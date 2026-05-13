@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /api/
+Disallow: /pro/
+
+Sitemap: https://glowscan.app/sitemap.xml
