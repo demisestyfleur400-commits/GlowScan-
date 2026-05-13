@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GlowScan — Dossier Investisseur 2026</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Outfit', sans-serif; background: #0a0a0a; color: #f5f5f5; }
+
+  .print-btn {
+    position: fixed; top: 20px; right: 20px; z-index: 999;
+    background: #d4a017; color: #000; font-weight: 800; font-size: 13px;
+    padding: 10px 20px; border-radius: 50px; border: none; cursor: pointer;
+    box-shadow: 0 4px 20px rgba(212,160,23,0.4);
+  }
+  @media print {
+    .print-btn { display: none; }
+    body { background: white; color: #111; }
+    .page { page-break-after: always; box-shadow: none !important; }
+  }
+
+  .page {
+    width: 794px; min-height: 560px;
+    margin: 24px auto; border-radius: 20px;
+    overflow: hidden; box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+    position: relative;
+  }
+
+  /* PAGE 1 — COVER */
+  .cover {
+    background: linear-gradient(145deg, #0d0d0d 0%, #1a1200 50%, #0d0d0d 100%);
+    padding: 60px;
+    display: flex; flex-direction: column; justify-content: space-between;
+    min-height: 500px; border: 1px solid #2a2000;
+  }
+  .gold-line { height: 3px; background: linear-gradient(90deg, transparent, #d4a017, #f5c842, #d4a017, transparent); margin-bottom: 50px; }
+  .cover-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(212,160,23,0.15); border: 1px solid rgba(212,160,23,0.4);
+    color: #d4a017; font-size: 11px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase;
+    padding: 6px 16px; border-radius: 50px; margin-bottom: 24px; width: fit-content;
+  }
+  .cover h1 { font-size: 64px; font-weight: 900; line-height: 1; margin-bottom: 8px; }
+  .cover h1 span { color: #d4a017; }
+  .cover .tagline { font-size: 18px; color: #9ca3af; font-weight: 300; margin-bottom: 40px; }
+  .cover-stats { display: flex; gap: 40px; }
+  .cover-stat { }
+  .cover-stat .num { font-size: 36px; font-weight: 900; color: #d4a017; }
+  .cover-stat .lab { font-size: 12px; color: #6b7280; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; }
+  .cover-footer { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 50px; padding-top: 30px; border-top: 1px solid #2a2000; }
+  .cover-founder { font-size: 14px; color: #9ca3af; }
+  .cover-founder strong { color: #f5f5f5; font-weight: 700; }
+  .cover-date { font-size: 12px; color: #4b5563; }
+
+  /* PAGES INTERNES */
+  .inner { background: #111; padding: 50px 60px; border: 1px solid #1f1f1f; }
+  .section-label {
+    font-size: 10px; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase;
+    color: #d4a017; margin-bottom: 8px;
+  }
+  .section-title { font-size: 32px; font-weight: 900; margin-bottom: 30px; }
+  .section-title span { color: #d4a017; }
+
+  /* Grilles */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 14px; }
+
+  .card {
+    background: #1a1a1a; border: 1px solid #2a2a2a;
+    border-radius: 16px; padding: 24px;
+  }
+  .card.gold-border { border-color: rgba(212,160,23,0.3); }
+  .card .card-icon { font-size: 28px; margin-bottom: 12px; }
+  .card .card-label { font-size: 10px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: #d4a017; margin-bottom: 6px; }
+  .card .card-title { font-size: 16px; font-weight: 800; margin-bottom: 8px; }
+  .card .card-text { font-size: 13px; color: #9ca3af; line-height: 1.6; }
+  .card .big-num { font-size: 40px; font-weight: 900; color: #d4a017; line-height: 1; }
+  .card .big-unit { font-size: 14px; color: #6b7280; margin-top: 4px; }
+
+  /* Tableau */
+  table { width: 100%; border-collapse: collapse; }
+  th { background: #d4a017; color: #000; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; padding: 12px 16px; text-align: left; }
+  td { padding: 12px 16px; font-size: 13px; border-bottom: 1px solid #1f1f1f; }
+  tr:nth-child(even) td { background: #161616; }
+  tr td:first-child { font-weight: 700; }
+
+  /* Timeline */
+  .timeline { display: flex; flex-direction: column; gap: 16px; }
+  .timeline-item { display: flex; gap: 20px; align-items: flex-start; }
+  .timeline-dot { width: 36px; height: 36px; border-radius: 50%; background: rgba(212,160,23,0.15); border: 2px solid #d4a017; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 14px; }
+  .timeline-content .t-label { font-size: 10px; color: #d4a017; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; }
+  .timeline-content .t-title { font-size: 15px; font-weight: 800; margin-bottom: 4px; }
+  .timeline-content .t-text { font-size: 12px; color: #6b7280; line-height: 1.5; }
+
+  /* Progress bar */
+  .bar-row { margin-bottom: 16px; }
+  .bar-label { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 12px; font-weight: 600; }
+  .bar-track { height: 8px; background: #222; border-radius: 50px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 50px; background: linear-gradient(90deg, #b8860b, #d4a017); }
+
+  /* Highlight box */
+  .highlight { background: rgba(212,160,23,0.08); border: 1px solid rgba(212,160,23,0.3); border-radius: 16px; padding: 24px; }
+  .highlight p { font-size: 14px; color: #d4a017; font-weight: 600; line-height: 1.7; }
+
+  /* Quote */
+  .quote { border-left: 3px solid #d4a017; padding-left: 20px; margin: 20px 0; }
+  .quote p { font-size: 18px; font-weight: 700; font-style: italic; color: #f5f5f5; line-height: 1.5; }
+  .quote span { font-size: 12px; color: #6b7280; }
+
+  /* Contact final */
+  .contact-page {
+    background: linear-gradient(145deg, #0d0d0d, #1a1200);
+    padding: 60px; border: 1px solid #2a2000;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; min-height: 400px;
+  }
+  .contact-page h2 { font-size: 40px; font-weight: 900; margin-bottom: 8px; }
+  .contact-page h2 span { color: #d4a017; }
+  .contact-page p { color: #9ca3af; font-size: 15px; margin-bottom: 40px; }
+  .contact-cards { display: flex; gap: 20px; justify-content: center; margin-bottom: 40px; flex-wrap: wrap; }
+  .contact-card { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 16px; padding: 20px 28px; text-align: center; }
+  .contact-card .c-icon { font-size: 24px; margin-bottom: 8px; }
+  .contact-card .c-label { font-size: 10px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px; }
+  .contact-card .c-val { font-size: 14px; font-weight: 700; color: #f5f5f5; }
+  .cta-btn {
+    background: linear-gradient(135deg, #b8860b, #d4a017);
+    color: #000; font-weight: 900; font-size: 16px;
+    padding: 16px 48px; border-radius: 50px; text-decoration: none;
+    display: inline-block;
+  }
+</style>
+</head>
+<body>
+
+<button class="print-btn" onclick="window.print()">⬇ Télécharger PDF</button>
+
+<!-- PAGE 1 — COVER -->
+<div class="page">
+  <div class="cover">
+    <div>
+      <div class="gold-line"></div>
+      <div class="cover-badge">✦ Dossier Investisseur Confidentiel — 2026</div>
+      <h1>Glow<span>Scan</span></h1>
+      <p class="tagline">L'intelligence artificielle dermatologique pour l'Afrique noire</p>
+      <div class="cover-stats">
+        <div class="cover-stat">
+          <div class="num">2 400+</div>
+          <div class="lab">Utilisateurs actifs</div>
+        </div>
+        <div class="cover-stat">
+          <div class="num">IV–VI</div>
+          <div class="lab">Phototypes ciblés</div>
+        </div>
+        <div class="cover-stat">
+          <div class="num">0 FCFA</div>
+          <div class="lab">Budget pub à ce jour</div>
+        </div>
+        <div class="cover-stat">
+          <div class="num">500 FCFA</div>
+          <div class="lab">Entrée Premium/sem.</div>
+        </div>
+      </div>
+    </div>
+    <div class="cover-footer">
+      <div class="cover-founder">
+        Présenté par <strong>Démise Essawe</strong><br>
+        Fondateur & Développeur — Douala, Cameroun
+      </div>
+      <div class="cover-date">Avril 2026</div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 2 — LE PROBLÈME -->
+<div class="page">
+  <div class="inner">
+    <div class="section-label">01 — Le Problème</div>
+    <div class="section-title">Les peaux africaines sont <span>ignorées</span> par la tech mondiale</div>
+
+    <div class="grid-3" style="margin-bottom: 24px;">
+      <div class="card gold-border">
+        <div class="card-icon">🌍</div>
+        <div class="card-label">Marché ignoré</div>
+        <div class="card-title">Aucune solution locale</div>
+        <div class="card-text">Les apps skincare mondiales (Skin AI, SkinVision) sont calibrées pour les phototypes I–III. Les peaux noires et métissées ne sont pas reconnues correctement.</div>
+      </div>
+      <div class="card gold-border">
+        <div class="card-icon">💰</div>
+        <div class="card-label">Accès aux soins</div>
+        <div class="card-title">Dermatologue inaccessible</div>
+        <div class="card-text">Une consultation dermatologique coûte 15 000 à 50 000 FCFA au Cameroun. Plus de 90% de la population ne peut pas se le permettre régulièrement.</div>
+      </div>
+      <div class="card gold-border">
+        <div class="card-icon">🧴</div>
+        <div class="card-label">Consommation aveugle</div>
+        <div class="card-title">Produits inadaptés</div>
+        <div class="card-text">Sans conseil expert, les consommatrices achètent des produits au hasard — souvent nocifs pour les peaux noires (dépigmentation, irritations).</div>
+      </div>
+    </div>
+
+    <div class="highlight">
+      <p>📊 Le marché des cosmétiques en Afrique subsaharienne représente <strong>8,4 milliards USD</strong> en 2025 et croît de <strong>7,2% par an</strong>. Aucune app locale ne capte ce marché avec une solution IA adaptée.</p>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 3 — LA SOLUTION -->
+<div class="page">
+  <div class="inner">
+    <div class="section-label">02 — La Solution</div>
+    <div class="section-title">GlowScan — <span>30 secondes</span> pour connaître sa peau</div>
+
+    <div class="grid-2" style="margin-bottom: 24px;">
+      <div>
+        <div class="timeline">
+          <div class="timeline-item">
+            <div class="timeline-dot">📸</div>
+            <div class="timeline-content">
+              <div class="t-label">Étape 1</div>
+              <div class="t-title">Photo de la zone à analyser</div>
+              <div class="t-text">Visage, corps ou cheveux. Depuis le smartphone, sans équipement.</div>
+            </div>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-dot">🧠</div>
+            <div class="timeline-content">
+              <div class="t-label">Étape 2</div>
+              <div class="t-title">Analyse IA en 10 secondes</div>
+              <div class="t-text">Notre IA (OpenAI Vision) détecte acné, hyperpigmentation, sécheresse, rides, pores. Calibrée pour phototypes IV à VI.</div>
+            </div>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-dot">📊</div>
+            <div class="timeline-content">
+              <div class="t-label">Étape 3</div>
+              <div class="t-title">Glow Score + Routine personnalisée</div>
+              <div class="t-text">Score sur 100, diagnostic détaillé, 3 produits recommandés disponibles au Cameroun avec lien commande WhatsApp.</div>
+            </div>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-dot">🛒</div>
+            <div class="timeline-content">
+              <div class="t-label">Étape 4</div>
+              <div class="t-title">Commande directe</div>
+              <div class="t-text">L'utilisatrice commande via WhatsApp ou Jumia. Boutiques partenaires locales intégrées.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 16px;">
+        <div class="card gold-border">
+          <div class="card-label">Avantage clé</div>
+          <div class="card-title">Fait pour NOUS</div>
+          <div class="card-text">Première app IA dermatologique calibrée exclusivement pour les peaux africaines — phototypes IV à VI, conditions climatiques tropicales, produits disponibles localement.</div>
+        </div>
+        <div class="card gold-border">
+          <div class="card-label">Technologie</div>
+          <div class="card-title">Stack moderne</div>
+          <div class="card-text">React + Node.js + PostgreSQL + OpenAI Vision API. App web progressive (PWA) — fonctionne sans téléchargement sur tous les smartphones.</div>
+        </div>
+        <div class="card gold-border">
+          <div class="card-label">Disponible maintenant</div>
+          <div class="card-title">glow-scan.com</div>
+          <div class="card-text">Application 100% fonctionnelle, en ligne, avec utilisateurs réels et commandes effectuées à ce jour.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 4 — TRACTION -->
+<div class="page">
+  <div class="inner">
+    <div class="section-label">03 — Traction</div>
+    <div class="section-title">Déjà réel. <span>Zéro budget publicitaire.</span></div>
+
+    <div class="grid-4" style="margin-bottom: 28px;">
+      <div class="card gold-border" style="text-align:center;">
+        <div class="big-num">2 400+</div>
+        <div class="big-unit">Utilisateurs inscrits</div>
+      </div>
+      <div class="card gold-border" style="text-align:center;">
+        <div class="big-num">100%</div>
+        <div class="big-unit">Croissance organique</div>
+      </div>
+      <div class="card gold-border" style="text-align:center;">
+        <div class="big-num">✅</div>
+        <div class="big-unit">Commandes effectuées</div>
+      </div>
+      <div class="card gold-border" style="text-align:center;">
+        <div class="big-num">0 FCFA</div>
+        <div class="big-unit">Dépensé en pub</div>
+      </div>
+    </div>
+
+    <div class="quote">
+      <p>"Tout ce que GlowScan a accompli — utilisateurs, commandes, app fonctionnelle — a été réalisé sans budget marketing, sans investisseur, par un seul développeur camerounais."</p>
+      <span>— Démise Essawe, Fondateur</span>
+    </div>
+
+    <div style="margin-top: 24px;">
+      <p style="font-size: 12px; color: #6b7280; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700;">Adoption par fonctionnalité</p>
+      <div class="bar-row">
+        <div class="bar-label"><span>Analyse peau (scan)</span><span>100%</span></div>
+        <div class="bar-track"><div class="bar-fill" style="width:100%"></div></div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label"><span>Recommandations produits</span><span>78%</span></div>
+        <div class="bar-track"><div class="bar-fill" style="width:78%"></div></div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label"><span>Clics commande WhatsApp</span><span>54%</span></div>
+        <div class="bar-track"><div class="bar-fill" style="width:54%"></div></div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label"><span>Retour pour 2e analyse</span><span>41%</span></div>
+        <div class="bar-track"><div class="bar-fill" style="width:41%"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 5 — BUSINESS MODEL -->
+<div class="page">
+  <div class="inner">
+    <div class="section-label">04 — Business Model</div>
+    <div class="section-title">3 sources de <span>revenus</span></div>
+
+    <div class="grid-3" style="margin-bottom: 24px;">
+      <div class="card gold-border">
+        <div class="card-icon">👑</div>
+        <div class="card-label">Revenu 1</div>
+        <div class="card-title">Abonnement Premium</div>
+        <div class="card-text" style="margin-bottom: 12px;">Accès illimité aux analyses, SkinBot IA, Scan Produit, boutique.</div>
+        <div style="font-size: 22px; font-weight: 900; color: #d4a017;">500 FCFA<span style="font-size: 13px; color: #6b7280;">/semaine</span></div>
+        <div style="font-size: 22px; font-weight: 900; color: #d4a017;">2 000 FCFA<span style="font-size: 13px; color: #6b7280;">/mois</span></div>
+      </div>
+      <div class="card gold-border">
+        <div class="card-icon">🤝</div>
+        <div class="card-label">Revenu 2</div>
+        <div class="card-title">Partenaires boutiques</div>
+        <div class="card-text" style="margin-bottom: 12px;">Parfumeries locales inscrites dans l'app. Commission sur chaque commande générée.</div>
+        <div style="font-size: 22px; font-weight: 900; color: #d4a017;">1 000 FCFA<span style="font-size: 13px; color: #6b7280;">/inscription</span></div>
+        <div style="font-size: 22px; font-weight: 900; color: #d4a017;">10%<span style="font-size: 13px; color: #6b7280;"> /commande</span></div>
+      </div>
+      <div class="card gold-border">
+        <div class="card-icon">📢</div>
+        <div class="card-label">Revenu 3 — futur</div>
+        <div class="card-title">Publicité ciblée</div>
+        <div class="card-text">Marques cosmétiques (Garnier, L'Oréal, Dove) payent pour apparaître en recommandation prioritaire selon le profil cutané de l'utilisatrice.</div>
+      </div>
+    </div>
+
+    <table>
+      <thead>
+        <tr><th>Scénario</th><th>Utilisateurs Premium</th><th>Boutiques partenaires</th><th>Revenu mensuel</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Conservateur</td><td>100</td><td>10</td><td>210 000 FCFA</td></tr>
+        <tr><td>Réaliste</td><td>500</td><td>50</td><td>1 050 000 FCFA</td></tr>
+        <tr><td>Optimiste</td><td>2 000</td><td>150</td><td>4 150 000 FCFA</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- PAGE 6 — MARCHÉ -->
+<div class="page">
+  <div class="inner">
+    <div class="section-label">05 — Marché</div>
+    <div class="section-title">Un marché de <span>milliards</span>, pas encore digitalisé</div>
+
+    <div class="grid-2" style="margin-bottom: 24px;">
+      <div>
+        <div class="card gold-border" style="margin-bottom: 16px;">
+          <div class="card-label">Marché Total Addressable (TAM)</div>
+          <div class="big-num">8,4 Mrd $</div>
+          <div class="big-unit">Cosmétiques Afrique subsaharienne (2025)</div>
+        </div>
+        <div class="card gold-border">
+          <div class="card-label">Marché Cameroun (SAM)</div>
+          <div class="big-num">320 M $</div>
+          <div class="big-unit">Cosmétiques + soins personnels</div>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <div class="card gold-border">
+          <div class="card-icon">📱</div>
+          <div class="card-label">Pénétration mobile</div>
+          <div class="card-title">76% ont un smartphone</div>
+          <div class="card-text">Au Cameroun, 76% de la population urbaine accède à internet via mobile. Notre app PWA ne nécessite aucun téléchargement.</div>
+        </div>
+        <div class="card gold-border">
+          <div class="card-icon">👩🏾</div>
+          <div class="card-label">Cible principale</div>
+          <div class="card-title">Femmes 18–40 ans urbaines</div>
+          <div class="card-text">Douala + Yaoundé = 5 millions d'habitants. Notre cible primaire représente ~1,2 million de personnes rien que dans ces deux villes.</div>
+        </div>
+        <div class="card gold-border">
+          <div class="card-icon">🚀</div>
+          <div class="card-label">Expansion prévue</div>
+          <div class="card-title">Afrique francophone</div>
+          <div class="card-text">Côte d'Ivoire, Sénégal, RDC, Bénin — même langue, mêmes phototypes, mêmes besoins. Le même produit, sans ré-développement.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 7 — ROADMAP -->
+<div class="page">
+  <div class="inner">
+    <div class="section-label">06 — Feuille de Route</div>
+    <div class="section-title">Plan sur <span>12 mois</span> avec financement</div>
+
+    <div class="grid-2">
+      <div>
+        <table>
+          <thead><tr><th>Période</th><th>Objectif</th></tr></thead>
+          <tbody>
+            <tr><td>Mois 1–2</td><td>50 boutiques partenaires à Douala signées</td></tr>
+            <tr><td>Mois 2–3</td><td>Campagne influenceurs (10 créateurs)</td></tr>
+            <tr><td>Mois 3–4</td><td>Lancement Yaoundé — 500 nouveaux users</td></tr>
+            <tr><td>Mois 4–6</td><td>App mobile iOS + Android</td></tr>
+            <tr><td>Mois 6–8</td><td>Expansion Côte d'Ivoire + Sénégal</td></tr>
+            <tr><td>Mois 8–12</td><td>Partenariat marques cosmétiques (pub)</td></tr>
+            <tr><td>Mois 12</td><td>10 000 utilisateurs Premium actifs</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <div class="card gold-border">
+          <div class="card-label">Utilisation des fonds demandés</div>
+          <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 10px;">
+            <div class="bar-row">
+              <div class="bar-label"><span>Marketing & acquisition</span><span>40%</span></div>
+              <div class="bar-track"><div class="bar-fill" style="width:40%"></div></div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label"><span>Développement app mobile</span><span>30%</span></div>
+              <div class="bar-track"><div class="bar-fill" style="width:30%"></div></div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label"><span>Infrastructure & serveurs</span><span>15%</span></div>
+              <div class="bar-track"><div class="bar-fill" style="width:15%"></div></div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label"><span>Équipe & opérations</span><span>15%</span></div>
+              <div class="bar-track"><div class="bar-fill" style="width:15%"></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="highlight">
+          <p>💡 Avec <strong>5 000 000 FCFA</strong> d'investissement, GlowScan atteint son seuil de rentabilité en <strong>6 mois</strong> et génère <strong>4 M FCFA/mois</strong> à mois 12.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 8 — L'ÉQUIPE -->
+<div class="page">
+  <div class="inner">
+    <div class="section-label">07 — L'Équipe</div>
+    <div class="section-title">Le <span>fondateur</span></div>
+
+    <div class="grid-2" style="align-items: start;">
+      <div class="card gold-border" style="padding: 32px;">
+        <div style="width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, #d4a017, #b8860b); display: flex; align-items: center; justify-content: center; font-size: 28px; margin-bottom: 20px;">👨🏾‍💻</div>
+        <div style="font-size: 24px; font-weight: 900; margin-bottom: 4px;">Démise Essawe</div>
+        <div style="font-size: 13px; color: #d4a017; font-weight: 700; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 0.1em;">Fondateur & Développeur Full-Stack</div>
+        <div class="card-text" style="margin-bottom: 20px; line-height: 1.8;">
+          Développeur camerounais basé à Douala. A conçu et développé seul l'intégralité de GlowScan — de l'interface utilisateur à l'intégration IA, en passant par la base de données et le système de paiement.
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <div style="font-size: 12px; color: #6b7280;"><span style="color: #d4a017;">✦</span> React, Node.js, TypeScript, PostgreSQL</div>
+          <div style="font-size: 12px; color: #6b7280;"><span style="color: #d4a017;">✦</span> Intégration OpenAI Vision API</div>
+          <div style="font-size: 12px; color: #6b7280;"><span style="color: #d4a017;">✦</span> Connaissance terrain du marché camerounais</div>
+          <div style="font-size: 12px; color: #6b7280;"><span style="color: #d4a017;">✦</span> Vision produit centrée sur l'Afrique</div>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <div class="highlight">
+          <p>"Ce que la plupart des startups font avec une équipe de 5 personnes et 50 000 $ de financement — Démise l'a fait seul, à Douala, avec 0 budget."</p>
+        </div>
+        <div class="card gold-border">
+          <div class="card-label">Ce que l'investissement apportera</div>
+          <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px;">
+            <div style="font-size: 13px; color: #9ca3af;"><span style="color: #d4a017;">→</span> Recruter 1 commercial terrain Douala</div>
+            <div style="font-size: 13px; color: #9ca3af;"><span style="color: #d4a017;">→</span> Recruter 1 community manager</div>
+            <div style="font-size: 13px; color: #9ca3af;"><span style="color: #d4a017;">→</span> Développer l'app mobile native</div>
+            <div style="font-size: 13px; color: #9ca3af;"><span style="color: #d4a017;">→</span> Lancer les campagnes marketing digitales</div>
+            <div style="font-size: 13px; color: #9ca3af;"><span style="color: #d4a017;">→</span> Scaler l'infrastructure IA</div>
+          </div>
+        </div>
+        <div class="card gold-border">
+          <div class="card-label">Avantage concurrentiel</div>
+          <div class="card-text" style="margin-top: 8px;">Aucun concurrent local. Les apps mondiales ignorent les peaux africaines. GlowScan est <strong style="color: #d4a017;">first mover</strong> sur un marché de 8 milliards USD.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 9 — CONTACT -->
+<div class="page">
+  <div class="contact-page">
+    <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: #d4a017; margin-bottom: 20px;">08 — Passons à l'action</div>
+    <h2>Investissez dans<br><span>l'avenir de la beauté africaine</span></h2>
+    <p style="max-width: 500px; margin: 16px auto 40px;">GlowScan n'a besoin que d'un premier investisseur qui croit en la tech africaine.<br>L'app existe. Les utilisateurs sont là. Il manque juste le carburant.</p>
+
+    <div class="contact-cards">
+      <div class="contact-card">
+        <div class="c-icon">👤</div>
+        <div class="c-label">Fondateur</div>
+        <div class="c-val">Démise Essawe</div>
+      </div>
+      <div class="contact-card">
+        <div class="c-icon">📱</div>
+        <div class="c-label">WhatsApp</div>
+        <div class="c-val">[Votre numéro]</div>
+      </div>
+      <div class="contact-card">
+        <div class="c-icon">🌐</div>
+        <div class="c-label">Application live</div>
+        <div class="c-val">glow-scan.com</div>
+      </div>
+      <div class="contact-card">
+        <div class="c-icon">📍</div>
+        <div class="c-label">Localisation</div>
+        <div class="c-val">Douala, Cameroun</div>
+      </div>
+    </div>
+
+    <a href="https://glow-scan.com" class="cta-btn">✦ Tester GlowScan maintenant</a>
+
+    <p style="margin-top: 30px; font-size: 11px; color: #374151;">Document confidentiel — usage exclusif des investisseurs potentiels</p>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GlowScan × Partenaires Boutiques</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Outfit', sans-serif; background: #f8f9fa; }
+
+  .slide {
+    width: 297mm;
+    min-height: 210mm;
+    background: white;
+    margin: 0 auto 20px;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+    page-break-after: always;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.1);
+  }
+
+  @media print {
+    body { background: white; }
+    .slide { margin: 0; box-shadow: none; width: 100%; min-height: 100vh; }
+    .no-print { display: none; }
+  }
+
+  /* COULEURS */
+  .teal { color: #0d9488; }
+  .coral { color: #f97316; }
+  .gold { color: #d4a017; }
+  .dark { color: #111827; }
+  .gray { color: #6b7280; }
+
+  .bg-teal { background: #0d9488; }
+  .bg-coral { background: #f97316; }
+  .bg-gold { background: #d4a017; }
+  .bg-light { background: #f0fdfa; }
+
+  /* LOGO */
+  .logo {
+    font-size: 18px;
+    font-weight: 900;
+    letter-spacing: -0.5px;
+  }
+  .logo span { color: #0d9488; }
+
+  /* BADGE */
+  .badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  /* STAT BOX */
+  .stat-box {
+    background: #f0fdfa;
+    border: 1px solid #99f6e4;
+    border-radius: 16px;
+    padding: 20px;
+    text-align: center;
+  }
+  .stat-box .num { font-size: 36px; font-weight: 900; color: #0d9488; line-height: 1; }
+  .stat-box .label { font-size: 11px; color: #6b7280; margin-top: 6px; font-weight: 600; }
+
+  /* STEP */
+  .step {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 16px;
+    background: #f9fafb;
+    border-radius: 16px;
+    border: 1px solid #e5e7eb;
+  }
+  .step-num {
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+    background: #0d9488;
+    color: white;
+    font-size: 16px;
+    font-weight: 900;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  /* BENEFIT */
+  .benefit {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 20px;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+  }
+  .benefit-icon {
+    font-size: 28px;
+    flex-shrink: 0;
+  }
+
+  /* HEADER BARRE */
+  .top-bar {
+    padding: 20px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid #f3f4f6;
+  }
+
+  /* PRINT BUTTON */
+  .print-btn {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #0d9488;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 12px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    z-index: 100;
+    box-shadow: 0 4px 16px rgba(13,148,136,0.4);
+  }
+
+  .watermark {
+    position: absolute;
+    bottom: 20px;
+    right: 24px;
+    font-size: 10px;
+    color: #d1d5db;
+    font-weight: 600;
+  }
+</style>
+</head>
+<body>
+
+<button class="print-btn no-print" onclick="window.print()">⬇ Télécharger PDF</button>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- SLIDE 1 : COUVERTURE -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="slide">
+  <div style="background: linear-gradient(135deg, #0d9488 0%, #0f766e 40%, #115e59 100%); flex:1; display:flex; flex-direction:column; padding: 60px;">
+
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 80px;">
+      <div class="logo" style="color:white; font-size:22px;">Glow<span style="color:#5eead4;">Scan</span></div>
+      <div class="badge" style="background:rgba(255,255,255,0.15); color:white; border: 1px solid rgba(255,255,255,0.3);">Proposition Partenariat</div>
+    </div>
+
+    <div style="flex:1; display:flex; flex-direction:column; justify-content:center;">
+      <p style="color:#5eead4; font-size:13px; font-weight:700; letter-spacing:2px; text-transform:uppercase; margin-bottom:20px;">🤝 Pour les parfumeries & boutiques beauté</p>
+      <h1 style="color:white; font-size:52px; font-weight:900; line-height:1.05; margin-bottom:24px;">Faites venir vos<br><span style="color:#fbbf24;">clients à vous.</span><br>Automatiquement.</h1>
+      <p style="color:rgba(255,255,255,0.7); font-size:18px; line-height:1.6; max-width:500px;">GlowScan analyse la peau de vos futures clientes et leur recommande <strong style="color:white;">vos produits</strong>, directement sur leur téléphone.</p>
+    </div>
+
+    <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:20px; margin-top:60px;">
+      <div style="background:rgba(255,255,255,0.1); border-radius:16px; padding:20px; border:1px solid rgba(255,255,255,0.2);">
+        <div style="font-size:28px; font-weight:900; color:#fbbf24;">300+</div>
+        <div style="font-size:12px; color:rgba(255,255,255,0.7); margin-top:4px;">Utilisatrices actives</div>
+      </div>
+      <div style="background:rgba(255,255,255,0.1); border-radius:16px; padding:20px; border:1px solid rgba(255,255,255,0.2);">
+        <div style="font-size:28px; font-weight:900; color:#fbbf24;">0 FCFA</div>
+        <div style="font-size:12px; color:rgba(255,255,255,0.7); margin-top:4px;">Coût pour la boutique</div>
+      </div>
+      <div style="background:rgba(255,255,255,0.1); border-radius:16px; padding:20px; border:1px solid rgba(255,255,255,0.2);">
+        <div style="font-size:28px; font-weight:900; color:#fbbf24;">&lt;5 min</div>
+        <div style="font-size:12px; color:rgba(255,255,255,0.7); margin-top:4px;">Pour être en ligne</div>
+      </div>
+    </div>
+  </div>
+  <div class="watermark">GlowScan — Confidentiel 2025</div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- SLIDE 2 : LE PROBLÈME -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="slide">
+  <div class="top-bar">
+    <div class="logo">Glow<span>Scan</span></div>
+    <div class="badge" style="background:#fef3c7; color:#d4a017;">Le problème</div>
+  </div>
+
+  <div style="padding: 40px; flex:1; display:flex; gap:40px; align-items:center;">
+    <div style="flex:1;">
+      <h2 style="font-size:36px; font-weight:900; color:#111827; margin-bottom:16px; line-height:1.1;">Vos clientes ne savent<br>pas quoi acheter.</h2>
+      <p style="font-size:15px; color:#6b7280; line-height:1.7; margin-bottom:32px;">Elles entrent dans votre boutique avec un problème de peau, elles repartent sans acheter — ou avec le mauvais produit. Ce n'est pas rentable pour vous, ni satisfaisant pour elles.</p>
+
+      <div style="display:flex; flex-direction:column; gap:16px;">
+        <div style="display:flex; align-items:center; gap:14px; background:#fef2f2; border-radius:14px; padding:16px; border:1px solid #fecaca;">
+          <div style="font-size:24px;">😕</div>
+          <div>
+            <div style="font-size:13px; font-weight:700; color:#dc2626;">70% des achats cosmétiques</div>
+            <div style="font-size:12px; color:#6b7280; margin-top:2px;">sont faits sans conseil adapté à leur type de peau</div>
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:14px; background:#fef2f2; border-radius:14px; padding:16px; border:1px solid #fecaca;">
+          <div style="font-size:24px;">📱</div>
+          <div>
+            <div style="font-size:13px; font-weight:700; color:#dc2626;">90% recherchent d'abord en ligne</div>
+            <div style="font-size:12px; color:#6b7280; margin-top:2px;">avant de se déplacer en boutique — et tombent sur de la concurrence</div>
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:14px; background:#fef2f2; border-radius:14px; padding:16px; border:1px solid #fecaca;">
+          <div style="font-size:24px;">💸</div>
+          <div>
+            <div style="font-size:13px; font-weight:700; color:#dc2626;">Retours & insatisfactions</div>
+            <div style="font-size:12px; color:#6b7280; margin-top:2px;">causés par des produits mal adaptés aux phototypes IV-VI</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="width:280px; background:linear-gradient(160deg, #fef3c7 0%, #fff7ed 100%); border-radius:24px; padding:32px; border:1px solid #fde68a; text-align:center;">
+      <div style="font-size:72px; margin-bottom:16px;">🛍️</div>
+      <div style="font-size:48px; font-weight:900; color:#d4a017; line-height:1;">15M</div>
+      <div style="font-size:13px; color:#92400e; margin-top:8px; font-weight:600;">femmes au Cameroun<br>qui dépensent en beauté</div>
+      <div style="height:1px; background:#fde68a; margin:20px 0;"></div>
+      <div style="font-size:32px; font-weight:900; color:#d97706;">30-100 €</div>
+      <div style="font-size:12px; color:#92400e; margin-top:6px; font-weight:600;">de budget beauté mensuel<br>par femme active</div>
+    </div>
+  </div>
+  <div class="watermark">GlowScan — Confidentiel 2025</div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- SLIDE 3 : COMMENT ÇA MARCHE -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="slide">
+  <div class="top-bar">
+    <div class="logo">Glow<span>Scan</span></div>
+    <div class="badge" style="background:#f0fdfa; color:#0d9488;">Comment ça marche</div>
+  </div>
+
+  <div style="padding: 40px;">
+    <h2 style="font-size:30px; font-weight:900; color:#111827; margin-bottom:8px;">3 étapes. Aucune technologie à installer.</h2>
+    <p style="font-size:14px; color:#6b7280; margin-bottom:40px;">Votre boutique est visible dans l'app en moins de 5 minutes.</p>
+
+    <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:24px; margin-bottom:40px;">
+      <div style="background:linear-gradient(135deg, #f0fdfa, #ccfbf1); border-radius:20px; padding:28px; border:1px solid #99f6e4; position:relative;">
+        <div style="background:#0d9488; color:white; width:36px; height:36px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:900; margin-bottom:16px;">1</div>
+        <div style="font-size:36px; margin-bottom:16px;">📷</div>
+        <h3 style="font-size:16px; font-weight:800; color:#111827; margin-bottom:8px;">La cliente scanne sa peau</h3>
+        <p style="font-size:13px; color:#6b7280; line-height:1.6;">Elle prend une photo de son visage, corps ou cheveux sur son téléphone.</p>
+      </div>
+      <div style="background:linear-gradient(135deg, #fef3c7, #fef9c3); border-radius:20px; padding:28px; border:1px solid #fde68a; position:relative;">
+        <div style="background:#d4a017; color:white; width:36px; height:36px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:900; margin-bottom:16px;">2</div>
+        <div style="font-size:36px; margin-bottom:16px;">🤖</div>
+        <h3 style="font-size:16px; font-weight:800; color:#111827; margin-bottom:8px;">L'IA analyse et recommande</h3>
+        <p style="font-size:13px; color:#6b7280; line-height:1.6;">GlowScan identifie son type de peau et lui recommande <strong style="color:#d4a017;">vos produits</strong> spécifiquement.</p>
+      </div>
+      <div style="background:linear-gradient(135deg, #f0fdf4, #dcfce7); border-radius:20px; padding:28px; border:1px solid #86efac; position:relative;">
+        <div style="background:#16a34a; color:white; width:36px; height:36px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:900; margin-bottom:16px;">3</div>
+        <div style="font-size:36px; margin-bottom:16px;">💬</div>
+        <h3 style="font-size:16px; font-weight:800; color:#111827; margin-bottom:8px;">Elle commande via WhatsApp</h3>
+        <p style="font-size:13px; color:#6b7280; line-height:1.6;">Un clic → WhatsApp s'ouvre sur <strong style="color:#16a34a;">votre numéro</strong> avec le message prêt à envoyer.</p>
+      </div>
+    </div>
+
+    <div style="background:#f9fafb; border-radius:20px; padding:24px; border:1px solid #e5e7eb; display:flex; align-items:center; gap:24px;">
+      <div style="font-size:40px;">📲</div>
+      <div>
+        <div style="font-size:14px; font-weight:800; color:#111827; margin-bottom:6px;">Exemple du message WhatsApp reçu chez vous :</div>
+        <div style="background:white; border-radius:12px; padding:14px; border:1px solid #e5e7eb; font-size:13px; color:#374151; line-height:1.6; max-width:600px;">
+          🛍️ <em>Bonjour ! Je souhaite commander :</em><br>
+          • <strong>Gel Nettoyant Doux</strong> — 4 500 FCFA<br>
+          • <strong>Sérum Hydratant</strong> — 6 000 FCFA<br><br>
+          <em>Via GlowScan. Merci !</em>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="watermark">GlowScan — Confidentiel 2025</div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- SLIDE 4 : CE QUE VOUS GAGNEZ -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="slide">
+  <div class="top-bar">
+    <div class="logo">Glow<span>Scan</span></div>
+    <div class="badge" style="background:#f3e8ff; color:#7c3aed;">Vos avantages</div>
+  </div>
+
+  <div style="padding: 40px; flex:1; display:flex; flex-direction:column;">
+    <h2 style="font-size:30px; font-weight:900; color:#111827; margin-bottom:8px;">Ce que vous gagnez en rejoignant GlowScan</h2>
+    <p style="font-size:14px; color:#6b7280; margin-bottom:36px;">Gratuit pour commencer. Vous avez rien à installer, rien à gérer.</p>
+
+    <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:20px; flex:1;">
+      <div class="benefit">
+        <div class="benefit-icon">👥</div>
+        <div>
+          <div style="font-size:15px; font-weight:800; color:#111827; margin-bottom:4px;">Nouveaux clients qualifiés</div>
+          <div style="font-size:13px; color:#6b7280; line-height:1.6;">Les femmes qui arrivent chez vous via GlowScan savent déjà ce qu'elles veulent. Conversion plus facile, panier plus élevé.</div>
+        </div>
+      </div>
+      <div class="benefit">
+        <div class="benefit-icon">📍</div>
+        <div>
+          <div style="font-size:15px; font-weight:800; color:#111827; margin-bottom:4px;">Visibilité digitale gratuite</div>
+          <div style="font-size:13px; color:#6b7280; line-height:1.6;">Votre boutique est visible dans l'app auprès de toutes nos utilisatrices à Douala — sans créer de compte, sans site web.</div>
+        </div>
+      </div>
+      <div class="benefit">
+        <div class="benefit-icon">💬</div>
+        <div>
+          <div style="font-size:15px; font-weight:800; color:#111827; margin-bottom:4px;">Commandes directes sur WhatsApp</div>
+          <div style="font-size:13px; color:#6b7280; line-height:1.6;">Vous utilisez déjà WhatsApp pour vendre. On ne change rien à votre façon de travailler — on ajoute juste du volume.</div>
+        </div>
+      </div>
+      <div class="benefit">
+        <div class="benefit-icon">📊</div>
+        <div>
+          <div style="font-size:15px; font-weight:800; color:#111827; margin-bottom:4px;">Données sur vos ventes</div>
+          <div style="font-size:13px; color:#6b7280; line-height:1.6;">Vous voyez quels produits sont les plus demandés via GlowScan pour mieux gérer votre stock.</div>
+        </div>
+      </div>
+      <div class="benefit">
+        <div class="benefit-icon">🆓</div>
+        <div>
+          <div style="font-size:15px; font-weight:800; color:#111827; margin-bottom:4px;">Absolument gratuit pour démarrer</div>
+          <div style="font-size:13px; color:#6b7280; line-height:1.6;">Pas d'abonnement, pas de commission au départ. On teste ensemble. Si vous êtes satisfait, on discute d'un accord plus long terme.</div>
+        </div>
+      </div>
+      <div class="benefit">
+        <div class="benefit-icon">⚡</div>
+        <div>
+          <div style="font-size:15px; font-weight:800; color:#111827; margin-bottom:4px;">En ligne en moins de 5 minutes</div>
+          <div style="font-size:13px; color:#6b7280; line-height:1.6;">Je note votre nom, votre quartier, votre numéro WhatsApp, vos produits — et c'est publié dans l'app immédiatement.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="watermark">GlowScan — Confidentiel 2025</div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- SLIDE 5 : CALL TO ACTION -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="slide">
+  <div style="background:linear-gradient(135deg, #111827 0%, #1f2937 100%); flex:1; display:flex; flex-direction:column; padding:60px;">
+    <div class="logo" style="color:white; font-size:22px; margin-bottom:80px;">Glow<span style="color:#5eead4;">Scan</span></div>
+
+    <div style="flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center;">
+      <div style="font-size:56px; margin-bottom:24px;">🤝</div>
+      <h2 style="font-size:42px; font-weight:900; color:white; margin-bottom:16px; line-height:1.1;">Rejoignez les<br><span style="color:#5eead4;">premières boutiques</span><br>partenaires.</h2>
+      <p style="font-size:16px; color:rgba(255,255,255,0.6); max-width:480px; line-height:1.7; margin-bottom:50px;">Les premiers partenaires bénéficient d'une visibilité prioritaire dans l'app et d'un placement en tête de liste. Places limitées.</p>
+
+      <div style="display:flex; gap:20px; margin-bottom:50px; flex-wrap:wrap; justify-content:center;">
+        <div style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:16px; padding:20px 32px; text-align:center;">
+          <div style="font-size:28px; font-weight:900; color:#fbbf24;">0 FCFA</div>
+          <div style="font-size:12px; color:rgba(255,255,255,0.5); margin-top:4px;">Pour démarrer</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:16px; padding:20px 32px; text-align:center;">
+          <div style="font-size:28px; font-weight:900; color:#5eead4;">5 min</div>
+          <div style="font-size:12px; color:rgba(255,255,255,0.5); margin-top:4px;">Pour être listé</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:16px; padding:20px 32px; text-align:center;">
+          <div style="font-size:28px; font-weight:900; color:#f97316;">300+</div>
+          <div style="font-size:12px; color:rgba(255,255,255,0.5); margin-top:4px;">Clientes potentielles</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="border-top:1px solid rgba(255,255,255,0.1); padding-top:32px; display:flex; align-items:center; justify-content:space-between;">
+      <div>
+        <div style="font-size:13px; color:rgba(255,255,255,0.4); margin-bottom:6px;">Contactez-nous maintenant</div>
+        <div style="font-size:20px; font-weight:900; color:white;">📲 +237 674 37 79 59</div>
+        <div style="font-size:13px; color:#5eead4; margin-top:4px;">WhatsApp · Réponse immédiate</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:13px; color:rgba(255,255,255,0.4); margin-bottom:6px;">Application disponible sur</div>
+        <div style="font-size:16px; font-weight:700; color:white;">glowscan.replit.app</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

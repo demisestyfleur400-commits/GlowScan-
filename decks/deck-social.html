@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GlowScan — Carousel Social Media</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Outfit', sans-serif; background: #18181b; display: flex; flex-direction: column; align-items: center; padding: 40px 20px; gap: 24px; }
+
+  .card {
+    width: 1080px;
+    height: 1080px;
+    position: relative;
+    overflow: hidden;
+    flex-shrink: 0;
+    border-radius: 0;
+  }
+
+  @media print {
+    body { background: white; padding: 0; gap: 0; }
+    .card { width: 100%; height: 100vh; border-radius: 0; page-break-after: always; }
+    .no-print { display: none; }
+  }
+
+  /* Pour écran (aperçu réduit à 55%) */
+  @media screen {
+    .card { transform: scale(0.55); transform-origin: top center; margin-bottom: -450px; }
+  }
+
+  .print-btn {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #5eead4;
+    color: #111;
+    border: none;
+    padding: 14px 28px;
+    border-radius: 14px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 15px;
+    font-weight: 800;
+    cursor: pointer;
+    z-index: 100;
+  }
+
+  .logo { font-size: 36px; font-weight: 900; letter-spacing: -1px; }
+  .logo span { color: #5eead4; }
+  .badge { display: inline-block; padding: 8px 20px; border-radius: 999px; font-size: 14px; font-weight: 700; }
+  .slide-num { position: absolute; bottom: 40px; right: 40px; font-size: 22px; font-weight: 900; opacity: 0.3; }
+  .watermark { position: absolute; bottom: 40px; left: 40px; font-size: 18px; font-weight: 700; color: rgba(255,255,255,0.3); }
+</style>
+</head>
+<body>
+
+<button class="print-btn no-print" onclick="window.print()">⬇ Télécharger toutes les slides</button>
+
+<!-- CARD 1 : ACCROCHE -->
+<div class="card" style="background:linear-gradient(160deg, #0d9488 0%, #0f766e 50%, #064e3b 100%); display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; padding:80px;">
+  <div style="font-size:120px; margin-bottom:40px;">✨</div>
+  <div class="badge" style="background:rgba(255,255,255,0.15); color:white; border:1px solid rgba(255,255,255,0.3); margin-bottom:32px; font-size:16px;">Découverte 🇨🇲</div>
+  <h1 style="font-size:88px; font-weight:900; color:white; line-height:1.0; margin-bottom:28px;">Tu connais<br>vraiment<br>ta peau ?</h1>
+  <p style="font-size:32px; color:rgba(255,255,255,0.75); line-height:1.5;">L'IA qui analyse ta peau<br>en 30 secondes 👉 slide suivante</p>
+  <div class="watermark" style="font-size:22px;">GlowScan</div>
+  <div class="slide-num" style="color:rgba(255,255,255,0.3);">1/8</div>
+</div>
+
+<!-- CARD 2 : LE PROBLÈME -->
+<div class="card" style="background:white; display:flex; flex-direction:column; padding:80px;">
+  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:60px;">
+    <div class="logo" style="color:#111827;">Glow<span>Scan</span></div>
+    <div class="badge" style="background:#fef2f2; color:#dc2626;">Le vrai problème</div>
+  </div>
+  <div style="flex:1; display:flex; flex-direction:column; justify-content:center; gap:28px;">
+    <h2 style="font-size:64px; font-weight:900; color:#111827; line-height:1.05; margin-bottom:16px;">On dépense des<br><span style="color:#dc2626;">milliers de FCFA</span><br>pour rien.</h2>
+    <div style="display:flex; flex-direction:column; gap:20px;">
+      <div style="background:#fef2f2; border-radius:20px; padding:28px; display:flex; align-items:center; gap:24px; border-left:6px solid #dc2626;">
+        <div style="font-size:48px;">😔</div>
+        <div>
+          <div style="font-size:22px; font-weight:800; color:#dc2626; margin-bottom:4px;">Mauvais produit, mauvaise peau</div>
+          <div style="font-size:18px; color:#6b7280;">On achète sans conseil adapté à notre phototype</div>
+        </div>
+      </div>
+      <div style="background:#fef3c7; border-radius:20px; padding:28px; display:flex; align-items:center; gap:24px; border-left:6px solid #d4a017;">
+        <div style="font-size:48px;">💸</div>
+        <div>
+          <div style="font-size:22px; font-weight:800; color:#d4a017; margin-bottom:4px;">Argent gaspillé</div>
+          <div style="font-size:18px; color:#6b7280;">30 000 à 100 000 F de cosmétiques qui ne marchent pas</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="watermark" style="color:#e5e7eb; font-family:'Outfit'; font-weight:900; font-size:22px;">GlowScan</div>
+  <div class="slide-num" style="color:#e5e7eb;">2/8</div>
+</div>
+
+<!-- CARD 3 : LA SOLUTION -->
+<div class="card" style="background:linear-gradient(160deg, #fbbf24 0%, #d4a017 60%, #92400e 100%); display:flex; flex-direction:column; padding:80px;">
+  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:60px;">
+    <div class="logo" style="color:white;">Glow<span style="color:#fef3c7;">Scan</span></div>
+    <div class="badge" style="background:rgba(255,255,255,0.2); color:white; border:1px solid rgba(255,255,255,0.3);">La solution 💡</div>
+  </div>
+  <div style="flex:1; display:flex; flex-direction:column; justify-content:center;">
+    <h2 style="font-size:72px; font-weight:900; color:white; line-height:1.0; margin-bottom:40px;">GlowScan analyse<br>ta peau comme<br>un dermatologue.</h2>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+      <div style="background:rgba(255,255,255,0.15); border-radius:20px; padding:32px; border:1px solid rgba(255,255,255,0.2);">
+        <div style="font-size:52px; margin-bottom:16px;">📷</div>
+        <div style="font-size:24px; font-weight:800; color:white; margin-bottom:8px;">Photo de ta peau</div>
+        <div style="font-size:18px; color:rgba(255,255,255,0.7);">Visage, corps ou cheveux</div>
+      </div>
+      <div style="background:rgba(255,255,255,0.15); border-radius:20px; padding:32px; border:1px solid rgba(255,255,255,0.2);">
+        <div style="font-size:52px; margin-bottom:16px;">🤖</div>
+        <div style="font-size:24px; font-weight:800; color:white; margin-bottom:8px;">IA analyse en 30s</div>
+        <div style="font-size:18px; color:rgba(255,255,255,0.7);">Diagnostic expert adapté à toi</div>
+      </div>
+      <div style="background:rgba(255,255,255,0.15); border-radius:20px; padding:32px; border:1px solid rgba(255,255,255,0.2);">
+        <div style="font-size:52px; margin-bottom:16px;">🌟</div>
+        <div style="font-size:24px; font-weight:800; color:white; margin-bottom:8px;">Glow Score /100</div>
+        <div style="font-size:18px; color:rgba(255,255,255,0.7);">Suis tes progrès dans le temps</div>
+      </div>
+      <div style="background:rgba(255,255,255,0.15); border-radius:20px; padding:32px; border:1px solid rgba(255,255,255,0.2);">
+        <div style="font-size:52px; margin-bottom:16px;">🧴</div>
+        <div style="font-size:24px; font-weight:800; color:white; margin-bottom:8px;">Produits adaptés</div>
+        <div style="font-size:18px; color:rgba(255,255,255,0.7);">Disponibles au Cameroun</div>
+      </div>
+    </div>
+  </div>
+  <div class="watermark">GlowScan</div>
+  <div class="slide-num">3/8</div>
+</div>
+
+<!-- CARD 4 : POUR QUI -->
+<div class="card" style="background:#0f172a; display:flex; flex-direction:column; padding:80px;">
+  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:60px;">
+    <div class="logo" style="color:white;">Glow<span style="color:#5eead4;">Scan</span></div>
+    <div class="badge" style="background:rgba(255,255,255,0.1); color:white; border:1px solid rgba(255,255,255,0.2);">Pour toi si...</div>
+  </div>
+  <div style="flex:1; display:flex; flex-direction:column; justify-content:center; gap:24px;">
+    <div style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:24px; padding:36px; display:flex; align-items:center; gap:32px;">
+      <div style="font-size:64px; flex-shrink:0;">🤎</div>
+      <div>
+        <div style="font-size:28px; font-weight:900; color:white; margin-bottom:8px;">Tu as une peau noire ou métissée</div>
+        <div style="font-size:20px; color:rgba(255,255,255,0.5);">GlowScan est conçu pour les phototypes IV-VI, pas pour tester les apps faites pour les autres</div>
+      </div>
+    </div>
+    <div style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:24px; padding:36px; display:flex; align-items:center; gap:32px;">
+      <div style="font-size:64px; flex-shrink:0;">🇨🇲</div>
+      <div>
+        <div style="font-size:28px; font-weight:900; color:white; margin-bottom:8px;">Tu es en Afrique francophone</div>
+        <div style="font-size:20px; color:rgba(255,255,255,0.5);">L'app est 100% en français. Les produits recommandés sont disponibles localement.</div>
+      </div>
+    </div>
+    <div style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:24px; padding:36px; display:flex; align-items:center; gap:32px;">
+      <div style="font-size:64px; flex-shrink:0;">💆🏾‍♀️</div>
+      <div>
+        <div style="font-size:28px; font-weight:900; color:white; margin-bottom:8px;">Tu veux enfin une routine qui marche</div>
+        <div style="font-size:20px; color:rgba(255,255,255,0.5);">Plus d'essais ratés. GlowScan te dit exactement quoi faire le matin et le soir.</div>
+      </div>
+    </div>
+  </div>
+  <div class="watermark">GlowScan</div>
+  <div class="slide-num">4/8</div>
+</div>
+
+<!-- CARD 5 : PRIX -->
+<div class="card" style="background:white; display:flex; flex-direction:column; padding:80px;">
+  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:60px;">
+    <div class="logo" style="color:#111827;">Glow<span>Scan</span></div>
+    <div class="badge" style="background:#f0fdfa; color:#0d9488;">Les forfaits 💳</div>
+  </div>
+  <div style="flex:1; display:flex; flex-direction:column; justify-content:center; gap:28px;">
+    <h2 style="font-size:56px; font-weight:900; color:#111827; line-height:1.0; margin-bottom:20px;">Moins cher qu'un<br>seul produit raté.</h2>
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:20px;">
+      <div style="background:#f9fafb; border-radius:24px; padding:40px; border:2px solid #e5e7eb; text-align:center;">
+        <div style="font-size:36px; margin-bottom:16px;">🆓</div>
+        <div style="font-size:22px; font-weight:900; color:#111827; margin-bottom:8px;">Gratuit</div>
+        <div style="font-size:48px; font-weight:900; color:#111827; line-height:1; margin-bottom:8px;">0F</div>
+        <div style="font-size:16px; color:#6b7280; margin-bottom:24px;">pour toujours</div>
+        <div style="font-size:15px; color:#6b7280; line-height:1.7; text-align:left;">✓ 3 analyses/mois<br>✓ Glow Score<br>✓ Diagnostic IA</div>
+      </div>
+      <div style="background:linear-gradient(160deg, #f0fdfa, #ccfbf1); border-radius:24px; padding:40px; border:3px solid #0d9488; text-align:center; position:relative;">
+        <div style="position:absolute; top:-16px; left:50%; transform:translateX(-50%); background:#0d9488; color:white; font-size:13px; font-weight:800; padding:6px 20px; border-radius:999px; white-space:nowrap;">POPULAIRE</div>
+        <div style="font-size:36px; margin-bottom:16px;">⭐</div>
+        <div style="font-size:22px; font-weight:900; color:#111827; margin-bottom:8px;">Hebdo</div>
+        <div style="font-size:48px; font-weight:900; color:#0d9488; line-height:1; margin-bottom:8px;">500F</div>
+        <div style="font-size:16px; color:#6b7280; margin-bottom:24px;">par semaine</div>
+        <div style="font-size:15px; color:#374151; line-height:1.7; text-align:left;">✓ Analyses illimitées<br>✓ Routine personnalisée<br>✓ Boutique complète<br>✓ SkinBot IA</div>
+      </div>
+      <div style="background:linear-gradient(160deg, #fef3c7, #fef9c3); border-radius:24px; padding:40px; border:2px solid #fbbf24; text-align:center;">
+        <div style="font-size:36px; margin-bottom:16px;">👑</div>
+        <div style="font-size:22px; font-weight:900; color:#111827; margin-bottom:8px;">Mensuel</div>
+        <div style="font-size:48px; font-weight:900; color:#d4a017; line-height:1; margin-bottom:8px;">2000F</div>
+        <div style="font-size:16px; color:#6b7280; margin-bottom:24px;">par mois</div>
+        <div style="font-size:15px; color:#374151; line-height:1.7; text-align:left;">✓ Tout inclus<br>✓ +100 pts fidélité<br>✓ Badge Premium<br>✓ Meilleur rapport</div>
+      </div>
+    </div>
+  </div>
+  <div class="watermark" style="color:#e5e7eb; font-family:'Outfit'; font-weight:900; font-size:22px;">GlowScan</div>
+  <div class="slide-num" style="color:#e5e7eb;">5/8</div>
+</div>
+
+<!-- CARD 6 : TÉMOIGNAGES (fictifs réalistes) -->
+<div class="card" style="background:linear-gradient(160deg, #4c1d95, #5b21b6, #6d28d9); display:flex; flex-direction:column; padding:80px;">
+  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:60px;">
+    <div class="logo" style="color:white;">Glow<span style="color:#c4b5fd;">Scan</span></div>
+    <div class="badge" style="background:rgba(255,255,255,0.15); color:white; border:1px solid rgba(255,255,255,0.2);">Elles ont testé 🗣️</div>
+  </div>
+  <div style="flex:1; display:flex; flex-direction:column; justify-content:center; gap:24px;">
+    <div style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:24px; padding:36px;">
+      <div style="font-size:28px; margin-bottom:16px;">⭐⭐⭐⭐⭐</div>
+      <p style="font-size:26px; color:white; line-height:1.5; margin-bottom:20px; font-style:italic;">"J'ai essayé pendant des mois des crèmes pour mes taches. GlowScan m'a expliqué que c'était de l'hyperpigmentation post-acnéique et m'a donné une routine précise. En 3 semaines j'ai vu la différence."</p>
+      <div style="font-size:20px; font-weight:700; color:#c4b5fd;">— Aminata K., Douala</div>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+      <div style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:20px; padding:28px;">
+        <div style="font-size:20px; margin-bottom:12px;">⭐⭐⭐⭐⭐</div>
+        <p style="font-size:20px; color:white; line-height:1.5; font-style:italic;">"Mon glow score est passé de 58 à 74 en un mois. Je recommande à toutes mes amies."</p>
+        <div style="font-size:17px; font-weight:700; color:#c4b5fd; margin-top:12px;">— Christelle N., Yaoundé</div>
+      </div>
+      <div style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:20px; padding:28px;">
+        <div style="font-size:20px; margin-bottom:12px;">⭐⭐⭐⭐⭐</div>
+        <p style="font-size:20px; color:white; line-height:1.5; font-style:italic;">"Enfin une app qui comprend la peau noire. Je l'utilise chaque semaine pour suivre ma routine."</p>
+        <div style="font-size:17px; font-weight:700; color:#c4b5fd; margin-top:12px;">— Fatoumata D., Abidjan</div>
+      </div>
+    </div>
+  </div>
+  <div class="watermark">GlowScan</div>
+  <div class="slide-num">6/8</div>
+</div>
+
+<!-- CARD 7 : CHIFFRES CLÉS -->
+<div class="card" style="background:#f9fafb; display:flex; flex-direction:column; padding:80px;">
+  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:60px;">
+    <div class="logo" style="color:#111827;">Glow<span>Scan</span></div>
+    <div class="badge" style="background:#f0fdfa; color:#0d9488;">En chiffres 📊</div>
+  </div>
+  <div style="flex:1; display:flex; flex-direction:column; justify-content:center; gap:28px;">
+    <h2 style="font-size:56px; font-weight:900; color:#111827; line-height:1.0; margin-bottom:12px;">GlowScan c'est déjà</h2>
+    <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:20px;">
+      <div style="background:linear-gradient(160deg, #0d9488, #0f766e); border-radius:24px; padding:48px; text-align:center;">
+        <div style="font-size:88px; font-weight:900; color:white; line-height:1;">300+</div>
+        <div style="font-size:24px; color:rgba(255,255,255,0.7); margin-top:12px;">utilisatrices actives<br>à Douala & Yaoundé</div>
+      </div>
+      <div style="background:linear-gradient(160deg, #fbbf24, #d4a017); border-radius:24px; padding:48px; text-align:center;">
+        <div style="font-size:88px; font-weight:900; color:white; line-height:1;">30s</div>
+        <div style="font-size:24px; color:rgba(255,255,255,0.7); margin-top:12px;">pour avoir ton<br>diagnostic complet</div>
+      </div>
+      <div style="background:linear-gradient(160deg, #7c3aed, #6d28d9); border-radius:24px; padding:48px; text-align:center;">
+        <div style="font-size:88px; font-weight:900; color:white; line-height:1;">450+</div>
+        <div style="font-size:24px; color:rgba(255,255,255,0.7); margin-top:12px;">analyses IA<br>effectuées</div>
+      </div>
+      <div style="background:linear-gradient(160deg, #16a34a, #15803d); border-radius:24px; padding:48px; text-align:center;">
+        <div style="font-size:88px; font-weight:900; color:white; line-height:1;">94%</div>
+        <div style="font-size:24px; color:rgba(255,255,255,0.7); margin-top:12px;">de précision<br>diagnostique</div>
+      </div>
+    </div>
+  </div>
+  <div class="watermark" style="color:#e5e7eb; font-family:'Outfit'; font-weight:900; font-size:22px;">GlowScan</div>
+  <div class="slide-num" style="color:#e5e7eb;">7/8</div>
+</div>
+
+<!-- CARD 8 : CTA FINAL -->
+<div class="card" style="background:linear-gradient(135deg, #111827 0%, #0d9488 100%); display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; padding:80px;">
+  <div style="font-size:100px; margin-bottom:40px;">🚀</div>
+  <h2 style="font-size:80px; font-weight:900; color:white; line-height:1.0; margin-bottom:24px;">Essaie<br>gratuitement.</h2>
+  <p style="font-size:28px; color:rgba(255,255,255,0.7); line-height:1.5; margin-bottom:60px; max-width:700px;">Pas de carte. Pas d'inscription obligatoire.<br>Juste ta photo et 30 secondes.</p>
+  <div style="background:rgba(255,255,255,0.1); border:2px solid rgba(255,255,255,0.25); border-radius:28px; padding:48px 80px; margin-bottom:48px;">
+    <div style="font-size:40px; font-weight:900; color:white;">glowscan.replit.app</div>
+  </div>
+  <div style="display:flex; gap:20px; flex-wrap:wrap; justify-content:center;">
+    <div style="background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); border-radius:20px; padding:24px 40px; text-align:center;">
+      <div style="font-size:36px; font-weight:900; color:#fbbf24;">3</div>
+      <div style="font-size:16px; color:rgba(255,255,255,0.6); margin-top:4px;">scans gratuits/mois</div>
+    </div>
+    <div style="background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); border-radius:20px; padding:24px 40px; text-align:center;">
+      <div style="font-size:36px; font-weight:900; color:#5eead4;">500F</div>
+      <div style="font-size:16px; color:rgba(255,255,255,0.6); margin-top:4px;">pour débloquer tout</div>
+    </div>
+    <div style="background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); border-radius:20px; padding:24px 40px; text-align:center;">
+      <div style="font-size:36px; font-weight:900; color:#f97316;">📲</div>
+      <div style="font-size:16px; color:rgba(255,255,255,0.6); margin-top:4px;">Fonctionne sur téléphone</div>
+    </div>
+  </div>
+  <div style="margin-top:60px; font-size:20px; font-weight:700; color:rgba(255,255,255,0.4);">@glowscan.cm</div>
+  <div class="slide-num">8/8</div>
+</div>
+
+</body>
+</html>

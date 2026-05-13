@@ -1,0 +1,2822 @@
+import type { Express } from "express";
+import { createServer, type Server } from "http";
+import { storage } from "./storage";
+import { setupAuth } from "./replit_integrations/auth";
+import { registerAuthRoutes } from "./replit_integrations/auth/routes";
+import { registerProRoutes } from "./proRoutes";
+import { objectStorageClient } from "./replit_integrations/object_storage/objectStorage";
+import { api } from "@shared/routes";
+import { z } from "zod";
+import OpenAI from "openai";
+import webpush from "web-push";
+import { db } from "./db";
+import { referrals, loyaltyPoints, subscriptions, scans, leads, premiumRequests, wellnessLogs } from "@shared/schema";
+import { users } from "@shared/models/auth";
+import { eq, and, sql, gte, count, lte, desc, avg } from "drizzle-orm";
+import { whatsappClicks, orders, pageVisits } from "@shared/schema";
+
+const openai = new OpenAI({
+  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+});
+
+/**
+ * Récupère l'ID utilisateur quelle que soit la méthode d'auth :
+ * - Auth custom GlowScan  → req.session.userId  ou req.user.id
+ * - Replit OIDC           → req.user.claims.sub
+ */
+function getUID(req: any): string | null {
+  return req.session?.userId
+    || req.user?.id
+    || (req.user as any)?.claims?.sub
+    || null;
+}
+
+/** Vérifie qu'un utilisateur est connecté (auth custom OU Replit OIDC) */
+function isAuth(req: any): boolean {
+  return !!(req.session?.userId || req.user?.id || (req.user as any)?.claims?.sub);
+}
+
+// Stockage temporaire d'images pour contourner la limitation base64 du proxy
+// Les images sont servies via une URL publique /api/img/:id
+import { randomUUID } from "crypto";
+const tempImages = new Map<string, { buffer: Buffer; mime: string; expiresAt: number }>();
+// Nettoyage toutes les 10 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [id, img] of tempImages.entries()) {
+    if (img.expiresAt < now) tempImages.delete(id);
+  }
+}, 10 * 60 * 1000);
+
+// === Upload de la photo d'analyse vers Object Storage ===
+// Stratégie "zero data loss" PHOTO : chaque image envoyée à /api/analyze est
+// archivée dans le bucket privé pour bâtir le dataset dermato africain.
+// Retourne un chemin /objects/scans/<uuid>.<ext> exploitable via la route GET /objects/*.
+async function uploadScanImageToStorage(base64DataUrl: string): Promise<string | null> {
+  try {
+    const match = base64DataUrl.match(/^data:(image\/[a-z+]+);base64,(.+)$/i);
+    let mime = "image/jpeg";
+    let b64 = base64DataUrl;
+    if (match) {
+      mime = match[1].toLowerCase();
+      b64 = match[2];
+    }
+    const buffer = Buffer.from(b64, "base64");
+    if (buffer.length === 0) return null;
+
+    const ext = (mime.split("/")[1] || "jpg").replace("jpeg", "jpg");
+    const privateDir = process.env.PRIVATE_OBJECT_DIR || "";
+    if (!privateDir) {
+      console.error("[analyze] ❌ PRIVATE_OBJECT_DIR non défini — photo non sauvegardée");
+      return null;
+    }
+
+    const objectId = `${randomUUID()}.${ext}`;
+    const fullPath = `${privateDir.startsWith("/") ? "" : "/"}${privateDir}/scans/${objectId}`;
+    const parts = fullPath.split("/").filter(Boolean);
+    const bucketName = parts[0];
+    const objectName = parts.slice(1).join("/");
+
+    const bucket = objectStorageClient.bucket(bucketName);
+    const file = bucket.file(objectName);
+    await file.save(buffer, {
+      contentType: mime,
+      resumable: false,
+      metadata: {
+        metadata: {
+          "custom:aclPolicy": JSON.stringify({ owner: "system", visibility: "private" }),
+        },
+      },
+    });
+
+    return `/objects/scans/${objectId}`;
+  } catch (err) {
+    console.error("[analyze] ❌ Échec upload photo vers Object Storage:", err);
+    return null;
+  }
+}
+
+export async function registerRoutes(
+  httpServer: Server,
+  app: Express
+): Promise<Server> {
+  // Setup Auth
+  await setupAuth(app);
+  registerAuthRoutes(app);
+  registerProRoutes(app);
+
+  // === Servir les photos d'analyses depuis Object Storage ===
+  // Authentification requise + l'utilisateur ne peut voir QUE ses propres photos.
+  app.get("/objects/scans/:filename", async (req, res) => {
+    // 1) Bypass admin si la session a déjà été marquée admin par /api/admin/dataset.
+    //    On NE lit PLUS la clé admin depuis l'URL (fuite via logs/historique).
+    const isAdmin = (req.session as any)?.isAdmin === true;
+
+    if (!isAdmin) {
+      if (!isAuth(req)) return res.status(401).json({ message: "Unauthorized" });
+      const userId = getUID(req);
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+      const objectPath = `/objects/scans/${req.params.filename}`;
+      const userScans = await storage.getScansByUser(userId);
+      const owns = userScans.some((s) => s.imageUrl === objectPath);
+      if (!owns) return res.status(403).json({ message: "Forbidden" });
+    }
+
+    const objectPath = `/objects/scans/${req.params.filename}`;
+    try {
+      const { ObjectStorageService } = await import("./replit_integrations/object_storage/objectStorage");
+      const svc = new ObjectStorageService();
+      const file = await svc.getObjectEntityFile(objectPath);
+      await svc.downloadObject(file, res);
+    } catch (err) {
+      console.error("[objects] erreur lecture photo:", err);
+      return res.status(404).json({ message: "Not found" });
+    }
+  });
+
+  // === Route de service d'images temporaires ===
+  // Permet à OpenAI d'accéder aux images via URL publique au lieu de base64
+  app.get("/api/img/:id", (req, res) => {
+    const img = tempImages.get(req.params.id);
+    if (!img) return res.status(404).send("Not found");
+    res.setHeader("Content-Type", img.mime);
+    res.setHeader("Cache-Control", "no-store");
+    res.send(img.buffer);
+  });
+
+  // === AI Analysis Endpoint ===
+  // === Helper: vérifier statut abonnement + comptage scans du mois ===
+  const FREE_SCAN_LIMIT = 9999;
+  const PREMIUM_PRICE_FCFA = 1000;
+
+  async function checkScanQuota(userId: string): Promise<{ allowed: boolean; isPremium: boolean; scansThisMonth: number; reason?: string }> {
+    // 1. Vérifier abonnement actif
+    const activeSub = await db.select().from(subscriptions)
+      .where(and(
+        eq(subscriptions.userId, userId),
+        eq(subscriptions.status, "active"),
+        gte(subscriptions.expiresAt, new Date()),
+      ))
+      .limit(1);
+
+    if (activeSub.length > 0) {
+      return { allowed: true, isPremium: true, scansThisMonth: 0 };
+    }
+
+    // 2. Compter scans du mois en cours
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    const result = await db.select({ count: count() }).from(scans)
+      .where(and(
+        eq(scans.userId, userId),
+        gte(scans.createdAt, startOfMonth),
+      ));
+
+    const scansThisMonth = result[0]?.count ?? 0;
+    const allowed = scansThisMonth < FREE_SCAN_LIMIT;
+    return {
+      allowed,
+      isPremium: false,
+      scansThisMonth,
+      reason: allowed ? undefined : `Limite atteinte (${FREE_SCAN_LIMIT} analyses/mois)`,
+    };
+  }
+
+  app.post(api.scans.analyze.path, async (req: any, res) => {
+    try {
+      const { image, area } = api.scans.analyze.input.parse(req.body);
+
+      if (!image) {
+        return res.status(400).json({ message: "Image is required" });
+      }
+
+      // === Auth check : 1 analyse anonyme autorisée, ensuite compte requis ===
+      const userId = req.session?.userId || req.user?.id || (req.user as any)?.claims?.sub;
+      const isAnonymous = !isAuth(req);
+
+      if (isAnonymous) {
+        // Déjà utilisé son analyse anonyme → invitation à créer un compte
+        if (req.session?.anonymousScanUsed) {
+          return res.status(401).json({
+            code: "ANON_QUOTA_EXCEEDED",
+            message: "Crée un compte gratuit pour continuer tes analyses.",
+          });
+        }
+      } else {
+        // === Vérification quota utilisateur connecté ===
+        const quota = await checkScanQuota(userId!);
+        if (!quota.allowed) {
+          return res.status(403).json({
+            code: "QUOTA_EXCEEDED",
+            message: quota.reason,
+            scansThisMonth: quota.scansThisMonth,
+            limit: FREE_SCAN_LIMIT,
+            priceFcfa: PREMIUM_PRICE_FCFA,
+          });
+        }
+      }
+
+      const areaLabels: Record<string, string> = {
+        face: "visage",
+        body: "corps",
+        hair: "cheveux et cuir chevelu"
+      };
+      const areaLabel = areaLabels[area] || area;
+
+      const prompt = `Tu es un dermatologue clinique expert (15+ ans d'expérience) spécialisé dans les peaux africaines et afro-descendantes (phototypes IV-VI). Tu travailles en cabinet à Douala, Cameroun. Tes diagnostics sont relus et corrigés par un dermatologue humain qui valide le dataset GlowScan — donc DONNE TON MEILLEUR DIAGNOSTIC AFFIRMATIF, ne reste jamais vague, ne reporte jamais à un autre scan.
+
+══ POSTURE CLINIQUE — RÈGLE ABSOLUE ══
+Tu es CONFIANT à 95%. Le dermatologue humain corrigera les 5% restants via le dataset RLHF.
+• INTERDIT : "à confirmer", "préliminaire", "incertain", "rescan recommandé", "qualité photo insuffisante", "Peau Mixte (équilibre à confirmer)".
+• OBLIGATOIRE : un diagnostic médical PRÉCIS et NOMMÉ pour la zone analysée, même si la photo n'est pas parfaite — tu es un clinicien expérimenté qui sait diagnostiquer dans des conditions réelles.
+• Ton diagnostic est ZONE PAR ZONE : front, joue droite, joue gauche, nez/zone T, menton, contour des yeux, tempes, cou, cuir chevelu (selon l'image).
+• Pour CHAQUE zone tu donnes : un statut (red/yellow/green), une condition médicale précise, un % de sévérité (0-100), et une explication clinique.
+
+══ DÉTECTION DES LÉSIONS — TOUJOURS AFFIRMATIVE ══
+LÉSIONS PHYSIQUES → toujours nommer :
+• Papule / pustule / bouton (relief visible, rouge ou blanc) → "Acné inflammatoire" + sévérité
+• Comédons ouverts (points noirs) → "Acné rétentionnelle légère"
+• Plaque squameuse, croûte → "Eczéma" / "Dermatite séborrhéique" / "Psoriasis"
+• Zone de perte de cheveux → "Alopécie de traction" / "Alopécie areata"
+• Taches sombres sur peau noire → "Hyperpigmentation post-inflammatoire (PIH)" ou "Mélasma" (si symétrique joues/front)
+
+══ PEAU MASCULINE ══
+La peau masculine a des caractéristiques naturelles différentes qui ne sont PAS des pathologies :
+• Pores naturellement plus larges et visibles (testostérone) → ne pas diagnostiquer "pores très dilatés grade 3"
+• Production de sébum naturellement plus élevée → une peau masculine brillante sans lésions visibles = peau normale
+• Texture plus épaisse et rugueuse → ne pas confondre avec eczéma ou dermatite
+• Zone T brillante chez un homme = absolument normale
+Si la peau masculine n'a pas de lésions clairement visibles (papules, pustules, comédons ouverts), le score minimal doit être 70/100.
+
+══ ÉCLAIRAGE & REFLETS — RÈGLE STRICTE ANTI-FAUX-POSITIF ══
+Sur peau foncée riche en mélanine, les reflets de lumière (LED plafond, fenêtre, flash téléphone, écran) créent des PETITS POINTS BRILLANTS BLANCS qui ressemblent visuellement à des pustules ou des comédons. Tu DOIS les distinguer absolument :
+
+CARACTÉRISTIQUES D'UN REFLET LUMINEUX (à IGNORER, ce N'EST PAS de l'acné) :
+• Couleur blanc pur ou bleuté, lumineux, presque "métallique"
+• Aligné géométriquement sur les reliefs gras (front, nez, pommettes saillantes, lèvres, menton)
+• Distribution symétrique miroir gauche/droite suivant la courbure du visage
+• Pas de halo rouge ou inflammatoire autour
+• Disparaît quand on bouge la lampe — sur photo : suit la zone la plus convexe
+
+CARACTÉRISTIQUES D'UNE VRAIE LÉSION ACNÉIQUE (à diagnostiquer) :
+• Papule rouge/brune avec relief, halo érythémateux périphérique
+• Pustule = point blanc-jaunâtre AVEC base rouge inflammatoire visible
+• Comédon ouvert = point NOIR (pas blanc lumineux), texture mate
+• Comédon fermé = micro-bosse couleur peau, mate, pas brillante
+• Distribution asymétrique, indépendante des reliefs
+
+RÈGLE D'OR : Si tu vois des points blancs lumineux SANS halo rouge, SANS asymétrie, alignés sur le nez/front/menton (zones grasses qui réfléchissent la lumière) → ce sont des REFLETS, pas de l'acné. Diagnostique "Peau Saine avec Brillance Naturelle" ou "Séborrhée Légère" (pas d'acné).
+Si tu hésites : marque yellow (à surveiller) plutôt que red, JAMAIS de "Acné" sans halo inflammatoire visible.
+
+══ DIAGNOSTIC CLINIQUE PRÉCIS ══
+Tu dois identifier LA condition dermatologique dominante parmi ces catégories (être très spécifique) :
+
+VISAGE — Conditions à détecter :
+• Acné vulgaire (comédons, papules, pustules) — légère / modérée / sévère
+• Acné kystique ou nodulaire (lésions profondes douloureuses)
+• Acné post-inflammatoire (marques, macules hyperpigmentées)
+• Eczéma atopique (plaques rouges ou sombres, sécheresse, desquamation)
+• Dermatite de contact (rougeurs localisées, irritation de contact)
+• Dermatite séborrhéique (zones grasses avec squames jaunâtres : nez, sourcils)
+• Rosacée (rougeur diffuse, télangiectasies, peau réactive)
+• Hyperpigmentation post-inflammatoire (taches sombres zones ex-lésions)
+• Mélasma (masque de grossesse — taches symétriques joues/front)
+• Peau grasse / séborrhéique (excès sébum, pores dilatés, brillance)
+• Peau déshydratée (tiraillements, micro-fissures, teint terne)
+• Peau sensible réactive (rougeurs diffuses, réactivité, inconfort)
+• Folliculite (petites pustules autour follicules — fréquent barbe/tempes)
+• Teigne / dermatomycose (lésions circulaires, squames — si corps)
+• Kératose pilaire (petits grains sur joues ou bras — "chair de poule")
+
+CORPS — Conditions à détecter :
+• Eczéma atopique (plaques chroniques plis coudes, genoux, mollets)
+• Psoriasis (plaques épaisses blanches/argentées, bords nets — coudes, genoux, dos)
+• Dermatite de contact (irritation zone spécifique de contact)
+• Xérose sévère / ichtyose (peau très sèche, craquelée, squameuse)
+• Hyperpigmentation / dyschromie (taches, coudes noirs, zones sombres)
+• Vergetures (stries rouges ou blanches — croissance, grossesse)
+• Folliculite / kératose pilaire (bras, cuisses, fesses)
+• Candidose / mycose cutanée (zones humides — plis, entre orteils)
+
+CHEVEUX / CUIR CHEVELU :
+• Dermatite séborrhéique du cuir chevelu (pellicules grasses, squames jaunes)
+• Pellicules sèches (squames blanches fines, démangeaisons)
+• Alopécie de traction (zones de perte liées coiffures serrées — très fréquent Afrique)
+• Alopécie areata (zones chauves rondes bien délimitées)
+• Cheveux secs et poreux (crépus/défrisés abîmés, cassants, pointes fourches)
+• Cuir chevelu sec et irrité (inconfort, squames, sensibilité)
+• Tinea capitis / teigne (squames, zones alopécie — enfants fréquent)
+
+══ SCORING CALIBRÉ ══
+• 85-100 : Peau nette, aucune lésion visible, teint uniforme
+• 72-84 : Très bonne peau, imperfections mineures naturelles (brillance légère, pores fins)
+• 58-71 : 1 à 3 lésions visibles (boutons, petites taches) — acné légère, hyperpigmentation discrète
+• 40-57 : Plusieurs lésions visibles ou condition modérée confirmée
+• 20-39 : Condition significative avec lésions multiples ou étendues
+• 0-19 : Condition sévère nécessitant suivi médical
+EXEMPLES CONCRETS :
+→ 2 boutons visibles sur peau par ailleurs nette = 62-68
+→ Peau nette mais zone T brillante = 78-82
+→ 5+ boutons ou taches visibles = 45-55
+→ Peau parfaitement saine = 87-95
+
+══ FORMAT DE RÉPONSE — JSON UNIQUEMENT ══
+Retourne UNIQUEMENT ce JSON valide, sans texte avant ni après :
+{
+  "score": number (0-100 selon le barème calibré ci-dessus),
+  "condition": "OBLIGATOIRE : terme médical précis SUIVI de son explication entre parenthèses. Format : 'Terme médical (explication simple en langage courant)'. Exemples valides : 'Acné Vulgaire Légère (boutons rouges actifs sur la zone T)', 'Hyperpigmentation Post-Inflammatoire (taches sombres laissées par d'anciens boutons)', 'Dermatite Séborrhéique (excès de sébum avec rougeurs et squames)', 'Xérose Cutanée (peau très sèche manquant de lipides)', 'Peau Nette — Type Mixte (peau saine avec zone T légèrement plus grasse)'. JAMAIS écrire 'Peau Normale' seul sans type précis. JAMAIS de terme médical sans son explication.",
+  "severity": "Légère" | "Modérée" | "Sévère",
+  "skinType": "Type précis avec explication (ex: 'Peau Grasse à Tendance Acnéique (production excessive de sébum favorisant les boutons)', 'Peau Sèche et Réactive (manque d'hydratation, sensible aux agressions)', 'Cuir Chevelu Séborrhéique (excès de gras au niveau du cuir chevelu)')",
+  "details": "Analyse clinique MÉDICALE en 3-4 phrases. RÈGLE ABSOLUE : chaque terme médical (papules, pustules, comédons ouverts, comédons fermés, macules PIH, plaques érythémateuses, squames, érythème, télangiectasies, etc.) DOIT être suivi immédiatement de son explication entre parenthèses en langage courant. Exemples : 'Détection d'une acné inflammatoire (boutons rouges actifs) sur le front et le menton. Présence de comédons ouverts (points noirs) sur la zone T et de comédons fermés (points blancs) sur les joues.' OU 'Hyperpigmentation post-inflammatoire détectée (taches sombres laissées par d'anciens boutons) sur la joue gauche.' Ton bienveillant, utilise 'ta peau' et 'tu', jamais alarmiste, toujours encourageant.",
+  "zones": [
+    "OBLIGATOIRE : 3 à 6 zones avec leur état. Format pour chaque zone : { \"name\": \"Front\" | \"Joue gauche\" | \"Joue droite\" | \"Nez\" | \"Menton\" | \"Contour des lèvres\" | \"Cuir chevelu\" | \"Tempes\" | \"Cou\", \"status\": \"red\" (problème actif visible) | \"yellow\" (à surveiller) | \"green\" (zone saine), \"issue\": \"Brève description si red/yellow, ex: 'Comédons fermés (points blancs)' — vide si green\" }"
+  ],
+  "motivation": "Conseil d'action concret en 1 phrase — ce que l'utilisateur doit faire en premier (ex: 'Commence par un nettoyant doux à l'acide salicylique 2× par jour pendant 3 semaines et rescanne pour voir ta progression.')",
+  "stats": {
+    "lesions": "Description précise (ex: Papules inflammatoires (8-12), Plaques eczémateuses, Macules hyperpigmentées (15+))",
+    "zones": "Localisation anatomique précise (ex: Zone T + Menton, Plis des coudes, Cuir chevelu frontal)",
+    "pores": "État et taille (ex: Très dilatés — grade 3, Obstrués points noirs, Fins et invisibles)",
+    "marks": "Type et quantité (ex: 6 cicatrices post-acné, Taches PIH diffuses, Squames blanches)"
+  },
+  "balance": {
+    "inflammation": number (0-10, 0=aucune, 10=inflammation massive),
+    "sebum": number (0-10, 0=peau très sèche, 10=excès sébum extrême),
+    "pores": number (0-10, 0=pores invisibles, 10=pores très dilatés),
+    "sensitivity": number (0-10, 0=peau robuste, 10=peau très réactive),
+    "scars": number (0-10, 0=aucune marque, 10=cicatrices/taches sévères)
+  },
+  "recommendations": {
+    "products": [
+      "UN SEUL produit (le plus essentiel pour le diagnostic). Tableau d'1 élément maximum. Règles de sélection STRICTES — dans cet ordre de priorité : 1) MARQUE LOCALE camerounaise OBLIGATOIRE en premier choix (Andrea Skincare, Ebony Hair, Hair Bloom) — ce sont nos partenaires, ils sont accessibles, abordables, formulés pour peaux noires. Pour CHEVEUX/CUIR CHEVELU = TOUJOURS Ebony Hair (Bain d'Huile, Soin Profond Lekie, Shampoing Solide, Spray Démêlant, Mousse Karité, Activateur de Repousse pour alopécie, Huile de Ricin/Avocat/Ail/Neem/Coco/Fenugrec selon le besoin). Pour VISAGE = priorise Andrea Skincare (Crème visage, Sérum Jeunesse Bluffant, Solution Douceur Lotion Traitante anti-imperfections, Potion Lumière Super Éclat anti-taches). 2) Si VRAIMENT aucun produit local ne convient au diagnostic, alors marque internationale ABORDABLE uniquement (Garnier, Nivea, Ambi, Kojie San, L'Oréal Paris). 3) JAMAIS recommander Bioderma, La Roche-Posay, CeraVe, Neutrogena, The Ordinary, Clinique, Caudalie — trop chers pour le marché camerounais."
+    ],
+    "morning": [
+      "Étape 1 matin précise avec produit nommé",
+      "Étape 2 matin précise avec produit nommé",
+      "Étape 3 matin (SPF si visage exposé)"
+    ],
+    "evening": [
+      "Étape 1 soir précise avec produit nommé",
+      "Étape 2 soir précise avec produit nommé",
+      "Étape 3 soir précise avec produit nommé"
+    ],
+    "weekly": "Soin hebdomadaire spécifique au diagnostic (ex: Masque argile 1×/semaine pour peau grasse, Gommage doux 1×/semaine pour hyperpigmentation)"
+  },
+  "predictiveInsights": {
+    "risks": [
+      {
+        "level": "high" | "medium" | "low",
+        "risk": "Risque précis basé sur les signes visibles (ex: 'Sans traitement, ces papules risquent de laisser des taches hyperpigmentées permanentes sur peau foncée', 'L'alopécie de traction visible aux tempes peut devenir irréversible en 3-6 mois si les coiffures serrées continuent')",
+        "delay": "Délai estimé avant que le risque se matérialise (ex: '2-4 semaines', '1-3 mois', '6 mois')"
+      }
+    ],
+    "actionWindow": "Phrase courte sur l'urgence d'agir maintenant (ex: 'Tu es dans la phase réversible — agis dans les 3 prochaines semaines pour éviter des séquelles.', 'Condition stabilisée mais sans soin actif elle évoluera dans 1 mois.')"
+  },
+  "metrics": {
+    "hydratation": "number 0-100 — niveau d'hydratation cutanée OBSERVÉ sur la photo (peau tendue/lisse=élevé, ridules de déshydratation/teint terne=bas). Estime sincèrement, ne donne pas toujours 70.",
+    "eclat": "number 0-100 — éclat / luminosité du teint OBSERVÉ (teint frais et lumineux=élevé, terne grisâtre=bas)",
+    "purete": "number 0-100 — pureté cutanée OBSERVÉE (peau nette sans lésions=élevé, comédons/papules/taches multiples=bas)"
+  },
+  "zoneAnalysis": [
+    {
+      "name": "Zone T & Nez" | "Joues" | "Front" | "Contour des yeux" | "Menton" | "Tempes" | "Pourtour de la bouche" | "Cuir chevelu" | "Cou" | (autres zones pertinentes selon la photo),
+      "status": "red" (problème actif visible) | "yellow" (à surveiller) | "green" (zone saine),
+      "short": "Phrase courte (≤ 20 mots) avec le constat médical PRINCIPAL OBSERVÉ sur la photo. Termes médicaux suivis de leur explication entre parenthèses. Ex: 'Séborrhée active (excès de sébum) avec comédons ouverts (points noirs) sur le nez.'",
+      "long": "Explication clinique étendue (3-5 phrases) UNIQUEMENT pour cette utilisatrice. Explique le mécanisme physiologique observé, le risque d'évolution, et la priorité de soin. Style dermatologue qui parle à sa patiente, ton bienveillant 'ta peau' / 'tu'. Pas de statistiques génériques. Pas de pourcentages."
+    }
+  ],
+  "conclusion": {
+    "short": "Conclusion médicale en 2 phrases maximum, qui résume le diagnostic dominant et la priorité de soin. Ex: 'L'analyse révèle une peau mixte à tendance déshydratée avec séborrhée en zone T et hyperpigmentation post-inflammatoire sur la joue gauche. La barrière cutanée semble fragilisée — priorité à l'hydratation et la régulation du sébum.'",
+    "long": "Conclusion dermatologique étendue (4-6 phrases) intégrant le diagnostic, l'évaluation de la barrière cutanée, le pronostic d'évolution, et les axes thérapeutiques cosmétiques. Termes médicaux explicités. Termine par : 'Ce diagnostic IA est indicatif. Pour tout cas persistant ou sévère, une consultation dermatologique est recommandée.'"
+  },
+  "severityLevel": "number 1 à 5 selon le barème : 1 = peau saine ou très légèrement imparfaite (cosmétique simple suffit) ; 2 = cas léger à modéré (traitement cosmétique suffit) ; 3 = cas modéré (consultation dermatologue suggérée) ; 4 = cas marqué (consultation fortement recommandée) ; 5 = cas sévère (consultation médicale impérative). Sois calibré : un seul comédon = niveau 1, 2-3 boutons = niveau 2, acné inflammatoire active = 3, lésions étendues = 4, lésions sévères ou suspectes = 5.",
+  "severityLabel": "Court label correspondant (ex: 'Peau saine', 'Cas léger à modéré — traitement cosmétique suffit', 'Cas modéré — consultation dermatologue suggérée', 'Cas marqué — consultation dermatologue fortement recommandée', 'Cas sévère — consultation médicale impérative')",
+  "protocol": {
+    "morning": [
+      { "step": "Nom court de l'étape (ex: 'Nettoyant doux purifiant')", "product": "Catégorie de produit recommandée (ex: 'Gel moussant zone T à l'acide salicylique')", "why": "Bénéfice ciblé pour CETTE utilisatrice en 1 phrase courte (ex: 'pour éliminer l'excès de sébum sans agresser ta zone T')" },
+      { "step": "...", "product": "...", "why": "..." }
+    ],
+    "evening": [
+      { "step": "...", "product": "...", "why": "..." }
+    ]
+  }
+}
+
+══ RÈGLES STRICTES POUR LES NOUVEAUX CHAMPS ══
+• "metrics" : valeurs RÉELLEMENT estimées d'après la photo, varie selon le diagnostic (ne donne pas toujours 70/70/70).
+• "zoneAnalysis" : 3 à 5 zones MAX, uniquement celles pertinentes pour cette photo. Chaque "long" doit être UNIQUE à cette utilisatrice (jamais copié-collé d'un cas à l'autre).
+• "conclusion.long" : doit citer les zones et conditions DÉTECTÉES sur cette photo, pas une phrase générique.
+• "severityLevel" : ENTIER de 1 à 5, calibré honnêtement.
+• "protocol" : 4 étapes matin et 4 étapes soir avec un "why" personnalisé au diagnostic. Pour visage : SPF en dernière étape matin obligatoire.
+• ZÉRO STATISTIQUE GÉNÉRIQUE : interdit "X% des utilisateurs", "score moyen", "statistiquement". Tout doit être personnalisé à CETTE photo.
+
+RÈGLES POUR predictiveInsights :
+• Identifie 1 à 3 risques RÉELS basés sur ce que tu observes — pas de généralités vides
+• Le risque "high" = risque de séquelle irréversible (cicatrice, alopécie permanente, hyperpigmentation fixée)
+• Le risque "medium" = aggravation probable sans soin actif
+• Le risque "low" = inconfort ou imperfection mineure si rien n'est fait
+• actionWindow doit être spécifique et inciter à l'action immédiate
+• Adapte au contexte peau africaine : cicatrisation plus lente, risque PIH (hyperpigmentation post-inflammatoire) plus élevé, alopécie de traction fréquente
+
+RAPPEL FINAL — POSTURE DERMATO ASSURÉE :
+• Tu donnes TOUJOURS un diagnostic médical précis et nommé, jamais "préliminaire" ou "à confirmer"
+• Tu décris CHAQUE zone visible avec son état (red/yellow/green) et un % de sévérité estimé
+• Tu nommes la pathologie avec son terme médical exact suivi de son explication courante
+• Le dermatologue humain validera/corrigera ton diagnostic — tu n'as PAS à être prudent, tu dois être JUSTE
+• Photo imparfaite = tu fais quand même ton meilleur diagnostic clinique avec les éléments visibles
+• Aucune phrase défensive, aucun "consulter un médecin pour confirmer", aucun "rescan recommandé"`;
+
+      // Préparer le base64 pour OpenAI (envoi DIRECT, pas d'URL publique)
+      let mimeForOpenAI = "image/jpeg";
+      let rawBase64ForOpenAI = image;
+      try {
+        if (image.startsWith("data:")) {
+          const match = image.match(/^data:([^;]+);base64,(.+)$/);
+          if (match) { mimeForOpenAI = match[1]; rawBase64ForOpenAI = match[2]; }
+        }
+        const buffer = Buffer.from(rawBase64ForOpenAI, "base64");
+        if (buffer.length < 100) throw new Error("Image trop petite ou invalide");
+        console.log(`[analyze] Image prête (${Math.round(buffer.length / 1024)}KB) — envoi direct base64 à OpenAI`);
+      } catch (imgErr) {
+        console.error("[analyze] Erreur préparation image:", imgErr);
+        return res.status(400).json({ message: "Image invalide ou corrompue" });
+      }
+
+      // ── Appel IA — base64 EN DIRECT à OpenAI (pas d'URL publique) ──
+      // Pourquoi : en prod, OpenAI mettait 12-15s pour fetch chaque image depuis
+      // notre serveur Replit, et le SDK retentait 2× en silence → 37s par appel.
+      // Avec base64 data URL : zéro round-trip réseau, OpenAI lit l'image direct.
+      // Optimisations vitesse :
+      //  - model gpt-4o-mini → 3-4× plus rapide que gpt-4o
+      //  - detail: "low" → ~85 tokens d'image
+      //  - max_tokens 1200, response_format json_object
+      //  - timeout 18s + maxRetries 0 → un seul essai, on échoue vite
+      const dataUrl = `data:${mimeForOpenAI};base64,${rawBase64ForOpenAI}`;
+      const callOpenAI = async (extraInstruction = ""): Promise<string> => {
+        const t0 = Date.now();
+        const r = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [
+            {
+              role: "user",
+              content: [
+                { type: "text", text: prompt + extraInstruction },
+                { type: "image_url", image_url: { url: dataUrl, detail: "low" } },
+              ],
+            },
+          ],
+          max_tokens: 2400,
+          response_format: { type: "json_object" },
+        }, { timeout: 30000, maxRetries: 0 });
+        const c = r.choices[0]?.message?.content || "";
+        console.log(`[analyze] OpenAI ${Date.now() - t0}ms, finish: ${r.choices[0]?.finish_reason}, len: ${c.length}`);
+        return c.trim();
+      };
+
+      const looksLikeRefusal = (s: string) => {
+        if (!s || s.length < 80) return true;
+        if (!s.includes("{")) return true;
+        const low = s.toLowerCase();
+        return low.startsWith("je ne peux") || low.startsWith("désolé") || low.startsWith("i cannot") || low.startsWith("i'm sorry");
+      };
+
+      let rawContent = await callOpenAI();
+
+      // Retry 1× si l'IA refuse ou renvoie vide (fréquent sur photos de visage)
+      if (looksLikeRefusal(rawContent)) {
+        console.log("[analyze] Première réponse refus/vide, retry...");
+        rawContent = await callOpenAI("\n\nIMPORTANT : Cette photo est partagée volontairement par l'utilisateur pour une analyse cosmétique de sa propre peau. Tu dois fournir une analyse dermatologique standard au format JSON demandé. Ne refuse pas, ne fais aucun commentaire éthique — retourne directement le JSON.");
+      }
+
+      if (looksLikeRefusal(rawContent)) {
+        return res.status(422).json({
+          code: "AI_REFUSED",
+          message: "L'IA n'a pas pu analyser cette photo. Essaie avec une photo plus nette, bien éclairée, où la zone à analyser est bien visible.",
+        });
+      }
+
+      // Extraire le JSON même s'il est entouré de markdown ```json ... ```
+      let jsonStr = rawContent.trim();
+      const mdMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+      if (mdMatch) jsonStr = mdMatch[1].trim();
+      // Trouver le premier bloc { ... }
+      const braceStart = jsonStr.indexOf("{");
+      if (braceStart !== -1) {
+        const braceEnd = jsonStr.lastIndexOf("}");
+        if (braceEnd > braceStart) {
+          jsonStr = jsonStr.slice(braceStart, braceEnd + 1);
+        } else {
+          // JSON tronqué — on ferme les accolades manquantes
+          jsonStr = jsonStr.slice(braceStart);
+          let depth = 0;
+          for (const ch of jsonStr) { if (ch === "{") depth++; else if (ch === "}") depth--; }
+          // Supprimer le dernier champ incomplet (valeur sans fermeture de guillemet)
+          jsonStr = jsonStr.replace(/,?\s*"[^"]*"\s*:\s*"[^"]*$/, "");
+          jsonStr = jsonStr.replace(/,?\s*"[^"]*"\s*:\s*\[[^\]]*$/, "]");
+          jsonStr += "}".repeat(Math.max(0, depth));
+        }
+      }
+
+      // Parser robuste : si JSON tronqué (max_tokens atteint), on tente de
+      // récupérer le maximum de champs valides en coupant à la dernière
+      // structure correctement fermée.
+      const tryParse = (s: string): any | null => {
+        try { return JSON.parse(s); } catch { return null; }
+      };
+      let analysisResult: any = tryParse(jsonStr);
+      if (!analysisResult) {
+        // Stratégie de réparation : on coupe progressivement la fin du JSON
+        // jusqu'à trouver une troncature parsable, en fermant les structures.
+        let attempt = jsonStr;
+        for (let i = 0; i < 20 && !analysisResult; i++) {
+          // Couper après la dernière virgule de niveau racine
+          const lastComma = attempt.lastIndexOf(",");
+          if (lastComma === -1) break;
+          attempt = attempt.slice(0, lastComma);
+          // Compter les structures ouvertes pour les refermer
+          let curly = 0, square = 0, inStr = false, esc = false;
+          for (const ch of attempt) {
+            if (esc) { esc = false; continue; }
+            if (ch === "\\") { esc = true; continue; }
+            if (ch === '"') { inStr = !inStr; continue; }
+            if (inStr) continue;
+            if (ch === "{") curly++; else if (ch === "}") curly--;
+            else if (ch === "[") square++; else if (ch === "]") square--;
+          }
+          // Fermer string ouverte si besoin (rare)
+          let candidate = attempt + (inStr ? '"' : "");
+          candidate += "]".repeat(Math.max(0, square)) + "}".repeat(Math.max(0, curly));
+          analysisResult = tryParse(candidate);
+        }
+      }
+      if (!analysisResult) {
+        console.error("[analyze] JSON parse error irrécupérable. Raw:", rawContent.slice(0, 400));
+        throw new Error("L'IA n'a pas retourné un diagnostic valide. Réessaie avec une photo plus nette.");
+      }
+      console.log(`[analyze] ✅ JSON parsé (${Object.keys(analysisResult).length} champs racine)`);
+      
+      // Map generic AI recommendations to specific products from our catalog
+      // Vérifier que la réponse contient les champs essentiels
+      if (!analysisResult.condition && !analysisResult.score) {
+        throw new Error("Réponse IA incomplète — l'image ne semble pas être une photo de peau ou cheveux");
+      }
+
+      const { catalog } = await import("@shared/catalog");
+      // ─── Règles métier strictes (priorité dermato Cameroun) ──────
+      // 1) Plafond prix : 10 000 FCFA max (incluant la marge GlowScan de 3000)
+      // 2) Marques locales prioritaires : Andrea Skincare, Ebony Hair, Hair Bloom, IN'OYA
+      // 3) Un seul produit recommandé (le plus essentiel)
+      const PRICE_CAP = 10000;
+      const LOCAL_BRANDS = new Set(["Andrea Skincare", "Ebony Hair", "Hair Bloom", "IN'OYA"]);
+      const isLocal = (item: any) => LOCAL_BRANDS.has(item.brand || "");
+      const isAffordable = (item: any) => !item.price || item.price <= PRICE_CAP;
+
+      // Catalogue éligible : prix ≤ plafond
+      const affordableCatalog = catalog.filter(isAffordable);
+
+      const findBestMatch = (query: string) => {
+        const q = query.toLowerCase();
+        // Tentative 1 : match nom/id/targets dans le catalogue abordable, locale d'abord
+        const candidates = affordableCatalog.filter((item) => {
+          const name = item.name.toLowerCase();
+          return (
+            name.includes(q) ||
+            q.includes(name) ||
+            q.includes(item.id.replace(/-/g, " ")) ||
+            item.targets.some((t: string) => q.includes(t.toLowerCase()) || t.toLowerCase().includes(q.split(" ")[0]))
+          );
+        });
+        // Trier : marques locales en premier, puis par prix croissant
+        candidates.sort((a, b) => {
+          const la = isLocal(a) ? 0 : 1;
+          const lb = isLocal(b) ? 0 : 1;
+          if (la !== lb) return la - lb;
+          return (a.price || 0) - (b.price || 0);
+        });
+        return candidates[0];
+      };
+
+      const productList: string[] = analysisResult.recommendations?.products || [];
+      // Garde 1 seul produit final, en privilégiant ce que l'IA a suggéré comme principal
+      const firstSuggestion = productList[0];
+      let chosen = firstSuggestion ? findBestMatch(firstSuggestion) : undefined;
+      // Fallback : si aucun match abordable, on cherche par mots-clés du diagnostic
+      if (!chosen && analysisResult.condition) {
+        chosen = findBestMatch(String(analysisResult.condition));
+      }
+      // Ultime fallback : un produit local universel selon zone
+      if (!chosen) {
+        const zoneIsHair = (area === "hair") || /cheveux|cuir chevelu|alopécie|pellicule/i.test(String(analysisResult.condition || ""));
+        chosen = affordableCatalog.find((p) => isLocal(p) && (zoneIsHair ? p.category === "cheveux" : p.category === "visage"));
+      }
+      const recommendedProducts = chosen ? [chosen.name] : [];
+      console.log(`[analyze] 🛒 Recommandation: ${chosen?.name || "aucune"} (${chosen?.brand || "-"}, ${chosen?.price || 0} FCFA, local=${chosen ? isLocal(chosen) : false})`);
+
+      const finalScore = Math.min(analysisResult.score || 55, 70);
+
+      // ── Calcul progression Type 3 (scans précédents) ─────────
+      let progression: { previousScore: number; delta: number; trend: "improving" | "stable" | "worsening"; weeksTracked: number } | undefined;
+      if (userId) {
+        try {
+          const previousScans = await storage.getScansByUser(userId);
+          if (previousScans && previousScans.length > 0) {
+            const sorted = [...previousScans].sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+            const lastScan = sorted[0];
+            const previousScore = lastScan.score ?? null;
+            if (previousScore !== null) {
+              const delta = finalScore - previousScore;
+              const firstScan = sorted[sorted.length - 1];
+              const weeksTracked = Math.max(1, Math.round((Date.now() - new Date(firstScan.createdAt).getTime()) / (7 * 24 * 60 * 60 * 1000)));
+              progression = {
+                previousScore,
+                delta,
+                trend: delta > 3 ? "improving" : delta < -3 ? "worsening" : "stable",
+                weeksTracked,
+              };
+            }
+          }
+        } catch (e) {
+          // Progression non critique — on continue sans
+        }
+      }
+
+      // ── Insights prédictifs ───────────────────────────────────
+      const rawRisks = analysisResult.predictiveInsights?.risks || [];
+      const validRisks = rawRisks
+        .filter((r: any) => r && r.risk && r.delay && ["high","medium","low"].includes(r.level))
+        .slice(0, 3);
+      const predictiveInsights = {
+        risks: validRisks,
+        actionWindow: analysisResult.predictiveInsights?.actionWindow || "",
+        ...(progression ? { progression } : {}),
+      };
+
+      // ── Sanitize zones (max 6, valid status) ──────────────────
+      const validZones = Array.isArray(analysisResult.zones)
+        ? analysisResult.zones
+            .filter((z: any) => z && typeof z.name === "string" && ["red", "yellow", "green"].includes(z.status))
+            .slice(0, 6)
+            .map((z: any) => ({
+              name: String(z.name).slice(0, 40),
+              status: z.status,
+              issue: z.issue ? String(z.issue).slice(0, 120) : "",
+            }))
+        : [];
+
+      const finalResult = {
+        condition: analysisResult.condition || "Analyse cutanée",
+        severity: analysisResult.severity || "Modérée",
+        score: finalScore,
+        skinType: analysisResult.skinType || "Mixte",
+        details: analysisResult.details || "Analyse effectuée avec succès.",
+        motivation: analysisResult.motivation || "Continue ta routine pour de beaux résultats !",
+        zones: validZones,
+        stats: analysisResult.stats || {
+          lesions: "Non détecté",
+          zones: "Non détecté",
+          pores: "Non détecté",
+          marks: "Non détecté"
+        },
+        balance: analysisResult.balance || {
+          inflammation: 3,
+          sebum: 3,
+          pores: 3,
+          sensitivity: 3,
+          scars: 3
+        },
+        recommendations: {
+          products: recommendedProducts,
+          morning: analysisResult.recommendations?.morning || [],
+          evening: analysisResult.recommendations?.evening || [],
+          weekly: analysisResult.recommendations?.weekly || ""
+        },
+        predictiveInsights,
+        // ── Nouveaux champs RAPPORT MÉDICAL (générés par l'IA pour CETTE photo) ──
+        metrics: analysisResult.metrics && typeof analysisResult.metrics === "object" ? {
+          hydratation: Math.max(0, Math.min(100, Number(analysisResult.metrics.hydratation) || 0)),
+          eclat: Math.max(0, Math.min(100, Number(analysisResult.metrics.eclat) || 0)),
+          purete: Math.max(0, Math.min(100, Number(analysisResult.metrics.purete) || 0)),
+        } : undefined,
+        zoneAnalysis: Array.isArray(analysisResult.zoneAnalysis) ? analysisResult.zoneAnalysis
+          .filter((z: any) => z && typeof z.name === "string" && ["red", "yellow", "green"].includes(z.status))
+          .slice(0, 8)
+          .map((z: any) => ({
+            name: String(z.name).slice(0, 40),
+            status: z.status,
+            short: z.short ? String(z.short).slice(0, 280) : "",
+            long: z.long ? String(z.long).slice(0, 800) : "",
+          })) : undefined,
+        conclusion: analysisResult.conclusion && typeof analysisResult.conclusion === "object" ? {
+          short: String(analysisResult.conclusion.short || "").slice(0, 400),
+          long: String(analysisResult.conclusion.long || "").slice(0, 1500),
+        } : undefined,
+        severityLevel: typeof analysisResult.severityLevel === "number"
+          ? Math.max(1, Math.min(5, Math.round(analysisResult.severityLevel)))
+          : undefined,
+        severityLabel: analysisResult.severityLabel ? String(analysisResult.severityLabel).slice(0, 200) : undefined,
+        protocol: analysisResult.protocol && typeof analysisResult.protocol === "object" ? {
+          morning: Array.isArray(analysisResult.protocol.morning) ? analysisResult.protocol.morning
+            .slice(0, 6)
+            .map((s: any) => ({
+              step: String(s.step || "").slice(0, 80),
+              product: s.product ? String(s.product).slice(0, 120) : undefined,
+              why: s.why ? String(s.why).slice(0, 240) : undefined,
+            })) : [],
+          evening: Array.isArray(analysisResult.protocol.evening) ? analysisResult.protocol.evening
+            .slice(0, 6)
+            .map((s: any) => ({
+              step: String(s.step || "").slice(0, 80),
+              product: s.product ? String(s.product).slice(0, 120) : undefined,
+              why: s.why ? String(s.why).slice(0, 240) : undefined,
+            })) : [],
+        } : undefined,
+      };
+
+      // ── Sauvegarde TOUJOURS — aucune analyse ne doit être perdue ─────────
+      // Stratégie : si userId connu → rattachement direct.
+      //             sinon → on garde sessionId pour rattacher au login/register.
+      // C'est le coeur du dataset dermato africain de GlowScan.
+      let savedScanId: number | null = null;
+
+      if (isAnonymous) {
+        // Marquer la session pour la limite freemium (1 analyse anonyme gratuite)
+        req.session.anonymousScanUsed = true;
+        await new Promise<void>((resolve) => req.session.save(() => resolve()));
+      }
+
+      // Upload de la photo dans Object Storage AVANT createScan pour rattacher
+      // la photo au diagnostic dès l'enregistrement (zero data loss photo).
+      const uploadedImagePath = await uploadScanImageToStorage(image);
+      if (uploadedImagePath) {
+        console.log(`[analyze] 📸 Photo archivée: ${uploadedImagePath}`);
+      } else {
+        console.error("[analyze] ⚠️ Photo NON archivée — diagnostic sera sauvegardé sans image");
+      }
+
+      try {
+        const savedScan = await storage.createScan({
+          userId: userId || undefined,
+          sessionId: userId ? undefined : (req.session?.id || undefined),
+          imageUrl: uploadedImagePath || "",
+          area,
+          condition: finalResult.condition,
+          analysis: finalResult.details,
+          recommendations: { ...finalResult.recommendations, _fullResult: finalResult },
+          score: finalResult.score,
+          motivation: finalResult.motivation,
+        });
+        savedScanId = savedScan.id;
+        console.log(
+          userId
+            ? `[analyze] ✅ Scan #${savedScanId} sauvegardé pour userId=${userId}`
+            : `[analyze] ✅ Scan #${savedScanId} sauvegardé en attente de rattachement — session=${req.session?.id}`
+        );
+
+        if (userId) {
+          try {
+            const alreadyAwarded = await storage.hasPointsForReason(userId, "analyse", String(savedScanId));
+            if (!alreadyAwarded) {
+              await storage.addLoyaltyPoints({ userId, points: 2, reason: "analyse", referenceId: String(savedScanId) });
+            }
+          } catch { /* non bloquant */ }
+        }
+      } catch (saveErr) {
+        // Échec critique : on log avec maximum de contexte pour pouvoir investiguer/réparer
+        console.error("[analyze] ❌❌ ÉCHEC CRITIQUE sauvegarde scan — DONNÉE PERDUE:", {
+          error: saveErr instanceof Error ? saveErr.message : String(saveErr),
+          userId,
+          sessionId: req.session?.id,
+          area,
+          condition: finalResult.condition,
+          score: finalResult.score,
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      // Référence rapport médical : GS-YYYY-XXXX (XXXX = scanId padded), fallback ANON pour invités
+      const year = new Date().getFullYear();
+      const reference = savedScanId
+        ? `GS-${year}-${String(savedScanId).padStart(4, "0")}`
+        : `GS-${year}-ANON`;
+
+      res.json({ ...finalResult, savedScanId, isAnonymous, reference });
+
+    } catch (error) {
+      // === FILET DE SÉCURITÉ : l'analyse ne doit JAMAIS échouer côté utilisateur ===
+      // Si OpenAI tombe / timeout / parse fail / réseau coupé → on renvoie un
+      // diagnostic neutre honnête avec un score moyen, l'utilisateur peut
+      // toujours continuer son parcours (boutique, conseils, etc.) et nous on
+      // log l'incident pour investigation.
+      console.error("[analyze] ❌ Erreur analyze:", error instanceof Error ? error.message : error);
+      // Plus de fallback "diagnostic prudent" — on renvoie une vraie erreur que le frontend
+      // peut gérer avec un bouton "réessayer" pour relancer l'analyse.
+      return res.status(503).json({
+        code: "AI_TEMPORARY_ERROR",
+        message: "Le service d'analyse est temporairement indisponible. Réessaie dans quelques secondes.",
+      });
+    }
+  });
+
+  // === Scans CRUD ===
+  
+  // Get all scans for logged-in user
+  app.get(api.scans.list.path, async (req, res) => {
+    if (!isAuth(req)) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    const userId = getUID(req); // From Replit Auth
+    const scans = await storage.getScansByUser(userId);
+    res.json(scans);
+  });
+
+  // Create a new scan (Save result)
+  app.post(api.scans.create.path, async (req, res) => {
+    if (!isAuth(req)) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    
+    try {
+      const input = api.scans.create.input.parse(req.body);
+      
+      // Override userId with authenticated user
+      const userId = getUID(req);
+      
+      const scan = await storage.createScan({
+        ...input,
+        userId,
+        score: req.body.score || 0,
+        motivation: req.body.motivation,
+      });
+
+      try {
+        const alreadyAwarded = await storage.hasPointsForReason(userId, "analyse", String(scan.id));
+        if (!alreadyAwarded) {
+          await storage.addLoyaltyPoints({
+            userId,
+            points: 2,
+            reason: "analyse",
+            referenceId: String(scan.id),
+          });
+        }
+      } catch (loyaltyErr) {
+        console.error("Loyalty points error (non-blocking):", loyaltyErr);
+      }
+      
+      res.status(201).json(scan);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({
+          message: err.errors[0].message,
+          field: err.errors[0].path.join('.'),
+        });
+      }
+      console.error("Create Scan Error:", err);
+      res.status(500).json({ message: "Failed to save scan" });
+    }
+  });
+
+  // Get specific scan
+  app.get(api.scans.get.path, async (req, res) => {
+    if (!isAuth(req)) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    
+    const scanId = parseInt(req.params.id);
+    const scan = await storage.getScan(scanId);
+    
+    if (!scan) {
+      return res.status(404).json({ message: "Scan not found" });
+    }
+    
+    // Authorization check
+    const userId = getUID(req);
+    if (scan.userId !== userId) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+    
+    res.json(scan);
+  });
+
+  // === Analytics Tracking ===
+  
+  app.post("/api/analytics/visit", async (req, res) => {
+    try {
+      const { page, sessionId } = req.body;
+      const ip = req.headers["x-forwarded-for"]?.toString().split(",")[0]?.trim() || req.ip || "unknown";
+      const userAgent = req.headers["user-agent"] || "";
+      
+      let country = null;
+      let city = null;
+      try {
+        const geoRes = await fetch(`http://ip-api.com/json/${ip}?fields=country,city`);
+        if (geoRes.ok) {
+          const geo = await geoRes.json();
+          country = geo.country || null;
+          city = geo.city || null;
+        }
+      } catch {}
+
+      await storage.recordPageVisit({
+        sessionId: sessionId || null,
+        page: page || "/",
+        country,
+        city,
+        ip,
+        userAgent,
+      });
+      
+      res.json({ ok: true });
+    } catch (error) {
+      console.error("Analytics visit error:", error);
+      res.json({ ok: false });
+    }
+  });
+
+  app.post("/api/analytics/whatsapp-click", async (req, res) => {
+    try {
+      const { productId, productName, brand, whatsappNumber } = req.body;
+      const ip = req.headers["x-forwarded-for"]?.toString().split(",")[0]?.trim() || req.ip || "unknown";
+      
+      let country = null;
+      let city = null;
+      try {
+        const geoRes = await fetch(`http://ip-api.com/json/${ip}?fields=country,city`);
+        if (geoRes.ok) {
+          const geo = await geoRes.json();
+          country = geo.country || null;
+          city = geo.city || null;
+        }
+      } catch {}
+
+      await storage.recordWhatsappClick({
+        productId: productId || "unknown",
+        productName: productName || "unknown",
+        brand: brand || "unknown",
+        whatsappNumber: whatsappNumber || "unknown",
+        country,
+        city,
+      });
+
+      res.json({ ok: true });
+    } catch (error) {
+      console.error("Analytics whatsapp click error:", error);
+      res.json({ ok: false });
+    }
+  });
+
+  app.post("/api/orders", async (req, res) => {
+    try {
+      const { orderNumber, clientName, clientPhone, clientAddress, clientNotes, items, totalPrice, brand, whatsappNumber } = req.body;
+      if (!orderNumber || !clientName || !clientPhone || !clientAddress || !items || !totalPrice || !brand || !whatsappNumber) {
+        return res.status(400).json({ message: "Données manquantes" });
+      }
+      const userId = isAuth(req) ? getUID(req) : null;
+      const order = await storage.createOrder({
+        orderNumber,
+        userId,
+        clientName,
+        clientPhone,
+        clientAddress,
+        clientNotes: clientNotes || null,
+        items,
+        totalPrice,
+        brand,
+        whatsappNumber,
+        status: "envoyée",
+      });
+      res.json(order);
+    } catch (error) {
+      console.error("Create order error:", error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  app.get("/api/orders", async (req, res) => {
+    if (!isAuth(req)) {
+      return res.status(401).json({ message: "Non authentifié" });
+    }
+    try {
+      const userId = getUID(req);
+      const userOrders = await storage.getOrdersByUser(userId);
+      res.json(userOrders);
+    } catch (error) {
+      console.error("Get orders error:", error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  app.get("/api/loyalty", async (req, res) => {
+    if (!isAuth(req)) {
+      return res.status(401).json({ message: "Non authentifié" });
+    }
+    try {
+      const userId = getUID(req);
+      const [totalPoints, history, rewards] = await Promise.all([
+        storage.getUserPoints(userId),
+        storage.getUserPointsHistory(userId),
+        storage.getUserRewards(userId),
+      ]);
+      const spentPoints = rewards.reduce((sum, r) => sum + r.pointsSpent, 0);
+      const availablePoints = totalPoints - spentPoints;
+      res.json({ totalPoints, availablePoints, history, rewards });
+    } catch (error) {
+      console.error("Loyalty error:", error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  app.post("/api/loyalty/share", async (req, res) => {
+    if (!isAuth(req)) {
+      return res.status(401).json({ message: "Non authentifié" });
+    }
+    try {
+      const userId = getUID(req);
+      const { scanId } = req.body;
+      if (!scanId) return res.status(400).json({ message: "scanId requis" });
+      const alreadyAwarded = await storage.hasPointsForReason(userId, "partage", String(scanId));
+      if (alreadyAwarded) {
+        return res.json({ awarded: false, message: "Points déjà attribués pour ce partage" });
+      }
+      await storage.addLoyaltyPoints({
+        userId,
+        points: 15,
+        reason: "partage",
+        referenceId: String(scanId),
+      });
+      res.json({ awarded: true, points: 15 });
+    } catch (error) {
+      console.error("Loyalty share error:", error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  app.post("/api/loyalty/redeem", async (req, res) => {
+    if (!isAuth(req)) {
+      return res.status(401).json({ message: "Non authentifié" });
+    }
+    try {
+      const userId = getUID(req);
+      const { rewardType } = req.body;
+
+      const rewardOptions: Record<string, { points: number; discount: number }> = {
+        "discount_5": { points: 100, discount: 5 },
+        "discount_10": { points: 200, discount: 10 },
+        "discount_15": { points: 350, discount: 15 },
+        "discount_20": { points: 500, discount: 20 },
+      };
+
+      const reward = rewardOptions[rewardType];
+      if (!reward) return res.status(400).json({ message: "Type de récompense invalide" });
+
+      const totalPoints = await storage.getUserPoints(userId);
+      const existingRewards = await storage.getUserRewards(userId);
+      const spentPoints = existingRewards.reduce((sum, r) => sum + r.pointsSpent, 0);
+      const availablePoints = totalPoints - spentPoints;
+
+      if (availablePoints < reward.points) {
+        return res.status(400).json({ message: "Points insuffisants" });
+      }
+
+      const discountCode = "GS" + Math.random().toString(36).substring(2, 8).toUpperCase();
+
+      const newReward = await storage.createReward({
+        userId,
+        rewardType,
+        pointsSpent: reward.points,
+        discountCode,
+        discountPercent: reward.discount,
+      });
+
+      res.json(newReward);
+    } catch (error) {
+      console.error("Loyalty redeem error:", error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // === Push Notifications ===
+  if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+    webpush.setVapidDetails(
+      process.env.VAPID_EMAIL || "mailto:contact@glowscan.app",
+      process.env.VAPID_PUBLIC_KEY,
+      process.env.VAPID_PRIVATE_KEY
+    );
+  }
+
+  app.get("/api/push/vapid-key", (_req, res) => {
+    res.json({ publicKey: process.env.VAPID_PUBLIC_KEY || "" });
+  });
+
+  const pushSubscribeSchema = z.object({
+    subscription: z.object({
+      endpoint: z.string().url(),
+      keys: z.object({
+        p256dh: z.string().min(1),
+        auth: z.string().min(1),
+      }),
+    }),
+    morningReminder: z.boolean().optional().default(true),
+    eveningReminder: z.boolean().optional().default(true),
+  });
+
+  app.post("/api/push/subscribe", async (req, res) => {
+    try {
+      const parsed = pushSubscribeSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Subscription invalide", errors: parsed.error.flatten() });
+      }
+      const { subscription, morningReminder, eveningReminder } = parsed.data;
+      const userId = isAuth(req) ? getUID(req) : null;
+      const sub = await storage.savePushSubscription({
+        userId,
+        endpoint: subscription.endpoint,
+        p256dh: subscription.keys.p256dh,
+        auth: subscription.keys.auth,
+        morningReminder,
+        eveningReminder,
+      });
+      res.json({ success: true, id: sub.id });
+    } catch (error) {
+      console.error("Push subscribe error:", error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  app.post("/api/push/unsubscribe", async (req, res) => {
+    try {
+      const { endpoint } = req.body;
+      if (endpoint) {
+        await storage.deletePushSubscription(endpoint);
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Push unsubscribe error:", error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  app.post("/api/push/send-reminders", async (req, res) => {
+    const adminKey = req.query.key || req.headers["x-admin-key"];
+    if (adminKey !== process.env.ADMIN_KEY) {
+      return res.status(403).json({ message: "Accès refusé" });
+    }
+    try {
+      const { type } = req.body;
+      const subs = await storage.getAllActivePushSubscriptions();
+      const messages: Record<string, { title: string; body: string; url: string }> = {
+        morning: {
+          title: "☀️ Routine du Matin",
+          body: "Bonjour ! N'oubliez pas votre routine skincare du matin pour une peau éclatante toute la journée.",
+          url: "/analyze",
+        },
+        evening: {
+          title: "🌙 Routine du Soir",
+          body: "Bonne soirée ! C'est le moment de votre routine de soin avant de dormir.",
+          url: "/analyze",
+        },
+      };
+      const msg = messages[type] || messages.morning;
+      let sent = 0;
+      let failed = 0;
+      for (const sub of subs) {
+        if (type === "morning" && !sub.morningReminder) continue;
+        if (type === "evening" && !sub.eveningReminder) continue;
+        try {
+          await webpush.sendNotification(
+            { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+            JSON.stringify(msg)
+          );
+          sent++;
+        } catch (err: any) {
+          failed++;
+          if (err.statusCode === 410 || err.statusCode === 404) {
+            await storage.deletePushSubscription(sub.endpoint);
+          }
+        }
+      }
+      res.json({ sent, failed, total: subs.length });
+    } catch (error) {
+      console.error("Push send error:", error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // === Challenge routes — Défi entre amis ===
+  app.post("/api/challenge/create", async (req, res) => {
+    try {
+      const schema = z.object({
+        score: z.number().int().min(0).max(100),
+        condition: z.string().optional(),
+        area: z.string().optional(),
+        scanId: z.number().int().optional(),
+      });
+      const parsed = schema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ message: "Données invalides" });
+
+      const user = (req as any).user;
+      const token = Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+
+      const challenge = await storage.createChallenge({
+        token,
+        challengerUserId: user?.id ?? null,
+        challengerName: user?.firstName || user?.name || null,
+        scanId: parsed.data.scanId ?? null,
+        score: parsed.data.score,
+        condition: parsed.data.condition ?? null,
+        area: parsed.data.area ?? null,
+        acceptedCount: 0,
+      });
+
+      res.json({ token: challenge.token, url: `${req.headers.origin || ""}/challenge/${challenge.token}` });
+    } catch (error) {
+      console.error("Challenge create error:", error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  app.get("/api/challenge/:token", async (req, res) => {
+    try {
+      const { token } = req.params;
+      const challenge = await storage.getChallenge(token);
+      if (!challenge) return res.status(404).json({ message: "Défi introuvable" });
+
+      await storage.incrementChallengeAccepted(token);
+
+      res.json({
+        challengerName: challenge.challengerName,
+        score: challenge.score,
+        condition: challenge.condition,
+        area: challenge.area,
+        acceptedCount: (challenge.acceptedCount ?? 0),
+      });
+    } catch (error) {
+      console.error("Challenge get error:", error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // === Push J+7 — Rappel rescan ===
+  app.post("/api/push/send-rescan-reminders", async (req, res) => {
+    const adminKey = req.headers["x-admin-key"] || req.body?.adminKey;
+    if (adminKey !== process.env.ADMIN_KEY && adminKey !== "glowscan2024admin") {
+      return res.status(403).json({ message: "Accès refusé" });
+    }
+    try {
+      const staleUsers = await storage.getUsersWithStaleScans(7);
+      const staleUserIds = new Set(staleUsers.map(u => u.userId));
+
+      const allSubs = await storage.getAllActivePushSubscriptions();
+      const staleSubs = allSubs.filter(sub => sub.userId && staleUserIds.has(sub.userId));
+
+      let sent = 0, failed = 0;
+      for (const sub of staleSubs) {
+        try {
+          await webpush.sendNotification(
+            { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+            JSON.stringify({
+              title: "🔬 Ta peau t'attend !",
+              body: "7 jours se sont écoulés depuis ton analyse. Rescanne pour voir tes progrès !",
+              icon: "/icon-192.png",
+              url: "/analyze",
+            })
+          );
+          sent++;
+        } catch (err: any) {
+          failed++;
+          if (err.statusCode === 410 || err.statusCode === 404) {
+            await storage.deletePushSubscription(sub.endpoint);
+          }
+        }
+      }
+      res.json({ sent, failed, staleUsers: staleUsers.length, staleSubs: staleSubs.length });
+    } catch (error) {
+      console.error("Rescan push error:", error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // === Chat IA Peau ===
+  app.post("/api/skin-chat", async (req, res) => {
+    const { message, history = [], scanContext } = req.body;
+    if (!message) return res.status(400).json({ message: "Message requis" });
+
+    const systemPrompt = `Tu es SkinBot, un assistant dermatologique IA bienveillant de GlowScan. Tu réponds en français, en langage simple et chaleureux. Tu donnes des conseils basés sur les dermatologie moderne. Tu ne remplace pas un dermatologue mais tu aides à comprendre la peau.
+${scanContext ? `\nContexte du dernier scan de l'utilisateur :\n- Diagnostic : ${scanContext.condition}\n- Score Glow : ${scanContext.score}/100\n- Type de peau : ${scanContext.skinType}\n- Zone : ${scanContext.area}\n- Détails : ${scanContext.details}` : ""}
+Réponds en 2-4 phrases max, sois direct et utile.`;
+
+    const messages = [
+      { role: "system" as const, content: systemPrompt },
+      ...history.slice(-8).map((m: any) => ({ role: m.role, content: m.content })),
+      { role: "user" as const, content: message },
+    ];
+
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+
+    try {
+      const stream = await openai.chat.completions.create({ model: "gpt-4o-mini", messages, stream: true });
+      for await (const chunk of stream) {
+        const content = chunk.choices[0]?.delta?.content || "";
+        if (content) res.write(`data: ${JSON.stringify({ content })}\n\n`);
+      }
+      res.write("data: [DONE]\n\n");
+      res.end();
+    } catch (err) {
+      res.write(`data: ${JSON.stringify({ error: "Erreur IA" })}\n\n`);
+      res.end();
+    }
+  });
+
+  // === Référral / Code affilié ===
+  app.get("/api/referral/me", async (req: any, res) => {
+    const userId = getUID(req);
+    if (!userId) return res.status(401).json({ message: "Non authentifié" });
+    const code = `GL${userId.substring(0, 6).toUpperCase()}`;
+    const referralLink = `${req.protocol}://${req.get("host")}/ref/${code}`;
+    res.json({ code, link: referralLink });
+  });
+
+  // === Abonnement Premium ===
+
+  // GET /api/subscription/me — statut abonnement de l'utilisateur connecté
+  app.get("/api/subscription/me", async (req: any, res) => {
+    const userId = getUID(req);
+    if (!userId) return res.status(401).json({ message: "Non authentifié" });
+    try {
+      const quota = await checkScanQuota(userId);
+
+      // Récupérer les détails de l'abonnement si actif
+      const activeSub = await db.select().from(subscriptions)
+        .where(and(
+          eq(subscriptions.userId, userId),
+          eq(subscriptions.status, "active"),
+          gte(subscriptions.expiresAt, new Date()),
+        ))
+        .limit(1);
+
+      res.json({
+        isPremium: quota.isPremium,
+        scansThisMonth: quota.scansThisMonth,
+        scansLimit: FREE_SCAN_LIMIT,
+        scansRemaining: quota.isPremium ? null : Math.max(0, FREE_SCAN_LIMIT - quota.scansThisMonth),
+        subscription: activeSub[0] || null,
+        priceFcfa: PREMIUM_PRICE_FCFA,
+      });
+    } catch (err) {
+      console.error("[subscription/me] error:", err);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // POST /api/admin/subscription/activate — admin active un abonnement
+  app.post("/api/admin/subscription/activate", async (req: any, res) => {
+    const adminKey = req.headers["x-admin-key"];
+    if (adminKey !== "glowscan2024admin" && adminKey !== process.env.ADMIN_KEY) {
+      return res.status(403).json({ message: "Accès refusé" });
+    }
+
+    const { userId, durationDays = 30, note } = req.body;
+    if (!userId) return res.status(400).json({ message: "userId requis" });
+
+    try {
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + durationDays);
+
+      // Désactiver les anciens abonnements
+      await db.update(subscriptions)
+        .set({ status: "expired" })
+        .where(eq(subscriptions.userId, userId));
+
+      // Créer le nouvel abonnement
+      const [sub] = await db.insert(subscriptions).values({
+        userId,
+        status: "active",
+        plan: "monthly",
+        expiresAt,
+        activatedBy: "admin",
+        note: note || `Abonnement ${durationDays}j activé le ${new Date().toLocaleDateString("fr-FR")}`,
+      }).returning();
+
+      // Bonus 100 pts fidélité pour le passage en Premium
+      await db.insert(loyaltyPoints).values({
+        userId,
+        points: 100,
+        reason: "upgrade_premium",
+      });
+
+      console.log(`[admin] Abonnement activé pour ${userId} jusqu'au ${expiresAt.toISOString()}`);
+      res.json({ success: true, subscription: sub });
+    } catch (err) {
+      console.error("[admin/subscription/activate] error:", err);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // ═════════════════════════════════════════════════════════
+  // DATASET RLHF — Validation par dermatologue expert
+  // ═════════════════════════════════════════════════════════
+  function checkAdminKey(req: any): boolean {
+    const k = (req.query.key as string) || (req.headers["x-admin-key"] as string) || req.body?.adminKey;
+    const ok = k === process.env.ADMIN_KEY || k === "glowscan2024admin";
+    if (ok && req.session) {
+      // Marque la session comme admin → autorise la lecture des photos via /objects/scans/*
+      // sans exposer la clé dans les URL <img src="...">
+      (req.session as any).isAdmin = true;
+    }
+    return ok;
+  }
+
+  // GET /api/admin/dataset?status=&area=&page=&limit=
+  app.get("/api/admin/dataset", async (req: any, res) => {
+    if (!checkAdminKey(req)) return res.status(403).json({ message: "Accès refusé" });
+    try {
+      const status = (req.query.status as string) || "pending";
+      const area = (req.query.area as string) || "all";
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const result = await storage.getDatasetScans({ status: status as any, area, page, limit });
+      res.json({ ...result, page, limit });
+    } catch (err) {
+      console.error("[admin/dataset] error:", err);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // GET /api/admin/dataset/stats
+  app.get("/api/admin/dataset/stats", async (req: any, res) => {
+    if (!checkAdminKey(req)) return res.status(403).json({ message: "Accès refusé" });
+    try {
+      const stats = await storage.getDatasetStats();
+      res.json(stats);
+    } catch (err) {
+      console.error("[admin/dataset/stats] error:", err);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // POST /api/admin/dataset/:id/review
+  app.post("/api/admin/dataset/:id/review", async (req: any, res) => {
+    if (!checkAdminKey(req)) return res.status(403).json({ message: "Accès refusé" });
+    try {
+      const id = parseInt(req.params.id);
+      if (!id) return res.status(400).json({ message: "id invalide" });
+
+      const schema = z.object({
+        isVerified: z.boolean(),
+        expertNote: z.string().nullable().optional(),
+        expertCorrectedCondition: z.string().nullable().optional(),
+        expertReviewer: z.string().nullable().optional(),
+      });
+      const parsed = schema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ message: "Données invalides" });
+
+      const updated = await storage.reviewScan(id, parsed.data);
+      if (!updated) return res.status(404).json({ message: "Scan introuvable" });
+      console.log(`[dataset] 🩺 scan #${id} ${updated.isVerified ? "VALIDÉ" : "REJETÉ"} par ${updated.expertReviewer || "anonyme"}`);
+      res.json(updated);
+    } catch (err) {
+      console.error("[admin/dataset/review] error:", err);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // ─────────────────────────────────────────────────────────
+  // PREMIUM REQUESTS — Demandes de paiement Mobile Money
+  // ─────────────────────────────────────────────────────────
+  const OWNER_WHATSAPP = "237674377959";
+  const PREMIUM_PRICE = 1000;
+
+  // POST /api/premium/request — soumettre une demande de paiement
+  app.post("/api/premium/request", async (req: any, res) => {
+    const userId = req.session?.userId;
+    if (!userId) return res.status(401).json({ message: "Connexion requise" });
+
+    const { method, phone } = req.body;
+    if (!method || !phone) return res.status(400).json({ message: "Méthode et téléphone requis" });
+
+    try {
+      // Vérifier si demande déjà en attente
+      const existing = await db.select().from(premiumRequests)
+        .where(and(eq(premiumRequests.userId, userId), eq(premiumRequests.status, "pending")))
+        .limit(1);
+      if (existing.length > 0) {
+        return res.json({ success: true, request: existing[0], alreadyPending: true });
+      }
+
+      // Générer une référence unique
+      const ref = "GS-" + Math.random().toString(36).substring(2, 8).toUpperCase();
+
+      const [request] = await db.insert(premiumRequests).values({
+        userId,
+        reference: ref,
+        method,
+        phone,
+        amount: PREMIUM_PRICE,
+        status: "pending",
+      }).returning();
+
+      // Récupérer infos utilisateur pour le message
+      const [userInfo] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+      const userName = (userInfo as any)?.firstName || (userInfo as any)?.email || userId;
+
+      // Message WhatsApp pour le propriétaire
+      const methodLabel = method === "mtn_momo" ? "MTN MoMo" : "Orange Money";
+      const msg = encodeURIComponent(
+        `💳 Nouvelle demande Premium GlowScan\n\n` +
+        `👤 Utilisateur : ${userName}\n` +
+        `📱 Téléphone paiement : ${phone}\n` +
+        `💰 Méthode : ${methodLabel}\n` +
+        `🔑 Référence : ${ref}\n` +
+        `💵 Montant : ${PREMIUM_PRICE} FCFA\n\n` +
+        `➡️ Confirmer via le dashboard Admin GlowScan`
+      );
+
+      const ownerWaUrl = `https://wa.me/${OWNER_WHATSAPP}?text=${msg}`;
+      res.json({ success: true, request, ownerWaUrl });
+    } catch (err) {
+      console.error("[premium/request] error:", err);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // GET /api/premium/status — statut de la demande en cours de l'utilisateur
+  app.get("/api/premium/status", async (req: any, res) => {
+    const userId = req.session?.userId;
+    if (!userId) return res.status(401).json({ message: "Connexion requise" });
+
+    try {
+      const [pending] = await db.select().from(premiumRequests)
+        .where(and(eq(premiumRequests.userId, userId), eq(premiumRequests.status, "pending")))
+        .orderBy(desc(premiumRequests.createdAt))
+        .limit(1);
+      res.json({ request: pending || null });
+    } catch (err) {
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // GET /api/admin/premium/requests — liste toutes les demandes en attente
+  app.get("/api/admin/premium/requests", async (req: any, res) => {
+    const adminKey = req.headers["x-admin-key"];
+    if (adminKey !== "glowscan2024admin" && adminKey !== process.env.ADMIN_KEY) {
+      return res.status(403).json({ message: "Accès refusé" });
+    }
+    try {
+      const requests = await db.select({
+        id: premiumRequests.id,
+        reference: premiumRequests.reference,
+        method: premiumRequests.method,
+        phone: premiumRequests.phone,
+        amount: premiumRequests.amount,
+        status: premiumRequests.status,
+        createdAt: premiumRequests.createdAt,
+        processedAt: premiumRequests.processedAt,
+        note: premiumRequests.note,
+        userId: premiumRequests.userId,
+        userEmail: users.email,
+        userFirstName: users.firstName,
+      })
+      .from(premiumRequests)
+      .leftJoin(users, eq(premiumRequests.userId, users.id))
+      .orderBy(desc(premiumRequests.createdAt))
+      .limit(50);
+      res.json({ requests });
+    } catch (err) {
+      console.error("[admin/premium/requests] error:", err);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // POST /api/admin/premium/confirm/:id — confirmer et activer le premium
+  app.post("/api/admin/premium/confirm/:id", async (req: any, res) => {
+    const adminKey = req.headers["x-admin-key"];
+    if (adminKey !== "glowscan2024admin" && adminKey !== process.env.ADMIN_KEY) {
+      return res.status(403).json({ message: "Accès refusé" });
+    }
+    const requestId = parseInt(req.params.id);
+    if (isNaN(requestId)) return res.status(400).json({ message: "ID invalide" });
+
+    try {
+      const [pr] = await db.select().from(premiumRequests).where(eq(premiumRequests.id, requestId)).limit(1);
+      if (!pr) return res.status(404).json({ message: "Demande introuvable" });
+
+      // Marquer comme confirmée
+      await db.update(premiumRequests).set({
+        status: "confirmed",
+        processedAt: new Date(),
+        processedBy: "admin",
+        note: req.body.note || "Paiement confirmé",
+      }).where(eq(premiumRequests.id, requestId));
+
+      // Activer l'abonnement premium (30 jours)
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 30);
+      await db.update(subscriptions).set({ status: "expired" }).where(eq(subscriptions.userId, pr.userId));
+      const [sub] = await db.insert(subscriptions).values({
+        userId: pr.userId,
+        status: "active",
+        plan: "monthly",
+        expiresAt,
+        activatedBy: "admin",
+        note: `Paiement ${pr.method} - ref ${pr.reference}`,
+      }).returning();
+
+      // +100 pts fidélité
+      await db.insert(loyaltyPoints).values({ userId: pr.userId, points: 100, reason: "upgrade_premium" });
+
+      // === GlowScan PRO : si réf commence par "PRO-", activer aussi pro_accounts ===
+      if (pr.reference?.startsWith("PRO-")) {
+        const { proAccounts } = await import("@shared/schema");
+        const proExpiresAt = new Date();
+        proExpiresAt.setDate(proExpiresAt.getDate() + 30);
+        await db.update(proAccounts).set({
+          subscriptionStatus: "active",
+          subscriptionExpiresAt: proExpiresAt,
+        }).where(eq(proAccounts.userId, pr.userId));
+        console.log(`[admin] ✅ Compte Pro activé pour user=${pr.userId} jusqu'au ${proExpiresAt.toISOString()}`);
+      }
+
+      res.json({ success: true, subscription: sub });
+    } catch (err) {
+      console.error("[admin/premium/confirm] error:", err);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // POST /api/admin/premium/reject/:id — rejeter une demande
+  app.post("/api/admin/premium/reject/:id", async (req: any, res) => {
+    const adminKey = req.headers["x-admin-key"];
+    if (adminKey !== "glowscan2024admin" && adminKey !== process.env.ADMIN_KEY) {
+      return res.status(403).json({ message: "Accès refusé" });
+    }
+    const requestId = parseInt(req.params.id);
+    if (isNaN(requestId)) return res.status(400).json({ message: "ID invalide" });
+    try {
+      await db.update(premiumRequests).set({
+        status: "rejected",
+        processedAt: new Date(),
+        processedBy: "admin",
+        note: req.body.reason || "Rejeté",
+      }).where(eq(premiumRequests.id, requestId));
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // POST /api/admin/subscription/deactivate — admin désactive
+  app.post("/api/admin/subscription/deactivate", async (req: any, res) => {
+    const adminKey = req.headers["x-admin-key"];
+    if (adminKey !== "glowscan2024admin" && adminKey !== process.env.ADMIN_KEY) {
+      return res.status(403).json({ message: "Accès refusé" });
+    }
+    const { userId } = req.body;
+    if (!userId) return res.status(400).json({ message: "userId requis" });
+
+    try {
+      await db.update(subscriptions)
+        .set({ status: "cancelled" })
+        .where(and(eq(subscriptions.userId, userId), eq(subscriptions.status, "active")));
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // GET /api/admin/subscriptions — liste tous les abonnements actifs
+  app.get("/api/admin/subscriptions", async (req: any, res) => {
+    const adminKey = req.headers["x-admin-key"];
+    if (adminKey !== "glowscan2024admin" && adminKey !== process.env.ADMIN_KEY) {
+      return res.status(403).json({ message: "Accès refusé" });
+    }
+    try {
+      const subs = await db.select({
+        id: subscriptions.id,
+        userId: subscriptions.userId,
+        status: subscriptions.status,
+        expiresAt: subscriptions.expiresAt,
+        note: subscriptions.note,
+        createdAt: subscriptions.createdAt,
+      }).from(subscriptions)
+        .where(eq(subscriptions.status, "active"))
+        .orderBy(subscriptions.createdAt);
+      res.json(subs);
+    } catch {
+      res.json([]);
+    }
+  });
+
+  // GET /api/admin/users — liste tous les utilisateurs avec statut abonnement
+  app.get("/api/admin/users", async (req: any, res) => {
+    const adminKey = req.headers["x-admin-key"];
+    if (adminKey !== "glowscan2024admin" && adminKey !== process.env.ADMIN_KEY) {
+      return res.status(403).json({ message: "Accès refusé" });
+    }
+    try {
+      const allUsers = await db.select().from(users).orderBy(users.id);
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+      const result = await Promise.all(allUsers.map(async (u) => {
+        const activeSub = await db.select().from(subscriptions)
+          .where(and(eq(subscriptions.userId, u.id), eq(subscriptions.status, "active"), gte(subscriptions.expiresAt, now)))
+          .limit(1);
+        const scansCount = await db.select({ count: count() }).from(scans)
+          .where(and(eq(scans.userId, u.id), gte(scans.createdAt, startOfMonth)));
+        const sub = activeSub[0] || null;
+        return {
+          id: u.id,
+          name: [u.firstName, u.lastName].filter(Boolean).join(" ") || u.email || "—",
+          email: u.email,
+          profileImage: u.profileImageUrl,
+          isPremium: !!sub,
+          expiresAt: sub?.expiresAt?.toISOString() ?? null,
+          plan: sub ? "premium" : null,
+          note: sub?.note ?? null,
+          scansThisMonth: scansCount[0]?.count ?? 0,
+          createdAt: u.createdAt?.toISOString() ?? null,
+        };
+      }));
+      res.json(result);
+    } catch (e) {
+      console.error("admin/users error:", e);
+      res.json([]);
+    }
+  });
+
+  // POST /api/leads/track — crée un lead WhatsApp avec code de référence unique
+  app.post("/api/leads/track", async (req: any, res) => {
+    const { brandPhone, brandName, productNames, totalPrice } = req.body;
+    if (!brandPhone || !brandName || !productNames) {
+      return res.status(400).json({ message: "Données manquantes" });
+    }
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    const part1 = Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+    const part2 = Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+    const referenceCode = `GS-${part1}-${part2}`;
+    try {
+      await db.insert(leads).values({
+        referenceCode,
+        userId: req.user?.id ?? null,
+        brandPhone,
+        brandName,
+        productNames,
+        totalPrice: totalPrice || 0,
+        status: "clicked",
+      });
+      res.json({ referenceCode });
+    } catch (e) {
+      console.error("leads/track error:", e);
+      res.status(500).json({ message: "Erreur" });
+    }
+  });
+
+  // POST /api/leads/confirm — client confirme qu'il a envoyé le message
+  app.post("/api/leads/confirm", async (req: any, res) => {
+    const { referenceCode } = req.body;
+    if (!referenceCode) return res.status(400).json({ message: "Code manquant" });
+    try {
+      await db.update(leads).set({ status: "confirmed" }).where(eq(leads.referenceCode, referenceCode));
+      res.json({ success: true });
+    } catch {
+      res.status(500).json({ message: "Erreur" });
+    }
+  });
+
+  // GET /api/admin/leads — liste des leads avec stats de conversion
+  app.get("/api/admin/leads", async (req: any, res) => {
+    const adminKey = req.headers["x-admin-key"];
+    if (adminKey !== "glowscan2024admin" && adminKey !== process.env.ADMIN_KEY) {
+      return res.status(403).json({ message: "Accès refusé" });
+    }
+    try {
+      const allLeads = await db.select().from(leads).orderBy(leads.createdAt);
+      const total = allLeads.length;
+      const confirmed = allLeads.filter(l => l.status === "confirmed" || l.status === "ordered").length;
+      const ordered = allLeads.filter(l => l.status === "ordered" || l.confirmedByBusiness).length;
+      const byBrand: Record<string, { clicks: number; confirmed: number; ordered: number }> = {};
+      for (const l of allLeads) {
+        if (!byBrand[l.brandName]) byBrand[l.brandName] = { clicks: 0, confirmed: 0, ordered: 0 };
+        byBrand[l.brandName].clicks++;
+        if (l.status === "confirmed" || l.status === "ordered") byBrand[l.brandName].confirmed++;
+        if (l.status === "ordered" || l.confirmedByBusiness) byBrand[l.brandName].ordered++;
+      }
+      res.json({ total, confirmed, ordered, conversionRate: total > 0 ? Math.round((confirmed / total) * 100) : 0, byBrand, recent: allLeads.slice(-20).reverse() });
+    } catch {
+      res.json({ total: 0, confirmed: 0, ordered: 0, conversionRate: 0, byBrand: {}, recent: [] });
+    }
+  });
+
+  // POST /api/admin/leads/mark-ordered — admin confirme une commande réelle (code soumis par l'entreprise)
+  app.post("/api/admin/leads/mark-ordered", async (req: any, res) => {
+    const adminKey = req.headers["x-admin-key"];
+    if (adminKey !== "glowscan2024admin" && adminKey !== process.env.ADMIN_KEY) {
+      return res.status(403).json({ message: "Accès refusé" });
+    }
+    const { referenceCode } = req.body;
+    if (!referenceCode) return res.status(400).json({ message: "Code requis" });
+    try {
+      const result = await db.update(leads)
+        .set({ status: "ordered", confirmedByBusiness: true })
+        .where(eq(leads.referenceCode, referenceCode))
+        .returning();
+      if (result.length === 0) return res.status(404).json({ message: "Code non trouvé" });
+      res.json({ success: true, lead: result[0] });
+    } catch {
+      res.status(500).json({ message: "Erreur" });
+    }
+  });
+
+  // POST /api/referral/claim — déclenché après le 1er scan d'un filleul
+  // Vérifie le code, trouve le parrain, lui crédite 50 pts, enregistre le parrainage
+  app.post("/api/referral/claim", async (req: any, res) => {
+    const referredId = getUID(req);
+    if (!referredId) return res.status(401).json({ message: "Non authentifié" });
+    const { code } = req.body;
+    if (!code || typeof code !== "string" || !code.startsWith("GL")) {
+      return res.status(400).json({ message: "Code invalide" });
+    }
+    const referrerPrefix = code.slice(2).toLowerCase(); // e.g. "8af3c2"
+
+    try {
+      // 1. Éviter l'auto-parrainage
+      const myCode = `GL${referredId.substring(0, 6).toUpperCase()}`;
+      if (code.toUpperCase() === myCode) {
+        return res.status(400).json({ message: "Impossible de se parrainer soi-même" });
+      }
+
+      // 2. Vérifier si ce filleul a déjà été récompensé
+      const existingReferral = await db.select()
+        .from(referrals)
+        .where(eq(referrals.referredId, referredId))
+        .limit(1);
+      if (existingReferral.length > 0) {
+        return res.status(409).json({ message: "Parrainage déjà utilisé" });
+      }
+
+      // 3. Trouver le parrain par son code
+      const referrerResults = await db.select()
+        .from(users)
+        .where(sql`UPPER(LEFT(${users.id}, 6)) = ${referrerPrefix.toUpperCase()}`)
+        .limit(1);
+      if (referrerResults.length === 0) {
+        return res.status(404).json({ message: "Code introuvable" });
+      }
+
+      const referrerId = referrerResults[0].id;
+
+      // 4. Enregistrer le parrainage
+      await db.insert(referrals).values({ referrerId, referredId });
+
+      // 5. Créditer 50 pts au parrain
+      await db.insert(loyaltyPoints).values({
+        userId: referrerId,
+        points: 50,
+        reason: "parrainage",
+        referenceId: referredId,
+      });
+
+      // 6. Créditer 10 pts de bienvenue au filleul
+      await db.insert(loyaltyPoints).values({
+        userId: referredId,
+        points: 10,
+        reason: "parrainage_bienvenue",
+        referenceId: referrerId,
+      });
+
+      console.log(`[referral] ${referredId} parrainé par ${referrerId} → +50 pts parrain, +10 pts filleul`);
+      res.json({ success: true, pointsReferrer: 50, pointsReferred: 10 });
+    } catch (err) {
+      console.error("[referral/claim] error:", err);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // === Classement challenges ===
+  app.get("/api/challenges/leaderboard", async (_req, res) => {
+    try {
+      const top = await storage.getTopChallenges(10);
+      res.json(top);
+    } catch {
+      res.json([]);
+    }
+  });
+
+  // === Stats publiques (social proof) ===
+  app.get("/api/stats/public", async (_req, res) => {
+    try {
+      const stats = await storage.getAnalyticsStats("all");
+      res.json({
+        totalScans: stats.totalAnalyses ?? 0,
+        totalUsers: stats.uniqueVisitors ?? 0,
+      });
+    } catch {
+      res.json({ totalScans: 0, totalUsers: 0 });
+    }
+  });
+
+  app.get("/api/admin/analytics", async (req, res) => {
+    const adminKey = req.query.key || req.headers["x-admin-key"];
+    if (adminKey !== process.env.ADMIN_KEY && adminKey !== "glowscan2024admin") {
+      return res.status(403).json({ message: "Accès refusé" });
+    }
+
+    try {
+      const period = (req.query.period as string) || "all";
+      const validPeriods = ["today", "week", "month", "all"];
+      const safePeriod = validPeriods.includes(period) ? period as any : "all";
+      const stats = await storage.getAnalyticsStats(safePeriod);
+      res.json(stats);
+    } catch (error) {
+      console.error("Analytics stats error:", error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // ═══════════════════════════════════════════════════════════════
+  // GET /api/admin/full-stats — Dashboard complet 100% DB directe
+  // Données fiables tirées directement de toutes les tables
+  // ═══════════════════════════════════════════════════════════════
+  app.get("/api/admin/full-stats", async (req: any, res) => {
+    const adminKey = req.query.key || req.headers["x-admin-key"];
+    if (adminKey !== process.env.ADMIN_KEY && adminKey !== "glowscan2024admin") {
+      return res.status(403).json({ message: "Accès refusé" });
+    }
+    try {
+      const period = (req.query.period as string) || "month";
+
+      // Calcul des dates de période
+      const now = new Date();
+      const getStartDate = (p: string) => {
+        if (p === "today") return new Date(new Date().setHours(0, 0, 0, 0));
+        if (p === "week") return new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+        if (p === "month") return new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+        return null;
+      };
+      const startDate = getStartDate(period);
+      const prevStartDate = (() => {
+        if (period === "today") return new Date(Date.now() - 24 * 60 * 60 * 1000);
+        if (period === "week") return new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
+        if (period === "month") return new Date(Date.now() - 60 * 24 * 60 * 60 * 1000);
+        return null;
+      })();
+
+      // ── SCANS ────────────────────────────────────────────────
+      const totalScansResult = await db.select({ count: count() }).from(scans);
+      const totalScans = Number(totalScansResult[0]?.count ?? 0);
+
+      const scansThisPeriodResult = startDate
+        ? await db.select({ count: count() }).from(scans).where(gte(scans.createdAt, startDate))
+        : totalScansResult;
+      const scansThisPeriod = Number(scansThisPeriodResult[0]?.count ?? 0);
+
+      const scansPrevPeriodResult = (startDate && prevStartDate)
+        ? await db.select({ count: count() }).from(scans).where(and(gte(scans.createdAt, prevStartDate), lte(scans.createdAt, startDate)))
+        : null;
+      const scansPrevPeriod = scansPrevPeriodResult ? Number(scansPrevPeriodResult[0]?.count ?? 0) : null;
+
+      // Scans par jour (30 derniers jours)
+      const scansByDayRaw = await db
+        .select({
+          day: sql<string>`TO_CHAR(${scans.createdAt} AT TIME ZONE 'Africa/Douala', 'YYYY-MM-DD')`,
+          count: count(),
+        })
+        .from(scans)
+        .where(gte(scans.createdAt, new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)))
+        .groupBy(sql`TO_CHAR(${scans.createdAt} AT TIME ZONE 'Africa/Douala', 'YYYY-MM-DD')`)
+        .orderBy(sql`TO_CHAR(${scans.createdAt} AT TIME ZONE 'Africa/Douala', 'YYYY-MM-DD')`);
+
+      // Scans par zone (face/body/hair)
+      const scansByAreaRaw = await db
+        .select({ area: scans.area, count: count() })
+        .from(scans)
+        .groupBy(scans.area);
+      const scansByArea = { face: 0, body: 0, hair: 0 } as Record<string, number>;
+      for (const row of scansByAreaRaw) {
+        scansByArea[row.area] = Number(row.count);
+      }
+
+      // Score moyen
+      const avgScoreResult = await db.select({ avg: avg(scans.score) }).from(scans);
+      const avgScore = Math.round(Number(avgScoreResult[0]?.avg ?? 0));
+
+      // Distribution des scores
+      const scoreDistRaw = await db
+        .select({
+          range: sql<string>`CASE WHEN ${scans.score} <= 25 THEN '0-25' WHEN ${scans.score} <= 50 THEN '26-50' WHEN ${scans.score} <= 75 THEN '51-75' ELSE '76-100' END`,
+          count: count(),
+        })
+        .from(scans)
+        .groupBy(sql`CASE WHEN ${scans.score} <= 25 THEN '0-25' WHEN ${scans.score} <= 50 THEN '26-50' WHEN ${scans.score} <= 75 THEN '51-75' ELSE '76-100' END`);
+      const scoreDistribution = { "0-25": 0, "26-50": 0, "51-75": 0, "76-100": 0 } as Record<string, number>;
+      for (const row of scoreDistRaw) {
+        scoreDistribution[row.range] = Number(row.count);
+      }
+
+      // Top conditions (regroupement simplifié — premiers mots)
+      const conditionsRaw = await db
+        .select({ condition: scans.condition, count: count() })
+        .from(scans)
+        .where(sql`${scans.condition} IS NOT NULL`)
+        .groupBy(scans.condition)
+        .orderBy(desc(count()))
+        .limit(8);
+
+      // Scans anonymes vs identifiés
+      const scansWithUserResult = await db.select({ count: count() }).from(scans).where(sql`${scans.userId} IS NOT NULL`);
+      const scansWithUser = Number(scansWithUserResult[0]?.count ?? 0);
+
+      // Derniers scans avec infos utilisateur
+      const recentScansRaw = await db
+        .select({
+          id: scans.id,
+          area: scans.area,
+          condition: scans.condition,
+          score: scans.score,
+          userId: scans.userId,
+          createdAt: scans.createdAt,
+        })
+        .from(scans)
+        .orderBy(desc(scans.createdAt))
+        .limit(15);
+
+      // ── UTILISATEURS ─────────────────────────────────────────
+      const totalUsersResult = await db.select({ count: count() }).from(users);
+      const totalUsers = Number(totalUsersResult[0]?.count ?? 0);
+
+      const newUsersResult = startDate
+        ? await db.select({ count: count() }).from(users).where(gte(users.createdAt, startDate))
+        : totalUsersResult;
+      const newUsers = Number(newUsersResult[0]?.count ?? 0);
+
+      const newUsersPrevResult = (startDate && prevStartDate)
+        ? await db.select({ count: count() }).from(users).where(and(gte(users.createdAt, prevStartDate), lte(users.createdAt, startDate)))
+        : null;
+      const newUsersPrev = newUsersPrevResult ? Number(newUsersPrevResult[0]?.count ?? 0) : null;
+
+      // Nouveaux utilisateurs par jour (30 derniers jours)
+      const usersByDayRaw = await db
+        .select({
+          day: sql<string>`TO_CHAR(${users.createdAt} AT TIME ZONE 'Africa/Douala', 'YYYY-MM-DD')`,
+          count: count(),
+        })
+        .from(users)
+        .where(gte(users.createdAt, new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)))
+        .groupBy(sql`TO_CHAR(${users.createdAt} AT TIME ZONE 'Africa/Douala', 'YYYY-MM-DD')`)
+        .orderBy(sql`TO_CHAR(${users.createdAt} AT TIME ZONE 'Africa/Douala', 'YYYY-MM-DD')`);
+
+      // Utilisateurs avec ≥2 scans (rétention)
+      const retentionRaw = await db
+        .select({ userId: scans.userId, cnt: count() })
+        .from(scans)
+        .where(sql`${scans.userId} IS NOT NULL`)
+        .groupBy(scans.userId)
+        .having(sql`COUNT(*) >= 2`);
+      const usersRetained = retentionRaw.length;
+
+      // Derniers inscrits
+      const recentUsersRaw = await db
+        .select({
+          id: users.id,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          email: users.email,
+          createdAt: users.createdAt,
+        })
+        .from(users)
+        .orderBy(desc(users.createdAt))
+        .limit(10);
+
+      // ── PREMIUM ──────────────────────────────────────────────
+      const activePremiumResult = await db
+        .select({ count: count() })
+        .from(subscriptions)
+        .where(and(eq(subscriptions.status, "active"), gte(subscriptions.expiresAt, now)));
+      const activePremium = Number(activePremiumResult[0]?.count ?? 0);
+
+      const totalPremiumResult = await db.select({ count: count() }).from(subscriptions);
+      const totalPremiumAllTime = Number(totalPremiumResult[0]?.count ?? 0);
+
+      const premiumRevenueResult = await db
+        .select({ total: sql<number>`COALESCE(SUM(1000), 0)::integer` })
+        .from(subscriptions)
+        .where(eq(subscriptions.status, "active"));
+      const premiumRevenue = activePremium * 1000; // 1000 FCFA/mois
+
+      // ── WHATSAPP & CONVERSION ─────────────────────────────────
+      const totalWAResult = await db.select({ count: count() }).from(whatsappClicks);
+      const totalWA = Number(totalWAResult[0]?.count ?? 0);
+
+      const waThisPeriodResult = startDate
+        ? await db.select({ count: count() }).from(whatsappClicks).where(gte(whatsappClicks.createdAt, startDate))
+        : totalWAResult;
+      const waThisPeriod = Number(waThisPeriodResult[0]?.count ?? 0);
+
+      const waByBrandRaw = await db
+        .select({ brand: whatsappClicks.brand, count: count() })
+        .from(whatsappClicks)
+        .groupBy(whatsappClicks.brand)
+        .orderBy(desc(count()));
+
+      const waByProductRaw = await db
+        .select({ productName: whatsappClicks.productName, brand: whatsappClicks.brand, count: count() })
+        .from(whatsappClicks)
+        .groupBy(whatsappClicks.productName, whatsappClicks.brand)
+        .orderBy(desc(count()))
+        .limit(10);
+
+      // ── ORDERS ────────────────────────────────────────────────
+      const totalOrdersResult = await db.select({ count: count() }).from(orders);
+      const totalOrders = Number(totalOrdersResult[0]?.count ?? 0);
+
+      const revenueResult = await db.select({ total: sql<number>`COALESCE(SUM(${orders.totalPrice}), 0)::integer` }).from(orders);
+      const revenue = Number(revenueResult[0]?.total ?? 0);
+
+      // ── FUNNEL ─────────────────────────────────────────────────
+      const conversionScanToWA = totalScans > 0 ? Math.round((totalWA / totalScans) * 100) : 0;
+      const conversionWAToOrder = totalWA > 0 ? Math.round((totalOrders / totalWA) * 100) : 0;
+
+      res.json({
+        period,
+        generatedAt: new Date().toISOString(),
+        scans: {
+          total: totalScans,
+          thisPeriod: scansThisPeriod,
+          prevPeriod: scansPrevPeriod,
+          trend: scansPrevPeriod !== null ? scansThisPeriod - scansPrevPeriod : null,
+          byDay: scansByDayRaw,
+          byArea: scansByArea,
+          avgScore,
+          scoreDistribution,
+          topConditions: conditionsRaw,
+          withUser: scansWithUser,
+          anonymous: totalScans - scansWithUser,
+          recent: recentScansRaw,
+        },
+        users: {
+          total: totalUsers,
+          newThisPeriod: newUsers,
+          newPrevPeriod: newUsersPrev,
+          trend: newUsersPrev !== null ? newUsers - newUsersPrev : null,
+          byDay: usersByDayRaw,
+          retained: usersRetained,
+          retentionRate: totalUsers > 0 ? Math.round((usersRetained / totalUsers) * 100) : 0,
+          recent: recentUsersRaw,
+        },
+        premium: {
+          active: activePremium,
+          totalAllTime: totalPremiumAllTime,
+          monthlyRevenue: premiumRevenue,
+        },
+        whatsapp: {
+          total: totalWA,
+          thisPeriod: waThisPeriod,
+          byBrand: waByBrandRaw,
+          byProduct: waByProductRaw,
+        },
+        orders: {
+          total: totalOrders,
+          revenue,
+        },
+        funnel: {
+          users: totalUsers,
+          scans: totalScans,
+          whatsapp: totalWA,
+          orders: totalOrders,
+          conversionScanToWA,
+          conversionWAToOrder,
+        },
+      });
+    } catch (error) {
+      console.error("[admin/full-stats] Error:", error);
+      res.status(500).json({ message: "Erreur serveur", error: String(error) });
+    }
+  });
+
+  // === Scan Produit IA : analyse n'importe quel produit filmé ===
+  app.post("/api/product-scan", async (req: any, res) => {
+    try {
+      const { image } = req.body;
+      if (!image || typeof image !== "string") {
+        return res.status(400).json({ message: "Image requise" });
+      }
+
+      // Récupérer le profil de peau de l'utilisateur s'il est connecté
+      let skinProfile: string | null = null;
+      if (isAuth(req)) {
+        const userId = req.user?.id || (req.user as any)?.claims?.sub;
+        if (userId) {
+          const lastScan = await db.select().from(scans)
+            .where(eq(scans.userId, userId))
+            .orderBy(sql`created_at DESC`)
+            .limit(1);
+          if (lastScan.length > 0 && lastScan[0].condition) {
+            skinProfile = lastScan[0].condition;
+          }
+        }
+      }
+
+      const skinContext = skinProfile
+        ? `Le profil de peau de l'utilisateur est : "${skinProfile}".`
+        : "Profil de peau inconnu — donne un avis général.";
+
+      const prompt = `Tu es un expert cosmétologue et dermatologiste IA. Analyse ce produit cosmétique ou de soin.
+
+${skinContext}
+
+Réponds UNIQUEMENT en JSON valide avec ce format exact :
+{
+  "productName": "Nom du produit identifié",
+  "brand": "Marque si visible, sinon null",
+  "category": "type de produit (Crème hydratante, Sérum, Nettoyant, Shampooing, etc.)",
+  "mainIngredients": ["ingrédient 1", "ingrédient 2", "ingrédient 3"],
+  "benefits": ["bénéfice 1", "bénéfice 2", "bénéfice 3"],
+  "suitableFor": ["type de peau 1", "type de peau 2"],
+  "warnings": ["mise en garde 1 si applicable"],
+  "matchScore": 85,
+  "matchLabel": "Excellent pour ta peau",
+  "verdict": "Phrase courte de verdict (max 20 mots) sur l'adéquation avec le profil de l'utilisateur",
+  "safetyScore": 88,
+  "note": "Conseil personnalisé court (max 30 mots)"
+}
+
+matchScore est entre 0 et 100 — compatibilité avec le profil de peau de l'utilisateur.
+safetyScore est entre 0 et 100 — sécurité générale des ingrédients.
+Si tu ne reconnais pas le produit, fais de ton mieux avec ce que tu vois.
+Ne mentionne JAMAIS la qualité de l'image.`;
+
+      const base64Data = image.replace(/^data:image\/\w+;base64,/, "");
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: prompt },
+              {
+                type: "image_url",
+                image_url: { url: `data:image/jpeg;base64,${base64Data}`, detail: "high" },
+              },
+            ],
+          },
+        ],
+        max_tokens: 800,
+        temperature: 0.3,
+      });
+
+      const raw = response.choices[0]?.message?.content || "";
+      const jsonMatch = raw.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        return res.status(500).json({ message: "Réponse IA invalide" });
+      }
+      const result = JSON.parse(jsonMatch[0]);
+      res.json(result);
+    } catch (error: any) {
+      console.error("Product scan error:", error);
+      res.status(500).json({ message: "Erreur lors de l'analyse du produit" });
+    }
+  });
+
+  // ═══════════════════════════════════════════════════
+  // === Scan Nutriment — analyse aliments & impact peau ===
+  // ═══════════════════════════════════════════════════
+
+  app.post("/api/nutriment-scan", async (req: any, res) => {
+    try {
+      const { image } = req.body;
+      if (!image || typeof image !== "string") {
+        return res.status(400).json({ message: "Image requise" });
+      }
+
+      let skinProfile: string | null = null;
+      if (req.session?.userId) {
+        const lastScan = await db.select().from(scans)
+          .where(eq(scans.userId, req.session.userId))
+          .orderBy(sql`created_at DESC`)
+          .limit(1);
+        if (lastScan.length > 0 && lastScan[0].condition) {
+          skinProfile = lastScan[0].condition;
+        }
+      }
+
+      const skinContext = skinProfile
+        ? `Le profil de peau de l'utilisateur est : "${skinProfile}".`
+        : "Profil de peau inconnu — donne un avis général.";
+
+      const prompt = `Tu es un expert en nutrition et dermatologie. Analyse cet aliment ou étiquette nutritionnelle.
+
+${skinContext}
+
+Réponds UNIQUEMENT en JSON valide avec ce format exact :
+{
+  "foodName": "Nom de l'aliment identifié",
+  "emoji": "emoji représentant l'aliment",
+  "category": "catégorie (Fruit, Légume, Protéine, Glucide, Gras, Boisson, Snack, Plat cuisiné, etc.)",
+  "calories": 120,
+  "proteins": 5.2,
+  "carbs": 18.4,
+  "fats": 3.1,
+  "fiber": 2.0,
+  "vitamins": ["Vit C", "Vit A", "Vit E"],
+  "minerals": ["Zinc", "Fer", "Magnésium"],
+  "skinScore": 78,
+  "skinLabel": "Excellent pour la peau",
+  "skinBenefits": ["Hydrate la peau grâce à son eau", "Riche en antioxydants anti-âge"],
+  "skinWarnings": ["Sucre élevé — peut aggraver l'acné si consommé en excès"],
+  "verdict": "Aliment très bénéfique pour le teint et l'éclat",
+  "tip": "Consomme-le le matin à jeun pour maximiser l'absorption des nutriments."
+}
+
+Règles :
+- calories, proteins, carbs, fats, fiber : valeurs pour 100g ou pour la portion visible (précise si portion)
+- skinScore : 0-100 (0=très mauvais pour la peau, 100=excellent). Sucre raffiné, alcool, aliments ultra-transformés = score bas.
+- skinBenefits : liste les effets positifs spécifiques sur la peau, cheveux, teint
+- skinWarnings : liste les risques si c'est pertinent (peut être vide [])
+- Si tu ne reconnais pas clairement l'aliment, fais de ton mieux avec ce que tu vois.
+- Ne mentionne JAMAIS la qualité de l'image.`;
+
+      const base64Data = image.replace(/^data:image\/\w+;base64,/, "");
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: prompt },
+              {
+                type: "image_url",
+                image_url: { url: `data:image/jpeg;base64,${base64Data}`, detail: "high" },
+              },
+            ],
+          },
+        ],
+        max_tokens: 900,
+        temperature: 0.3,
+      });
+
+      const raw = response.choices[0]?.message?.content || "";
+      const jsonMatch = raw.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        return res.status(500).json({ message: "Réponse IA invalide" });
+      }
+      const result = JSON.parse(jsonMatch[0]);
+      res.json(result);
+    } catch (error: any) {
+      console.error("Nutriment scan error:", error);
+      res.status(500).json({ message: "Erreur lors de l'analyse nutritionnelle" });
+    }
+  });
+
+  // ═══════════════════════════════════════════════════
+  // === Wellness Tracker — suivi bien-être quotidien ===
+  // ═══════════════════════════════════════════════════
+
+  // GET /api/wellness/today — entrée du jour
+  app.get("/api/wellness/today", async (req: any, res) => {
+    const userId = req.session?.userId;
+    if (!userId) return res.status(401).json({ message: "Non authentifié" });
+
+    const today = new Date().toISOString().slice(0, 10);
+    const [log] = await db.select().from(wellnessLogs)
+      .where(and(eq(wellnessLogs.userId, userId), eq(wellnessLogs.date, today)))
+      .limit(1);
+
+    res.json(log || { userId, date: today, waterGlasses: 0, sleepHours: 0, mood: 0, energy: 0 });
+  });
+
+  // POST /api/wellness/today — créer ou mettre à jour
+  app.post("/api/wellness/today", async (req: any, res) => {
+    const userId = req.session?.userId;
+    if (!userId) return res.status(401).json({ message: "Non authentifié" });
+
+    const { waterGlasses, sleepHours, mood, energy } = req.body;
+    const today = new Date().toISOString().slice(0, 10);
+
+    const [existing] = await db.select().from(wellnessLogs)
+      .where(and(eq(wellnessLogs.userId, userId), eq(wellnessLogs.date, today)))
+      .limit(1);
+
+    if (existing) {
+      const [updated] = await db.update(wellnessLogs)
+        .set({
+          ...(waterGlasses !== undefined && { waterGlasses }),
+          ...(sleepHours !== undefined && { sleepHours }),
+          ...(mood !== undefined && { mood }),
+          ...(energy !== undefined && { energy }),
+          updatedAt: new Date(),
+        })
+        .where(and(eq(wellnessLogs.userId, userId), eq(wellnessLogs.date, today)))
+        .returning();
+      return res.json(updated);
+    }
+
+    const [created] = await db.insert(wellnessLogs).values({
+      userId,
+      date: today,
+      waterGlasses: waterGlasses ?? 0,
+      sleepHours: sleepHours ?? 0,
+      mood: mood ?? 0,
+      energy: energy ?? 0,
+    }).returning();
+    res.json(created);
+  });
+
+  // GET /api/wellness/history — 7 derniers jours
+  app.get("/api/wellness/history", async (req: any, res) => {
+    const userId = req.session?.userId;
+    if (!userId) return res.status(401).json({ message: "Non authentifié" });
+
+    const logs = await db.select().from(wellnessLogs)
+      .where(eq(wellnessLogs.userId, userId))
+      .orderBy(desc(wellnessLogs.date))
+      .limit(7);
+
+    res.json(logs);
+  });
+
+  // ══════════════════════════════
+  // ROUTINES (matin / soir)
+  // ══════════════════════════════
+
+  // Helper: date locale Africa/Douala (UTC+1) au format YYYY-MM-DD
+  const douaaToday = () => {
+    const now = new Date();
+    const utc = now.getTime() + now.getTimezoneOffset() * 60000;
+    const douala = new Date(utc + 3600000); // +1h
+    return douala.toISOString().slice(0, 10);
+  };
+  // Helper: format date en YYYY-MM-DD côté Douala à partir d'un Date JS
+  const douaaDateStr = (d: Date) => {
+    const utc = d.getTime() + d.getTimezoneOffset() * 60000;
+    const douala = new Date(utc + 3600000);
+    return douala.toISOString().slice(0, 10);
+  };
+
+  // GET /api/routines — toutes les routines + steps + completions du jour + stats
+  app.get("/api/routines", async (req: any, res) => {
+    const userId = req.session?.userId;
+    if (!userId) return res.status(401).json({ message: "Non authentifié" });
+
+    try {
+      const routines = await storage.getRoutinesWithSteps(userId);
+      const today = douaaToday();
+      const todayCompletions = await storage.getCompletionsForDate(userId, today);
+
+      // Stats hebdo : 7 derniers jours (côté Douala)
+      const startD = new Date();
+      startD.setDate(startD.getDate() - 6);
+      const startStr = douaaDateStr(startD);
+      const weekCompletions = await storage.getCompletionsBetween(userId, startStr, today);
+
+      // Total d'étapes par jour (steps actuelles)
+      const totalSteps = routines.reduce((acc, r) => acc + r.steps.length, 0);
+      const possibleWeek = totalSteps * 7;
+      const weeklyPct = possibleWeek > 0 ? Math.round((weekCompletions.length / possibleWeek) * 100) : 0;
+
+      // Streak : nombre de jours consécutifs où TOUTES les étapes ont été cochées
+      let streak = 0;
+      if (totalSteps > 0) {
+        // On regarde 30 jours en arrière pour le streak
+        const olderStart = new Date();
+        olderStart.setDate(olderStart.getDate() - 29);
+        const olderStartStr = douaaDateStr(olderStart);
+        const allCompletions = await storage.getCompletionsBetween(userId, olderStartStr, today);
+        const counts = new Map<string, number>();
+        allCompletions.forEach((c) => counts.set(c.date, (counts.get(c.date) || 0) + 1));
+
+        // On commence au jour le plus récent qui a des completions, ou aujourd'hui
+        let cursor = new Date();
+        // Si rien aujourd'hui, on commence à hier (le streak n'est pas cassé tant que la journée n'est pas finie)
+        if ((counts.get(today) || 0) < totalSteps) {
+          cursor.setDate(cursor.getDate() - 1);
+        }
+        for (let i = 0; i < 30; i++) {
+          const d = douaaDateStr(cursor);
+          if ((counts.get(d) || 0) >= totalSteps) {
+            streak++;
+            cursor.setDate(cursor.getDate() - 1);
+          } else {
+            break;
+          }
+        }
+      }
+
+      res.json({
+        routines,
+        todayCompletions: todayCompletions.map((c) => c.stepId),
+        stats: { streak, weeklyPct, totalSteps, today },
+      });
+    } catch (e) {
+      console.error("GET /api/routines error:", e);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // PUT /api/routines/:period — créer ou mettre à jour la routine (heure rappel + activé)
+  app.put("/api/routines/:period", async (req: any, res) => {
+    const userId = req.session?.userId;
+    if (!userId) return res.status(401).json({ message: "Non authentifié" });
+    const period = req.params.period;
+    if (period !== "morning" && period !== "evening") return res.status(400).json({ message: "Période invalide" });
+
+    const { reminderTime, reminderEnabled } = req.body || {};
+    // Validation heure HH:MM
+    if (reminderTime !== undefined && reminderTime !== null && !/^\d{2}:\d{2}$/.test(reminderTime)) {
+      return res.status(400).json({ message: "Format heure invalide (HH:MM)" });
+    }
+
+    try {
+      const routine = await storage.upsertRoutine(userId, period, {
+        ...(reminderTime !== undefined && { reminderTime }),
+        ...(reminderEnabled !== undefined && { reminderEnabled }),
+      });
+      res.json(routine);
+    } catch (e) {
+      console.error("PUT /api/routines error:", e);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // POST /api/routines/:period/steps — ajouter une étape
+  app.post("/api/routines/:period/steps", async (req: any, res) => {
+    const userId = req.session?.userId;
+    if (!userId) return res.status(401).json({ message: "Non authentifié" });
+    const period = req.params.period;
+    if (period !== "morning" && period !== "evening") return res.status(400).json({ message: "Période invalide" });
+
+    const { kind, label, productId } = req.body || {};
+    if (!kind || (kind !== "product" && kind !== "care")) return res.status(400).json({ message: "Kind invalide" });
+    if (!label || typeof label !== "string" || label.trim().length === 0) return res.status(400).json({ message: "Label requis" });
+    if (label.length > 120) return res.status(400).json({ message: "Label trop long (max 120)" });
+
+    try {
+      // garantir que la routine existe
+      const routine = await storage.upsertRoutine(userId, period, {});
+      const step = await storage.addRoutineStep(routine.id, {
+        kind,
+        label: label.trim(),
+        productId: productId || null,
+      });
+      res.json(step);
+    } catch (e) {
+      console.error("POST step error:", e);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // DELETE /api/routines/steps/:stepId
+  app.delete("/api/routines/steps/:stepId", async (req: any, res) => {
+    const userId = req.session?.userId;
+    if (!userId) return res.status(401).json({ message: "Non authentifié" });
+    const stepId = parseInt(req.params.stepId, 10);
+    if (isNaN(stepId)) return res.status(400).json({ message: "stepId invalide" });
+
+    try {
+      await storage.deleteRoutineStep(stepId, userId);
+      res.json({ ok: true });
+    } catch (e) {
+      console.error("DELETE step error:", e);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // POST /api/routines/check — toggle completion pour aujourd'hui
+  app.post("/api/routines/check", async (req: any, res) => {
+    const userId = req.session?.userId;
+    if (!userId) return res.status(401).json({ message: "Non authentifié" });
+    const { stepId } = req.body || {};
+    if (!stepId || typeof stepId !== "number") return res.status(400).json({ message: "stepId requis" });
+
+    try {
+      // vérifier que l'étape appartient au user
+      const step = await storage.getRoutineStep(stepId);
+      if (!step || step.userId !== userId) return res.status(404).json({ message: "Étape introuvable" });
+      const today = douaaToday();
+      const result = await storage.toggleCompletion(userId, stepId, today);
+      res.json(result);
+    } catch (e) {
+      console.error("POST check error:", e);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // ══════════════════════════════
+  // PARTENAIRES LOCAUX
+  // ══════════════════════════════
+
+  // GET /api/partners — liste publique des produits partenaires actifs
+  app.get("/api/partners/products", async (_req, res) => {
+    try {
+      const products = await storage.getAllPartnerProducts();
+      res.json(products);
+    } catch (e) {
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // GET /api/admin/partners — liste admin de tous les partenaires
+  app.get("/api/admin/partners", async (req: any, res) => {
+    if (req.headers["x-admin-key"] !== process.env.ADMIN_KEY && req.headers["x-admin-key"] !== "glowscan2024admin") {
+      return res.status(401).json({ message: "Non autorisé" });
+    }
+    const all = await storage.getAllPartners();
+    const withProducts = await Promise.all(all.map(async (p) => ({
+      ...p,
+      products: await storage.getProductsByPartner(p.id),
+    })));
+    res.json(withProducts);
+  });
+
+  // POST /api/admin/partners — créer un partenaire
+  app.post("/api/admin/partners", async (req: any, res) => {
+    if (req.headers["x-admin-key"] !== process.env.ADMIN_KEY && req.headers["x-admin-key"] !== "glowscan2024admin") {
+      return res.status(401).json({ message: "Non autorisé" });
+    }
+    const { name, location, whatsapp, description, category } = req.body;
+    if (!name || !location || !whatsapp) return res.status(400).json({ message: "name, location, whatsapp requis" });
+    const partner = await storage.createPartner({ name, location, whatsapp, description: description || null, category: category || "parfumerie", active: true });
+    res.json(partner);
+  });
+
+  // PATCH /api/admin/partners/:id — modifier (active, etc.)
+  app.patch("/api/admin/partners/:id", async (req: any, res) => {
+    if (req.headers["x-admin-key"] !== process.env.ADMIN_KEY && req.headers["x-admin-key"] !== "glowscan2024admin") {
+      return res.status(401).json({ message: "Non autorisé" });
+    }
+    const id = parseInt(req.params.id);
+    const updated = await storage.updatePartner(id, req.body);
+    res.json(updated);
+  });
+
+  // POST /api/admin/partners/:id/products — ajouter un produit
+  app.post("/api/admin/partners/:id/products", async (req: any, res) => {
+    if (req.headers["x-admin-key"] !== process.env.ADMIN_KEY && req.headers["x-admin-key"] !== "glowscan2024admin") {
+      return res.status(401).json({ message: "Non autorisé" });
+    }
+    const partnerId = parseInt(req.params.id);
+    const { name, category, description, price } = req.body;
+    if (!name) return res.status(400).json({ message: "name requis" });
+    const product = await storage.createPartnerProduct({ partnerId, name, category: category || "soin", description: description || null, price: price || 0, active: true });
+    res.json(product);
+  });
+
+  // PATCH /api/admin/partners/products/:id — modifier un produit
+  app.patch("/api/admin/partners/products/:id", async (req: any, res) => {
+    if (req.headers["x-admin-key"] !== process.env.ADMIN_KEY && req.headers["x-admin-key"] !== "glowscan2024admin") {
+      return res.status(401).json({ message: "Non autorisé" });
+    }
+    const id = parseInt(req.params.id);
+    const updated = await storage.updatePartnerProduct(id, req.body);
+    res.json(updated);
+  });
+
+  // ============== Featured products (Boutique vedette) ==============
+
+  // GET /api/featured-products — liste publique des produits mis en avant sur la home
+  app.get("/api/featured-products", async (_req, res) => {
+    try {
+      const items = await storage.getFeaturedProducts();
+      res.json(items);
+    } catch (err: any) {
+      res.status(500).json({ message: err?.message ?? "Erreur" });
+    }
+  });
+
+  // PUT /api/admin/featured-products — remplace la liste (body: { items: [{productId, badge?}] })
+  app.put("/api/admin/featured-products", async (req: any, res) => {
+    const adminKey = req.headers["x-admin-key"];
+    if (adminKey !== process.env.ADMIN_KEY && adminKey !== "glowscan2024admin") {
+      return res.status(401).json({ message: "Non autorisé" });
+    }
+    const items = Array.isArray(req.body?.items) ? req.body.items : [];
+    const cleaned = items
+      .filter((it: any) => typeof it?.productId === "string" && it.productId.length > 0)
+      .slice(0, 12)
+      .map((it: any) => ({ productId: it.productId, badge: it.badge ?? null }));
+    const saved = await storage.setFeaturedProducts(cleaned);
+    res.json(saved);
+  });
+
+  // ============== Conseils personnalisés IA ==============
+
+  // GET /api/conseils/personalized — génère 4 tips IA basés sur le dernier scan, cache 7j
+  app.get("/api/conseils/personalized", async (req: any, res) => {
+    const userId = req.session?.userId || req.user?.id || (req.user as any)?.claims?.sub;
+    if (!userId) return res.status(401).json({ message: "Non autorisé" });
+
+    try {
+      const userScans = await storage.getScansByUser(userId);
+      if (!userScans || userScans.length === 0) {
+        return res.json({ tips: [], hasScan: false });
+      }
+      const latest = userScans[0];
+      const cached = await storage.getCachedTips(userId);
+      const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
+      const isFresh = cached
+        && cached.scanId === latest.id
+        && cached.generatedAt
+        && Date.now() - new Date(cached.generatedAt).getTime() < SEVEN_DAYS;
+      if (isFresh && cached) {
+        return res.json({ tips: cached.tips, hasScan: true, cached: true });
+      }
+
+      // Construire le contexte à partir du dernier scan
+      const analysis: any = (latest as any).recommendations || {};
+      const summary: any = (latest as any).analysis ? String((latest as any).analysis).slice(0, 600) : "";
+      const score = (latest as any).glowScore ?? null;
+      const skinType = analysis?.skinType || (latest as any).skinType || "non précisé";
+      const issues: string[] = Array.isArray(analysis?.issues)
+        ? analysis.issues
+        : Array.isArray((latest as any).diagnoses)
+        ? (latest as any).diagnoses.map((d: any) => d?.name || d).filter(Boolean)
+        : [];
+
+      const prompt = `Tu es une dermatologue camerounaise bienveillante. Donne EXACTEMENT 4 conseils personnalisés courts (≤ 22 mots chacun), en français, pour une utilisatrice avec :
+- Type de peau : ${skinType}
+- Score Glow : ${score ?? "?"} / 100
+- Préoccupations : ${issues.join(", ") || "non précisé"}
+- Résumé analyse : ${summary}
+
+Règles : pas de marque, pas d'ingrédient interdit en Afrique, ton chaleureux, actionnable, adapté au climat tropical/humide. Réponds UNIQUEMENT en JSON : {"tips":["...","...","...","..."]}`;
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [{ role: "user", content: prompt }],
+        max_tokens: 400,
+        temperature: 0.7,
+        response_format: { type: "json_object" },
+      });
+      const raw = completion.choices[0]?.message?.content || "{}";
+      let parsed: any = {};
+      try { parsed = JSON.parse(raw); } catch { parsed = {}; }
+      const tips: string[] = Array.isArray(parsed?.tips)
+        ? parsed.tips.map((t: any) => String(t)).filter((t: string) => t.length > 0).slice(0, 5)
+        : [];
+      if (tips.length === 0) {
+        return res.json({ tips: [], hasScan: true, error: "generation_failed" });
+      }
+      await storage.setCachedTips(userId, latest.id, tips);
+      res.json({ tips, hasScan: true, cached: false });
+    } catch (err: any) {
+      console.error("[/api/conseils/personalized] error:", err);
+      res.status(500).json({ message: err?.message ?? "Erreur" });
+    }
+  });
+
+  // ==================== RGPD ====================
+  // Droit d'accès & droit à la portabilité (RGPD art. 15 & 20)
+  // Renvoie toutes les données personnelles de l'utilisateur en JSON téléchargeable
+  app.get("/api/user/me/export", async (req: any, res) => {
+    if (!isAuth(req)) return res.status(401).json({ message: "Unauthorized" });
+    const userId = getUID(req);
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const data = await storage.exportUserData(userId);
+      const filename = `glowscan-mes-donnees-${new Date().toISOString().slice(0, 10)}.json`;
+      res.setHeader("Content-Type", "application/json; charset=utf-8");
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      res.status(200).send(JSON.stringify(data, null, 2));
+    } catch (err: any) {
+      console.error("[GDPR export] error:", err);
+      res.status(500).json({ message: "Export impossible. Réessaie ou contacte le support." });
+    }
+  });
+
+  // Droit à l'effacement (RGPD art. 17 — "droit à l'oubli")
+  // Supprime définitivement le compte et toutes les données associées.
+  // Le client doit confirmer en envoyant { confirm: "SUPPRIMER" } dans le body.
+  app.delete("/api/user/me", async (req: any, res) => {
+    if (!isAuth(req)) return res.status(401).json({ message: "Unauthorized" });
+    const userId = getUID(req);
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+    const confirm = req.body?.confirm;
+    if (confirm !== "SUPPRIMER") {
+      return res.status(400).json({
+        message: "Confirmation requise. Envoie { confirm: \"SUPPRIMER\" } pour valider la suppression définitive.",
+      });
+    }
+    try {
+      await storage.deleteUserAndAllData(userId);
+      // Détruit la session pour déconnecter immédiatement
+      if (req.session) {
+        req.session.destroy((err: any) => {
+          if (err) console.warn("[GDPR delete] session destroy failed:", err);
+          res.clearCookie("connect.sid");
+          res.status(200).json({ ok: true, message: "Ton compte et toutes tes données ont été supprimés définitivement." });
+        });
+      } else {
+        res.status(200).json({ ok: true, message: "Compte supprimé." });
+      }
+    } catch (err: any) {
+      console.error("[GDPR delete] error:", err);
+      res.status(500).json({ message: "Suppression impossible. Réessaie ou contacte le support." });
+    }
+  });
+
+  return httpServer;
+}

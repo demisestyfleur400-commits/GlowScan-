@@ -1,0 +1,235 @@
+@import url('https://fonts.googleapis.com/css2?family=Carlito:ital,wght@0,400;0,700;1,400;1,700&family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* ═══════════════════════════════════════════════════════
+     GlowScan Design System — Rose & Noir (avril 2026)
+     Premium · Médical · Africain · Moderne
+     ═══════════════════════════════════════════════════════ */
+
+  /* Rose GlowScan #E91E8C — couleur signature */
+  --primary: 327 81% 51%;
+  --primary-foreground: 0 0% 100%;
+
+  /* Noir profond #1A1A2E — backgrounds sombres, headers */
+  --secondary: 323 80% 94%;        /* Rose clair #FCE4F1 pour sections douces */
+  --secondary-foreground: 240 28% 14%;
+
+  /* Accent = rose clair #FCE4F1 */
+  --accent: 323 80% 94%;
+  --accent-foreground: 240 28% 14%;
+
+  /* Backgrounds & textes */
+  --background: 0 0% 100%;          /* Blanc pur */
+  --foreground: 240 28% 14%;        /* Noir profond #1A1A2E */
+
+  --muted: 323 60% 97%;              /* rose très très pâle pour zones neutres */
+  --muted-foreground: 0 0% 33%;     /* gris #555555 pour textes secondaires */
+
+  --card: 0 0% 100%;
+  --card-foreground: 240 28% 14%;
+
+  --popover: 0 0% 100%;
+  --popover-foreground: 240 28% 14%;
+
+  --border: 323 40% 90%;             /* bordure rose subtile */
+  --input: 323 40% 90%;
+
+  --ring: 327 81% 51%;               /* focus = rose */
+
+  --radius: 0.5rem;                  /* coins 8px par défaut (boutons) */
+
+  /* Statuts sémantiques */
+  --success: 123 56% 24%;            /* Vert #1B5E20 */
+  --success-foreground: 0 0% 100%;
+  --alert: 20 100% 45%;              /* Orange #E65100 */
+  --alert-foreground: 0 0% 100%;
+  --destructive: 20 100% 45%;
+  --destructive-foreground: 0 0% 100%;
+
+  /* Charts (fallback) */
+  --chart-1: 327 81% 51%;
+  --chart-2: 240 28% 14%;
+  --chart-3: 123 56% 24%;
+  --chart-4: 20 100% 45%;
+  --chart-5: 323 80% 80%;
+
+  /* Sidebar (fallback identique au thème principal) */
+  --sidebar: 240 28% 14%;
+  --sidebar-foreground: 0 0% 100%;
+  --sidebar-border: 323 40% 30%;
+  --sidebar-ring: 327 81% 51%;
+  --sidebar-primary: 327 81% 51%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 323 80% 94%;
+  --sidebar-accent-foreground: 240 28% 14%;
+
+  /* Tokens GlowScan exposés pour les usages directs */
+  --glow-pink: #E91E8C;
+  --glow-pink-soft: #FCE4F1;
+  --glow-dark: #1A1A2E;
+  --glow-text-2: #555555;
+  --glow-success: #1B5E20;
+  --glow-alert: #E65100;
+
+  /* Typographie GlowScan — Calibri / Carlito (clone libre metric-compatible) */
+  --font-display: 'Carlito', 'Calibri', 'Inter', system-ui, sans-serif;
+  --font-body: 'Carlito', 'Calibri', 'Inter', system-ui, sans-serif;
+  --font-medical: 'Carlito', 'Calibri', 'Inter', system-ui, sans-serif;
+}
+
+.dark {
+  /* Mode sombre = inversion sur fond noir profond */
+  --background: 240 28% 14%;
+  --foreground: 0 0% 100%;
+
+  --primary: 327 81% 55%;
+  --primary-foreground: 240 28% 14%;
+
+  --secondary: 240 28% 22%;
+  --secondary-foreground: 0 0% 100%;
+
+  --muted: 240 28% 22%;
+  --muted-foreground: 323 30% 80%;
+
+  --accent: 327 60% 30%;
+  --accent-foreground: 0 0% 100%;
+
+  --card: 240 28% 18%;
+  --card-foreground: 0 0% 100%;
+
+  --popover: 240 28% 18%;
+  --popover-foreground: 0 0% 100%;
+
+  --border: 240 28% 25%;
+  --input: 240 28% 25%;
+
+  --ring: 327 81% 55%;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: var(--font-body);
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    @apply font-bold tracking-tight;
+  }
+}
+
+/* Utilities GlowScan ------------------------------------------------------ */
+@layer utilities {
+  .glow-bg-dark { background-color: var(--glow-dark); }
+  .glow-bg-pink { background-color: var(--glow-pink); }
+  .glow-bg-pink-soft { background-color: var(--glow-pink-soft); }
+  .glow-text-pink { color: var(--glow-pink); }
+  .glow-text-dark { color: var(--glow-dark); }
+  .glow-text-2 { color: var(--glow-text-2); }
+  .glow-text-success { color: var(--glow-success); }
+  .glow-text-alert { color: var(--glow-alert); }
+  .glow-border-pink { border-color: var(--glow-pink); }
+
+  .glass-card {
+    @apply bg-white/80 backdrop-blur-lg border border-white/40 shadow-lg;
+  }
+  .text-gradient {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, var(--glow-pink) 0%, var(--glow-dark) 100%);
+  }
+  .animate-in {
+    animation: animateIn 0.5s ease-out forwards;
+  }
+}
+
+@keyframes animateIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+   AUTO DARK MODE — soir : fonds noir profond, textes blancs
+   Surcharges des classes Tailwind utilitaires les plus utilisées.
+   Le rose (pink-*) reste intact pour conserver l'identité visuelle.
+   ───────────────────────────────────────────────────────────────────── */
+.dark body { background-color: #1A1A2E; color: #fff; }
+
+/* Fonds clairs → fond sombre */
+.dark .bg-white,
+.dark .bg-white\/95,
+.dark .bg-white\/90,
+.dark .bg-white\/80,
+.dark .bg-gray-50,
+.dark .bg-gray-100 { background-color: #1A1A2E !important; }
+
+.dark .bg-gray-200 { background-color: #2A2A40 !important; }
+
+/* Cartes & surfaces */
+.dark .bg-card { background-color: #232338 !important; }
+
+/* Gradients de fond pâles → uniforme sombre */
+.dark .from-gray-50 { --tw-gradient-from: #1A1A2E var(--tw-gradient-from-position) !important; }
+.dark .to-gray-100 { --tw-gradient-to: #1A1A2E var(--tw-gradient-to-position) !important; }
+.dark .to-white { --tw-gradient-to: #1A1A2E var(--tw-gradient-to-position) !important; }
+.dark .from-white { --tw-gradient-from: #1A1A2E var(--tw-gradient-from-position) !important; }
+
+/* Pink soft backgrounds → légèrement plus foncés mais lisibles */
+.dark .bg-pink-50 { background-color: #2A1B26 !important; }
+.dark .bg-pink-100 { background-color: #3A1F30 !important; }
+.dark .from-pink-50 { --tw-gradient-from: #2A1B26 var(--tw-gradient-from-position) !important; }
+.dark .to-pink-50 { --tw-gradient-to: #2A1B26 var(--tw-gradient-to-position) !important; }
+.dark .from-pink-100 { --tw-gradient-from: #3A1F30 var(--tw-gradient-from-position) !important; }
+.dark .to-pink-100 { --tw-gradient-to: #3A1F30 var(--tw-gradient-to-position) !important; }
+.dark .via-pink-50 { --tw-gradient-via: #2A1B26 var(--tw-gradient-via-position) !important; }
+.dark .via-rose-50 { --tw-gradient-via: #2A1B26 var(--tw-gradient-via-position) !important; }
+.dark .from-rose-50 { --tw-gradient-from: #2A1B26 var(--tw-gradient-from-position) !important; }
+
+/* Textes sombres → blanc */
+.dark .text-gray-900,
+.dark .text-black { color: #FFFFFF !important; }
+.dark .text-gray-800,
+.dark .text-gray-700 { color: #E8E8F0 !important; }
+.dark .text-gray-600,
+.dark .text-gray-500 { color: #B8B8C8 !important; }
+.dark .text-gray-400 { color: #888899 !important; }
+
+/* Bordures claires → bordures sombres */
+.dark .border-gray-100 { border-color: #2A2A40 !important; }
+.dark .border-gray-200 { border-color: #33334A !important; }
+.dark .border-pink-100,
+.dark .border-pink-200 { border-color: #C2185B !important; }
+
+/* Ombres douces deviennent moins visibles → on les neutralise */
+.dark .shadow-sm,
+.dark .shadow,
+.dark .shadow-md,
+.dark .shadow-lg { box-shadow: 0 4px 12px rgba(0,0,0,0.4) !important; }
+
+/* Inputs/textarea */
+.dark input:not([type="checkbox"]):not([type="radio"]),
+.dark textarea,
+.dark select {
+  background-color: #232338 !important;
+  color: #fff !important;
+  border-color: #33334A !important;
+}
+.dark input::placeholder,
+.dark textarea::placeholder { color: #888899 !important; }
+
+/* Glass cards */
+.dark .glass-card {
+  background-color: rgba(35, 35, 56, 0.85) !important;
+  border-color: rgba(233, 30, 140, 0.2) !important;
+}
