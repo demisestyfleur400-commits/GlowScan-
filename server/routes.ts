@@ -8,6 +8,7 @@ import { objectStorageClient } from "./replit_integrations/object_storage/object
 import { api } from "@shared/routes";
 import { z } from "zod";
 import OpenAI from "openai";
+import { GLOWSCAN_SYSTEM_PROMPT } from "./prompt";
 import webpush from "web-push";
 import { db } from "./db";
 import { referrals, loyaltyPoints, subscriptions, scans, leads, premiumRequests, wellnessLogs } from "@shared/schema";
@@ -459,6 +460,7 @@ RAPPEL FINAL — POSTURE DERMATO ASSURÉE :
         const r = await openai.chat.completions.create({
           model: "gpt-4o-mini",
           messages: [
+            { role: "system", content: GLOWSCAN_SYSTEM_PROMPT },
             {
               role: "user",
               content: [
