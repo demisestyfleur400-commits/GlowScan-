@@ -33,7 +33,7 @@ export default function Privacy() {
         <Section icon={<FileText className="w-5 h-5 text-pink-600" />} title="1. Qui sommes-nous ?">
           <p>
             GlowScan est une application d'analyse dermatologique assistée par IA, opérée depuis le Cameroun.
-            Pour toute question, contacte-nous : <a href="mailto:contact@glowscan.app" className="text-pink-600 underline">contact@glowscan.app</a>.
+            Pour toute question, contacte-nous : <a href="mailto:contact@glow-scan.com" className="text-pink-600 underline">contact@glow-scan.com</a>.
           </p>
         </Section>
 
@@ -99,13 +99,13 @@ export default function Privacy() {
           </ul>
           <p>
             Pour toute demande complémentaire (opposition, limitation, portabilité), écris-nous à{" "}
-            <a href="mailto:contact@glowscan.app" className="text-pink-600 underline">contact@glowscan.app</a>.
+            <a href="mailto:contact@glow-scan.com" className="text-pink-600 underline">contact@glow-scan.com</a>.
           </p>
         </Section>
 
         <Section icon={<Mail className="w-5 h-5 text-pink-600" />} title="8. Contact & réclamations">
           <p className="mb-2">
-            Email : <a href="mailto:contact@glowscan.app" className="text-pink-600 underline">contact@glowscan.app</a>
+            Email : <a href="mailto:contact@glow-scan.com" className="text-pink-600 underline">contact@glow-scan.com</a>
           </p>
           <p>
             Si tu estimes que tes droits ne sont pas respectés, tu peux saisir l'autorité de protection des données
