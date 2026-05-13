@@ -402,7 +402,15 @@ Retourne UNIQUEMENT ce JSON valide, sans texte avant ni après :
     "evening": [
       { "step": "...", "product": "...", "why": "..." }
     ]
-  }
+  },
+  "analyse_zones": {
+    "front": "Description technique courte de ce que tu vois sur le front (ex: 'Peau nette, 1 papule détectée à la racine des cheveux')",
+    "nez": "Description technique courte du nez (ex: 'Pores dilatés visibles, brillance séborrhéique sur l'arête')",
+    "joues": "Description technique courte des joues (ex: 'Légère rougeur sur la joue gauche, texture lisse')",
+    "menton": "Description technique courte du menton (ex: 'Zone saine, aucune lésion visible')"
+  },
+  "justification_score": "1 phrase qui explique précisément pourquoi le score n'est pas 100/100 (ex: 'Présence de 3 comédons en zone T et légère inflammation diffuse')",
+  "conseil_expert": "LE conseil prioritaire technique pour CETTE peau précise, en 1-2 phrases (ex: 'Introduis un sérum à la niacinamide 10% le soir pour réguler le sébum et atténuer la PIH sur la joue gauche')"
 }
 
 ══ RÈGLES STRICTES POUR LES NOUVEAUX CHAMPS ══
@@ -412,6 +420,9 @@ Retourne UNIQUEMENT ce JSON valide, sans texte avant ni après :
 • "severityLevel" : ENTIER de 1 à 5, calibré honnêtement.
 • "protocol" : 4 étapes matin et 4 étapes soir avec un "why" personnalisé au diagnostic. Pour visage : SPF en dernière étape matin obligatoire.
 • ZÉRO STATISTIQUE GÉNÉRIQUE : interdit "X% des utilisateurs", "score moyen", "statistiquement". Tout doit être personnalisé à CETTE photo.
+• "analyse_zones" : OBLIGATOIRE. Une description TECHNIQUE par zone (front, nez, joues, menton). Si la photo n'est pas un visage, adapte les clés (mains : { dos, paume, doigts } ; cuir chevelu : { racines, longueurs, cuir }). Chaque description doit être ANCRÉE dans ce que tu vois (compte les boutons, nomme les zones précises). JAMAIS de phrase générique du type "C'est typique des hommes" ou "Peau normale".
+• "justification_score" : OBLIGATOIRE. Doit être cohérent avec le score donné — explique en 1 phrase pourquoi le score n'est pas 100.
+• "conseil_expert" : OBLIGATOIRE. UN seul conseil technique prioritaire spécifique à CETTE peau (pas une routine complète, le protocol s'en charge).
 
 RÈGLES POUR predictiveInsights :
 • Identifie 1 à 3 risques RÉELS basés sur ce que tu observes — pas de généralités vides

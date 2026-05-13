@@ -760,6 +760,42 @@ export default function ProAnalyze() {
                         {result.recommendations.products.length} produit(s) recommandé(s)
                       </div>
                     )}
+
+                    {(() => {
+                      const r = result as any;
+                      const zones = r?.analyse_zones as Record<string, string> | undefined;
+                      const justif = r?.justification_score as string | undefined;
+                      const conseil = r?.conseil_expert as string | undefined;
+                      if (!zones && !justif && !conseil) return null;
+                      return (
+                        <div className="mt-3 pt-3 border-t border-slate-200 space-y-2 text-left">
+                          {zones && (
+                            <div>
+                              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Analyse par zone</p>
+                              <div className="grid grid-cols-2 gap-1.5">
+                                {Object.entries(zones).map(([z, d]) => (
+                                  <div key={z} className="text-[10px] bg-white border border-slate-200 rounded p-1.5">
+                                    <span className="font-bold uppercase text-slate-500">{z}</span>
+                                    <p className="text-slate-700 leading-tight">{d}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {justif && (
+                            <div className="text-[10px] text-slate-600">
+                              <span className="font-bold uppercase tracking-wider text-slate-500">Justification score :</span> {justif}
+                            </div>
+                          )}
+                          {conseil && (
+                            <div className="text-[11px] bg-amber-50 border border-amber-200 rounded p-2">
+                              <span className="font-bold uppercase tracking-wider text-amber-700 text-[10px]">Conseil expert</span>
+                              <p className="text-slate-800 leading-snug mt-0.5">{conseil}</p>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {/* Actions */}

@@ -288,6 +288,41 @@ export default function ProPatient() {
                 );
               })()}
 
+              {(() => {
+                const fr = (s.recommendations as any)?._fullResult || {};
+                const zones = fr.analyse_zones as Record<string, string> | undefined;
+                const justif = fr.justification_score as string | undefined;
+                const conseil = fr.conseil_expert as string | undefined;
+                if (!zones && !justif && !conseil) return null;
+                return (
+                  <details className="mb-2 rounded-lg border border-slate-200 bg-white" data-testid={`technical-${s.id}`}>
+                    <summary className="cursor-pointer text-[11px] font-semibold text-slate-700 px-3 py-2 hover:bg-slate-50">
+                      Analyse technique par zone
+                    </summary>
+                    <div className="p-3 pt-0 space-y-2">
+                      {zones && Object.entries(zones).map(([zone, desc]) => (
+                        <div key={zone} className="text-[11px]">
+                          <span className="font-bold uppercase tracking-wider text-slate-500">{zone}</span>
+                          <p className="text-slate-700 leading-snug">{desc}</p>
+                        </div>
+                      ))}
+                      {justif && (
+                        <div className="text-[11px] pt-2 border-t border-slate-100">
+                          <span className="font-bold uppercase tracking-wider text-slate-500">Justification du score</span>
+                          <p className="text-slate-700 leading-snug">{justif}</p>
+                        </div>
+                      )}
+                      {conseil && (
+                        <div className="text-[11px] bg-amber-50 border border-amber-200 rounded p-2">
+                          <span className="font-bold uppercase tracking-wider text-amber-700">Conseil expert</span>
+                          <p className="text-slate-800 leading-snug mt-0.5">{conseil}</p>
+                        </div>
+                      )}
+                    </div>
+                  </details>
+                );
+              })()}
+
               {s.isVerified && (
                 <div className="inline-flex items-center gap-1.5 text-[10px] font-semibold mt-2 px-2 py-1 rounded-md bg-emerald-50 border border-emerald-200" style={{ color: GREEN }}>
                   <CheckCircle2 className="w-3 h-3" />

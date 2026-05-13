@@ -710,6 +710,41 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
               })()}
             </div>
 
+            {/* ── Analyse technique par zone (Cerveau Structuré) ── */}
+            {(() => {
+              const r = result as any;
+              const zones = r?.analyse_zones as Record<string, string> | undefined;
+              const justif = r?.justification_score as string | undefined;
+              const conseil = r?.conseil_expert as string | undefined;
+              if (!zones && !justif && !conseil) return null;
+              return (
+                <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100" data-testid="section-technical">
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-pink-600 mb-3">Analyse technique par zone</p>
+                  {zones && (
+                    <div className="grid grid-cols-2 gap-2 mb-3">
+                      {Object.entries(zones).map(([z, d]) => (
+                        <div key={z} className="text-[11px] bg-gray-50 border border-gray-100 rounded-xl p-2.5">
+                          <p className="font-black uppercase tracking-wider text-gray-500 text-[9px] mb-0.5">{z}</p>
+                          <p className="text-gray-800 leading-snug">{d}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {justif && (
+                    <div className="text-xs text-gray-700 leading-snug mb-2 px-1">
+                      <span className="font-black uppercase tracking-wider text-gray-500 text-[9px]">Pourquoi ce score :</span> {justif}
+                    </div>
+                  )}
+                  {conseil && (
+                    <div className="text-xs bg-amber-50 border border-amber-200 rounded-xl p-3">
+                      <p className="font-black uppercase tracking-wider text-amber-700 text-[9px] mb-1">Conseil expert</p>
+                      <p className="text-gray-800 leading-snug">{conseil}</p>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* ── Analyse expert (juste après le Glow Score) ── */}
             <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
               <div className="flex items-center justify-between mb-4">
