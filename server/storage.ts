@@ -644,6 +644,9 @@ export class DatabaseStorage implements IStorage {
     else if (opts.status === "rejected") conds.push(and(eq(scans.isVerified, false), sql`${scans.expertReviewedAt} IS NOT NULL`));
     else if (opts.status === "pending") conds.push(and(eq(scans.isVerified, false), sql`${scans.expertReviewedAt} IS NULL`));
     if (opts.area && opts.area !== "all") conds.push(eq(scans.area, opts.area));
+    // ⚠️ Le médecin doit pouvoir VOIR la photo pour valider — on n'expose que les scans
+    // dont l'image est correctement archivée dans Object Storage.
+    conds.push(sql`${scans.imageUrl} LIKE '/objects/scans/%'`);
 
     const whereClause = conds.length ? and(...conds) : undefined;
 
