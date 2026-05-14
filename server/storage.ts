@@ -680,6 +680,38 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
+  // Few-shot RLHF : récupère les corrections expertes les plus récentes pour
+  // une zone donnée, afin de les injecter dans le prompt comme exemples.
+  // Priorité absolue aux scans où l'expert a CORRIGÉ le diagnostic IA
+  // (expert_corrected_condition non vide), car c'est là que l'IA s'est trompée.
+  async getFewShotExamples(area: string, limit = 8): Promise<Array<{
+    aiCondition: string;
+    correctedCondition: string;
+    expertNote: string | null;
+    score: number;
+  }>> {
+    const rows = await db.select({
+      condition: scans.condition,
+      expertCorrectedCondition: scans.expertCorrectedCondition,
+      expertNote: scans.expertNote,
+      score: scans.score,
+    }).from(scans)
+      .where(and(
+        eq(scans.area, area),
+        eq(scans.isVerified, true),
+        sql`${scans.expertCorrectedCondition} IS NOT NULL AND TRIM(${scans.expertCorrectedCondition}) <> ''`,
+      ))
+      .orderBy(desc(scans.expertReviewedAt))
+      .limit(limit);
+
+    return rows.map((r) => ({
+      aiCondition: r.condition || "",
+      correctedCondition: r.expertCorrectedCondition || "",
+      expertNote: r.expertNote,
+      score: r.score ?? 0,
+    }));
+  }
+
   async reviewScan(id: number, payload: {
     isVerified: boolean;
     expertNote?: string | null;

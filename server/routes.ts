@@ -440,6 +440,32 @@ RAPPEL FINAL — POSTURE DERMATO ASSURÉE :
 • Photo imparfaite = tu fais quand même ton meilleur diagnostic clinique avec les éléments visibles
 • Aucune phrase défensive, aucun "consulter un médecin pour confirmer", aucun "rescan recommandé"`;
 
+      // ── Few-shot RLHF : injecter les corrections expertes pour cette zone ──
+      // Le médecin valide des scans avec correction → ces corrections sont injectées
+      // dans le prompt à chaque nouvelle analyse, pour que l'IA arrête de répéter
+      // les mêmes erreurs sans attendre le fine-tuning (qui demande 1000+ scans).
+      let fewShotBlock = "";
+      try {
+        const examples = await storage.getFewShotExamples(area, 8);
+        if (examples.length > 0) {
+          const lines = examples.map((ex, i) => {
+            const note = ex.expertNote ? ` — Note expert : "${ex.expertNote.slice(0, 200)}"` : "";
+            return `${i + 1}. Sur photo similaire (zone ${areaLabel}), tu avais répondu : "${ex.aiCondition}". ❌ ERREUR. Le dermatologue expert a corrigé en : "${ex.correctedCondition}".${note}`;
+          }).join("\n");
+          fewShotBlock = `
+
+══ CORRECTIONS RÉCENTES DE TON DERMATOLOGUE EXPERT (à NE PAS REPRODUIRE) ══
+Voici ${examples.length} cas où tu t'es trompé sur cette zone, corrigés par le dermatologue humain. Tu dois IMPÉRATIVEMENT t'inspirer de ces corrections pour cette nouvelle analyse :
+${lines}
+
+RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, applique le diagnostic CORRIGÉ par l'expert, PAS ton ancienne erreur.
+`;
+          console.log(`[analyze] 🧠 Few-shot RLHF : ${examples.length} corrections expertes injectées (zone=${area})`);
+        }
+      } catch (fsErr) {
+        console.error("[analyze] ⚠️ Few-shot fetch error (non bloquant):", fsErr);
+      }
+
       // Préparer le base64 pour OpenAI (envoi DIRECT, pas d'URL publique)
       let mimeForOpenAI = "image/jpeg";
       let rawBase64ForOpenAI = image;
@@ -475,7 +501,7 @@ RAPPEL FINAL — POSTURE DERMATO ASSURÉE :
             {
               role: "user",
               content: [
-                { type: "text", text: prompt + extraInstruction },
+                { type: "text", text: prompt + fewShotBlock + extraInstruction },
                 { type: "image_url", image_url: { url: dataUrl, detail: "low" } },
               ],
             },

@@ -2023,16 +2023,21 @@ function DatasetCard({
           )}
 
           <div className="space-y-2 pt-2 border-t border-gray-100">
-            <div>
-              <label className="block text-[10px] font-bold text-gray-600 mb-1">Diagnostic corrigé (si l'IA s'est trompée)</label>
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-2.5">
+              <label className="block text-[11px] font-black text-amber-900 mb-1">
+                ⭐ Diagnostic corrigé (entraîne l'IA en temps réel)
+              </label>
               <input
                 type="text"
                 value={corrected}
                 onChange={(e) => setCorrected(e.target.value)}
                 placeholder="Ex: Dermatite séborrhéique modérée"
                 data-testid={`input-corrected-${scan.id}`}
-                className="w-full text-xs px-2 py-1.5 rounded-lg border border-gray-200 outline-none focus:border-emerald-500 bg-white"
+                className="w-full text-xs px-2 py-1.5 rounded-lg border border-amber-300 outline-none focus:border-amber-500 bg-white"
               />
+              <p className="text-[10px] text-amber-700 mt-1 leading-snug">
+                Ce que tu écris ici sera injecté dans le prompt à chaque future analyse de la même zone — l'IA arrête de répéter cette erreur dès la prochaine validation.
+              </p>
             </div>
             <div>
               <label className="block text-[10px] font-bold text-gray-600 mb-1">Note dermato</label>
