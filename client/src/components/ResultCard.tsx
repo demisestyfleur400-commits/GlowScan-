@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, MessageCircle, AlertTriangle, Eye, Droplets, ShieldAlert, Scan as ScanIcon, Share2, Truck, ChevronRight, Swords, ImageIcon, Lock, Sun, Moon, Calendar, ScanFace, Bell, TrendingUp, TrendingDown, Minus, Zap } from "lucide-react";
+import { Sparkles, MessageCircle, AlertTriangle, Eye, Droplets, ShieldAlert, Scan as ScanIcon, Share2, Truck, ChevronRight, ImageIcon, Lock, Sun, Moon, Calendar, Bell } from "lucide-react";
 import type { AnalysisResult } from "@shared/schema";
 import { ShareCard } from "./ShareCard";
 import FaceZonesMap from "./FaceZonesMap";
@@ -263,104 +263,6 @@ function splitSentences(text: string): string[] {
   return text.replace(/([.!?])\s+/g, "$1\u0000").split("\u0000").filter(Boolean);
 }
 
-// ── Composant Insights Prédictifs ──────────────────────────────
-function PredictiveInsightsCard({ insights }: { insights: NonNullable<AnalysisResult["predictiveInsights"]> }) {
-  const [open, setOpen] = useState(false);
-
-  const levelConfig = {
-    high:   { bg: "bg-red-50",    border: "border-red-200",   dot: "bg-red-500",    text: "text-red-700",   label: "Risque élevé" },
-    medium: { bg: "bg-orange-50", border: "border-orange-200",dot: "bg-orange-400", text: "text-orange-700",label: "Risque modéré" },
-    low:    { bg: "bg-yellow-50", border: "border-yellow-200",dot: "bg-yellow-400", text: "text-yellow-700", label: "Risque faible" },
-  };
-
-  const trendConfig = {
-    improving: { icon: <TrendingUp className="w-4 h-4 text-emerald-500" />, label: "en amélioration", color: "text-emerald-600" },
-    worsening: { icon: <TrendingDown className="w-4 h-4 text-red-500" />,  label: "en dégradation",  color: "text-red-600" },
-    stable:    { icon: <Minus className="w-4 h-4 text-gray-400" />,        label: "stable",           color: "text-gray-500" },
-  };
-
-  const highCount = insights.risks.filter(r => r.level === "high").length;
-
-  return (
-    <div className="rounded-3xl overflow-hidden border border-pink-200 shadow-sm" data-testid="predictive-insights-card">
-      {/* Header — toujours visible */}
-      <button
-        onClick={() => setOpen(v => !v)}
-        className="w-full flex items-center justify-between px-5 py-4 bg-gradient-to-r from-pink-50 to-pink-100"
-        data-testid="button-toggle-predictive"
-      >
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-pink-100 flex items-center justify-center">
-            <Zap className="w-4 h-4 text-pink-600" />
-          </div>
-          <div className="text-left">
-            <p className="text-sm font-extrabold text-gray-900">Radar prédictif</p>
-            <p className="text-xs text-pink-700">
-              {highCount > 0 ? `${highCount} risque${highCount > 1 ? "s" : ""} élevé${highCount > 1 ? "s" : ""} détecté${highCount > 1 ? "s" : ""}` : `${insights.risks.length} risque${insights.risks.length > 1 ? "s" : ""} analysé${insights.risks.length > 1 ? "s" : ""}`}
-              {insights.progression && ` · suivi ${insights.progression.weeksTracked} sem.`}
-            </p>
-          </div>
-        </div>
-        <ChevronRight className={`w-4 h-4 text-pink-500 transition-transform ${open ? "rotate-90" : ""}`} />
-      </button>
-
-      {/* Contenu dépliable */}
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.25 }}
-            className="overflow-hidden bg-white"
-          >
-            <div className="px-5 pb-5 pt-3 space-y-3">
-
-              {/* Progression Type 3 */}
-              {insights.progression && (
-                <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100">
-                  {trendConfig[insights.progression.trend].icon}
-                  <div className="flex-1">
-                    <p className={`text-xs font-bold ${trendConfig[insights.progression.trend].color}`}>
-                      {insights.progression.delta > 0 ? "+" : ""}{insights.progression.delta} pts vs scan précédent
-                      <span className="font-normal text-gray-400 ml-1">({trendConfig[insights.progression.trend].label})</span>
-                    </p>
-                    <p className="text-xs text-gray-400">Score précédent : {insights.progression.previousScore}/100 · suivi depuis {insights.progression.weeksTracked} semaine{insights.progression.weeksTracked > 1 ? "s" : ""}</p>
-                  </div>
-                </div>
-              )}
-
-              {/* Risques Type 1 */}
-              {insights.risks.map((r, i) => {
-                const cfg = levelConfig[r.level] || levelConfig.low;
-                return (
-                  <div key={i} className={`p-3 rounded-xl border ${cfg.bg} ${cfg.border}`} data-testid={`risk-item-${i}`}>
-                    <div className="flex items-start gap-2">
-                      <div className={`w-2 h-2 rounded-full mt-1 flex-shrink-0 ${cfg.dot}`} />
-                      <div className="flex-1">
-                        <span className={`text-xs font-bold ${cfg.text}`}>{cfg.label} · {r.delay}</span>
-                        <p className="text-xs text-gray-700 mt-0.5 leading-relaxed">{r.risk}</p>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-
-              {/* Fenêtre d'action Type 2 */}
-              {insights.actionWindow && (
-                <div className="flex items-start gap-2 p-3 rounded-xl bg-pink-50 border border-pink-200">
-                  <AlertTriangle className="w-4 h-4 text-pink-500 flex-shrink-0 mt-0.5" />
-                  <p className="text-xs text-pink-700 font-medium leading-relaxed">{insights.actionWindow}</p>
-                </div>
-              )}
-
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
 
 export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: ResultCardProps) {
   const { toast } = useToast();
@@ -368,21 +270,11 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
   const { isPremium } = useSubscription();
   const [showShareCard, setShowShareCard] = useState(false);
   const [showRoutineCard, setShowRoutineCard] = useState(false);
-  const [challengeLoading, setChallengeLoading] = useState(false);
-  const [challengeUrl, setChallengeUrl] = useState<string | null>(null);
   const [j7ReminderSet, setJ7ReminderSet] = useState(false);
   const [showRoutine, setShowRoutine] = useState(false);
   const [showOrderModal, setShowOrderModal] = useState(false);
   const [orderModalItems, setOrderModalItems] = useState<OrderItem[]>([]);
   const [orderModalTitle, setOrderModalTitle] = useState("");
-  const [challenge30, setChallenge30] = useState<{ startedAt: string; area: string; initialScore: number } | null>(null);
-
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem("glowscan_challenge_30");
-      if (raw) setChallenge30(JSON.parse(raw));
-    } catch {}
-  }, []);
 
 
 
@@ -631,117 +523,6 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
               previousScore={result.predictiveInsights?.progression?.previousScore ?? null}
             />
 
-            {/* ── (Ancien contenu masqué — remplacé par MedicalReport) ── */}
-            {false && (
-            <>
-            <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
-              <div className="flex items-center justify-end mb-2">
-                <SeverityBadge severity={result.severity} />
-              </div>
-              <div className="mb-4" data-testid="diagnostic-header">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-1">Diagnostic & stratégie</p>
-                <h2 className="text-2xl font-black text-gray-900 leading-tight font-display tracking-tight">
-                  {result.condition || "Analyse cutanée"}
-                </h2>
-              </div>
-
-              {/* Gauge speedometer */}
-              {(() => {
-                const ARC_LEN = 251.33;
-                const filledLen = (result.score / 100) * ARC_LEN;
-                return (
-                  <>
-                    <div className="flex flex-col items-center mb-4">
-                      <svg viewBox="0 0 200 115" className="w-52" aria-label={`Glow Score ${result.score}/100`}>
-                        <defs>
-                          <linearGradient id="gauge-grad" x1="0%" y1="0%" x2="100%" y2="0%">
-                            <stop offset="0%" stopColor="#ef4444" />
-                            <stop offset="35%" stopColor="#f59e0b" />
-                            <stop offset="65%" stopColor="#10b981" />
-                            <stop offset="100%" stopColor="#1B5E20" />
-                          </linearGradient>
-                        </defs>
-                        <path d="M 20,100 A 80,80 0 0 1 180,100" fill="none" stroke="#f3f4f6" strokeWidth="14" strokeLinecap="round" />
-                        <path d="M 20,100 A 80,80 0 0 1 180,100" fill="none" stroke="url(#gauge-grad)" strokeWidth="14" strokeLinecap="round" strokeDasharray={`${filledLen} ${ARC_LEN}`} strokeDashoffset={0} />
-                        <text x="12" y="113" fill="#d1d5db" fontSize="7" fontWeight="700">0</text>
-                        <text x="96" y="18" fill="#d1d5db" fontSize="7" fontWeight="700" textAnchor="middle">50</text>
-                        <text x="182" y="113" fill="#d1d5db" fontSize="7" fontWeight="700">100</text>
-                        <text x="100" y="90" fill="#111827" fontSize="30" fontWeight="900" textAnchor="middle" data-testid="text-score">{result.score}</text>
-                        <text x="100" y="103" fill="#9ca3af" fontSize="8" textAnchor="middle">Glow Score</text>
-                      </svg>
-                    </div>
-
-                    {/* Cartes métriques sous le gauge */}
-                    {(() => {
-                      const m = (result as any).metrics || {};
-                      const hydratation = Number.isFinite(Number(m.hydratation)) ? Math.round(Number(m.hydratation)) : null;
-                      const eclat = Number.isFinite(Number(m.eclat)) ? Math.round(Number(m.eclat)) : null;
-                      const purete = Number.isFinite(Number(m.purete)) ? Math.round(Number(m.purete)) : null;
-                      const indiceAcne = purete !== null ? 100 - purete : null;
-                      const cards: { label: string; value: string; sub: string; color: string }[] = [];
-                      if (indiceAcne !== null) {
-                        const lvl = indiceAcne < 25 ? { sub: "Faible", c: "text-emerald-600" } : indiceAcne < 55 ? { sub: "Modéré", c: "text-amber-600" } : { sub: "Élevé", c: "text-red-600" };
-                        cards.push({ label: "Indice acné", value: `${indiceAcne}%`, sub: lvl.sub, color: lvl.c });
-                      }
-                      if (hydratation !== null) {
-                        const lvl = hydratation >= 65 ? { sub: "optimal", c: "text-emerald-600" } : hydratation >= 40 ? { sub: "moyen", c: "text-amber-600" } : { sub: "faible", c: "text-red-600" };
-                        cards.push({ label: "Hydratation", value: `${hydratation}%`, sub: lvl.sub, color: lvl.c });
-                      }
-                      if (eclat !== null) {
-                        const lvl = eclat >= 70 ? { sub: "Bon", c: "text-emerald-600" } : eclat >= 45 ? { sub: "Moyen", c: "text-amber-600" } : { sub: "Faible", c: "text-red-600" };
-                        cards.push({ label: "Éclat", value: `${eclat}%`, sub: lvl.sub, color: lvl.c });
-                      }
-                      if (cards.length === 0) return null;
-                      const icons: Record<string, string> = { "Indice acné": "🔴", "Hydratation": "💧", "Éclat": "✨" };
-                      return (
-                        <div className="grid grid-cols-2 gap-2 mb-4" data-testid="metrics-cards">
-                          {cards.map((c) => (
-                            <div key={c.label} className="rounded-2xl border border-gray-100 bg-gray-50/50 p-3 flex items-start gap-2.5">
-                              <span className="text-lg flex-shrink-0">{icons[c.label]}</span>
-                              <div className="min-w-0">
-                                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">{c.label}</p>
-                                <p className="text-base font-black text-gray-900 leading-tight">
-                                  {c.value} <span className={`text-[10px] font-semibold ${c.color}`}>{c.sub}</span>
-                                </p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      );
-                    })()}
-                  </>
-                );
-              })()}
-
-              {/* ── Problèmes détectés sur ta peau ── */}
-              {(() => {
-                const problems = deriveDiagnosticProblems(result);
-                return (
-                  <div className="mt-2 space-y-2" data-testid="section-problems">
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-pink-600 mb-1">Détecté pour toi</p>
-                    {/* Type de peau en premier */}
-                    <div className="flex items-center gap-3 p-3 rounded-2xl bg-violet-50 border border-violet-100" data-testid="problem-skin-type">
-                      <span className="text-xl flex-shrink-0">🌺</span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[10px] font-black uppercase tracking-wide text-violet-600">Type de peau</p>
-                        <p className="text-sm font-bold text-violet-900 leading-tight">{result.skinType}</p>
-                      </div>
-                    </div>
-                    {problems.map((p, i) => (
-                      <div
-                        key={p.key + i}
-                        className="flex items-center gap-3 p-3 rounded-2xl bg-pink-50 border border-pink-100"
-                        data-testid={`problem-${p.key}`}
-                      >
-                        <span className="text-xl flex-shrink-0">{p.icon}</span>
-                        <p className="text-sm font-bold text-gray-800 leading-tight flex-1">{p.label}</p>
-                      </div>
-                    ))}
-                  </div>
-                );
-              })()}
-            </div>
-
             {/* ── Analyse technique par zone (Cerveau Structuré) ── */}
             {(() => {
               const r = result as any;
@@ -782,320 +563,19 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
               <FaceZonesMap zones={result.zones} />
             )}
 
-            {/* ── Grille de conversion pour les non-inscrits ── */}
-            {!user && (
-              <motion.div
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="bg-white rounded-3xl overflow-hidden shadow-sm border border-pink-100"
-                data-testid="content-gate"
-              >
-                {/* Barre accent */}
-                <div className="h-1 w-full bg-gradient-to-r from-pink-400 via-emerald-400 to-pink-500" />
-                <div className="p-5 space-y-4">
-                  {/* Titre */}
-                  <div className="text-center">
-                    <div className="w-10 h-10 rounded-full bg-pink-50 border border-pink-100 flex items-center justify-center mx-auto mb-2">
-                      <Lock className="w-5 h-5 text-pink-600" />
-                    </div>
-                    <h3 className="text-base font-black text-gray-900">Débloquer ton analyse complète</h3>
-                    <p className="text-xs text-gray-500 mt-1">Crée ton compte gratuit pour accéder à :</p>
-                  </div>
-
-                  {/* Ce qu'ils vont débloquer avec le compte gratuit */}
-                  <div className="grid grid-cols-2 gap-2">
-                    {[
-                      { icon: "📊", label: "Métriques complètes", sub: "Âge cutané, hydratation...", free: true },
-                      { icon: "🧠", label: "Analyse expert IA", sub: "Diagnostic détaillé", free: true },
-                      { icon: "📈", label: "Historique & graphique", sub: "Suivi dans le temps", free: true },
-                      { icon: "🧴", label: "Routine & produits", sub: "Premium — 500 FCFA/sem.", free: false },
-                    ].map(({ icon, label, sub, free }) => (
-                      <div key={label} className={`flex items-start gap-2 rounded-xl p-2.5 border ${free ? "bg-pink-50/60 border-pink-100" : "bg-pink-50/40 border-pink-200"}`}>
-                        <span className="text-base mt-0.5 flex-shrink-0">{icon}</span>
-                        <div>
-                          <p className="text-[11px] font-bold text-gray-800 leading-tight">{label}</p>
-                          <p className={`text-[9px] mt-0.5 ${free ? "text-pink-600 font-semibold" : "text-pink-600 font-semibold"}`}>
-                            {free ? "✓ Gratuit" : "⭐ " + sub}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* CTA principal */}
-                  <a
-                    href="/auth"
-                    data-testid="button-gate-register"
-                    className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl bg-gradient-to-r from-pink-500 to-emerald-500 text-white font-black text-sm shadow-lg shadow-pink-100/60 active:scale-[0.98] transition-all"
-                  >
-                    <Sparkles className="w-4 h-4" />
-                    Créer mon compte — gratuit
-                  </a>
-
-                  {/* Lien secondaire */}
-                  <p className="text-center text-xs text-gray-400">
-                    Déjà inscrit ?{" "}
-                    <a href="/auth" className="font-bold text-pink-600 underline underline-offset-2">
-                      Me connecter
-                    </a>
-                  </p>
-
-                  {/* Petite preuve sociale */}
-                  <div className="flex items-center justify-center gap-1.5 pt-1">
-                    <div className="flex -space-x-1.5">
-                      {["bg-pink-500","bg-rose-400","bg-pink-400","bg-violet-400"].map((c,i) => (
-                        <div key={i} className={`w-5 h-5 rounded-full ${c} border-2 border-white flex items-center justify-center`}>
-                          <span className="text-[7px] text-white font-black">✓</span>
-                        </div>
-                      ))}
-                    </div>
-                    <p className="text-[10px] text-gray-400 font-medium">+2 400 personnes ont déjà leur routine</p>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-
-            {/* Stats 3 colonnes */}
-            {user && <div className="grid grid-cols-3 gap-2">
-              {[
-                { label: "Type Peau", value: result.skinType, icon: <Droplets className="w-3.5 h-3.5 text-pink-500" /> },
-                { label: "Lésions", value: result.stats?.lesions || "—", icon: <Eye className="w-3.5 h-3.5 text-rose-500" /> },
-                { label: "Pores", value: result.stats?.pores || "—", icon: <ScanIcon className="w-3.5 h-3.5 text-pink-500" /> },
-                { label: "Marques", value: result.stats?.marks || "—", icon: <ShieldAlert className="w-3.5 h-3.5 text-pink-500" /> },
-                { label: "Zones", value: result.stats?.zones || "—", icon: <AlertTriangle className="w-3.5 h-3.5 text-purple-500" /> },
-                { label: "Score", value: `${result.score}%`, icon: <Sparkles className="w-3.5 h-3.5 text-emerald-500" /> },
-              ].map((stat, idx) => (
-                <div key={idx} className="bg-white rounded-2xl p-3 border border-gray-100 shadow-sm text-center">
-                  <div className="flex items-center justify-center gap-1 mb-1">
-                    {stat.icon}
-                    <span className="text-[9px] font-black uppercase tracking-wider text-gray-400">{stat.label}</span>
-                  </div>
-                  <p className="text-sm font-black text-gray-900 leading-tight">{stat.value}</p>
-                </div>
-              ))}
-            </div>}
-
-            {/* Radar Chart — Équilibre cutané */}
+            {/* ── Détails repliables : Équilibre cutané (radar) ── */}
             {user && result.balance && (
-              <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-pink-600 mb-4">Equilibre Cutané</p>
-                <RadarChart balance={result.balance} />
-              </div>
-            )}
-
-            {/* ── Écran 2 — Pont vers les produits ── */}
-            {user && routineProducts.length > 0 && (
-              <div
-                className="bg-gradient-to-br from-pink-500 via-rose-500 to-pink-600 rounded-3xl p-6 shadow-lg shadow-pink-200/40 text-white text-center"
-                data-testid="bridge-to-products"
-              >
-                <div className="text-3xl mb-2">🧴</div>
-                <h3 className="text-xl font-black leading-tight">Ta routine sur-mesure est prête</h3>
-                <p className="text-[13px] font-medium text-pink-50/95 mt-2 leading-relaxed">
-                  Basée sur <span className="font-black">TON</span> diagnostic, GlowScan a sélectionné les produits qui correspondent exactement à ta peau.
-                </p>
-                <p className="text-[12px] font-bold text-pink-100 mt-2">
-                  Pas du hasard. Pas du générique. Fait pour toi.
-                </p>
-                <button
-                  onClick={() => {
-                    const el = document.getElementById("section-recommended-products");
-                    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-                  }}
-                  data-testid="button-see-products"
-                  className="mt-5 inline-flex items-center justify-center gap-2 px-6 py-3 bg-white text-pink-600 font-black text-sm rounded-2xl active:scale-[0.97] transition-all shadow-md"
-                >
-                  → Voir mes produits
-                </button>
-              </div>
-            )}
-
-            {/* ── Écran 3 — Cartes produits enrichies ── */}
-            {user && routineProducts.length > 0 && (() => {
-              const problems = deriveDiagnosticProblems(result);
-              return (
-                <div
-                  id="section-recommended-products"
-                  className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100"
-                  data-testid="section-recommended-products"
-                >
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="w-8 h-8 rounded-xl bg-pink-50 flex items-center justify-center flex-shrink-0">
-                      <Sparkles className="w-4 h-4 text-pink-600" />
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-pink-600">Produits pour toi</p>
-                      <p className="text-xs text-gray-500 font-medium">Choisis selon TON diagnostic</p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    {routineProducts.map(({ product, role, index }) => {
-                      const img = productImages[product.id];
-                      const reasons = getProductMatchReasons(product, problems);
-                      const benefit = getProductBenefit(product, problems);
-                      const rating = getProductRating(product.id);
-                      const proof = getSocialProof(product.id);
-                      return (
-                        <div
-                          key={product.id}
-                          className="rounded-3xl border border-pink-100 bg-gradient-to-br from-white to-pink-50/40 overflow-hidden shadow-sm"
-                          data-testid={`recommended-product-${index}`}
-                        >
-                          {/* Top: image + nom */}
-                          <div className="flex items-center gap-3 p-4 pb-3">
-                            <div className="w-16 h-16 rounded-2xl overflow-hidden bg-white border border-gray-100 flex-shrink-0">
-                              {img
-                                ? <img src={img} alt={product.name} className="w-full h-full object-cover" />
-                                : <div className="w-full h-full flex items-center justify-center bg-pink-50"><Sparkles className="w-5 h-5 text-pink-300" /></div>
-                              }
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-[10px] font-black uppercase tracking-wide text-pink-600 mb-0.5">{role.emoji} {role.label}</p>
-                              <p className="text-base font-black text-gray-900 leading-tight" data-testid={`product-name-${index}`}>{product.name}</p>
-                              <div className="flex items-center gap-2 mt-0.5">
-                                {product.price && <span className="text-sm font-extrabold text-pink-700">{formatPrice(product.price)}</span>}
-                                <span className="text-[10px] text-gray-400 font-medium">· {getProductBrand(product)}</span>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Recommandé pour */}
-                          <div className="mx-4 mb-2 flex items-start gap-2 p-3 rounded-2xl bg-emerald-50 border border-emerald-100" data-testid={`product-reason-${index}`}>
-                            <span className="text-base flex-shrink-0">✅</span>
-                            <p className="text-[12px] text-emerald-900 leading-snug">
-                              <span className="font-bold">Recommandé pour {getProductTargetArea(product)} :</span> {reasons}
-                            </p>
-                          </div>
-
-                          {/* Quote / bénéfice */}
-                          <div className="mx-4 mb-2 flex items-start gap-2 p-3 rounded-2xl bg-pink-50/70 border border-pink-100" data-testid={`product-benefit-${index}`}>
-                            <span className="text-base flex-shrink-0">💬</span>
-                            <p className="text-[12px] text-gray-700 italic leading-snug">{benefit}</p>
-                          </div>
-
-                          {/* Rating + preuve sociale */}
-                          <div className="mx-4 mb-3 flex items-center gap-2 p-2.5 rounded-2xl bg-amber-50 border border-amber-100" data-testid={`product-rating-${index}`}>
-                            <span className="text-base">⭐</span>
-                            <p className="text-[11px] text-amber-900 leading-tight">
-                              <span className="font-black">{rating}/5</span>
-                              <span className="text-amber-700"> — {proof} peaux similaires à la tienne ont adoré</span>
-                            </p>
-                          </div>
-
-                          {/* Pas de bouton individuel — un seul CTA "Commander ma gamme" plus bas */}
-                          <div className="h-2" />
-                        </div>
-                      );
-                    })}
-                  </div>
+              <details className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden" data-testid="details-balance">
+                <summary className="cursor-pointer px-6 py-4 flex items-center justify-between text-sm font-black text-gray-900 hover:bg-gray-50 transition-colors">
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-pink-600">Détails — Équilibre cutané</span>
+                  <ChevronRight className="w-4 h-4 text-gray-400" />
+                </summary>
+                <div className="px-6 pb-6">
+                  <RadarChart balance={result.balance} />
                 </div>
-              );
-            })()}
-
-            {/* ── Écran 4 — Avant WhatsApp ── */}
-            {user && routineProducts.length > 0 && (
-              <div
-                className="bg-white rounded-3xl p-6 shadow-sm border-2 border-pink-200 text-center"
-                data-testid="pre-whatsapp"
-              >
-                <div className="text-3xl mb-2">🌟</div>
-                <h3 className="text-lg font-black text-gray-900 leading-tight">
-                  Tu es à 1 étape d'une peau transformée
-                </h3>
-                <p className="text-[13px] text-gray-600 mt-2 leading-relaxed">
-                  Ta commande sera préparée spécialement pour ton type de peau.
-                </p>
-                <ul className="mt-4 space-y-1.5 text-[12px] text-gray-800 leading-snug text-left max-w-xs mx-auto" data-testid="trust-list">
-                  <li className="flex items-start gap-2">
-                    <span aria-hidden="true" className="text-emerald-600 font-bold flex-shrink-0">✓</span>
-                    <span><span className="font-semibold">Paiement à la livraison</span> — tu ne paies que quand tu reçois.</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span aria-hidden="true" className="text-emerald-600 font-bold flex-shrink-0">✓</span>
-                    <span><span className="font-semibold">Livraison Douala &amp; Yaoundé</span> sous 24–48h.</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span aria-hidden="true" className="text-emerald-600 font-bold flex-shrink-0">✓</span>
-                    <span><span className="font-semibold">Une conseillère</span> te confirme tout sur WhatsApp avant l'envoi.</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span aria-hidden="true" className="text-emerald-600 font-bold flex-shrink-0">✓</span>
-                    <span><span className="font-semibold">Produits 100% authentiques</span>, choisis pour les peaux africaines.</span>
-                  </li>
-                </ul>
-                <button
-                  onClick={() => {
-                    const items: OrderItem[] = routineProducts.map(({ product }) => ({
-                      productId: product.id,
-                      productName: product.name,
-                      brand: getProductBrand(product),
-                      price: product.price,
-                    }));
-                    setOrderModalItems(items);
-                    setOrderModalTitle("Confirmer ma commande");
-                    setShowOrderModal(true);
-                  }}
-                  data-testid="button-confirm-whatsapp"
-                  className="mt-5 w-full flex items-center justify-center gap-2 py-4 bg-[#25D366] hover:bg-[#1ebe57] text-white text-sm font-black rounded-2xl active:scale-[0.98] transition-all shadow-lg shadow-green-200/50"
-                >
-                  <MessageCircle className="w-4 h-4 fill-current" />
-                  Confirmer ma commande sur WhatsApp
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
-            )}
-            </>
-            )}
-            {/* ── Fin ancien contenu masqué ── */}
-
-
-            {/* ── Produit intermédiaire — après analyse expert ── */}
-            {user && featuredProduct && (
-              <div className="bg-white rounded-3xl p-5 shadow-sm border border-pink-200 relative overflow-hidden" data-testid="card-budget-product">
-                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-pink-400 via-pink-500 to-pink-600" />
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="text-xl">💡</span>
-                  <div>
-                    <p className="text-sm font-black text-gray-900">Pas de budget pour les 3 produits ?</p>
-                    <p className="text-xs text-pink-700 font-medium">Commence avec ce produit intermédiaire</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 p-3 rounded-2xl bg-pink-50 border border-pink-200">
-                  <div className="w-14 h-14 rounded-xl overflow-hidden bg-white border border-gray-100 flex-shrink-0">
-                    {productImages[featuredProduct.id]
-                      ? <img src={productImages[featuredProduct.id]} alt={featuredProduct.name} className="w-full h-full object-cover" />
-                      : <div className="w-full h-full flex items-center justify-center bg-pink-50"><Sparkles className="w-5 h-5 text-pink-300" /></div>
-                    }
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-gray-900 leading-tight" data-testid="text-budget-product-name">{featuredProduct.name}</p>
-                    <p className="text-[10px] text-gray-400 font-medium mt-0.5">· {getProductBrand(featuredProduct)}</p>
-                    {featuredProduct.price && (
-                      <p className="text-base font-extrabold text-pink-700 mt-0.5" data-testid="text-budget-price">{formatPrice(featuredProduct.price)}</p>
-                    )}
-                  </div>
-                </div>
-                <button
-                  onClick={() => {
-                    setOrderModalItems([{ productId: featuredProduct.id, productName: featuredProduct.name, brand: getProductBrand(featuredProduct), price: featuredProduct.price }]);
-                    setOrderModalTitle("Commander ce produit");
-                    setShowOrderModal(true);
-                  }}
-                  data-testid="button-budget-whatsapp"
-                  className="mt-3 w-full flex items-center justify-center gap-2 py-3 bg-[#25D366] text-white text-sm font-bold rounded-2xl active:scale-[0.98] transition-all shadow-lg shadow-green-200/50"
-                >
-                  <MessageCircle className="w-4 h-4 fill-current" />
-                  Commander via WhatsApp
-                </button>
-              </div>
+              </details>
             )}
 
-            {/* ── Insights Prédictifs ── */}
-            {result.predictiveInsights && (result.predictiveInsights.risks.length > 0 || result.predictiveInsights.actionWindow || result.predictiveInsights.progression) && (
-              <PredictiveInsightsCard insights={result.predictiveInsights} />
-            )}
 
             {/* Boutons de partage */}
             {user && (
@@ -1111,32 +591,6 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
                   >
                     <ImageIcon className="w-5 h-5" />
                     Ma carte
-                  </button>
-                  <button
-                    onClick={async () => {
-                      if (challengeUrl) {
-                        if (navigator.share) navigator.share({ title: "Défi Glow Scan", text: `Je te défie de battre mon score de ${result.score}/100 !`, url: challengeUrl }).catch(() => {});
-                        else { navigator.clipboard?.writeText(challengeUrl); toast({ title: "Lien copié !", description: "Envoie-le à ton ami 🥊" }); }
-                        return;
-                      }
-                      setChallengeLoading(true);
-                      try {
-                        const res = await fetch("/api/challenge/create", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ score: result.score, condition: result.condition, area, scanId: scanId ?? undefined }) });
-                        const data = await res.json();
-                        const url = data.url || `${window.location.origin}/challenge/${data.token}`;
-                        setChallengeUrl(url);
-                        const text = `🥊 Je te défie de battre mon Glow Score de ${result.score}/100 sur GlowScan ! Clique ici : ${url}`;
-                        if (navigator.share) navigator.share({ title: "Défi Glow Scan", text, url }).catch(() => {});
-                        else if (navigator.clipboard?.writeText) { navigator.clipboard.writeText(text); toast({ title: "Défi créé ! 🥊", description: "Lien copié — envoie-le à ton ami !" }); }
-                      } catch { toast({ title: "Erreur", description: "Réessaie plus tard", variant: "destructive" }); }
-                      finally { setChallengeLoading(false); }
-                    }}
-                    disabled={challengeLoading}
-                    data-testid="button-challenge-friend"
-                    className="flex flex-col items-center gap-1.5 py-3 px-2 bg-gradient-to-br from-orange-500 to-red-500 text-white rounded-xl text-xs font-bold shadow-md active:scale-95 transition-all disabled:opacity-60"
-                  >
-                    <Swords className="w-5 h-5" />
-                    {challengeLoading ? "..." : challengeUrl ? "Renvoyer" : "Défier"}
                   </button>
                   <button
                     onClick={async () => {
@@ -1175,37 +629,6 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
               </a>
             )}
 
-            {/* ── Défi 30 jours ── */}
-            {user && (() => {
-              const isActive = challenge30 && (Date.now() - new Date(challenge30.startedAt).getTime()) < 30 * 24 * 60 * 60 * 1000;
-              const daysElapsed = challenge30 ? Math.floor((Date.now() - new Date(challenge30.startedAt).getTime()) / (1000 * 60 * 60 * 24)) : 0;
-              if (isActive) {
-                return (
-                  <div
-                    data-testid="challenge30-active"
-                    className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border-2 border-dashed text-sm font-bold"
-                    style={{ borderColor: "#c9a84c", background: "rgba(212,160,23,0.07)", color: "#b8860b" }}
-                  >
-                    🏆 Défi 30 jours en cours · Jour {daysElapsed}/30
-                  </div>
-                );
-              }
-              return (
-                <button
-                  data-testid="button-challenge30"
-                  onClick={() => {
-                    const c = { startedAt: new Date().toISOString(), area: area || "face", initialScore: result.score };
-                    try { localStorage.setItem("glowscan_challenge_30", JSON.stringify(c)); } catch {}
-                    setChallenge30(c);
-                    toast({ title: "🏆 Défi lancé !", description: "Suis ta routine 30 jours et rescanne ta peau pour voir ta progression !" });
-                  }}
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border text-sm font-bold active:scale-[0.98] transition-all"
-                  style={{ borderColor: "#c9a84c", background: "rgba(212,160,23,0.07)", color: "#b8860b" }}
-                >
-                  🏆 Relever le défi 30 jours
-                </button>
-              );
-            })()}
           </motion.div>
 
         {/* ══════════════════════════════
@@ -1360,50 +783,6 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
                   })()}
                 </div>
 
-                {/* Produit intermédiaire */}
-                {featuredProduct && (
-                  <div className="bg-white rounded-2xl p-4 shadow-sm border border-pink-200 relative overflow-hidden" data-testid="card-featured-product">
-                    <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-pink-400 via-pink-500 to-pink-600" />
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-pink-600 mb-3">💡 Produit intermédiaire</p>
-                    <div className="flex items-center gap-3">
-                      <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-50 border border-gray-100 flex-shrink-0">
-                        {productImages[featuredProduct.id] ? (
-                          <img src={productImages[featuredProduct.id]} alt={featuredProduct.name} className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-pink-50 to-pink-100">
-                            <Sparkles className="w-5 h-5 text-pink-300" />
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold text-gray-900 truncate" data-testid="text-featured-product-name">{featuredProduct.name}</p>
-                        <p className="text-[10px] text-gray-400 font-medium">Pour : {result.condition}</p>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          {featuredProduct.price && <span className="text-sm font-extrabold text-pink-600" data-testid="text-featured-price">{formatPrice(featuredProduct.price)}</span>}
-                          <span className="text-[9px] text-gray-400">· {getProductBrand(featuredProduct)}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => {
-                        setOrderModalItems([{
-                          productId: featuredProduct.id,
-                          productName: featuredProduct.name,
-                          brand: getProductBrand(featuredProduct),
-                          price: featuredProduct.price,
-                        }]);
-                        setOrderModalTitle("Commander ce produit");
-                        setShowOrderModal(true);
-                      }}
-                      data-testid="button-featured-whatsapp"
-                      className="mt-3 w-full flex items-center justify-center gap-2 py-2.5 bg-[#25D366] text-white text-xs font-bold rounded-xl active:scale-[0.98] transition-all"
-                    >
-                      <MessageCircle className="w-3.5 h-3.5 fill-current" />
-                      Commander via WhatsApp
-                    </button>
-                  </div>
-                )}
-
               </>
             )}
 
@@ -1552,22 +931,6 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
                   <p className="text-sm font-bold text-gray-900">{result.recommendations.weekly}</p>
                 </div>
                 <span className="px-2.5 py-1 rounded-md bg-purple-100 text-purple-700 text-[10px] font-black uppercase">1x / Semaine</span>
-              </div>
-            )}
-
-            {/* CTA Analyse Cheveux */}
-            {currentArea !== "cheveux" && (
-              <div className="bg-gradient-to-br from-pink-50 via-rose-50 to-pink-100 rounded-2xl p-5 border border-pink-200 text-center">
-                <p className="text-base font-extrabold text-gray-900 mb-1">💇 Et tes cheveux ?</p>
-                <p className="text-xs text-gray-500 font-medium mb-3">Découvre l'état de tes cheveux et reçois une routine capillaire personnalisée</p>
-                <a
-                  href="/analyze?area=hair"
-                  data-testid="button-analyze-hair"
-                  className="inline-flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-pink-600 to-rose-500 text-white text-sm font-bold rounded-lg shadow-lg active:scale-[0.97] transition-all"
-                >
-                  <ScanFace className="w-4 h-4" />
-                  Faire l'analyse cheveux
-                </a>
               </div>
             )}
 
