@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, ChevronUp, Sun, Moon, AlertTriangle, ShoppingBag, ArrowUp, ArrowDown } from "lucide-react";
+import { Sun, Moon, AlertTriangle, ShoppingBag, ArrowUp, ArrowDown, ScanLine, Sparkles, ArrowRight } from "lucide-react";
 import type { AnalysisResult, ZoneAnalysisItem, ProtocolStep } from "@shared/schema";
 import FaceZonesMap from "./FaceZonesMap";
 import { catalog, getProductBrand, formatPrice, BRAND_MAP } from "@shared/catalog";
@@ -300,49 +300,6 @@ function findRoutineProducts(result: AnalysisResult, area: string): RoutineSelec
   return { main: winner.products, supplement, sourceLabel };
 }
 
-// === Bloc dépliable ===
-function ExpandSection({
-  short,
-  long,
-  testIdShow,
-}: {
-  short: React.ReactNode;
-  long?: React.ReactNode;
-  testIdShow?: string;
-}) {
-  const [open, setOpen] = useState(false);
-  if (!long) return <>{short}</>;
-  return (
-    <>
-      {short}
-      <AnimatePresence initial={false}>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.3 }}
-            className="overflow-hidden"
-          >
-            <div className="pt-3 text-[14px] text-gray-700 leading-relaxed font-medical whitespace-pre-line">
-              {long}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="mt-3 inline-flex items-center gap-1 text-[13px] font-semibold text-pink-600 hover:text-pink-700 transition-colors"
-        data-testid={testIdShow}
-      >
-        {open ? "Voir moins" : "Voir plus"}
-        {open ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-      </button>
-    </>
-  );
-}
-
 // === Card médicale (cards flottantes spec utilisateur) ===
 function MedCard({
   children,
@@ -376,61 +333,6 @@ function ZoneIcon({ status }: { status: ZoneAnalysisItem["status"] | "red" | "ye
   return <span className="text-base">{map[status] || "🟡"}</span>;
 }
 
-// === Accordion compact (header cliquable + body collapsible) ===
-function AccordionCard({
-  title,
-  defaultOpen = false,
-  accent = false,
-  testId,
-  children,
-}: {
-  title: string;
-  defaultOpen?: boolean;
-  accent?: boolean;
-  testId?: string;
-  children: React.ReactNode;
-}) {
-  const [open, setOpen] = useState(defaultOpen);
-  return (
-    <motion.section
-      initial={{ opacity: 0, y: 8 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.2 }}
-      transition={{ duration: 0.3 }}
-      className={`relative rounded-[14px] bg-white shadow-[0_2px_10px_rgba(0,0,0,0.05)] ${
-        accent ? "border-l-[3px] border-l-pink-600" : "border border-gray-100"
-      }`}
-      data-testid={testId}
-    >
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center justify-between px-3.5 py-2.5 text-left active:bg-gray-50 transition-colors rounded-[14px]"
-        aria-expanded={open}
-        data-testid={testId ? `${testId}-toggle` : undefined}
-      >
-        <span className="text-[14px] font-bold text-gray-900 font-display leading-tight">{title}</span>
-        {open
-          ? <ChevronUp className="w-4 h-4 text-pink-600 flex-shrink-0" />
-          : <ChevronDown className="w-4 h-4 text-pink-600 flex-shrink-0" />}
-      </button>
-      <AnimatePresence initial={false}>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.25 }}
-            className="overflow-hidden"
-          >
-            <div className="px-3.5 pb-3.5 pt-1">{children}</div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.section>
-  );
-}
-
 // Une ligne de zone à l'intérieur de l'accordion BLOC 5 — son propre "Voir plus" indépendant
 function ZoneRow({
   zone,
@@ -439,44 +341,23 @@ function ZoneRow({
   zone: ZoneAnalysisItem;
   index: number;
 }) {
-  const [open, setOpen] = useState(false);
   return (
     <div className="border-t border-gray-100 first:border-t-0 py-2" data-testid={`zone-row-${index}`}>
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 min-w-0 flex-1">
-          <ZoneIcon status={zone.status} />
-          <p className="text-[13px] text-gray-800 leading-snug min-w-0 truncate">
+      <div className="flex items-start gap-2">
+        <ZoneIcon status={zone.status} />
+        <div className="min-w-0 flex-1">
+          <p className="text-[13px] text-gray-800 leading-snug">
             <span className="font-bold text-gray-900">{zone.name}</span>
             <span className="text-gray-400"> — </span>
             <span>{zone.short}</span>
           </p>
-        </div>
-        {zone.long && (
-          <button
-            type="button"
-            onClick={() => setOpen((v) => !v)}
-            className="text-[11px] font-semibold text-pink-600 whitespace-nowrap flex-shrink-0"
-            data-testid={`button-expand-zone-${index}`}
-          >
-            {open ? "Moins" : "Voir plus"}
-          </button>
-        )}
-      </div>
-      <AnimatePresence initial={false}>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.2 }}
-            className="overflow-hidden"
-          >
-            <p className="mt-2 text-[12px] text-gray-600 leading-relaxed font-medical whitespace-pre-line" data-testid={`text-zone-long-${index}`}>
-              {zone.long || "Aucun détail supplémentaire pour cette zone."}
+          {zone.long && (
+            <p className="mt-1 text-[12px] text-gray-600 leading-relaxed font-medical whitespace-pre-line" data-testid={`text-zone-long-${index}`}>
+              {zone.long}
             </p>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -667,38 +548,6 @@ export default function MedicalReport({ result, scanId, area = "face", imageUrl,
       </div>
 
       {/* ═══════════════════════════════════════════
-          BLOC 2 bis — Diagnostic complet (texte intégral, jamais tronqué)
-          Affiche condition + conclusion.long || details pour que l'utilisateur
-          voie tout ce que l'IA a détecté, comme dans le message WhatsApp.
-          ═══════════════════════════════════════════ */}
-      {(result.condition || result.conclusion?.long || result.details) && (
-        <div
-          className="rounded-2xl border border-pink-100 bg-pink-50/40 px-3.5 py-3"
-          data-testid="block-full-diagnosis"
-        >
-          <p className="text-[10px] uppercase tracking-wider text-pink-600 font-bold leading-none mb-1.5">
-            Mon diagnostic complet
-          </p>
-          {result.condition && (
-            <p
-              className="text-[13px] font-semibold text-gray-900 leading-snug mb-1"
-              data-testid="text-diagnosis-condition"
-            >
-              {result.condition}
-            </p>
-          )}
-          {(result.conclusion?.long || result.details) && (
-            <p
-              className="text-[12.5px] text-gray-700 leading-relaxed whitespace-pre-line break-words"
-              data-testid="text-diagnosis-long"
-            >
-              {result.conclusion?.long || result.details}
-            </p>
-          )}
-        </div>
-      )}
-
-      {/* ═══════════════════════════════════════════
           BLOC 3 — 3 métriques pills horizontales (35px)
           💧 Hydratation 65 • ✨ Éclat 70 • 🧼 Pureté 58
           ═══════════════════════════════════════════ */}
@@ -876,11 +725,11 @@ export default function MedicalReport({ result, scanId, area = "face", imageUrl,
           Contient : carte des zones du visage (si dispo) + 1 ligne par zone avec son "Voir plus"
           ═══════════════════════════════════════════ */}
       {(zoneAnalysis.length > 0 || (result.zones && result.zones.length > 0)) && (
-        <AccordionCard
-          title="Voir l'analyse complète"
-          accent
-          testId="block-zone-analysis"
-        >
+        <MedCard accent testId="block-zone-analysis">
+          <div className="flex items-center gap-2 mb-2">
+            <ScanLine className="w-4 h-4 text-pink-600" />
+            <h2 className="text-[15px] font-bold text-gray-900 font-display">Analyse complète</h2>
+          </div>
           {result.zones && result.zones.length > 0 && (
             <div className="mb-3" data-testid="block-face-map">
               <p className="text-[10px] uppercase tracking-wider font-semibold text-gray-500 mb-1.5">Carte des zones</p>
@@ -894,53 +743,19 @@ export default function MedicalReport({ result, scanId, area = "face", imageUrl,
               ))}
             </div>
           )}
-        </AccordionCard>
+        </MedCard>
       )}
 
       {/* ═══════════════════════════════════════════
-          BLOC 6.A — Conclusion médicale (accordion)
+          BLOC 6 — Mon protocole de soin (carte plate)
           ═══════════════════════════════════════════ */}
-      <AccordionCard
-        title="Conclusion médicale"
-        accent
-        testId="block-conclusion"
-      >
-        <p className="text-[13px] text-gray-800 leading-relaxed font-medical whitespace-pre-line" data-testid="text-conclusion-short">
-          {conclusion.short}
-        </p>
-        {conclusion.long && (
-          <p className="mt-2 text-[12px] text-gray-600 leading-relaxed font-medical whitespace-pre-line" data-testid="text-conclusion-long">
-            {conclusion.long}
-          </p>
-        )}
-        {severityLevel >= 4 ? (
-          <div className="mt-3 p-2.5 rounded-lg bg-rose-50 border border-rose-200 flex items-start gap-2" data-testid="alert-severity-high">
-            <AlertTriangle className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" />
-            <p className="text-[11px] text-rose-900 leading-snug">
-              <span className="font-bold">Consultation dermatologique recommandée</span> ({severityLabel.toLowerCase()}, niveau {severityLevel}/5).
-            </p>
-          </div>
-        ) : (
-          <div className="mt-3 p-2.5 rounded-lg bg-amber-50 border border-amber-200 flex items-start gap-2">
-            <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
-            <p className="text-[11px] text-amber-900 leading-snug italic">
-              Diagnostic IA indicatif — pour un cas persistant, consulte un dermatologue.
-            </p>
-          </div>
-        )}
-      </AccordionCard>
-
-      {/* ═══════════════════════════════════════════
-          BLOC 6.B — Mon protocole de soin (accordion)
-          ═══════════════════════════════════════════ */}
-      <AccordionCard
-        title="Mon protocole de soin"
-        accent
-        testId="block-protocol"
-      >
+      <MedCard accent testId="block-protocol">
+        <div className="flex items-center gap-2 mb-1">
+          <Sparkles className="w-4 h-4 text-pink-600" />
+          <h2 className="text-[15px] font-bold text-gray-900 font-display">Mon protocole de soin</h2>
+        </div>
         <p className="text-[11px] text-gray-500 italic mb-3">Applique-le 4 à 6 semaines avant de réévaluer.</p>
         <div className="space-y-3">
-          {/* MATIN */}
           <div>
             <div className="flex items-center gap-1.5 mb-1.5">
               <Sun className="w-4 h-4 text-amber-500" />
@@ -955,8 +770,6 @@ export default function MedicalReport({ result, scanId, area = "face", imageUrl,
               )}
             </ol>
           </div>
-
-          {/* SOIR */}
           <div>
             <div className="flex items-center gap-1.5 mb-1.5">
               <Moon className="w-4 h-4 text-indigo-500" />
@@ -971,7 +784,6 @@ export default function MedicalReport({ result, scanId, area = "face", imageUrl,
               )}
             </ol>
           </div>
-
           {result.recommendations?.weekly && (
             <div className="rounded-lg p-2.5 bg-pink-50 border border-pink-100">
               <p className="text-[10px] uppercase tracking-wider font-bold text-pink-600 mb-0.5">Hebdo</p>
@@ -979,7 +791,137 @@ export default function MedicalReport({ result, scanId, area = "face", imageUrl,
             </div>
           )}
         </div>
-      </AccordionCard>
+      </MedCard>
+
+      {severityLevel >= 4 && (
+        <div className="rounded-2xl bg-rose-50 border border-rose-200 px-3.5 py-2.5 flex items-start gap-2" data-testid="alert-severity-high">
+          <AlertTriangle className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" />
+          <p className="text-[12px] text-rose-900 leading-snug">
+            <span className="font-bold">Consultation dermatologique recommandée</span> — {severityLabel.toLowerCase()} (niveau {severityLevel}/5).
+          </p>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════
+          BLOC 7 — TA TRANSFORMATION 4 SEMAINES (rétention)
+          Roadmap visuelle qui pousse à revenir chaque semaine
+          mesurer ses progrès, avec récompense finale (rescan offert).
+          ═══════════════════════════════════════════ */}
+      <motion.section
+        initial={{ opacity: 0, y: 16 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.2 }}
+        transition={{ duration: 0.5 }}
+        className="relative rounded-[24px] overflow-hidden shadow-[0_8px_32px_rgba(233,30,140,0.18)]"
+        data-testid="block-transformation-4w"
+      >
+        <div
+          className="absolute inset-0"
+          style={{
+            background: "linear-gradient(135deg, #1A1A2E 0%, #2D1B3D 45%, #4A1B4D 75%, #E91E8C 100%)",
+          }}
+          aria-hidden="true"
+        />
+        <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-pink-400/20 blur-3xl" aria-hidden="true" />
+        <div className="absolute -bottom-12 -left-12 w-40 h-40 rounded-full bg-rose-300/15 blur-3xl" aria-hidden="true" />
+
+        <div className="relative p-5 text-white">
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-[10px] uppercase tracking-[0.25em] font-black text-pink-200/90">Ton parcours Glow</p>
+            <span className="text-[10px] font-bold text-pink-100 bg-white/10 backdrop-blur-sm border border-white/20 px-2 py-0.5 rounded-full">
+              Semaine 1 / 4
+            </span>
+          </div>
+          <h3 className="text-[20px] font-black leading-tight font-display mb-1">
+            Ta transformation en 4 semaines
+          </h3>
+          <p className="text-[12px] text-pink-100/85 leading-snug mb-4">
+            Suis ta routine, reviens chaque semaine — on mesure ensemble tes vrais progrès.
+          </p>
+
+          <div className="relative mb-4 px-1">
+            <div className="absolute left-3 right-3 top-3 h-[2px] bg-white/15" aria-hidden="true" />
+            <div
+              className="absolute left-3 top-3 h-[2px] bg-gradient-to-r from-pink-300 to-pink-100"
+              style={{ width: "10%" }}
+              aria-hidden="true"
+            />
+            <div className="relative grid grid-cols-4 gap-2">
+              {[
+                { week: "S1", label: "Hydratation", desc: "On répare la barrière", emoji: "💧", active: true },
+                { week: "S2", label: "Premiers signes", desc: "Teint plus net", emoji: "✨", active: false },
+                { week: "S3", label: "Uniformisation", desc: "Taches qui s'atténuent", emoji: "🌸", active: false },
+                { week: "S4", label: "Glow révélé", desc: "Rescan offert 🎁", emoji: "🏆", active: false, reward: true },
+              ].map((step) => (
+                <div key={step.week} className="flex flex-col items-center text-center">
+                  <div
+                    className={`relative z-10 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black mb-1.5 ${
+                      step.active
+                        ? "bg-white text-pink-700 shadow-lg shadow-pink-500/40 ring-2 ring-pink-200"
+                        : step.reward
+                          ? "bg-amber-300/90 text-amber-900 ring-2 ring-amber-200/40"
+                          : "bg-white/15 text-white/70 border border-white/25"
+                    }`}
+                    data-testid={`milestone-${step.week.toLowerCase()}`}
+                  >
+                    {step.active ? "•" : step.week}
+                  </div>
+                  <p className="text-[15px] mb-0.5" aria-hidden="true">{step.emoji}</p>
+                  <p className={`text-[10px] font-bold leading-tight ${step.active ? "text-white" : step.reward ? "text-amber-200" : "text-white/70"}`}>
+                    {step.label}
+                  </p>
+                  <p className={`text-[9px] leading-tight mt-0.5 ${step.active ? "text-pink-100" : "text-white/45"}`}>
+                    {step.desc}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-2xl bg-white/10 backdrop-blur-sm border border-white/15 px-3.5 py-3 mb-3">
+            <div className="flex items-start gap-2.5">
+              <span className="text-xl flex-shrink-0">🎁</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-[12px] font-black text-amber-200 leading-tight">
+                  Récompense semaine 4
+                </p>
+                <p className="text-[11px] text-white/85 leading-snug mt-0.5">
+                  Termine ton parcours et débloque <span className="font-bold text-white">1 rescan offert</span> + un nouveau diagnostic comparatif "avant / après".
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              try {
+                const journey = {
+                  startedAt: new Date().toISOString(),
+                  initialScore: result.score,
+                  area: area || "face",
+                  condition: result.condition,
+                };
+                localStorage.setItem("glowscan_journey_4w", JSON.stringify(journey));
+              } catch {}
+              const reminderBtn = document.querySelector('[data-testid="button-set-j7-reminder"]') as HTMLButtonElement | null;
+              if (reminderBtn) reminderBtn.click();
+              const target = document.querySelector('[data-testid="block-products"]');
+              if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+            }}
+            data-testid="button-start-journey"
+            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-white text-pink-700 font-black text-sm shadow-xl shadow-black/30 active:scale-[0.98] transition-all"
+          >
+            <Sparkles className="w-4 h-4" />
+            Démarrer mon parcours 4 semaines
+            <ArrowRight className="w-4 h-4" />
+          </button>
+
+          <p className="text-[10px] text-pink-100/70 text-center mt-2.5 font-medium">
+            On t'envoie un rappel chaque semaine pour mesurer tes progrès
+          </p>
+        </div>
+      </motion.section>
 
       {/* Modale fiche commande — toutes les commandes vont vers WhatsApp 237 674 377 959 */}
       <OrderModal
