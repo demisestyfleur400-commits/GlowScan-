@@ -250,7 +250,7 @@ La peau masculine a des caractéristiques naturelles différentes qui ne sont PA
 • Production de sébum naturellement plus élevée → une peau masculine brillante sans lésions visibles = peau normale
 • Texture plus épaisse et rugueuse → ne pas confondre avec eczéma ou dermatite
 • Zone T brillante chez un homme = absolument normale
-Si la peau masculine n'a pas de lésions clairement visibles (papules, pustules, comédons ouverts), le score minimal doit être 70/100.
+Pour la peau masculine sans lésions visibles, calibre le score honnêtement (peau saine = 80-95, légère brillance = 75-85). N'inflige pas de score bas pour des caractéristiques masculines normales, mais NE PLAFONNE PAS non plus le score à 70 — donne le vrai score.
 
 ══ ÉCLAIRAGE & REFLETS — RÈGLE STRICTE ANTI-FAUX-POSITIF ══
 Sur peau foncée riche en mélanine, les reflets de lumière (LED plafond, fenêtre, flash téléphone, écran) créent des PETITS POINTS BRILLANTS BLANCS qui ressemblent visuellement à des pustules ou des comédons. Tu DOIS les distinguer absolument :
@@ -627,7 +627,9 @@ RAPPEL FINAL — POSTURE DERMATO ASSURÉE :
       const recommendedProducts = chosen ? [chosen.name] : [];
       console.log(`[analyze] 🛒 Recommandation: ${chosen?.name || "aucune"} (${chosen?.brand || "-"}, ${chosen?.price || 0} FCFA, local=${chosen ? isLocal(chosen) : false})`);
 
-      const finalScore = Math.min(analysisResult.score || 55, 70);
+      // Score RÉEL renvoyé par l'IA, calibré 0-100. Pas de plafond artificiel.
+      const rawScore = Number(analysisResult.score);
+      const finalScore = Number.isFinite(rawScore) ? Math.max(0, Math.min(100, Math.round(rawScore))) : 60;
 
       // ── Calcul progression Type 3 (scans précédents) ─────────
       let progression: { previousScore: number; delta: number; trend: "improving" | "stable" | "worsening"; weeksTracked: number } | undefined;

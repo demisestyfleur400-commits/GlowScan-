@@ -371,7 +371,6 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
   const [challengeLoading, setChallengeLoading] = useState(false);
   const [challengeUrl, setChallengeUrl] = useState<string | null>(null);
   const [j7ReminderSet, setJ7ReminderSet] = useState(false);
-  const [showExpertDetails, setShowExpertDetails] = useState(false);
   const [showRoutine, setShowRoutine] = useState(false);
   const [showOrderModal, setShowOrderModal] = useState(false);
   const [orderModalItems, setOrderModalItems] = useState<OrderItem[]>([]);
@@ -639,16 +638,11 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
               <div className="flex items-center justify-end mb-2">
                 <SeverityBadge severity={result.severity} />
               </div>
-              <div className="text-center mb-5" data-testid="diagnostic-header">
+              <div className="mb-4" data-testid="diagnostic-header">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-1">Diagnostic & stratégie</p>
                 <h2 className="text-2xl font-black text-gray-900 leading-tight font-display tracking-tight">
-                  Ton diagnostic est prêt <span aria-hidden="true">✨</span>
+                  {result.condition || "Analyse cutanée"}
                 </h2>
-                <p className="text-[13px] text-gray-500 mt-2 leading-snug">
-                  L'IA a analysé ta peau en détail.
-                </p>
-                <p className="text-[13px] text-gray-500 leading-snug">
-                  Voici ce qu'on a détecté pour toi.
-                </p>
               </div>
 
               {/* Gauge speedometer */}
@@ -677,6 +671,44 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
                       </svg>
                     </div>
 
+                    {/* Cartes métriques sous le gauge */}
+                    {(() => {
+                      const m = (result as any).metrics || {};
+                      const hydratation = Number.isFinite(Number(m.hydratation)) ? Math.round(Number(m.hydratation)) : null;
+                      const eclat = Number.isFinite(Number(m.eclat)) ? Math.round(Number(m.eclat)) : null;
+                      const purete = Number.isFinite(Number(m.purete)) ? Math.round(Number(m.purete)) : null;
+                      const indiceAcne = purete !== null ? 100 - purete : null;
+                      const cards: { label: string; value: string; sub: string; color: string }[] = [];
+                      if (indiceAcne !== null) {
+                        const lvl = indiceAcne < 25 ? { sub: "Faible", c: "text-emerald-600" } : indiceAcne < 55 ? { sub: "Modéré", c: "text-amber-600" } : { sub: "Élevé", c: "text-red-600" };
+                        cards.push({ label: "Indice acné", value: `${indiceAcne}%`, sub: lvl.sub, color: lvl.c });
+                      }
+                      if (hydratation !== null) {
+                        const lvl = hydratation >= 65 ? { sub: "optimal", c: "text-emerald-600" } : hydratation >= 40 ? { sub: "moyen", c: "text-amber-600" } : { sub: "faible", c: "text-red-600" };
+                        cards.push({ label: "Hydratation", value: `${hydratation}%`, sub: lvl.sub, color: lvl.c });
+                      }
+                      if (eclat !== null) {
+                        const lvl = eclat >= 70 ? { sub: "Bon", c: "text-emerald-600" } : eclat >= 45 ? { sub: "Moyen", c: "text-amber-600" } : { sub: "Faible", c: "text-red-600" };
+                        cards.push({ label: "Éclat", value: `${eclat}%`, sub: lvl.sub, color: lvl.c });
+                      }
+                      if (cards.length === 0) return null;
+                      const icons: Record<string, string> = { "Indice acné": "🔴", "Hydratation": "💧", "Éclat": "✨" };
+                      return (
+                        <div className="grid grid-cols-2 gap-2 mb-4" data-testid="metrics-cards">
+                          {cards.map((c) => (
+                            <div key={c.label} className="rounded-2xl border border-gray-100 bg-gray-50/50 p-3 flex items-start gap-2.5">
+                              <span className="text-lg flex-shrink-0">{icons[c.label]}</span>
+                              <div className="min-w-0">
+                                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">{c.label}</p>
+                                <p className="text-base font-black text-gray-900 leading-tight">
+                                  {c.value} <span className={`text-[10px] font-semibold ${c.color}`}>{c.sub}</span>
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
                   </>
                 );
               })()}
@@ -744,54 +776,6 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
                 </div>
               );
             })()}
-
-            {/* ── Analyse expert (juste après le Glow Score) ── */}
-            <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-xl bg-pink-50 flex items-center justify-center">
-                    <Sparkles className="w-4 h-4 text-pink-600" />
-                  </div>
-                  <h3 className="text-base font-black text-gray-900">Analyse expert</h3>
-                </div>
-                <button
-                  onClick={() => setShowExpertDetails(v => !v)}
-                  data-testid="button-toggle-expert-details"
-                  className="flex items-center gap-1 text-xs font-bold text-pink-600 bg-pink-50 border border-pink-100 px-3 py-1.5 rounded-xl active:scale-95 transition-all"
-                >
-                  {showExpertDetails ? "Réduire" : "Voir détails"}
-                  <ChevronRight className={`w-3.5 h-3.5 transition-transform ${showExpertDetails ? "rotate-90" : ""}`} />
-                </button>
-              </div>
-
-              {/* Résumé toujours visible (2 premières phrases) */}
-              <p className="text-sm text-gray-600 leading-relaxed" data-testid="text-details-summary">
-                {result.details ? splitSentences(result.details).slice(0, 2).join(" ") : ""}
-                {!showExpertDetails && result.details && splitSentences(result.details).length > 2 && (
-                  <span className="text-gray-400"> …</span>
-                )}
-              </p>
-
-              {/* Détails complets — affichés si showExpertDetails */}
-              {showExpertDetails && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <p className="text-sm text-gray-600 leading-relaxed mt-2" data-testid="text-details-full">
-                    {result.details ? splitSentences(result.details).slice(2).join(" ") : ""}
-                  </p>
-                </motion.div>
-              )}
-
-              {result.motivation && (
-                <div className="mt-4 p-4 rounded-2xl bg-pink-50 border border-pink-100">
-                  <p className="text-sm font-bold text-pink-700 italic" data-testid="text-motivation">"{result.motivation}"</p>
-                </div>
-              )}
-            </div>
 
             {/* ── Carte visuelle des zones de la peau ── */}
             {result.zones && result.zones.length > 0 && (
