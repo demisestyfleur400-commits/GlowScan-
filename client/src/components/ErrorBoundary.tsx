@@ -43,10 +43,12 @@ export default class ErrorBoundary extends Component<Props, State> {
             L'application a rencontré une erreur inattendue. Appuie sur le bouton ci-dessous pour revenir à l'accueil.
           </p>
           {this.state.error && (
-            <details className="mb-4 text-left w-full max-w-sm">
+            <details open className="mb-4 text-left w-full max-w-sm">
               <summary className="text-xs text-gray-400 cursor-pointer">Détails de l'erreur</summary>
-              <pre className="mt-2 text-[10px] text-red-600 bg-red-50 rounded-lg p-3 overflow-auto max-h-40 whitespace-pre-wrap break-words">
+              <pre className="mt-2 text-[10px] text-red-600 bg-red-50 rounded-lg p-3 overflow-auto max-h-60 whitespace-pre-wrap break-words" data-testid="text-error-details">
                 {this.state.error.message}
+                {"\n\n"}
+                {this.state.error.stack}
                 {"\n\n"}
                 {this.state.errorInfo}
               </pre>

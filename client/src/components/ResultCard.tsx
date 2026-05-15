@@ -7,12 +7,36 @@ import FaceZonesMap from "./FaceZonesMap";
 import { RoutineShareCard } from "./RoutineShareCard";
 import OrderModal, { type OrderItem } from "./OrderModal";
 import MedicalReport from "./MedicalReport";
+import { Component as ReactComponent, type ReactNode } from "react";
 import { catalog, getProductBrand, getBrandByWhatsapp, formatPrice } from "@shared/catalog";
 import { productImages as centralProductImages } from "@/lib/productImages";
 import { trackWhatsappClick } from "@/lib/analytics";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
+
+class MedicalReportBoundary extends ReactComponent<{ children: ReactNode; fallback: ReactNode }, { hasError: boolean; msg: string }> {
+  state = { hasError: false, msg: "" };
+  static getDerivedStateFromError(err: Error) {
+    return { hasError: true, msg: err?.message || String(err) };
+  }
+  componentDidCatch(err: Error) {
+    console.error("[MedicalReport crash]", err?.message, err?.stack);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-[12px] text-amber-900" data-testid="block-medical-fallback">
+          <p className="font-bold mb-1">Affichage simplifié</p>
+          <p className="mb-2">Impossible d'afficher le rapport détaillé. Voici tes infos essentielles ci-dessous.</p>
+          <p className="text-[10px] text-amber-700/70 break-words">Détail technique : {this.state.msg}</p>
+          <div className="mt-3">{this.props.fallback}</div>
+        </div>
+      );
+    }
+    return <>{this.props.children}</>;
+  }
+}
 const productImages = centralProductImages;
 
 const SOCIAL_PROOF: Record<string, number> = {
@@ -514,14 +538,25 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
             {/* ═══════════════════════════════════════════
                 NOUVEAU RAPPORT MÉDICAL — 9 BLOCS
                 ═══════════════════════════════════════════ */}
-            <MedicalReport
-              result={result}
-              scanId={scanId}
-              area={area}
-              imageUrl={imageUrl}
-              userFirstName={userFirstName}
-              previousScore={result.predictiveInsights?.progression?.previousScore ?? null}
-            />
+            <MedicalReportBoundary
+              fallback={
+                <div className="space-y-2 text-[12px] text-gray-800">
+                  {result.skinType && <p><span className="font-bold">Type :</span> {result.skinType}</p>}
+                  {result.condition && <p><span className="font-bold">Diagnostic :</span> {result.condition}</p>}
+                  {typeof result.score === "number" && <p><span className="font-bold">GlowScore :</span> {result.score}/100</p>}
+                  {result.details && <p className="whitespace-pre-line">{result.details}</p>}
+                </div>
+              }
+            >
+              <MedicalReport
+                result={result}
+                scanId={scanId}
+                area={area}
+                imageUrl={imageUrl}
+                userFirstName={userFirstName}
+                previousScore={result.predictiveInsights?.progression?.previousScore ?? null}
+              />
+            </MedicalReportBoundary>
 
             {/* ── Analyse technique par zone (Cerveau Structuré) ── */}
             {(() => {
