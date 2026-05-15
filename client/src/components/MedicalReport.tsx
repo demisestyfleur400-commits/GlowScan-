@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sun, Moon, AlertTriangle, ShoppingBag, ArrowUp, ArrowDown, ScanLine, Sparkles, ArrowRight } from "lucide-react";
+import { Sun, Moon, AlertTriangle, ShoppingBag, ArrowUp, ArrowDown, ScanLine, Sparkles } from "lucide-react";
 import type { AnalysisResult, ZoneAnalysisItem, ProtocolStep } from "@shared/schema";
 import FaceZonesMap from "./FaceZonesMap";
 import { catalog, getProductBrand, formatPrice, BRAND_MAP } from "@shared/catalog";
@@ -803,125 +803,19 @@ export default function MedicalReport({ result, scanId, area = "face", imageUrl,
       )}
 
       {/* ═══════════════════════════════════════════
-          BLOC 7 — TA TRANSFORMATION 4 SEMAINES (rétention)
-          Roadmap visuelle qui pousse à revenir chaque semaine
-          mesurer ses progrès, avec récompense finale (rescan offert).
+          BLOC 7 — Message de rétention simple
           ═══════════════════════════════════════════ */}
-      <motion.section
-        initial={{ opacity: 0, y: 16 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, amount: 0.2 }}
-        transition={{ duration: 0.5 }}
-        className="relative rounded-[24px] overflow-hidden shadow-[0_8px_32px_rgba(233,30,140,0.18)]"
-        data-testid="block-transformation-4w"
+      <div
+        className="rounded-2xl border border-pink-200 bg-pink-50 px-4 py-3 text-center"
+        data-testid="block-retention-message"
       >
-        <div
-          className="absolute inset-0"
-          style={{
-            background: "linear-gradient(135deg, #1A1A2E 0%, #2D1B3D 45%, #4A1B4D 75%, #E91E8C 100%)",
-          }}
-          aria-hidden="true"
-        />
-        <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-pink-400/20 blur-3xl" aria-hidden="true" />
-        <div className="absolute -bottom-12 -left-12 w-40 h-40 rounded-full bg-rose-300/15 blur-3xl" aria-hidden="true" />
-
-        <div className="relative p-5 text-white">
-          <div className="flex items-center justify-between mb-1">
-            <p className="text-[10px] uppercase tracking-[0.25em] font-black text-pink-200/90">Ton parcours Glow</p>
-            <span className="text-[10px] font-bold text-pink-100 bg-white/10 backdrop-blur-sm border border-white/20 px-2 py-0.5 rounded-full">
-              Semaine 1 / 4
-            </span>
-          </div>
-          <h3 className="text-[20px] font-black leading-tight font-display mb-1">
-            Ta transformation en 4 semaines
-          </h3>
-          <p className="text-[12px] text-pink-100/85 leading-snug mb-4">
-            Suis ta routine, reviens chaque semaine — on mesure ensemble tes vrais progrès.
-          </p>
-
-          <div className="relative mb-4 px-1">
-            <div className="absolute left-3 right-3 top-3 h-[2px] bg-white/15" aria-hidden="true" />
-            <div
-              className="absolute left-3 top-3 h-[2px] bg-gradient-to-r from-pink-300 to-pink-100"
-              style={{ width: "10%" }}
-              aria-hidden="true"
-            />
-            <div className="relative grid grid-cols-4 gap-2">
-              {[
-                { week: "S1", label: "Hydratation", desc: "On répare la barrière", emoji: "💧", active: true },
-                { week: "S2", label: "Premiers signes", desc: "Teint plus net", emoji: "✨", active: false },
-                { week: "S3", label: "Uniformisation", desc: "Taches qui s'atténuent", emoji: "🌸", active: false },
-                { week: "S4", label: "Glow révélé", desc: "Rescan offert 🎁", emoji: "🏆", active: false, reward: true },
-              ].map((step) => (
-                <div key={step.week} className="flex flex-col items-center text-center">
-                  <div
-                    className={`relative z-10 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black mb-1.5 ${
-                      step.active
-                        ? "bg-white text-pink-700 shadow-lg shadow-pink-500/40 ring-2 ring-pink-200"
-                        : step.reward
-                          ? "bg-amber-300/90 text-amber-900 ring-2 ring-amber-200/40"
-                          : "bg-white/15 text-white/70 border border-white/25"
-                    }`}
-                    data-testid={`milestone-${step.week.toLowerCase()}`}
-                  >
-                    {step.active ? "•" : step.week}
-                  </div>
-                  <p className="text-[15px] mb-0.5" aria-hidden="true">{step.emoji}</p>
-                  <p className={`text-[10px] font-bold leading-tight ${step.active ? "text-white" : step.reward ? "text-amber-200" : "text-white/70"}`}>
-                    {step.label}
-                  </p>
-                  <p className={`text-[9px] leading-tight mt-0.5 ${step.active ? "text-pink-100" : "text-white/45"}`}>
-                    {step.desc}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="rounded-2xl bg-white/10 backdrop-blur-sm border border-white/15 px-3.5 py-3 mb-3">
-            <div className="flex items-start gap-2.5">
-              <span className="text-xl flex-shrink-0">🎁</span>
-              <div className="flex-1 min-w-0">
-                <p className="text-[12px] font-black text-amber-200 leading-tight">
-                  Récompense semaine 4
-                </p>
-                <p className="text-[11px] text-white/85 leading-snug mt-0.5">
-                  Termine ton parcours et débloque <span className="font-bold text-white">1 rescan offert</span> + un nouveau diagnostic comparatif "avant / après".
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => {
-              try {
-                const journey = {
-                  startedAt: new Date().toISOString(),
-                  initialScore: result.score,
-                  area: area || "face",
-                  condition: result.condition,
-                };
-                localStorage.setItem("glowscan_journey_4w", JSON.stringify(journey));
-              } catch {}
-              const reminderBtn = document.querySelector('[data-testid="button-set-j7-reminder"]') as HTMLButtonElement | null;
-              if (reminderBtn) reminderBtn.click();
-              const target = document.querySelector('[data-testid="block-products"]');
-              if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
-            }}
-            data-testid="button-start-journey"
-            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-white text-pink-700 font-black text-sm shadow-xl shadow-black/30 active:scale-[0.98] transition-all"
-          >
-            <Sparkles className="w-4 h-4" />
-            Démarrer mon parcours 4 semaines
-            <ArrowRight className="w-4 h-4" />
-          </button>
-
-          <p className="text-[10px] text-pink-100/70 text-center mt-2.5 font-medium">
-            On t'envoie un rappel chaque semaine pour mesurer tes progrès
-          </p>
-        </div>
-      </motion.section>
+        <p className="text-[13px] font-bold text-pink-700 leading-snug">
+          ✨ Suis ta routine 4 semaines et reviens scanner —
+        </p>
+        <p className="text-[12px] text-gray-700 leading-snug mt-1">
+          on mesurera ensemble tes vrais progrès. <span className="font-semibold text-pink-700">Rescan offert</span> au bout du parcours 🎁
+        </p>
+      </div>
 
       {/* Modale fiche commande — toutes les commandes vont vers WhatsApp 237 674 377 959 */}
       <OrderModal
