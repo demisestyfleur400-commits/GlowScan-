@@ -822,12 +822,17 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
                   <h3 className="text-base font-black text-gray-900">Matin</h3>
                 </div>
                 <div className="space-y-3">
-                  {result.recommendations.morning.map((s, idx) => (
-                    <div key={idx} className="flex items-start gap-3">
-                      <span className="flex-shrink-0 w-6 h-6 rounded-lg bg-pink-50 text-pink-600 flex items-center justify-center text-xs font-black">{idx + 1}</span>
-                      <p className="text-sm text-gray-600 font-medium leading-relaxed">{s}</p>
-                    </div>
-                  ))}
+                  {result.recommendations.morning.map((s: any, idx) => {
+                    const text = typeof s === "string"
+                      ? s
+                      : [s?.step, s?.product, s?.why].filter((x) => typeof x === "string").join(" — ");
+                    return (
+                      <div key={idx} className="flex items-start gap-3">
+                        <span className="flex-shrink-0 w-6 h-6 rounded-lg bg-pink-50 text-pink-600 flex items-center justify-center text-xs font-black">{idx + 1}</span>
+                        <p className="text-sm text-gray-600 font-medium leading-relaxed">{text}</p>
+                      </div>
+                    );
+                  })}
                 </div>
                 {routineProducts.length > 0 && (
                   <div className="mt-5 pt-4 border-t border-gray-100">
@@ -880,12 +885,17 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
                   <h3 className="text-base font-black text-gray-900">Soir</h3>
                 </div>
                 <div className="space-y-3">
-                  {result.recommendations.evening.map((s, idx) => (
-                    <div key={idx} className="flex items-start gap-3">
-                      <span className="flex-shrink-0 w-6 h-6 rounded-lg bg-pink-50 text-pink-600 flex items-center justify-center text-xs font-black">{idx + 1}</span>
-                      <p className="text-sm text-gray-600 font-medium leading-relaxed">{s}</p>
-                    </div>
-                  ))}
+                  {result.recommendations.evening.map((s: any, idx) => {
+                    const text = typeof s === "string"
+                      ? s
+                      : [s?.step, s?.product, s?.why].filter((x) => typeof x === "string").join(" — ");
+                    return (
+                      <div key={idx} className="flex items-start gap-3">
+                        <span className="flex-shrink-0 w-6 h-6 rounded-lg bg-pink-50 text-pink-600 flex items-center justify-center text-xs font-black">{idx + 1}</span>
+                        <p className="text-sm text-gray-600 font-medium leading-relaxed">{text}</p>
+                      </div>
+                    );
+                  })}
                 </div>
                 {routineProducts.length > 0 && (
                   <div className="mt-5 pt-4 border-t border-gray-100">

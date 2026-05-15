@@ -390,14 +390,20 @@ export default function MedicalReport({ result, scanId, area = "face", imageUrl,
   );
 
   // Protocole avec fallback depuis recommendations.morning/evening
-  const protocolMorning: ProtocolStep[] = result.protocol?.morning || (result.recommendations?.morning || []).map((s, i) => ({
-    step: `Étape ${i + 1}`,
-    product: s,
-  }));
-  const protocolEvening: ProtocolStep[] = result.protocol?.evening || (result.recommendations?.evening || []).map((s, i) => ({
-    step: `Étape ${i + 1}`,
-    product: s,
-  }));
+  // ⚠️ L'IA peut renvoyer soit des chaînes, soit des objets {step, product, why}
+  // dans recommendations.morning/evening — on normalise pour éviter le crash React.
+  const normalizeStep = (s: any, i: number): ProtocolStep => {
+    if (s && typeof s === "object") {
+      return {
+        step: typeof s.step === "string" ? s.step : `Étape ${i + 1}`,
+        product: typeof s.product === "string" ? s.product : undefined,
+        why: typeof s.why === "string" ? s.why : undefined,
+      };
+    }
+    return { step: `Étape ${i + 1}`, product: typeof s === "string" ? s : String(s ?? "") };
+  };
+  const protocolMorning: ProtocolStep[] = (result.protocol?.morning || result.recommendations?.morning || []).map(normalizeStep);
+  const protocolEvening: ProtocolStep[] = (result.protocol?.evening || result.recommendations?.evening || []).map(normalizeStep);
 
   const routine = findRoutineProducts(result, area);
   const problems = deriveProblems(result);

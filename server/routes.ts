@@ -729,9 +729,13 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
         },
         recommendations: {
           products: recommendedProducts,
-          morning: analysisResult.recommendations?.morning || [],
-          evening: analysisResult.recommendations?.evening || [],
-          weekly: analysisResult.recommendations?.weekly || ""
+          morning: (analysisResult.recommendations?.morning || []).map((s: any) =>
+            typeof s === "string" ? s : [s?.step, s?.product, s?.why].filter((x: any) => typeof x === "string").join(" — ")
+          ),
+          evening: (analysisResult.recommendations?.evening || []).map((s: any) =>
+            typeof s === "string" ? s : [s?.step, s?.product, s?.why].filter((x: any) => typeof x === "string").join(" — ")
+          ),
+          weekly: typeof analysisResult.recommendations?.weekly === "string" ? analysisResult.recommendations.weekly : ""
         },
         predictiveInsights,
         // ── Nouveaux champs RAPPORT MÉDICAL (générés par l'IA pour CETTE photo) ──
