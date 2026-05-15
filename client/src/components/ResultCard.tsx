@@ -46,19 +46,6 @@ const SOCIAL_PROOF: Record<string, number> = {
   "savon-corps": 33, "serum-mains-pieds": 16, "huile-eclat": 21,
   "shampooing-chebe": 24, "huile-chebe": 20, "creme-chebe": 15,
   "serum-hairbloom": 13,
-  "garnier-eau-micellaire": 142, "garnier-creme-spf": 98,
-  "garnier-vitaminc-serum": 178, "ambi-fade-cream": 134,
-  "lrp-effaclar-duo": 219, "neutrogena-acne-gel": 156,
-  "bioderma-sensibio": 264, "loreal-glycolic-bright": 89,
-  "kojie-san-soap": 203, "fair-white-vitaminc": 167,
-  "ambi-body-lotion": 112, "africas-best-olive-oil": 88,
-  "jamaican-castor-oil": 143, "head-shoulders-shampoo": 321,
-  "neutrogena-hydro-boost": 187, "cerave-creme": 243,
-  "lrp-effaclar-gel": 167, "nivea-creme-visage": 312,
-  "nivea-cocoa-butter-lotion": 289, "dove-lait-corporel": 198,
-  "vaseline-intensive-care": 276, "palmers-cocoa-butter": 154,
-  "pantene-prov-shampoo": 133, "dark-lovely-creme": 89,
-  "cantu-shea-butter": 201, "ors-olive-oil": 76, "schwarzkopf-gliss": 112,
 };
 
 function getSocialProof(productId: string): number {
@@ -352,12 +339,10 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
       creme: { emoji: "🧴", label: currentArea === "cheveux" ? "Masque / Crème" : "Crème hydratante" },
     };
 
-    // ─── Règle "tous même source" ─────────────────────────────────────
-    // Une routine = soit 100% une seule marque locale, soit 100% international.
-    // Aucun mélange (= 1 seule livraison + cohérence de gamme).
-    // À score égal : on PRIVILÉGIE LES MARQUES LOCALES.
+    // ─── Règle "une seule marque locale par routine" ─────────────────
+    // Une routine = 100% une seule marque locale (Andrea / Ebony / Hair Bloom)
+    // = 1 seule livraison + cohérence de gamme.
     // ────────────────────────────────────────────────────────────────────
-    const internationals = areaProducts.filter(p => !p.whatsapp);
     const localsByBrand = new Map<string, typeof catalog>();
     for (const p of areaProducts.filter(x => x.whatsapp)) {
       const k = p.whatsapp as string;
@@ -388,31 +373,21 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
     };
 
     const candidates: Source[] = [];
-    const intl = buildSource(internationals, "international");
-    if (intl) candidates.push(intl);
     for (const [waKey, brandProducts] of Array.from(localsByBrand.entries())) {
       const c = buildSource(brandProducts, waKey);
       if (c) candidates.push(c);
     }
 
-    // Tri : score décroissant ; à égalité → marques LOCALES en premier
-    candidates.sort((a, b) => {
-      if (b.total !== a.total) return b.total - a.total;
-      if (a.brandKey === "international") return 1;
-      if (b.brandKey === "international") return -1;
-      return 0;
-    });
+    // Choisir la marque locale qui matche le mieux le diagnostic
+    candidates.sort((a, b) => b.total - a.total);
 
-    // Fallback si vraiment aucune source ne rassemble 3 produits
+    // Fallback si aucune marque ne rassemble 3 produits : prendre la plus fournie
     let winner: Source | null = candidates[0] || null;
     if (!winner) {
-      // Dernier recours : 3 meilleurs internationaux ou marque la plus fournie
-      const fallbackPool = internationals.length >= 3
-        ? internationals
-        : (Array.from(localsByBrand.values()).sort((a, b) => b.length - a.length)[0] || areaProducts);
+      const fallbackPool = Array.from(localsByBrand.values()).sort((a, b) => b.length - a.length)[0] || areaProducts;
       const sorted = [...fallbackPool].sort((a, b) => scoreProduct(b) - scoreProduct(a)).slice(0, 3);
       if (sorted.length === 0) return [];
-      winner = { products: sorted, total: 0, brandKey: sorted[0].whatsapp || "international" };
+      winner = { products: sorted, total: 0, brandKey: sorted[0].whatsapp || "" };
     }
 
     return winner.products.map((p, i) => {

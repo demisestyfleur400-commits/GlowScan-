@@ -89,9 +89,9 @@ function supplementCopy(problems: DiagProblem[]): string {
 }
 
 interface RoutineSelection {
-  main: any[];           // 3 produits cohérents (tous internationaux OU tous une seule marque locale)
-  supplement: any | null; // 4e produit intermédiaire 2000–4000 FCFA, même source
-  sourceLabel: string;    // ex. "international" ou "Andrea Skincare"
+  main: any[];           // 3 produits cohérents d'une seule marque locale
+  supplement: any | null; // 4e produit intermédiaire 2000–4000 FCFA, même marque
+  sourceLabel: string;    // ex. "Andrea Skincare", "Ebony Hair", "Hair Bloom"
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -224,9 +224,8 @@ function findRoutineProducts(result: AnalysisResult, area: string): RoutineSelec
   const areaProducts = catalog.filter((p) => p.category === cat);
   const score = (p: any) => getMatchReasons(p, problems).length;
 
-  // Internationaux = pas de whatsapp local (tous routés via le N° central GlowScan = 1 livraison)
-  const internationals = areaProducts.filter((p) => !p.whatsapp);
-  // Locaux groupés par numéro WhatsApp = par marque
+  // Toutes les marques sont locales (Andrea Skincare, Ebony Hair, Hair Bloom)
+  // Groupées par numéro WhatsApp = par marque
   const localsByBrand = new Map<string, any[]>();
   for (const p of areaProducts.filter((x) => x.whatsapp)) {
     const k = p.whatsapp as string;
@@ -234,18 +233,10 @@ function findRoutineProducts(result: AnalysisResult, area: string): RoutineSelec
     localsByBrand.get(k)!.push(p);
   }
 
-  // Chaque "candidat" = 3 produits cohérents (1 livraison)
+  // Chaque "candidat" = 3 produits cohérents d'une même marque locale (1 livraison)
   type Candidate = { products: any[]; total: number; brandKey: string };
   const candidates: Candidate[] = [];
 
-  // Bloc tout-international
-  const intSorted = [...internationals].sort((a, b) => score(b) - score(a));
-  if (intSorted.length >= 3) {
-    const top3 = intSorted.slice(0, 3);
-    candidates.push({ products: top3, total: top3.reduce((s, p) => s + score(p), 0), brandKey: "international" });
-  }
-
-  // Un bloc par marque locale (si elle a ≥3 produits dans la catégorie)
   for (const [waKey, brandProducts] of Array.from(localsByBrand.entries())) {
     if (brandProducts.length < 3) continue;
     const sorted = [...brandProducts].sort((a, b) => score(b) - score(a));
@@ -253,39 +244,26 @@ function findRoutineProducts(result: AnalysisResult, area: string): RoutineSelec
     candidates.push({ products: top3, total: top3.reduce((s, p) => s + score(p), 0), brandKey: waKey });
   }
 
-  // Choisir le meilleur ; égalité → PRIORITÉ AUX MARQUES LOCALES
-  // (soutien au tissu local + livraison directe par la marque elle-même)
-  candidates.sort((a, b) => {
-    if (b.total !== a.total) return b.total - a.total;
-    if (a.brandKey === "international") return 1;   // international descend
-    if (b.brandKey === "international") return -1;  // local remonte
-    return 0;
-  });
+  // Choisir la marque locale qui matche le mieux le diagnostic
+  candidates.sort((a, b) => b.total - a.total);
 
-  // Fallback robuste : pas de mélange local/international
+  // Fallback robuste : prendre la première marque disponible même si <3 produits
   let winner: Candidate;
   if (candidates.length === 0) {
-    if (internationals.length > 0) {
-      const top = [...internationals].sort((a, b) => score(b) - score(a)).slice(0, 3);
-      winner = { products: top, total: top.reduce((s, p) => s + score(p), 0), brandKey: "international" };
-    } else {
-      const firstBrand = Array.from(localsByBrand.entries())[0];
-      if (!firstBrand) {
-        return { main: [], supplement: null, sourceLabel: "international" };
-      }
-      const [waKey, brandProducts] = firstBrand;
-      const top = [...brandProducts].sort((a, b) => score(b) - score(a)).slice(0, 3);
-      winner = { products: top, total: top.reduce((s, p) => s + score(p), 0), brandKey: waKey };
+    const firstBrand = Array.from(localsByBrand.entries())[0];
+    if (!firstBrand) {
+      return { main: [], supplement: null, sourceLabel: "marque locale" };
     }
+    const [waKey, brandProducts] = firstBrand;
+    const top = [...brandProducts].sort((a, b) => score(b) - score(a)).slice(0, 3);
+    winner = { products: top, total: top.reduce((s, p) => s + score(p), 0), brandKey: waKey };
   } else {
     winner = candidates[0];
   }
-  const sourceLabel = winner.brandKey === "international" ? "international" : (BRAND_MAP[winner.brandKey] || "marque locale");
+  const sourceLabel = BRAND_MAP[winner.brandKey] || "marque locale";
 
-  // Gamme intermédiaire (4000–6000 FCFA, point d'entrée pour pousser à l'action), MÊME source, exclu des 3 principaux
-  const sourcePool = winner.brandKey === "international"
-    ? internationals
-    : (localsByBrand.get(winner.brandKey) || []);
+  // Gamme intermédiaire (4000–6000 FCFA), MÊME marque, exclu des 3 principaux
+  const sourcePool = localsByBrand.get(winner.brandKey) || [];
   const inRange = sourcePool.filter((p) =>
     typeof p.price === "number" && p.price >= 4000 && p.price <= 6000 &&
     !winner.products.some((w) => w.id === p.id)
@@ -590,7 +568,7 @@ export default function MedicalReport({ result, scanId, area = "face", imageUrl,
           <h2 className="text-[15px] font-bold text-gray-900 font-display">Recommandé pour toi</h2>
         </div>
         <p className="text-[11px] text-gray-500 mb-3 leading-snug">
-          Bundle adapté à ton diagnostic — {bundle.sourceLabel === "international" ? "marques internationales" : bundle.sourceLabel}, une seule livraison.
+          Bundle adapté à ton diagnostic — {bundle.sourceLabel}, livraison directe par la marque.
         </p>
 
         <div

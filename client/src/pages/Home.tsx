@@ -18,9 +18,7 @@ import cardNutrimentsPhoto from "@assets/generated_images/home_card_nutriments.p
 import cardRoutinePhoto from "@assets/generated_images/home_card_routine.png";
 import cardEvolutionPhoto from "@assets/generated_images/home_card_evolution.png";
 
-import garnierVitC from "@assets/generated_images/garnier-vitaminc-serum.png";
-import niveaCocoa from "@assets/generated_images/nivea-cocoa-butter-lotion.png";
-import bioderma from "@assets/generated_images/bioderma-sensibio.png";
+import { productImages } from "@/lib/productImages";
 
 // ─────────────────────────────────────────────────────────────────────────
 //  Animations au scroll — variantes Framer Motion
@@ -236,16 +234,12 @@ function getTipForUser(skinType?: string) {
 // ─────────────────────────────────────────────────────────────────────────
 //  Boutique — produits mis en avant (fallback si DB vide)
 // ─────────────────────────────────────────────────────────────────────────
-const LOCAL_PRODUCT_IMAGES: Record<string, string> = {
-  "garnier-vitaminc-serum": garnierVitC,
-  "nivea-cocoa-butter-lotion": niveaCocoa,
-  "bioderma-sensibio": bioderma,
-};
+const LOCAL_PRODUCT_IMAGES: Record<string, string> = productImages;
 
 const FALLBACK_FEATURED = [
-  { productId: "garnier-vitaminc-serum", badge: "Anti-taches" },
-  { productId: "nivea-cocoa-butter-lotion", badge: "Hydratation" },
-  { productId: "bioderma-sensibio", badge: "Peau sensible" },
+  { productId: "serum-jeunesse", badge: "Anti-taches" },
+  { productId: "tresor-cacao", badge: "Hydratation" },
+  { productId: "ebony-hair-soin-profond", badge: "Cheveux abîmés" },
 ];
 
 type DisplayProduct = {
