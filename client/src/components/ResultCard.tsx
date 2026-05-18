@@ -437,7 +437,7 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
   const indiceAcne = deriveIndiceAcne(result);
   const hydratation = deriveHydratation(result);
   const rides = deriveRides(result);
-  const expertCitation = result.motivation || "Continue ta routine régulière et reviens scanner dans 1 semaine pour suivre tes progrès.";
+  const expertCitation = result.motivation || "Ton produit te soigne. GlowScan te connaît — on garde la mémoire de ce qui marche sur ta peau, pour que tu ne repartes jamais de zéro.";
 
   // ═══════════════════════════════════════════════════════════════════
   //  RENDU
