@@ -88,6 +88,14 @@ function deriveLesionsLabel(result: AnalysisResult): string {
   return "Aucune lésion notable";
 }
 function deriveZonesLabel(result: AnalysisResult): string {
+  // 1) Préférer stats.zones rempli par l'IA : c'est la localisation anatomique
+  //    précise (ex: "Front + Menton", "Zone T + Joue droite") — bien plus
+  //    informatif que la simple liste des zones rouges.
+  const statsZones = (result as any).stats?.zones;
+  if (typeof statsZones === "string" && statsZones.trim() && statsZones.trim() !== "—" && statsZones.trim() !== "Non détecté") {
+    return statsZones.trim();
+  }
+  // 2) Fallback : noms des zones red/yellow détectées
   const zones = (result.zones || []).filter((z: any) => z.status === "red" || z.status === "yellow");
   if (zones.length === 0) return "Toutes saines";
   const names = zones.slice(0, 2).map((z: any) => z.name);
