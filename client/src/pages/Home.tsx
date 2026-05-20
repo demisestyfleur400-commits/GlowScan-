@@ -156,11 +156,11 @@ function CircularScore({ score, color }: { score: number; color: string }) {
 const KNOWLEDGE_CARDS = [
   {
     photo: cardSkinbotPhoto,
-    title: "SkinBot connaît ta peau",
+    title: "GlowScan AI connaît ta peau",
     text: "Mieux que toi. Pose-lui n'importe quelle question — ses réponses sont adaptées à TON diagnostic.",
     cta: "Poser une question",
     path: "/chat",
-    testid: "skinbot",
+    testid: "GlowScan AI",
   },
   {
     photo: cardNutrimentsPhoto,
@@ -172,7 +172,7 @@ const KNOWLEDGE_CARDS = [
   },
   {
     photo: cardRoutinePhoto,
-    title: "Ta routine, pas celle de ta voisine",
+    title: "Ta routine GlowScan , pas celle de ta voisine",
     text: "Chaque produit recommandé est choisi uniquement pour TON type de peau.",
     cta: "Voir ma routine",
     path: "/routine",
