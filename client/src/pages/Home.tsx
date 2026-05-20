@@ -14,9 +14,9 @@ import type { FeaturedProduct } from "@shared/schema";
 
 import tipPhoto from "../lib/IMG_0122.png";
 import cardSkinbotPhoto from "../lib/IMG_0139.png";
-import cardNutrimentsPhoto from "@assets/generated_images/home_card_nutriments.png";
-import cardRoutinePhoto from "@assets/generated_images/home_card_routine.png";
-import cardEvolutionPhoto from "@assets/generated_images/home_card_evolution.png";
+import cardNutrimentsPhoto from "../lib/IMG_0140.png";
+import cardRoutinePhoto from "../lib/IMG_0133.png";
+import cardEvolutionPhoto from "../lib/IMG_0131.png";
 
 import { productImages } from "@/lib/productImages";
 
