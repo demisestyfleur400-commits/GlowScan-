@@ -12,7 +12,7 @@ import Onboarding from "@/components/Onboarding";
 import { catalog, formatPrice, type Product } from "@shared/catalog";
 import type { FeaturedProduct } from "@shared/schema";
 
-import tipPhoto from "@assets/generated_images/home_tip_skincare.png";
+import tipPhoto from "../lib/IMG_0122.png";
 import cardSkinbotPhoto from "@assets/generated_images/home_card_skinbot.png";
 import cardNutrimentsPhoto from "@assets/generated_images/home_card_nutriments.png";
 import cardRoutinePhoto from "@assets/generated_images/home_card_routine.png";
