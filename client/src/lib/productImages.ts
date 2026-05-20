@@ -16,29 +16,29 @@ import asHuileEssentielleImg from "@assets/fa94b192-c76e-4aa8-93a5-4af2d13fda0d_
 import cremeVisageImg from "@assets/creme-visage-product.png";
 
 // Ebony Hair (BISSA'A Cosmetics) — photos produits rognées individuellement
-import ebonyBainHuileImg from "@assets/generated_images/ebony/bain-huile.jpg";
-import ebonyHuileCoiffanteImg from "@assets/generated_images/ebony/huile-coiffante.jpg";
-import ebonySoinProfondImg from "@assets/generated_images/ebony/soin-profond.jpg";
-import ebonyShampoingLekieImg from "@assets/generated_images/ebony/shampoing-lekie.jpg";
-import ebonyApresShampoing from "@assets/generated_images/ebony/apres-shampoing.jpg";
-import ebonySprayDemelantImg from "@assets/generated_images/ebony/spray-demelant.jpg";
-import ebonyMousseKariteImg from "@assets/generated_images/ebony/mousse-karite.jpg";
-import ebonyMasqueReparationImg from "@assets/generated_images/ebony/masque-reparation.jpg";
-import ebonyActivateurRepousseImg from "@assets/generated_images/ebony/activateur-repousse.jpg";
-import ebonyHuileRicinImg from "@assets/generated_images/ebony/huile-ricin.jpg";
-import ebonyHuileAvocat from "@assets/generated_images/ebony/huile-avocat.jpg";
-import ebonyHuileAilImg from "@assets/generated_images/ebony/huile-ail.jpg";
-import ebonyHuileNeemImg from "@assets/generated_images/ebony/huile-neem.jpg";
-import ebonyHuileCocoImg from "@assets/generated_images/ebony/huile-coco.jpg";
-import ebonyHuileFenugrec from "@assets/generated_images/ebony/huile-fenugrec.jpg";
-import ebonyHuileMoringaImg from "@assets/generated_images/ebony/huile-moringa.jpg";
-import ebonyHuileCarotteImg from "@assets/generated_images/ebony/huile-carotte.jpg";
-import ebonyHuileSesameImg from "@assets/generated_images/ebony/huile-sesame.jpg";
-import ebonyGlycerinImg from "@assets/generated_images/ebony/glycerine-vegetale.jpg";
-import ebonySavonNoirImg from "@assets/generated_images/ebony/savon-noir.jpg";
-import ebonySavonExfoliantImg from "@assets/generated_images/ebony/savon-exfoliant.jpg";
-import ebonySavonSurgrasImg from "@assets/generated_images/ebony/savon-surgras.jpg";
-import ebonySavonCorpsImg from "@assets/generated_images/ebony/savon-corps.jpg";
+//import ebonyBainHuileImg from "@assets/generated_images/ebony/bain-huile.jpg";
+//import ebonyHuileCoiffanteImg from "@assets/generated_images/ebony/huile-coiffante.jpg";
+//import ebonySoinProfondImg from "@assets/generated_images/ebony/soin-profond.jpg";
+//import ebonyShampoingLekieImg from "@assets/generated_images/ebony/shampoing-lekie.jpg";
+//import ebonyApresShampoing from "@assets/generated_images/ebony/apres-shampoing.jpg";
+//import ebonySprayDemelantImg from "@assets/generated_images/ebony/spray-demelant.jpg";
+//import ebonyMousseKariteImg from "@assets/generated_images/ebony/mousse-karite.jpg";
+//import ebonyMasqueReparationImg from "@assets/generated_images/ebony/masque-reparation.jpg";
+//import ebonyActivateurRepousseImg from "@assets/generated_images/ebony/activateur-repousse.jpg";
+//import ebonyHuileRicinImg from "@assets/generated_images/ebony/huile-ricin.jpg";
+//import ebonyHuileAvocat from "@assets/generated_images/ebony/huile-avocat.jpg";
+//import ebonyHuileAilImg from "@assets/generated_images/ebony/huile-ail.jpg";
+//import ebonyHuileNeemImg from "@assets/generated_images/ebony/huile-neem.jpg";
+//import ebonyHuileCocoImg from "@assets/generated_images/ebony/huile-coco.jpg";
+//import ebonyHuileFenugrec from "@assets/generated_images/ebony/huile-fenugrec.jpg";
+//import ebonyHuileMoringaImg from "@assets/generated_images/ebony/huile-moringa.jpg";
+//import ebonyHuileCarotteImg from "@assets/generated_images/ebony/huile-carotte.jpg";
+//import ebonyHuileSesameImg from "@assets/generated_images/ebony/huile-sesame.jpg";
+//import ebonyGlycerinImg from "@assets/generated_images/ebony/glycerine-vegetale.jpg";
+//import ebonySavonNoirImg from "@assets/generated_images/ebony/savon-noir.jpg";
+//import ebonySavonExfoliantImg from "@assets/generated_images/ebony/savon-exfoliant.jpg";
+//import ebonySavonSurgrasImg from "@assets/generated_images/ebony/savon-surgras.jpg";
+//import ebonySavonCorpsImg from "@assets/generated_images/ebony/savon-corps.jpg";
 
 export const productImages: Record<string, string> = {
   // Andrea Skincare
