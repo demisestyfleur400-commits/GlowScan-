@@ -13,7 +13,7 @@ import { catalog, formatPrice, type Product } from "@shared/catalog";
 import type { FeaturedProduct } from "@shared/schema";
 
 import tipPhoto from "../lib/IMG_0122.png";
-import cardSkinbotPhoto from "@assets/generated_images/home_card_skinbot.png";
+import cardSkinbotPhoto from "../lib/IMG_0139.png";
 import cardNutrimentsPhoto from "@assets/generated_images/home_card_nutriments.png";
 import cardRoutinePhoto from "@assets/generated_images/home_card_routine.png";
 import cardEvolutionPhoto from "@assets/generated_images/home_card_evolution.png";
