@@ -2,10 +2,10 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronRight } from "lucide-react";
-import img1 from "@assets/onboarding_1_belle_sans_filtre.png";
-import img2 from "@assets/onboarding_2_peau_naturelle.png";
-import img3 from "@assets/onboarding_3_scan_visage.png";
-import img4 from "@assets/onboarding_4_ta_peau_ton_diagnostic.png";
+import img1 from "/src/lib/IMG_0141.png";
+import img2 from "/src/lib/IMG_0143.png";
+import img3 from "/src/lib/IMG_0142.png";
+import img4 from "/src/lib/IMG_0127.jpeg";
 
 interface Step {
   image: string;
