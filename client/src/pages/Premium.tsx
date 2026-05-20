@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Crown, Star, CheckCircle2, Clock, ArrowLeft, Phone, Sparkles, Shield, Zap, FileText, ChevronRight, Copy, Check } from "lucide-react";
-import founderConf from "@assets/IMG_9168_1775960551739.png";
+//import founderConf from "@assets/IMG_9168_1775960551739.png";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
 import { useToast } from "@/hooks/use-toast";
