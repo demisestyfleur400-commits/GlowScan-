@@ -469,7 +469,7 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
   score={result.score} 
   observationsVisuelles={result.consultationData?.observations_visuelles || (result as any).observationsVisuelles} 
 />
- {/* 4 tuiles colorées */}
+     {/* 4 tuiles colorées et contextualisées */}
           <div className="grid grid-cols-2 gap-2 mt-4">
             <StatTile
               icon={<Sun className="w-5 h-5 text-amber-500" />}
@@ -477,6 +477,7 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
               value={`${ageCutane} ans`}
               sub="estimé"
               color="amber"
+              explicationContextuelle={(result as any).consultationData?.impact_facteurs?.age || (result as any).facteurAge}
             />
             <StatTile
               icon={<div className="w-3 h-3 rounded-full bg-rose-500" />}
@@ -484,6 +485,7 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
               value={`${indiceAcne.value}%`}
               sub={indiceAcne.label}
               color="rose"
+              explicationContextuelle={(result as any).consultationData?.impact_facteurs?.inflammation || (result as any).facteurInflammation}
             />
             <StatTile
               icon={<Droplets className="w-5 h-5 text-blue-500" />}
@@ -491,6 +493,7 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
               value={`${hydratation.value}%`}
               sub={hydratation.label}
               color="blue"
+              explicationContextuelle={(result as any).consultationData?.impact_facteurs?.hydratation || (result as any).facteurHydratation}
             />
             <StatTile
               icon={<Leaf className="w-5 h-5 text-emerald-500" />}
@@ -498,10 +501,11 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
               value={rides.value}
               sub={rides.label}
               color="emerald"
+              explicationContextuelle={(result as any).consultationData?.impact_facteurs?.rides || (result as any).facteurRides}
             />
           </div>
         </div>
-
+           
         {/* ═══════════════════════════════════════════
             BLOC 2 — Grille 6 tuiles
             ═══════════════════════════════════════════ */}
