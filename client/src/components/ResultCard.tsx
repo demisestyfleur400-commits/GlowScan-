@@ -837,149 +837,228 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
           </div>
         )}
 
-        {/* ═══════════════════════════════════════════
-            BLOC 7 — Ma routine personnalisée (3 produits + WhatsApp)
-            ═══════════════════════════════════════════ */}
-        {!user ? (
-          // Gate inscription pour anonymes
-          <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 relative overflow-hidden" data-testid="block-routine-gate">
-            <div className="blur-[3px] pointer-events-none select-none space-y-2.5 opacity-60">
-              {[
-                { role: "🧴 Nettoyant", name: "Soin nettoyant doux" },
-                { role: "💧 Sérum", name: "Sérum ciblé éclat" },
-                { role: "🌿 Crème", name: "Crème hydratante" },
-              ].map((p) => (
-                <div key={p.name} className="flex items-center gap-3 p-2.5 rounded-xl bg-gray-50 border border-gray-100">
-                  <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-pink-50 to-emerald-50 flex-shrink-0" />
-                  <div className="flex-1">
-                    <p className="text-[10px] text-gray-400 font-bold uppercase">{p.role}</p>
-                    <p className="text-sm font-bold text-gray-900">{p.name}</p>
-                    <p className="text-xs font-extrabold text-pink-600">— FCFA</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/85 backdrop-blur-[2px] rounded-2xl px-5 py-6 text-center">
-              <div className="w-12 h-12 rounded-2xl bg-violet-100 flex items-center justify-center mb-3">
-                <Lock className="w-6 h-6 text-violet-600" />
-              </div>
-              <p className="text-base font-extrabold text-gray-900 mb-1">Ta routine personnalisée est prête !</p>
-              <p className="text-xs text-gray-500 mb-4 leading-snug">Crée un compte gratuit pour voir tes 3 produits<br />recommandés et ta routine matin/soir.</p>
-              <a href="/auth" data-testid="button-gate-signup" className="w-full py-3 rounded-2xl bg-gradient-to-r from-violet-500 to-pink-500 text-white text-sm font-extrabold shadow-lg shadow-purple-200 flex items-center justify-center gap-2 active:scale-[0.98] transition-all">
-                ✨ Créer mon compte gratuit
-              </a>
-              <p className="text-[10px] text-gray-400 mt-2">Sans carte bancaire · En 10 secondes</p>
-            </div>
-          </div>
-        ) : routineProducts.length > 0 ? (
-          <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100" data-testid="block-routine">
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-pink-600">✨ Ma routine personnalisée</p>
-              <span className="text-[10px] font-bold text-gray-500">3 produits</span>
-            </div>
+                        {/* BLOC 7 : TUNNEL D'ACHAT AGRESSIF HAUTE CONVERSION (1M+ REVENUS) */}
+        {routineProducts.length > 0 ? (
+          (() => {
+            const routineTotal = routineProducts.reduce((sum, { product }) => sum + (product.price || 0), 0);
+            const brandLabel = getProductBrand(routineProducts[0].product);
+            
+            // Simulation d'un prix de vente unitaire plus élevé pour l'effet d'ancrage psychologique (+20%)
+            const unitPriceTotal = Math.round(routineTotal * 1.2);
+            const totalSavingsRoutine = unitPriceTotal - routineTotal;
+            
+            // Calculs de l'offre intermédiaire (Le Duo à 2 produits)
+            const duoTotal = intermediateOffer ? intermediateOffer.totalPrice : 0;
+            const unitPriceDuo = Math.round(duoTotal * 1.15);
+            const totalSavingsDuo = unitPriceDuo - duoTotal;
 
-            <div className="space-y-2.5">
-              {routineProducts.map(({ product, role, index }) => {
-                const img = productImages[product.id];
-                return (
-                  <div key={product.id} className="flex items-center gap-3 p-2.5 rounded-xl bg-gray-50 border border-gray-100" data-testid={`routine-product-${index}`}>
-                    <div className="w-14 h-14 rounded-xl overflow-hidden bg-white border border-gray-100 flex-shrink-0">
-                      {img ? <img src={img} alt={product.name} className="w-full h-full object-cover" /> : (
-                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-pink-50 to-emerald-50">
-                          <Sparkles className="w-5 h-5 text-pink-300" />
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wide">{role.emoji} {role.label}</p>
-                      <p className="text-sm font-bold text-gray-900 truncate">{product.name}</p>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {product.price ? (
-                          <span className="text-xs font-extrabold text-pink-600">{formatPrice(product.price)}</span>
-                        ) : (
-                          <span className="text-xs font-medium text-gray-400 italic">Sur demande</span>
-                        )}
-                        <span className="text-[9px] text-gray-400">· {getProductBrand(product)}</span>
-                        <span className="text-[9px] font-bold text-orange-600 bg-orange-50 border border-orange-200 px-1.5 py-0.5 rounded-full">
-                          🔥 {getSocialProof(product.id)} commandes
+            return (
+              <div className="mt-6 space-y-5 px-1 animate-fade-in" data-testid="block-conversion-tunnel">
+                
+                {/* NOTIFICATION DE FOMO & PREUVE SOCIALE CAMEROUNAISE */}
+                <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200/70 flex items-center gap-2.5 shadow-sm">
+                  <span className="flex h-2 w-2 relative">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                  </span>
+                  <p className="text-[11px] text-amber-950 font-bold leading-tight">
+                    🔥 <span className="text-red-600 font-extrabold">37 femmes</span> ont validé cette ordonnance à Douala aujourd'hui. Stock de la gamme <span className="underline">{brandLabel}</span> limité.
+                  </p>
+                </div>
+
+                {/* DOUBLE OFFRE COMPARATIVE : L'ANCRAGE REVERSE */}
+                <div className="grid grid-cols-1 gap-4">
+                  
+                  {/* OFFRE 1 : L'EXPÉRIENCE TOTALE (ROUTINE COMPLÈTE - 3 PRODUITS) */}
+                  <div className="border border-gray-200 bg-white rounded-3xl p-5 shadow-sm flex flex-col justify-between transition-all hover:border-gray-300">
+                    <div>
+                      <div className="flex justify-between items-start mb-1">
+                        <h4 className="font-black text-gray-900 text-sm flex items-center gap-1">
+                          L'Expérience Totale 🚀
+                        </h4>
+                        <span className="text-[9px] bg-emerald-100 text-emerald-800 font-black px-2 py-0.5 rounded-md uppercase tracking-wide">
+                          Économie : {formatPrice(totalSavingsRoutine)}
                         </span>
                       </div>
+                      <p className="text-[10px] font-semibold text-gray-500 mb-2">Traitement Global Synergique (Nettoyant + Sérum + Crème)</p>
+                      <p className="text-[11px] text-gray-600 leading-relaxed mb-4">
+                        Zéro compromis. C'est la combinaison exacte recommandée par l'IA pour traiter le problème à la racine et bloquer définitivement le retour des imperfections.
+                      </p>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-2 border-t border-gray-100 pt-3.5 mt-1">
+                      <div>
+                        <p className="text-[9px] text-gray-400 font-bold line-through">{formatPrice(unitPriceTotal)}</p>
+                        <p className="text-lg font-black text-gray-950">{formatPrice(routineTotal)}</p>
+                      </div>
+                      <button 
+                        onClick={() => {
+                          const items: OrderItem[] = routineProducts.map(({ product }) => ({
+                            productId: product.id,
+                            productName: product.name,
+                            brand: getProductBrand(product),
+                            price: product.price,
+                          }));
+                          setOrderModalItems(items);
+                          setOrderModalTitle("Commander la routine complète");
+                          setShowOrderModal(true);
+                        }}
+                        className="flex items-center gap-1.5 px-4 py-2.5 bg-gray-950 hover:bg-gray-900 text-white text-xs font-black rounded-xl transition-all shadow-md active:scale-95"
+                      >
+                        <MessageCircle className="w-3.5 h-3.5 fill-current" />
+                        Prendre la Totale
+                      </button>
                     </div>
                   </div>
-                );
-              })}
-            </div>
 
-            {/* Total + bouton whatsapp 
-            {(() => {
-              const routineTotal = routineProducts.reduce((sum, { product }) => sum + (product.price || 0), 0);
-              const brandLabel = getProductBrand(routineProducts[0].product);
-              
-              // Simulation d'un prix à l'unité plus cher pour créer l'effet d'ancrage (ex: +20%)
-              const unitPriceTotal = Math.round(routineTotal * 1.2);
-              const totalSavingsRoutine = unitPriceTotal - routineTotal;
-              
-              // Calculs pour le Duo (l'offre intermédiaire)
-              const duoTotal = intermediateOffer ? intermediateOffer.totalPrice : 0;
-              const unitPriceDuo = Math.round(duoTotal * 1.15);
-              const totalSavingsDuo = unitPriceDuo - duoTotal;
-
-              return (
-                <div className="mt-6 space-y-5 px-1 animate-fade-in">
-                  
-                  {/* 🔥 BANDEAU D'URGENCE ET PREUVE SOCIALE CAMEROUN */}
-                  <div className="p-3 rounded-2xl bg-amber-50 border border-amber-200/70 flex items-center gap-2.5 shadow-sm">
-                    <span className="flex h-2.5 w-2.5 relative">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
-                    </span>
-                    <p className="text-[11px] text-amber-900 font-bold leading-tight">
-                      🔥 <span className="text-red-600">37 femmes</span> ont validé cette ordonnance à Douala aujourd'hui. Stock de la gamme <span className="underline">{brandLabel}</span> limité.
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-4">
-                    
-                    {/* 🏆 OPTION 1 : L'EXPÉRIENCE TOTALE (ROUTINE COMPLÈTE 3 PRODUITS) */}
-                    {/* Positionnée en premier pour ancrer un prix plus haut */}
-                    <div className="border border-gray-200 bg-white rounded-3xl p-4 shadow-sm flex flex-col justify-between transition-all hover:border-gray-300">
-                      <div>
-                        <div className="flex justify-between items-start mb-1">
-                          <h4 className="font-black text-gray-900 text-sm">L'Expérience Totale 🚀</h4>
-                          <span className="text-[9px] bg-emerald-100 text-emerald-800 font-black px-2 py-0.5 rounded-md uppercase">
-                            Économie : {formatPrice(totalSavingsRoutine)}
-                          </span>
-                        </div>
-                        <p className="text-[10px] font-semibold text-gray-500 mb-2">Traitement Global Synergique (Nettoyant + Sérum + Crème)</p>
-                        <p className="text-[11px] text-gray-600 leading-relaxed mb-4">
-                          Zéro compromis. C'est la combinaison exacte recommandée par l'IA pour traiter le problème à la racine et bloquer définitivement les imperfections.
-                        </p>
+                  {/* OFFRE 2 : LE COMPROMIS IDÉAL (LE DUO DE SAUVETAGE - 2 PRODUITS) */}
+                  {intermediateOffer && (
+                    <div className="border-2 border-pink-500 bg-gradient-to-br from-pink-50/20 via-white to-white rounded-3xl p-5 relative shadow-md shadow-pink-100/40 transition-all scale-[1.01]">
+                      <div className="absolute -top-3 right-5 bg-pink-500 text-white text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-wider shadow-sm">
+                        Le Compromis Idéal ✨
+                      </div>
+                      
+                      <h4 className="font-black text-gray-950 text-sm mb-0.5">
+                        {intermediateOffer.copywriting.title}
+                      </h4>
+                      <p className="text-[10px] font-bold text-pink-600 mb-2">{intermediateOffer.copywriting.subtitle}</p>
+                      <p className="text-[11px] text-gray-600 leading-relaxed mb-4">
+                        Vous n'avez pas le budget pour la totale ? Ce duo rassemble les **2 actifs majeurs** pour stopper l'urgence cutanée sans vider vos poches.
+                      </p>
+                      
+                      {/* Vignettes visuelles des produits inclus dans le Duo */}
+                      <div className="space-y-2 mb-4 bg-white/80 rounded-xl p-2.5 border border-pink-100/40">
+                        {intermediateOffer.duo.map((item, idx) => (
+                          <div key={idx} className="text-[11px] font-bold text-gray-800 flex items-center gap-2">
+                            <span className="bg-pink-100 p-0.5 rounded text-xs">{item.role.emoji}</span> 
+                            <span className="truncate">{item.product.name}</span>
+                          </div>
+                        ))}
                       </div>
 
-                      <div className="flex items-center justify-between gap-2 border-t border-gray-100 pt-3 mt-1">
+                      <div className="flex items-center justify-between gap-2 border-t border-pink-100 pt-3.5">
                         <div>
-                          <p className="text-[10px] text-gray-400 font-bold line-through">{formatPrice(unitPriceTotal)}</p>
-                          <p className="text-lg font-black text-gray-950">{formatPrice(routineTotal)}</p>
+                          <p className="text-[9px] text-gray-400 font-bold line-through">{formatPrice(unitPriceDuo)}</p>
+                          <p className="text-lg font-black text-pink-600">{formatPrice(duoTotal)}</p>
                         </div>
                         <button 
                           onClick={() => {
-                            const items: OrderItem[] = routineProducts.map(({ product }) => ({
+                            const items: OrderItem[] = intermediateOffer.duo.map(({ product }) => ({
                               productId: product.id,
                               productName: product.name,
                               brand: getProductBrand(product),
                               price: product.price,
                             }));
                             setOrderModalItems(items);
-                            setOrderModalTitle("Commander la routine complète");
+                            setOrderModalTitle("Commander le Compromis Idéal");
                             setShowOrderModal(true);
                           }}
-                          className="flex items-center gap-1.5 px-4 py-2.5 bg-gray-950 hover:bg-gray-900 text-white text-xs font-black rounded-xl transition-all shadow-md active:scale-95"
+                          className="flex items-center gap-1.5 px-5 py-2.5 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white text-xs font-black rounded-xl transition-all shadow-md shadow-pink-200 active:scale-95"
                         >
                           <MessageCircle className="w-3.5 h-3.5 fill-current" />
-                          Prendre la Totale
+                          Prendre le Duo
                         </button>
                       </div>
                     </div>
+                  )}
+
+                </div>
+
+                {/* BLOC LOGISTIQUE DE CONFIANCE (DOUALA / YAOUNDÉ) */}
+                <div className="bg-emerald-50/80 px-4 py-3 rounded-2xl flex items-center gap-3 border border-emerald-100/80 shadow-sm">
+                  <Truck className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+                  <div className="text-left">
+                    <p className="text-[11px] text-emerald-800 font-black leading-tight">Expédition Express au Cameroun</p>
+                    <p className="text-[10px] text-emerald-600 font-semibold mt-0.5">Livraison à domicile (Douala & Yaoundé) · Paiement Cash à la livraison</p>
+                  </div>
+                </div>
+
+                {/* Action secondaire : Partage social discret */}
+                <button
+                  onClick={() => setShowRoutineCard(true)}
+                  className="w-full py-2 text-gray-400 hover:text-gray-600 text-[11px] font-bold transition-all text-center underline tracking-wide"
+                >
+                  💾 Enregistrer ou partager mon ordonnance personnalisée
+                </button>
+              </div>
+            );
+          })()
+        ) : null}
+
+
+                  {/* OFFRE 2 : LE COMPROMIS IDÉAL (LE DUO DE SAUVETAGE - 2 PRODUITS) */}
+                  {intermediateOffer && (
+                    <div className="border-2 border-pink-500 bg-gradient-to-br from-pink-50/20 via-white to-white rounded-3xl p-5 relative shadow-md shadow-pink-100/40 transition-all scale-[1.01]">
+                      <div className="absolute -top-3 right-5 bg-pink-500 text-white text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-wider shadow-sm">
+                        Le Compromis Idéal ✨
+                      </div>
+                      
+                      <h4 className="font-black text-gray-950 text-sm mb-0.5">
+                        {intermediateOffer.copywriting.title}
+                      </h4>
+                      <p className="text-[10px] font-bold text-pink-600 mb-2">{intermediateOffer.copywriting.subtitle}</p>
+                      <p className="text-[11px] text-gray-600 leading-relaxed mb-4">
+                        Vous n'avez pas le budget pour la totale ? Ce duo rassemble les **2 actifs majeurs** pour stopper l'urgence cutanée sans vider vos poches.
+                      </p>
+                      
+                      {/* Vignettes visuelles des produits inclus dans le Duo */}
+                      <div className="space-y-2 mb-4 bg-white/80 rounded-xl p-2.5 border border-pink-100/40">
+                        {intermediateOffer.duo.map((item, idx) => (
+                          <div key={idx} className="text-[11px] font-bold text-gray-800 flex items-center gap-2">
+                            <span className="bg-pink-100 p-0.5 rounded text-xs">{item.role.emoji}</span> 
+                            <span className="truncate">{item.product.name}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="flex items-center justify-between gap-2 border-t border-pink-100 pt-3.5">
+                        <div>
+                          <p className="text-[9px] text-gray-400 font-bold line-through">{formatPrice(unitPriceDuo)}</p>
+                          <p className="text-lg font-black text-pink-600">{formatPrice(duoTotal)}</p>
+                        </div>
+                        <button 
+                          onClick={() => {
+                            const items: OrderItem[] = intermediateOffer.duo.map(({ product }) => ({
+                              productId: product.id,
+                              productName: product.name,
+                              brand: getProductBrand(product),
+                              price: product.price,
+                            }));
+                            setOrderModalItems(items);
+                            setOrderModalTitle("Commander le Compromis Idéal");
+                            setShowOrderModal(true);
+                          }}
+                          className="flex items-center gap-1.5 px-5 py-2.5 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white text-xs font-black rounded-xl transition-all shadow-md shadow-pink-200 active:scale-95"
+                        >
+                          <MessageCircle className="w-3.5 h-3.5 fill-current" />
+                          Prendre le Duo
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                </div>
+
+                {/* BLOC LOGISTIQUE DE CONFIANCE (DOUALA / YAOUNDÉ) */}
+                <div className="bg-emerald-50/80 px-4 py-3 rounded-2xl flex items-center gap-3 border border-emerald-100/80 shadow-sm">
+                  <Truck className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+                  <div className="text-left">
+                    <p className="text-[11px] text-emerald-800 font-black leading-tight">Expédition Express au Cameroun</p>
+                    <p className="text-[10px] text-emerald-600 font-semibold mt-0.5">Livraison à domicile (Douala & Yaoundé) · Paiement Cash à la livraison</p>
+                  </div>
+                </div>
+
+                {/* Action secondaire : Partage social discret */}
+                <button
+                  onClick={() => setShowRoutineCard(true)}
+                  className="w-full py-2 text-gray-400 hover:text-gray-600 text-[11px] font-bold transition-all text-center underline tracking-wide"
+                >
+                  💾 Enregistrer ou partager mon ordonnance personnalisée
+                </button>
+              </div>
+            );
+          })()
+        ) : null}
 
                     {/* 🌟 OPTION 2 : LE COMPROMIS IDÉAL (LE DUO INTERMÉDIAIRE) */}
                     {/* Psychologiquement, après avoir vu la totale, le Duo devient irrésistible */}
