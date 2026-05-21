@@ -537,13 +537,13 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
           <GridTile
             icon={<Droplets className="w-3.5 h-3.5 text-cyan-500" />}
             label="Type Peau"
-            value={(result.skinType || "Mixte").split("(")[0].trim()}
+            value={((result as any).consultationData?.type_peau || result.skinType || "Mixte").split("(")[0].trim()}
             testId="tile-skintype"
           />
           <GridTile
             icon={<Eye className="w-3.5 h-3.5 text-rose-500" />}
             label="Lésions"
-            value={deriveLesionsLabel(result)}
+            value={deriveLesionsLabel(result).replace("inflammatoires ", "")} /* Version plus courte pour éviter le bug d'affichage sur mobile */
             testId="tile-lesions"
           />
           <GridTile
