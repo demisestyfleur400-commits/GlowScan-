@@ -464,9 +464,12 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
           </h1>
 
           {/* Jauge demi-cercle */}
-          <GlowGauge score={result.score} />
-
-          {/* 4 tuiles colorées */}
+          
+           <GlowGauge 
+  score={result.score} 
+  observationsVisuelles={result.consultationData?.observations_visuelles || (result as any).observationsVisuelles} 
+/>
+ {/* 4 tuiles colorées */}
           <div className="grid grid-cols-2 gap-2 mt-4">
             <StatTile
               icon={<Sun className="w-5 h-5 text-amber-500" />}
