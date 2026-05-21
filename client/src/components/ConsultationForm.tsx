@@ -17,7 +17,7 @@ export default function ConsultationForm() {
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [diagnosticFinal, setDiagnosticFinal] = useState<string>("");
 
-  // Étape 1 : Envoyer la photo pour recevoir le questionnaire sur mesure
+  // Étape 1 : Envoyer la photo en Base64 pour recevoir le questionnaire sur mesure
   const demarrerConsultation = async () => {
     if (!image) return alert("Veuillez d'abord prendre une photo.");
     setLoading(true);
@@ -25,7 +25,7 @@ export default function ConsultationForm() {
       const response = await fetch("/api/generate-consultation", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageUrl: image }),
+        body: JSON.stringify({ base64Image: image }), // 🛠️ Modification ici : imageUrl devient base64Image
       });
       const data = await response.json();
       setConsultation(data);
@@ -35,6 +35,7 @@ export default function ConsultationForm() {
       setLoading(false);
     }
   };
+
 
   // Gérer la saisie des réponses par l'utilisateur
   const handleInputChange = (questionId: number, value: string) => {
