@@ -629,10 +629,38 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
         </div>
 
         {/* ═══════════════════════════════════════════
-            BLOC 5 — Carte visuelle des zones (visage)
+            BLOC 5 — Cartographie visuelle des zones (visage)
             ═══════════════════════════════════════════ */}
         {result.zones && result.zones.length > 0 && (
-          <FaceZonesMap zones={result.zones} />
+          <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100 relative overflow-hidden" data-testid="block-zones-map">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-indigo-50 flex items-center justify-center border border-indigo-100">
+                  <ScanIcon className="w-4 h-4 text-indigo-600" />
+                </div>
+                <div>
+                  <h2 className="text-xs font-black uppercase tracking-wider text-gray-900">Cartographie Cutanée</h2>
+                  <p className="text-[10px] text-gray-400 font-semibold">Localisation des foyers à traiter</p>
+                </div>
+              </div>
+              
+              {/* Effet Scanner Clignotant pour le côté technologique */}
+              <span className="flex items-center gap-1.5 text-[9px] font-black bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-lg uppercase tracking-wide">
+                <span className="h-1.5 w-1.5 rounded-full bg-indigo-600 animate-pulse" />
+                Analyse Rétinienne IA
+              </span>
+            </div>
+
+            {/* Le composant de la carte du visage */}
+            <div className="bg-gradient-to-b from-gray-50/50 to-white rounded-2xl p-2 border border-gray-100/60 flex items-center justify-center">
+              <FaceZonesMap zones={result.zones} />
+            </div>
+
+            {/* Légende rapide pour faciliter l'interprétation sous le soleil de Douala */}
+            <p className="text-[10px] text-gray-400 text-center font-medium mt-3">
+              💡 Cliquez sur les zones colorées pour isoler les imperfections détectées.
+            </p>
+          </div>
         )}
 
         {/* ═══════════════════════════════════════════
