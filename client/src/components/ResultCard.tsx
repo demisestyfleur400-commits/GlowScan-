@@ -111,12 +111,12 @@ function normalizeStep(s: any, i: number): ProtocolStep {
       why: typeof s.why === "string" ? s.why : undefined,
     };
   }
-  return { step: `Étape ${i + 1}`, product: typeof s === "string" ? s : String(s ?? "") };
-}
+  return { step: `Étape ${i + 1}`, product: typeof s === "string" ? s : String(
+import { useState } from "react";
+import { AlertTriangle, Sparkles } from "lucide-react";
 
-// ═══════════════════════════════════════════════════════════════════
-//  Composants UI réutilisables
-// ═══════════════════════════════════════════════════════════════════
+// ─── Composants UI réutilisables et personnalisés ───────────────────
+
 function SeverityBadge({ severity }: { severity: string }) {
   const s = severity?.toLowerCase() || "modérée";
   let bg = "bg-pink-100 text-pink-700 border-pink-200";
@@ -129,61 +129,69 @@ function SeverityBadge({ severity }: { severity: string }) {
   );
 }
 
-// Jauge demi-cercle Glow Score — le "moment waouh" de l'écran
-function GlowGauge({ score }: { score: number }) {
+// Jauge demi-cercle Glow Score enrichie avec la remarque personnalisée du Docteur
+function GlowGauge({ score, observationsVisuelles }: { score: number; observationsVisuelles?: string }) {
   const safeScore = clamp(score || 0, 0, 100);
   const radius = 90;
   const cx = 120;
   const cy = 110;
-  const startAngle = 180; // gauche
-  const endAngle = 0;     // droite
-  const arcLength = Math.PI * radius; // demi-cercle
-  const filled = (safeScore / 100) * arcLength;
-  const remaining = arcLength - filled;
+  const filled = (safeScore / 100) * (Math.PI * radius);
+  const remaining = (Math.PI * radius) - filled;
 
   return (
-    <div className="relative w-full max-w-[280px] mx-auto" data-testid="glow-gauge">
-      <svg viewBox="0 0 240 140" className="w-full">
-        <defs>
-          <linearGradient id="gauge-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#ef4444" />
-            <stop offset="50%" stopColor="#f59e0b" />
-            <stop offset="100%" stopColor="#10b981" />
-          </linearGradient>
-        </defs>
-        {/* Track gris */}
-        <path
-          d={`M ${cx - radius} ${cy} A ${radius} ${radius} 0 0 1 ${cx + radius} ${cy}`}
-          fill="none"
-          stroke="#e5e7eb"
-          strokeWidth="14"
-          strokeLinecap="round"
-        />
-        {/* Arc coloré rempli */}
-        <path
-          d={`M ${cx - radius} ${cy} A ${radius} ${radius} 0 0 1 ${cx + radius} ${cy}`}
-          fill="none"
-          stroke="url(#gauge-gradient)"
-          strokeWidth="14"
-          strokeLinecap="round"
-          strokeDasharray={`${filled} ${remaining}`}
-        />
-        {/* Repère 50 */}
-        <text x={cx} y={cy - radius - 6} textAnchor="middle" className="fill-gray-400 text-[10px] font-bold">50</text>
-        <text x={cx - radius} y={cy + 22} textAnchor="middle" className="fill-gray-400 text-[10px] font-bold">0</text>
-        <text x={cx + radius} y={cy + 22} textAnchor="middle" className="fill-gray-400 text-[10px] font-bold">100</text>
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-end pb-4 pointer-events-none">
-        <p className="text-5xl font-black text-gray-900 leading-none" data-testid="text-glow-score">{safeScore}</p>
-        <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mt-1">Glow Score</p>
+    <div className="w-full max-w-[280px] mx-auto text-center" data-testid="glow-gauge">
+      <div className="relative">
+        <svg viewBox="0 0 240 140" className="w-full">
+          <defs>
+            <linearGradient id="gauge-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#ef4444" />
+              <stop offset="50%" stopColor="#f59e0b" />
+              <stop offset="100%" stopColor="#10b981" />
+            </linearGradient>
+          </defs>
+          <path
+            d={`M ${cx - radius} ${cy} A ${radius} ${radius} 0 0 1 ${cx + radius} ${cy}`}
+            fill="none"
+            stroke="#e5e7eb"
+            strokeWidth="14"
+            strokeLinecap="round"
+          />
+          <path
+            d={`M ${cx - radius} ${cy} A ${radius} ${radius} 0 0 1 ${cx + radius} ${cy}`}
+            fill="none"
+            stroke="url(#gauge-gradient)"
+            strokeWidth="14"
+            strokeLinecap="round"
+            strokeDasharray={`${filled} ${remaining}`}
+          />
+          <text x={cx} y={cy - radius - 6} textAnchor="middle" className="fill-gray-400 text-[10px] font-bold">50</text>
+          <text x={cx - radius} y={cy + 22} textAnchor="middle" className="fill-gray-400 text-[10px] font-bold">0</text>
+          <text x={cx + radius} y={cy + 22} textAnchor="middle" className="fill-gray-400 text-[10px] font-bold">100</text>
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-end pb-4 pointer-events-none">
+          <p className="text-5xl font-black text-gray-900 leading-none">{safeScore}</p>
+          <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mt-1">Glow Score</p>
+        </div>
       </div>
+
+      {/* 💬 REMARQUE DU DOCTEUR IA : Brise le côté générique instantanément */}
+      {observationsVisuelles && (
+        <div className="mt-3 bg-indigo-50/70 border border-indigo-100 rounded-xl p-3 text-left shadow-sm">
+          <p className="text-[11px] font-bold text-indigo-700 flex items-center gap-1 uppercase tracking-wider mb-1">
+            <Sparkles className="w-3.5 h-3.5" /> L'avis du Doc'
+          </p>
+          <p className="text-xs font-semibold text-gray-700 italic leading-relaxed">
+            "{observationsVisuelles}"
+          </p>
+        </div>
+      )}
     </div>
   );
 }
 
-// Tuile chiffrée colorée (Âge, Acné, Hydratation, Rides)
+// Tuile chiffrée colorée avec option d'explication contextuelle
 function StatTile({
-  icon, label, value, suffix, sub, color,
+  icon, label, value, suffix, sub, color, explicationContextuelle
 }: {
   icon: React.ReactNode;
   label: string;
@@ -191,37 +199,38 @@ function StatTile({
   suffix?: string;
   sub?: string;
   color: "amber" | "rose" | "blue" | "emerald";
-  testId?: string;
+  explicationContextuelle?: string; // Ex: "Aggravé par le manque de sommeil mentionné"
 }) {
   const palette: Record<string, string> = {
-    amber: "bg-amber-50 border-amber-100",
-    rose: "bg-rose-50 border-rose-100",
-    blue: "bg-blue-50 border-blue-100",
-    emerald: "bg-emerald-50 border-emerald-100",
+    amber: "bg-amber-50 border-amber-100 text-amber-800",
+    rose: "bg-rose-50 border-rose-100 text-rose-800",
+    blue: "bg-blue-50 border-blue-100 text-blue-800",
+    emerald: "bg-emerald-50 border-emerald-100 text-emerald-800",
   };
   return (
-    <div className={`rounded-2xl border ${palette[color]} px-3 py-2.5 flex items-center gap-2.5`}>
-      <div className="flex-shrink-0">{icon}</div>
-      <div className="flex-1 min-w-0">
-        <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">{label}</p>
-        <p className="text-sm font-black text-gray-900 leading-tight">
-          {value}{suffix && <span className="text-xs font-bold ml-0.5">{suffix}</span>}
-          {sub && <span className="text-[11px] font-semibold text-gray-500 ml-1.5">{sub}</span>}
-        </p>
+    <div className={`rounded-2xl border ${palette[color]} p-3 flex flex-col gap-1.5 shadow-sm`}>
+      <div className="flex items-center gap-2.5">
+        <div className="flex-shrink-0">{icon}</div>
+        <div className="flex-1 min-w-0">
+          <p className="text-[10px] font-bold uppercase tracking-wide opacity-70">{label}</p>
+          <p className="text-lg font-black text-gray-900 leading-tight">
+            {value}{suffix && <span className="text-xs font-bold ml-0.5">{suffix}</span>}
+            {sub && <span className="text-[11px] font-semibold text-gray-500 ml-1.5">{sub}</span>}
+          </p>
+        </div>
       </div>
+      
+      {/* 🎯 FACTEUR DÉCLENCHEUR : Lie le score directement aux réponses du questionnaire */}
+      {explicationContextuelle && (
+        <div className="text-[11px] font-medium border-t border-black/5 pt-1.5 opacity-80 leading-snug">
+          💡 {explicationContextuelle}
+        </div>
+      )}
     </div>
   );
 }
 
-// Tuile grille (Type Peau, Lésions, Pores, Marques, Zones, Score)
-function GridTile({
-  icon, label, value, testId,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  testId?: string;
-}) {
+function GridTile({ icon, label, value, testId }: { icon: React.ReactNode; label: string; value: string; testId?: string }) {
   return (
     <div className="rounded-2xl bg-white border border-gray-100 px-3 py-3 flex flex-col items-center text-center shadow-sm" data-testid={testId}>
       <div className="flex items-center gap-1.5 mb-1.5">
@@ -233,7 +242,6 @@ function GridTile({
   );
 }
 
-// Radar Équilibre cutané
 function RadarChart({ balance }: { balance: AnalysisResult["balance"] }) {
   const labels = [
     { key: "inflammation", label: "Inflammation" },
@@ -250,36 +258,21 @@ function RadarChart({ balance }: { balance: AnalysisResult["balance"] }) {
     return { x: cx + radius * Math.cos(angle), y: cy + radius * Math.sin(angle) };
   };
   const gridLevels = [0.25, 0.5, 0.75, 1];
-  const dataPoints = labels.map((l, i) => {
-    const val = balance[l.key as keyof typeof balance] || 0;
-    return getPoint(i, val);
-  });
+  const dataPoints = labels.map((l, i) => getPoint(i, balance[l.key as keyof typeof balance] || 0));
   const dataPath = dataPoints.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ") + " Z";
   return (
     <svg viewBox="0 0 240 240" className="w-full max-w-[260px] mx-auto" data-testid="radar-balance">
-      {gridLevels.map((level) => {
-        const points = labels.map((_, i) => {
-          const p = getPoint(i, level * 10);
-          return `${p.x},${p.y}`;
-        }).join(" ");
-        return <polygon key={level} points={points} fill="none" stroke="#e5e7eb" strokeWidth="0.5" />;
-      })}
-      {labels.map((_, i) => {
-        const p = getPoint(i, 10);
-        return <line key={i} x1={cx} y1={cy} x2={p.x} y2={p.y} stroke="#e5e7eb" strokeWidth="0.5" />;
-      })}
-      <path d={dataPath} fill="rgba(20, 184, 166, 0.18)" stroke="#14b8a6" strokeWidth="2" />
-      {dataPoints.map((p, i) => (
-        <circle key={i} cx={p.x} cy={p.y} r="4" fill="#14b8a6" stroke="white" strokeWidth="2" />
+      {gridLevels.map((level) => (
+        <polygon key={level} points={labels.map((_, i) => `${getPoint(i, level * 10).x},${getPoint(i, level * 10).y}`).join(" ")} fill="none" stroke="#e5e7eb" strokeWidth="0.5" />
       ))}
-      {labels.map((l, i) => {
-        const p = getPoint(i, 12.5);
-        return (
-          <text key={i} x={p.x} y={p.y} textAnchor="middle" dominantBaseline="middle" className="fill-gray-500 text-[8px] font-bold uppercase">
-            {l.label}
+      {labels.map((_, i) => <line key={i} x1={cx} y1={cy} x2={getPoint(i, 10).x} y2={getPoint(i, 10).y} stroke="#e5e7eb" strokeWidth="0.5" />)}
+      <path d={dataPath} fill="rgba(20, 184, 166, 0.18)" stroke="#14b8a6" strokeWidth="2" />
+      {dataPoints.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="4" fill="#14b8a6" stroke="white" strokeWidth="2" />)}
+      {labels.map((l, i) => (
+        <text key={i} x={getPoint(i, 12.5).x} y={getPoint(i, 12.5).y} textAnchor="middle" dominantBaseline="middle" className="fill-gray-500 text-[8px] font-bold uppercase">
+          {l.label}
           </text>
-        );
-      })}
+      ))}
     </svg>
   );
 }
