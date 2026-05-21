@@ -2991,6 +2991,55 @@ Règles : pas de marque, pas d'ingrédient interdit en Afrique, ton chaleureux, 
       res.status(500).json({ message: "Suppression impossible. Réessaie ou contacte le support." });
     }
   });
+// Route pour analyser la photo et générer le questionnaire de consultation sur mesure
+app.post("/api/generate-consultation", async (req, res) => {
+  try {
+    const { imageUrl } = req.body;
+
+    if (!imageUrl) {
+      return res.status(400).json({ error: "L'URL de l'image est requise." });
+    }
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o", // Ce sera parfait dès que tu passeras sur ce modèle
+      temperature: 0.5,
+      response_format: { type: "json_object" },
+      messages: [
+        {
+          role: "system",
+          content: `Tu es un dermatologue expert de garde. Analyse visuellement l'image fournie. 
+          Ne donne PAS encore de diagnostic. À la place, génère un questionnaire de 3 questions ultra-personnalisées 
+          basé sur ce que tu observes (ex: si tu vois des boutons, pose des questions sur l'alimentation, le stress ou la douleur).
+          Le but est que l'utilisateur se sente pris en charge dans une vraie consultation médicale.
+          
+          Tu devez impérativement répondre sous ce format JSON strict :
+          {
+            "observations_visuelles": "Une phrase courte disant ce que tu remarques pour créer de la familiarité et de la confiance",
+            "questions": [
+              {"id": 1, "label": "Texte de la question 1"},
+              {"id": 2, "label": "Texte de la question 2"},
+              {"id": 3, "label": "Texte de la question 3"}
+            ]
+          }`
+        },
+        {
+          role: "user",
+          content: [
+            { type: "text", text: "Génère mon questionnaire de consultation basé sur cette photo." },
+            { type: "image_url", image_url: { url: imageUrl } }
+          ]
+        }
+      ]
+    });
+
+    const consultationData = JSON.parse(response.choices[0].message.content);
+    res.json(consultationData);
+
+  } catch (error) {
+    console.error("Erreur lors de la génération de la consultation:", error);
+    res.status(500).json({ error: "Impossible de générer le questionnaire." });
+  }
+});
 
   return httpServer;
 }
