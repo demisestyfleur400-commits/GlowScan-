@@ -366,8 +366,9 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
   };
 
   const findRoutineProducts = () => {
-    const searchText = ((result.condition || "") + " " + (result.details || "")).toLowerCase();
-    const areaProducts = catalog.filter(p => {
+    const consultationText = (result as any).consultationData?.observations_visuelles || "";
+const searchText = ((result.condition || "") + " " + (result.details || "") + " " + consultationText).toLowerCase();
+const areaProducts = catalog.filter(p => {
       if (currentArea === "cheveux") return p.category === "cheveux";
       if (currentArea === "corps") return p.category === "corps" || p.category === "visage";
       return p.category === "visage";
