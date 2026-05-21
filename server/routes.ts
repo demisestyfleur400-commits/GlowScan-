@@ -2990,17 +2990,17 @@ Règles : pas de marque, pas d'ingrédient interdit en Afrique, ton chaleureux, 
       res.status(500).json({ message: "Suppression impossible. Réessaie ou contacte le support." });
     }
   });
-// Route pour analyser la photo et générer le questionnaire de consultation sur mesure
+// Route pour analyser la photo en Base64 et générer le questionnaire de consultation sur mesure
 app.post("/api/generate-consultation", async (req, res) => {
   try {
-    const { imageUrl } = req.body;
+    const { base64Image } = req.body; // On récupère directement le flux Base64 du frontend
 
-    if (!imageUrl) {
-      return res.status(400).json({ error: "L'URL de l'image est requise." });
+    if (!base64Image) {
+      return res.status(400).json({ error: "La photo au format Base64 est requise." });
     }
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4o", // Ce sera parfait dès que tu passeras sur ce modèle
+      model: "gpt-4o",
       temperature: 0.5,
       response_format: { type: "json_object" },
       messages: [
@@ -3011,7 +3011,7 @@ app.post("/api/generate-consultation", async (req, res) => {
           basé sur ce que tu observes (ex: si tu vois des boutons, pose des questions sur l'alimentation, le stress ou la douleur).
           Le but est que l'utilisateur se sente pris en charge dans une vraie consultation médicale.
           
-          Tu devez impérativement répondre sous ce format JSON strict :
+          Tu dois impérativement répondre sous ce format JSON strict :
           {
             "observations_visuelles": "Une phrase courte disant ce que tu remarques pour créer de la familiarité et de la confiance",
             "questions": [
@@ -3025,7 +3025,12 @@ app.post("/api/generate-consultation", async (req, res) => {
           role: "user",
           content: [
             { type: "text", text: "Génère mon questionnaire de consultation basé sur cette photo." },
-            { type: "image_url", image_url: { url: imageUrl } }
+            { 
+              type: "image_url", 
+              image_url: { 
+                url: base64Image // GPT-4o prend directement le "data:image/jpeg;base64,..." ici !
+              } 
+            }
           ]
         }
       ]
