@@ -1,4 +1,4 @@
-import { useState } from "react";
+#import { useState } from "react";
 import { motion } from "framer-motion";
 import {
   Sparkles, MessageCircle, AlertTriangle, Eye, Droplets, ShieldAlert,
@@ -702,6 +702,134 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
                   <div className="flex-1">
                     <p className="text-[10px] font-black uppercase tracking-wider text-purple-700">Hebdo · 1×/semaine</p>
                     <p className="text-[12px] text-gray-800 font-medium leading-snug">{weekly}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* BLOC 6 — Le Protocole de Soin Connecté au Catalogue de Vente */}
+        {(protocolMorning.length > 0 || protocolEvening.length > 0 || weekly) && (
+          <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100" data-testid="block-protocol">
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-pink-600" />
+                <h2 className="text-[15px] font-black text-gray-900 font-display">Mon Ordonnance d'Application</h2>
+              </div>
+              <span className="text-[9px] bg-pink-50 text-pink-700 font-bold px-2 py-0.5 rounded-full">
+                Cycle de 4 à 6 semaines
+              </span>
+            </div>
+            <p className="text-[11px] text-gray-400 mb-5">
+              Suivez rigoureusement cet ordre pour maximiser la pénétration des actifs sous le climat chaud.
+            </p>
+
+            <div className="space-y-6">
+              {/* ☀️ LE PROTOCOLE DU MATIN */}
+              {protocolMorning.length > 0 && (
+                <div className="relative pl-4 border-l-2 border-amber-200">
+                  <div className="absolute -left-[9px] top-0 bg-amber-500 text-white rounded-full p-0.5 shadow-sm">
+                    <Sun className="w-3 h-3" />
+                  </div>
+                  <h3 className="text-[12px] font-black uppercase tracking-wider text-amber-700 mb-3 flex items-center gap-1.5">
+                    Rituel du Matin <span className="text-[10px] font-medium text-gray-400 font-sans lowercase">(protection & régulation)</span>
+                  </h3>
+                  
+                  <div className="space-y-3">
+                    {protocolMorning.map((s, i) => {
+                      const stepData = normalizeStep(s, i);
+                      // On cherche si un produit du catalogue correspond à cette étape
+                      const matchedItem = routineProducts.find(rp => 
+                        stepData.product && rp.product.name.toLowerCase().includes(stepData.product.toLowerCase())
+                      );
+
+                      return (
+                        <div key={`m-${i}`} className="bg-gray-50/70 border border-gray-100 rounded-2xl p-2.5 flex items-center gap-3 transition-all">
+                          <div className="w-5 h-5 rounded-lg bg-white border border-gray-200 text-[11px] font-black text-gray-700 flex items-center justify-center flex-shrink-0 shadow-sm">
+                            {i + 1}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-wide">{stepData.step}</p>
+                            <p className="text-[12px] font-bold text-gray-900 truncate">
+                              {matchedItem ? matchedItem.product.name : (stepData.product || stepData.step)}
+                            </p>
+                            {stepData.why && <p className="text-[10px] text-gray-500 leading-snug mt-0.5 font-medium">{stepData.why}</p>}
+                          </div>
+                          
+                          {/* Affichage de la vignette du produit pour forcer l'achat */}
+                          {matchedItem && (
+                            <div className="w-10 h-10 rounded-xl bg-white border border-gray-200/60 p-0.5 flex-shrink-0 flex items-center justify-center shadow-inner">
+                              <img 
+                                src={productImages[matchedItem.product.id] || "/placeholder-product.png"} 
+                                alt={matchedItem.product.name} 
+                                className="w-full h-full object-contain mix-blend-multiply"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* 🌙 LE PROTOCOLE DU SOIR */}
+              {protocolEvening.length > 0 && (
+                <div className="relative pl-4 border-l-2 border-indigo-200">
+                  <div className="absolute -left-[9px] top-0 bg-indigo-600 text-white rounded-full p-0.5 shadow-sm">
+                    <Moon className="w-3 h-3" />
+                  </div>
+                  <h3 className="text-[12px] font-black uppercase tracking-wider text-indigo-700 mb-3 flex items-center gap-1.5">
+                    Rituel du Soir <span className="text-[10px] font-medium text-gray-400 font-sans lowercase">(réparation intense)</span>
+                  </h3>
+                  
+                  <div className="space-y-3">
+                    {protocolEvening.map((s, i) => {
+                      const stepData = normalizeStep(s, i);
+                      const matchedItem = routineProducts.find(rp => 
+                        stepData.product && rp.product.name.toLowerCase().includes(stepData.product.toLowerCase())
+                      );
+
+                      return (
+                        <div key={`e-${i}`} className="bg-gray-50/70 border border-gray-100 rounded-2xl p-2.5 flex items-center gap-3 transition-all">
+                          <div className="w-5 h-5 rounded-lg bg-white border border-gray-200 text-[11px] font-black text-gray-700 flex items-center justify-center flex-shrink-0 shadow-sm">
+                            {i + 1}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-wide">{stepData.step}</p>
+                            <p className="text-[12px] font-bold text-gray-900 truncate">
+                              {matchedItem ? matchedItem.product.name : (stepData.product || stepData.step)}
+                            </p>
+                            {stepData.why && <p className="text-[10px] text-gray-500 leading-snug mt-0.5 font-medium">{stepData.why}</p>}
+                          </div>
+                          
+                          {/* Affichage de la vignette du produit */}
+                          {matchedItem && (
+                            <div className="w-10 h-10 rounded-xl bg-white border border-gray-200/60 p-0.5 flex-shrink-0 flex items-center justify-center shadow-inner">
+                              <img 
+                                src={productImages[matchedItem.product.id] || "/placeholder-product.png"} 
+                                alt={matchedItem.product.name} 
+                                className="w-full h-full object-contain mix-blend-multiply"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* 📅 SOIN HEBDOMADAIRE */}
+              {weekly && (
+                <div className="rounded-2xl p-3.5 bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-100/70 flex items-center gap-3 shadow-sm">
+                  <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center border border-purple-200 text-purple-600 flex-shrink-0 shadow-sm">
+                    <Calendar className="w-4 h-4" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[9px] font-black uppercase tracking-wider text-purple-700">Soin Booster Hebdomadaire</p>
+                    <p className="text-[12px] text-gray-800 font-bold leading-tight mt-0.5">{weekly}</p>
                   </div>
                 </div>
               )}
