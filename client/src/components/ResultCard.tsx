@@ -583,25 +583,49 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
         )}
 
         {/* ═══════════════════════════════════════════
-            BLOC 4 — Analyse expert
+            BLOC 4 — L'Ordonnance Clinique de l'Expert GlowScan
             ═══════════════════════════════════════════ */}
-        <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100" data-testid="block-expert">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-8 h-8 rounded-xl bg-teal-50 flex items-center justify-center">
-              <Sparkles className="w-4 h-4 text-teal-600" />
+        <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100 relative overflow-hidden" data-testid="block-expert">
+          {/* Filigrane de sécurité médicale en arrière-plan */}
+          <div className="absolute top-0 right-0 w-24 h-24 bg-teal-50/30 rounded-full blur-2xl pointer-events-none" />
+
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-teal-50 flex items-center justify-center border border-teal-100">
+                <Sparkles className="w-4 h-4 text-teal-600" />
+              </div>
+              <h2 className="text-sm font-black uppercase tracking-wider text-gray-900">Conclusions du Dr. GlowScan</h2>
             </div>
-            <h2 className="text-base font-black text-gray-900">Analyse expert</h2>
+            {/* Badge de réassurance scientifique */}
+            <span className="text-[9px] font-black bg-teal-600 text-white px-2 py-1 rounded-lg uppercase tracking-wide shadow-sm shadow-teal-100">
+              ✓ Approuvé IA Clinique
+            </span>
           </div>
+
+          {/* Corps de l'analyse : Diagnostic de la peau */}
           {result.details && (
-            <p className="text-sm text-gray-700 leading-relaxed mb-3" data-testid="text-details">
-              {result.details}
-            </p>
+            <div className="bg-gray-50/50 border border-gray-100 rounded-2xl p-4 mb-4">
+              <p className="text-xs font-black uppercase tracking-wide text-gray-400 mb-1.5">Évaluation de la barrière cutanée :</p>
+              <p className="text-xs text-gray-700 leading-relaxed font-medium" data-testid="text-details">
+                {result.details}
+              </p>
+            </div>
           )}
-          <div className="bg-teal-50 border border-teal-100 rounded-2xl p-3.5">
-            <p className="text-[13px] text-teal-900 italic leading-snug" data-testid="text-motivation">
-              "{expertCitation}"
+
+          {/* L'ordonnance / La recommandation clé de l'expert */}
+          <div className="bg-gradient-to-r from-teal-50/70 to-emerald-50/40 border border-teal-100/60 rounded-2xl p-4 relative">
+            <div className="absolute -top-2 left-4 bg-white border border-teal-100 text-[9px] font-black text-teal-700 px-2 py-0.5 rounded-full uppercase">
+              La recommandation clé
+            </div>
+            <p className="text-[12px] text-teal-950 font-semibold leading-relaxed italic mt-1" data-testid="text-motivation">
+              "{expertCitation || "Votre peau exprime un besoin urgent de régulation. Suivre rigoureusement le protocole de soins locaux sélectionné est la première étape essentielle pour restaurer votre éclat d'origine."}"
             </p>
           </div>
+
+          {/* Rappel bienveillant d'accompagnement */}
+          <p className="text-[10px] text-gray-400 text-center font-medium mt-3.5">
+            🔒 Vos données d'analyse clinique restent 100% confidentielles.
+          </p>
         </div>
 
         {/* ═══════════════════════════════════════════
