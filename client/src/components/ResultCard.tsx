@@ -1115,25 +1115,57 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
         )}
 
         {/* ═══════════════════════════════════════════
-            BLOC 9 — SkinBot CTA
-            ═══════════════════════════════════════════ */}
+                {/* BLOC 9 : L'ACCÈS AU SKINBOT IA — CONVERSION PREMIUM À 2 000 FRScfa */}
         {user && (
-          <a
-            href={isPremium ? "/chat" : "/premium"}
-            data-testid="button-skinbot-cta"
-            className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl font-extrabold text-sm active:scale-[0.98] transition-all"
-            style={{
-              background: isPremium
-                ? "linear-gradient(135deg, #E91E8C 0%, #C2185B 100%)"
-                : "linear-gradient(135deg, #1A1A2E 0%, #E91E8C 100%)",
-              color: "#fff",
-              boxShadow: isPremium ? "0 8px 24px rgba(233,30,140,0.35)" : "0 8px 24px rgba(26,26,46,0.35)",
-              fontFamily: "'Outfit', sans-serif",
-            }}
-          >
-            <MessageCircle className="w-5 h-5" />
-            {isPremium ? "Discuter avec SkinBot IA" : "⭐ Discuter avec SkinBot — Premium"}
-          </a>
+          <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100 space-y-4" data-testid="block-skinbot-premium">
+            
+            {/* Titre d'accroche pour créer le besoin si elle n'est pas premium */}
+            {!isPremium && (
+              <div className="space-y-1">
+                <div className="flex items-center gap-1.5 text-pink-600">
+                  <Sparkles className="w-4 h-4" />
+                  <p className="text-[11px] font-black uppercase tracking-wider">Accompagnement Continu</p>
+                </div>
+                <h4 className="text-sm font-black text-gray-950 leading-tight">
+                  Des questions sur l'évolution de vos imperfections ?
+                </h4>
+                <p className="text-[11px] text-gray-500 leading-relaxed">
+                  Débloquez votre coach cutané personnel. SkinBot IA ajuste votre routine au quotidien selon la météo locale, suit vos réactions aux actifs et répond 24h/24.
+                </p>
+                {/* Badge de prix psychologique */}
+                <div className="pt-1 flex items-center gap-1.5 text-[10px] text-gray-400 font-medium">
+                  <span className="bg-gray-900 text-white font-extrabold px-1.5 py-0.5 rounded text-[9px]">Seulement 2 000 FRS</span>
+                  Accès illimité à vie sans abonnement mensuel.
+                </div>
+              </div>
+            )}
+
+            {/* Le Bouton d'Action Principal */}
+            <a
+              href={isPremium ? "/chat" : "/premium"}
+              data-testid="button-skinbot-cta"
+              className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-sm active:scale-[0.98] transition-all tracking-wide shadow-lg group"
+              style={{
+                background: isPremium
+                  ? "linear-gradient(135deg, #E91E8C 0%, #C2185B 100%)"
+                  : "linear-gradient(135deg, #1A1A2E 0%, #E91E8C 100%)",
+                color: "#fff",
+                boxShadow: isPremium ? "0 8px 24px rgba(233,30,140,0.3)" : "0 8px 24px rgba(26,26,46,0.25)",
+              }}
+            >
+              <MessageCircle className="w-5 h-5 transition-transform group-hover:scale-110" />
+              <div className="text-left flex flex-col">
+                <span className="text-xs font-black uppercase tracking-wider leading-none">
+                  {isPremium ? "Ouvrir mon suivi SkinBot IA" : "⭐ Activer SkinBot Premium"}
+                </span>
+                {!isPremium && (
+                  <span className="text-[9px] font-medium opacity-80 mt-0.5 leading-none">
+                    Votre dermatologue de poche pour 2 000 FRS
+                  </span>
+                )}
+              </div>
+            </a>
+          </div>
         )}
 
         {/* ═══════════════════════════════════════════
