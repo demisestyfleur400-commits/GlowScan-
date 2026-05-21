@@ -1064,32 +1064,53 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
             BLOC 8 — Partage social
             ═══════════════════════════════════════════ */}
         {user && (
-          <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100 space-y-3" data-testid="block-share">
-            <p className="text-sm font-bold text-gray-800 text-center">
-              Partage ton score, gagne <span className="text-pink-600">15 pts</span>
-            </p>
-            <div className="grid grid-cols-2 gap-2">
+          <div className="bg-gradient-to-br from-gray-900 to-slate-800 rounded-3xl p-5 shadow-xl border border-gray-800 space-y-4 text-white" data-testid="block-challenge-j7">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-pink-500/10 flex items-center justify-center border border-pink-500/20">
+                  <Sparkles className="w-4 h-4 text-pink-400" />
+                </div>
+                <h3 className="text-xs font-black uppercase tracking-wider text-pink-400">Le Défi Éclat GlowScan</h3>
+              </div>
+              <span className="text-[9px] bg-white/10 text-white px-2 py-0.5 rounded-md uppercase font-bold tracking-wide">
+                Objectif J+7
+              </span>
+            </div>
+
+            <div className="space-y-1">
+              <p className="text-sm font-black leading-snug">
+                Prête à voir ton score de {result.score}/100 grimper ?
+              </p>
+              <p className="text-[11px] text-gray-300 leading-relaxed">
+                En lançant ta routine dès aujourd'hui, ta peau va commencer sa régulation. Active ton rappel pour bloquer ta prochaine analyse automatique dans exactement 7 jours.
+              </p>
+            </div>
+
+            <div className="pt-1">
               <button
-                onClick={() => setShowShareCard(true)}
-                data-testid="button-open-sharecard"
-                className="flex flex-col items-center gap-1.5 py-3 px-2 bg-gradient-to-br from-violet-500 to-purple-600 text-white rounded-xl text-xs font-bold shadow-md active:scale-95 transition-all"
-              >
-                <ImageIcon className="w-5 h-5" />
-                Ma carte
-              </button>
-              <button
-                onClick={async () => {
-                  const shareText = `🌟 Mon Glow Score est ${result.score}/100 ! Analyse ta peau sur GlowScan 👉 ${window.location.origin}`;
-                  if (navigator.share) navigator.share({ title: "Mon Glow Score", text: shareText, url: window.location.origin }).catch(() => {});
-                  else { navigator.clipboard?.writeText(shareText); toast({ title: "Copié !", description: "Partage ce message avec tes amis 🎉" }); }
+                onClick={() => {
+                  setJ7ReminderSet(!j7ReminderSet);
+                  toast({
+                    title: j7ReminderSet ? "Rappel annulé" : "Rappel activé ! 🗓️",
+                    description: j7ReminderSet 
+                      ? "Le rappel J+7 a été désactivé." 
+                      : "Nous te notifierons dans 7 jours pour analyser l'évolution de tes imperfections.",
+                  });
                 }}
-                data-testid="button-share-glow-score"
-                className="flex flex-col items-center gap-1.5 py-3 px-2 bg-gradient-to-br from-pink-500 to-emerald-600 text-white rounded-xl text-xs font-bold shadow-md active:scale-95 transition-all"
+                data-testid="button-j7-reminder"
+                className={`w-full py-3 px-4 rounded-xl text-xs font-black tracking-wide transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-2 shadow-md ${
+                  j7ReminderSet 
+                    ? "bg-emerald-600 text-white shadow-emerald-900/20" 
+                    : "bg-white text-gray-900 hover:bg-gray-50 shadow-white/5"
+                }`}
               >
-                <Share2 className="w-5 h-5" />
-                Partager
+                {j7ReminderSet ? "✓ Rappel activé pour le diagnostic de suivi" : "🗓️ Planifier mon scan de contrôle gratuit (J+7)"}
               </button>
             </div>
+
+            <p className="text-[9px] text-gray-400 text-center font-medium">
+              🔒 Le suivi d'évolution nécessite l'application rigoureuse du protocole commandé.
+            </p>
           </div>
         )}
 
