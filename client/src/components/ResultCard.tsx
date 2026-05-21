@@ -362,17 +362,17 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
     const n = p.name.toLowerCase();
     if (n.includes("savon") || n.includes("soap") || n.includes("gel de douche") || n.includes("gel douche") || n.includes("gommage") || n.includes("shampoo") || n.includes("shampoing") || n.includes("clarifiant") || n.includes("nettoyant") || n.includes("cleansing")) return "nettoyant";
     if (n.includes("sérum") || n.includes("serum") || n.includes("huile") || n.includes("oil") || n.includes("lotion") || n.includes("tonic") || n.includes("tonique") || n.includes("potion") || n.includes("spray") || n.includes("poudre")) return "serum";
-    return "creme";
-  };
-
+    return 
   const findRoutineProducts = () => {
     const consultationText = (result as any).consultationData?.observations_visuelles || "";
-const searchText = ((result.condition || "") + " " + (result.details || "") + " " + consultationText).toLowerCase();
-const areaProducts = catalog.filter(p => {
+    const searchText = ((result.condition || "") + " " + (result.details || "") + " " + consultationText).toLowerCase();
+    
+    const areaProducts = catalog.filter(p => {
       if (currentArea === "cheveux") return p.category === "cheveux";
       if (currentArea === "corps") return p.category === "corps" || p.category === "visage";
       return p.category === "visage";
     });
+
     const scoreProduct = (p: typeof catalog[0]) => {
       let s = 0;
       for (const t of p.targets) if (searchText.includes(t.toLowerCase())) s += 3;
@@ -381,17 +381,20 @@ const areaProducts = catalog.filter(p => {
       }
       return s;
     };
+
     const roleLabels: Record<string, { emoji: string; label: string }> = {
       nettoyant: { emoji: "🧴", label: currentArea === "cheveux" ? "Shampooing" : "Nettoyant" },
       serum: { emoji: "💧", label: currentArea === "cheveux" ? "Huile / Sérum" : "Sérum / Traitement" },
       creme: { emoji: "🧴", label: currentArea === "cheveux" ? "Masque / Crème" : "Crème hydratante" },
     };
+
     const localsByBrand = new Map<string, typeof catalog>();
     for (const p of areaProducts.filter(x => x.whatsapp)) {
       const k = p.whatsapp as string;
       if (!localsByBrand.has(k)) localsByBrand.set(k, []);
       localsByBrand.get(k)!.push(p);
     }
+
     type Source = { products: typeof catalog; total: number; brandKey: string };
     const buildSource = (pool: typeof catalog, brandKey: string): Source | null => {
       const n = pool.filter(p => getProductRole(p) === "nettoyant").sort((a, b) => scoreProduct(b) - scoreProduct(a));
@@ -408,6 +411,7 @@ const areaProducts = catalog.filter(p => {
       if (picked.length < 3) return null;
       return { products: picked, total: picked.reduce((sum, p) => sum + scoreProduct(p), 0), brandKey };
     };
+
     const candidates: Source[] = [];
     for (const [waKey, brandProducts] of Array.from(localsByBrand.entries())) {
       const c = buildSource(brandProducts, waKey);
@@ -427,8 +431,27 @@ const areaProducts = catalog.filter(p => {
       index: i + 1,
     }));
   };
+
+  // 1) On génère la routine complète de 3 produits
   const routineProducts = findRoutineProducts();
 
+  // 2) 🛠️ On calcule automatiquement l'offre intermédiaire (Le Duo) juste après
+  const getIntermediateOffer = () => {
+    if (routineProducts.length < 2) return null;
+    const duoProducts = routineProducts.slice(0, 2);
+    const totalPriceDuo = duoProducts.reduce((sum, item) => sum + item.product.price, 0);
+    return {
+      duo: duoProducts,
+      totalPrice: totalPriceDuo,
+      copywriting: {
+        title: "Le Compromis Idéal ✨",
+        subtitle: currentArea === "cheveux" ? "Le kit booster de croissance" : "Le Duo Action Ciblée",
+        description: `Le strict minimum requis pour cibler directement l'état actuel de votre peau sans surcharger votre routine.`
+      }
+    };
+  };
+
+  const intermediateOffer = getIntermediateOffer();
   // ── Protocole matin/soir/hebdo normalisé ───────────────────────────
   const protocolMorning: ProtocolStep[] = ((result as any).protocol?.morning || result.recommendations?.morning || []).map(normalizeStep);
   const protocolEvening: ProtocolStep[] = ((result as any).protocol?.evening || result.recommendations?.evening || []).map(normalizeStep);
