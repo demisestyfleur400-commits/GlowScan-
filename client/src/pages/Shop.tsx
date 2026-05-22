@@ -1,16 +1,18 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Navbar } from "@/components/Navbar";
 import { catalog, type Product, formatPrice, getProductBrand } from "@shared/catalog";
-import { Sparkles, X, Check, MessageCircle, Star, ChevronLeft } from "lucide-react";
+import { Sparkles, X, Check, MessageCircle, Star, ChevronLeft, ShieldCheck, Truck } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useScans } from "@/hooks/use-scans";
 import { trackPageVisit } from "@/lib/analytics";
 import { productImages } from "@/lib/productImages";
 import OrderModal, { type OrderItem } from "@/components/OrderModal";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 // ─────────────────────────────────────────────────────────────────────
-//  Filtres par problème
+//  Filtres par problème (Esthétique Clinique)
 // ─────────────────────────────────────────────────────────────────────
 type ProblemKey = "tous" | "acne" | "taches" | "hydratation" | "solaire" | "corps";
 
@@ -29,56 +31,45 @@ const PROBLEMS: ProblemFilter[] = [
   { key: "tous", label: "Tous", emoji: "✨", matcher: () => true },
   {
     key: "acne",
-    label: "Acné",
+    label: "Acné & Boutons",
     emoji: "🔴",
-    // Acné = produit qui CIBLE activement l'acné. On regarde le nom + description
-    // (les targets contiennent souvent "post-acné/marques acné" pour des produits
-    // anti-taches, ce qui donne des faux positifs).
     matcher: (p) => {
       if (p.category === "cheveux") return false;
       const nameDesc = `${p.name} ${p.description || ""}`.toLowerCase();
-      // Signaux acné actifs (jamais "post-acné" ni "marques acné" ni "cicatrices acné")
       const hasActiveSignal = /acn[eé]|bouton|imperfection|point.{0,3}noir|comédon|salicylique|peroxyde de benzoyle|anti-imperfection|purifiant.*visage|anti-acn/i.test(nameDesc);
       if (!hasActiveSignal) return false;
-      // Exclure si le seul signal est "post-acné", "marques acné", "cicatrices acné"
       const isJustPostAcne = /(post.acn|marques.acn|cicatrices.acn)/i.test(nameDesc) &&
         !/anti.acn|salicylique|peroxyde|imperfection|bouton|comédon/i.test(nameDesc);
       if (isJustPostAcne) return false;
-      // Corps : seulement si acné corporelle explicite
       if (p.category === "corps" && !/dos|body acne|acné corporelle|acné du dos/i.test(nameDesc)) return false;
       return true;
     },
   },
   {
     key: "taches",
-    label: "Taches",
+    label: "Taches & Teint",
     emoji: "🟤",
     matcher: (p) => p.category !== "cheveux" && /tache|hyperpigment|éclaircis|pih|niacinamide|vitamine c|mélasma|dyschromie/i.test(searchableText(p)),
   },
   {
     key: "hydratation",
-    label: "Hydratation",
+    label: "Hydratation & Barrière",
     emoji: "💧",
     matcher: (p) => /hydrat|déshydrat|hyaluron|barrière cutanée|céramide|nourrissant/i.test(searchableText(p)),
   },
   {
     key: "solaire",
-    label: "Solaire",
+    label: "Protections Solaires",
     emoji: "☀️",
-    // Solaire = vrai produit de protection visage (SPF dans le NOM/description,
-    // pas une simple mention "protection solaire naturelle" dans une huile capillaire).
     matcher: (p) => {
       if (p.category === "cheveux") return false;
       const nameDesc = `${p.name} ${p.description || ""}`.toLowerCase();
       return /spf\s?\d|écran solaire|crème solaire|sunscreen/i.test(nameDesc);
     },
   },
-  { key: "corps", label: "Corps", emoji: "🧴", matcher: (p) => p.category === "corps" },
+  { key: "corps", label: "Soins Corps", emoji: "🧴", matcher: (p) => p.category === "corps" },
 ];
 
-// ─────────────────────────────────────────────────────────────────────
-//  Profil utilisateur (issu du dernier scan)
-// ─────────────────────────────────────────────────────────────────────
 interface UserProfile {
   skinType?: string;
   condition?: string;
@@ -100,15 +91,12 @@ function isRecommendedForUser(product: Product, profile: UserProfile): boolean {
   if (!profile.skinType && !profile.condition) return false;
   const profileText = `${profile.skinType || ""} ${profile.condition || ""}`.toLowerCase();
   const productText = searchableText(product);
-  // Mots-clés "fort" = vraies pathologies/conditions ciblées
   const strongKeywords = [
     "acn", "bouton", "imperfection", "comédon",
     "tache", "hyperpigment", "pih", "mélasma",
-    "déshydrat", "sécheresse",
-    "ride", "anti-âge",
+    "déshydrat", "sécheresse", "ride", "anti-âge",
     "rougeur", "rosacée",
   ];
-  // Type de peau = match si le produit cible explicitement ce type
   const skinTypeMatch = ["grasse", "mixte", "sèche", "sensible"].some(
     (t) => profileText.includes(t) && productText.includes(t)
   );
@@ -118,9 +106,6 @@ function isRecommendedForUser(product: Product, profile: UserProfile): boolean {
   return strongMatch || skinTypeMatch;
 }
 
-// ─────────────────────────────────────────────────────────────────────
-//  Bénéfices dynamiques selon profil
-// ─────────────────────────────────────────────────────────────────────
 function getDynamicBenefits(product: Product, profile: UserProfile): string[] {
   const benefits: string[] = [];
   const blob = searchableText(product);
@@ -128,7 +113,6 @@ function getDynamicBenefits(product: Product, profile: UserProfile): string[] {
   const cond = profile.condition?.toLowerCase() || "";
   const userBlob = `${skin} ${cond}`;
 
-  // Acné — copy prudente sans promesse chiffrée
   if (/acn[eé]|bouton|imperfection|point.{0,3}noir|comédon|salicylique/i.test(blob)) {
     if (/acn[eé]|bouton|comédon/.test(userBlob)) {
       benefits.push("Aide à apaiser tes imperfections actuelles");
@@ -136,85 +120,46 @@ function getDynamicBenefits(product: Product, profile: UserProfile): string[] {
       benefits.push("Prévient l'apparition de nouvelles imperfections");
     }
   }
-
-  // Sébum / pores
   if (/sébum|peau grasse|matifiant|pore|salicylique/i.test(blob)) {
-    if (skin.includes("mixte")) {
-      benefits.push("Régule l'excès de sébum sur ta zone T");
-    } else if (skin.includes("grasse")) {
-      benefits.push("Régule la production de sébum sur tout le visage");
-    } else {
-      benefits.push("Désincruste les pores et matifie la peau");
-    }
+    if (skin.includes("mixte")) benefits.push("Régule l'excès de sébum sur ta zone T");
+    else if (skin.includes("grasse")) benefits.push("Régule la production de sébum sur tout le visage");
+    else benefits.push("Désincruste les pores et matifie la peau");
   }
-
-  // Taches / PIH
   if (/tache|hyperpigment|éclaircis|pih|niacinamide|vitamine c/i.test(blob)) {
-    if (/tache|pih|hyperpigment/.test(userBlob)) {
-      benefits.push("Atténue tes taches post-inflammatoires");
-    } else {
-      benefits.push("Unifie le teint et atténue les marques");
-    }
+    if (/tache|pih|hyperpigment/.test(userBlob)) benefits.push("Atténue tes taches post-inflammatoires");
+    else benefits.push("Unifie le teint et atténue les marques");
   }
-
-  // Hydratation
   if (/hydrat|hyaluron|déshydrat|céramide|barrière/i.test(blob)) {
-    if (skin.includes("grasse") || skin.includes("mixte")) {
-      benefits.push("Hydrate sans obstruer les pores");
-    } else if (skin.includes("sèche")) {
-      benefits.push("Hydrate intensément ta peau sèche pendant 24h");
-    } else {
-      benefits.push("Hydratation longue durée jusqu'à 24h");
-    }
+    if (skin.includes("grasse") || skin.includes("mixte")) benefits.push("Hydrate sans obstruer les pores");
+    else if (skin.includes("sèche")) benefits.push("Hydrate intensément ta peau sèche pendant 24h");
+    else benefits.push("Hydratation longue durée jusqu'à 24h");
   }
-
-  // SPF
   if (/spf|uv|solaire/i.test(blob)) {
-    if (/tache|pih|hyperpigment/.test(userBlob)) {
-      benefits.push("Protège des UV qui aggravent tes taches");
-    } else {
-      benefits.push("Protège ta peau des UV au quotidien");
-    }
+    if (/tache|pih|hyperpigment/.test(userBlob)) benefits.push("Protège des UV qui aggravent tes taches");
+    else benefits.push("Protège ta peau des UV au quotidien");
   }
-
-  // Sensibilité
   if (/sensible|doux|apais/i.test(blob)) {
-    if (skin.includes("sensible")) {
-      benefits.push("Formule douce qui ne réactive pas tes rougeurs");
-    } else {
-      benefits.push("Formule douce respectant la barrière cutanée");
-    }
+    if (skin.includes("sensible")) benefits.push("Formule douce qui ne réactive pas tes rougeurs");
+    else benefits.push("Formule douce respectant la barrière cutanée");
   }
-
-  // Cheveux
   if (product.category === "cheveux") {
     if (/sec|sèche/i.test(blob)) benefits.push("Nourrit en profondeur tes cheveux secs");
     if (/croissance|pousse/i.test(blob)) benefits.push("Stimule la pousse de tes cheveux");
     if (/frisé|crépu|naturel|boucle/i.test(blob)) benefits.push("Définit tes boucles sans alourdir");
   }
-
-  // Corps
   if (product.category === "corps" && benefits.length === 0) {
     if (skin.includes("sèche")) benefits.push("Nourrit ta peau et restaure sa douceur");
     else benefits.push("Hydrate et adoucit ta peau au quotidien");
   }
-
-  // Anti-âge
   if (/rétinol|anti-âge|ride/i.test(blob)) {
     benefits.push("Stimule le renouvellement cellulaire et lisse les rides");
   }
 
-  // Dédoublonner et limiter à 4
   const unique = Array.from(new Set(benefits)).slice(0, 4);
-
-  // Fallback si rien matché
   if (unique.length === 0) {
-    if (product.usagePoints && product.usagePoints.length > 0) {
-      return product.usagePoints.slice(0, 4);
-    }
+    if (product.usagePoints && product.usagePoints.length > 0) return product.usagePoints.slice(0, 4);
     return ["Améliore visiblement la qualité de ta peau", "Adapté à ton type de peau"];
   }
-
   return unique;
 }
 
@@ -234,11 +179,11 @@ function getRecommendationReason(product: Product, profile: UserProfile): string
   else if (/rétinol/i.test(blob)) activeIngredient = "le rétinol";
   else if (/vitamine c/i.test(blob)) activeIngredient = "la vitamine C";
 
-  return `Basé sur ton diagnostic du ${date}, ta peau ${skin}${cond} bénéficiera particulièrement de ${activeIngredient}.`;
+  return `Prescription IA : Diagnostiqué le ${date}. Ce soin est précisément calibré pour cibler ta peau ${skin}${cond} via ${activeIngredient}.`;
 }
 
 // ─────────────────────────────────────────────────────────────────────
-//  Modale détail produit
+//  Modale Fiche Produit (Style Tiroir Applicatif Premium)
 // ─────────────────────────────────────────────────────────────────────
 function ProductDetailModal({
   product,
@@ -255,7 +200,6 @@ function ProductDetailModal({
     if (!product) return;
     const handleEscape = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     document.addEventListener("keydown", handleEscape);
-    // Lock body scroll pendant que la modale est ouverte
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
@@ -269,11 +213,11 @@ function ProductDetailModal({
   const reason = getRecommendationReason(product, profile);
   const img = productImages[product.id] || product.image;
   const brand = getProductBrand(product);
-  // Adapte le titre des bénéfices à la catégorie du produit
+
   const targetLabel =
-    product.category === "cheveux" ? "TES cheveux" :
-    product.category === "corps" ? "TON corps" :
-    "TA peau";
+    product.category === "cheveux" ? "TES CHEVEUX" :
+    product.category === "corps" ? "TON CORPS" :
+    "TA PEAU";
 
   return (
     <AnimatePresence>
@@ -282,139 +226,132 @@ function ProductDetailModal({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+        className="fixed inset-0 bg-slate-950/40 backdrop-blur-xs z-50"
         onClick={onClose}
-        data-testid="modal-backdrop"
       />
       <motion.div
         key="modal-drawer"
         initial={{ y: "100%" }}
         animate={{ y: 0 }}
         exit={{ y: "100%" }}
-        transition={{ type: "spring", damping: 30, stiffness: 280 }}
+        transition={{ type: "spring", damping: 30, stiffness: 300 }}
         role="dialog"
         aria-modal="true"
-        aria-labelledby="product-title"
-        className="fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-3xl max-h-[92vh] flex flex-col shadow-2xl"
-        data-testid="modal-product-detail"
+        className="fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-3xl max-h-[94vh] flex flex-col shadow-2xl border-t border-slate-100"
       >
-        {/* Sticky header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 flex-shrink-0">
+        {/* Header Modale */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 flex-shrink-0">
           <button
             onClick={onClose}
-            className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center active:scale-90 transition-transform"
-            data-testid="button-close-detail"
+            className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center active:scale-95 transition-all"
             aria-label="Fermer"
           >
-            <ChevronLeft className="w-4 h-4 text-gray-600" />
+            <ChevronLeft className="w-4 h-4 text-slate-700" />
           </button>
-          <div className="flex justify-center">
-            <div className="w-10 h-1 rounded-full bg-gray-200" />
-          </div>
+          <div className="w-12 h-1.5 rounded-full bg-slate-200" />
           <button
             onClick={onClose}
-            className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center active:scale-90 transition-transform"
+            className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center active:scale-95 transition-all"
             aria-label="Fermer"
           >
-            <X className="w-4 h-4 text-gray-600" />
+            <X className="w-4 h-4 text-slate-700" />
           </button>
         </div>
 
-        {/* Scrollable body */}
-        <div className="overflow-y-auto flex-1">
-          {/* Photo */}
-          <div className="aspect-square bg-gradient-to-br from-gray-50 to-gray-100">
+        {/* Corps défilant */}
+        <div className="overflow-y-auto flex-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="relative aspect-square bg-slate-50 flex items-center justify-center border-b border-slate-100">
             {img ? (
-              <img src={img} alt={product.name} className="w-full h-full object-cover" data-testid="img-product-detail" />
+              <img src={img} alt={product.name} className="w-full h-full object-cover" />
             ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <Sparkles className="w-16 h-16 text-gray-300" />
-              </div>
+              <Sparkles className="w-16 h-16 text-slate-200" />
             )}
+            
+            {/* Badges de réassurance exclusifs */}
+            <div className="absolute bottom-4 left-4 flex gap-2">
+              <span className="inline-flex items-center gap-1 bg-slate-900/90 backdrop-blur-xs text-white text-[9px] font-black uppercase px-2.5 py-1 rounded-md shadow-sm tracking-wider">
+                <ShieldCheck className="w-3 h-3 text-blue-400" /> Authentique
+              </span>
+            </div>
           </div>
 
-          <div className="p-5 space-y-6">
-            {/* Nom + prix */}
+          <div className="p-6 space-y-6">
+            {/* Infos Principales */}
             <div>
-              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-[0.18em]">{brand}</p>
-              <h2 id="product-title" className="text-[22px] font-bold text-gray-900 font-display tracking-tight leading-tight mt-1" data-testid="text-product-name">
+              <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">{brand}</span>
+              <h2 className="text-xl font-black text-slate-900 tracking-tight leading-tight mt-1">
                 {product.name}
               </h2>
-              <p className="text-[24px] font-black text-pink-700 mt-3 font-display" data-testid="text-product-price">
-                {product.price ? formatPrice(product.price) : "Prix sur demande"}
-              </p>
+              <div className="flex items-baseline gap-2 mt-2">
+                <span className="text-2xl font-black text-slate-950">
+                  {product.price ? formatPrice(product.price) : "Sur demande"}
+                </span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Livraison Rapide</span>
+              </div>
             </div>
 
-            {/* Description courte */}
             {product.description && (
-              <p className="text-[13px] text-gray-600 leading-relaxed border-l-2 border-gray-200 pl-3 italic">
+              <p className="text-xs md:text-sm font-medium text-slate-600 leading-relaxed bg-slate-50 border-l-2 border-slate-900 p-3.5 rounded-r-xl">
                 {product.description}
               </p>
             )}
 
-            {/* Bénéfices dynamiques */}
-            <section data-testid="section-benefits">
-              <h3 className="text-[14px] font-bold text-gray-900 mb-3 font-display">
-                Ce que ce produit va faire pour <span className="text-pink-700">{targetLabel}</span>&nbsp;:
-              </h3>
-              <ul className="space-y-2.5">
-                {benefits.map((b, i) => (
-                  <motion.li
-                    key={i}
-                    initial={{ opacity: 0, x: -8 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.1 + i * 0.08 }}
-                    className="flex items-start gap-3 text-[13px] text-gray-700 leading-relaxed"
-                    data-testid={`benefit-${i}`}
-                  >
-                    <div className="w-5 h-5 rounded-full bg-pink-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <Check className="w-3 h-3 text-pink-600" strokeWidth={3} />
-                    </div>
-                    <span>{b}</span>
-                  </motion.li>
-                ))}
-              </ul>
-            </section>
-
-            {/* Pourquoi GlowScan recommande */}
+            {/* Pourquoi l'IA recommande */}
             {reason && (
               <motion.section
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
-                className="bg-gradient-to-br from-pink-50 to-pink-100 border border-pink-200 rounded-2xl p-4"
-                data-testid="section-recommendation"
+                className="bg-blue-50/60 border border-blue-100/70 rounded-2xl p-4.5"
               >
                 <div className="flex items-center gap-2 mb-2">
-                  <Sparkles className="w-4 h-4 text-pink-600" />
-                  <h3 className="text-[11px] font-black uppercase tracking-wider text-pink-700">
-                    Pourquoi GlowScan te le recommande
+                  <Sparkles className="w-4 h-4 text-blue-600" />
+                  <h3 className="text-[10px] font-black uppercase tracking-wider text-blue-700">
+                    Analyse Clinique GlowScan
                   </h3>
                 </div>
-                <p className="text-[13px] text-gray-700 leading-relaxed">{reason}</p>
+                <p className="text-xs md:text-sm font-semibold text-slate-700 leading-relaxed">{reason}</p>
               </motion.section>
             )}
 
-            {/* Espace pour le bouton sticky */}
-            <div className="h-4" />
+            {/* Liste des Actions Cutanées */}
+            <section>
+              <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider mb-3.5">
+                Impact ciblé sur <span className="text-blue-600">{targetLabel}</span> :
+              </h3>
+              <ul className="space-y-3">
+                {benefits.map((b, i) => (
+                  <li key={i} className="flex items-start gap-3 text-xs md:text-sm font-medium text-slate-700 leading-relaxed">
+                    <div className="w-5 h-5 rounded-md bg-emerald-50 border border-emerald-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <Check className="w-3 h-3 text-emerald-600" strokeWidth={3} />
+                    </div>
+                    <span>{b}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+            
+            {/* Rappel Logistique */}
+            <div className="flex items-center gap-3 p-4 border border-slate-100 rounded-xl bg-slate-50/50 text-slate-500">
+              <Truck className="w-5 h-5 text-slate-400 shrink-0" />
+              <p className="text-[11px] font-medium leading-normal">
+                Livraison à domicile ou retrait disponible à Douala & Yaoundé sous 24/48h.
+              </p>
+            </div>
           </div>
         </div>
 
-        {/* Sticky bottom CTA */}
-        <div
-          className="border-t border-gray-100 bg-white p-4 flex-shrink-0"
-          style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom, 0px))" }}
-        >
-          <button
+        {/* Bouton d'achat Sticky */}
+        <div className="border-t border-slate-100 bg-white p-4 flex-shrink-0">
+          <Button
             type="button"
+            variant="premium"
+            size="lg"
             onClick={() => onOrder(product)}
-            data-testid="button-order-now"
-            className="flex items-center justify-center gap-2.5 w-full py-4 rounded-lg text-white font-bold text-[15px] shadow-lg shadow-pink-300/40 active:scale-[0.97] transition-transform"
-            style={{ background: "linear-gradient(135deg, #25d366 0%, #128c7e 100%)" }}
+            className="w-full shadow-lg"
           >
-            <MessageCircle className="w-5 h-5" />
-            Commander maintenant
-          </button>
+            <MessageCircle className="w-4 h-4 fill-white" />
+            Acheter via WhatsApp — Direct Réseau
+          </Button>
         </div>
       </motion.div>
     </AnimatePresence>
@@ -422,15 +359,13 @@ function ProductDetailModal({
 }
 
 // ─────────────────────────────────────────────────────────────────────
-//  PAGE BOUTIQUE
+//  PAGE PRINCIPALE : BOUTIQUE EXPERTE
 // ─────────────────────────────────────────────────────────────────────
 export default function Shop() {
   const { user } = useAuth();
   const { data: scans } = useScans();
   const [problemFilter, setProblemFilter] = useState<ProblemKey>("tous");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-
-  // ── Modale fiche commande (nom / téléphone / adresse → WhatsApp 237 674 377 959) ──
   const [showOrderModal, setShowOrderModal] = useState(false);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
 
@@ -466,77 +401,72 @@ export default function Shop() {
     return products;
   }, [problemFilter, profile, hasProfile]);
 
-  // Gate non connecté
+  // Écran d'attente / Connexion requis
   if (!user) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-6 pb-20 bg-gradient-to-b from-pink-50 to-white">
-        <div className="w-20 h-20 rounded-3xl bg-white shadow-lg flex items-center justify-center mb-6 text-4xl">🛍️</div>
-        <h1 className="text-[24px] font-bold text-gray-900 font-display mb-3">La Boutique</h1>
-        <p className="text-[14px] text-gray-500 leading-relaxed text-center max-w-xs mb-8">
-          Connecte-toi pour découvrir les produits sélectionnés pour ta peau.
+      <div className="min-h-screen flex flex-col items-center justify-center px-6 bg-white">
+        <div className="w-16 h-16 rounded-2xl bg-slate-900 flex items-center justify-center mb-6 text-2xl text-white shadow-xl shadow-slate-950/10">🛍️</div>
+        <h1 className="text-xl font-black text-slate-900 uppercase tracking-wider mb-2">Boutique GlowScan</h1>
+        <p className="text-xs font-medium text-slate-500 text-center max-w-xs mb-8 leading-relaxed">
+          Accède aux prescriptions cosmétiques calibrées pour ta mélanine et ton type de peau.
         </p>
-        <a
-          href="/auth"
-          className="w-full max-w-sm flex items-center justify-center gap-2 py-3.5 rounded-lg font-bold text-[14px] text-white shadow-lg shadow-pink-500/30 active:scale-95 transition-transform glow-bg-pink"
-        >
-          Me connecter
-        </a>
+        <Button asChild size="lg" variant="default" className="w-full max-w-xs">
+          <a href="/auth">Créer mon compte / Connexion</a>
+        </Button>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-24" data-testid="page-shop">
+    <div className="min-h-screen bg-slate-50/50 pb-24">
       <Navbar />
 
-      {/* Header */}
-      <header className="bg-white px-5 pt-5 pb-4 border-b border-gray-100">
-        <p className="text-[10px] font-black tracking-[0.2em] uppercase text-pink-600">Boutique ✦</p>
-        <h1 className="text-[26px] font-bold font-display text-gray-900 tracking-tight mt-1">
-          Pour {hasProfile ? `ta peau ${profile.skinType || ""}`.trim() : "ta peau"}
+      {/* En-tête de la Pharmacie Technologique */}
+      <header className="bg-white px-5 pt-6 pb-5 border-b border-slate-200/50">
+        <span className="text-[10px] font-black tracking-widest uppercase text-blue-600">Pharmacie IA ✦ GlowScan</span>
+        <h1 className="text-[24px] font-black text-slate-900 tracking-tight uppercase mt-1">
+          {hasProfile ? `Profil : Peau ${profile.skinType || ""}`.trim() : "Prescriptions Cosmétiques"}
         </h1>
-        <p className="text-[12px] text-gray-500 mt-1">
+        <p className="text-xs font-semibold text-slate-400 mt-1.5 leading-normal">
           {hasProfile
-            ? "Produits sélectionnés selon ton dernier diagnostic"
-            : "Fais une analyse pour personnaliser tes recommandations"}
+            ? "Molécules et soins triés selon tes scans cliniques récents."
+            : "Effectue un scan facial pour recevoir tes recommandations sur-mesure."}
         </p>
       </header>
 
-      {/* Filtre par problème */}
-      <div className="bg-white sticky top-0 z-20 border-b border-gray-100">
-        <div
-          className="flex gap-2 overflow-x-auto px-4 py-3"
-          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-          data-testid="filter-bar"
-        >
-          {PROBLEMS.map((p) => (
-            <button
-              key={p.key}
-              onClick={() => setProblemFilter(p.key)}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-[12px] font-bold whitespace-nowrap transition-all active:scale-95 ${
-                problemFilter === p.key
-                  ? "bg-pink-600 text-white shadow-md shadow-pink-100/50"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
-              data-testid={`filter-${p.key}`}
-            >
-              <span>{p.emoji}</span>
-              {p.label}
-            </button>
-          ))}
+      {/* Filtres Horizontaux Fluides (Barre de défilement masquée) */}
+      <div className="bg-white sticky top-0 z-20 border-b border-slate-200/50">
+        <div className="flex gap-2 overflow-x-auto px-4 py-3.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {PROBLEMS.map((p) => {
+            const isActive = problemFilter === p.key;
+            return (
+              <button
+                key={p.key}
+                onClick={() => setProblemFilter(p.key)}
+                className={`flex items-center gap-2 px-4.5 h-10 rounded-full text-xs font-black uppercase tracking-wider transition-all active:scale-[0.97] border ${
+                  isActive
+                    ? "bg-slate-950 border-slate-950 text-white shadow-md shadow-slate-950/10"
+                    : "bg-slate-50 border-slate-200/60 text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                <span>{p.emoji}</span>
+                <span>{p.label}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* Grille produits */}
-      <main className="px-4 py-5">
+      {/* Grille des produits ordonnés par pertinence IA */}
+      <main className="px-4 py-6">
         {filtered.length === 0 ? (
-          <div className="text-center py-16">
-            <Sparkles className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-            <p className="text-sm font-bold text-gray-400">Aucun produit dans cette catégorie</p>
-            <p className="text-xs text-gray-300 mt-1">Essaie un autre filtre</p>
+          <div className="text-center py-20 bg-white rounded-2xl border border-slate-200/60 p-6">
+            <Sparkles className="w-8 h-8 text-slate-300 mx-auto mb-3" />
+            <p className="text-xs font-black uppercase text-slate-800 tracking-wider">Aucune formule trouvée</p>
+            <p className="text-xs font-medium text-slate-400 mt-1">Sélectionne un autre filtre moléculaire.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3.5">
             {filtered.map((product, i) => {
               const img = productImages[product.id] || product.image;
               const recommended = isRecommendedForUser(product, profile);
@@ -546,41 +476,40 @@ export default function Shop() {
                   initial={{ opacity: 0, y: 12 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
-                  transition={{ delay: Math.min(i * 0.04, 0.3), duration: 0.4 }}
+                  transition={{ delay: Math.min(i * 0.03, 0.25), duration: 0.35 }}
                   onClick={() => setSelectedProduct(product)}
-                  className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 text-left active:scale-[0.97] transition-transform flex flex-col"
-                  data-testid={`card-product-${product.id}`}
+                  className="bg-white rounded-2xl overflow-hidden border border-slate-200/60 text-left active:scale-[0.98] transition-all flex flex-col hover:shadow-md hover:shadow-slate-100/50 group relative"
                 >
-                  <div className="relative aspect-square bg-gradient-to-br from-gray-50 to-gray-100">
+                  <div className="relative aspect-square bg-slate-50 flex items-center justify-center border-b border-slate-100 overflow-hidden">
                     {img ? (
-                      <img src={img} alt={product.name} className="w-full h-full object-cover" />
+                      <img src={img} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <Sparkles className="w-8 h-8 text-gray-300" />
-                      </div>
+                      <Sparkles className="w-6 h-6 text-slate-200" />
                     )}
+                    
+                    {/* Badge de Recommandation Algorithmique */}
                     {recommended && (
-                      <div className="absolute top-2 left-2 right-2">
-                        <span
-                          className="inline-flex items-center gap-1 bg-pink-600 text-white text-[9px] font-black px-2 py-1 rounded-full shadow-md uppercase tracking-wide whitespace-normal text-center leading-tight"
-                          data-testid={`badge-recommended-${product.id}`}
-                        >
-                          <Star className="w-2.5 h-2.5 fill-white flex-shrink-0" />
-                          Recommandé pour ta peau
-                        </span>
+                      <div className="absolute top-2 left-2 right-2 z-10">
+                        <Badge variant="info" className="w-full justify-center gap-1 shadow-sm text-center py-1">
+                          <Star className="w-2.5 h-2.5 fill-current shrink-0" />
+                          Recommandé par l'IA
+                        </Badge>
                       </div>
                     )}
                   </div>
-                  <div className="p-3 flex-1 flex flex-col">
-                    <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-1 truncate">
+                  
+                  {/* Corps de la Carte */}
+                  <div className="p-3.5 flex-1 flex flex-col bg-white">
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider mb-1 truncate">
                       {getProductBrand(product)}
-                    </p>
-                    <p className="text-[12px] font-bold text-gray-900 leading-snug line-clamp-2 mb-2 min-h-[32px]">
+                    </span>
+                    <h3 className="text-xs font-black text-slate-900 leading-snug line-clamp-2 mb-2 min-h-[32px] tracking-tight">
                       {product.name}
-                    </p>
-                    <p className="text-[14px] font-black text-gray-900 mt-auto" data-testid={`price-${product.id}`}>
-                      {product.price ? formatPrice(product.price) : "Sur demande"}
-                    </p>
+                    </h3>
+                    <div className="text-xs font-black text-slate-950 mt-auto pt-1 flex justify-between items-center">
+                      <span>{product.price ? formatPrice(product.price) : "Sur demande"}</span>
+                      <span className="text-[9px] font-bold text-blue-600 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">Voir</span>
+                    </div>
                   </div>
                 </motion.button>
               );
@@ -589,7 +518,7 @@ export default function Shop() {
         )}
       </main>
 
-      {/* Modale détail */}
+      {/* Modale Fiche Produit Tiroir */}
       <ProductDetailModal
         product={selectedProduct}
         profile={profile}
@@ -597,12 +526,12 @@ export default function Shop() {
         onOrder={openOrderForProduct}
       />
 
-      {/* Fiche commande — toutes les commandes vont vers WhatsApp 237 674 377 959 */}
+      {/* Modale de validation finale de coordonnées */}
       <OrderModal
         isOpen={showOrderModal}
         onClose={() => setShowOrderModal(false)}
         items={orderItems}
-        title="Commander ce produit"
+        title="Finaliser la commande"
         scanContext={profile.skinType || profile.condition ? {
           skinType: profile.skinType,
           condition: profile.condition,
