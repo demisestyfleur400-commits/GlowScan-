@@ -64,12 +64,11 @@ export function FileUpload({ onFileSelect, isProcessing }: FileUploadProps) {
   useEffect(() => {
     startCamera(facingMode);
     return () => stopStream();
-  }, []);
+  }, [facingMode, startCamera]);
 
   const flipCamera = async () => {
     const next = facingMode === "user" ? "environment" : "user";
     setFacingMode(next);
-    await startCamera(next);
   };
 
   const capturePhoto = async () => {
@@ -87,7 +86,6 @@ export function FileUpload({ onFileSelect, isProcessing }: FileUploadProps) {
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
     stopStream();
-    // Optimisation réseau : redimensionne à 1024px max avant tout (≈10× plus léger)
     const optimized = await resizeBase64Image(dataUrl, 1024, 0.85);
     setPreview(optimized);
     setMode("preview");
@@ -111,7 +109,6 @@ export function FileUpload({ onFileSelect, isProcessing }: FileUploadProps) {
     reader.onload = async () => {
       const result = reader.result as string;
       stopStream();
-      // Optimisation réseau : redimensionne à 1024px max (jusqu'à 20× plus léger sur 3G)
       const optimized = await resizeBase64Image(result, 1024, 0.85);
       setPreview(optimized);
       setMode("preview");
@@ -136,10 +133,10 @@ export function FileUpload({ onFileSelect, isProcessing }: FileUploadProps) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="space-y-3"
+            className="space-y-5"
           >
-            {/* Viewfinder */}
-            <div className="relative overflow-hidden rounded-[2.5rem] bg-black" style={{ aspectRatio: "3/4" }}>
+            {/* Viseur Caméra */}
+            <div className="relative overflow-hidden rounded-[2.5rem] bg-black shadow-inner border border-gray-100" style={{ aspectRatio: "3/4" }}>
               <video
                 ref={videoRef}
                 autoPlay
@@ -149,7 +146,7 @@ export function FileUpload({ onFileSelect, isProcessing }: FileUploadProps) {
                 style={{ transform: facingMode === "user" ? "scaleX(-1)" : "none" }}
               />
 
-              {/* Overlay scan brackets */}
+              {/* Animation des repères de scan */}
               {cameraReady && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                   {[
@@ -158,71 +155,64 @@ export function FileUpload({ onFileSelect, isProcessing }: FileUploadProps) {
                     "bottom-[15%] left-[10%] border-b-2 border-l-2 rounded-bl-2xl",
                     "bottom-[15%] right-[10%] border-b-2 border-r-2 rounded-br-2xl",
                   ].map((cls, i) => (
-                    <div key={i} className={`absolute w-10 h-10 border-white/70 ${cls}`} />
+                    <div key={i} className={`absolute w-10 h-10 border-white/80 ${cls}`} />
                   ))}
                   <motion.div
                     className="absolute left-[10%] right-[10%] h-0.5 bg-gradient-to-r from-transparent via-pink-400 to-transparent"
                     animate={{ top: ["16%", "84%", "16%"] }}
                     transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
-                    style={{ position: "absolute" }}
                   />
                 </div>
               )}
 
-              {/* Chargement caméra */}
+              {/* Loader de démarrage */}
               {!cameraReady && !cameraError && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60">
-                  <Loader2 className="w-8 h-8 text-white animate-spin mb-2" />
-                  <p className="text-white text-xs font-medium">Ouverture de la caméra…</p>
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 backdrop-blur-sm">
+                  <Loader2 className="w-6 h-6 text-pink-500 animate-spin mb-2" />
+                  <p className="text-white/90 text-xs font-black uppercase tracking-wider">Calibration de l'objectif…</p>
                 </div>
               )}
-
-              {/* Bouton flip (avant/arrière) */}
-              {cameraReady && (
-                <button
-                  onClick={flipCamera}
-                  className="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/40 backdrop-blur flex items-center justify-center active:scale-90 transition-all"
-                  data-testid="button-flip-camera"
-                >
-                  <RefreshCw className="w-5 h-5 text-white" />
-                </button>
-              )}
-
-              {/* Bouton galerie */}
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="absolute top-4 left-4 w-10 h-10 rounded-full bg-black/40 backdrop-blur flex items-center justify-center active:scale-90 transition-all"
-                data-testid="button-open-gallery"
-              >
-                <ImageIcon className="w-5 h-5 text-white" />
-              </button>
             </div>
 
-            {/* Bouton capture */}
-            <motion.button
-              whileTap={{ scale: 0.93 }}
-              onClick={capturePhoto}
-              disabled={!cameraReady || isProcessing}
-              data-testid="button-capture-photo"
-              className="w-full flex items-center justify-center gap-3 py-5 rounded-[2rem] bg-gradient-to-r from-pink-500 to-emerald-500 text-white font-extrabold text-base shadow-xl shadow-pink-300/40 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Camera className="w-6 h-6" />
-              Prendre la photo
-            </motion.button>
-
-            <p className="text-center text-gray-400 text-xs">
-              ou{" "}
+            {/* Hub de contrôle ergonomique à un pouce (style iOS/Android Pro) */}
+            <div className="flex items-center justify-between px-6 py-2 bg-slate-50 border border-gray-100 rounded-3xl">
+              {/* Galerie */}
               <button
+                type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="text-pink-600 font-bold underline-offset-2 underline"
+                className="w-11 h-11 rounded-full bg-white flex items-center justify-center border border-gray-200/60 shadow-sm active:scale-90 transition-all text-gray-700"
+                title="Ouvrir la galerie"
               >
-                choisir depuis la galerie
+                <ImageIcon className="w-4 h-4" />
               </button>
-            </p>
+
+              {/* Déclencheur Photo Central */}
+              <motion.button
+                whileTap={{ scale: 0.92 }}
+                onClick={capturePhoto}
+                disabled={!cameraReady || isProcessing}
+                className="w-16 h-16 rounded-full bg-white border-4 border-gray-200 flex items-center justify-center shadow-lg active:border-pink-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-pink-600 to-purple-600 flex items-center justify-center shadow-inner">
+                  <Camera className="w-5 h-5 text-white" />
+                </div>
+              </motion.button>
+
+              {/* Pivot Caméra (Avant / Arrière) */}
+              <button
+                type="button"
+                onClick={flipCamera}
+                disabled={!cameraReady}
+                className="w-11 h-11 rounded-full bg-white flex items-center justify-center border border-gray-200/60 shadow-sm active:scale-90 transition-all text-gray-700 disabled:opacity-30"
+                title="Changer de caméra"
+              >
+                <RefreshCw className="w-4 h-4" />
+              </button>
+            </div>
           </motion.div>
         )}
 
-        {/* ── FALLBACK GALERIE (si caméra refusée) ── */}
+        {/* ── FALLBACK GALERIE ── */}
         {mode === "gallery_fallback" && (
           <motion.div
             key="gallery"
@@ -232,21 +222,21 @@ export function FileUpload({ onFileSelect, isProcessing }: FileUploadProps) {
             className="space-y-3"
           >
             {cameraError && (
-              <div className="p-4 rounded-2xl bg-pink-50 border border-pink-200 text-center">
-                <p className="text-pink-700 text-sm font-bold mb-1">📷 {cameraError}</p>
+              <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-100 text-center">
+                <p className="text-amber-900 text-xs font-bold leading-normal">💡 {cameraError}</p>
               </div>
             )}
             <button
               onClick={() => fileInputRef.current?.click()}
               data-testid="dropzone"
-              className="relative overflow-hidden rounded-[2.5rem] border-2 border-dashed border-gray-200 hover:border-pink-400 hover:bg-gray-50 transition-all w-full min-h-[280px] flex flex-col items-center justify-center gap-4"
+              className="relative overflow-hidden rounded-[2.5rem] border-2 border-dashed border-gray-200 bg-white hover:border-pink-400 hover:bg-slate-50/50 transition-all w-full min-h-[300px] flex flex-col items-center justify-center gap-4 shadow-sm"
             >
-              <div className="w-20 h-20 rounded-3xl bg-pink-50 flex items-center justify-center">
-                <Upload className="w-10 h-10 text-pink-500" />
+              <div className="w-16 h-16 rounded-2xl bg-pink-50 flex items-center justify-center border border-pink-100">
+                <Upload className="w-6 h-6 text-pink-600" />
               </div>
               <div className="text-center px-6">
-                <p className="text-xl font-black text-gray-800">Choisir une photo</p>
-                <p className="text-gray-400 text-sm mt-1">JPG, PNG jusqu'à 10 Mo</p>
+                <p className="text-sm font-black text-gray-950 uppercase tracking-wide">Importer un cliché</p>
+                <p className="text-gray-400 text-xs mt-1 font-medium">Prend en charge JPG, PNG, WEBP</p>
               </div>
             </button>
           </motion.div>
@@ -259,20 +249,20 @@ export function FileUpload({ onFileSelect, isProcessing }: FileUploadProps) {
             initial={{ opacity: 0, scale: 0.97 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0 }}
-            className="space-y-3"
+            className="space-y-4"
           >
-            <div className="relative overflow-hidden rounded-[2.5rem]" style={{ aspectRatio: "3/4" }}>
-              <img src={preview} alt="Aperçu" className="w-full h-full object-cover" />
+            <div className="relative overflow-hidden rounded-[2.5rem] border border-gray-100" style={{ aspectRatio: "3/4" }}>
+              <img src={preview} alt="Aperçu du visage" className="w-full h-full object-cover" />
               <button
                 onClick={retake}
                 data-testid="button-retake"
-                className="absolute top-4 right-4 p-3 bg-black/50 backdrop-blur text-white rounded-full hover:bg-black/70 transition-all active:scale-90"
+                className="absolute top-4 right-4 w-10 h-10 bg-black/40 backdrop-blur-md text-white rounded-full flex items-center justify-center border border-white/10 active:scale-90 transition-all"
               >
-                <X className="w-6 h-6" />
+                <X className="w-5 h-5" />
               </button>
               <div className="absolute bottom-4 left-1/2 -translate-x-1/2">
-                <span className="bg-black/50 backdrop-blur text-white text-xs font-bold px-4 py-2 rounded-full">
-                  ✓ Photo prête
+                <span className="bg-emerald-500/90 backdrop-blur text-white text-[10px] font-black uppercase tracking-wider px-4 py-2 rounded-full shadow-md">
+                  ✓ Cliché Validé
                 </span>
               </div>
             </div>
@@ -281,33 +271,24 @@ export function FileUpload({ onFileSelect, isProcessing }: FileUploadProps) {
               onClick={handleAnalyze}
               disabled={isProcessing}
               data-testid="button-upload"
-              className="w-full h-16 rounded-[2rem] bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold text-lg shadow-xl shadow-purple-200 hover:shadow-2xl transition-all active:scale-[0.98]"
+              className="w-full h-14 rounded-2xl bg-gradient-to-r from-pink-600 to-purple-600 text-white font-black text-xs uppercase tracking-wider shadow-xl shadow-pink-600/10 active:scale-[0.98] transition-transform"
             >
               {isProcessing ? (
                 <span className="flex items-center gap-2">
-                  <Loader2 className="w-6 h-6 animate-spin" />
-                  Analyse en cours…
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Calcul cartographique...
                 </span>
               ) : (
                 <span className="flex items-center gap-2">
-                  <Play className="w-6 h-6 fill-current" />
-                  Lancer l'analyse
+                  <Play className="w-3.5 h-3.5 fill-current" />
+                  Analyser mon visage
                 </span>
               )}
             </Button>
-
-            <button
-              onClick={retake}
-              className="w-full py-3 text-sm text-gray-400 hover:text-gray-600 font-medium transition-colors"
-              data-testid="button-retake-link"
-            >
-              🔄 Reprendre la photo
-            </button>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Input fichier caché */}
       <input
         ref={fileInputRef}
         type="file"
@@ -321,7 +302,7 @@ export function FileUpload({ onFileSelect, isProcessing }: FileUploadProps) {
         <motion.p
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-destructive text-sm font-bold text-center"
+          className="text-destructive text-xs font-black text-center uppercase tracking-wide"
         >
           {error}
         </motion.p>
