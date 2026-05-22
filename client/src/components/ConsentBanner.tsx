@@ -1,14 +1,12 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "wouter";
-import { ShieldCheck, X, Globe } from "lucide-react";
+import { ShieldCheck, Globe, Lock } from "lucide-react";
 
 const CONSENT_KEY_BASE = "glowscan_consent_v1";
 
 /**
  * Clé scopée par utilisateur. Pour les visiteurs anonymes, on utilise "anon"
- * (consentement device-level acceptable car aucun compte n'existe).
- * Dès qu'un utilisateur se connecte, son propre consentement est tracké séparément.
  */
 function consentKey(userId: string | null | undefined): string {
   return `${CONSENT_KEY_BASE}_${userId || "anon"}`;
@@ -36,11 +34,6 @@ interface ConsentBannerProps {
   userId?: string | null;
 }
 
-/**
- * Bandeau de consentement RGPD affiché avant la première analyse.
- * Mentionne explicitement le transfert vers OpenAI (USA) et lie vers la politique de confidentialité.
- * Accessible : role="dialog", aria-modal, focus piégé, fermeture par Escape.
- */
 export function ConsentBanner({ onAccept, onDecline, userId }: ConsentBannerProps) {
   const [visible, setVisible] = useState(false);
 
@@ -60,7 +53,7 @@ export function ConsentBanner({ onAccept, onDecline, userId }: ConsentBannerProp
     setTimeout(() => onDecline?.(), 200);
   };
 
-  // Accessibilité : Escape ferme = refuse (capture phase pour battre les autres handlers)
+  // Accessibilité : Escape ferme = refuse
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape" || e.key === "Esc") {
@@ -77,7 +70,7 @@ export function ConsentBanner({ onAccept, onDecline, userId }: ConsentBannerProp
     <AnimatePresence>
       {visible && (
         <motion.div
-          className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm px-4"
+          className="fixed inset-0 z-[250] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm px-4"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -93,52 +86,58 @@ export function ConsentBanner({ onAccept, onDecline, userId }: ConsentBannerProp
             exit={{ y: 80, opacity: 0 }}
             transition={{ type: "spring", damping: 24, stiffness: 220 }}
           >
+            {/* Header */}
             <div className="flex items-start gap-3 mb-4">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center shadow-lg flex-shrink-0">
-                <ShieldCheck className="w-6 h-6 text-white" />
+              <div className="w-11 h-11 rounded-xl bg-pink-50 flex items-center justify-center flex-shrink-0 border border-pink-100">
+                <ShieldCheck className="w-5 h-5 text-pink-600" />
               </div>
               <div className="flex-1">
-                <h2 id="consent-title" className="text-base font-black text-gray-900 leading-tight" data-testid="text-consent-title">
-                  Avant ton analyse — protégeons tes données
+                <h2 id="consent-title" className="text-sm font-black text-gray-950 leading-tight uppercase tracking-wide" data-testid="text-consent-title">
+                  Respect de ta vie privée
                 </h2>
-                <p className="text-xs text-gray-500 mt-0.5">RGPD & loi camerounaise n° 2010-012</p>
+                <p className="text-[10px] font-bold text-gray-400 mt-0.5 uppercase tracking-wider">Loi camerounaise n° 2010-012 & RGPD</p>
               </div>
             </div>
 
-            <div className="space-y-2.5 text-sm text-gray-700 mb-5">
+            {/* Contenu */}
+            <div className="space-y-3 text-xs text-gray-700 mb-5 leading-relaxed font-medium">
               <p>
-                Ta photo est analysée par une <strong>IA dermatologique</strong> pour produire ton diagnostic et tes recommandations.
+                Ta photo est analysée de manière strictement confidentielle par notre technologie de <strong>cartographie faciale GlowScan AI</strong> pour générer ton score et ta routine de soins.
               </p>
-              <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-50 border border-amber-100">
-                <Globe className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
-                <p className="text-xs text-amber-900">
-                  La photo est envoyée à <strong>OpenAI</strong> (États-Unis) pour l'analyse. Aucun humain ne la consulte. Elle n'est pas conservée au-delà du traitement.
+              
+              {/* Bloc de réassurance vert (confidentialité) à la place du bloc orange OpenAI */}
+              <div className="flex items-start gap-2.5 p-3 rounded-xl bg-emerald-50 border border-emerald-100/60">
+                <Lock className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0 mt-0.5" />
+                <p className="text-[11px] text-emerald-950 font-semibold leading-normal">
+                  Sécurisé & Anonyme : Aucun humain ne consulte ta photo. Elle est immédiatement supprimée après l'analyse et n'est jamais sauvegardée sans ton accord.
                 </p>
               </div>
-              <p className="text-xs text-gray-500">
-                Tu peux à tout moment exporter ou supprimer toutes tes données depuis ton profil.{" "}
+              
+              <p className="text-[11px] text-gray-400 font-normal">
+                Tu gardes le contrôle total. Tu peux exporter ou supprimer définitivement tes données à tout moment depuis ton profil.{" "}
                 <Link href="/confidentialite">
-                  <span className="text-pink-600 underline cursor-pointer" data-testid="link-privacy-policy">
-                    Lire la politique complète
+                  <span className="text-pink-600 font-bold underline cursor-pointer" data-testid="link-privacy-policy">
+                    Lire notre politique de confidentialité
                   </span>
                 </Link>
               </p>
             </div>
 
+            {/* Boutons CTA */}
             <div className="flex flex-col gap-2">
               <button
                 onClick={handleAccept}
-                className="w-full py-3 rounded-2xl bg-gradient-to-r from-pink-600 to-purple-600 text-white font-black text-sm shadow-lg active:scale-[0.98] transition-transform"
+                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-pink-600 to-purple-600 text-white font-black text-xs uppercase tracking-wider shadow-lg shadow-pink-600/10 active:scale-[0.98] transition-transform"
                 data-testid="button-consent-accept"
               >
-                J'accepte et je continue
+                J'accepte, lancer l'analyse
               </button>
               <button
                 onClick={handleDecline}
-                className="w-full py-2.5 text-sm font-bold text-gray-500 hover:text-gray-700"
+                className="w-full py-2 text-xs font-black uppercase tracking-wider text-gray-400 hover:text-gray-600 transition-colors"
                 data-testid="button-consent-decline"
               >
-                Non merci
+                Plus tard
               </button>
             </div>
           </motion.div>
