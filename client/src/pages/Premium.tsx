@@ -1,35 +1,33 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { Crown, Star, CheckCircle2, Clock, ArrowLeft, Phone, Sparkles, Shield, Zap, FileText, ChevronRight, Copy, Check } from "lucide-react";
-//import founderConf from "@assets/IMG_9168_1775960551739.png";
+import { Crown, CheckCircle2, Clock, ArrowLeft, Phone, Shield, Zap, ChevronRight, Copy, Check, ShieldAlert } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 const MTN_NUMBER = "674377959";
 const ORANGE_NUMBER = "690501392";
-const OWNER_WA = "237674377959";
 
 const FEATURES_FREE = [
-  { icon: "✅", text: "1 analyse IA par mois" },
-  { icon: "📊", text: "Métriques cutanées complètes" },
-  { icon: "🧠", text: "Analyse expert personnalisée" },
-  { icon: "📈", text: "Historique de tes scans" },
-  { icon: "🏆", text: "Défis entre amis" },
+  { text: "1 analyse faciale IA par mois" },
+  { text: "Métriques cutanées de base" },
+  { text: "Historique de tes scans sauvegardé" },
 ];
 
 const FEATURES_PREMIUM = [
-  { icon: "♾️", text: "Analyses illimitées chaque mois" },
-  { icon: "🧴", text: "Routine matin & soir personnalisée" },
-  { icon: "🛒", text: "Produits recommandés + commande directe" },
-  { icon: "📄", text: "Rapport PDF exportable" },
-  { icon: "⚡", text: "SkinBot IA illimité" },
-  { icon: "🎁", text: "+100 pts fidélité offerts à l'activation" },
+  { text: "Analyses IA illimitées 24h/24" },
+  { text: "Génération de routines d'ordonnance matin & soir" },
+  { text: "Recommandations de molécules et produits ciblés" },
+  { text: "Rapport d'évolution PDF exportable pour spécialiste" },
+  { text: "Accès illimité au modèle d'analyse SkinBot" },
+  { text: "Crédit de +100 points de fidélité immédiat" },
 ];
 
-type Step = "offer" | "payment" | "confirm" | "pending";
+type Step = "offer" | "payment" | "confirm";
 
 export default function Premium() {
   const [, setLocation] = useLocation();
@@ -43,11 +41,11 @@ export default function Premium() {
   const [loading, setLoading] = useState(false);
   const [requestData, setRequestData] = useState<{ reference: string; ownerWaUrl?: string } | null>(null);
   const [copied, setCopied] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<"weekly" | "monthly">("monthly");
-  const planPrice = selectedPlan === "weekly" ? 500 : 2000;
-  const planLabel = selectedPlan === "weekly" ? "500 FCFA / semaine" : "2 000 FCFA / mois";
 
-  // Vérifier si une demande est déjà en attente
+  const planPrice = 2000;
+  const planLabel = "2 000 FCFA — ACCÈS À VIE";
+
+  // Statut de la requête
   const { data: statusData } = useQuery<{ request: { reference: string; status: string } | null }>({
     queryKey: ["/api/premium/status"],
     enabled: !!user && !isPremium,
@@ -57,7 +55,11 @@ export default function Premium() {
 
   const handleSubmitRequest = async () => {
     if (!phone.trim() || phone.trim().length < 8) {
-      toast({ title: "Numéro invalide", description: "Saisis ton numéro de téléphone Mobile Money", variant: "destructive" });
+      toast({ 
+        title: "Numéro incorrect", 
+        description: "Veuillez entrer un numéro Mobile Money valide à 9 chiffres.", 
+        variant: "destructive" 
+      });
       return;
     }
     setLoading(true);
@@ -70,19 +72,21 @@ export default function Premium() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message);
+      
       setRequestData({ reference: data.request.reference, ownerWaUrl: data.ownerWaUrl });
-      // Événement Meta Pixel — initiation de paiement Premium
+
+      // Suivi Meta Pixel
       if (typeof (window as any).fbq === "function") {
         (window as any).fbq("track", "InitiateCheckout", {
-          value: 1000,
+          value: planPrice,
           currency: "XAF",
-          content_name: "GlowScan Premium",
-          content_ids: ["premium_monthly"],
+          content_name: "GlowScan Premium Lifetime",
+          content_ids: ["premium_lifetime"],
         });
       }
       setStep("confirm");
     } catch (err: any) {
-      toast({ title: "Erreur", description: err.message || "Réessaie dans un instant", variant: "destructive" });
+      toast({ title: "Échec de l'enregistrement", description: err.message || "Une erreur est survenue.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -94,267 +98,241 @@ export default function Premium() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // ── Si déjà premium ──
+  // ── ÉTAT : DÉJÀ PREMIUM ──
   if (isPremium) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-pink-50 to-pink-100 flex flex-col items-center justify-center p-6">
-        <div className="w-16 h-16 rounded-2xl bg-pink-100 border border-pink-200 flex items-center justify-center mb-4">
-          <Crown className="w-8 h-8 text-pink-500" />
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-white text-center">
+        <div className="w-14 h-14 rounded-2xl bg-blue-600/10 border border-blue-500/30 flex items-center justify-center mb-5 shadow-lg shadow-blue-500/10">
+          <Crown className="w-6 h-6 text-blue-400" />
         </div>
-        <h1 className="text-2xl font-black text-gray-900 mb-2">Tu es déjà Premium !</h1>
-        <p className="text-gray-500 text-sm text-center mb-6">Profite de toutes les fonctionnalités sans limite.</p>
-        <button onClick={() => setLocation("/")} className="bg-pink-500 text-white font-bold px-6 py-3 rounded-2xl">
-          Retour à l'accueil
-        </button>
+        <h1 className="text-xl font-black uppercase tracking-tight mb-2">Licence Active</h1>
+        <p className="text-slate-400 text-xs max-w-xs mx-auto mb-6">Tu disposes d'un accès à vie complet aux infrastructures et analyses de GlowScan.</p>
+        <Button onClick={() => setLocation("/")} variant="default" className="w-full max-w-xs">
+          Retour au Tableau de Bord
+        </Button>
       </div>
     );
   }
 
-  // ── Si demande déjà en attente ──
+  // ── ÉTAT : EN ATTENTE DE VÉRIFICATION ──
   if (statusData?.request?.status === "pending" && step === "offer") {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col">
-        <div className="p-4 flex items-center gap-3 bg-white border-b border-gray-100">
-          <button onClick={() => setLocation(-1 as any)} className="p-2 rounded-xl hover:bg-gray-100">
-            <ArrowLeft className="w-5 h-5 text-gray-600" />
+      <div className="min-h-screen bg-slate-50 flex flex-col">
+        <div className="p-4 flex items-center gap-3 bg-white border-b border-slate-200">
+          <button onClick={() => setLocation(-1 as any)} className="p-2 rounded-xl hover:bg-slate-100 transition-colors">
+            <ArrowLeft className="w-4 h-4 text-slate-700" />
           </button>
-          <h1 className="text-base font-black text-gray-900">Premium GlowScan</h1>
+          <span className="text-xs font-black uppercase tracking-widest text-slate-900">Vérification de licence</span>
         </div>
-        <div className="flex-1 flex flex-col items-center justify-center p-6">
-          <div className="w-16 h-16 rounded-2xl bg-pink-100 border border-pink-200 flex items-center justify-center mb-4">
-            <Clock className="w-8 h-8 text-pink-500" />
+        <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+          <div className="w-12 h-12 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center mb-4">
+            <Clock className="w-5 h-5 text-amber-600 animate-pulse" />
           </div>
-          <h2 className="text-xl font-black text-gray-900 mb-2 text-center">Demande en attente</h2>
-          <p className="text-sm text-gray-500 text-center mb-4">
-            Ta demande avec la référence <span className="font-black text-pink-600">{statusData.request.reference}</span> est en cours de vérification.
+          <h2 className="text-base font-black text-slate-900 uppercase tracking-tight mb-1">Transaction en cours</h2>
+          <p className="text-xs text-slate-500 max-w-xs mx-auto mb-4 leading-relaxed">
+            Ta demande avec la référence <span className="font-mono font-bold text-slate-900 bg-slate-100 px-1.5 py-0.5 rounded">{statusData.request.reference}</span> est en cours de validation par nos équipes.
           </p>
-          <p className="text-xs text-gray-400 text-center">L'activation se fait généralement dans les 24h après réception du paiement.</p>
+          <p className="text-[10px] font-medium text-slate-400 max-w-xs">L'activation définitive sur le réseau s'effectue généralement dans un délai inférieur à 24 heures.</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-100 px-4 py-3 flex items-center gap-3">
-        <button onClick={() => step === "offer" ? setLocation(-1 as any) : setStep("offer")} className="p-2 rounded-xl hover:bg-gray-100">
-          <ArrowLeft className="w-5 h-5 text-gray-600" />
+    <div className="min-h-screen bg-slate-50 flex flex-col">
+      {/* Header Clinique */}
+      <div className="bg-white border-b border-slate-200/60 px-4 py-3.5 flex items-center gap-3 sticky top-0 z-10">
+        <button onClick={() => step === "offer" ? setLocation(-1 as any) : setStep("offer")} className="p-2 rounded-xl hover:bg-slate-50 transition-all border border-transparent active:border-slate-200">
+          <ArrowLeft className="w-4 h-4 text-slate-700" />
         </button>
-        <h1 className="text-base font-black text-gray-900">Premium GlowScan</h1>
+        <span className="text-xs font-black uppercase tracking-widest text-slate-900">GlowScan Architecture</span>
       </div>
 
-      <div className="flex-1 overflow-y-auto pb-8">
+      <div className="flex-1 overflow-y-auto pb-12">
         <AnimatePresence mode="wait">
 
-          {/* ══════════ ÉTAPE 1 : OFFRE ══════════ */}
+          {/* ══════════ ÉTAPE 1 : L'OFFRE UNIQUE ══════════ */}
           {step === "offer" && (
-            <motion.div key="offer" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="p-4 space-y-4">
+            <motion.div key="offer" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="p-4 space-y-5 max-w-md mx-auto w-full">
 
-              {/* Hero */}
-              <div className="relative rounded-3xl overflow-hidden" style={{ background: "linear-gradient(135deg, #92400e 0%, #b8860b 40%, #d4a017 70%, #c9a84c 100%)" }}>
-                <div className="absolute inset-0 opacity-20" style={{ backgroundImage: "radial-gradient(circle at 80% 20%, white 0%, transparent 50%)" }} />
+              {/* Hero Card - Black Tech & Deep Blue Accent */}
+              <div className="relative rounded-2xl overflow-hidden border border-slate-900 bg-slate-950 text-white shadow-xl">
+                <div className="absolute top-0 right-0 w-48 h-48 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
                 <div className="relative p-6 text-center">
-                  <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center mx-auto mb-3 border border-white/30">
-                    <Crown className="w-7 h-7 text-white" />
-                  </div>
-                  <h2 className="text-2xl font-black text-white mb-1" style={{ fontFamily: "'Outfit', sans-serif" }}>
-                    GlowScan Premium
+                  <Badge className="bg-blue-600 hover:bg-blue-600 text-white border-0 text-[9px] font-black tracking-widest py-1 mb-4 uppercase">
+                    Offre de lancement
+                  </Badge>
+                  <h2 className="text-xl font-black uppercase tracking-tight mb-1">
+                    Mise à niveau à vie
                   </h2>
-                  <p className="text-white/80 text-sm mb-4">Prends soin de ta peau sans limite</p>
-                  {/* Sélecteur de plan */}
-                  <div className="flex gap-2 justify-center mb-3">
-                    {([{ key: "weekly", label: "500 FCFA / sem." }, { key: "monthly", label: "2 000 FCFA / mois" }] as const).map(p => (
-                      <button key={p.key} onClick={() => setSelectedPlan(p.key)}
-                        className={`px-4 py-2 rounded-xl text-xs font-black transition-all border ${selectedPlan === p.key ? "bg-white text-pink-700 border-white" : "bg-white/10 text-white/70 border-white/20"}`}>
-                        {p.label}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="bg-white/20 backdrop-blur rounded-2xl px-6 py-3 inline-block border border-white/30">
-                    <p className="text-3xl font-black text-white" style={{ fontFamily: "'Outfit', sans-serif" }}>{planLabel}</p>
-                    <p className="text-white/70 text-xs">annulable à tout moment</p>
+                  <p className="text-slate-400 text-xs mb-6">Débloque la puissance maximale de l'analyse cutanée faciale.</p>
+                  
+                  <div className="bg-white/[0.03] border border-white/10 rounded-xl px-5 py-3.5 inline-block w-full">
+                    <p className="text-2xl font-black tracking-tight text-white">{planLabel}</p>
+                    <p className="text-slate-500 text-[10px] font-medium mt-0.5">Aucun abonnement hidden · Paiement unique</p>
                   </div>
                 </div>
               </div>
 
-              {/* Comparaison */}
-              <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100">
-                <p className="text-xs font-black uppercase tracking-widest text-gray-400 mb-4">Ce que tu obtiens</p>
-
-                <div className="mb-4">
-                  <p className="text-[11px] font-black uppercase tracking-wider text-pink-600 mb-2">✓ Gratuit — déjà inclus</p>
-                  <div className="space-y-1.5">
+              {/* Matrice des fonctionnalités */}
+              <div className="bg-white rounded-2xl p-5 border border-slate-200/60 shadow-xs space-y-4">
+                <div>
+                  <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 block mb-2.5">Accès Standard (Limité)</span>
+                  <div className="space-y-2">
                     {FEATURES_FREE.map(f => (
-                      <div key={f.text} className="flex items-center gap-2 text-sm text-gray-500">
-                        <span className="text-sm">{f.icon}</span>
+                      <div key={f.text} className="flex items-start gap-2.5 text-xs text-slate-500 font-medium">
+                        <span className="text-slate-300 mt-0.5">✕</span>
                         <span>{f.text}</span>
                       </div>
                     ))}
                   </div>
                 </div>
 
-                <div className="border-t border-dashed border-pink-200 pt-4">
-                  <p className="text-[11px] font-black uppercase tracking-wider text-pink-600 mb-2">⭐ Premium — nouvelles fonctionnalités</p>
-                  <div className="space-y-2">
+                <div className="border-t border-slate-100 pt-4">
+                  <span className="text-[9px] font-black uppercase tracking-widest text-blue-600 block mb-2.5">Infrastructures Débloquées Premium</span>
+                  <div className="space-y-2.5">
                     {FEATURES_PREMIUM.map(f => (
-                      <div key={f.text} className="flex items-center gap-2">
-                        <span className="text-sm">{f.icon}</span>
-                        <span className="text-sm font-semibold text-gray-800">{f.text}</span>
+                      <div key={f.text} className="flex items-start gap-2.5 text-xs font-semibold text-slate-800">
+                        <CheckCircle2 className="w-4 h-4 text-slate-950 shrink-0 mt-0.5" />
+                        <span>{f.text}</span>
                       </div>
                     ))}
                   </div>
                 </div>
               </div>
 
-              {/* Mot du fondateur */}
-              <div className="bg-white rounded-3xl overflow-hidden shadow-sm border border-gray-100">
-                <div className="relative h-52 overflow-hidden">
-                  <img src={founderConf} alt="Démise Essawe" className="w-full h-full object-cover object-top" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                  <div className="absolute bottom-3 left-4">
-                    <p className="text-white text-sm font-black">Démise Essawe</p>
-                    <p className="text-white/70 text-[10px]">Fondateur de GlowScan · Douala</p>
-                  </div>
+              {/* Section d'autorité technique */}
+              <div className="bg-white rounded-2xl overflow-hidden border border-slate-200/60 shadow-xs p-5 flex items-start gap-4">
+                <div className="w-10 h-10 rounded-xl bg-slate-950 flex items-center justify-center shrink-0 text-white font-black text-sm">
+                  DE
                 </div>
-                <div className="p-4">
-                  <p className="text-[10px] font-black uppercase tracking-wider text-pink-600 mb-2">👤 Mot du fondateur</p>
-                  <p className="text-sm text-gray-600 italic leading-relaxed">
-                    "J'ai créé GlowScan parce que les peaux africaines méritaient enfin une IA qui les comprend vraiment. Premium, c'est l'outil complet pour prendre soin de toi chaque jour, sans limite."
+                <div>
+                  <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 block">Note d'ingénierie</span>
+                  <p className="text-xs font-semibold text-slate-800 leading-relaxed mt-1">
+                    "Nous développons des modèles algorithmiques entraînés spécifiquement sur les variations mélaniques et climatiques d'Afrique centrale. L'accès à vie nous permet de financer la puissance de calcul nécessaire sans imposer de rentes récurrentes à notre communauté."
                   </p>
+                  <span className="text-[10px] font-bold text-slate-400 block mt-1.5">— Demise Essawe, Fondateur GlowScan</span>
                 </div>
               </div>
 
               {/* Garanties */}
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 {[
-                  { icon: <Shield className="w-4 h-4 text-pink-500" />, label: "Paiement sécurisé" },
-                  { icon: <Zap className="w-4 h-4 text-pink-500" />, label: "Activation rapide" },
-                  { icon: <CheckCircle2 className="w-4 h-4 text-emerald-500" />, label: "Annulable" },
+                  { icon: <Shield className="w-3.5 h-3.5 text-slate-900" />, label: "Protocole MOMO/OM Chiffré" },
+                  { icon: <Zap className="w-3.5 h-3.5 text-slate-900" />, label: "Activation Serveur Rapide" },
                 ].map(({ icon, label }) => (
-                  <div key={label} className="bg-white rounded-2xl p-3 text-center shadow-sm border border-gray-100">
-                    <div className="flex justify-center mb-1">{icon}</div>
-                    <p className="text-[10px] font-bold text-gray-600 leading-tight">{label}</p>
+                  <div key={label} className="bg-white rounded-xl p-3 border border-slate-200/60 flex items-center gap-2.5 shadow-2xs">
+                    {icon}
+                    <p className="text-[10px] font-bold text-slate-700 leading-tight">{label}</p>
                   </div>
                 ))}
               </div>
 
-              {/* CTA */}
+              {/* Action principal */}
               {!user ? (
-                <a href="/auth" className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-sm text-white shadow-lg active:scale-[0.98] transition-all"
-                  style={{ background: "linear-gradient(135deg, #b8860b 0%, #d4a017 100%)", boxShadow: "0 8px 24px rgba(184,134,11,0.35)", fontFamily: "'Outfit', sans-serif" }}>
-                  <Crown className="w-5 h-5" />
-                  Créer mon compte pour continuer
-                </a>
+                <Button onClick={() => setLocation("/auth")} variant="premium" className="w-full py-6 text-xs uppercase tracking-widest font-black">
+                  Créer un compte pour s'enregistrer
+                </Button>
               ) : (
-                <button
-                  onClick={() => setStep("payment")}
-                  data-testid="button-go-to-payment"
-                  className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-sm text-white shadow-lg active:scale-[0.98] transition-all"
-                  style={{ background: "linear-gradient(135deg, #b8860b 0%, #d4a017 100%)", boxShadow: "0 8px 24px rgba(184,134,11,0.35)", fontFamily: "'Outfit', sans-serif" }}
-                >
-                  <Crown className="w-5 h-5" />
-                  Passer à Premium — {planLabel}
-                  <ChevronRight className="w-4 h-4" />
-                </button>
+                <Button onClick={() => setStep("payment")} variant="premium" className="w-full py-6 text-xs uppercase tracking-widest font-black group">
+                  Obtenir mon accès permanent
+                  <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-0.5 transition-transform" />
+                </Button>
               )}
             </motion.div>
           )}
 
-          {/* ══════════ ÉTAPE 2 : PAIEMENT ══════════ */}
+          {/* ══════════ ÉTAPE 2 : LE PAIEMENT LOCAL ══════════ */}
           {step === "payment" && (
-            <motion.div key="payment" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="p-4 space-y-4">
+            <motion.div key="payment" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="p-4 max-w-md mx-auto w-full">
+              <div className="bg-white rounded-2xl p-5 border border-slate-200/60 shadow-xs space-y-5">
+                <div>
+                  <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">Passerelle de dépôt manuel</h2>
+                  <p className="text-xs text-slate-400 mt-0.5">Traitement sécurisé via Mobile Money régional.</p>
+                </div>
 
-              <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100">
-                <h2 className="text-base font-black text-gray-900 mb-1">Choisis ton mode de paiement</h2>
-                <p className="text-xs text-gray-400 mb-5">Mobile Money — paiement local, sécurisé</p>
-
-                {/* Méthode */}
-                <div className="grid grid-cols-2 gap-3 mb-5">
-                  {([
-                    { id: "mtn_momo", label: "MTN MoMo", color: "bg-yellow-400", emoji: "🟡" },
-                    { id: "orange_money", label: "Orange Money", color: "bg-orange-400", emoji: "🟠" },
+                {/* Sélecteur d'opérateur */}
+                <div className="grid grid-cols-2 gap-3">
+                  {( [
+                    { id: "mtn_momo", label: "MTN MoMo", badge: "🟡" },
+                    { id: "orange_money", label: "Orange Money", badge: "🟠" },
                   ] as const).map(m => (
                     <button
                       key={m.id}
                       onClick={() => setMethod(m.id)}
-                      data-testid={`button-method-${m.id}`}
-                      className={`flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all ${
-                        method === m.id ? "border-pink-500 bg-pink-50" : "border-gray-200 bg-gray-50"
+                      className={`flex flex-col items-center gap-1.5 p-4 rounded-xl border-2 text-center transition-all ${
+                        method === m.id ? "border-slate-950 bg-slate-50" : "border-slate-200 bg-white"
                       }`}
                     >
-                      <span className="text-2xl">{m.emoji}</span>
-                      <span className="text-xs font-black text-gray-800">{m.label}</span>
-                      {method === m.id && <CheckCircle2 className="w-4 h-4 text-pink-500" />}
+                      <span className="text-lg">{m.badge}</span>
+                      <span className="text-xs font-black tracking-tight text-slate-900">{m.label}</span>
+                      {method === m.id && <CheckCircle2 className="w-3.5 h-3.5 text-slate-950 mt-0.5" />}
                     </button>
                   ))}
                 </div>
 
-                {/* Instructions de paiement */}
-                <div className="bg-pink-50 rounded-2xl p-4 border border-pink-200 mb-5">
-                  <p className="text-xs font-black text-pink-700 mb-2">
-                    📲 Envoie exactement <span className="text-pink-600">{planPrice} FCFA</span> au :
+                {/* Encadré des coordonnées de transfert */}
+                <div className="bg-slate-950 text-white rounded-xl p-4 space-y-2">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    Instruction d'envoi requis :
                   </p>
-                  <div className="flex items-center justify-between bg-white rounded-xl px-4 py-3 border border-pink-200">
-                    <span className="text-lg font-black text-gray-900" style={{ fontFamily: "'Outfit', sans-serif" }}>
+                  <p className="text-xs font-semibold text-slate-200">
+                    Effectue un transfert de exactement <span className="text-white font-black">{planPrice} FCFA</span> au numéro ci-dessous :
+                  </p>
+                  <div className="flex items-center justify-between bg-white/[0.04] border border-white/10 rounded-lg px-3.5 py-2.5 font-mono">
+                    <span className="text-base font-black tracking-wider text-white">
                       {paymentNumber}
                     </span>
-                    <span className="text-xs font-bold text-pink-600 bg-pink-100 px-2 py-1 rounded-lg">
-                      {method === "mtn_momo" ? "MTN MoMo" : "Orange Money"}
+                    <span className="text-[9px] font-black bg-white/10 px-2 py-0.5 rounded uppercase text-slate-300">
+                      {method === "mtn_momo" ? "MTN" : "Orange"}
                     </span>
                   </div>
-                  <p className="text-[10px] text-pink-700 mt-2">
-                    ⚠️ Ne mets aucun message dans le paiement Mobile Money — saisis juste ton numéro ci-dessous.
+                  <p className="text-[9px] text-slate-400 leading-normal pt-1">
+                    ⚠️ Note : N'ajoute aucun motif textuel lors de l'envoi pour accélérer le rapprochement automatique. Renseigne ton numéro de transaction ci-dessous après validation.
                   </p>
                 </div>
 
-                {/* Numéro de paiement */}
-                <div className="mb-5">
-                  <label className="text-xs font-black text-gray-700 mb-2 block">
-                    Ton numéro {method === "mtn_momo" ? "MTN" : "Orange"} utilisé pour le paiement
+                {/* Saisie du numéro émetteur */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block">
+                    Numéro de Téléphone Émetteur (Celui qui a payé)
                   </label>
-                  <div className="flex items-center gap-2 border-2 border-gray-200 rounded-2xl px-4 py-3 focus-within:border-pink-500 transition-colors">
-                    <Phone className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                  <div className="flex items-center gap-2 border border-slate-200 rounded-xl px-3.5 py-3 bg-slate-50/50 focus-within:bg-white focus-within:border-slate-950 transition-all">
+                    <Phone className="w-4 h-4 text-slate-400 flex-shrink-0" />
                     <input
                       type="tel"
-                      placeholder="ex: 675 000 000"
+                      placeholder="Ex: 67X XX XX XX"
                       value={phone}
                       onChange={e => setPhone(e.target.value)}
-                      data-testid="input-payment-phone"
-                      className="flex-1 text-sm font-bold text-gray-900 outline-none bg-transparent placeholder-gray-300"
+                      className="flex-1 text-xs font-bold text-slate-900 outline-none bg-transparent placeholder-slate-300"
                     />
                   </div>
-                  <p className="text-[10px] text-gray-400 mt-1">Ce numéro nous permet de vérifier ton paiement</p>
                 </div>
 
-                <button
+                <Button
                   onClick={handleSubmitRequest}
                   disabled={loading || !phone.trim()}
-                  data-testid="button-submit-payment"
-                  className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-sm text-white active:scale-[0.98] transition-all disabled:opacity-50"
-                  style={{ background: "linear-gradient(135deg, #b8860b 0%, #d4a017 100%)", boxShadow: "0 8px 24px rgba(184,134,11,0.35)", fontFamily: "'Outfit', sans-serif" }}
+                  variant="premium"
+                  className="w-full py-5 text-xs font-black uppercase tracking-widest"
                 >
                   {loading ? (
                     <span className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
                   ) : (
-                    <>
-                      <CheckCircle2 className="w-4 h-4" />
-                      J'ai effectué le paiement
-                    </>
+                    "Confirmer mon transfert"
                   )}
-                </button>
+                </Button>
               </div>
             </motion.div>
           )}
 
-          {/* ══════════ ÉTAPE 3 : CONFIRMATION ══════════ */}
+          {/* ══════════ ÉTAPE 3 : CONFIRMATION ET RÉFÉRENCE ══════════ */}
           {step === "confirm" && requestData && (() => {
-            // Événement Meta Pixel — souscription Premium déclarée
+            // Déclenchement Pixel Achat Réussi
             if (typeof (window as any).fbq === "function" && !sessionStorage.getItem("gs_pixel_purchase_fired")) {
               (window as any).fbq("track", "Purchase", {
-                value: 1000,
+                value: planPrice,
                 currency: "XAF",
-                contents: [{ id: "1000", quantity: 1 }],
+                contents: [{ id: "premium_lifetime", quantity: 1 }],
                 content_ids: "XAF",
               });
               sessionStorage.setItem("gs_pixel_purchase_fired", "1");
@@ -362,62 +340,63 @@ export default function Premium() {
             return null;
           })()}
           {step === "confirm" && requestData && (
-            <motion.div key="confirm" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="p-4 space-y-4">
-
-              <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 text-center">
-                <div className="w-16 h-16 rounded-2xl bg-emerald-100 border border-emerald-200 flex items-center justify-center mx-auto mb-4">
-                  <CheckCircle2 className="w-8 h-8 text-emerald-500" />
+            <motion.div key="confirm" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="p-4 max-w-md mx-auto w-full space-y-4">
+              <div className="bg-white rounded-2xl p-6 border border-slate-200/60 shadow-xs text-center space-y-4">
+                <div className="w-12 h-12 rounded-xl bg-slate-950 flex items-center justify-center mx-auto shadow-md">
+                  <CheckCircle2 className="w-5 h-5 text-white" />
                 </div>
-                <h2 className="text-xl font-black text-gray-900 mb-2">Demande enregistrée !</h2>
-                <p className="text-sm text-gray-500 mb-5">
-                  Ton paiement est en cours de vérification. L'activation se fait généralement dans les <span className="font-bold text-gray-700">24 heures</span>.
-                </p>
+                
+                <div>
+                  <h2 className="text-base font-black text-slate-900 uppercase tracking-tight">Demande Prise en Charge</h2>
+                  <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                    Les logs de paiement ont été transmis au registre réseau. Validation finale sous 24 heures maximum.
+                  </p>
+                </div>
 
-                {/* Référence */}
-                <div className="bg-pink-50 rounded-2xl p-4 border border-pink-200 mb-5">
-                  <p className="text-xs text-pink-700 font-bold mb-2">Ta référence de paiement</p>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xl font-black text-pink-700" style={{ fontFamily: "'Outfit', sans-serif" }}>
+                {/* Affichage Référence */}
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-center space-y-1 relative group">
+                  <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 block">Référence Système Unique</span>
+                  <div className="flex items-center justify-center gap-3">
+                    <span className="text-lg font-mono font-black text-slate-900 tracking-wider">
                       {requestData.reference}
                     </span>
                     <button
                       onClick={() => copyRef(requestData.reference)}
-                      className="p-2 rounded-xl bg-pink-100 border border-pink-200 active:scale-95 transition-all"
+                      className="p-1.5 rounded-lg border border-slate-200 bg-white active:scale-90 transition-all hover:bg-slate-50"
                     >
-                      {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4 text-pink-600" />}
+                      {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-slate-500" />}
                     </button>
                   </div>
-                  <p className="text-[10px] text-pink-600 mt-1">Garde cette référence en cas de besoin</p>
                 </div>
 
-                {/* Envoyer preuve sur WhatsApp */}
+                {/* Routage WhatsApp Externe Direct */}
                 {requestData.ownerWaUrl && (
                   <a
                     href={requestData.ownerWaUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    data-testid="button-confirm-whatsapp"
-                    className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-sm text-white mb-3 active:scale-[0.98] transition-all"
-                    style={{ background: "#25D366", boxShadow: "0 6px 20px rgba(37,211,102,0.35)", fontFamily: "'Outfit', sans-serif" }}
+                    className="w-full inline-flex items-center justify-center gap-2 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-widest rounded-xl shadow-md transition-all active:scale-[0.98]"
                   >
-                    <span className="text-lg">💬</span>
-                    Envoyer la confirmation WhatsApp
+                    💬 Envoyer le reçu sur WhatsApp
                   </a>
                 )}
 
-                <button onClick={() => setLocation("/")} className="w-full py-3 rounded-2xl text-sm font-bold text-gray-500 bg-gray-100 active:scale-[0.98] transition-all">
-                  Retour à l'accueil
-                </button>
+                <Button onClick={() => setLocation("/")} variant="outline" className="w-full">
+                  Retour à l'application
+                </Button>
               </div>
 
-              <div className="bg-pink-50 rounded-2xl p-4 border border-pink-100">
-                <p className="text-xs text-pink-700 font-bold mb-1">📌 Que se passe-t-il ensuite ?</p>
-                <ol className="text-xs text-pink-600 space-y-1 list-decimal list-inside">
-                  <li>Notre équipe vérifie ton paiement Mobile Money</li>
-                  <li>Ton compte est activé en Premium sous 24h</li>
-                  <li>Tu reçois +100 pts fidélité offerts</li>
-                  <li>Tu accèdes immédiatement à ta routine et tes produits</li>
-                </ol>
+              {/* Terminal Logs d'activation */}
+              <div className="bg-white rounded-2xl p-4 border border-slate-200/60 space-y-2">
+                <div className="flex items-center gap-2 text-slate-400">
+                  <ShieldAlert className="w-3.5 h-3.5" />
+                  <span className="text-[9px] font-black uppercase tracking-widest">Protocole de validation</span>
+                </div>
+                <ul className="text-[11px] font-medium text-slate-600 space-y-1.5 list-disc list-inside">
+                  <li>Vérification du hachage de la transaction Mobile Money.</li>
+                  <li>Déploiement des accès illimités sur ton ID utilisateur.</li>
+                  <li>Crédit automatique des points de fidélité au premier scan.</li>
+                </ul>
               </div>
             </motion.div>
           )}
