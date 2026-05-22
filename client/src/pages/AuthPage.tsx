@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { Eye, EyeOff, Mail, Lock, User, ArrowLeft, ArrowRight, Phone, Check } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, User, ArrowLeft, ArrowRight, Phone, Check, ShieldAlert } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { Button } from "@/components/ui/button";
 
 type Mode = "login" | "register";
 
@@ -22,7 +23,7 @@ export default function AuthPage() {
   const [step, setStep] = useState(1);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [contact, setContact] = useState(""); // email OU téléphone
+  const [contact, setContact] = useState(""); 
   const [regPwd, setRegPwd] = useState("");
 
   // ── LOGIN ──────────────────────────────────────────────
@@ -38,8 +39,8 @@ export default function AuthPage() {
       setLocation("/");
     } catch (err: any) {
       toast({
-        title: "Connexion impossible",
-        description: parseError(err) || "Email ou mot de passe incorrect",
+        title: "Identification impossible",
+        description: parseError(err) || "Email ou mot de passe non répertorié.",
         variant: "destructive",
       });
     } finally {
@@ -50,11 +51,11 @@ export default function AuthPage() {
   // ── REGISTER (3 étapes) ────────────────────────────────
   function nextStep() {
     if (step === 1 && !firstName.trim()) {
-      toast({ title: "Prénom requis", variant: "destructive" });
+      toast({ title: "Identification requise", description: "Le prénom est obligatoire.", variant: "destructive" });
       return;
     }
     if (step === 2 && !contact.trim()) {
-      toast({ title: "Email ou téléphone requis", variant: "destructive" });
+      toast({ title: "Canal requis", description: "Veuillez fournir un email ou un numéro valide.", variant: "destructive" });
       return;
     }
     setStep((s) => s + 1);
@@ -68,15 +69,14 @@ export default function AuthPage() {
     e.preventDefault();
     if (regPwd.length < 6) {
       toast({
-        title: "Mot de passe trop court",
-        description: "6 caractères minimum",
+        title: "Sécurité insuffisante",
+        description: "Le mot de passe doit contenir 6 caractères minimum.",
         variant: "destructive",
       });
       return;
     }
     setLoading(true);
     try {
-      // Détecter email vs téléphone
       const trimmed = contact.trim();
       const isEmail = trimmed.includes("@");
       const emailToSend = isEmail
@@ -95,16 +95,15 @@ export default function AuthPage() {
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
 
       toast({
-        title: "Compte créé ✨",
-        description: "Bienvenue sur GlowScan",
+        title: "Compte sécurisé",
+        description: "Initialisation du profil d'analyse effectuée.",
       });
 
-      // Redirection vers l'accueil — l'onboarding s'y déclenche automatiquement
       setLocation("/");
     } catch (err: any) {
       toast({
-        title: "Inscription impossible",
-        description: parseError(err) || "Erreur lors de l'inscription",
+        title: "Inscription refusée",
+        description: parseError(err) || "Une erreur est survenue lors de l'enregistrement.",
         variant: "destructive",
       });
     } finally {
@@ -112,75 +111,72 @@ export default function AuthPage() {
     }
   }
 
-  // ── UI ─────────────────────────────────────────────────
   return (
-    <div className="min-h-screen w-full bg-black text-white flex flex-col px-6 py-10 relative overflow-hidden">
-      {/* Halo subtil */}
+    <div className="min-h-screen w-full bg-slate-950 text-white flex flex-col px-6 py-10 relative overflow-hidden">
+      {/* Halo laser focalisé */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
           background:
-            "radial-gradient(ellipse at top, rgba(255,255,255,0.05) 0%, rgba(0,0,0,0) 60%)",
+            "radial-gradient(circle at top center, rgba(37, 99, 235, 0.06) 0%, rgba(0,0,0,0) 70%)",
         }}
       />
 
-      {/* Header */}
-      <div className="flex items-center justify-between relative z-10 mb-8">
+      {/* Header Médical Épuré */}
+      <div className="flex items-center justify-between relative z-10 mb-8 max-w-sm mx-auto w-full">
         <button
           onClick={() => (mode === "register" && step > 1 ? prevStep() : setLocation("/"))}
-          className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center active:scale-90 transition-all"
+          className="w-10 h-10 rounded-xl border border-slate-800 bg-slate-900/50 flex items-center justify-center active:scale-95 transition-all text-slate-400 hover:text-white"
           data-testid="button-back-from-auth"
         >
-          <ArrowLeft className="w-4 h-4 text-white" />
+          <ArrowLeft className="w-4 h-4" />
         </button>
-        <div className="bg-white rounded-lg px-2 py-1 shadow-sm" data-testid="logo-glowscan">
+        
+        <div className="bg-white rounded-xl p-2 border border-slate-800 shadow-xl" data-testid="logo-glowscan">
           <img
             src="/logo-glowscan.jpeg"
-            alt="GlowScan"
-            className="h-8 w-auto object-contain"
+            alt="GlowScan Core"
+            className="h-7 w-auto object-contain"
           />
         </div>
         <div className="w-10 h-10" />
       </div>
 
-      {/* Indicateur d'étape (register seulement) */}
+      {/* Indicateur de Progression Clinique */}
       {mode === "register" && (
-        <div className="flex justify-center gap-2 mb-10 relative z-10">
+        <div className="flex justify-center gap-1.5 mb-8 relative z-10">
           {[1, 2, 3].map((n) => (
             <div
               key={n}
-              className={`h-1 rounded-full transition-all duration-500 ${
-                n === step ? "w-10 bg-white" : n < step ? "w-6 bg-white/60" : "w-6 bg-white/15"
+              className={`h-0.5 rounded-full transition-all duration-500 ${
+                n === step ? "w-8 bg-blue-500" : n < step ? "w-5 bg-slate-500" : "w-5 bg-slate-800"
               }`}
             />
           ))}
         </div>
       )}
 
-      {/* ────── LOGIN ────── */}
+      {/* ────── OPTION A : FORMULAIRE DE CONNEXION ────── */}
       {mode === "login" && (
         <motion.form
           key="login"
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
+          transition={{ duration: 0.4 }}
           onSubmit={handleLogin}
-          className="flex-1 flex flex-col justify-center relative z-10 space-y-6 max-w-sm mx-auto w-full"
+          className="flex-1 flex flex-col justify-center relative z-10 space-y-5 max-w-sm mx-auto w-full"
         >
           <div className="text-center mb-2">
-            <h1
-              className="text-3xl font-light tracking-wide mb-2"
-              style={{ fontFamily: "'Outfit', sans-serif" }}
-            >
-              Content de te revoir
+            <h1 className="text-2xl font-black uppercase tracking-tight text-white font-display">
+              Identification Core
             </h1>
-            <p className="text-white/60 text-sm">Connecte-toi pour continuer</p>
+            <p className="text-slate-400 text-xs font-medium mt-1">Connectez-vous pour charger votre historique de diagnostics.</p>
           </div>
 
           <Field
             icon={<Mail className="w-4 h-4" />}
             type="email"
-            placeholder="Adresse email"
+            placeholder="Adresse e-mail de session"
             value={loginEmail}
             onChange={setLoginEmail}
             testId="input-login-email"
@@ -193,57 +189,55 @@ export default function AuthPage() {
             show={showPwd}
             onToggle={() => setShowPwd((v) => !v)}
             testId="input-login-password"
-            placeholder="Mot de passe"
+            placeholder="Clé de sécurité (Mot de passe)"
           />
 
-          <button
+          <Button
             type="submit"
             disabled={loading}
             data-testid="button-login-submit"
-            className="w-full py-4 rounded-lg glow-bg-pink text-white font-bold text-base tracking-wide active:scale-[0.98] transition-transform disabled:opacity-50 mt-4 shadow-lg shadow-pink-500/30"
+            variant="premium"
+            className="w-full py-6 text-xs uppercase tracking-widest font-black mt-2"
           >
-            {loading ? "Connexion..." : "Se connecter"}
-          </button>
+            {loading ? "Vérification..." : "Ouvrir la session"}
+          </Button>
 
-          <p className="text-center text-sm text-white/60 pt-4">
-            Je n'ai pas de compte —{" "}
+          <p className="text-center text-xs text-slate-400 font-medium pt-2">
+            Première analyse ?{" "}
             <button
               type="button"
               onClick={() => {
                 setMode("register");
                 setStep(1);
               }}
-              className="glow-text-pink font-bold underline-offset-4 hover:underline"
+              className="text-blue-400 font-bold hover:underline"
               data-testid="button-switch-to-register"
             >
-              Créer mon compte
+              Créer un profil sécurisé
             </button>
           </p>
         </motion.form>
       )}
 
-      {/* ────── REGISTER (3 étapes) ────── */}
+      {/* ────── OPTION B : FORMULAIRE D'INSCRIPTION (PROGRESSIF) ────── */}
       {mode === "register" && (
         <div className="flex-1 flex flex-col justify-center relative z-10 max-w-sm mx-auto w-full">
           <AnimatePresence mode="wait">
-            {/* Étape 1 — Prénom + Nom */}
+            {/* Étape 1 — Identité civile */}
             {step === 1 && (
               <motion.div
                 key="step1"
-                initial={{ opacity: 0, x: 30 }}
+                initial={{ opacity: 0, x: 16 }}
                 animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -30 }}
-                transition={{ duration: 0.35 }}
-                className="space-y-6"
+                exit={{ opacity: 0, x: -16 }}
+                transition={{ duration: 0.25 }}
+                className="space-y-5"
               >
                 <div className="text-center mb-2">
-                  <h1
-                    className="text-3xl font-light tracking-wide mb-2"
-                    style={{ fontFamily: "'Outfit', sans-serif" }}
-                  >
-                    Comment t'appelles-tu ?
+                  <h1 className="text-2xl font-black uppercase tracking-tight text-white font-display">
+                    Enregistrement
                   </h1>
-                  <p className="text-white/60 text-sm">Dis-nous ton nom et prénom</p>
+                  <p className="text-slate-400 text-xs font-medium mt-1">Saisissez les informations de dossier d'analyse.</p>
                 </div>
 
                 <Field
@@ -258,81 +252,69 @@ export default function AuthPage() {
                 <Field
                   icon={<User className="w-4 h-4" />}
                   type="text"
-                  placeholder="Nom (optionnel)"
+                  placeholder="Nom de famille (Optionnel)"
                   value={lastName}
                   onChange={setLastName}
                   testId="input-lastname"
                 />
 
-                <PrimaryButton onClick={nextStep} testId="button-step1-next">
-                  Suivant <ArrowRight className="w-4 h-4 ml-1 inline" />
-                </PrimaryButton>
+                <Button onClick={nextStep} variant="premium" className="w-full py-6 text-xs uppercase tracking-widest font-black" data-testid="button-step1-next">
+                  Continuer <ArrowRight className="w-3.5 h-3.5 ml-1 inline" />
+                </Button>
               </motion.div>
             )}
 
-            {/* Étape 2 — Email ou téléphone */}
+            {/* Étape 2 — Canal de contact */}
             {step === 2 && (
               <motion.div
                 key="step2"
-                initial={{ opacity: 0, x: 30 }}
+                initial={{ opacity: 0, x: 16 }}
                 animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -30 }}
-                transition={{ duration: 0.35 }}
-                className="space-y-6"
+                exit={{ opacity: 0, x: -16 }}
+                transition={{ duration: 0.25 }}
+                className="space-y-5"
               >
                 <div className="text-center mb-2">
-                  <h1
-                    className="text-3xl font-light tracking-wide mb-2"
-                    style={{ fontFamily: "'Outfit', sans-serif" }}
-                  >
-                    Comment te contacter ?
+                  <h1 className="text-2xl font-black uppercase tracking-tight text-white font-display">
+                    Point de Contact
                   </h1>
-                  <p className="text-white/60 text-sm">
-                    Email ou numéro de téléphone
+                  <p className="text-slate-400 text-xs font-medium mt-1">
+                    Spécifiez vos coordonnées d'accès pour les notifications de routine.
                   </p>
                 </div>
 
                 <Field
-                  icon={
-                    contact.includes("@") ? (
-                      <Mail className="w-4 h-4" />
-                    ) : (
-                      <Phone className="w-4 h-4" />
-                    )
-                  }
+                  icon={contact.includes("@") ? <Mail className="w-4 h-4" /> : <Phone className="w-4 h-4" />}
                   type="text"
-                  placeholder="ton@email.com  ou  +237 6XX XXX XXX"
+                  placeholder="adresse@email.com ou numéro (+237)"
                   value={contact}
                   onChange={setContact}
                   testId="input-contact"
                   autoFocus
                 />
 
-                <PrimaryButton onClick={nextStep} testId="button-step2-next">
-                  Suivant <ArrowRight className="w-4 h-4 ml-1 inline" />
-                </PrimaryButton>
+                <Button onClick={nextStep} variant="premium" className="w-full py-6 text-xs uppercase tracking-widest font-black" data-testid="button-step2-next">
+                  Valider le canal <ArrowRight className="w-3.5 h-3.5 ml-1 inline" />
+                </Button>
               </motion.div>
             )}
 
-            {/* Étape 3 — Mot de passe */}
+            {/* Étape 3 — Mot de passe sécurisé */}
             {step === 3 && (
               <motion.form
                 key="step3"
-                initial={{ opacity: 0, x: 30 }}
+                initial={{ opacity: 0, x: 16 }}
                 animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -30 }}
-                transition={{ duration: 0.35 }}
+                exit={{ opacity: 0, x: -16 }}
+                transition={{ duration: 0.25 }}
                 onSubmit={handleRegister}
-                className="space-y-6"
+                className="space-y-5"
               >
                 <div className="text-center mb-2">
-                  <h1
-                    className="text-3xl font-light tracking-wide mb-2"
-                    style={{ fontFamily: "'Outfit', sans-serif" }}
-                  >
-                    Crée ton mot de passe
+                  <h1 className="text-2xl font-black uppercase tracking-tight text-white font-display">
+                    Chiffrement
                   </h1>
-                  <p className="text-white/60 text-sm">6 caractères minimum</p>
+                  <p className="text-slate-400 text-xs font-medium mt-1">Configurez un code secret d'accès (6 signes min).</p>
                 </div>
 
                 <PwdField
@@ -341,38 +323,38 @@ export default function AuthPage() {
                   show={showPwd}
                   onToggle={() => setShowPwd((v) => !v)}
                   testId="input-register-password"
-                  placeholder="Mot de passe"
+                  placeholder="Nouveau mot de passe"
                   autoFocus
                 />
 
-                <button
+                <Button
                   type="submit"
                   disabled={loading}
+                  variant="premium"
+                  className="w-full py-6 text-xs uppercase tracking-widest font-black"
                   data-testid="button-register-finish"
-                  className="w-full py-4 rounded-full bg-white text-black font-semibold text-base tracking-wide active:scale-[0.98] transition-transform disabled:opacity-50"
-                  style={{ fontFamily: "'Outfit', sans-serif" }}
                 >
                   {loading ? (
-                    "Création..."
+                    "Initialisation..."
                   ) : (
                     <>
-                      Terminer <Check className="w-4 h-4 ml-1 inline" />
+                      Créer mon dossier <Check className="w-3.5 h-3.5 ml-1 inline" />
                     </>
                   )}
-                </button>
+                </Button>
               </motion.form>
             )}
           </AnimatePresence>
 
-          <p className="text-center text-sm text-white/60 pt-8">
-            J'ai déjà un compte —{" "}
+          <p className="text-center text-xs text-slate-400 font-medium pt-6">
+            Déjà inscrit ?{" "}
             <button
               type="button"
               onClick={() => {
                 setMode("login");
                 setStep(1);
               }}
-              className="text-white font-semibold underline-offset-4 hover:underline"
+              className="text-white font-bold hover:underline"
               data-testid="button-switch-to-login"
             >
               Se connecter
@@ -381,18 +363,16 @@ export default function AuthPage() {
         </div>
       )}
 
-      {/* Footer minimaliste */}
-      <p
-        className="text-center text-[10px] text-white/30 mt-8 tracking-widest uppercase relative z-10"
-        style={{ fontFamily: "'Outfit', sans-serif" }}
-      >
-        Fondateur · Démise Essawe
-      </p>
+      {/* Signature Institutionnelle */}
+      <div className="text-center mt-auto pt-8 relative z-10 opacity-40 flex justify-center items-center gap-1.5 text-[9px] text-slate-500 font-black tracking-widest uppercase font-display">
+        <ShieldAlert className="w-3 h-3 text-blue-500" />
+        <span>Données chiffrées de bout en bout</span>
+      </div>
     </div>
   );
 }
 
-// ── Composants réutilisables ─────────────────────────────
+// ── COMPOSANTS INTERNES EN CAPSULES CLINIQUES ─────────────────────────────
 function Field({
   icon,
   type,
@@ -412,7 +392,7 @@ function Field({
 }) {
   return (
     <div className="relative">
-      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40">{icon}</div>
+      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500">{icon}</div>
       <input
         type={type}
         placeholder={placeholder}
@@ -420,8 +400,7 @@ function Field({
         onChange={(e) => onChange(e.target.value)}
         autoFocus={autoFocus}
         data-testid={testId}
-        className="w-full pl-11 pr-4 py-4 bg-white/5 border border-white/15 rounded-2xl text-base text-white placeholder-white/35 focus:outline-none focus:border-white/40 focus:bg-white/10 transition-all"
-        style={{ fontFamily: "'Outfit', sans-serif" }}
+        className="w-full pl-11 pr-4 py-4 bg-slate-900/40 border border-slate-800/80 rounded-2xl text-xs font-bold text-white placeholder-slate-600 focus:outline-none focus:border-slate-700 focus:bg-slate-900 transition-all font-display"
       />
     </div>
   );
@@ -446,7 +425,7 @@ function PwdField({
 }) {
   return (
     <div className="relative">
-      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
       <input
         type={show ? "text" : "password"}
         placeholder={placeholder}
@@ -455,39 +434,16 @@ function PwdField({
         autoFocus={autoFocus}
         required
         data-testid={testId}
-        className="w-full pl-11 pr-12 py-4 bg-white/5 border border-white/15 rounded-2xl text-base text-white placeholder-white/35 focus:outline-none focus:border-white/40 focus:bg-white/10 transition-all"
-        style={{ fontFamily: "'Outfit', sans-serif" }}
+        className="w-full pl-11 pr-12 py-4 bg-slate-900/40 border border-slate-800/80 rounded-2xl text-xs font-bold text-white placeholder-slate-600 focus:outline-none focus:border-slate-700 focus:bg-slate-900 transition-all font-display"
       />
       <button
         type="button"
         onClick={onToggle}
-        className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70"
+        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
       >
         {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
       </button>
     </div>
-  );
-}
-
-function PrimaryButton({
-  children,
-  onClick,
-  testId,
-}: {
-  children: React.ReactNode;
-  onClick: () => void;
-  testId: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      data-testid={testId}
-      className="w-full py-4 rounded-full bg-white text-black font-semibold text-base tracking-wide active:scale-[0.98] transition-transform"
-      style={{ fontFamily: "'Outfit', sans-serif" }}
-    >
-      {children}
-    </button>
   );
 }
 
