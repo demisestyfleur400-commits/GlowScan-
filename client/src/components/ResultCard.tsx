@@ -1242,3 +1242,13 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
     </div>
   );
 }
+import { OrderTrackingCard } from "@/components/OrderTrackingCard";
+
+// Dans ton composant ResultCard, là où tu as tes données :
+<OrderTrackingCard 
+  products={result.recommendations.products} 
+  onRedirectToOrder={() => {
+    // Exemple : Envoi direct sur le WhatsApp Business ou la page panier
+    window.open("https://wa.me/237674377959?text=Bonjour%20GlowScan,%20je%20souhaite%20commander%20ma%20routine...", "_blank");
+  }}
+/>
