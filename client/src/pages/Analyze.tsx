@@ -319,4 +319,12 @@ export default function Analyze() {
                   )}
                   <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/40" />
                   <div className="absolute inset-0 opacity-30" style={{ backgroundImage: "linear-gradient(rgba(236,72,153,0.4) 1px, transparent 1px), linear-gradient(90deg, rgba(236,72,153,0.4) 1px, transparent 1px)", backgroundSize: "20px 20px" }} />
-                  <motion.div className="absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-pink-400 to-transparent shadow-[0_0_20px_rgba(236,72,153,0.9)]" animate={{ top: ["0%", "100%", "0%"] }} transition={{ duration:
+                        <motion.div 
+        className="absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-pink-400 to-transparent shadow-[0_0_20px_rgba(236,72,153,0.9)]" 
+        animate={{ top: ["0%", "100%", "0%"] }} 
+        transition={{ duration: 2.5, ease: "easeInOut", repeat: Infinity }} 
+      />
+    </div>
+  );
+}
+
