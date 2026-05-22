@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 
 const MTN_NUMBER = "674377959";
-const ORANGE_NUMBER = "674377959";
+const ORANGE_NUMBER = "690501392";
 const OWNER_WA = "237674377959";
 
 const FEATURES_FREE = [
