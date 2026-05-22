@@ -12,6 +12,7 @@ const Breadcrumb = React.forwardRef<
 >(({ ...props }, ref) => <nav ref={ref} aria-label="breadcrumb" {...props} />)
 Breadcrumb.displayName = "Breadcrumb"
 
+// Modification majeure : défilement horizontal propre sur mobile (no-scrollbar) au lieu de casser les lignes
 const BreadcrumbList = React.forwardRef<
   HTMLOListElement,
   React.ComponentPropsWithoutRef<"ol">
@@ -19,7 +20,7 @@ const BreadcrumbList = React.forwardRef<
   <ol
     ref={ref}
     className={cn(
-      "flex flex-wrap items-center gap-1.5 break-words text-sm text-muted-foreground sm:gap-2.5",
+      "flex items-center gap-2 whitespace-nowrap overflow-x-auto overflow-y-hidden text-[11px] font-black uppercase tracking-wider text-slate-400 sm:gap-2.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
       className
     )}
     {...props}
@@ -33,12 +34,13 @@ const BreadcrumbItem = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <li
     ref={ref}
-    className={cn("inline-flex items-center gap-1.5", className)}
+    className={cn("inline-flex items-center gap-2", className)}
     {...props}
   />
 ))
 BreadcrumbItem.displayName = "BreadcrumbItem"
 
+// Rendu optimisé pour supporter Wouter sans recharger la page
 const BreadcrumbLink = React.forwardRef<
   HTMLAnchorElement,
   React.ComponentPropsWithoutRef<"a"> & {
@@ -50,13 +52,17 @@ const BreadcrumbLink = React.forwardRef<
   return (
     <Comp
       ref={ref}
-      className={cn("transition-colors hover:text-foreground", className)}
+      className={cn(
+        "transition-colors hover:text-slate-900 cursor-pointer text-slate-400 font-bold", 
+        className
+      )}
       {...props}
     />
   )
 })
 BreadcrumbLink.displayName = "BreadcrumbLink"
 
+// La page active est mise en valeur de manière affirmée
 const BreadcrumbPage = React.forwardRef<
   HTMLSpanElement,
   React.ComponentPropsWithoutRef<"span">
@@ -66,7 +72,7 @@ const BreadcrumbPage = React.forwardRef<
     role="link"
     aria-disabled="true"
     aria-current="page"
-    className={cn("font-normal text-foreground", className)}
+    className={cn("font-black text-slate-900 tracking-wide", className)}
     {...props}
   />
 ))
@@ -80,7 +86,7 @@ const BreadcrumbSeparator = ({
   <li
     role="presentation"
     aria-hidden="true"
-    className={cn("[&>svg]:w-3.5 [&>svg]:h-3.5", className)}
+    className={cn("text-slate-300 [&>svg]:w-3.5 [&>svg]:h-3.5 flex items-center justify-center", className)}
     {...props}
   >
     {children ?? <ChevronRight />}
@@ -95,14 +101,14 @@ const BreadcrumbEllipsis = ({
   <span
     role="presentation"
     aria-hidden="true"
-    className={cn("flex h-9 w-9 items-center justify-center", className)}
+    className={cn("flex h-6 w-6 items-center justify-center text-slate-400 hover:text-slate-600 transition-colors", className)}
     {...props}
   >
-    <MoreHorizontal className="h-4 w-4" />
-    <span className="sr-only">More</span>
+    <MoreHorizontal className="h-3.5 w-3.5" />
+    <span className="sr-only">En savoir plus</span>
   </span>
 )
-BreadcrumbEllipsis.displayName = "BreadcrumbElipssis"
+BreadcrumbEllipsis.displayName = "BreadcrumbEllipsis"
 
 export {
   Breadcrumb,
