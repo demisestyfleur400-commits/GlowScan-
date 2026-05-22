@@ -1,35 +1,35 @@
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
+import { Loader2 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0" +
-  " hover-elevate active-elevate-2",
+  "inline-flex items-center justify-center gap-2.5 whitespace-nowrap rounded-xl text-xs font-black uppercase tracking-wider select-none focus-visible:outline-none transition-all disabled:pointer-events-none disabled:opacity-40 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98]",
   {
     variants: {
       variant: {
+        // Le bouton d'action standard : Propre, contrasté, autoritaire
         default:
-          "bg-primary text-primary-foreground border border-primary-border",
+          "bg-slate-950 text-white shadow-md shadow-slate-950/10 hover:bg-slate-900",
+        // Le bouton de paiement / conversion : Attire instantanément l'œil
+        premium:
+          "bg-gradient-to-r from-pink-500 to-violet-600 text-white shadow-lg shadow-purple-500/20 hover:opacity-95 text-white border-0",
         destructive:
-          "bg-destructive text-destructive-foreground border border-destructive-border",
+          "bg-red-600 text-white shadow-md shadow-red-600/10 hover:bg-red-700",
         outline:
-          // Shows the background color of whatever card / sidebar / accent background it is inside of.
-          // Inherits the current text color.
-          " border [border-color:var(--button-outline)]  shadow-xs active:shadow-none ",
-        secondary: "border bg-secondary text-secondary-foreground border border-secondary-border ",
-        // Add a transparent border so that when someone toggles a border on later, it doesn't shift layout/size.
-        ghost: "border border-transparent",
+          "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900 shadow-xs",
+        secondary: 
+          "bg-slate-100 text-slate-800 hover:bg-slate-200/80 border border-slate-200/40",
+        ghost: 
+          "hover:bg-slate-50 text-slate-600 hover:text-slate-900",
       },
-      // Heights are set as "min" heights, because sometimes Ai will place large amount of content
-      // inside buttons. With a min-height they will look appropriate with small amounts of content,
-      // but will expand to fit large amounts of content.
       size: {
-        default: "min-h-9 px-4 py-2",
-        sm: "min-h-8 rounded-md px-3 text-xs",
-        lg: "min-h-10 rounded-md px-8",
-        icon: "h-9 w-9",
+        default: "h-12 px-6 py-3",
+        sm: "h-9 rounded-lg px-3.5 text-[10px]",
+        lg: "h-14 rounded-2xl px-8 text-sm tracking-wide",
+        icon: "h-12 w-12 rounded-xl",
       },
     },
     defaultVariants: {
@@ -43,17 +43,45 @@ export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
   asChild?: boolean
+  isLoading?: boolean // Intégration directe de l'état de chargement
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, ...props }, ref) => {
-    const Comp = asChild ? Slot : "button"
+  ({ className, variant, size, asChild = false, isLoading = false, children, disabled, ...props }, ref) => {
+    
+    // Si l'état isLoading est actif, on force le blocage du bouton
+    const isDisabled = disabled || isLoading;
+    
+    if (asChild) {
+      return (
+        <Slot
+          className={cn(buttonVariants({ variant, size, className }))}
+          ref={ref}
+          disabled={isDisabled}
+          {...props}
+        >
+          {children}
+        </Slot>
+      )
+    }
+
     return (
-      <Comp
+      <button
         className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
+        disabled={isDisabled}
         {...props}
-      />
+      >
+        {/* Affichage intelligent du spinner si l'action charge */}
+        {isLoading ? (
+          <>
+            <Loader2 className="h-4 w-4 animate-spin text-current" />
+            <span>Chargement...</span>
+          </>
+        ) : (
+          children
+        )}
+      </button>
     )
   },
 )
