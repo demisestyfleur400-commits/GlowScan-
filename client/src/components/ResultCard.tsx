@@ -111,7 +111,7 @@ function normalizeStep(s: any, i: number): ProtocolStep {
       why: typeof s.why === "string" ? s.why : undefined,
     };
   }
-  return { step: `Étape ${i + 1}`, product: typeof s === "string" ? s : String(
+  return { step: `Étape ${i + 1}`, product: typeof s === "string" ? s : String(s) };
 import { useState } from "react";
 import { AlertTriangle, Sparkles } from "lucide-react";
 
