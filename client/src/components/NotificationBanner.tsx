@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Bell, X } from "lucide-react";
+import { Bell, X, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 function urlBase64ToUint8Array(base64String: string) {
@@ -19,28 +19,44 @@ export default function NotificationBanner() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
+    // Blindage : Vérification stricte des APIs de notifications (évite les crashs sur les anciens iOS/Android)
+    if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
+      return;
+    }
 
-    // N'afficher qu'après la première analyse
+    // Sécurité : Si l'utilisateur a déjà bloqué les notifications au niveau du système, on n'affiche rien
+    if (Notification.permission === "denied") return;
+
+    // N'afficher qu'après la première analyse terminée
     const firstScanDone = localStorage.getItem("glowscan_first_scan_done");
     if (!firstScanDone) return;
 
     const dismissed = localStorage.getItem("push-dismissed");
     if (dismissed) return;
 
-    navigator.serviceWorker.ready.then(async (reg) => {
-      const sub = await reg.pushManager.getSubscription();
-      if (sub) {
-        setSubscribed(true);
-      } else {
-        setTimeout(() => setShow(true), 800);
-      }
-    });
+    navigator.serviceWorker.ready
+      .then(async (reg) => {
+        const sub = await reg.pushManager.getSubscription();
+        if (sub) {
+          setSubscribed(true);
+        } else {
+          // Petit délai de 1.5s après le chargement pour laisser respirer l'utilisatrice
+          setTimeout(() => setShow(true), 1500);
+        }
+      })
+      .catch((err) => console.log("[GlowScan] ServiceWorker non prêt :", err));
   }, []);
 
   async function subscribe() {
     setLoading(true);
     try {
+      // Demande de permission native du navigateur / téléphone
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") {
+        dismiss();
+        return;
+      }
+
       const reg = await navigator.serviceWorker.ready;
       const res = await fetch("/api/push/vapid-key");
       const { publicKey } = await res.json();
@@ -63,10 +79,9 @@ export default function NotificationBanner() {
 
       setSubscribed(true);
       setShow(false);
-      // Déclenche la bannière PWA juste après
       try { localStorage.setItem("glowscan_push_done", "1"); } catch {}
     } catch (err) {
-      console.error("Push subscription failed:", err);
+      console.error("[GlowScan] Échec de l'abonnement push :", err);
     } finally {
       setLoading(false);
     }
@@ -74,7 +89,6 @@ export default function NotificationBanner() {
 
   function dismiss() {
     localStorage.setItem("push-dismissed", "true");
-    // Déclenche la bannière PWA juste après
     try { localStorage.setItem("glowscan_push_done", "1"); } catch {}
     setShow(false);
   }
@@ -84,42 +98,60 @@ export default function NotificationBanner() {
   return (
     <AnimatePresence>
       <motion.div
-        initial={{ opacity: 0, y: 50 }}
+        initial={{ opacity: 0, y: 60 }}
         animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: 50 }}
-        className="fixed bottom-24 left-4 right-4 z-[60] mx-auto max-w-md"
+        exit={{ opacity: 0, y: 60 }}
+        // Positionnement z-[240] juste en dessous des modales principales pour éviter les chevauchements
+        className="fixed bottom-6 left-4 right-4 z-[240] mx-auto max-w-sm"
         data-testid="notification-banner"
       >
-        <div className="rounded-2xl bg-gradient-to-r from-pink-500 to-pink-600 p-4 shadow-2xl text-white ring-1 ring-white/20">
+        <div className="rounded-2xl bg-gradient-to-br from-slate-950 via-slate-900 to-pink-950 p-4 shadow-2xl text-white border border-white/10 relative overflow-hidden">
+          
+          {/* Effet lumineux décoratif en arrière-plan */}
+          <div className="absolute -right-10 -top-10 w-24 h-24 bg-pink-600/20 rounded-full blur-xl pointer-events-none" />
+
           <div className="flex items-start gap-3">
-            <div className="rounded-full bg-white/30 p-2.5 shadow-lg">
-              <Bell className="h-5 w-5 text-white drop-shadow-sm" />
+            {/* Cloche Premium aux couleurs de la marque */}
+            <div className="rounded-xl bg-gradient-to-tr from-pink-500 to-purple-600 p-2.5 shadow-lg flex-shrink-0 border border-white/10">
+              <Bell className="h-4 w-4 text-white" />
             </div>
-            <div className="flex-1">
-              <p className="font-semibold text-sm">Rappels de routine</p>
-              <p className="text-xs text-white/90 mt-0.5">
-                Recevez des rappels matin et soir pour ne jamais oublier votre routine skincare !
+            
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5">
+                <p className="text-xs font-black uppercase tracking-wider text-white">Suivi de discipline</p>
+                <Sparkles className="w-3 h-3 text-pink-400" />
+              </div>
+              <p className="text-[11px] text-gray-300 mt-1 leading-normal font-medium">
+                Active tes alertes matin et soir pour suivre l'évolution de tes imperfections et ne rater aucun soin.
               </p>
-              <div className="flex gap-2 mt-3">
+              
+              {/* Boutons d'actions épurés */}
+              <div className="flex gap-2 mt-3.5">
                 <button
                   onClick={subscribe}
                   disabled={loading}
-                  className="rounded-full bg-white text-pink-600 px-4 py-1.5 text-xs font-semibold hover:bg-white/90 transition-colors disabled:opacity-50"
+                  className="rounded-lg bg-white text-gray-950 px-4 py-2 text-[10px] font-black uppercase tracking-wider hover:bg-gray-100 active:scale-95 transition-all disabled:opacity-50"
                   data-testid="button-enable-notifications"
                 >
                   {loading ? "Activation..." : "Activer"}
                 </button>
                 <button
                   onClick={dismiss}
-                  className="rounded-full bg-white/20 px-4 py-1.5 text-xs font-medium hover:bg-white/30 transition-colors"
+                  className="rounded-lg bg-white/10 text-white/90 px-3 py-2 text-[10px] font-black uppercase tracking-wider hover:bg-white/20 active:scale-95 transition-all"
                   data-testid="button-dismiss-notifications"
                 >
                   Plus tard
                 </button>
               </div>
             </div>
-            <button onClick={dismiss} className="text-white/60 hover:text-white" data-testid="button-close-notification-banner">
-              <X className="h-4 w-4" />
+
+            {/* Bouton fermeture croix discret */}
+            <button 
+              onClick={dismiss} 
+              className="text-white/40 hover:text-white/80 transition-colors flex-shrink-0 p-0.5" 
+              data-testid="button-close-notification-banner"
+            >
+              <X className="h-3.5 w-3.5" />
             </button>
           </div>
         </div>
