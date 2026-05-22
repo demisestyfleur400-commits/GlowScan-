@@ -14,57 +14,54 @@ import {
   TrendingUp,
   Activity,
   Stethoscope,
+  Sparkles,
+  Layers,
+  ArrowUpRight
 } from "lucide-react";
 
-// ─────────────────────────────────────────────────────────────────────────
-//  GLOWSCAN PRO — Landing dermatologues — Style Skinive / Autoderm.ai
-//  Couleurs : Primary #1E40AF · Secondary #0EA5E9 · Accent #10B981
-//             BG #F8FAFC · Text #1E293B · Font Inter
-// ─────────────────────────────────────────────────────────────────────────
 export default function Pro() {
   const fadeUp = {
-    initial: { opacity: 0, y: 24 },
+    initial: { opacity: 0, y: 16 },
     whileInView: { opacity: 1, y: 0 },
-    viewport: { once: true, margin: "-60px" },
-    transition: { duration: 0.5 },
+    viewport: { once: true, margin: "-40px" },
+    transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] },
   };
 
   return (
     <div
-      className="min-h-screen bg-white text-slate-800 antialiased"
-      style={{ fontFamily: "Inter, system-ui, -apple-system, sans-serif", color: "#1E293B" }}
+      className="min-h-screen bg-[#090d16] text-slate-100 antialiased font-sans selection:bg-blue-600 selection:text-white"
     >
       {/* ── NAV TOP ────────────────────────────────────────────── */}
-      <header className="absolute top-0 left-0 right-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 lg:px-8 h-16 flex items-center justify-between">
+      <header className="absolute top-0 left-0 right-0 z-50 border-b border-white/[0.04] bg-[#090d16]/40 backdrop-blur-md">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8 h-20 flex items-center justify-between">
           <Link href="/pro" className="flex items-center gap-2.5" data-testid="link-pro-home">
-            <div className="w-9 h-9 rounded-md flex items-center justify-center bg-white/10 backdrop-blur-sm border border-white/20">
-              <Stethoscope className="w-4 h-4 text-white" />
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-blue-600/10 border border-blue-500/20">
+              <Stethoscope className="w-4 h-4 text-blue-400" />
             </div>
             <div className="leading-tight">
-              <p className="text-white font-bold text-base tracking-tight">GlowScan Pro</p>
-              <p className="text-[10px] uppercase tracking-[0.15em] text-blue-200 font-semibold">Clinical AI</p>
+              <p className="text-white font-black text-sm tracking-wide uppercase font-display">GlowScan Pro</p>
+              <p className="text-[9px] uppercase tracking-[0.2em] text-blue-400 font-bold">Clinical Engine</p>
             </div>
           </Link>
-          <nav className="hidden md:flex items-center gap-7 text-sm font-medium text-blue-100">
-            <a href="#educ" className="hover:text-white transition-colors">Pourquoi</a>
-            <a href="#features" className="hover:text-white transition-colors">Fonctionnalités</a>
-            <a href="#pricing" className="hover:text-white transition-colors">Tarifs</a>
+          <nav className="hidden md:flex items-center gap-8 text-xs font-bold uppercase tracking-widest text-slate-400">
+            <a href="#educ" className="hover:text-white transition-colors">Infrastructure</a>
+            <a href="#features" className="hover:text-white transition-colors">Spécifications</a>
+            <a href="#pricing" className="hover:text-white transition-colors">Licences B2B</a>
           </nav>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             <Link
               href="/pro/connexion"
-              className="hidden sm:inline-flex text-sm font-medium text-white/90 hover:text-white"
+              className="hidden sm:inline-flex text-xs font-bold uppercase tracking-widest text-slate-300 hover:text-white"
               data-testid="link-login-top"
             >
-              Connexion
+              Portail
             </Link>
             <Link
               href="/pro/inscription"
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-semibold bg-white text-blue-900 hover:bg-blue-50 transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest bg-blue-600 text-white hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/10"
               data-testid="link-trial-top"
             >
-              Essai 14 j
+              Essai Clinique
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
@@ -72,209 +69,180 @@ export default function Pro() {
       </header>
 
       {/* ═══════════════════════════════════════════════════════════════
-          1. HERO — h-screen gradient bleu, vidéo, double CTA
+          1. HERO — Mode Laboratoire Clinique Dark Tech
           ═══════════════════════════════════════════════════════════════ */}
       <section
-        className="relative min-h-screen flex items-center justify-center text-white py-24 px-6 lg:px-8 overflow-hidden"
-        style={{ background: "linear-gradient(135deg, #1E3A8A 0%, #1E40AF 50%, #312E81 100%)" }}
+        className="relative min-h-screen flex items-center justify-center py-32 px-6 lg:px-8 overflow-hidden border-b border-slate-900"
       >
-        {/* Grille hi-tech subtile */}
+        {/* Grille et Halos Lumineux Laser */}
         <div
-          className="absolute inset-0 opacity-[0.07] pointer-events-none"
+          className="absolute inset-0 opacity-[0.03] pointer-events-none"
           style={{
-            backgroundImage:
-              "linear-gradient(white 1px, transparent 1px), linear-gradient(90deg, white 1px, transparent 1px)",
-            backgroundSize: "56px 56px",
+            backgroundImage: "linear-gradient(white 1px, transparent 1px), linear-gradient(90deg, white 1px, transparent 1px)",
+            backgroundSize: "48px 48px",
           }}
         />
-        {/* Halos décoratifs */}
-        <div className="absolute top-1/4 -left-32 w-96 h-96 rounded-full blur-3xl opacity-30" style={{ background: "#0EA5E9" }} />
-        <div className="absolute bottom-1/4 -right-32 w-96 h-96 rounded-full blur-3xl opacity-20" style={{ background: "#10B981" }} />
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[500px] h-[500px] rounded-full blur-[140px] opacity-10 bg-blue-600 pointer-events-none" />
+        <div className="absolute bottom-1/4 right-10 w-[300px] h-[300px] rounded-full blur-[100px] opacity-10 bg-emerald-500 pointer-events-none" />
 
-        <div className="relative max-w-4xl mx-auto text-center w-full">
-          {/* Badge top */}
+        <div className="relative max-w-5xl mx-auto text-center w-full space-y-8">
           <motion.div
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 mb-8"
+            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900 border border-slate-800"
             data-testid="badge-pro"
           >
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 bg-emerald-400" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
-            </span>
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-white">
-              Plateforme dermatologique professionnelle
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+              Système d'Imagerie Algorithmique Dermatologique
             </span>
           </motion.div>
 
-          <motion.h1
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.05 }}
-            className="text-5xl md:text-7xl font-bold mb-6 tracking-tight leading-[1.05]"
-            data-testid="text-hero-title"
-          >
-            GlowScan Pro
-          </motion.h1>
+          <div className="space-y-4">
+            <motion.h1
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-4xl sm:text-6xl md:text-7xl font-black tracking-tight text-white uppercase font-display max-w-4xl mx-auto leading-none"
+              data-testid="text-hero-title"
+            >
+              L'IA au service de la <span className="text-blue-500">dermatologie noire</span>
+            </motion.h1>
 
-          <motion.p
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="text-xl md:text-2xl mb-10 opacity-90 font-normal max-w-2xl mx-auto"
-            data-testid="text-hero-subtitle"
-          >
-            IA Dermatologique Spécialisée Peaux Noires
-          </motion.p>
+            <motion.p
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="text-base sm:text-lg text-slate-400 max-w-2xl mx-auto font-medium"
+              data-testid="text-hero-subtitle"
+            >
+              Prédiagnostic, cartographie d'imperfections et redirection de flux patients. Conçu spécifiquement pour les phototypes V & VI en Afrique Centrale.
+            </motion.p>
+          </div>
 
-          {/* "Vidéo" hero — démo workflow IA (mockup animé professionnel, pas de cartoon) */}
+          {/* Simulateur Terminal Clinique */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.96 }}
+            initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.6, delay: 0.15 }}
-            className="w-full max-w-2xl mx-auto rounded-xl shadow-2xl mb-10 overflow-hidden border border-white/10 bg-slate-900"
+            transition={{ delay: 0.2 }}
+            className="w-full max-w-3xl mx-auto rounded-2xl shadow-2xl overflow-hidden border border-slate-800 bg-slate-950 text-left"
             data-testid="hero-demo"
           >
-            {/* Barre fenêtre style logiciel médical */}
-            <div className="flex items-center gap-1.5 px-4 py-2.5 bg-slate-950 border-b border-white/5">
-              <span className="w-2.5 h-2.5 rounded-full bg-red-500/70" />
-              <span className="w-2.5 h-2.5 rounded-full bg-yellow-500/70" />
-              <span className="w-2.5 h-2.5 rounded-full bg-green-500/70" />
-              <span className="ml-3 text-[11px] font-mono text-slate-400">app.glowscan.cm/pro/analyse</span>
-              <span className="ml-auto text-[10px] font-mono text-emerald-400 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                LIVE
-              </span>
+            <div className="flex items-center gap-2 px-4 py-3 bg-slate-900 border-b border-slate-800">
+              <div className="flex gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-slate-800" />
+                <span className="w-2.5 h-2.5 rounded-full bg-slate-800" />
+                <span className="w-2.5 h-2.5 rounded-full bg-slate-800" />
+              </div>
+              <span className="text-[10px] font-mono text-slate-500 tracking-wider">CORE_ENGINE // core-ai.glowscan.pro</span>
+              <Badge className="ml-auto bg-emerald-500/10 text-emerald-400 border-0 text-[9px] font-black tracking-widest uppercase py-0.5">
+                Secure Stack
+              </Badge>
             </div>
 
-            {/* Workflow animé */}
-            <div className="p-5 sm:p-7 space-y-2.5 bg-gradient-to-b from-slate-900 to-slate-950">
+            <div className="p-6 space-y-3 font-mono text-xs text-slate-400">
               {[
-                { step: "01", label: "Acquisition photo HD", time: "0.8s", color: "#0EA5E9" },
-                { step: "02", label: "Analyse IA — détection multi-pathologies", time: "4.2s", color: "#0EA5E9" },
-                { step: "03", label: "Validation dermatologue", time: "30s", color: "#10B981" },
-                { step: "04", label: "Rapport PDF clinique généré", time: "auto", color: "#10B981" },
+                { step: "01", label: "Acquisition de la matrice d'imagerie HD (Phototype V/VI)", status: "COMPLETED", time: "0.8s", color: "text-blue-400" },
+                { step: "02", label: "Filtrage et élimination des reflets lumineux (Spécificité équatoriale)", status: "COMPLETED", time: "1.1s", color: "text-blue-400" },
+                { step: "03", label: "Segmentation neuronale : Acné inf., Hyperpigmentation, Chéloïdes", status: "PROCESSING", time: "2.3s", color: "text-amber-400 animate-pulse" },
+                { step: "04", label: "Compilation du rapport technique au format PDF clinique", status: "PENDING", time: "wait", color: "text-slate-600" },
               ].map((s, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, x: -16 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.4 + i * 0.15 }}
-                  className="flex items-center gap-3 px-4 py-3 rounded-lg bg-white/[0.04] border border-white/10"
-                >
-                  <span
-                    className="font-mono font-bold text-xs px-2 py-0.5 rounded"
-                    style={{ background: s.color + "22", color: s.color }}
-                  >
-                    {s.step}
-                  </span>
-                  <span className="flex-1 text-sm text-white/90 font-medium text-left">{s.label}</span>
-                  <span className="text-[11px] font-mono text-slate-400">{s.time}</span>
-                </motion.div>
-              ))}
-
-              {/* Métriques bottom */}
-              <div className="grid grid-cols-3 gap-2 pt-3 mt-2 border-t border-white/5">
-                {[
-                  { v: "95%", l: "Précision" },
-                  { v: "5s", l: "Latence" },
-                  { v: "10k+", l: "Dataset" },
-                ].map((m) => (
-                  <div key={m.l} className="text-center">
-                    <p className="text-lg font-bold text-white">{m.v}</p>
-                    <p className="text-[10px] uppercase tracking-wider text-slate-400">{m.l}</p>
+                <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-xl bg-slate-900/40 border border-slate-900 gap-2">
+                  <div className="flex items-center gap-3">
+                    <span className={`font-black text-[10px] ${s.color}`}>[{s.step}]</span>
+                    <span className="text-slate-300 font-medium">{s.label}</span>
                   </div>
-                ))}
-              </div>
+                  <div className="flex items-center justify-between sm:justify-end gap-4 text-[10px]">
+                    <span className={`font-bold ${s.color}`}>{s.status}</span>
+                    <span className="text-slate-600 font-bold">{s.time}</span>
+                  </div>
+                </div>
+              ))}
             </div>
           </motion.div>
 
-          {/* CTAs */}
+          {/* Action CTAs */}
           <motion.div
-            initial={{ opacity: 0, y: 16 }}
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.25 }}
-            className="flex flex-col sm:flex-row gap-4 justify-center"
+            transition={{ delay: 0.3 }}
+            className="flex flex-col sm:flex-row gap-3 justify-center pt-2"
           >
             <Link
               href="/pro/inscription"
-              className="bg-emerald-500 hover:bg-emerald-600 px-8 py-4 rounded-lg font-semibold text-lg text-white shadow-xl hover:shadow-2xl transition-all hover:-translate-y-0.5 inline-flex items-center justify-center gap-2"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-xl font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-600/10 transition-all inline-flex items-center justify-center gap-2"
               data-testid="button-trial-hero"
             >
-              Essai Gratuit 14j
-              <ArrowRight className="w-5 h-5" />
+              Activer l'essai 14 jours
+              <ArrowRight className="w-4 h-4" />
             </Link>
             <a
-              href="#features"
-              className="border-2 border-white hover:bg-white hover:text-blue-900 px-8 py-4 rounded-lg font-semibold transition-all inline-flex items-center justify-center"
+              href="#pricing"
+              className="border border-slate-800 bg-slate-950/60 hover:bg-slate-900 text-slate-300 hover:text-white px-8 py-4 rounded-xl font-black text-xs uppercase tracking-widest transition-all inline-flex items-center justify-center"
               data-testid="button-demo"
             >
-              Demo Live
+              Grille tarifaire
             </a>
           </motion.div>
 
-          <p className="text-xs text-blue-200/80 mt-6 flex items-center justify-center gap-1.5">
-            <ShieldCheck className="w-3.5 h-3.5" />
-            Sans carte bancaire · RGPD compliant · Résiliable à tout moment
+          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 flex items-center justify-center gap-2">
+            <ShieldCheck className="w-4 h-4 text-blue-500" />
+            Zéro engagement · Hébergement Chiffré · Architecture PWA Intégrée
           </p>
         </div>
       </section>
 
       {/* ═══════════════════════════════════════════════════════════════
-          2. SECTION ÉDUC — bg-white py-20, 3 cards
+          2. SECTION INFRASTRUCTURE / ROI (ÉDUC)
           ═══════════════════════════════════════════════════════════════ */}
-      <section id="educ" className="bg-white py-20 px-6 lg:px-8">
+      <section id="educ" className="py-24 px-6 lg:px-8 border-b border-slate-900 relative">
         <div className="max-w-7xl mx-auto">
-          <motion.div {...fadeUp} className="text-center max-w-2xl mx-auto mb-14">
-            <p className="text-xs font-bold uppercase tracking-[0.2em] mb-3" style={{ color: "#1E40AF" }}>
-              Pourquoi GlowScan Pro
-            </p>
-            <h2 className="text-3xl md:text-4xl font-bold tracking-tight" style={{ color: "#1E293B" }}>
-              Conçu pour la dermatologie africaine
+          <motion.div {...fadeUp} className="text-center max-w-2xl mx-auto mb-16">
+            <span className="text-[10px] font-black uppercase tracking-widest text-blue-500 block mb-2">
+              Biais Clinique Résolu
+            </span>
+            <h2 className="text-2xl sm:text-4xl font-black uppercase tracking-tight text-white font-display">
+              Pourquoi GlowScan Pro ?
             </h2>
           </motion.div>
 
           <div className="grid md:grid-cols-3 gap-6 max-w-6xl mx-auto">
             {[
               {
-                icon: <Database className="w-5 h-5" />,
-                tag: "Problème",
-                title: "Datasets biaisés",
-                body: "Les modèles dermato globaux sont entraînés à 90 % sur peaux claires. GlowScan : 100 % data africaine, validée en continu par votre feedback.",
-                accent: "#1E40AF",
+                icon: <Database className="w-4 h-4" />,
+                tag: "La Réalité du Terrain",
+                title: "Datasets Peaux Noires",
+                body: "Les modèles globaux sont entraînés à 90 % sur des peaux claires. GlowScan intègre un dataset calibré pour la physiologie cutanée d'Afrique Centrale.",
+                color: "border-blue-500/20"
               },
               {
-                icon: <TrendingUp className="w-5 h-5" />,
-                tag: "Bénéfice",
-                title: "ROI +50 000 FCFA / mois",
-                body: "Patients redirigés depuis l'app B2C (commission 2 000 FCFA / consultation) + temps gagné en consultation grâce au prédiagnostic IA.",
-                accent: "#10B981",
+                icon: <TrendingUp className="w-4 h-4" />,
+                tag: "Modèle B2B SaaS",
+                title: "Génération de Flux & ROI",
+                body: "Redirection automatisée des patients de notre app B2C vers votre cabinet. Encaissez de nouvelles consultations privées chaque mois.",
+                color: "border-emerald-500/20"
               },
               {
-                icon: <ShieldCheck className="w-5 h-5" />,
-                tag: "Conformité",
-                title: "Sécurisé RGPD",
-                body: "Données patients anonymisées, hébergement chiffré, conformité RGPD. Partenariat MinSanté Cameroun en cours.",
-                accent: "#0EA5E9",
+                icon: <ShieldCheck className="w-4 h-4" />,
+                tag: "Sécurité Médicale",
+                title: "Anonymisation Absolue",
+                body: "Données patients hautement chiffrées. Traçabilité complète des dossiers médicaux pour une confidentialité réglementaire stricte.",
+                color: "border-slate-800"
               },
             ].map((c, i) => (
               <motion.div
                 key={i}
                 {...fadeUp}
-                transition={{ duration: 0.5, delay: i * 0.08 }}
-                className="max-w-md mx-auto w-full bg-white rounded-xl p-7 border border-slate-200 hover:border-slate-300 hover:shadow-lg transition-all"
+                transition={{ duration: 0.5, delay: i * 0.1 }}
+                className={`bg-slate-950 rounded-2xl p-6 border ${c.color} flex flex-col justify-between`}
               >
-                <div
-                  className="w-11 h-11 rounded-lg flex items-center justify-center text-white mb-4"
-                  style={{ background: c.accent }}
-                >
-                  {c.icon}
+                <div>
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-slate-900 text-white mb-5 border border-slate-800">
+                    {c.icon}
+                  </div>
+                  <span className="text-[9px] font-black uppercase tracking-widest text-slate-500 block mb-1">{c.tag}</span>
+                  <h3 className="text-base font-black uppercase tracking-tight text-white mb-3 font-display">{c.title}</h3>
+                  <p className="text-xs text-slate-400 leading-relaxed font-medium">{c.body}</p>
                 </div>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">{c.tag}</p>
-                <h3 className="text-lg font-bold mb-2.5" style={{ color: "#1E293B" }}>{c.title}</h3>
-                <p className="text-sm text-slate-600 leading-relaxed">{c.body}</p>
               </motion.div>
             ))}
           </div>
@@ -282,43 +250,42 @@ export default function Pro() {
       </section>
 
       {/* ═══════════════════════════════════════════════════════════════
-          3. FEATURES — bg-gray-50 py-20, 6 cards w-80
+          3. FEATURES — La Suite Logicielle Clinique
           ═══════════════════════════════════════════════════════════════ */}
-      <section id="features" className="py-20 px-6 lg:px-8" style={{ background: "#F8FAFC" }}>
+      <section id="features" className="py-24 px-6 lg:px-8 bg-slate-950/40 border-b border-slate-900">
         <div className="max-w-7xl mx-auto">
-          <motion.div {...fadeUp} className="text-center max-w-2xl mx-auto mb-14">
-            <p className="text-xs font-bold uppercase tracking-[0.2em] mb-3" style={{ color: "#1E40AF" }}>
-              Suite clinique complète
-            </p>
-            <h2 className="text-3xl md:text-4xl font-bold tracking-tight" style={{ color: "#1E293B" }}>
-              Tout ce dont votre cabinet a besoin
+          <motion.div {...fadeUp} className="text-center max-w-2xl mx-auto mb-16">
+            <span className="text-[10px] font-black uppercase tracking-widest text-blue-500 block mb-2">
+              Spécifications Pro
+            </span>
+            <h2 className="text-2xl sm:text-4xl font-black uppercase tracking-tight text-white font-display">
+              Outils d'Analyse Intégrés
             </h2>
           </motion.div>
 
-          <div className="flex flex-wrap justify-center gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-6xl mx-auto">
             {[
-              { icon: <Microscope className="w-5 h-5" />, title: "Prédiagnostic IA", desc: "Upload photo → détection acné, xérose, pigmentation en 5 secondes. Précision validée 95 %." },
-              { icon: <BarChart3 className="w-5 h-5" />, title: "Dashboard patients", desc: "Suivi GlowScore, évolution dans le temps et prédiction de churn par patient." },
-              { icon: <FileText className="w-5 h-5" />, title: "Rapports PDF", desc: "Modèles brandés à votre cabinet, export en 1 clic, partage sécurisé chiffré." },
-              { icon: <Smartphone className="w-5 h-5" />, title: "Intégration RDV", desc: "Booking direct depuis l'app patient B2C — commission par consultation." },
-              { icon: <Lock className="w-5 h-5" />, title: "Analytics sécurisés", desc: "ROI, statistiques pathologies, exports CSV chiffrés. Conformité RGPD totale." },
-              { icon: <Cog className="w-5 h-5" />, title: "API custom", desc: "Endpoints REST pour intégrer GlowScan à votre logiciel cabinet existant." },
+              { icon: <Microscope className="w-4 h-4" />, title: "Prédiagnostic Instantané", desc: "Scan d'image à haute résolution. Identification des pathologies majeures en 5 secondes." },
+              { icon: <BarChart3 className="w-4 h-4" />, title: "Console Praticien", desc: "Suivi chronologique des fiches patients, historique des scores d'évolution cutanée." },
+              { icon: <FileText className="w-4 h-4" />, title: "Export PDF Signé", desc: "Génération automatique de comptes-rendus cliniques avec le logo de votre cabinet." },
+              { icon: <Smartphone className="w-4 h-4" />, title: "Passerelle de Prise de RDV", desc: "Synchronisation native avec la file d'attente et l'agenda de votre structure médicale." },
+              { icon: <Lock className="w-4 h-4" />, title: "Chiffrement End-to-End", desc: "Sécurisation des photos et diagnostics. Zéro fuite de données confidentielles." },
+              { icon: <Cog className="w-4 h-4" />, title: "Intégration API REST", desc: "Endpoints documentés pour connecter GlowScan Pro à vos logiciels internes existants." },
             ].map((f, i) => (
               <motion.div
                 key={i}
                 {...fadeUp}
-                transition={{ duration: 0.4, delay: (i % 3) * 0.06 }}
-                className="w-80 h-64 bg-white rounded-xl p-6 border border-slate-200 hover:border-blue-700 hover:shadow-lg transition-all flex flex-col"
+                transition={{ duration: 0.4, delay: i * 0.05 }}
+                className="bg-slate-950 rounded-2xl p-6 border border-slate-900 hover:border-slate-800 transition-all flex flex-col justify-between"
                 data-testid={`card-feature-${i}`}
               >
-                <div
-                  className="w-10 h-10 rounded-lg flex items-center justify-center text-white mb-4"
-                  style={{ background: "#1E40AF" }}
-                >
-                  {f.icon}
+                <div>
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-blue-600/10 text-blue-400 mb-4 border border-blue-500/10">
+                    {f.icon}
+                  </div>
+                  <h3 className="text-sm font-black uppercase tracking-wide text-white mb-2 font-display">{f.title}</h3>
+                  <p className="text-xs text-slate-400 leading-relaxed font-medium">{f.desc}</p>
                 </div>
-                <h3 className="text-base font-bold mb-2" style={{ color: "#1E293B" }}>{f.title}</h3>
-                <p className="text-sm text-slate-600 leading-relaxed flex-1">{f.desc}</p>
               </motion.div>
             ))}
           </div>
@@ -326,50 +293,49 @@ export default function Pro() {
       </section>
 
       {/* ═══════════════════════════════════════════════════════════════
-          4. PRICING — bg-white py-20, 3 columns
+          4. PRICING — Grille des Licences SaaS (Monétisation)
           ═══════════════════════════════════════════════════════════════ */}
-      <section id="pricing" className="bg-white py-20 px-6 lg:px-8">
+      <section id="pricing" className="py-24 px-6 lg:px-8 border-b border-slate-900">
         <div className="max-w-7xl mx-auto">
-          <motion.div {...fadeUp} className="text-center max-w-2xl mx-auto mb-14">
-            <p className="text-xs font-bold uppercase tracking-[0.2em] mb-3" style={{ color: "#1E40AF" }}>
-              Tarification transparente
-            </p>
-            <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-3" style={{ color: "#1E293B" }}>
-              Choisissez votre plan
+          <motion.div {...fadeUp} className="text-center max-w-2xl mx-auto mb-16">
+            <span className="text-[10px] font-black uppercase tracking-widest text-blue-500 block mb-2">
+              Tarification B2B
+            </span>
+            <h2 className="text-2xl sm:text-4xl font-black uppercase tracking-tight text-white font-display">
+              Sélectionnez votre licence
             </h2>
-            <p className="text-slate-600">14 jours d'essai gratuit · Sans carte bancaire</p>
           </motion.div>
 
-          <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+          <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto items-stretch">
             {[
               {
-                name: "Free",
+                name: "Découverte",
                 price: "0",
                 unit: "FCFA",
-                period: "à vie",
-                desc: "Pour découvrir la plateforme",
-                features: ["50 prédiagnostics / mois", "Dashboard basique", "Support communauté"],
-                cta: "Commencer",
+                period: "/ à vie",
+                desc: "Pour évaluer l'outil en cabinet",
+                features: ["50 scans d'imagerie / mois", "Console patient standard", "Support communautaire"],
+                cta: "Démarrer",
                 highlight: false,
               },
               {
-                name: "Pro",
+                name: "Cabinet Pro",
                 price: "15 000",
                 unit: "FCFA",
                 period: "/ mois",
-                desc: "Pour dermatologues indépendants",
-                features: ["Prédiagnostics illimités", "Rapports PDF brandés", "Tracking patients complet", "API custom", "Support prioritaire"],
-                cta: "Démarrer l'essai 14 j",
+                desc: "Pour praticiens indépendants",
+                features: ["Scans et analyses illimités", "Rapports cliniques PDF brandés", "Génération de flux patients B2C", "Accès API standard", "Support technique prioritaire"],
+                cta: "Activer la licence Pro",
                 highlight: true,
               },
               {
-                name: "Clinic",
+                name: "Clinique / Labo",
                 price: "30 000",
                 unit: "FCFA",
                 period: "/ mois",
-                desc: "Pour cabinets multi-praticiens",
-                features: ["Tout le plan Pro", "Comptes multi-utilisateurs", "Support dédié", "Onboarding personnalisé", "SLA premium"],
-                cta: "Contacter l'équipe",
+                desc: "Pour structures multi-praticiens",
+                features: ["Tout le plan Cabinet Pro", "Comptes praticiens multiples", "Intégration sur-mesure", "Onboarding sur site à Douala/Yaoundé", "Garantie de disponibilité (SLA)"],
+                cta: "Ouvrir un compte Clinique",
                 highlight: false,
               },
             ].map((p, i) => (
@@ -377,83 +343,84 @@ export default function Pro() {
                 key={p.name}
                 {...fadeUp}
                 transition={{ duration: 0.5, delay: i * 0.08 }}
-                className={`relative bg-white rounded-2xl p-7 border-2 transition-all ${
+                className={`relative bg-slate-950 rounded-2xl p-6 border flex flex-col justify-between transition-all ${
                   p.highlight
-                    ? "shadow-2xl scale-[1.03]"
-                    : "border-slate-200 hover:border-slate-300 hover:shadow-md"
+                    ? "border-blue-500 shadow-2xl shadow-blue-600/5 md:scale-[1.03] z-10"
+                    : "border-slate-900 hover:border-slate-800"
                 }`}
-                style={p.highlight ? { borderColor: "#1E40AF" } : {}}
                 data-testid={`card-pricing-${p.name.toLowerCase()}`}
               >
                 {p.highlight && (
-                  <div
-                    className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider text-white"
-                    style={{ background: "#1E40AF" }}
-                  >
-                    Recommandé
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest text-white bg-blue-600 shadow-md">
+                    Licence recommandée
                   </div>
                 )}
 
-                <div className="mb-5">
-                  <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">{p.name}</p>
-                  <p className="text-sm text-slate-600 mb-4">{p.desc}</p>
-                  <div className="flex items-baseline gap-1.5">
-                    <span className="text-4xl font-bold" style={{ color: "#1E293B" }}>{p.price}</span>
-                    <span className="text-sm font-semibold text-slate-600">{p.unit}</span>
-                    <span className="text-sm text-slate-500">{p.period}</span>
+                <div className="space-y-4">
+                  <div>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-1">{p.name}</span>
+                    <p className="text-xs text-slate-400 font-medium leading-normal">{p.desc}</p>
                   </div>
+
+                  <div className="flex items-baseline gap-1 pt-2 border-b border-slate-900 pb-4">
+                    <span className="text-3xl font-black text-white font-mono">{p.price}</span>
+                    <span className="text-xs font-black text-slate-300">{p.unit}</span>
+                    <span className="text-xs font-bold text-slate-500 ml-1">{p.period}</span>
+                  </div>
+
+                  <ul className="space-y-3 pt-2">
+                    {p.features.map((feat, j) => (
+                      <li key={j} className="flex items-start gap-2.5 text-xs font-medium text-slate-300">
+                        <CheckCircle2 className="w-3.5 h-3.5 mt-0.5 shrink-0 text-emerald-400" />
+                        <span>{feat}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
 
-                <ul className="space-y-2.5 mb-6">
-                  {p.features.map((feat, j) => (
-                    <li key={j} className="flex items-start gap-2 text-sm text-slate-700">
-                      <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: "#10B981" }} />
-                      <span>{feat}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                {p.name === "Clinic" ? (
-                  <a
-                    href="https://wa.me/237674377959?text=Bonjour%20GlowScan%20Pro%20-%20plan%20Clinic"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`block w-full text-center py-3 rounded-lg font-semibold text-sm transition-all ${
-                      p.highlight ? "text-white" : "bg-slate-100 text-slate-900 hover:bg-slate-200"
-                    }`}
-                    data-testid={`button-pricing-${p.name.toLowerCase()}`}
-                  >
-                    {p.cta}
-                  </a>
-                ) : (
-                  <Link
-                    href="/pro/inscription"
-                    className={`block w-full text-center py-3 rounded-lg font-semibold text-sm transition-all ${
-                      p.highlight ? "text-white hover:opacity-90" : "bg-slate-100 text-slate-900 hover:bg-slate-200"
-                    }`}
-                    style={p.highlight ? { background: "#1E40AF" } : {}}
-                    data-testid={`button-pricing-${p.name.toLowerCase()}`}
-                  >
-                    {p.cta}
-                  </Link>
-                )}
+                <div className="pt-6 mt-6 border-t border-slate-900">
+                  {p.name === "Clinique / Labo" ? (
+                    <a
+                      href="https://wa.me/237674377959?text=Bonjour%20GlowScan%20Pro%20-%20Plan%20Clinique"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full text-center py-3.5 rounded-xl font-black text-xs uppercase tracking-widest bg-slate-900 text-slate-300 hover:text-white border border-slate-800 hover:border-slate-700 transition-all flex items-center justify-center gap-1.5"
+                      data-testid={`button-pricing-${p.name.toLowerCase()}`}
+                    >
+                      <span>Contacter l'équipe</span>
+                      <ArrowUpRight className="w-3.5 h-3.5" />
+                    </a>
+                  ) : (
+                    <Link
+                      href="/pro/inscription"
+                      className={`block w-full text-center py-3.5 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${
+                        p.highlight
+                          ? "bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-600/10"
+                          : "bg-slate-900 text-slate-400 hover:text-white border border-slate-800"
+                      }`}
+                      data-testid={`button-pricing-${p.name.toLowerCase()}`}
+                    >
+                      {p.cta}
+                    </Link>
+                  )}
+                </div>
               </motion.div>
             ))}
           </div>
 
-          {/* Social proof bar */}
-          <motion.div {...fadeUp} className="grid grid-cols-3 gap-4 max-w-3xl mx-auto mt-16 pt-10 border-t border-slate-200">
+          {/* Validation Metrics Bottom */}
+          <motion.div {...fadeUp} className="grid grid-cols-3 gap-4 max-w-3xl mx-auto mt-20 pt-10 border-t border-slate-900">
             {[
-              { v: "10 000+", l: "Photos peaux noires", icon: <Database className="w-4 h-4" /> },
-              { v: "95 %", l: "Précision validée", icon: <Activity className="w-4 h-4" /> },
-              { v: "+50 %", l: "Patients en moyenne", icon: <TrendingUp className="w-4 h-4" /> },
-            ].map((m) => (
-              <div key={m.l} className="text-center">
-                <div className="inline-flex w-9 h-9 rounded-lg items-center justify-center text-white mb-2" style={{ background: "#10B981" }}>
+              { v: "10 000+", l: "Dataset Localisé", icon: <Layers className="w-4 h-4" /> },
+              { v: "95 %", l: "Précision Validée", icon: <Activity className="w-4 h-4" /> },
+              { v: "Secured", l: "Chiffrement Chiffres", icon: <Lock className="w-4 h-4" /> },
+            ].map((m, i) => (
+              <div key={i} className="text-center space-y-1">
+                <div className="inline-flex w-8 h-8 rounded-lg items-center justify-center bg-slate-900 text-blue-400 border border-slate-800 mx-auto">
                   {m.icon}
                 </div>
-                <p className="text-2xl font-bold" style={{ color: "#1E293B" }}>{m.v}</p>
-                <p className="text-[11px] uppercase tracking-wider text-slate-500 font-semibold mt-1">{m.l}</p>
+                <p className="text-xl font-black text-white font-mono">{m.v}</p>
+                <p className="text-[9px] uppercase tracking-widest text-slate-500 font-bold">{m.l}</p>
               </div>
             ))}
           </motion.div>
@@ -461,59 +428,56 @@ export default function Pro() {
       </section>
 
       {/* ═══════════════════════════════════════════════════════════════
-          5. FOOTER — bg-blue-900 py-12 text-white
+          5. FOOTER — Cohérence de l'infrastructure
           ═══════════════════════════════════════════════════════════════ */}
-      <footer className="py-12 px-6 lg:px-8 text-white" style={{ background: "#1E3A8A" }}>
+      <footer className="py-16 px-6 lg:px-8 border-t border-slate-900 bg-slate-950">
         <div className="max-w-7xl mx-auto">
-          <div className="grid md:grid-cols-3 gap-10 mb-10">
-            {/* Logo + tagline */}
-            <div>
-              <div className="flex items-center gap-2.5 mb-4">
-                <div className="w-9 h-9 rounded-md flex items-center justify-center bg-white/10 border border-white/20">
-                  <Stethoscope className="w-4 h-4 text-white" />
+          <div className="grid md:grid-cols-3 gap-12 mb-12">
+            
+            <div className="space-y-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-blue-600/10 border border-blue-500/20">
+                  <Stethoscope className="w-3.5 h-3.5 text-blue-400" />
                 </div>
                 <div className="leading-tight">
-                  <p className="font-bold text-base">GlowScan Pro</p>
-                  <p className="text-[10px] uppercase tracking-[0.15em] text-blue-200">Clinical AI</p>
+                  <p className="font-black text-sm uppercase tracking-wide text-white">GlowScan Pro</p>
+                  <p className="text-[9px] uppercase tracking-[0.2em] text-blue-400 font-bold">Clinical Engine</p>
                 </div>
               </div>
-              <p className="text-sm text-blue-100 leading-relaxed max-w-xs">
-                IA dermatologique professionnelle conçue pour les peaux noires. Yaoundé · Douala · Cameroun.
+              <p className="text-xs text-slate-400 leading-relaxed max-w-xs font-medium">
+                Infrastructure d'imagerie faciale algorithmique et de redirection de flux patients. Déployé à Douala, Cameroun.
               </p>
             </div>
 
-            {/* Contact */}
-            <div>
-              <p className="text-sm font-bold uppercase tracking-wider mb-4 text-white">Contact</p>
+            <div className="space-y-4">
+              <p className="text-xs font-black uppercase tracking-widest text-white">Canal Praticien</p>
               <a
-                href="https://wa.me/237674377959?text=Bonjour%2C%20je%20souhaite%20une%20demo%20GlowScan%20Pro"
+                href="https://wa.me/237674377959?text=Bonjour%20GlowScan%20Pro"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-sm text-blue-100 hover:text-white transition-colors mb-2"
+                className="inline-flex items-center gap-2 text-xs font-bold text-slate-300 hover:text-white transition-colors"
                 data-testid="link-whatsapp"
               >
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+                <svg className="w-4 h-4 text-emerald-400" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
                 +237 674 377 959
               </a>
-              <p className="text-xs text-blue-200/80 mt-3">Réponse sous 1 h ouvrée · Lun-Sam 8h-18h</p>
+              <p className="text-[10px] font-medium text-slate-500">Support opérationnel permanent · Lun-Sam 8h-18h</p>
             </div>
 
-            {/* Légal */}
-            <div>
-              <p className="text-sm font-bold uppercase tracking-wider mb-4 text-white">Légal</p>
-              <ul className="space-y-2 text-sm">
-                <li><Link href="/confidentialite" className="text-blue-100 hover:text-white transition-colors">Politique de confidentialité</Link></li>
-                <li><Link href="/confidentialite" className="text-blue-100 hover:text-white transition-colors">Conditions d'utilisation</Link></li>
-                <li><Link href="/confidentialite" className="text-blue-100 hover:text-white transition-colors">Mentions légales</Link></li>
+            <div className="space-y-3">
+              <p className="text-xs font-black uppercase tracking-widest text-white">Sécurité</p>
+              <ul className="space-y-2 text-xs font-medium text-slate-400">
+                <li><Link href="/confidentialite" className="hover:text-white transition-colors">Politique de confidentialité</Link></li>
+                <li><Link href="/confidentialite" className="hover:text-white transition-colors">Réglementation des Données</Link></li>
               </ul>
             </div>
           </div>
 
-          <div className="pt-6 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-blue-200">
+          <div className="pt-8 border-t border-slate-900 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] font-medium text-slate-500">
             <p>© {new Date().getFullYear()} GlowScan. Tous droits réservés.</p>
             <p className="flex items-center gap-1.5">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              Hébergement chiffré · Données médicales sécurisées
+              <ShieldCheck className="w-4 h-4 text-blue-500" />
+              Chiffrement de bout en bout conforme MINSANTÉ
             </p>
           </div>
         </div>
