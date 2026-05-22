@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Link, useLocation } from "wouter";
-import { Sun, Moon, Plus, Trash2, Bell, BellOff, Flame, ChevronLeft, X, Check, Sparkles, Search } from "lucide-react";
+import { Sun, Moon, Plus, Trash2, Bell, BellOff, Flame, ChevronLeft, X, Check, Sparkles, Search, CheckCircle2 } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { useAuth } from "@/hooks/use-auth";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -10,9 +10,6 @@ import { useToast } from "@/hooks/use-toast";
 import { catalog, type Product, getProductBrand } from "@shared/catalog";
 import { productImages } from "@/lib/productImages";
 
-// ─────────────────────────────────────────────────────────────────────
-//  Types
-// ─────────────────────────────────────────────────────────────────────
 type Period = "morning" | "evening";
 
 interface RoutineStep {
@@ -40,15 +37,9 @@ interface RoutinesResponse {
 }
 
 // ─────────────────────────────────────────────────────────────────────
-//  Add Step Modal
+//  MODAL D'AJOUT D'ÉTAPE (STYLE LABO)
 // ─────────────────────────────────────────────────────────────────────
-function AddStepModal({
-  period,
-  onClose,
-}: {
-  period: Period;
-  onClose: () => void;
-}) {
+function AddStepModal({ period, onClose }: { period: Period; onClose: () => void }) {
   const [tab, setTab] = useState<"product" | "care">("product");
   const [search, setSearch] = useState("");
   const [careLabel, setCareLabel] = useState("");
@@ -71,7 +62,7 @@ function AddStepModal({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/routines"] });
-      toast({ title: "✨ Étape ajoutée" });
+      toast({ title: "Étape enregistrée ⚡" });
       onClose();
     },
     onError: () => toast({ title: "Erreur", description: "Impossible d'ajouter l'étape", variant: "destructive" }),
@@ -84,72 +75,71 @@ function AddStepModal({
   }, [search]);
 
   const careSuggestions = period === "morning"
-    ? ["💧 Boire 1 grand verre d'eau", "☀️ Mettre crème solaire SPF50", "🥒 Manger un fruit frais", "🧘 5 min respiration profonde"]
-    : ["🍵 Tisane sans caféine", "💤 Couper les écrans 1h avant de dormir", "🌸 Massage du visage 2 min", "💧 Boire un verre d'eau"];
+    ? ["💧 Eau fraîche au réveil", "☀️ Protection Solaire SPF 50+", "🌸 Massage tonifiant (60s)", "🥒 Application Gel Aloé Véra"]
+    : ["🧪 Nettoyage Double (Huile + Gel)", "🍵 Tisane antioxydante", "💤 Écrans coupés 45 min avant", "🌸 Massage lymphatique drainant"];
 
   return (
     <>
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+        className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-250"
         onClick={onClose}
         data-testid="add-step-backdrop"
       />
       <motion.div
         initial={{ y: "100%" }}
         animate={{ y: 0 }}
-        transition={{ type: "spring", damping: 30, stiffness: 280 }}
+        exit={{ y: "100%" }}
+        transition={{ type: "spring", damping: 28, stiffness: 260 }}
         role="dialog"
         aria-modal="true"
-        className="fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-3xl max-h-[88vh] flex flex-col shadow-2xl"
+        className="fixed inset-x-0 bottom-0 z-250 bg-white rounded-t-3xl max-h-[85vh] flex flex-col shadow-2xl border-t border-slate-200"
         data-testid="modal-add-step"
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 flex-shrink-0">
-          <button onClick={onClose} className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center active:scale-90 transition-transform" data-testid="button-close-add-step" aria-label="Fermer">
-            <X className="w-4 h-4 text-gray-600" />
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 flex-shrink-0">
+          <button onClick={onClose} className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center active:scale-90 transition-transform" data-testid="button-close-add-step">
+            <X className="w-4 h-4 text-slate-500" />
           </button>
-          <h3 className="text-base font-bold text-gray-900">Ajouter une étape</h3>
-          <div className="w-9" />
+          <h3 className="text-xs font-black uppercase tracking-widest text-slate-900">Configurer une action</h3>
+          <div className="w-8" />
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-2 px-4 py-3 border-b border-gray-100 flex-shrink-0">
+        {/* Switch Onglets Cliniques */}
+        <div className="flex bg-slate-100 p-1 rounded-xl mx-4 my-3 border border-slate-200/40 flex-shrink-0">
           <button
             onClick={() => setTab("product")}
-            className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${tab === "product" ? "bg-pink-500 text-white shadow-sm" : "bg-gray-100 text-gray-600"}`}
+            className={`flex-1 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${tab === "product" ? "bg-slate-950 text-white shadow-xs" : "text-slate-500"}`}
             data-testid="tab-product"
           >
-            🧴 Produit
+            🧴 Actif Spécifique
           </button>
           <button
             onClick={() => setTab("care")}
-            className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${tab === "care" ? "bg-pink-500 text-white shadow-sm" : "bg-gray-100 text-gray-600"}`}
+            className={`flex-1 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${tab === "care" ? "bg-slate-950 text-white shadow-xs" : "text-slate-500"}`}
             data-testid="tab-care"
           >
-            ✨ Soin perso
+            ✨ Geste Hygiène
           </button>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto px-4 py-3">
+        <div className="flex-1 overflow-y-auto px-4 pb-6">
           {tab === "product" ? (
-            <>
-              <div className="relative mb-3">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <div className="space-y-3">
+              <div className="relative">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
                 <input
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Chercher un produit..."
-                  className="w-full pl-10 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-pink-100"
+                  placeholder="Rechercher une formulation de la boutique..."
+                  className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:border-slate-400 transition-colors"
                   data-testid="input-search-product"
                 />
               </div>
               <div className="space-y-2">
                 {filteredProducts.length === 0 && (
-                  <p className="text-center text-sm text-gray-400 py-8">Aucun produit trouvé</p>
+                  <p className="text-center text-xs text-slate-400 py-6">Formulation introuvable</p>
                 )}
                 {filteredProducts.map((p) => {
                   const img = productImages[p.id];
@@ -159,60 +149,59 @@ function AddStepModal({
                       key={p.id}
                       onClick={() => addMut.mutate({ kind: "product", label: p.name, productId: p.id })}
                       disabled={addMut.isPending}
-                      className="w-full flex items-center gap-3 p-2.5 bg-white border border-gray-200 rounded-xl hover:border-pink-300 active:scale-[0.98] transition-all text-left"
+                      className="w-full flex items-center gap-3 p-2.5 bg-white border border-slate-200 rounded-xl hover:border-slate-400 active:scale-[0.99] transition-all text-left"
                       data-testid={`pick-product-${p.id}`}
                     >
-                      <div className="w-12 h-12 rounded-lg bg-gray-100 overflow-hidden flex-shrink-0">
-                        {img ? <img src={img} alt={p.name} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-2xl">🧴</div>}
+                      <div className="w-10 h-10 rounded-lg bg-slate-50 border border-slate-100 overflow-hidden flex-shrink-0">
+                        {img ? <img src={img} alt={p.name} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-xs font-bold bg-slate-100 text-slate-400">INCI</div>}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-pink-600">{brand}</p>
-                        <p className="text-sm font-semibold text-gray-900 truncate">{p.name}</p>
+                        <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">{brand}</p>
+                        <p className="text-xs font-bold text-slate-900 truncate">{p.name}</p>
                       </div>
-                      <Plus className="w-4 h-4 text-pink-500 flex-shrink-0" />
+                      <Plus className="w-4 h-4 text-slate-900 flex-shrink-0" />
                     </button>
                   );
                 })}
               </div>
-            </>
+            </div>
           ) : (
-            <>
+            <div className="space-y-3">
               <input
                 type="text"
                 value={careLabel}
                 onChange={(e) => setCareLabel(e.target.value)}
-                placeholder="Ex: Boire 2L d'eau, Massage visage..."
-                className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-pink-100"
+                placeholder="Ex: Massage facial à l'eau froide..."
+                className="w-full px-3 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:border-slate-400 transition-colors"
                 maxLength={120}
                 data-testid="input-care-label"
               />
-              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Suggestions</p>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest pt-1">Protocoles suggérés</p>
               <div className="space-y-1.5">
                 {careSuggestions.map((s) => (
                   <button
                     key={s}
                     onClick={() => setCareLabel(s)}
-                    className="w-full text-left px-3 py-2 rounded-xl bg-gray-50 hover:bg-pink-50 text-sm text-gray-700 active:scale-[0.98] transition-all"
+                    className="w-full text-left px-3.5 py-3 rounded-xl bg-slate-50 border border-slate-200/40 hover:bg-slate-100 text-xs font-bold text-slate-700 active:scale-[0.99] transition-all"
                     data-testid={`suggestion-${s.slice(0, 20)}`}
                   >
                     {s}
                   </button>
                 ))}
               </div>
-            </>
+            </div>
           )}
         </div>
 
-        {/* Sticky footer for care tab */}
         {tab === "care" && (
-          <div className="px-4 py-3 border-t border-gray-100 flex-shrink-0">
+          <div className="px-4 py-3 border-t border-slate-100 bg-slate-50 flex-shrink-0">
             <button
               onClick={() => careLabel.trim() && addMut.mutate({ kind: "care", label: careLabel.trim() })}
               disabled={!careLabel.trim() || addMut.isPending}
-              className="w-full bg-pink-500 hover:bg-pink-600 disabled:bg-gray-300 text-white py-3 rounded-xl text-sm font-bold transition-colors active:scale-[0.98]"
+              className="w-full bg-slate-950 text-white py-3.5 rounded-xl text-xs font-black uppercase tracking-widest transition-colors disabled:bg-slate-200 disabled:text-slate-400"
               data-testid="button-confirm-care"
             >
-              {addMut.isPending ? "Ajout..." : "Ajouter ce soin"}
+              {addMut.isPending ? "Validation..." : "Confirmer le geste"}
             </button>
           </div>
         )}
@@ -222,30 +211,22 @@ function AddStepModal({
 }
 
 // ─────────────────────────────────────────────────────────────────────
-//  Routine Card (matin ou soir)
+//  ROUTINE CARD (GESTION MATIN ET SOIR DIFFÉRENCIÉE)
 // ─────────────────────────────────────────────────────────────────────
-function RoutineCard({
-  period,
-  routine,
-  todayCompletions,
-}: {
-  period: Period;
-  routine: Routine | undefined;
-  todayCompletions: number[];
-}) {
+function RoutineCard({ period, routine, todayCompletions }: { period: Period; routine: Routine | undefined; todayCompletions: number[] }) {
   const { toast } = useToast();
   const [showAdd, setShowAdd] = useState(false);
   const isMorning = period === "morning";
+  
   const Icon = isMorning ? Sun : Moon;
-  const title = isMorning ? "Routine Matin" : "Routine Soir";
-  const emoji = isMorning ? "🌅" : "🌙";
-  const accentBg = isMorning ? "bg-pink-50" : "bg-gray-900";
-  const accentText = "text-pink-600";
-  const accentTitleText = isMorning ? "text-gray-900" : "text-white";
-  const accentLabelText = isMorning ? "text-gray-400" : "text-pink-300";
-  const accentBorder = isMorning ? "border-pink-200" : "border-gray-200";
+  const title = isMorning ? "Protocole Matinal" : "Protocole Nocturne";
+  
+  // Style Labo Matin vs Nuit Intercalé
+  const headerBg = isMorning ? "bg-slate-50 border-b border-slate-100" : "bg-slate-950 text-white";
+  const titleColor = isMorning ? "text-slate-900" : "text-white";
+  const descColor = isMorning ? "text-slate-400" : "text-slate-400";
+  const containerBorder = isMorning ? "border-slate-200/80" : "border-slate-950";
 
-  // Local optimistic state for the time picker
   const [localTime, setLocalTime] = useState(routine?.reminderTime || (isMorning ? "07:00" : "21:00"));
   useEffect(() => {
     if (routine?.reminderTime) setLocalTime(routine.reminderTime);
@@ -257,7 +238,7 @@ function RoutineCard({
       return r.json();
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/routines"] }),
-    onError: () => toast({ title: "Erreur", description: "Impossible de sauvegarder", variant: "destructive" }),
+    onError: () => toast({ title: "Erreur de synchronisation", variant: "destructive" }),
   });
 
   const checkMut = useMutation({
@@ -274,7 +255,7 @@ function RoutineCard({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/routines"] });
-      toast({ title: "Étape supprimée" });
+      toast({ title: "Action retirée de la liste" });
     },
   });
 
@@ -285,37 +266,37 @@ function RoutineCard({
 
   return (
     <>
-      <div className={`bg-white rounded-2xl border ${accentBorder} shadow-sm overflow-hidden`} data-testid={`card-routine-${period}`}>
-        {/* Header */}
-        <div className={`${accentBg} px-4 py-3 flex items-center justify-between`}>
-          <div className="flex items-center gap-2.5">
-            <div className={`w-9 h-9 rounded-xl bg-white flex items-center justify-center shadow-sm`}>
-              <Icon className={`w-5 h-5 ${accentText}`} />
+      <div className={`bg-white rounded-3xl border ${containerBorder} shadow-xs overflow-hidden`} data-testid={`card-routine-${period}`}>
+        
+        {/* En-tête de Carte Dynamique */}
+        <div className={`${headerBg} px-4 py-4 flex items-center justify-between`}>
+          <div className="flex items-center gap-3">
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center border ${isMorning ? "bg-white border-slate-200 text-amber-500" : "bg-slate-900 border-slate-800 text-indigo-400"}`}>
+              <Icon className="w-4 h-4" />
             </div>
             <div>
-              <p className={`text-xs font-bold ${accentLabelText} uppercase tracking-wider`}>{emoji} Période</p>
-              <p className={`text-sm font-bold ${accentTitleText}`}>{title}</p>
+              <p className={`text-[9px] font-black uppercase tracking-widest ${descColor}`}>Cycle journalier</p>
+              <p className={`text-xs font-black uppercase tracking-wider ${titleColor}`}>{title}</p>
             </div>
           </div>
           {steps.length > 0 && (
-            <div className={`px-2.5 py-1 rounded-full bg-white ${accentText} text-xs font-extrabold`}>
-              {completedCount}/{steps.length}
+            <div className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold ${isMorning ? "bg-slate-200/60 text-slate-800" : "bg-white/10 text-white"}`}>
+              {completedCount} / {steps.length} VALIDE(S)
             </div>
           )}
         </div>
 
-        {/* Reminder time picker */}
-        <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-3">
+        {/* Bloc Horloge Clinique */}
+        <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/40 flex items-center gap-3">
           <button
             onClick={() => updateMut.mutate({ reminderEnabled: !reminderEnabled })}
-            className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all active:scale-90 ${reminderEnabled ? "bg-pink-50 text-pink-600" : "bg-gray-100 text-gray-400"}`}
+            className={`w-9 h-9 rounded-xl flex items-center justify-center border transition-all active:scale-90 ${reminderEnabled ? "bg-slate-950 text-white border-slate-950" : "bg-white text-slate-400 border-slate-200"}`}
             data-testid={`button-toggle-reminder-${period}`}
-            aria-label="Activer/désactiver rappel"
           >
-            {reminderEnabled ? <Bell className="w-4 h-4" /> : <BellOff className="w-4 h-4" />}
+            {reminderEnabled ? <Bell className="w-3.5 h-3.5" /> : <BellOff className="w-3.5 h-3.5" />}
           </button>
           <div className="flex-1">
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">⏰ Rappel</p>
+            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Alerte Push</p>
             <input
               type="time"
               value={localTime}
@@ -326,42 +307,41 @@ function RoutineCard({
                 }
               }}
               disabled={!reminderEnabled}
-              className="text-lg font-bold text-gray-900 bg-transparent focus:outline-none disabled:text-gray-400"
+              className="text-sm font-black text-slate-900 bg-transparent focus:outline-none disabled:text-slate-300 font-mono"
               data-testid={`input-time-${period}`}
             />
           </div>
         </div>
 
-        {/* Steps list */}
-        <div className="px-4 py-3 space-y-1.5 min-h-[60px]">
+        {/* Liste des validations */}
+        <div className="px-4 py-3.5 space-y-2 min-h-[60px]">
           {steps.length === 0 && (
-            <p className="text-center text-xs text-gray-400 py-3">Aucune étape — appuie sur + pour commencer</p>
+            <p className="text-center text-xs text-slate-400 py-4 italic">Aucun traitement programmé sur ce créneau.</p>
           )}
           {steps.map((step) => {
             const done = todayCompletions.includes(step.id);
             return (
-              <div key={step.id} className="flex items-center gap-2 group" data-testid={`step-${step.id}`}>
+              <div key={step.id} className="flex items-center gap-2" data-testid={`step-${step.id}`}>
                 <button
                   onClick={() => checkMut.mutate(step.id)}
                   disabled={checkMut.isPending}
-                  className={`flex-1 flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all text-left ${done ? "bg-pink-50 border-pink-100" : "bg-gray-50 border-gray-100 hover:border-gray-200"}`}
+                  className={`flex-1 flex items-center gap-3 px-3 py-3 rounded-xl border transition-all text-left ${done ? "bg-emerald-500/5 border-emerald-500/20" : "bg-white border-slate-200 hover:border-slate-300"}`}
                   data-testid={`button-check-step-${step.id}`}
                 >
-                  <div className={`w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 border-2 transition-all ${done ? "bg-pink-500 border-pink-500" : "border-gray-300 bg-white"}`}>
-                    {done && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+                  <div className={`w-4 h-4 rounded-md flex items-center justify-center flex-shrink-0 border transition-all ${done ? "bg-emerald-500 border-emerald-500 text-white" : "border-slate-300 bg-white"}`}>
+                    {done && <Check className="w-3 h-3" strokeWidth={3} />}
                   </div>
-                  <span className={`text-sm flex-1 min-w-0 truncate ${done ? "text-pink-700 font-semibold line-through decoration-pink-300" : "text-gray-700"}`}>
+                  <span className={`text-xs font-bold flex-1 min-w-0 truncate ${done ? "text-slate-400 line-through" : "text-slate-800"}`}>
                     {step.kind === "product" && !step.label.match(/^[\u{1F300}-\u{1FAFF}\u2600-\u27BF]/u) && "🧴 "}
                     {step.label}
                   </span>
                 </button>
                 <button
                   onClick={() => {
-                    if (confirm(`Supprimer "${step.label}" ?`)) deleteMut.mutate(step.id);
+                    if (confirm(`Retirer l'étape "${step.label}" ?`)) deleteMut.mutate(step.id);
                   }}
-                  className="w-9 h-9 rounded-xl bg-gray-50 hover:bg-rose-50 text-gray-400 hover:text-rose-500 flex items-center justify-center active:scale-90 transition-all"
+                  className="w-9 h-9 rounded-xl bg-slate-50 border border-slate-100 text-slate-400 hover:text-red-500 hover:bg-red-50 flex items-center justify-center active:scale-90 transition-all"
                   data-testid={`button-delete-step-${step.id}`}
-                  aria-label={`Supprimer ${step.label}`}
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
@@ -371,35 +351,38 @@ function RoutineCard({
 
           {allDone && (
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
+              initial={{ opacity: 0, scale: 0.98 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="text-center py-2.5 mt-2 bg-gradient-to-r from-pink-50 to-pink-100 rounded-xl border border-pink-200"
+              className="text-center py-3 mt-2 bg-emerald-500/10 rounded-xl border border-emerald-500/20 flex items-center justify-center gap-2"
             >
-              <p className="text-sm font-bold text-pink-700">🎉 Routine complète, bravo !</p>
+              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+              <p className="text-xs font-black text-emerald-800 uppercase tracking-wide">Index de conformité atteint pour ce cycle !</p>
             </motion.div>
           )}
         </div>
 
-        {/* Add button */}
+        {/* Bouton d'ajout */}
         <div className="px-4 pb-4">
           <button
             onClick={() => setShowAdd(true)}
-            className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-dashed ${accentBorder} ${accentText} text-sm font-bold hover:bg-gray-50 active:scale-[0.98] transition-all`}
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-dashed border-slate-300 text-slate-800 text-xs font-black uppercase tracking-wider hover:bg-slate-50 active:scale-[0.99] transition-all"
             data-testid={`button-add-step-${period}`}
           >
-            <Plus className="w-4 h-4" />
-            Ajouter une étape
+            <Plus className="w-4 h-4 text-slate-500" />
+            Planifier un soin
           </button>
         </div>
       </div>
 
-      {showAdd && <AddStepModal period={period} onClose={() => setShowAdd(false)} />}
+      <AnimatePresence>
+        {showAdd && <AddStepModal period={period} onClose={() => setShowAdd(false)} />}
+      </AnimatePresence>
     </>
   );
 }
 
 // ─────────────────────────────────────────────────────────────────────
-//  Page principale
+//  PAGE PRINCIPALE
 // ─────────────────────────────────────────────────────────────────────
 export default function Routine() {
   const { user, isLoading: authLoading } = useAuth();
@@ -412,20 +395,20 @@ export default function Routine() {
 
   if (authLoading || isLoading) {
     return (
-      <div className="min-h-screen bg-[#FFF8FB] flex items-center justify-center">
-        <div className="animate-pulse text-sm text-gray-400">Chargement...</div>
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="w-6 h-6 rounded-full border-2 border-slate-200 border-t-slate-950 animate-spin" />
       </div>
     );
   }
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-[#FFF8FB] flex flex-col items-center justify-center px-6 text-center">
-        <Sparkles className="w-12 h-12 text-pink-500 mb-3" />
-        <h2 className="text-xl font-bold text-gray-900 mb-2">Connecte-toi</h2>
-        <p className="text-sm text-gray-600 mb-5">Pour créer ta routine, on a besoin de te reconnaître.</p>
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center px-6 text-center">
+        <Sparkles className="w-10 h-10 text-slate-400 mb-4" />
+        <h2 className="text-sm font-black uppercase tracking-widest text-slate-900 mb-1">Authentification Requise</h2>
+        <p className="text-xs text-slate-500 max-w-[260px] mx-auto leading-relaxed mb-6">Connecte-toi pour synchroniser tes formules et suivre tes cycles.</p>
         <Link href="/auth">
-          <a className="px-6 py-3 bg-pink-500 text-white rounded-xl text-sm font-bold" data-testid="button-login">Se connecter</a>
+          <a className="px-6 py-3.5 bg-slate-950 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-md" data-testid="button-login">S'identifier</a>
         </Link>
       </div>
     );
@@ -437,74 +420,71 @@ export default function Routine() {
   const stats = data?.stats || { streak: 0, weeklyPct: 0, totalSteps: 0, today: "" };
 
   return (
-    <div className="min-h-screen bg-[#FFF8FB] pb-24">
+    <div className="min-h-screen bg-slate-50 pb-24">
       <Navbar />
 
-      {/* Header */}
-      <div className="sticky top-0 z-30 bg-white/90 backdrop-blur-sm border-b border-gray-100">
-        <div className="max-w-md mx-auto px-4 py-3 flex items-center gap-3">
+      {/* Header Premium de Page */}
+      <div className="sticky top-16 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200/60">
+        <div className="max-w-md mx-auto px-4 py-4 flex items-center gap-3🎁">
           <button
             onClick={() => setLocation("/")}
-            className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center active:scale-90 transition-transform"
+            className="w-9 h-9 rounded-xl border border-slate-200 bg-white flex items-center justify-center active:scale-90 transition-transform"
             data-testid="button-back-home"
-            aria-label="Retour"
           >
-            <ChevronLeft className="w-4 h-4 text-gray-700" />
+            <ChevronLeft className="w-4 h-4 text-slate-700" />
           </button>
           <div className="flex-1">
-            <h1 className="text-base font-extrabold text-gray-900">Ma Routine</h1>
-            <p className="text-[11px] text-gray-400">Matin & soir, étape par étape</p>
+            <h1 className="text-sm font-black uppercase tracking-wider text-slate-900">Suivi Chrono-Cutané</h1>
+            <p className="text-[11px] text-slate-400 font-medium">Contrôle de la régularité et des applications</p>
           </div>
         </div>
       </div>
 
       <div className="max-w-md mx-auto px-4 py-4 space-y-4">
-        {/* Stats card */}
+        {/* Grille de performance (1% Progress Compounding) */}
         <div className="grid grid-cols-2 gap-3">
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-3.5 flex items-center gap-3" data-testid="card-streak">
-            <div className="w-10 h-10 rounded-xl bg-pink-50 flex items-center justify-center">
-              <Flame className="w-5 h-5 text-pink-500" />
+          <div className="bg-white rounded-2xl border border-slate-200/60 shadow-xs p-4 flex items-center gap-3.5" data-testid="card-streak">
+            <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+              <Flame className="w-4 h-4 text-amber-500" />
             </div>
             <div>
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Streak</p>
-              <p className="text-lg font-extrabold text-gray-900" data-testid="text-streak-value">
-                {stats.streak} <span className="text-xs font-bold text-gray-500">jour{stats.streak > 1 ? "s" : ""} 🔥</span>
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Régularité</p>
+              <p className="text-base font-black text-slate-900" data-testid="text-streak-value">
+                {stats.streak} <span className="text-[10px] font-bold text-slate-500 uppercase">Jour{stats.streak > 1 ? "s" : ""}</span>
               </p>
             </div>
           </div>
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-3.5 flex items-center gap-3" data-testid="card-weekly">
-            <div className="w-10 h-10 rounded-xl bg-pink-50 flex items-center justify-center">
-              <Sparkles className="w-5 h-5 text-pink-500" />
+          
+          <div className="bg-white rounded-2xl border border-slate-200/60 shadow-xs p-4 flex items-center gap-3.5" data-testid="card-weekly">
+            <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+              <Sparkles className="w-4 h-4 text-emerald-500" />
             </div>
             <div>
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Cette sem.</p>
-              <p className="text-lg font-extrabold text-gray-900" data-testid="text-weekly-value">{stats.weeklyPct}%</p>
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Complétion</p>
+              <p className="text-base font-black text-slate-900" data-testid="text-weekly-value">{stats.weeklyPct}%</p>
             </div>
           </div>
         </div>
 
-        {/* Streak motivation message */}
+        {/* Message d'ancrage psychologique */}
         {stats.streak >= 3 && (
           <motion.div
-            initial={{ opacity: 0, y: -8 }}
+            initial={{ opacity: 0, y: -5 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-gradient-to-r from-pink-50 to-pink-100 rounded-xl border border-pink-200 px-4 py-2.5"
+            className="bg-slate-950 text-white rounded-xl p-3.5 border border-slate-900 text-center"
           >
-            <p className="text-sm font-bold text-pink-700">
-              Tu as suivi ta routine {stats.streak} jours de suite 🔥
+            <p className="text-xs font-bold leading-normal">
+              ⚡ Discipline maintenue sur <span className="text-amber-400 font-black">{stats.streak} cycles</span>. Chaque jour valide forge ta transformation pour 2027.
             </p>
           </motion.div>
         )}
 
-        {/* Morning routine */}
+        {/* Les blocs de cycles matin et soir */}
         <RoutineCard period="morning" routine={morning} todayCompletions={todayCompletions} />
-
-        {/* Evening routine */}
         <RoutineCard period="evening" routine={evening} todayCompletions={todayCompletions} />
 
-        {/* Helper text */}
-        <p className="text-[11px] text-gray-400 text-center px-4 pt-2">
-          On t'enverra une notification à l'heure choisie. Tu pourras désactiver le rappel à tout moment.
+        <p className="text-[10px] text-slate-400 font-medium text-center px-6 pt-2 leading-relaxed">
+          Les alertes push s'adaptent automatiquement à ton fuseau local pour respecter la chronobiologie cutanée.
         </p>
       </div>
     </div>
