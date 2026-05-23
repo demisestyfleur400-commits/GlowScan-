@@ -1034,29 +1034,32 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
                         </button>
                       </div>
                     </div>
-                  )}
+                                {/* Fin du contenu conditionnel principal */}
+            </div>
+          );
+        })()
+      ) : (
+        /* Bloc logistique et action si aucune routine n'est en cours de traitement */
+        <div className="space-y-3 mt-4">
+          {/* BLOC LOGISTIQUE DE CONFIANCE (DOUALA / YAOUNDÉ) */}
+          <div className="bg-emerald-50/80 px-4 py-3 rounded-2xl flex items-center gap-3 border border-emerald-100/80 shadow-sm">
+            <Truck className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+            <div className="text-left">
+              <p className="text-[11px] text-emerald-800 font-black leading-tight">Expédition Express au Cameroun</p>
+              <p className="text-[10px] text-emerald-600 font-semibold mt-0.5">Livraison à domicile (Douala & Yaoundé) · Paiement Cash à la livraison</p>
+            </div>
+          </div>
 
-                </div>
+          {/* Action secondaire : Partage social discret */}
+          <button
+            onClick={() => setShowRoutineCard(true)}
+            className="w-full py-2 text-gray-400 hover:text-gray-600 text-[11px] font-bold transition-all text-center underline tracking-wide"
+          >
+            💾 Enregistrer ou partager mon ordonnance personnalisée
+          </button>
+        </div>
+      )}
 
-                {/* BLOC LOGISTIQUE DE CONFIANCE (DOUALA / YAOUNDÉ) */}
-                <div className="bg-emerald-50/80 px-4 py-3 rounded-2xl flex items-center gap-3 border border-emerald-100/80 shadow-sm">
-                  <Truck className="w-5 h-5 text-emerald-600 flex-shrink-0" />
-                  <div className="text-left">
-                    <p className="text-[11px] text-emerald-800 font-black leading-tight">Expédition Express au Cameroun</p>
-                    <p className="text-[10px] text-emerald-600 font-semibold mt-0.5">Livraison à domicile (Douala & Yaoundé) · Paiement Cash à la livraison</p>
-                  </div>
-                </div>
-
-                {/* Action secondaire : Partage social discret */}
-                <button
-                  onClick={() => setShowRoutineCard(true)}
-                  className="w-full py-2 text-gray-400 hover:text-gray-600 text-[11px] font-bold transition-all text-center underline tracking-wide"
-                >
-                  💾 Enregistrer ou partager mon ordonnance personnalisée
-                </button>
-              </div>
-            );
-          })()
         ) : null}
 
         {/* ═══════════════════════════════════════════
