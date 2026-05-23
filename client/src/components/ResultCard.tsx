@@ -112,8 +112,7 @@ function normalizeStep(s: any, i: number): ProtocolStep {
     };
   }
   return { step: `Étape ${i + 1}`, product: typeof s === "string" ? s : String(s) };
-import { useState } from "react";
-import { AlertTriangle, Sparkles } from "lucide-react";
+   };
 
 // ─── Composants UI réutilisables et personnalisés ───────────────────
 
