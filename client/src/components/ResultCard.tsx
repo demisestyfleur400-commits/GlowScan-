@@ -278,7 +278,7 @@ function RadarChart({ balance }: { balance: AnalysisResult["balance"] }) {
 
 // Ligne d'étape de protocole
 function ProtocolRow({ index, step }: { index: number; step: ProtocolStep }) {
-    return (
+  return (
     <li className="flex gap-2.5">
       <span className="flex-shrink-0 w-6 h-6 rounded-full bg-pink-600 text-white text-[11px] font-bold flex items-center justify-center mt-0.5">
         {index}
@@ -294,6 +294,16 @@ function ProtocolRow({ index, step }: { index: number; step: ProtocolStep }) {
       </div>
     </li>
   );
+}
+
+// Fonction de récupération du rôle du produit (Ressuscitée et sécurisée)
+const getProductRole = (type: string): string => {
+  if (!type) return "creme";
+  const t = type.toLowerCase();
+  if (t.includes("nettoyant") || t.includes("gel") || t.includes("mousse")) return "nettoyant";
+  if (t.includes("serum") || t.includes("sérum")) return "serum";
+  if (t.includes("solaire") || t.includes("protection") || t.includes("ecran")) return "solaire";
+  return "creme";
 };
 
 // Fonction de récupération du rôle du produit (Nettoyée et sécurisée)
