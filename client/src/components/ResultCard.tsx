@@ -1008,7 +1008,7 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
         ) : null}
 
 
-                  {/* OFFRE 2 : LE COMPROMIS IDÉAL (LE DUO DE SAUVETAGE - 2 PRODUITS) */}
+                                  {/* OFFRE 2 : LE COMPROMIS IDÉAL (LE DUO DE SAUVETAGE - 2 PRODUITS) */}
                   {intermediateOffer && (
                     <div className="border-2 border-pink-500 bg-gradient-to-br from-pink-50/20 via-white to-white rounded-3xl p-5 relative shadow-md shadow-pink-100/40 transition-all scale-[1.01]">
                       <div className="absolute -top-3 right-5 bg-pink-500 text-white text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-wider shadow-sm">
@@ -1057,38 +1057,41 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
                         </button>
                       </div>
                     </div>
-                                    </div>
-        </div>
-      );
-    })()
-  ) : (
-    <div className="space-y-3 mt-4">
-      {/* BLOC LOGISTIQUE DE CONFIANCE (DOUALA / YAOUNDÉ) */}
-      <div className="bg-emerald-50/80 px-4 py-3 rounded-2xl flex items-center gap-3 border border-emerald-100/80 shadow-sm">
-        <Truck className="w-5 h-5 text-emerald-600 flex-shrink-0" />
-        <div className="text-left">
-          <p className="text-[11px] text-emerald-800 font-black leading-tight">Expédition Express au Cameroun</p>
-          <p className="text-[10px] text-emerald-600 font-semibold mt-0.5">Livraison à domicile (Douala & Yaoundé) · Paiement Cash à la livraison</p>
+                  )}
+
+                </div>
+              </div>
+            );
+          })()
+        ) : (
+          <div className="space-y-3 mt-4">
+            {/* BLOC LOGISTIQUE DE CONFIANCE (DOUALA / YAOUNDÉ) */}
+            <div className="bg-emerald-50/80 px-4 py-3 rounded-2xl flex items-center gap-3 border border-emerald-100/80 shadow-sm">
+              <Truck className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+              <div className="text-left">
+                <p className="text-[11px] text-emerald-800 font-black leading-tight">Expédition Express au Cameroun</p>
+                <p className="text-[10px] text-emerald-600 font-semibold mt-0.5">Livraison à domicile (Douala & Yaoundé) · Paiement Cash à la livraison</p>
+              </div>
+            </div>
+
+            {/* Action secondaire : Partage social discret */}
+            <button
+              onClick={() => setShowRoutineCard(true)}
+              className="w-full py-2 text-gray-400 hover:text-gray-600 text-[11px] font-bold transition-all text-center underline tracking-wide"
+            >
+              💾 Enregistrer ou partager mon ordonnance personnalisée
+            </button>
+          </div>
+        )}
+
+        {/* Footer Prévention Clinique */}
+        <div className="px-4 py-2.5 bg-slate-50 border-t border-slate-100 flex items-center gap-2 text-[10px] text-slate-400 font-semibold text-left">
+          <AlertTriangle className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+          <span>Analyse indicative générée par GlowScan AI.</span>
         </div>
       </div>
-
-      {/* Action secondaire : Partage social discret */}
-      <button
-        onClick={() => setShowRoutineCard(true)}
-        className="w-full py-2 text-gray-400 hover:text-gray-600 text-[11px] font-bold transition-all text-center underline tracking-wide"
-      >
-        💾 Enregistrer ou partager mon ordonnance personnalisée
-      </button>
     </div>
-  )}
-
-  {/* Footer Prévention Clinique */}
-  <div className="px-4 py-2.5 bg-slate-50 border-t border-slate-100 flex items-center gap-2 text-[10px] text-slate-400 font-semibold text-left">
-    <AlertTriangle className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-    <span>Analyse indicative générée par GlowScan AI.</span>
-  </div>
-</div>
-);
+  );
 }
 
         {/* ═══════════════════════════════════════════
