@@ -296,7 +296,7 @@ function ProtocolRow({ index, step }: { index: number; step: ProtocolStep }) {
   );
 }
 
-// Fonction de récupération du rôle du produit (Ressuscitée et sécurisée)
+// Fonction de récupération du rôle du produit (UNE SEULE FOIS ICI)
 const getProductRole = (type: string): string => {
   if (!type) return "creme";
   const t = type.toLowerCase();
@@ -306,17 +306,7 @@ const getProductRole = (type: string): string => {
   return "creme";
 };
 
-// Fonction de récupération du rôle du produit (Nettoyée et sécurisée)
-const getProductRole = (type: string): string => {
-  if (!type) return "creme";
-  const t = type.toLowerCase();
-  if (t.includes("nettoyant") || t.includes("gel") || t.includes("mousse")) return "nettoyant";
-  if (t.includes("serum") || t.includes("sérum")) return "serum";
-  if (t.includes("solaire") || t.includes("protection") || t.includes("ecran")) return "solaire";
-  return "creme";
-};
-
-// Suite logique du fichier
+// Suite logique du fichier (La vraie fonction démarre ici proprement)
 const findRoutineProducts = () => {
 
 // ═══════════════════════════════════════════════════════════════════
