@@ -1034,10 +1034,11 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
                       </div>
 
                       <div className="flex items-center justify-between gap-2 border-t border-pink-100 pt-3.5">
-                        <div>
-                          <p className="text-[9px] text-gray-400 font-bold line-through">{formatPrice(unitPriceDuo)}</p>
-                          <p className="text-lg font-black text-pink-600">{formatPrice(duoTotal)}</p>
-                        </div>
+                        <div className="mb-4"> {/* Aligne ou ajuste avec mb-2, mb-4, mb-6 selon le besoin */}
+  <p className="text-[9px] text-gray-400 font-bold line-through">{formatPrice(unitPriceDuo)}</p>
+  <p className="text-lg font-black text-pink-600">{formatPrice(duoTotal)}</p>
+</div>
+
                         <button 
                           onClick={() => {
                             const items: OrderItem[] = intermediateOffer.duo.map(({ product }) => ({
