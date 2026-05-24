@@ -296,28 +296,7 @@ function ProtocolRow({ index, step }: { index: number; step: ProtocolStep }) {
   );
 }
 
-// Fonction de récupération du rôle du produit (Ressuscitée et sécurisée)
-const getProductRole = (type: string): string => {
-  if (!type) return "creme";
-  const t = type.toLowerCase();
-  if (t.includes("nettoyant") || t.includes("gel") || t.includes("mousse")) return "nettoyant";
-  if (t.includes("serum") || t.includes("sérum")) return "serum";
-  if (t.includes("solaire") || t.includes("protection") || t.includes("ecran")) return "solaire";
-  return "creme";
-};
 
-// Fonction de récupération du rôle du produit (Nettoyée et sécurisée)
-const getProductRole = (type: string): string => {
-  if (!type) return "creme";
-  const t = type.toLowerCase();
-  if (t.includes("nettoyant") || t.includes("gel") || t.includes("mousse")) return "nettoyant";
-  if (t.includes("serum") || t.includes("sérum")) return "serum";
-  if (t.includes("solaire") || t.includes("protection") || t.includes("ecran")) return "solaire";
-  return "creme";
-};
-
-// Suite logique du fichier
-const findRoutineProducts = () => {
 
 // ═══════════════════════════════════════════════════════════════════
 //  Composant principal
@@ -384,7 +363,9 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
     const n = p.name.toLowerCase();
     if (n.includes("savon") || n.includes("soap") || n.includes("gel de douche") || n.includes("gel douche") || n.includes("gommage") || n.includes("shampoo") || n.includes("shampoing") || n.includes("clarifiant") || n.includes("nettoyant") || n.includes("cleansing")) return "nettoyant";
     if (n.includes("sérum") || n.includes("serum") || n.includes("huile") || n.includes("oil") || n.includes("lotion") || n.includes("tonic") || n.includes("tonique") || n.includes("potion") || n.includes("spray") || n.includes("poudre")) return "serum";
-    return 
+    return "creme";
+  };
+
   const findRoutineProducts = () => {
     const consultationText = (result as any).consultationData?.observations_visuelles || "";
     const searchText = ((result.condition || "") + " " + (result.details || "") + " " + consultationText).toLowerCase();
