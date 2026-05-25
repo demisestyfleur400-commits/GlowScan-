@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { trackPageVisit } from "@/lib/analytics";
 import { fetchWithRetry } from "@/lib/imageUtils";
 import { triggerPWAInstallPrompt } from "@/hooks/use-pwa-install";
-import { useSubscription } from "@/hooks/use-scans";
+import { useSubscription } from "@/hooks/use-subscription";
 import { Navbar } from "@/components/Navbar";
 import { FileUpload } from "@/components/FileUpload";
 import { ResultCard } from "@/components/ResultCard";
@@ -294,7 +294,7 @@ export default function Analyze() {
                   ) : (
                     <div className="absolute inset-0 flex items-center justify-center text-4xl">🔬</div>
                   )}
-                  <div className="absolute inset-0 opacity-20" style={{ backgroundImage: "linear-gradient(#2563eb 1px, transparent 1px), linear-gradient(90deg, #2563eb 1px, transparent 1px)", backgroundSize: "16px 16px" }} />
+                  <div className="absolute inset-0 opacity-20" style={{ backgroundImage: "linear-gradient(#2563eb 1px, transparent 1px), linear-gradient(90deg, #2563eb 1px, transparent 1px)", backgroundSize: "20px 20px" }} />
                   <motion.div 
                     className="absolute left-0 right-0 h-0.5 bg-blue-500 shadow-[0_0_12px_rgba(37,99,235,1)]" 
                     animate={{ top: ["0%", "100%", "0%"] }} 
@@ -396,7 +396,7 @@ export default function Analyze() {
                       placeholder="Saisis ta réponse ici..."
                       value={answers[q.id] || ""}
                       onChange={(e) => handleInputChange(q.id, e.target.value)}
-                      className="w-full px-3.5 py-2.5 text-xs font-bold text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-slate-950 outline-none transition-all"
+                      className="w-full px-3.5 py-2.5 text-xs font-bold text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-slate-950 outline-none transition-colors"
                     />
                   </div>
                 ))}
@@ -411,7 +411,7 @@ export default function Analyze() {
           {/* ══════════ ÉTAPE 4 : CARTES DES RÉSULTATS FINAUX ══════════ */}
           {step === "result" && result && !isAnalyzing && (
             <motion.div key="result" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="space-y-5">
-              <ResultCard result={result} savedScanId={savedScanId} onReset={reset} />
+              <ResultCard result={result} savedScanId={savedScanId} area={selectedArea} />
             </motion.div>
           )}
 
