@@ -1,3 +1,41 @@
+// ─── SYSTÈME DE CORRESPONDANCE DE L'OMBRE (ANTI-FUITE) ─────────────
+const getClinicalNomenclature = (productName: string, role: string): { anonymousName: string; secretCode: string } => {
+  const nameLower = productName.toLowerCase();
+  
+  // Génération d'un code unique basé sur le nom du produit
+  let hash = 0;
+  for (let i = 0; i < productName.length; i++) hash = ((hash << 5) - hash + productName.charCodeAt(i)) | 0;
+  const uniqueId = Math.abs(hash % 99) + 1;
+  const padId = uniqueId < 10 ? `0${uniqueId}` : uniqueId;
+
+  if (role === "nettoyant") {
+    let ingredients = "Céramides & Zinc PCA";
+    if (nameLower.includes("savon") || nameLower.includes("acn")) ingredients = "Soufre & Arbre à Thé";
+    if (nameLower.includes("gommage")) ingredients = "Micro-Acides de Fruits (AHA)";
+    return {
+      anonymousName: `GlowScan Solution 🧴 Nettoyant Purifiant ${ingredients}`,
+      secretCode: `#GS-N${padId}`
+    };
+  }
+  
+  if (role === "serum") {
+    let ingredients = "Niacinamide 10% & Acide Hyaluronique";
+    if (nameLower.includes("chebe") || nameLower.includes("bloom")) ingredients = "Complexe Capillaire Chébé Bio Active";
+    if (nameLower.includes("huile") || nameLower.includes("oil")) ingredients = "Éclat Botanique Oxygénante";
+    return {
+      anonymousName: `GlowScan Concentré 💧 Sérum Actif Cblé ${ingredients}`,
+      secretCode: `#GS-S${padId}`
+    };
+  }
+  
+  let ingredients = "Vitamine C & Filtres Barrières";
+  if (nameLower.includes("creme") || nameLower.includes("cacao")) ingredients = "Beurre de Cacao Pur & Lipides Protecteurs";
+  return {
+    anonymousName: `GlowScan Formule 🛡️ Soin Régénérant ${ingredients}`,
+    secretCode: `#GS-C${padId}`
+  };
+};
+
 import { useState } from "react";
 import { motion } from "framer-motion";
 import {
@@ -27,6 +65,7 @@ const SOCIAL_PROOF: Record<string, number> = {
   "shampooing-chebe": 24, "huile-chebe": 20, "creme-chebe": 15,
   "serum-hairbloom": 13,
 };
+
 function getSocialProof(productId: string): number {
   if (SOCIAL_PROOF[productId]) return SOCIAL_PROOF[productId];
   let h = 0;
@@ -38,34 +77,36 @@ function getSocialProof(productId: string): number {
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
 }
+
 function deriveAgeCutane(result: AnalysisResult): number {
   const score = result.score || 50;
   const scars = result.balance?.scars || 0;
-  // Plus le score est bas et plus il y a de cicatrices/marques, plus l'âge cutané est élevé
   return clamp(Math.round(22 + (100 - score) * 0.25 + scars * 1.2), 18, 65);
 }
+
 function deriveIndiceAcne(result: AnalysisResult): { value: number; label: string } {
   const inflam = result.balance?.inflammation || 0;
   const value = clamp(inflam * 10, 0, 100);
   const label = value >= 60 ? "Élevé" : value >= 35 ? "Modéré" : value >= 15 ? "Léger" : "Faible";
   return { value, label };
 }
+
 function deriveHydratation(result: AnalysisResult): { value: number; label: string } {
   const sebum = result.balance?.sebum || 5;
   const score = result.score || 50;
-  // Plus de sébum + bon score = meilleure hydratation (relation indirecte)
   const value = clamp(Math.round(70 - sebum * 4 + (score - 50) * 0.3), 15, 95);
   const label = value >= 75 ? "optimal" : value >= 55 ? "moyen" : "faible";
   return { value, label };
 }
+
 function deriveRides(result: AnalysisResult): { value: number; label: string } {
   const scars = result.balance?.scars || 0;
   const age = deriveAgeCutane(result);
-  // Note 0-100, plus c'est haut, plus c'est faible (= peu de rides)
   const value = clamp(Math.round(100 - scars * 6 - Math.max(0, age - 28) * 1.2), 25, 99);
   const label = value >= 80 ? "Faible" : value >= 55 ? "Modéré" : "Marqué";
   return { value, label };
 }
+
 function derivePoresLabel(result: AnalysisResult): string {
   const pores = result.balance?.pores || 0;
   if (pores >= 7) return "Très dilatés";
@@ -73,6 +114,7 @@ function derivePoresLabel(result: AnalysisResult): string {
   if (pores >= 3) return "Modérés";
   return "Fins";
 }
+
 function deriveMarquesLabel(result: AnalysisResult): string {
   const scars = result.balance?.scars || 0;
   if (scars >= 7) return "Marquées";
@@ -80,6 +122,7 @@ function deriveMarquesLabel(result: AnalysisResult): string {
   if (scars >= 2) return "Discrètes";
   return "Aucune";
 }
+
 function deriveLesionsLabel(result: AnalysisResult): string {
   const inflam = result.balance?.inflammation || 0;
   if (inflam >= 7) return "Lésions inflammatoires marquées";
@@ -87,22 +130,19 @@ function deriveLesionsLabel(result: AnalysisResult): string {
   if (inflam >= 2) return "Imperfections mineures";
   return "Aucune lésion notable";
 }
+
 function deriveZonesLabel(result: AnalysisResult): string {
-  // 1) Préférer stats.zones rempli par l'IA : c'est la localisation anatomique
-  //    précise (ex: "Front + Menton", "Zone T + Joue droite") — bien plus
-  //    informatif que la simple liste des zones rouges.
   const statsZones = (result as any).stats?.zones;
   if (typeof statsZones === "string" && statsZones.trim() && statsZones.trim() !== "—" && statsZones.trim() !== "Non détecté") {
     return statsZones.trim();
   }
-  // 2) Fallback : noms des zones red/yellow détectées
   const zones = (result.zones || []).filter((z: any) => z.status === "red" || z.status === "yellow");
   if (zones.length === 0) return "Toutes saines";
   const names = zones.slice(0, 2).map((z: any) => z.name);
   return names.join(" · ");
 }
 
-// ─── Normalise les étapes de protocole (str OU {step,product,why}) ──
+// ─── Normalise les étapes de protocole ──────────────────────────────
 function normalizeStep(s: any, i: number): ProtocolStep {
   if (s && typeof s === "object") {
     return {
@@ -112,10 +152,9 @@ function normalizeStep(s: any, i: number): ProtocolStep {
     };
   }
   return { step: `Étape ${i + 1}`, product: typeof s === "string" ? s : String(s) };
-   };
+}
 
 // ─── Composants UI réutilisables et personnalisés ───────────────────
-
 function SeverityBadge({ severity }: { severity: string }) {
   const s = severity?.toLowerCase() || "modérée";
   let bg = "bg-pink-100 text-pink-700 border-pink-200";
@@ -128,7 +167,6 @@ function SeverityBadge({ severity }: { severity: string }) {
   );
 }
 
-// Jauge demi-cercle Glow Score enrichie avec la remarque personnalisée du Docteur
 function GlowGauge({ score, observationsVisuelles }: { score: number; observationsVisuelles?: string }) {
   const safeScore = clamp(score || 0, 0, 100);
   const radius = 90;
@@ -148,21 +186,8 @@ function GlowGauge({ score, observationsVisuelles }: { score: number; observatio
               <stop offset="100%" stopColor="#10b981" />
             </linearGradient>
           </defs>
-          <path
-            d={`M ${cx - radius} ${cy} A ${radius} ${radius} 0 0 1 ${cx + radius} ${cy}`}
-            fill="none"
-            stroke="#e5e7eb"
-            strokeWidth="14"
-            strokeLinecap="round"
-          />
-          <path
-            d={`M ${cx - radius} ${cy} A ${radius} ${radius} 0 0 1 ${cx + radius} ${cy}`}
-            fill="none"
-            stroke="url(#gauge-gradient)"
-            strokeWidth="14"
-            strokeLinecap="round"
-            strokeDasharray={`${filled} ${remaining}`}
-          />
+          <path d={`M ${cx - radius} ${cy} A ${radius} ${radius} 0 0 1 ${cx + radius} ${cy}`} fill="none" stroke="#e5e7eb" strokeWidth="14" strokeLinecap="round" />
+          <path d={`M ${cx - radius} ${cy} A ${radius} ${radius} 0 0 1 ${cx + radius} ${cy}`} fill="none" stroke="url(#gauge-gradient)" strokeWidth="14" strokeLinecap="round" strokeDasharray={`${filled} ${remaining}`} />
           <text x={cx} y={cy - radius - 6} textAnchor="middle" className="fill-gray-400 text-[10px] font-bold">50</text>
           <text x={cx - radius} y={cy + 22} textAnchor="middle" className="fill-gray-400 text-[10px] font-bold">0</text>
           <text x={cx + radius} y={cy + 22} textAnchor="middle" className="fill-gray-400 text-[10px] font-bold">100</text>
@@ -172,23 +197,18 @@ function GlowGauge({ score, observationsVisuelles }: { score: number; observatio
           <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mt-1">Glow Score</p>
         </div>
       </div>
-
-      {/* 💬 REMARQUE DU DOCTEUR IA : Brise le côté générique instantanément */}
       {observationsVisuelles && (
         <div className="mt-3 bg-indigo-50/70 border border-indigo-100 rounded-xl p-3 text-left shadow-sm">
           <p className="text-[11px] font-bold text-indigo-700 flex items-center gap-1 uppercase tracking-wider mb-1">
             <Sparkles className="w-3.5 h-3.5" /> L'avis du Doc'
           </p>
-          <p className="text-xs font-semibold text-gray-700 italic leading-relaxed">
-            "{observationsVisuelles}"
-          </p>
+          <p className="text-xs font-semibold text-gray-700 italic leading-relaxed">"{observationsVisuelles}"</p>
         </div>
       )}
     </div>
   );
 }
 
-// Tuile chiffrée colorée avec option d'explication contextuelle
 function StatTile({
   icon, label, value, suffix, sub, color, explicationContextuelle
 }: {
@@ -198,7 +218,7 @@ function StatTile({
   suffix?: string;
   sub?: string;
   color: "amber" | "rose" | "blue" | "emerald";
-  explicationContextuelle?: string; // Ex: "Aggravé par le manque de sommeil mentionné"
+  explicationContextuelle?: string;
 }) {
   const palette: Record<string, string> = {
     amber: "bg-amber-50 border-amber-100 text-amber-800",
@@ -218,8 +238,6 @@ function StatTile({
           </p>
         </div>
       </div>
-      
-      {/* 🎯 FACTEUR DÉCLENCHEUR : Lie le score directement aux réponses du questionnaire */}
       {explicationContextuelle && (
         <div className="text-[11px] font-medium border-t border-black/5 pt-1.5 opacity-80 leading-snug">
           💡 {explicationContextuelle}
@@ -270,13 +288,12 @@ function RadarChart({ balance }: { balance: AnalysisResult["balance"] }) {
       {labels.map((l, i) => (
         <text key={i} x={getPoint(i, 12.5).x} y={getPoint(i, 12.5).y} textAnchor="middle" dominantBaseline="middle" className="fill-gray-500 text-[8px] font-bold uppercase">
           {l.label}
-          </text>
+        </text>
       ))}
     </svg>
   );
 }
 
-// Ligne d'étape de protocole
 function ProtocolRow({ index, step }: { index: number; step: ProtocolStep }) {
   return (
     <li className="flex gap-2.5">
@@ -296,22 +313,7 @@ function ProtocolRow({ index, step }: { index: number; step: ProtocolStep }) {
   );
 }
 
-// Fonction de récupération du rôle du produit (UNE SEULE FOIS ICI)
-const getProductRole = (type: string): string => {
-  if (!type) return "creme";
-  const t = type.toLowerCase();
-  if (t.includes("nettoyant") || t.includes("gel") || t.includes("mousse")) return "nettoyant";
-  if (t.includes("serum") || t.includes("sérum")) return "serum";
-  if (t.includes("solaire") || t.includes("protection") || t.includes("ecran")) return "solaire";
-  return "creme";
-};
-
-// Suite logique du fichier (La vraie fonction démarre ici proprement)
-const findRoutineProducts = () => {
-
-// ═══════════════════════════════════════════════════════════════════
-//  Composant principal
-// ═══════════════════════════════════════════════════════════════════
+// ─── COMPOSANT PRINCIPAL SÉCURISÉ ───────────────────────────────────
 interface ResultCardProps {
   result: AnalysisResult;
   scanId?: number | null;
@@ -321,7 +323,6 @@ interface ResultCardProps {
 }
 
 export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: ResultCardProps) {
-^
   const { toast } = useToast();
   const { user } = useAuth();
   const { isPremium } = useSubscription();
@@ -332,9 +333,6 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
   const [orderModalItems, setOrderModalItems] = useState<OrderItem[]>([]);
   const [orderModalTitle, setOrderModalTitle] = useState("");
 
-  // ── Cas "Image non exploitable" : message court et clair ──────────
-  // On se fie UNIQUEMENT au signal explicite du backend pour éviter de
-  // masquer à tort des scans historiques valides avec score 0 ou sans zones.
   if (result.condition === "Image non exploitable") {
     return (
       <div className="max-w-lg mx-auto px-4" data-testid="result-unanalyzable">
@@ -358,7 +356,6 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
     );
   }
 
-  // ── Zone détectée ──────────────────────────────────────────────────
   const detectArea = (): "visage" | "corps" | "cheveux" => {
     if (area === "hair") return "cheveux";
     if (area === "body") return "corps";
@@ -370,13 +367,12 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
   };
   const currentArea = detectArea();
 
-  // ── Construction de la routine 3 produits (1 seule marque locale) ─
   const getProductRole = (p: typeof catalog[0]): "nettoyant" | "serum" | "creme" => {
     const n = p.name.toLowerCase();
     if (n.includes("savon") || n.includes("soap") || n.includes("gel de douche") || n.includes("gel douche") || n.includes("gommage") || n.includes("shampoo") || n.includes("shampoing") || n.includes("clarifiant") || n.includes("nettoyant") || n.includes("cleansing")) return "nettoyant";
     if (n.includes("sérum") || n.includes("serum") || n.includes("huile") || n.includes("oil") || n.includes("lotion") || n.includes("tonic") || n.includes("tonique") || n.includes("potion") || n.includes("spray") || n.includes("poudre")) return "serum";
     return "creme";
-  }; // <-- Fermeture propre et sécurisée ajoutée ici !
+  };
 
   const findRoutineProducts = () => {
     const consultationText = (result as any).consultationData?.observations_visuelles || "";
@@ -447,10 +443,8 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
     }));
   };
 
-  // 1) On génère la routine complète de 3 produits
   const routineProducts = findRoutineProducts();
 
-  // 2) 🛠️ On calcule automatiquement l'offre intermédiaire (Le Duo) juste après
   const getIntermediateOffer = () => {
     if (routineProducts.length < 2) return null;
     const duoProducts = routineProducts.slice(0, 2);
@@ -467,12 +461,10 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
   };
 
   const intermediateOffer = getIntermediateOffer();
-  // ── Protocole matin/soir/hebdo normalisé ───────────────────────────
   const protocolMorning: ProtocolStep[] = ((result as any).protocol?.morning || result.recommendations?.morning || []).map(normalizeStep);
   const protocolEvening: ProtocolStep[] = ((result as any).protocol?.evening || result.recommendations?.evening || []).map(normalizeStep);
   const weekly = typeof result.recommendations?.weekly === "string" ? result.recommendations.weekly : "";
 
-  // ── Valeurs des tuiles ─────────────────────────────────────────────
   const ageCutane = deriveAgeCutane(result);
   const indiceAcne = deriveIndiceAcne(result);
   const hydratation = deriveHydratation(result);
