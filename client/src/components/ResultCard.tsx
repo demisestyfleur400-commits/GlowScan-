@@ -187,7 +187,7 @@ function GlowGauge({ score, observationsVisuelles }: { score: number; observatio
             </linearGradient>
           </defs>
           <path d={`M ${cx - radius} ${cy} A ${radius} ${radius} 0 0 1 ${cx + radius} ${cy}`} fill="none" stroke="#e5e7eb" strokeWidth="14" strokeLinecap="round" />
-          <path d={`M ${cx - radius} ${cy} A ${radius} ${radius} 0 0 1 ${cx + radius} ${cy}`} fill="none" stroke="url(#gauge-gradient)" strokeWidth="14" strokeLinecap="round" strokeDasharray={`${filled} ${remaining}`} />
+          <path d={`M ${cx - radius} ${cy} A ${radius} ${radius} 0 0 1 ${cx + radius} ${cy}`} fill="none" stroke="url(#gauge-gradient)" strokeWidth="14" strokeLinecap="round" strokeDasharray={`${filled},${remaining}`} />
           <text x={cx} y={cy - radius - 6} textAnchor="middle" className="fill-gray-400 text-[10px] font-bold">50</text>
           <text x={cx - radius} y={cy + 22} textAnchor="middle" className="fill-gray-400 text-[10px] font-bold">0</text>
           <text x={cx + radius} y={cy + 22} textAnchor="middle" className="fill-gray-400 text-[10px] font-bold">100</text>
@@ -333,6 +333,16 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
   const [orderModalItems, setOrderModalItems] = useState<OrderItem[]>([]);
   const [orderModalTitle, setOrderModalTitle] = useState("");
 
+  // ─── Déclarer les variables manquantes ─────────────────────────────
+  const ageCutane = deriveAgeCutane(result);
+  const indiceAcne = deriveIndiceAcne(result);
+  const hydratation = deriveHydratation(result);
+  const rides = deriveRides(result);
+  const protocolMorning = (result as any).protocol?.morning || [];
+  const protocolEvening = (result as any).protocol?.evening || [];
+  const weekly = (result as any).protocol?.weekly || undefined;
+  const expertCitation = (result as any).consultationData?.recommendation || "Votre peau exprime un besoin urgent de régulation. Suivre rigoureusement le protocole de soins locaux sélectionné est la première étape essentielle pour retrouver l'équilibre.";
+
   if (result.condition === "Image non exploitable") {
     return (
       <div className="max-w-lg mx-auto px-4" data-testid="result-unanalyzable">
@@ -369,8 +379,8 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
 
   const getProductRole = (p: typeof catalog[0]): "nettoyant" | "serum" | "creme" => {
     const n = p.name.toLowerCase();
-    if (n.includes("savon") || n.includes("soap") || n.includes("gel de douche") || n.includes("gel douche") || n.includes("gommage") || n.includes("shampoo") || n.includes("shampoing") || n.includes("clarifiant") || n.includes("nettoyant") || n.includes("cleansing")) return "nettoyant";
-    if (n.includes("sérum") || n.includes("serum") || n.includes("huile") || n.includes("oil") || n.includes("lotion") || n.includes("tonic") || n.includes("tonique") || n.includes("potion") || n.includes("spray") || n.includes("poudre")) return "serum";
+    if (n.includes("savon") || n.includes("soap") || n.includes("gel de douche") || n.includes("gel douche") || n.includes("gommage") || n.includes("shampoo") || n.includes("shampoing")) return "nettoyant";
+    if (n.includes("sérum") || n.includes("serum") || n.includes("huile") || n.includes("oil") || n.includes("lotion") || n.includes("tonic") || n.includes("tonique") || n.includes("potion")) return "serum";
     return "creme";
   };
 
@@ -437,38 +447,34 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
       winner = { products: sorted, total: 0, brandKey: sorted[0].whatsapp || "" };
     }
     return winner.products.map((p, i) => {
-  const roleKey = getProductRole(p);
-  // On applique l'anonymisation magique
-  const { anonymousName, secretCode } = getClinicalNomenclature(p.name, roleKey);
-  
-  return {
-    product: {
-      ...p,
-      name: anonymousName,      // L'utilisateur lit la formule clinique, pas la marque
-      secretCode: secretCode,   // Le code secret pour ton WhatsApp
-      brand: "GlowScan Clinic"  // Masquage total du fabricant original
-    },
-    role: roleLabels[roleKey] || roleLabels["creme"],
-    index: i + 1,
-  };
-});
-
+      const roleKey = getProductRole(p);
+      const { anonymousName, secretCode } = getClinicalNomenclature(p.name, roleKey);
+      
+      return {
+        product: {
+          ...p,
+          name: anonymousName,
+          secretCode: secretCode,
+          brand: "GlowScan Clinic"
+        },
+        role: roleLabels[roleKey] || roleLabels["creme"],
+        index: i + 1,
+      };
+    });
   };
 
   const routineProducts = findRoutineProducts();
 
-    const getIntermediateOffer = () => {
+  const getIntermediateOffer = () => {
     if (routineProducts.length < 2) return null;
     const duoProducts = routineProducts.slice(0, 2);
     const totalPriceDuo = duoProducts.reduce((sum, item) => sum + item.product.price, 0);
-    
-    // On rassemble les codes secrets des deux produits (Ex: #GS-N05 + #GS-S12)
     const orderCodes = duoProducts.map(item => (item.product as any).secretCode).join(" + ");
     
     return {
       duo: duoProducts,
       totalPrice: totalPriceDuo,
-      secretCodes: orderCodes, // Sauvegardé pour le bouton
+      secretCodes: orderCodes,
       copywriting: {
         title: "Le Compromis Idéal ✨",
         subtitle: currentArea === "cheveux" ? "Le Kit Duo Croissance" : "Le Protocole Duo Action Ciblée",
@@ -478,7 +484,6 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
   };
 
   const intermediateOffer = getIntermediateOffer();
-
 
   // ═══════════════════════════════════════════════════════════════════
   //  RENDU
@@ -503,13 +508,10 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
             {result.condition}
           </h1>
 
-          {/* Jauge demi-cercle */}
-          
-           <GlowGauge 
-  score={result.score} 
-  observationsVisuelles={result.consultationData?.observations_visuelles || (result as any).observationsVisuelles} 
-/>
-     {/* 4 tuiles colorées et contextualisées */}
+          <GlowGauge 
+            score={result.score} 
+            observationsVisuelles={result.consultationData?.observations_visuelles || (result as any).observationsVisuelles} 
+          />
           <div className="grid grid-cols-2 gap-2 mt-4">
             <StatTile
               icon={<Sun className="w-5 h-5 text-amber-500" />}
@@ -559,7 +561,7 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
           <GridTile
             icon={<Eye className="w-3.5 h-3.5 text-rose-500" />}
             label="Lésions"
-            value={deriveLesionsLabel(result).replace("inflammatoires ", "")} /* Version plus courte pour éviter le bug d'affichage sur mobile */
+            value={deriveLesionsLabel(result).replace("inflammatoires ", "")}
             testId="tile-lesions"
           />
           <GridTile
@@ -599,10 +601,9 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
         )}
 
         {/* ═══════════════════════════════════════════
-            BLOC 4 — L'Ordonnance Clinique de l'Expert GlowScan
+            BLOC 4 — L'Ordonnance Clinique
             ═══════════════════════════════════════════ */}
         <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100 relative overflow-hidden" data-testid="block-expert">
-          {/* Filigrane de sécurité médicale en arrière-plan */}
           <div className="absolute top-0 right-0 w-24 h-24 bg-teal-50/30 rounded-full blur-2xl pointer-events-none" />
 
           <div className="flex items-center justify-between mb-4">
@@ -612,13 +613,11 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
               </div>
               <h2 className="text-sm font-black uppercase tracking-wider text-gray-900">Conclusions du Dr. GlowScan</h2>
             </div>
-            {/* Badge de réassurance scientifique */}
-            <span className="text-[9px] font-black bg-teal-600 text-white px-2 py-1 rounded-lg uppercase tracking-wide shadow-sm shadow-teal-100">
+            <span className="text-[9px] font-black bg-teal-600 text-white px-2 py-1 rounded-lg uppercase tracking-wide shadow-sm">
               ✓ Approuvé IA Clinique
             </span>
           </div>
 
-          {/* Corps de l'analyse : Diagnostic de la peau */}
           {result.details && (
             <div className="bg-gray-50/50 border border-gray-100 rounded-2xl p-4 mb-4">
               <p className="text-xs font-black uppercase tracking-wide text-gray-400 mb-1.5">Évaluation de la barrière cutanée :</p>
@@ -628,24 +627,22 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
             </div>
           )}
 
-          {/* L'ordonnance / La recommandation clé de l'expert */}
           <div className="bg-gradient-to-r from-teal-50/70 to-emerald-50/40 border border-teal-100/60 rounded-2xl p-4 relative">
             <div className="absolute -top-2 left-4 bg-white border border-teal-100 text-[9px] font-black text-teal-700 px-2 py-0.5 rounded-full uppercase">
               La recommandation clé
             </div>
             <p className="text-[12px] text-teal-950 font-semibold leading-relaxed italic mt-1" data-testid="text-motivation">
-              "{expertCitation || "Votre peau exprime un besoin urgent de régulation. Suivre rigoureusement le protocole de soins locaux sélectionné est la première étape essentielle pour restaurer votre éclat d'origine."}"
+              "{expertCitation}"
             </p>
           </div>
 
-          {/* Rappel bienveillant d'accompagnement */}
           <p className="text-[10px] text-gray-400 text-center font-medium mt-3.5">
             🔒 Vos données d'analyse clinique restent 100% confidentielles.
           </p>
         </div>
 
         {/* ═══════════════════════════════════════════
-            BLOC 5 — Cartographie visuelle des zones (visage)
+            BLOC 5 — Cartographie visuelle des zones
             ═══════════════════════════════════════════ */}
         {result.zones && result.zones.length > 0 && (
           <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100 relative overflow-hidden" data-testid="block-zones-map">
@@ -660,19 +657,16 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
                 </div>
               </div>
               
-              {/* Effet Scanner Clignotant pour le côté technologique */}
               <span className="flex items-center gap-1.5 text-[9px] font-black bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-lg uppercase tracking-wide">
                 <span className="h-1.5 w-1.5 rounded-full bg-indigo-600 animate-pulse" />
                 Analyse Rétinienne IA
               </span>
             </div>
 
-            {/* Le composant de la carte du visage */}
             <div className="bg-gradient-to-b from-gray-50/50 to-white rounded-2xl p-2 border border-gray-100/60 flex items-center justify-center">
               <FaceZonesMap zones={result.zones} />
             </div>
 
-            {/* Légende rapide pour faciliter l'interprétation sous le soleil de Douala */}
             <p className="text-[10px] text-gray-400 text-center font-medium mt-3">
               💡 Cliquez sur les zones colorées pour isoler les imperfections détectées.
             </p>
@@ -680,52 +674,8 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
         )}
 
         {/* ═══════════════════════════════════════════
-            BLOC 6 — Protocole de soin (Matin / Soir / Hebdo)
+            BLOC 6 — Protocole de soin
             ═══════════════════════════════════════════ */}
-        {(protocolMorning.length > 0 || protocolEvening.length > 0 || weekly) && (
-          <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100" data-testid="block-protocol">
-            <div className="flex items-center gap-2 mb-1">
-              <Sparkles className="w-4 h-4 text-pink-600" />
-              <h2 className="text-[15px] font-black text-gray-900 font-display">Mon protocole de soin</h2>
-            </div>
-            <p className="text-[11px] text-gray-500 italic mb-4">Applique-le 4 à 6 semaines avant de réévaluer.</p>
-            <div className="space-y-4">
-              {protocolMorning.length > 0 && (
-                <div>
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <Sun className="w-4 h-4 text-amber-500" />
-                    <h3 className="text-[13px] font-black text-gray-900">Matin</h3>
-                  </div>
-                  <ol className="space-y-2 ml-1">
-                    {protocolMorning.map((s, i) => <ProtocolRow key={`m-${i}`} index={i + 1} step={s} />)}
-                  </ol>
-                </div>
-              )}
-              {protocolEvening.length > 0 && (
-                <div>
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <Moon className="w-4 h-4 text-indigo-500" />
-                    <h3 className="text-[13px] font-black text-gray-900">Soir</h3>
-                  </div>
-                  <ol className="space-y-2 ml-1">
-                    {protocolEvening.map((s, i) => <ProtocolRow key={`e-${i}`} index={i + 1} step={s} />)}
-                  </ol>
-                </div>
-              )}
-              {weekly && (
-                <div className="rounded-2xl p-3 bg-purple-50 border border-purple-100 flex items-center gap-3">
-                  <Calendar className="w-5 h-5 text-purple-600 flex-shrink-0" />
-                  <div className="flex-1">
-                    <p className="text-[10px] font-black uppercase tracking-wider text-purple-700">Hebdo · 1×/semaine</p>
-                    <p className="text-[12px] text-gray-800 font-medium leading-snug">{weekly}</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* BLOC 6 — Le Protocole de Soin Connecté au Catalogue de Vente */}
         {(protocolMorning.length > 0 || protocolEvening.length > 0 || weekly) && (
           <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100" data-testid="block-protocol">
             <div className="flex items-center justify-between mb-1">
@@ -755,7 +705,6 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
                   <div className="space-y-3">
                     {protocolMorning.map((s, i) => {
                       const stepData = normalizeStep(s, i);
-                      // On cherche si un produit du catalogue correspond à cette étape
                       const matchedItem = routineProducts.find(rp => 
                         stepData.product && rp.product.name.toLowerCase().includes(stepData.product.toLowerCase())
                       );
@@ -773,7 +722,6 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
                             {stepData.why && <p className="text-[10px] text-gray-500 leading-snug mt-0.5 font-medium">{stepData.why}</p>}
                           </div>
                           
-                          {/* Affichage de la vignette du produit pour forcer l'achat */}
                           {matchedItem && (
                             <div className="w-10 h-10 rounded-xl bg-white border border-gray-200/60 p-0.5 flex-shrink-0 flex items-center justify-center shadow-inner">
                               <img 
@@ -820,7 +768,6 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
                             {stepData.why && <p className="text-[10px] text-gray-500 leading-snug mt-0.5 font-medium">{stepData.why}</p>}
                           </div>
                           
-                          {/* Affichage de la vignette du produit */}
                           {matchedItem && (
                             <div className="w-10 h-10 rounded-xl bg-white border border-gray-200/60 p-0.5 flex-shrink-0 flex items-center justify-center shadow-inner">
                               <img 
@@ -853,17 +800,17 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
           </div>
         )}
 
-                        {/* BLOC 7 : TUNNEL D'ACHAT AGRESSIF HAUTE CONVERSION (1M+ REVENUS) */}
+        {/* ═══════════════════════════════════════════
+            BLOC 7 : TUNNEL D'ACHAT
+            ═══════════════════════════════════════════ */}
         {routineProducts.length > 0 ? (
           (() => {
             const routineTotal = routineProducts.reduce((sum, { product }) => sum + (product.price || 0), 0);
             const brandLabel = getProductBrand(routineProducts[0].product);
             
-            // Simulation d'un prix de vente unitaire plus élevé pour l'effet d'ancrage psychologique (+20%)
             const unitPriceTotal = Math.round(routineTotal * 1.2);
             const totalSavingsRoutine = unitPriceTotal - routineTotal;
             
-            // Calculs de l'offre intermédiaire (Le Duo à 2 produits)
             const duoTotal = intermediateOffer ? intermediateOffer.totalPrice : 0;
             const unitPriceDuo = Math.round(duoTotal * 1.15);
             const totalSavingsDuo = unitPriceDuo - duoTotal;
@@ -871,7 +818,7 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
             return (
               <div className="mt-6 space-y-5 px-1 animate-fade-in" data-testid="block-conversion-tunnel">
                 
-                {/* NOTIFICATION DE FOMO & PREUVE SOCIALE CAMEROUNAISE */}
+                {/* NOTIFICATION DE FOMO */}
                 <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200/70 flex items-center gap-2.5 shadow-sm">
                   <span className="flex h-2 w-2 relative">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
@@ -882,10 +829,10 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
                   </p>
                 </div>
 
-                {/* DOUBLE OFFRE COMPARATIVE : L'ANCRAGE REVERSE */}
+                {/* DOUBLE OFFRE COMPARATIVE */}
                 <div className="grid grid-cols-1 gap-4">
                   
-                  {/* OFFRE 1 : L'EXPÉRIENCE TOTALE (ROUTINE COMPLÈTE - 3 PRODUITS) */}
+                  {/* OFFRE 1 : L'EXPÉRIENCE TOTALE */}
                   <div className="border border-gray-200 bg-white rounded-3xl p-5 shadow-sm flex flex-col justify-between transition-all hover:border-gray-300">
                     <div>
                       <div className="flex justify-between items-start mb-1">
@@ -898,7 +845,7 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
                       </div>
                       <p className="text-[10px] font-semibold text-gray-500 mb-2">Traitement Global Synergique (Nettoyant + Sérum + Crème)</p>
                       <p className="text-[11px] text-gray-600 leading-relaxed mb-4">
-                        Zéro compromis. C'est la combinaison exacte recommandée par l'IA pour traiter le problème à la racine et bloquer définitivement le retour des imperfections.
+                        Zéro compromis. C'est la combinaison exacte recommandée par l'IA pour traiter le problème à la racine.
                       </p>
                     </div>
 
@@ -927,7 +874,7 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
                     </div>
                   </div>
 
-                  {/* OFFRE 2 : LE COMPROMIS IDÉAL (LE DUO DE SAUVETAGE - 2 PRODUITS) */}
+                  {/* OFFRE 2 : LE DUO */}
                   {intermediateOffer && (
                     <div className="border-2 border-pink-500 bg-gradient-to-br from-pink-50/20 via-white to-white rounded-3xl p-5 relative shadow-md shadow-pink-100/40 transition-all scale-[1.01]">
                       <div className="absolute -top-3 right-5 bg-pink-500 text-white text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-wider shadow-sm">
@@ -939,10 +886,9 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
                       </h4>
                       <p className="text-[10px] font-bold text-pink-600 mb-2">{intermediateOffer.copywriting.subtitle}</p>
                       <p className="text-[11px] text-gray-600 leading-relaxed mb-4">
-                        Vous n'avez pas le budget pour la totale ? Ce duo rassemble les **2 actifs majeurs** pour stopper l'urgence cutanée sans vider vos poches.
+                        Vous n'avez pas le budget pour la totale ? Ce duo rassemble les **2 actifs majeurs** pour stopper l'urgence cutanée.
                       </p>
                       
-                      {/* Vignettes visuelles des produits inclus dans le Duo */}
                       <div className="space-y-2 mb-4 bg-white/80 rounded-xl p-2.5 border border-pink-100/40">
                         {intermediateOffer.duo.map((item, idx) => (
                           <div key={idx} className="text-[11px] font-bold text-gray-800 flex items-center gap-2">
@@ -969,7 +915,7 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
                             setOrderModalTitle("Commander le Compromis Idéal");
                             setShowOrderModal(true);
                           }}
-                          className="flex items-center gap-1.5 px-5 py-2.5 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white text-xs font-black rounded-xl transition-all shadow-md shadow-pink-200 active:scale-95"
+                          className="flex items-center gap-1.5 px-5 py-2.5 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white text-xs font-black rounded-xl transition-all shadow-md active:scale-95"
                         >
                           <MessageCircle className="w-3.5 h-3.5 fill-current" />
                           Prendre le Duo
@@ -980,7 +926,7 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
 
                 </div>
 
-                {/* BLOC LOGISTIQUE DE CONFIANCE (DOUALA / YAOUNDÉ) */}
+                {/* BLOC LOGISTIQUE */}
                 <div className="bg-emerald-50/80 px-4 py-3 rounded-2xl flex items-center gap-3 border border-emerald-100/80 shadow-sm">
                   <Truck className="w-5 h-5 text-emerald-600 flex-shrink-0" />
                   <div className="text-left">
@@ -989,7 +935,7 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
                   </div>
                 </div>
 
-                {/* Action secondaire : Partage social discret */}
+                {/* Action secondaire */}
                 <button
                   onClick={() => setShowRoutineCard(true)}
                   className="w-full py-2 text-gray-400 hover:text-gray-600 text-[11px] font-bold transition-all text-center underline tracking-wide"
@@ -1001,229 +947,10 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
           })()
         ) : null}
 
-
-                                  {/* OFFRE 2 : LE COMPROMIS IDÉAL (LE DUO DE SAUVETAGE - 2 PRODUITS) */}
-                  {intermediateOffer && (
-                    <div className="border-2 border-pink-500 bg-gradient-to-br from-pink-50/20 via-white to-white rounded-3xl p-5 relative shadow-md shadow-pink-100/40 transition-all scale-[1.01]">
-                      <div className="absolute -top-3 right-5 bg-pink-500 text-white text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-wider shadow-sm">
-                        Le Compromis Idéal ✨
-                      </div>
-                      
-                      <h4 className="font-black text-gray-950 text-sm mb-0.5">
-                        {intermediateOffer.copywriting.title}
-                      </h4>
-                      <p className="text-[10px] font-bold text-pink-600 mb-2">{intermediateOffer.copywriting.subtitle}</p>
-                      <p className="text-[11px] text-gray-600 leading-relaxed mb-4">
-                        Vous n'avez pas le budget pour la totale ? Ce duo rassemble les **2 actifs majeurs** pour stopper l'urgence cutanée sans vider vos poches.
-                      </p>
-                      
-                      {/* Vignettes visuelles des produits inclus dans le Duo */}
-                      <div className="space-y-2 mb-4 bg-white/80 rounded-xl p-2.5 border border-pink-100/40">
-                        {intermediateOffer.duo.map((item, idx) => (
-                          <div key={idx} className="text-[11px] font-bold text-gray-800 flex items-center gap-2">
-                            <span className="bg-pink-100 p-0.5 rounded text-xs">{item.role.emoji}</span> 
-                            <span className="truncate">{item.product.name}</span>
-                          </div>
-                        ))}
-                      </div>
-
-                      <div className="flex items-center justify-between gap-2 border-t border-pink-100 pt-3.5">
-                        <div className="mb-4"> {/* Aligne ou ajuste avec mb-2, mb-4, mb-6 selon le besoin */}
-  <p className="text-[9px] text-gray-400 font-bold line-through">{formatPrice(unitPriceDuo)}</p>
-  <p className="text-lg font-black text-pink-600">{formatPrice(duoTotal)}</p>
-</div>
-
-                        <button 
-                          onClick={() => {
-                            const items: OrderItem[] = intermediateOffer.duo.map(({ product }) => ({
-                              productId: product.id,
-                              productName: product.name,
-                              brand: getProductBrand(product),
-                              price: product.price,
-                            }));
-                            setOrderModalItems(items);
-                            setOrderModalTitle("Commander le Compromis Idéal");
-                            setShowOrderModal(true);
-                          }}
-                          className="flex items-center gap-1.5 px-5 py-2.5 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white text-xs font-black rounded-xl transition-all shadow-md shadow-pink-200 active:scale-95"
-                        >
-                          <MessageCircle className="w-3.5 h-3.5 fill-current" />
-                          Prendre le Duo
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                </div>
-              </div>
-            );
-          })()
-        ) : (
-          <div className="space-y-3 mt-4">
-            {/* BLOC LOGISTIQUE DE CONFIANCE (DOUALA / YAOUNDÉ) */}
-            <div className="bg-emerald-50/80 px-4 py-3 rounded-2xl flex items-center gap-3 border border-emerald-100/80 shadow-sm">
-              <Truck className="w-5 h-5 text-emerald-600 flex-shrink-0" />
-              <div className="text-left">
-                <p className="text-[11px] text-emerald-800 font-black leading-tight">Expédition Express au Cameroun</p>
-                <p className="text-[10px] text-emerald-600 font-semibold mt-0.5">Livraison à domicile (Douala & Yaoundé) · Paiement Cash à la livraison</p>
-              </div>
-            </div>
-
-            {/* Action secondaire : Partage social discret */}
-            <button
-              onClick={() => setShowRoutineCard(true)}
-              className="w-full py-2 text-gray-400 hover:text-gray-600 text-[11px] font-bold transition-all text-center underline tracking-wide"
-            >
-              💾 Enregistrer ou partager mon ordonnance personnalisée
-            </button>
-          </div>
-        )}
-
         {/* Footer Prévention Clinique */}
         <div className="px-4 py-2.5 bg-slate-50 border-t border-slate-100 flex items-center gap-2 text-[10px] text-slate-400 font-semibold text-left">
           <AlertTriangle className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
           <span>Analyse indicative générée par GlowScan AI.</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-        {/* ═══════════════════════════════════════════
-            BLOC 8 — Partage social
-            ═══════════════════════════════════════════ */}
-        {user && (
-          <div className="bg-gradient-to-br from-gray-900 to-slate-800 rounded-3xl p-5 shadow-xl border border-gray-800 space-y-4 text-white" data-testid="block-challenge-j7">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-pink-500/10 flex items-center justify-center border border-pink-500/20">
-                  <Sparkles className="w-4 h-4 text-pink-400" />
-                </div>
-                <h3 className="text-xs font-black uppercase tracking-wider text-pink-400">Le Défi Éclat GlowScan</h3>
-              </div>
-              <span className="text-[9px] bg-white/10 text-white px-2 py-0.5 rounded-md uppercase font-bold tracking-wide">
-                Objectif J+7
-              </span>
-            </div>
-
-            <div className="space-y-1">
-              <p className="text-sm font-black leading-snug">
-                Prête à voir ton score de {result.score}/100 grimper ?
-              </p>
-              <p className="text-[11px] text-gray-300 leading-relaxed">
-                En lançant ta routine dès aujourd'hui, ta peau va commencer sa régulation. Active ton rappel pour bloquer ta prochaine analyse automatique dans exactement 7 jours.
-              </p>
-            </div>
-
-            <div className="pt-1">
-              <button
-                onClick={() => {
-                  setJ7ReminderSet(!j7ReminderSet);
-                  toast({
-                    title: j7ReminderSet ? "Rappel annulé" : "Rappel activé ! 🗓️",
-                    description: j7ReminderSet 
-                      ? "Le rappel J+7 a été désactivé." 
-                      : "Nous te notifierons dans 7 jours pour analyser l'évolution de tes imperfections.",
-                  });
-                }}
-                data-testid="button-j7-reminder"
-                className={`w-full py-3 px-4 rounded-xl text-xs font-black tracking-wide transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-2 shadow-md ${
-                  j7ReminderSet 
-                    ? "bg-emerald-600 text-white shadow-emerald-900/20" 
-                    : "bg-white text-gray-900 hover:bg-gray-50 shadow-white/5"
-                }`}
-              >
-                {j7ReminderSet ? "✓ Rappel activé pour le diagnostic de suivi" : "🗓️ Planifier mon scan de contrôle gratuit (J+7)"}
-              </button>
-            </div>
-
-            <p className="text-[9px] text-gray-400 text-center font-medium">
-              🔒 Le suivi d'évolution nécessite l'application rigoureuse du protocole commandé.
-            </p>
-          </div>
-        )}
-
-        {/* ═══════════════════════════════════════════
-                {/* BLOC 9 : L'ACCÈS AU SKINBOT IA — CONVERSION PREMIUM À 2 000 FRScfa */}
-        {user && (
-          <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100 space-y-4" data-testid="block-skinbot-premium">
-            
-            {/* Titre d'accroche pour créer le besoin si elle n'est pas premium */}
-            {!isPremium && (
-              <div className="space-y-1">
-                <div className="flex items-center gap-1.5 text-pink-600">
-                  <Sparkles className="w-4 h-4" />
-                  <p className="text-[11px] font-black uppercase tracking-wider">Accompagnement Continu</p>
-                </div>
-                <h4 className="text-sm font-black text-gray-950 leading-tight">
-                  Des questions sur l'évolution de vos imperfections ?
-                </h4>
-                <p className="text-[11px] text-gray-500 leading-relaxed">
-                  Débloquez votre coach cutané personnel. SkinBot IA ajuste votre routine au quotidien selon la météo locale, suit vos réactions aux actifs et répond 24h/24.
-                </p>
-                {/* Badge de prix psychologique */}
-                <div className="pt-1 flex items-center gap-1.5 text-[10px] text-gray-400 font-medium">
-                  <span className="bg-gray-900 text-white font-extrabold px-1.5 py-0.5 rounded text-[9px]">Seulement 2 000 FRS</span>
-                  Accès illimité à vie sans abonnement mensuel.
-                </div>
-              </div>
-            )}
-
-            {/* Le Bouton d'Action Principal */}
-            <a
-              href={isPremium ? "/chat" : "/premium"}
-              data-testid="button-skinbot-cta"
-              className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-sm active:scale-[0.98] transition-all tracking-wide shadow-lg group"
-              style={{
-                background: isPremium
-                  ? "linear-gradient(135deg, #E91E8C 0%, #C2185B 100%)"
-                  : "linear-gradient(135deg, #1A1A2E 0%, #E91E8C 100%)",
-                color: "#fff",
-                boxShadow: isPremium ? "0 8px 24px rgba(233,30,140,0.3)" : "0 8px 24px rgba(26,26,46,0.25)",
-              }}
-            >
-              <MessageCircle className="w-5 h-5 transition-transform group-hover:scale-110" />
-              <div className="text-left flex flex-col">
-                <span className="text-xs font-black uppercase tracking-wider leading-none">
-                  {isPremium ? "Ouvrir mon suivi SkinBot IA" : "⭐ Activer SkinBot Premium"}
-                </span>
-                {!isPremium && (
-                  <span className="text-[9px] font-medium opacity-80 mt-0.5 leading-none">
-                    Votre dermatologue de poche pour 2 000 FRS
-                  </span>
-                )}
-              </div>
-            </a>
-          </div>
-        )}
-
-        {/* ═══════════════════════════════════════════
-            BLOC 10 — Rappel J+7
-            ═══════════════════════════════════════════ */}
-        <div className="bg-gradient-to-br from-pink-50 to-emerald-50 rounded-2xl p-5 border border-pink-100" data-testid="block-j7">
-          <div className="flex items-start gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-pink-100 flex items-center justify-center text-pink-600 flex-shrink-0">
-              <Calendar className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-sm font-black text-gray-900">Rendez-vous dans 7 jours 📅</p>
-              <p className="text-xs text-gray-500 font-medium mt-0.5">Ta peau évolue en 1 semaine. Rescanne pour mesurer tes progrès et ajuster ta routine.</p>
-            </div>
-          </div>
-          <button
-            onClick={async () => {
-              if (j7ReminderSet) return;
-              setJ7ReminderSet(true);
-              toast({ title: "📅 Note-le dans ton agenda !", description: `Reviens le ${new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString("fr-FR", { day: "numeric", month: "long" })}` });
-            }}
-            data-testid="button-set-j7-reminder"
-            className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all ${
-              j7ReminderSet ? "bg-pink-100 text-pink-700 border border-pink-100" : "bg-pink-600 text-white shadow-lg shadow-pink-100 active:scale-[0.98]"
-            }`}
-          >
-            <Bell className="w-4 h-4" />
-            {j7ReminderSet ? "✅ Rappel J+7 activé" : "Me rappeler dans 7 jours"}
-          </button>
         </div>
       </motion.div>
 
@@ -1271,13 +998,3 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
     </div>
   );
 }
-import { OrderTrackingCard } from "@/components/OrderTrackingCard";
-
-// Dans ton composant ResultCard, là où tu as tes données :
-<OrderTrackingCard 
-  products={result.recommendations.products} 
-  onRedirectToOrder={() => {
-    // Exemple : Envoi direct sur le WhatsApp Business ou la page panier
-    window.open("https://wa.me/237674377959?text=Bonjour%20GlowScan,%20je%20souhaite%20commander%20ma%20routine...", "_blank");
-  }}
-/>
