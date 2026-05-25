@@ -321,6 +321,7 @@ interface ResultCardProps {
 }
 
 export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: ResultCardProps) {
+^
   const { toast } = useToast();
   const { user } = useAuth();
   const { isPremium } = useSubscription();
