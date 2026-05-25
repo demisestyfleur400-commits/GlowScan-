@@ -3,8 +3,7 @@ import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { Search, Plus, ChevronRight, ScanLine, Users } from "lucide-react";
 import { useProPatients } from "@/hooks/use-pro";
-import { ProLayout, ProCard, StatusBadge, NAVY, INK } from "@/components/ProLayout";
-
+import { ProLayout, ProCard, StatusBadge } from "@/components/ProLayout";
 export default function ProPatients() {
   const [q, setQ] = useState("");
   const { data, isLoading } = useProPatients(q);
