@@ -15,7 +15,7 @@ import {
   Clock,
 } from "lucide-react";
 import { useProAccount, useProPatients, useUpdateProAccount } from "@/hooks/use-pro";
-import { ProLayout, ProCard, NAVY, GREEN, INK } from "@/components/ProLayout";
+import { ProLayout, ProCard, NAVY, GREEN, } from "@/components/ProLayout";
 
 const TOUR_STEPS = [
   { title: "Bienvenue sur votre tableau de bord", body: "Retrouvez ici votre vue d'ensemble et le bouton principal pour analyser un patient." },
