@@ -30,8 +30,7 @@ import {
 import { useAnalyze } from "@/hooks/use-scans";
 import { useToast } from "@/hooks/use-toast";
 import type { AnalysisResult, Patient } from "@shared/schema";
-import { ProLayout, ProCard, ProInput, NAVY, GREEN, INK } from "@/components/ProLayout";
-
+import { ProLayout, ProCard, ProInput } from "@/components/ProLayout";
 type Step = 1 | 2 | 3 | 4 | 5;
 type AnswerValue = "oui" | "non" | "nsp";
 
