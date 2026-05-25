@@ -457,31 +457,28 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
 
   const routineProducts = findRoutineProducts();
 
-  const getIntermediateOffer = () => {
+    const getIntermediateOffer = () => {
     if (routineProducts.length < 2) return null;
     const duoProducts = routineProducts.slice(0, 2);
     const totalPriceDuo = duoProducts.reduce((sum, item) => sum + item.product.price, 0);
+    
+    // On rassemble les codes secrets des deux produits (Ex: #GS-N05 + #GS-S12)
+    const orderCodes = duoProducts.map(item => (item.product as any).secretCode).join(" + ");
+    
     return {
       duo: duoProducts,
       totalPrice: totalPriceDuo,
+      secretCodes: orderCodes, // Sauvegardé pour le bouton
       copywriting: {
         title: "Le Compromis Idéal ✨",
-        subtitle: currentArea === "cheveux" ? "Le kit booster de croissance" : "Le Duo Action Ciblée",
-        description: `Le strict minimum requis pour cibler directement l'état actuel de votre peau sans surcharger votre routine.`
+        subtitle: currentArea === "cheveux" ? "Le Kit Duo Croissance" : "Le Protocole Duo Action Ciblée",
+        description: `Le strict minimum requis par notre IA pour saturer les récepteurs de votre peau sans surcharger votre budget.`
       }
     };
   };
 
   const intermediateOffer = getIntermediateOffer();
-  const protocolMorning: ProtocolStep[] = ((result as any).protocol?.morning || result.recommendations?.morning || []).map(normalizeStep);
-  const protocolEvening: ProtocolStep[] = ((result as any).protocol?.evening || result.recommendations?.evening || []).map(normalizeStep);
-  const weekly = typeof result.recommendations?.weekly === "string" ? result.recommendations.weekly : "";
 
-  const ageCutane = deriveAgeCutane(result);
-  const indiceAcne = deriveIndiceAcne(result);
-  const hydratation = deriveHydratation(result);
-  const rides = deriveRides(result);
-  const expertCitation = result.motivation || "Ton produit te soigne. GlowScan te connaît — on garde la mémoire de ce qui marche sur ta peau, pour que tu ne repartes jamais de zéro.";
 
   // ═══════════════════════════════════════════════════════════════════
   //  RENDU
