@@ -9,7 +9,7 @@ import { ProLayout, ProCard, ProInput, LogoutButton  } from "@/components/ProLay
 import { LoadingScreen } from "./ProDashboard";
 
 const MTN_NUMBER = "674377959";
-const ORANGE_NUMBER = "674377959";
+const ORANGE_NUMBER = "690501392";
 const PRO_PRICE = 20000;
 
 export default function ProCabinet() {
