@@ -458,7 +458,6 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteRoutineStep(stepId: number, userId: string): Promise<void> {
-    // sécurité : vérifier que l'étape appartient à une routine du user
     const owned = await db
       .select({ id: routineSteps.id })
       .from(routineSteps)
@@ -505,8 +504,17 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(routineCompletions).where(and(eq(routineCompletions.userId, userId), gte(routineCompletions.date, startDate), sql`${routineCompletions.date} <= ${endDate}`));
   }
 
+  // MÉTHODE CORRIGÉE : On applique un filtre SQL natif pour exclure les anciens comptes Replit orphelins
   async getAllRoutinesWithUserAndSteps(): Promise<(Routine & { steps: RoutineStep[] })[]> {
-    const rs = await db.select().from(routines).where(eq(routines.reminderEnabled, true));
+    const rs = await db
+      .select()
+      .from(routines)
+      .where(and(
+        eq(routines.reminderEnabled, true),
+        sql`${routines.userId} NOT LIKE 'replit:%'`,
+        sql`${routines.userId} NOT LIKE '%:%'`
+      ));
+      
     if (rs.length === 0) return [];
     const ids = rs.map((r) => r.id);
     const allSteps = await db.select().from(routineSteps).where(inArray(routineSteps.routineId, ids));
@@ -541,7 +549,7 @@ export class DatabaseStorage implements IStorage {
       });
   }
 
-  // ===== RGPD : export complet (droit d'accès & portabilité, art. 15 & 20) =====
+  // ===== RGPD : export complet =====
   async exportUserData(userId: string): Promise<Record<string, unknown>> {
     const safe = async <T>(p: Promise<T>, fallback: T): Promise<T> => {
       try { return await p; } catch { return fallback; }
@@ -590,16 +598,11 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  // ===== RGPD : suppression complète du compte (droit à l'effacement, art. 17) =====
-  // ATOMIQUE : tout dans une transaction. Si une suppression échoue, rollback complet.
-  // Inclut la révocation de TOUTES les sessions du user (pas seulement la session courante).
-  // Note: les conversations/messages du chat ne sont pas attachées à un userId
-  // (tables sans FK user). Elles ne sont donc pas supprimées ici.
+  // ===== RGPD : suppression complète du compte =====
   async deleteUserAndAllData(userId: string): Promise<void> {
     await db.transaction(async (tx) => {
-      // Ordre : enfants d'abord, puis user.
       await tx.delete(routineCompletions).where(eq(routineCompletions.userId, userId));
-      await tx.delete(routines).where(eq(routines.userId, userId)); // steps cascade via routineId
+      await tx.delete(routines).where(eq(routines.userId, userId));
       await tx.delete(personalizedTipsCache).where(eq(personalizedTipsCache.userId, userId));
       await tx.delete(wellnessLogs).where(eq(wellnessLogs.userId, userId));
       await tx.delete(leads).where(eq(leads.userId, userId));
@@ -614,8 +617,6 @@ export class DatabaseStorage implements IStorage {
       await tx.delete(referrals).where(eq(referrals.referredId, userId));
       await tx.delete(challenges).where(eq(challenges.challengerUserId, userId));
 
-      // Révocation de TOUTES les sessions actives (custom auth ET Replit OIDC)
-      // Le payload `sess` (jsonb) contient soit `userId`, soit `passport.user.claims.sub`.
       await tx.execute(sql`
         DELETE FROM sessions
         WHERE sess->>'userId' = ${userId}
@@ -623,12 +624,11 @@ export class DatabaseStorage implements IStorage {
            OR sess->'passport'->'user'->'claims'->>'sub' = ${userId}
       `);
 
-      // Enfin l'utilisateur
       await tx.delete(users).where(eq(users.id, userId));
     });
   }
 
-  // ====== RLHF / Dataset Pipeline (expert review) ======
+  // ====== RLHF / Dataset Pipeline ======
   async getDatasetScans(opts: {
     status?: "all" | "pending" | "verified" | "rejected";
     area?: string;
@@ -644,8 +644,6 @@ export class DatabaseStorage implements IStorage {
     else if (opts.status === "rejected") conds.push(and(eq(scans.isVerified, false), sql`${scans.expertReviewedAt} IS NOT NULL`));
     else if (opts.status === "pending") conds.push(and(eq(scans.isVerified, false), sql`${scans.expertReviewedAt} IS NULL`));
     if (opts.area && opts.area !== "all") conds.push(eq(scans.area, opts.area));
-    // ⚠️ Le médecin doit pouvoir VOIR la photo pour valider — on n'expose que les scans
-    // dont l'image est correctement archivée dans Object Storage.
     conds.push(sql`${scans.imageUrl} LIKE '/objects/scans/%'`);
 
     const whereClause = conds.length ? and(...conds) : undefined;
@@ -680,10 +678,6 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  // Few-shot RLHF : récupère les corrections expertes les plus récentes pour
-  // une zone donnée, afin de les injecter dans le prompt comme exemples.
-  // Priorité absolue aux scans où l'expert a CORRIGÉ le diagnostic IA
-  // (expert_corrected_condition non vide), car c'est là que l'IA s'est trompée.
   async getFewShotExamples(area: string, limit = 8): Promise<Array<{
     aiCondition: string;
     correctedCondition: string;
