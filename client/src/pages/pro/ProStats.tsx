@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { Users, BarChart3, TrendingUp, Calendar, ShoppingBag } from "lucide-react";
 import { useProStats } from "@/hooks/use-pro";
-import { ProLayout, ProCard, NAVY, GREEN, INK } from "@/components/ProLayout";
+import { ProLayout, ProCard } from "@/components/ProLayout";
 import { LoadingScreen } from "./ProDashboard";
 
 export default function ProStats() {
