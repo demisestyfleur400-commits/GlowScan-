@@ -18,7 +18,7 @@ import {
   useDeletePatient,
   useProAccount,
 } from "@/hooks/use-pro";
-import { ProLayout, ProCard, ProInput, StatusBadge, NAVY, GREEN, INK } from "@/components/ProLayout";
+import { ProLayout, ProCard, ProInput, StatusBadge } from "@/components/ProLayout";
 import { useToast } from "@/hooks/use-toast";
 import { LoadingScreen } from "./ProDashboard";
 
