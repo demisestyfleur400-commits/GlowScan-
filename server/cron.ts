@@ -1,6 +1,8 @@
 import cron from "node-cron";
 import webpush from "web-push";
 import { storage } from "./storage";
+import { db } from "../../db"; // Ajuste le chemin si nécessaire
+import { users } from "@shared/models/auth";
 
 function log(msg: string) {
   const t = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
@@ -33,12 +35,17 @@ async function sendPushToUsers(userIds: Set<string>, notification: { title: stri
 async function sendDay2Reminders() {
   log("🔔 Envoi rappels J+2...");
   try {
-    // Utilisateurs dont le dernier scan date d'EXACTEMENT 2 jours (pas plus, pas moins)
     const stale2 = await storage.getUsersWithStaleScans(2);
     const stale3 = await storage.getUsersWithStaleScans(3);
     const stale3Ids = new Set(stale3.map((u) => u.userId));
-    const day2Only = stale2.filter((u) => !stale3Ids.has(u.userId));
+    const day2Only = stale2.filter((u) => u.userId && !stale3Ids.has(u.userId) && !u.userId.includes(":"));
     const ids = new Set(day2Only.map((u) => u.userId));
+    
+    if (ids.size === 0) {
+      log("✅ J+2 : Aucun utilisateur local concerné aujourd'hui.");
+      return;
+    }
+
     const { sent, failed } = await sendPushToUsers(ids, {
       title: "🌸 Ta peau a évolué",
       body: "Viens voir ! 2 jours se sont écoulés depuis ton dernier scan.",
@@ -57,8 +64,14 @@ async function sendDay7SkinBotReminders() {
     const stale7 = await storage.getUsersWithStaleScans(7);
     const stale8 = await storage.getUsersWithStaleScans(8);
     const stale8Ids = new Set(stale8.map((u) => u.userId));
-    const day7Only = stale7.filter((u) => !stale8Ids.has(u.userId));
+    const day7Only = stale7.filter((u) => u.userId && !stale8Ids.has(u.userId) && !u.userId.includes(":"));
     const ids = new Set(day7Only.map((u) => u.userId));
+
+    if (ids.size === 0) {
+      log("✅ J+7 SkinBot : Aucun utilisateur local concerné aujourd'hui.");
+      return;
+    }
+
     const { sent, failed } = await sendPushToUsers(ids, {
       title: "🤖 SkinBot t'attend",
       body: "Tu n'as pas encore essayé SkinBot — pose ta première question gratuite !",
@@ -77,8 +90,14 @@ async function sendDay14Reminders() {
     const stale14 = await storage.getUsersWithStaleScans(14);
     const stale15 = await storage.getUsersWithStaleScans(15);
     const stale15Ids = new Set(stale15.map((u) => u.userId));
-    const day14Only = stale14.filter((u) => !stale15Ids.has(u.userId));
+    const day14Only = stale14.filter((u) => u.userId && !stale15Ids.has(u.userId) && !u.userId.includes(":"));
     const ids = new Set(day14Only.map((u) => u.userId));
+
+    if (ids.size === 0) {
+      log("✅ J+14 : Aucun utilisateur local concerné aujourd'hui.");
+      return;
+    }
+
     const { sent, failed } = await sendPushToUsers(ids, {
       title: "📈 Ton suivi de 2 semaines est prêt",
       body: "Reviens voir tes progrès — ta peau a sûrement changé en 14 jours.",
@@ -94,14 +113,21 @@ async function sendDay14Reminders() {
 async function sendProductReminders() {
   log("🛍️ Envoi des rappels produits 72h...");
   try {
-    const users = await storage.getUsersWithScansBetweenHours(60, 84);
-    const userIds = new Set(users.map((u) => u.userId));
+    const usersList = await storage.getUsersWithScansBetweenHours(60, 84);
+    const filteredUsers = usersList.filter((u) => u.userId && !u.userId.includes(":"));
+    const userIds = new Set(filteredUsers.map((u) => u.userId));
+
+    if (userIds.size === 0) {
+      log("✅ Rappels produits 72h : Aucun utilisateur local concerné.");
+      return;
+    }
+
     const { sent, failed } = await sendPushToUsers(userIds, {
       title: "🌟 Tes produits t'attendent !",
       body: "Tu as reçu ta routine il y a 3 jours. Tes produits sont encore disponibles — commande maintenant !",
       url: "/",
     });
-    log(`✅ Rappels produits 72h : ${sent} envoyés, ${failed} échecs (${users.length} utilisateurs)`);
+    log(`✅ Rappels produits 72h : ${sent} envoyés, ${failed} échecs (${filteredUsers.length} utilisateurs)`);
   } catch (err) {
     log(`❌ Erreur rappels produits : ${err}`);
   }
@@ -111,8 +137,18 @@ async function sendProductReminders() {
 async function sendRoutineReminders(currentHHMM: string) {
   try {
     const all = await storage.getAllRoutinesWithUserAndSteps();
-    const matching = all.filter((r) => r.reminderEnabled && r.reminderTime === currentHHMM && r.steps.length > 0);
+    
+    // Protection : On ignore les rappels liés à d'anciens IDs Replit OIDC (qui contiennent souvent un ":")
+    const matching = all.filter((r) => 
+      r.reminderEnabled && 
+      r.reminderTime === currentHHMM && 
+      r.steps.length > 0 &&
+      r.userId &&
+      !r.userId.includes(":")
+    );
+
     if (matching.length === 0) return;
+
     for (const r of matching) {
       const period = r.period === "morning" ? "matin" : "soir";
       const emoji = r.period === "morning" ? "✨" : "🌙";
@@ -124,17 +160,18 @@ async function sendRoutineReminders(currentHHMM: string) {
     }
     log(`🔔 Rappels routine ${currentHHMM} : ${matching.length} envoyés`);
   } catch (err) {
-    log(`❌ Erreur rappels routine : ${err}`);
+    log(`❌ Erreur rappels routine à ${currentHHMM} : ${err}`);
   }
 }
 
 // À 22h00 : check routines soir non complétées
 async function sendEveningMissedReminders() {
+  log("🌙 Vérification des routines du soir manquées...");
   try {
     const all = await storage.getAllRoutinesWithUserAndSteps();
-    const evening = all.filter((r) => r.period === "evening" && r.steps.length > 0);
+    const evening = all.filter((r) => r.period === "evening" && r.steps.length > 0 && r.userId && !r.userId.includes(":"));
     if (evening.length === 0) return;
-    // date Douala
+    
     const now = new Date();
     const utc = now.getTime() + now.getTimezoneOffset() * 60000;
     const douala = new Date(utc + 3600000);
