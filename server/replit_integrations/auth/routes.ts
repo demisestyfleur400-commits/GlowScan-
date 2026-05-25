@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { authStorage } from "./storage";
-import { isAuthenticated } from "./replitAuth";
+import { isAuthenticated } from "./replitAuth"; // Conserve l'import, notre nouveau middleware épuré
 import bcrypt from "bcryptjs";
 import { db } from "../../db";
 import { storage } from "../../storage";
@@ -9,10 +9,16 @@ import { eq } from "drizzle-orm";
 
 export function registerAuthRoutes(app: Express): void {
 
-  // ── GET /api/auth/user ── utilisateur connecté (Replit OIDC ou local)
+  // ── GET /api/auth/user ── Utilisateur connecté (Authentification 100% locale)
   app.get("/api/auth/user", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.session?.userId || req.user?.claims?.sub;
+      // Plus besoin de chercher req.user?.claims?.sub de Replit, on utilise la session locale sécurisée
+      const userId = req.session?.userId;
+      
+      if (!userId) {
+        return res.status(401).json({ message: "Non authentifié" });
+      }
+
       const user = await authStorage.getUser(userId);
       res.json(user);
     } catch (error) {
@@ -21,7 +27,7 @@ export function registerAuthRoutes(app: Express): void {
     }
   });
 
-  // ── POST /api/auth/register ── inscription email/mot de passe
+  // ── POST /api/auth/register ── Inscription email/mot de passe
   app.post("/api/auth/register", async (req: any, res) => {
     const ip = req.headers["x-forwarded-for"] || req.socket?.remoteAddress || "?";
     try {
@@ -63,6 +69,7 @@ export function registerAuthRoutes(app: Express): void {
           return res.status(500).json({ message: "Erreur lors de la connexion" });
         }
         console.log(`[register] ✅ Session créée pour userId=${user.id}`);
+        
         // Rattacher tous les scans anonymes de cette session au nouveau compte
         try {
           if (previousSessionId) {
@@ -79,7 +86,7 @@ export function registerAuthRoutes(app: Express): void {
     }
   });
 
-  // ── POST /api/auth/login ── connexion email/mot de passe
+  // ── POST /api/auth/login ── Connexion email/mot de passe
   app.post("/api/auth/login", async (req: any, res) => {
     try {
       const { email, password } = req.body;
@@ -107,6 +114,7 @@ export function registerAuthRoutes(app: Express): void {
           console.error("Session save error:", err);
           return res.status(500).json({ message: "Erreur lors de la connexion" });
         }
+        
         // Rattacher tous les scans anonymes de cette session au compte
         try {
           if (previousSessionId) {
@@ -123,7 +131,7 @@ export function registerAuthRoutes(app: Express): void {
     }
   });
 
-  // ── POST /api/auth/logout ── déconnexion
+  // ── POST /api/auth/logout ── Déconnexion
   app.post("/api/auth/logout", (req: any, res) => {
     req.session.destroy((err: any) => {
       if (err) {
