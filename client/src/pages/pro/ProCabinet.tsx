@@ -5,7 +5,7 @@ import { Settings, Download, Crown, CheckCircle2, Loader2, Phone, Clock } from "
 import { useProAccount, useProPatients, useUpdateProAccount } from "@/hooks/use-pro";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
-import { ProLayout, ProCard, ProInput, LogoutButton, NAVY, GREEN, INK } from "@/components/ProLayout";
+import { ProLayout, ProCard, ProInput, LogoutButton  } from "@/components/ProLayout";
 import { LoadingScreen } from "./ProDashboard";
 
 const MTN_NUMBER = "674377959";
