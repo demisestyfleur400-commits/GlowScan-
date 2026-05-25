@@ -436,11 +436,23 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
       if (sorted.length === 0) return [];
       winner = { products: sorted, total: 0, brandKey: sorted[0].whatsapp || "" };
     }
-    return winner.products.map((p, i) => ({
-      product: p,
-      role: roleLabels[getProductRole(p)] || roleLabels["creme"],
-      index: i + 1,
-    }));
+    return winner.products.map((p, i) => {
+  const roleKey = getProductRole(p);
+  // On applique l'anonymisation magique
+  const { anonymousName, secretCode } = getClinicalNomenclature(p.name, roleKey);
+  
+  return {
+    product: {
+      ...p,
+      name: anonymousName,      // L'utilisateur lit la formule clinique, pas la marque
+      secretCode: secretCode,   // Le code secret pour ton WhatsApp
+      brand: "GlowScan Clinic"  // Masquage total du fabricant original
+    },
+    role: roleLabels[roleKey] || roleLabels["creme"],
+    index: i + 1,
+  };
+});
+
   };
 
   const routineProducts = findRoutineProducts();
