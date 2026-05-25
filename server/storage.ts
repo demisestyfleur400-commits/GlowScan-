@@ -117,10 +117,9 @@ export class DatabaseStorage implements IStorage {
   async getAllOrders(period: AnalyticsPeriod = "all"): Promise<Order[]> {
     const startDate = this.getPeriodStartDate(period);
     const dateFilter = startDate ? gte(orders.createdAt, startDate) : undefined;
-    const query = dateFilter
+    return dateFilter
       ? db.select().from(orders).where(dateFilter).orderBy(desc(orders.createdAt)).limit(100)
       : db.select().from(orders).orderBy(desc(orders.createdAt)).limit(100);
-    return query;
   }
 
   async addLoyaltyPoints(entry: InsertLoyaltyPoint): Promise<LoyaltyPoint> {
@@ -165,8 +164,15 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(pushSubscriptions).where(eq(pushSubscriptions.userId, userId));
   }
 
+  // Filtrage SQL pour éviter d'extraire des souscriptions push avec d'anciens formats d'identifiants
   async getAllActivePushSubscriptions(): Promise<PushSubscription[]> {
-    return db.select().from(pushSubscriptions);
+    return db
+      .select()
+      .from(pushSubscriptions)
+      .where(and(
+        sql`${pushSubscriptions.userId} NOT LIKE 'replit:%'`,
+        sql`${pushSubscriptions.userId} NOT LIKE '%:%'`
+      ));
   }
 
   async deletePushSubscription(endpoint: string): Promise<void> {
@@ -199,120 +205,45 @@ export class DatabaseStorage implements IStorage {
     const clickDateFilter = startDate ? gte(whatsappClicks.createdAt, startDate) : undefined;
     const scanDateFilter = startDate ? gte(scans.createdAt, startDate) : undefined;
 
-    const visitQuery = visitDateFilter
-      ? db.select({ count: count() }).from(pageVisits).where(visitDateFilter)
-      : db.select({ count: count() }).from(pageVisits);
+    const visitQuery = visitDateFilter ? db.select({ count: count() }).from(pageVisits).where(visitDateFilter) : db.select({ count: count() }).from(pageVisits);
     const totalVisits = await visitQuery;
 
-    const uniqueQuery = visitDateFilter
-      ? db.select({ count: sql<number>`COUNT(DISTINCT ${pageVisits.sessionId})::integer` }).from(pageVisits).where(visitDateFilter)
-      : db.select({ count: sql<number>`COUNT(DISTINCT ${pageVisits.sessionId})::integer` }).from(pageVisits);
+    const uniqueQuery = visitDateFilter ? db.select({ count: sql<number>`COUNT(DISTINCT ${pageVisits.sessionId})::integer` }).from(pageVisits).where(visitDateFilter) : db.select({ count: sql<number>`COUNT(DISTINCT ${pageVisits.sessionId})::integer` }).from(pageVisits);
     const uniqueVisitors = await uniqueQuery;
 
-    const scanQuery = scanDateFilter
-      ? db.select({ count: count() }).from(scans).where(scanDateFilter)
-      : db.select({ count: count() }).from(scans);
+    const scanQuery = scanDateFilter ? db.select({ count: count() }).from(scans).where(scanDateFilter) : db.select({ count: count() }).from(scans);
     const totalAnalyses = await scanQuery;
 
-    const clickCountQuery = clickDateFilter
-      ? db.select({ count: count() }).from(whatsappClicks).where(clickDateFilter)
-      : db.select({ count: count() }).from(whatsappClicks);
+    const clickCountQuery = clickDateFilter ? db.select({ count: count() }).from(whatsappClicks).where(clickDateFilter) : db.select({ count: count() }).from(whatsappClicks);
     const totalWhatsappClicks = await clickCountQuery;
 
-    const visitsByCountryQuery = db
-      .select({ country: pageVisits.country, count: count() })
-      .from(pageVisits)
-      .where(visitDateFilter ? sql`${pageVisits.country} IS NOT NULL AND ${pageVisits.createdAt} >= ${startDate}` : sql`${pageVisits.country} IS NOT NULL`)
-      .groupBy(pageVisits.country)
-      .orderBy(desc(count()));
-    const visitsByCountry = await visitsByCountryQuery;
+    const visitsByCountry = await db.select({ country: pageVisits.country, count: count() }).from(pageVisits).where(visitDateFilter ? sql`${pageVisits.country} IS NOT NULL AND ${pageVisits.createdAt} >= ${startDate}` : sql`${pageVisits.country} IS NOT NULL`).groupBy(pageVisits.country).orderBy(desc(count()));
+    const visitsByCity = await db.select({ city: pageVisits.city, country: pageVisits.country, count: count() }).from(pageVisits).where(visitDateFilter ? sql`${pageVisits.city} IS NOT NULL AND ${pageVisits.createdAt} >= ${startDate}` : sql`${pageVisits.city} IS NOT NULL`).groupBy(pageVisits.city, pageVisits.country).orderBy(desc(count()));
+    const whatsappByBrand = await (clickDateFilter ? db.select({ brand: whatsappClicks.brand, count: count() }).from(whatsappClicks).where(clickDateFilter).groupBy(whatsappClicks.brand).orderBy(desc(count())) : db.select({ brand: whatsappClicks.brand, count: count() }).from(whatsappClicks).groupBy(whatsappClicks.brand).orderBy(desc(count())));
+    const whatsappByProduct = await (clickDateFilter ? db.select({ productName: whatsappClicks.productName, brand: whatsappClicks.brand, count: count() }).from(whatsappClicks).where(clickDateFilter).groupBy(whatsappClicks.productName, whatsappClicks.brand).orderBy(desc(count())) : db.select({ productName: whatsappClicks.productName, brand: whatsappClicks.brand, count: count() }).from(whatsappClicks).groupBy(whatsappClicks.productName, whatsappClicks.brand).orderBy(desc(count())));
+    const recentVisits = await (visitDateFilter ? db.select().from(pageVisits).where(visitDateFilter).orderBy(desc(pageVisits.createdAt)).limit(50) : db.select().from(pageVisits).orderBy(desc(pageVisits.createdAt)).limit(50));
+    const recentWhatsappClicks = await (clickDateFilter ? db.select().from(whatsappClicks).where(clickDateFilter).orderBy(desc(whatsappClicks.createdAt)).limit(50) : db.select().from(whatsappClicks).orderBy(desc(whatsappClicks.createdAt)).limit(50));
 
-    const visitsByCityQuery = db
-      .select({ city: pageVisits.city, country: pageVisits.country, count: count() })
-      .from(pageVisits)
-      .where(visitDateFilter ? sql`${pageVisits.city} IS NOT NULL AND ${pageVisits.createdAt} >= ${startDate}` : sql`${pageVisits.city} IS NOT NULL`)
-      .groupBy(pageVisits.city, pageVisits.country)
-      .orderBy(desc(count()));
-    const visitsByCity = await visitsByCityQuery;
-
-    const whatsappByBrandQuery = clickDateFilter
-      ? db.select({ brand: whatsappClicks.brand, count: count() }).from(whatsappClicks).where(clickDateFilter).groupBy(whatsappClicks.brand).orderBy(desc(count()))
-      : db.select({ brand: whatsappClicks.brand, count: count() }).from(whatsappClicks).groupBy(whatsappClicks.brand).orderBy(desc(count()));
-    const whatsappByBrand = await whatsappByBrandQuery;
-
-    const whatsappByProductQuery = clickDateFilter
-      ? db.select({ productName: whatsappClicks.productName, brand: whatsappClicks.brand, count: count() }).from(whatsappClicks).where(clickDateFilter).groupBy(whatsappClicks.productName, whatsappClicks.brand).orderBy(desc(count()))
-      : db.select({ productName: whatsappClicks.productName, brand: whatsappClicks.brand, count: count() }).from(whatsappClicks).groupBy(whatsappClicks.productName, whatsappClicks.brand).orderBy(desc(count()));
-    const whatsappByProduct = await whatsappByProductQuery;
-
-    const recentVisitsQuery = visitDateFilter
-      ? db.select().from(pageVisits).where(visitDateFilter).orderBy(desc(pageVisits.createdAt)).limit(50)
-      : db.select().from(pageVisits).orderBy(desc(pageVisits.createdAt)).limit(50);
-    const recentVisits = await recentVisitsQuery;
-
-    const recentWhatsappQuery = clickDateFilter
-      ? db.select().from(whatsappClicks).where(clickDateFilter).orderBy(desc(whatsappClicks.createdAt)).limit(50)
-      : db.select().from(whatsappClicks).orderBy(desc(whatsappClicks.createdAt)).limit(50);
-    const recentWhatsappClicks = await recentWhatsappQuery;
-
-    const visitsByDayQuery = period === "month"
-      ? db
-          .select({
-            day: sql<string>`TO_CHAR(${pageVisits.createdAt}, 'IYYY-"S"IW')`,
-            count: count(),
-          })
-          .from(pageVisits)
-          .where(visitDateFilter || sql`TRUE`)
-          .groupBy(sql`TO_CHAR(${pageVisits.createdAt}, 'IYYY-"S"IW')`)
-          .orderBy(sql`TO_CHAR(${pageVisits.createdAt}, 'IYYY-"S"IW')`)
-      : db
-          .select({
-            day: sql<string>`TO_CHAR(${pageVisits.createdAt}, 'YYYY-MM-DD')`,
-            count: count(),
-          })
-          .from(pageVisits)
-          .where(visitDateFilter || sql`TRUE`)
-          .groupBy(sql`TO_CHAR(${pageVisits.createdAt}, 'YYYY-MM-DD')`)
-          .orderBy(sql`TO_CHAR(${pageVisits.createdAt}, 'YYYY-MM-DD')`);
-    const visitsByDay = await visitsByDayQuery;
+    const visitsByDay = await (period === "month"
+      ? db.select({ day: sql<string>`TO_CHAR(${pageVisits.createdAt}, 'IYYY-"S"IW')`, count: count() }).from(pageVisits).where(visitDateFilter || sql`TRUE`).groupBy(sql`TO_CHAR(${pageVisits.createdAt}, 'IYYY-"S"IW')`).orderBy(sql`TO_CHAR(${pageVisits.createdAt}, 'IYYY-"S"IW')`)
+      : db.select({ day: sql<string>`TO_CHAR(${pageVisits.createdAt}, 'YYYY-MM-DD')`, count: count() }).from(pageVisits).where(visitDateFilter || sql`TRUE`).groupBy(sql`TO_CHAR(${pageVisits.createdAt}, 'YYYY-MM-DD')`).orderBy(sql`TO_CHAR(${pageVisits.createdAt}, 'YYYY-MM-DD')`));
 
     const orderDateFilter = startDate ? gte(orders.createdAt, startDate) : undefined;
+    const totalOrders = await (orderDateFilter ? db.select({ count: count() }).from(orders).where(orderDateFilter) : db.select({ count: count() }).from(orders));
+    const orderRevenue = await (orderDateFilter ? db.select({ total: sql<number>`COALESCE(SUM(${orders.totalPrice}), 0)::integer` }).from(orders).where(orderDateFilter) : db.select({ total: sql<number>`COALESCE(SUM(${orders.totalPrice}), 0)::integer` }).from(orders));
+    const ordersByBrand = await (orderDateFilter ? db.select({ brand: orders.brand, count: count(), revenue: sql<number>`COALESCE(SUM(${orders.totalPrice}), 0)::integer` }).from(orders).where(orderDateFilter).groupBy(orders.brand).orderBy(desc(count())) : db.select({ brand: orders.brand, count: count(), revenue: sql<number>`COALESCE(SUM(${orders.totalPrice}), 0)::integer` }).from(orders).groupBy(orders.brand).orderBy(desc(count())));
+    const recentOrders = await (orderDateFilter ? db.select().from(orders).where(orderDateFilter).orderBy(desc(orders.createdAt)).limit(50) : db.select().from(orders).orderBy(desc(orders.createdAt)).limit(50));
 
-    const totalOrdersQuery = orderDateFilter
-      ? db.select({ count: count() }).from(orders).where(orderDateFilter)
-      : db.select({ count: count() }).from(orders);
-    const totalOrders = await totalOrdersQuery;
-
-    const orderRevenueQuery = orderDateFilter
-      ? db.select({ total: sql<number>`COALESCE(SUM(${orders.totalPrice}), 0)::integer` }).from(orders).where(orderDateFilter)
-      : db.select({ total: sql<number>`COALESCE(SUM(${orders.totalPrice}), 0)::integer` }).from(orders);
-    const orderRevenue = await orderRevenueQuery;
-
-    const ordersByBrandQuery = orderDateFilter
-      ? db.select({ brand: orders.brand, count: count(), revenue: sql<number>`COALESCE(SUM(${orders.totalPrice}), 0)::integer` }).from(orders).where(orderDateFilter).groupBy(orders.brand).orderBy(desc(count()))
-      : db.select({ brand: orders.brand, count: count(), revenue: sql<number>`COALESCE(SUM(${orders.totalPrice}), 0)::integer` }).from(orders).groupBy(orders.brand).orderBy(desc(count()));
-    const ordersByBrand = await ordersByBrandQuery;
-
-    const recentOrdersQuery = orderDateFilter
-      ? db.select().from(orders).where(orderDateFilter).orderBy(desc(orders.createdAt)).limit(50)
-      : db.select().from(orders).orderBy(desc(orders.createdAt)).limit(50);
-    const recentOrders = await recentOrdersQuery;
-
-    // Visites dernières 6h
     const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000);
     const visits6hResult = await db.select({ count: count() }).from(pageVisits).where(gte(pageVisits.createdAt, sixHoursAgo));
-    const visits6h = Number(visits6hResult[0]?.count ?? 0);
-
-    // Visites dernières 24h
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
     const visits24hResult = await db.select({ count: count() }).from(pageVisits).where(gte(pageVisits.createdAt, oneDayAgo));
-    const visits24h = Number(visits24hResult[0]?.count ?? 0);
 
     return {
       totalVisits: totalVisits[0]?.count || 0,
       uniqueVisitors: uniqueVisitors[0]?.count || 0,
-      visits6h,
-      visits24h,
+      visits6h: Number(visits6hResult[0]?.count ?? 0),
+      visits24h: Number(visits24hResult[0]?.count ?? 0),
       totalAnalyses: totalAnalyses[0]?.count || 0,
       totalWhatsappClicks: totalWhatsappClicks[0]?.count || 0,
       totalOrders: totalOrders[0]?.count || 0,
@@ -341,21 +272,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async incrementChallengeAccepted(token: string): Promise<void> {
-    await db
-      .update(challenges)
-      .set({ acceptedCount: sql`${challenges.acceptedCount} + 1` })
-      .where(eq(challenges.token, token));
+    await db.update(challenges).set({ acceptedCount: sql`${challenges.acceptedCount} + 1` }).where(eq(challenges.token, token));
   }
 
   async getUsersWithStaleScans(daysSince: number): Promise<{ userId: string }[]> {
     const cutoff = new Date(Date.now() - daysSince * 24 * 60 * 60 * 1000);
-    const result = await db
-      .selectDistinct({ userId: scans.userId })
-      .from(scans)
-      .where(and(
-        lt(scans.createdAt, cutoff),
-        sql`${scans.userId} IS NOT NULL`
-      ));
+    const result = await db.selectDistinct({ userId: scans.userId }).from(scans).where(and(lt(scans.createdAt, cutoff), sql`${scans.userId} IS NOT NULL`));
     return result.filter(r => r.userId) as { userId: string }[];
   }
 
@@ -366,14 +288,7 @@ export class DatabaseStorage implements IStorage {
   async getUsersWithScansBetweenHours(minHours: number, maxHours: number): Promise<{ userId: string }[]> {
     const minCutoff = new Date(Date.now() - maxHours * 60 * 60 * 1000);
     const maxCutoff = new Date(Date.now() - minHours * 60 * 60 * 1000);
-    const result = await db
-      .selectDistinct({ userId: scans.userId })
-      .from(scans)
-      .where(and(
-        gte(scans.createdAt, minCutoff),
-        lt(scans.createdAt, maxCutoff),
-        sql`${scans.userId} IS NOT NULL`
-      ));
+    const result = await db.selectDistinct({ userId: scans.userId }).from(scans).where(and(gte(scans.createdAt, minCutoff), lt(scans.createdAt, maxCutoff), sql`${scans.userId} IS NOT NULL`));
     return result.filter(r => r.userId) as { userId: string }[];
   }
 
@@ -410,28 +325,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllPartnerProducts(): Promise<(PartnerProduct & { partnerName: string; partnerWhatsapp: string; partnerLocation: string })[]> {
-    const rows = await db
-      .select({
-        id: partnerProducts.id,
-        partnerId: partnerProducts.partnerId,
-        name: partnerProducts.name,
-        category: partnerProducts.category,
-        description: partnerProducts.description,
-        price: partnerProducts.price,
-        active: partnerProducts.active,
-        createdAt: partnerProducts.createdAt,
-        partnerName: partners.name,
-        partnerWhatsapp: partners.whatsapp,
-        partnerLocation: partners.location,
-      })
-      .from(partnerProducts)
-      .innerJoin(partners, eq(partnerProducts.partnerId, partners.id))
-      .where(and(eq(partnerProducts.active, true), eq(partners.active, true)))
-      .orderBy(partners.name, partnerProducts.name);
-    return rows;
+    return db.select({
+      id: partnerProducts.id,
+      partnerId: partnerProducts.partnerId,
+      name: partnerProducts.name,
+      category: partnerProducts.category,
+      description: partnerProducts.description,
+      price: partnerProducts.price,
+      active: partnerProducts.active,
+      createdAt: partnerProducts.createdAt,
+      partnerName: partners.name,
+      partnerWhatsapp: partners.whatsapp,
+      partnerLocation: partners.location,
+    }).from(partnerProducts).innerJoin(partners, eq(partnerProducts.partnerId, partners.id)).where(and(eq(partnerProducts.active, true), eq(partners.active, true))).orderBy(partners.name, partnerProducts.name);
   }
 
-  // ===== Routines =====
   async getRoutinesWithSteps(userId: string): Promise<(Routine & { steps: RoutineStep[] })[]> {
     const rs = await db.select().from(routines).where(eq(routines.userId, userId));
     if (rs.length === 0) return [];
@@ -447,42 +355,32 @@ export class DatabaseStorage implements IStorage {
       const [updated] = await db.update(routines).set(data).where(eq(routines.id, existing.id)).returning();
       return updated;
     }
-    const [created] = await db.insert(routines).values({ userId, period, ...data }).returning();
-    return created;
+    return (await db.insert(routines).values({ userId, period, ...data }).returning())[0];
   }
 
   async addRoutineStep(routineId: number, data: Omit<InsertRoutineStep, "routineId" | "position">): Promise<RoutineStep> {
     const [{ maxPos }] = await db.select({ maxPos: sql<number>`COALESCE(MAX(${routineSteps.position}), -1)` }).from(routineSteps).where(eq(routineSteps.routineId, routineId));
-    const [step] = await db.insert(routineSteps).values({ ...data, routineId, position: (maxPos ?? -1) + 1 }).returning();
-    return step;
+    return (await db.insert(routineSteps).values({ ...data, routineId, position: (maxPos ?? -1) + 1 }).returning())[0];
   }
 
   async deleteRoutineStep(stepId: number, userId: string): Promise<void> {
-    const owned = await db
-      .select({ id: routineSteps.id })
-      .from(routineSteps)
-      .innerJoin(routines, eq(routineSteps.routineId, routines.id))
-      .where(and(eq(routineSteps.id, stepId), eq(routines.userId, userId)));
+    const owned = await db.select({ id: routineSteps.id }).from(routineSteps).innerJoin(routines, eq(routineSteps.routineId, routines.id)).where(and(eq(routineSteps.id, stepId), eq(routines.userId, userId)));
     if (owned.length === 0) return;
     await db.delete(routineSteps).where(eq(routineSteps.id, stepId));
   }
 
   async getRoutineStep(stepId: number) {
-    const rows = await db
-      .select({
-        id: routineSteps.id,
-        routineId: routineSteps.routineId,
-        kind: routineSteps.kind,
-        label: routineSteps.label,
-        productId: routineSteps.productId,
-        position: routineSteps.position,
-        createdAt: routineSteps.createdAt,
-        userId: routines.userId,
-        period: routines.period,
-      })
-      .from(routineSteps)
-      .innerJoin(routines, eq(routineSteps.routineId, routines.id))
-      .where(eq(routineSteps.id, stepId));
+    const rows = await db.select({
+      id: routineSteps.id,
+      routineId: routineSteps.routineId,
+      kind: routineSteps.kind,
+      label: routineSteps.label,
+      productId: routineSteps.productId,
+      position: routineSteps.position,
+      createdAt: routineSteps.createdAt,
+      userId: routines.userId,
+      period: routines.period,
+    }).from(routineSteps).innerJoin(routines, eq(routineSteps.routineId, routines.id)).where(eq(routineSteps.id, stepId));
     return rows[0];
   }
 
@@ -504,7 +402,7 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(routineCompletions).where(and(eq(routineCompletions.userId, userId), gte(routineCompletions.date, startDate), sql`${routineCompletions.date} <= ${endDate}`));
   }
 
-  // MÉTHODE CORRIGÉE : On applique un filtre SQL natif pour exclure les anciens comptes Replit orphelins
+  // Filtrage SQL strict et natif
   async getAllRoutinesWithUserAndSteps(): Promise<(Routine & { steps: RoutineStep[] })[]> {
     const rs = await db
       .select()
@@ -521,7 +419,6 @@ export class DatabaseStorage implements IStorage {
     return rs.map((r) => ({ ...r, steps: allSteps.filter((s) => s.routineId === r.id) }));
   }
 
-  // ===== Featured products =====
   async getFeaturedProducts(): Promise<FeaturedProduct[]> {
     return db.select().from(featuredProducts).orderBy(featuredProducts.position);
   }
@@ -533,72 +430,33 @@ export class DatabaseStorage implements IStorage {
     return db.insert(featuredProducts).values(rows).returning();
   }
 
-  // ===== Personalized tips cache =====
   async getCachedTips(userId: string): Promise<PersonalizedTipsCache | undefined> {
     const [c] = await db.select().from(personalizedTipsCache).where(eq(personalizedTipsCache.userId, userId));
     return c;
   }
 
   async setCachedTips(userId: string, scanId: number | null, tips: string[]): Promise<void> {
-    await db
-      .insert(personalizedTipsCache)
-      .values({ userId, scanId, tips, generatedAt: new Date() })
-      .onConflictDoUpdate({
-        target: personalizedTipsCache.userId,
-        set: { scanId, tips, generatedAt: new Date() },
-      });
+    await db.insert(personalizedTipsCache).values({ userId, scanId, tips, generatedAt: new Date() }).onConflictDoUpdate({
+      target: personalizedTipsCache.userId,
+      set: { scanId, tips, generatedAt: new Date() },
+    });
   }
 
-  // ===== RGPD : export complet =====
   async exportUserData(userId: string): Promise<Record<string, unknown>> {
-    const safe = async <T>(p: Promise<T>, fallback: T): Promise<T> => {
-      try { return await p; } catch { return fallback; }
-    };
-
+    const safe = async <T>(p: Promise<T>, fallback: T): Promise<T> => { try { return await p; } catch { return fallback; } };
     const [user] = await db.select().from(users).where(eq(users.id, userId));
     if (!user) throw new Error("User not found");
 
-    const userScans = await safe(db.select().from(scans).where(eq(scans.userId, userId)), [] as any[]);
-    const userOrders = await safe(db.select().from(orders).where(eq(orders.userId, userId)), [] as any[]);
-    const userPoints = await safe(db.select().from(loyaltyPoints).where(eq(loyaltyPoints.userId, userId)), [] as any[]);
-    const userRewards = await safe(db.select().from(loyaltyRewards).where(eq(loyaltyRewards.userId, userId)), [] as any[]);
-    const userPush = await safe(db.select().from(pushSubscriptions).where(eq(pushSubscriptions.userId, userId)), [] as any[]);
-    const userSubs = await safe(db.select().from(subscriptions).where(eq(subscriptions.userId, userId)), [] as any[]);
-    const userPremReq = await safe(db.select().from(premiumRequests).where(eq(premiumRequests.userId, userId)), [] as any[]);
-    const userLeads = await safe(db.select().from(leads).where(eq(leads.userId, userId)), [] as any[]);
-    const userWellness = await safe(db.select().from(wellnessLogs).where(eq(wellnessLogs.userId, userId)), [] as any[]);
-    const userRoutines = await safe(db.select().from(routines).where(eq(routines.userId, userId)), [] as any[]);
-    const userCompletions = await safe(db.select().from(routineCompletions).where(eq(routineCompletions.userId, userId)), [] as any[]);
-    const userReferralsOut = await safe(db.select().from(referrals).where(eq(referrals.referrerId, userId)), [] as any[]);
-    const userReferralsIn = await safe(db.select().from(referrals).where(eq(referrals.referredId, userId)), [] as any[]);
-
     return {
       exportedAt: new Date().toISOString(),
-      notice: "Export RGPD — vos données personnelles sur GlowScan. Conformément aux articles 15 et 20 du RGPD.",
-      profile: {
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        profileImageUrl: user.profileImageUrl,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt,
-      },
-      scans: userScans,
-      orders: userOrders,
-      loyalty: { points: userPoints, rewards: userRewards },
-      subscriptions: userSubs,
-      premiumRequests: userPremReq,
-      pushSubscriptions: userPush,
-      leads: userLeads,
-      wellnessLogs: userWellness,
-      routines: userRoutines,
-      routineCompletions: userCompletions,
-      referrals: { asReferrer: userReferralsOut, asReferred: userReferralsIn },
+      profile: user,
+      scans: await safe(db.select().from(scans).where(eq(scans.userId, userId)), []),
+      orders: await safe(db.select().from(orders).where(eq(orders.userId, userId)), []),
+      loyalty: { points: await safe(db.select().from(loyaltyPoints).where(eq(loyaltyPoints.userId, userId)), []), rewards: await safe(db.select().from(loyaltyRewards).where(eq(loyaltyRewards.userId, userId)), []) },
+      pushSubscriptions: await safe(db.select().from(pushSubscriptions).where(eq(pushSubscriptions.userId, userId)), []),
     };
   }
 
-  // ===== RGPD : suppression complète du compte =====
   async deleteUserAndAllData(userId: string): Promise<void> {
     await db.transaction(async (tx) => {
       await tx.delete(routineCompletions).where(eq(routineCompletions.userId, userId));
@@ -616,109 +474,46 @@ export class DatabaseStorage implements IStorage {
       await tx.delete(referrals).where(eq(referrals.referrerId, userId));
       await tx.delete(referrals).where(eq(referrals.referredId, userId));
       await tx.delete(challenges).where(eq(challenges.challengerUserId, userId));
-
-      await tx.execute(sql`
-        DELETE FROM sessions
-        WHERE sess->>'userId' = ${userId}
-           OR sess->'passport'->'user'->>'id' = ${userId}
-           OR sess->'passport'->'user'->'claims'->>'sub' = ${userId}
-      `);
-
+      await tx.execute(sql`DELETE FROM sessions WHERE sess->>'userId' = ${userId} OR sess->'passport'->'user'->>'id' = ${userId} OR sess->'passport'->'user'->'claims'->>'sub' = ${userId}`);
       await tx.delete(users).where(eq(users.id, userId));
     });
   }
 
-  // ====== RLHF / Dataset Pipeline ======
-  async getDatasetScans(opts: {
-    status?: "all" | "pending" | "verified" | "rejected";
-    area?: string;
-    page?: number;
-    limit?: number;
-  }): Promise<{ items: Scan[]; total: number }> {
+  async getDatasetScans(opts: { status?: "all" | "pending" | "verified" | "rejected"; area?: string; page?: number; limit?: number; }): Promise<{ items: Scan[]; total: number }> {
     const page = Math.max(1, opts.page || 1);
     const limit = Math.min(100, Math.max(1, opts.limit || 20));
     const offset = (page - 1) * limit;
-
     const conds: any[] = [];
     if (opts.status === "verified") conds.push(eq(scans.isVerified, true));
     else if (opts.status === "rejected") conds.push(and(eq(scans.isVerified, false), sql`${scans.expertReviewedAt} IS NOT NULL`));
     else if (opts.status === "pending") conds.push(and(eq(scans.isVerified, false), sql`${scans.expertReviewedAt} IS NULL`));
     if (opts.area && opts.area !== "all") conds.push(eq(scans.area, opts.area));
     conds.push(sql`${scans.imageUrl} LIKE '/objects/scans/%'`);
-
     const whereClause = conds.length ? and(...conds) : undefined;
-
-    const items = await db.select().from(scans)
-      .where(whereClause as any)
-      .orderBy(desc(scans.createdAt))
-      .limit(limit).offset(offset);
-
+    const items = await db.select().from(scans).where(whereClause as any).orderBy(desc(scans.createdAt)).limit(limit).offset(offset);
     const totalRow = await db.select({ c: count() }).from(scans).where(whereClause as any);
     return { items, total: totalRow[0]?.c ?? 0 };
   }
 
-  async getDatasetStats(): Promise<{
-    total: number; verified: number; rejected: number; pending: number;
-    withImage: number; byArea: Record<string, number>;
-  }> {
+  async getDatasetStats(): Promise<{ total: number; verified: number; rejected: number; pending: number; withImage: number; byArea: Record<string, number>; }> {
     const [tot] = await db.select({ c: count() }).from(scans);
     const [ver] = await db.select({ c: count() }).from(scans).where(eq(scans.isVerified, true));
-    const [rej] = await db.select({ c: count() }).from(scans)
-      .where(and(eq(scans.isVerified, false), sql`${scans.expertReviewedAt} IS NOT NULL`));
-    const [pen] = await db.select({ c: count() }).from(scans)
-      .where(and(eq(scans.isVerified, false), sql`${scans.expertReviewedAt} IS NULL`));
-    const [img] = await db.select({ c: count() }).from(scans)
-      .where(sql`${scans.imageUrl} LIKE '/objects/scans/%'`);
+    const [rej] = await db.select({ c: count() }).from(scans).where(and(eq(scans.isVerified, false), sql`${scans.expertReviewedAt} IS NOT NULL`));
+    const [pen] = await db.select({ c: count() }).from(scans).where(and(eq(scans.isVerified, false), sql`${scans.expertReviewedAt} IS NULL`));
+    const [img] = await db.select({ c: count() }).from(scans).where(sql`${scans.imageUrl} LIKE '/objects/scans/%'`);
     const areaRows = await db.select({ a: scans.area, c: count() }).from(scans).groupBy(scans.area);
     const byArea: Record<string, number> = {};
     for (const r of areaRows) byArea[r.a] = r.c;
-    return {
-      total: tot?.c ?? 0, verified: ver?.c ?? 0, rejected: rej?.c ?? 0, pending: pen?.c ?? 0,
-      withImage: img?.c ?? 0, byArea,
-    };
+    return { total: tot?.c ?? 0, verified: ver?.c ?? 0, rejected: rej?.c ?? 0, pending: pen?.c ?? 0, withImage: img?.c ?? 0, byArea };
   }
 
-  async getFewShotExamples(area: string, limit = 8): Promise<Array<{
-    aiCondition: string;
-    correctedCondition: string;
-    expertNote: string | null;
-    score: number;
-  }>> {
-    const rows = await db.select({
-      condition: scans.condition,
-      expertCorrectedCondition: scans.expertCorrectedCondition,
-      expertNote: scans.expertNote,
-      score: scans.score,
-    }).from(scans)
-      .where(and(
-        eq(scans.area, area),
-        eq(scans.isVerified, true),
-        sql`${scans.expertCorrectedCondition} IS NOT NULL AND TRIM(${scans.expertCorrectedCondition}) <> ''`,
-      ))
-      .orderBy(desc(scans.expertReviewedAt))
-      .limit(limit);
-
-    return rows.map((r) => ({
-      aiCondition: r.condition || "",
-      correctedCondition: r.expertCorrectedCondition || "",
-      expertNote: r.expertNote,
-      score: r.score ?? 0,
-    }));
+  async getFewShotExamples(area: string, limit = 8): Promise<Array<{ aiCondition: string; correctedCondition: string; expertNote: string | null; score: number; }>> {
+    const rows = await db.select({ condition: scans.condition, expertCorrectedCondition: scans.expertCorrectedCondition, expertNote: scans.expertNote, score: scans.score }).from(scans).where(and(eq(scans.area, area), eq(scans.isVerified, true), sql`${scans.expertCorrectedCondition} IS NOT NULL AND TRIM(${scans.expertCorrectedCondition}) <> ''`)).orderBy(desc(scans.expertReviewedAt)).limit(limit);
+    return rows.map((r) => ({ aiCondition: r.condition || "", correctedCondition: r.expertCorrectedCondition || "", expertNote: r.expertNote, score: r.score ?? 0 }));
   }
 
-  async reviewScan(id: number, payload: {
-    isVerified: boolean;
-    expertNote?: string | null;
-    expertCorrectedCondition?: string | null;
-    expertReviewer?: string | null;
-  }): Promise<Scan | undefined> {
-    const [updated] = await db.update(scans).set({
-      isVerified: payload.isVerified,
-      expertNote: payload.expertNote ?? null,
-      expertCorrectedCondition: payload.expertCorrectedCondition ?? null,
-      expertReviewer: payload.expertReviewer ?? null,
-      expertReviewedAt: new Date(),
-    }).where(eq(scans.id, id)).returning();
+  async reviewScan(id: number, payload: { isVerified: boolean; expertNote?: string | null; expertCorrectedCondition?: string | null; expertReviewer?: string | null; }): Promise<Scan | undefined> {
+    const [updated] = await db.update(scans).set({ isVerified: payload.isVerified, expertNote: payload.expertNote ?? null, expertCorrectedCondition: payload.expertCorrectedCondition ?? null, expertReviewer: payload.expertReviewer ?? null, expertReviewedAt: new Date() }).where(eq(scans.id, id)).returning();
     return updated;
   }
 }
