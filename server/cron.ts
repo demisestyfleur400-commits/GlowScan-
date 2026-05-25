@@ -10,25 +10,31 @@ function log(msg: string) {
 }
 
 async function sendPushToUsers(userIds: Set<string>, notification: { title: string; body: string; url: string }) {
-  const allSubs = await storage.getAllActivePushSubscriptions();
-  const targetSubs = allSubs.filter((sub) => sub.userId && userIds.has(sub.userId));
-  let sent = 0;
-  let failed = 0;
-  for (const sub of targetSubs) {
-    try {
-      await webpush.sendNotification(
-        { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-        JSON.stringify({ ...notification, icon: "/icon-192.png" })
-      );
-      sent++;
-    } catch (err: any) {
-      failed++;
-      if (err.statusCode === 410 || err.statusCode === 404) {
-        await storage.deletePushSubscription(sub.endpoint);
+  try {
+    const allSubs = await storage.getAllActivePushSubscriptions();
+    const targetSubs = allSubs.filter((sub) => sub.userId && userIds.has(sub.userId));
+    let sent = 0;
+    let failed = 0;
+    
+    for (const sub of targetSubs) {
+      try {
+        await webpush.sendNotification(
+          { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+          JSON.stringify({ ...notification, icon: "/icon-192.png" })
+        );
+        sent++;
+      } catch (err: any) {
+        failed++;
+        if (err.statusCode === 410 || err.statusCode === 404) {
+          await storage.deletePushSubscription(sub.endpoint);
+        }
       }
     }
+    return { sent, failed };
+  } catch (err) {
+    log(`❌ Erreur lors de la récupération ou de l'envoi des abonnements Push: ${err}`);
+    return { sent: 0, failed: 0 };
   }
-  return { sent, failed };
 }
 
 // J+2 — Ta peau a évolué
@@ -42,7 +48,7 @@ async function sendDay2Reminders() {
     const ids = new Set(day2Only.map((u) => u.userId));
     
     if (ids.size === 0) {
-      log("✅ J+2 : Aucun utilisateur local concerné aujourd'hui.");
+      log("✅ J+2 : Aucun utilisateur concerné aujourd'hui.");
       return;
     }
 
@@ -68,7 +74,7 @@ async function sendDay7SkinBotReminders() {
     const ids = new Set(day7Only.map((u) => u.userId));
 
     if (ids.size === 0) {
-      log("✅ J+7 SkinBot : Aucun utilisateur local concerné aujourd'hui.");
+      log("✅ J+7 SkinBot : Aucun utilisateur concerné aujourd'hui.");
       return;
     }
 
@@ -94,7 +100,7 @@ async function sendDay14Reminders() {
     const ids = new Set(day14Only.map((u) => u.userId));
 
     if (ids.size === 0) {
-      log("✅ J+14 : Aucun utilisateur local concerné aujourd'hui.");
+      log("✅ J+14 : Aucun utilisateur concerné aujourd'hui.");
       return;
     }
 
@@ -118,7 +124,7 @@ async function sendProductReminders() {
     const userIds = new Set(filteredUsers.map((u) => u.userId));
 
     if (userIds.size === 0) {
-      log("✅ Rappels produits 72h : Aucun utilisateur local concerné.");
+      log("✅ Rappels produits 72h : Aucun utilisateur concerné.");
       return;
     }
 
@@ -133,34 +139,48 @@ async function sendProductReminders() {
   }
 }
 
-// Rappels routine matin/soir — heure exacte choisie par l'utilisateur
+// Rappels routine matin/soir — Vérification par minute
 async function sendRoutineReminders(currentHHMM: string) {
+  let routinesToCheck = [];
   try {
-    const all = await storage.getAllRoutinesWithUserAndSteps();
-    
-    // Protection : On ignore les rappels liés à d'anciens IDs Replit OIDC (qui contiennent souvent un ":")
-    const matching = all.filter((r) => 
-      r.reminderEnabled && 
-      r.reminderTime === currentHHMM && 
-      r.steps.length > 0 &&
-      r.userId &&
-      !r.userId.includes(":")
-    );
+    routinesToCheck = await storage.getAllRoutinesWithUserAndSteps();
+  } catch (dbErr) {
+    log(`❌ Erreur critique lors de la récupération des routines de la DB : ${dbErr}`);
+    return;
+  }
 
-    if (matching.length === 0) return;
+  const matching = routinesToCheck.filter((r) => 
+    r.reminderEnabled && 
+    r.reminderTime === currentHHMM && 
+    r.steps.length > 0 &&
+    r.userId &&
+    !r.userId.includes(":")
+  );
 
-    for (const r of matching) {
+  if (matching.length === 0) return;
+
+  let successfullySentCount = 0;
+
+  for (const r of matching) {
+    try {
       const period = r.period === "morning" ? "matin" : "soir";
       const emoji = r.period === "morning" ? "✨" : "🌙";
-      await sendPushToUsers(new Set([r.userId]), {
+      
+      const { sent } = await sendPushToUsers(new Set([r.userId]), {
         title: `C'est l'heure de ta routine ${period} ${emoji}`,
         body: "Ta peau compte sur toi !",
         url: "/routine",
       });
+      
+      if (sent > 0) successfullySentCount++;
+    } catch (userErr) {
+      // Si un utilisateur précis crash (ex: profil supprimé ou inexistant côté tenant), on log et on passe au suivant
+      log(`⚠️ Impossible d'envoyer la notification pour l'utilisateur ${r.userId} : ${userErr}`);
     }
-    log(`🔔 Rappels routine ${currentHHMM} : ${matching.length} envoyés`);
-  } catch (err) {
-    log(`❌ Erreur rappels routine à ${currentHHMM} : ${err}`);
+  }
+
+  if (successfullySentCount > 0) {
+    log(`🔔 Rappels routine ${currentHHMM} : ${successfullySentCount} envoyés avec succès`);
   }
 }
 
@@ -172,62 +192,55 @@ async function sendEveningMissedReminders() {
     const evening = all.filter((r) => r.period === "evening" && r.steps.length > 0 && r.userId && !r.userId.includes(":"));
     if (evening.length === 0) return;
     
-    const now = new Date();
-    const utc = now.getTime() + now.getTimezoneOffset() * 60000;
-    const douala = new Date(utc + 3600000);
-    const today = douala.toISOString().slice(0, 10);
+    const today = new Date(Date.now() + 3600000).toISOString().slice(0, 10); // Fuseau Douala
 
     let sent = 0;
     for (const r of evening) {
-      const completions = await storage.getCompletionsForDate(r.userId, today);
-      const stepIds = new Set(r.steps.map((s) => s.id));
-      const doneCount = completions.filter((c) => stepIds.has(c.stepId)).length;
-      if (doneCount < r.steps.length) {
-        await sendPushToUsers(new Set([r.userId]), {
-          title: "Tu n'as pas fait ta routine ce soir 🌙",
-          body: "Ta peau en a besoin — coche tes étapes maintenant.",
-          url: "/routine",
-        });
-        sent++;
+      try {
+        const completions = await storage.getCompletionsForDate(r.userId, today);
+        const stepIds = new Set(r.steps.map((s) => s.id));
+        const doneCount = completions.filter((c) => stepIds.has(c.stepId)).length;
+        if (doneCount < r.steps.length) {
+          await sendPushToUsers(new Set([r.userId]), {
+            title: "Tu n'as pas fait ta routine ce soir 🌙",
+            body: "Ta peau en a besoin — coche tes étapes maintenant.",
+            url: "/routine",
+          });
+          sent++;
+        }
+      } catch (innerErr) {
+        log(`⚠️ Erreur routine manquée pour l'user ${r.userId} : ${innerErr}`);
       }
     }
     log(`🌙 Rappels routine soir manquée : ${sent} envoyés`);
   } catch (err) {
-    log(`❌ Erreur rappels soir manquée : ${err}`);
+    log(`❌ Erreur globale rappels soir manquée : ${err}`);
   }
 }
 
 export function startCronJobs() {
   if (process.env.NODE_ENV === "test") return;
 
-  // Routines : check chaque minute pour matcher l'heure exacte
   cron.schedule("* * * * *", () => {
-    const now = new Date();
-    const utc = now.getTime() + now.getTimezoneOffset() * 60000;
-    const douala = new Date(utc + 3600000);
-    const hh = String(douala.getHours()).padStart(2, "0");
-    const mm = String(douala.getMinutes()).padStart(2, "0");
+    const doualaDate = new Date(Date.now() + 3600000);
+    const hh = String(doualaDate.getHours()).padStart(2, "0");
+    const mm = String(doualaDate.getMinutes()).padStart(2, "0");
     sendRoutineReminders(`${hh}:${mm}`);
   }, { timezone: "Africa/Douala" });
   log("✅ Cron rappels routines actif — chaque minute (Douala)");
 
-  // 22h00 : rappel routine soir non complétée
   cron.schedule("0 22 * * *", sendEveningMissedReminders, { timezone: "Africa/Douala" });
   log("✅ Cron rappel soir non complétée actif — 22h00 (Douala)");
 
-  // 9h00 : rappel J+2 ("Ta peau a évolué")
   cron.schedule("0 9 * * *", sendDay2Reminders, { timezone: "Africa/Douala" });
   log("✅ Cron J+2 actif — tous les jours à 9h00 (Douala)");
 
-  // 9h30 : rappel J+7 ("Essaie SkinBot")
   cron.schedule("30 9 * * *", sendDay7SkinBotReminders, { timezone: "Africa/Douala" });
   log("✅ Cron J+7 SkinBot actif — tous les jours à 9h30 (Douala)");
 
-  // 10h00 : rappel J+14 ("Suivi 2 semaines prêt")
   cron.schedule("0 10 * * *", sendDay14Reminders, { timezone: "Africa/Douala" });
   log("✅ Cron J+14 actif — tous les jours à 10h00 (Douala)");
 
-  // 10h30 : rappel produits 72h
   cron.schedule("30 10 * * *", sendProductReminders, { timezone: "Africa/Douala" });
   log("✅ Cron rappels produits 72h actif — tous les jours à 10h30 (Douala)");
 }
