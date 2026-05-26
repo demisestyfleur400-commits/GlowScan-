@@ -1,32 +1,32 @@
 import express, { type Express } from "express";
 import fs from "fs";
 import path from "path";
-import { fileURLToPath } from "url";
 
 export function serveStatic(app: Express) {
-  // ✅ CORRECTION: Utiliser fileURLToPath + import.meta.url pour les modules ES6
-  const __filename = fileURLToPath(import.meta.url);
-  const __dirname = path.dirname(__filename);
-  
-  // Essayons d'abord le chemin relatif au répertoire courant (production)
+  // ✅ SOLUTION: Utiliser process.cwd() qui fonctionne en CommonJS et ES6
   let distPath = path.resolve(process.cwd(), "dist", "public");
   
-  // Si ça n'existe pas, essayons le chemin relatif au fichier compilé
+  // Si ça n'existe pas, essayons sans le "dist"
   if (!fs.existsSync(distPath)) {
-    distPath = path.resolve(__dirname, "public");
+    distPath = path.resolve(process.cwd(), "public");
   }
   
   // Si ça n'existe toujours pas, affiche un diagnostic détaillé
   if (!fs.existsSync(distPath)) {
     console.error("❌ Could not find build directory at:");
     console.error(`   - ${path.resolve(process.cwd(), "dist", "public")}`);
-    console.error(`   - ${path.resolve(__dirname, "public")}`);
-    console.error(`\n📁 Checking what's in ${process.cwd()}:`);
+    console.error(`   - ${path.resolve(process.cwd(), "public")}`);
+    console.error(`\n📁 Current working directory: ${process.cwd()}`);
+    console.error(`📁 Checking what's in ${process.cwd()}:`);
     try {
       const contents = fs.readdirSync(process.cwd());
       console.error(contents);
+      
+      // Essayons aussi de voir ce qui est dans dist/
+      const distContents = fs.readdirSync(path.resolve(process.cwd(), "dist"));
+      console.error(`\n📁 Contents of dist/: ${distContents}`);
     } catch (e) {
-      console.error("Could not read directory");
+      console.error("Could not read directory:", e);
     }
     throw new Error(
       `Could not find the build directory. Expected static files at: ${distPath}`
