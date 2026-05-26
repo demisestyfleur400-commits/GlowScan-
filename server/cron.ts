@@ -1,8 +1,6 @@
 import cron from "node-cron";
 import webpush from "web-push";
 import { storage } from "./storage";
-import { db } from "../../db"; // Ajuste le chemin si nécessaire
-import { users } from "@shared/models/auth";
 
 function log(msg: string) {
   const t = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
@@ -144,7 +142,12 @@ async function sendRoutineReminders(currentHHMM: string) {
   let routinesToCheck = [];
   try {
     routinesToCheck = await storage.getAllRoutinesWithUserAndSteps();
-  } catch (dbErr) {
+  } catch (dbErr: any) {
+    // ✅ CORRECTION 1: Gestion gracieuse de l'erreur "Tenant or user not found"
+    if (dbErr.message?.includes("Tenant") || dbErr.message?.includes("user not found")) {
+      log(`⚠️ Aucun utilisateur/tenant trouvé — routines indisponibles`);
+      return;
+    }
     log(`❌ Erreur critique lors de la récupération des routines de la DB : ${dbErr}`);
     return;
   }
@@ -219,8 +222,20 @@ async function sendEveningMissedReminders() {
 }
 
 export function startCronJobs() {
-  if (process.env.NODE_ENV === "test") return;
+  // ✅ CORRECTION 2: Skip en mode test
+  if (process.env.NODE_ENV === "test") {
+    log("⏭️ Crons désactivés en mode test");
+    return;
+  }
 
+  // ✅ CORRECTION 3: Vérification de DATABASE_URL au démarrage
+  // Évite les crash au démarrage si la DB n'est pas configurée
+  if (!process.env.DATABASE_URL) {
+    log("⚠️ DATABASE_URL non configurée — crons désactivés pour éviter les erreurs");
+    return;
+  }
+
+  // ✅ Rappels routines — chaque minute
   cron.schedule("* * * * *", () => {
     const doualaDate = new Date(Date.now() + 3600000);
     const hh = String(doualaDate.getHours()).padStart(2, "0");
