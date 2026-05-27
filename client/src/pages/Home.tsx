@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useScans } from "@/hooks/use-scans";
 import { useProAccount } from "@/hooks/use-pro";
 import { useQuery } from "@tanstack/react-query";
-import { User, Sparkles, ScanLine, Bot, Apple, ListChecks, TrendingUp, ChevronRight, X, Compass, ShoppingBag, ArrowRight, Menu, Crown, LogOut, Lightbulb, Terminal, Target, ShieldAlert } from "lucide-react";
+import { User, Sparkles, ScanLine, Bot, Apple, ListChecks, TrendingUp, ChevronRight, X, Compass, ShoppingBag, ArrowRight, Menu, Crown, LogOut, Lightbulb, Terminal, Target, ShieldAlert, Loader2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { trackPageVisit } from "@/lib/analytics";
 import Landing from "@/pages/Landing";
