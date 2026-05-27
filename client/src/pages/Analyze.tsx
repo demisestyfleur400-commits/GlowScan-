@@ -141,7 +141,7 @@ export default function Analyze() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ imageUrl: base64 }),
+        body: JSON.stringify({ base64Image: base64 }),
         maxRetries: 2,
         baseDelayMs: 800,
         retryOn5xx: true,
