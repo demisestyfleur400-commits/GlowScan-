@@ -20,43 +20,71 @@ const SUGGESTIONS = [
   "Quelle routine pour peau grasse ?",
 ];
 
-function PremiumGatePage({ feature, icon }: { feature: string; icon: string }) {
+function PremiumGatePage({ feature }: { feature: string }) {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 px-6 pb-20 selection:bg-slate-950 selection:text-white">
-      <div className="w-16 h-16 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-center mb-6 text-2xl text-slate-950">
-        <Lock className="w-6 h-6 text-slate-950" />
+    <div className="min-h-screen flex flex-col items-center justify-center px-6 pb-20" style={{ background: "#0D0A0E" }}>
+      {/* Orb */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[400px] h-[400px] rounded-full" style={{ background: "radial-gradient(circle, rgba(233,30,140,0.15) 0%, transparent 70%)" }} />
       </div>
-      <div className="text-center mb-8">
-        <div className="inline-flex items-center gap-1.5 bg-slate-950 border border-slate-900 rounded-lg px-3 py-1 mb-4 shadow-sm">
-          <Crown className="w-3.5 h-3.5 text-emerald-400" />
+
+      <div
+        className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6"
+        style={{ background: "rgba(233,30,140,0.12)", border: "1px solid rgba(233,30,140,0.25)" }}
+      >
+        <Lock className="w-6 h-6" style={{ color: "#E91E8C" }} />
+      </div>
+
+      <div className="text-center mb-8 relative z-10">
+        <div
+          className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1 mb-4"
+          style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}
+        >
+          <Crown className="w-3.5 h-3.5" style={{ color: "#E91E8C" }} />
           <span className="text-[10px] font-black text-white uppercase tracking-wider font-mono">Module Premium</span>
         </div>
-        <h1 className="text-xl font-black text-slate-900 uppercase tracking-tight mb-2">{feature}</h1>
-        <p className="text-xs text-slate-500 leading-relaxed max-w-xs font-medium">
-          Débloquez l'accès illimité à l'assistant {feature}, aux analyses cellulaires continues et aux protocoles avancés pour <strong>500 FCFA/semaine</strong> ou <strong>2 000 FCFA/mois</strong>.
+        <h1 className="text-xl font-black text-white uppercase tracking-tight mb-2">{feature}</h1>
+        <p className="text-xs leading-relaxed max-w-xs font-medium" style={{ color: "rgba(255,255,255,0.45)" }}>
+          Débloquez l'accès illimité à l'assistant {feature}, aux analyses cellulaires continues et aux protocoles avancés pour <strong className="text-white">500 FCFA/semaine</strong> ou <strong className="text-white">2 000 FCFA/mois</strong>.
         </p>
       </div>
-      <div className="w-full max-w-xs space-y-2 mb-8 text-left">
+
+      <div className="w-full max-w-xs space-y-2 mb-8 text-left relative z-10">
         {[
           "Analyses de peau illimitées",
           "GlowScan AI — diagnostic continu 24h/24",
           "Scan de formulation cosmétique",
           "Analyse de l'impact nutritionnel",
-          "Accès intégral aux prescriptions cliniques"
+          "Accès intégral aux prescriptions cliniques",
         ].map(item => (
-          <div key={item} className="flex items-center gap-3 bg-white rounded-xl p-3 border border-slate-200 shadow-xs">
-            <div className="w-5 h-5 rounded-md bg-slate-50 border border-slate-200 flex items-center justify-center flex-shrink-0">
-              <span className="text-emerald-500 text-xs font-black">✓</span>
+          <div
+            key={item}
+            className="flex items-center gap-3 rounded-xl p-3"
+            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}
+          >
+            <div
+              className="w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0"
+              style={{ background: "rgba(233,30,140,0.15)", border: "1px solid rgba(233,30,140,0.25)" }}
+            >
+              <span className="text-xs font-black" style={{ color: "#E91E8C" }}>✓</span>
             </div>
-            <span className="text-xs font-semibold text-slate-700">{item}</span>
+            <span className="text-xs font-semibold text-white">{item}</span>
           </div>
         ))}
       </div>
-      <a href="/premium" className="w-full max-w-xs flex items-center justify-center gap-2 py-3.5 rounded-xl bg-slate-950 text-white font-black text-xs uppercase tracking-widest shadow-md active:scale-95 transition-all">
-        <Crown className="w-4 h-4 text-emerald-400" />
+
+      <a
+        href="/premium"
+        className="w-full max-w-xs flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-sm text-white active:scale-95 transition-transform relative z-10"
+        style={{
+          background: "linear-gradient(135deg, #E91E8C 0%, #f43f5e 60%, #fb923c 100%)",
+          boxShadow: "0 0 30px rgba(233,30,140,0.4)",
+        }}
+      >
+        <Crown className="w-4 h-4" />
         Activer la licence pro
       </a>
-      <a href="/" className="mt-5 text-xs text-slate-400 font-bold uppercase tracking-wider hover:underline">← Accueil</a>
+      <a href="/" className="mt-5 text-xs font-bold uppercase tracking-wider hover:underline relative z-10" style={{ color: "rgba(255,255,255,0.35)" }}>← Accueil</a>
     </div>
   );
 }
@@ -147,27 +175,45 @@ export default function Chat() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-slate-50 max-w-lg mx-auto border-x border-slate-200 selection:bg-slate-950 selection:text-white">
-      {/* Header Clinique */}
-      <div className="bg-white border-b border-slate-200 px-4 py-3 flex items-center gap-3 sticky top-0 z-10 shadow-xs">
+    <div
+      className="flex flex-col h-screen max-w-lg mx-auto"
+      style={{ background: "#0D0A0E", borderLeft: "1px solid rgba(255,255,255,0.05)", borderRight: "1px solid rgba(255,255,255,0.05)" }}
+    >
+      {/* Header */}
+      <div
+        className="px-4 py-3 flex items-center gap-3 sticky top-0 z-10"
+        style={{ background: "rgba(13,10,14,0.95)", borderBottom: "1px solid rgba(255,255,255,0.07)", backdropFilter: "blur(20px)" }}
+      >
         <Link href="/">
-          <button className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-100 transition-colors">
+          <button
+            className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
+            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.6)" }}
+          >
             <ArrowLeft className="w-4 h-4" />
           </button>
         </Link>
-        <div className="w-9 h-9 rounded-xl bg-slate-950 border border-slate-900 flex items-center justify-center shadow-md">
-          <Terminal className="w-4 h-4 text-emerald-400" />
+
+        <div
+          className="w-9 h-9 rounded-xl flex items-center justify-center"
+          style={{ background: "rgba(233,30,140,0.12)", border: "1px solid rgba(233,30,140,0.25)" }}
+        >
+          <Terminal className="w-4 h-4" style={{ color: "#E91E8C" }} />
         </div>
+
         <div className="text-left">
-          <p className="text-xs font-black text-slate-950 uppercase tracking-wide">GlowScan AI</p>
-          <p className="text-[10px] text-emerald-600 font-bold font-mono flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block animate-pulse" />
+          <p className="text-xs font-black text-white uppercase tracking-wide">GlowScan AI</p>
+          <p className="text-[10px] font-bold font-mono flex items-center gap-1" style={{ color: "#86efac" }}>
+            <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block animate-pulse" />
             Core Engine active
           </p>
         </div>
+
         {lastScan && (
-          <div className="ml-auto flex items-center gap-1 bg-slate-950 border border-slate-900 px-2.5 py-1 rounded-lg shadow-sm">
-            <ScanFace className="w-3.5 h-3.5 text-emerald-400" />
+          <div
+            className="ml-auto flex items-center gap-1 px-2.5 py-1 rounded-lg"
+            style={{ background: "rgba(233,30,140,0.12)", border: "1px solid rgba(233,30,140,0.25)" }}
+          >
+            <ScanFace className="w-3.5 h-3.5" style={{ color: "#E91E8C" }} />
             <span className="text-[10px] font-mono font-bold text-white">{lastScan.score}/100</span>
           </div>
         )}
@@ -184,26 +230,40 @@ export default function Chat() {
               className={`flex items-start gap-2.5 ${msg.role === "user" ? "flex-row-reverse" : ""}`}
             >
               {/* Avatar */}
-              <div className={`w-7 h-7 rounded-lg border flex items-center justify-center flex-shrink-0 text-xs font-bold ${
-                msg.role === "assistant" 
-                  ? "bg-slate-950 border-slate-900 text-emerald-400" 
-                  : "bg-white border-slate-200 text-slate-900 shadow-xs"
-              }`}>
+              <div
+                className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 text-xs font-bold"
+                style={
+                  msg.role === "assistant"
+                    ? { background: "rgba(233,30,140,0.12)", border: "1px solid rgba(233,30,140,0.25)", color: "#E91E8C" }
+                    : { background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.8)" }
+                }
+              >
                 {msg.role === "assistant" ? <Terminal className="w-3 h-3" /> : <User className="w-3 h-3" />}
               </div>
 
               {/* Bubble */}
-              <div className={`max-w-[80%] px-3.5 py-2.5 rounded-xl text-xs leading-relaxed text-left ${
-                msg.role === "assistant"
-                  ? "bg-white border border-slate-200 text-slate-800 shadow-xs font-medium"
-                  : "bg-slate-950 border border-slate-900 text-slate-100 font-semibold"
-              }`}
+              <div
+                className="max-w-[80%] px-3.5 py-2.5 rounded-xl text-xs leading-relaxed text-left"
+                style={
+                  msg.role === "assistant"
+                    ? { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.75)", fontWeight: 500 }
+                    : {
+                        background: "linear-gradient(135deg, rgba(233,30,140,0.2) 0%, rgba(244,63,94,0.2) 100%)",
+                        border: "1px solid rgba(233,30,140,0.3)",
+                        color: "rgba(255,255,255,0.9)",
+                        fontWeight: 600,
+                      }
+                }
                 data-testid={`message-${msg.role}-${i}`}
               >
                 {msg.loading ? (
                   <div className="flex items-center gap-1 py-1">
                     {[0, 1, 2].map(j => (
-                      <div key={j} className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: `${j * 0.12}s` }} />
+                      <div
+                        key={j}
+                        className="w-1.5 h-1.5 rounded-full animate-bounce"
+                        style={{ background: "rgba(233,30,140,0.6)", animationDelay: `${j * 0.12}s` }}
+                      />
                     ))}
                   </div>
                 ) : (
@@ -217,13 +277,16 @@ export default function Chat() {
         {/* Suggestions */}
         {messages.length === 1 && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-2 pt-4">
-            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest font-mono text-center">Requêtes fréquentes</p>
+            <p className="text-[9px] font-black uppercase tracking-widest font-mono text-center" style={{ color: "rgba(255,255,255,0.25)" }}>
+              Requêtes fréquentes
+            </p>
             <div className="flex flex-wrap gap-1.5 justify-center max-w-sm mx-auto">
               {SUGGESTIONS.map((s, i) => (
                 <button
                   key={i}
                   onClick={() => send(s)}
-                  className="text-[11px] bg-white border border-slate-200 text-slate-700 font-semibold px-3 py-1.5 rounded-lg hover:border-slate-400 hover:text-slate-950 transition-colors shadow-xs"
+                  className="text-[11px] font-semibold px-3 py-1.5 rounded-lg transition-all active:scale-95"
+                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.6)" }}
                   data-testid={`suggestion-${i}`}
                 >
                   {s}
@@ -236,18 +299,25 @@ export default function Chat() {
         <div ref={bottomRef} />
       </div>
 
-      {/* Zone de saisie Console */}
-      <div className="bg-white border-t border-slate-200 px-4 py-3 sticky bottom-0">
+      {/* Zone de saisie */}
+      <div
+        className="px-4 py-3 sticky bottom-0"
+        style={{ background: "rgba(13,10,14,0.95)", borderTop: "1px solid rgba(255,255,255,0.07)", backdropFilter: "blur(20px)" }}
+      >
         <div className="flex items-center gap-2">
-          <div className="flex-1 flex items-center bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 gap-2 focus-within:border-slate-400 transition-all">
-            <Sparkles className="w-4 h-4 text-slate-400 flex-shrink-0" />
+          <div
+            className="flex-1 flex items-center rounded-xl px-3.5 py-2.5 gap-2 transition-all"
+            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}
+          >
+            <Sparkles className="w-4 h-4 flex-shrink-0" style={{ color: "rgba(255,255,255,0.25)" }} />
             <input
               ref={inputRef}
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => e.key === "Enter" && !e.shiftKey && send()}
               placeholder="Posez votre question sur votre épiderme..."
-              className="flex-1 bg-transparent text-xs text-slate-800 placeholder-slate-400 outline-none font-medium"
+              className="flex-1 bg-transparent text-xs outline-none font-medium"
+              style={{ color: "rgba(255,255,255,0.8)" }}
               data-testid="input-chat"
               disabled={isLoading}
             />
@@ -255,14 +325,18 @@ export default function Chat() {
           <button
             onClick={() => send()}
             disabled={!input.trim() || isLoading}
-            className="w-10 h-10 rounded-xl bg-slate-950 text-white flex items-center justify-center border border-slate-900 shadow-md disabled:opacity-30 active:scale-95 transition-all flex-shrink-0"
+            className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 active:scale-95 transition-all disabled:opacity-30"
+            style={{
+              background: "linear-gradient(135deg, #E91E8C, #f43f5e)",
+              boxShadow: "0 0 20px rgba(233,30,140,0.3)",
+            }}
             data-testid="button-send-chat"
           >
-            <Send className="w-3.5 h-3.5 text-emerald-400" />
+            <Send className="w-3.5 h-3.5 text-white" />
           </button>
         </div>
-        <div className="flex items-center justify-center gap-1 mt-2 text-[10px] text-slate-400 font-semibold">
-          <ShieldAlert className="w-3 h-3 text-slate-400" />
+        <div className="flex items-center justify-center gap-1 mt-2 text-[10px] font-semibold" style={{ color: "rgba(255,255,255,0.2)" }}>
+          <ShieldAlert className="w-3 h-3" />
           <span>GlowScan AI fournit des indicateurs informatifs et ne remplace pas un avis médical.</span>
         </div>
       </div>

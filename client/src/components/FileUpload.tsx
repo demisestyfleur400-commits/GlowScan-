@@ -174,13 +174,17 @@ export function FileUpload({ onFileSelect, isProcessing }: FileUploadProps) {
               )}
             </div>
 
-            {/* Hub de contrôle ergonomique à un pouce (style iOS/Android Pro) */}
-            <div className="flex items-center justify-between px-6 py-2 bg-slate-50 border border-gray-100 rounded-3xl">
+            {/* Hub de contrôle */}
+            <div
+              className="flex items-center justify-between px-6 py-2 rounded-3xl"
+              style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}
+            >
               {/* Galerie */}
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="w-11 h-11 rounded-full bg-white flex items-center justify-center border border-gray-200/60 shadow-sm active:scale-90 transition-all text-gray-700"
+                className="w-11 h-11 rounded-full flex items-center justify-center active:scale-90 transition-all"
+                style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.6)" }}
                 title="Ouvrir la galerie"
               >
                 <ImageIcon className="w-4 h-4" />
@@ -191,9 +195,10 @@ export function FileUpload({ onFileSelect, isProcessing }: FileUploadProps) {
                 whileTap={{ scale: 0.92 }}
                 onClick={capturePhoto}
                 disabled={!cameraReady || isProcessing}
-                className="w-16 h-16 rounded-full bg-white border-4 border-gray-200 flex items-center justify-center shadow-lg active:border-pink-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="w-16 h-16 rounded-full flex items-center justify-center shadow-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                style={{ background: "rgba(255,255,255,0.1)", border: "3px solid rgba(233,30,140,0.5)", boxShadow: "0 0 20px rgba(233,30,140,0.2)" }}
               >
-                <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-pink-600 to-purple-600 flex items-center justify-center shadow-inner">
+                <div className="w-11 h-11 rounded-full flex items-center justify-center" style={{ background: "linear-gradient(135deg, #E91E8C, #f43f5e)" }}>
                   <Camera className="w-5 h-5 text-white" />
                 </div>
               </motion.button>
@@ -203,7 +208,8 @@ export function FileUpload({ onFileSelect, isProcessing }: FileUploadProps) {
                 type="button"
                 onClick={flipCamera}
                 disabled={!cameraReady}
-                className="w-11 h-11 rounded-full bg-white flex items-center justify-center border border-gray-200/60 shadow-sm active:scale-90 transition-all text-gray-700 disabled:opacity-30"
+                className="w-11 h-11 rounded-full flex items-center justify-center active:scale-90 transition-all disabled:opacity-30"
+                style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.6)" }}
                 title="Changer de caméra"
               >
                 <RefreshCw className="w-4 h-4" />
@@ -222,21 +228,28 @@ export function FileUpload({ onFileSelect, isProcessing }: FileUploadProps) {
             className="space-y-3"
           >
             {cameraError && (
-              <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-100 text-center">
-                <p className="text-amber-900 text-xs font-bold leading-normal">💡 {cameraError}</p>
+              <div
+                className="p-3.5 rounded-2xl text-center"
+                style={{ background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.2)" }}
+              >
+                <p className="text-xs font-bold leading-normal" style={{ color: "rgba(251,191,36,0.9)" }}>💡 {cameraError}</p>
               </div>
             )}
             <button
               onClick={() => fileInputRef.current?.click()}
               data-testid="dropzone"
-              className="relative overflow-hidden rounded-[2.5rem] border-2 border-dashed border-gray-200 bg-white hover:border-pink-400 hover:bg-slate-50/50 transition-all w-full min-h-[300px] flex flex-col items-center justify-center gap-4 shadow-sm"
+              className="relative overflow-hidden rounded-[2.5rem] border-2 border-dashed w-full min-h-[300px] flex flex-col items-center justify-center gap-4 transition-all"
+              style={{ borderColor: "rgba(233,30,140,0.25)", background: "rgba(233,30,140,0.04)" }}
             >
-              <div className="w-16 h-16 rounded-2xl bg-pink-50 flex items-center justify-center border border-pink-100">
-                <Upload className="w-6 h-6 text-pink-600" />
+              <div
+                className="w-16 h-16 rounded-2xl flex items-center justify-center"
+                style={{ background: "rgba(233,30,140,0.12)", border: "1px solid rgba(233,30,140,0.25)" }}
+              >
+                <Upload className="w-6 h-6" style={{ color: "#E91E8C" }} />
               </div>
               <div className="text-center px-6">
-                <p className="text-sm font-black text-gray-950 uppercase tracking-wide">Importer un cliché</p>
-                <p className="text-gray-400 text-xs mt-1 font-medium">Prend en charge JPG, PNG, WEBP</p>
+                <p className="text-sm font-black text-white uppercase tracking-wide">Importer un cliché</p>
+                <p className="text-xs mt-1 font-medium" style={{ color: "rgba(255,255,255,0.35)" }}>Prend en charge JPG, PNG, WEBP</p>
               </div>
             </button>
           </motion.div>
@@ -261,7 +274,10 @@ export function FileUpload({ onFileSelect, isProcessing }: FileUploadProps) {
                 <X className="w-5 h-5" />
               </button>
               <div className="absolute bottom-4 left-1/2 -translate-x-1/2">
-                <span className="bg-emerald-500/90 backdrop-blur text-white text-[10px] font-black uppercase tracking-wider px-4 py-2 rounded-full shadow-md">
+                <span
+                  className="backdrop-blur text-white text-[10px] font-black uppercase tracking-wider px-4 py-2 rounded-full"
+                  style={{ background: "rgba(233,30,140,0.85)", boxShadow: "0 0 20px rgba(233,30,140,0.4)" }}
+                >
                   ✓ Cliché Validé
                 </span>
               </div>
