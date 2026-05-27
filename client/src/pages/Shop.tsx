@@ -237,40 +237,43 @@ function ProductDetailModal({
         transition={{ type: "spring", damping: 30, stiffness: 300 }}
         role="dialog"
         aria-modal="true"
-        className="fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-3xl max-h-[94vh] flex flex-col shadow-2xl border-t border-slate-100"
+        className="fixed inset-x-0 bottom-0 z-50 rounded-t-3xl max-h-[94vh] flex flex-col shadow-2xl"
+        style={{ background: "#0D0A0E", border: "1px solid rgba(255,255,255,0.08)" }}
       >
         {/* Header Modale */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 flex-shrink-0">
+        <div className="flex items-center justify-between px-5 py-4 flex-shrink-0" style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
           <button
             onClick={onClose}
-            className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center active:scale-95 transition-all"
+            className="w-10 h-10 rounded-xl flex items-center justify-center active:scale-95 transition-all"
+            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.6)" }}
             aria-label="Fermer"
           >
-            <ChevronLeft className="w-4 h-4 text-slate-700" />
+            <ChevronLeft className="w-4 h-4" />
           </button>
-          <div className="w-12 h-1.5 rounded-full bg-slate-200" />
+          <div className="w-12 h-1.5 rounded-full" style={{ background: "rgba(255,255,255,0.15)" }} />
           <button
             onClick={onClose}
-            className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center active:scale-95 transition-all"
+            className="w-10 h-10 rounded-xl flex items-center justify-center active:scale-95 transition-all"
+            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.6)" }}
             aria-label="Fermer"
           >
-            <X className="w-4 h-4 text-slate-700" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Corps défilant */}
         <div className="overflow-y-auto flex-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <div className="relative aspect-square bg-slate-50 flex items-center justify-center border-b border-slate-100">
+          <div className="relative aspect-square flex items-center justify-center" style={{ background: "rgba(255,255,255,0.05)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
             {img ? (
               <img src={img} alt={product.name} className="w-full h-full object-cover" />
             ) : (
-              <Sparkles className="w-16 h-16 text-slate-200" />
+              <Sparkles className="w-16 h-16" style={{ color: "rgba(255,255,255,0.2)" }} />
             )}
-            
-            {/* Badges de réassurance exclusifs */}
+
+            {/* Badge réassurance */}
             <div className="absolute bottom-4 left-4 flex gap-2">
-              <span className="inline-flex items-center gap-1 bg-slate-900/90 backdrop-blur-xs text-white text-[9px] font-black uppercase px-2.5 py-1 rounded-md shadow-sm tracking-wider">
-                <ShieldCheck className="w-3 h-3 text-blue-400" /> Authentique
+              <span className="inline-flex items-center gap-1 text-white text-[9px] font-black uppercase px-2.5 py-1 rounded-md tracking-wider" style={{ background: "rgba(13,10,14,0.85)", border: "1px solid rgba(255,255,255,0.1)", backdropFilter: "blur(10px)" }}>
+                <ShieldCheck className="w-3 h-3" style={{ color: "#E91E8C" }} /> Authentique
               </span>
             </div>
           </div>
@@ -278,20 +281,20 @@ function ProductDetailModal({
           <div className="p-6 space-y-6">
             {/* Infos Principales */}
             <div>
-              <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">{brand}</span>
-              <h2 className="text-xl font-black text-slate-900 tracking-tight leading-tight mt-1">
+              <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: "#f9a8d4" }}>{brand}</span>
+              <h2 className="text-xl font-black text-white tracking-tight leading-tight mt-1">
                 {product.name}
               </h2>
               <div className="flex items-baseline gap-2 mt-2">
-                <span className="text-2xl font-black text-slate-950">
+                <span className="text-2xl font-black text-white">
                   {product.price ? formatPrice(product.price) : "Sur demande"}
                 </span>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Livraison Rapide</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.35)" }}>Livraison Rapide</span>
               </div>
             </div>
 
             {product.description && (
-              <p className="text-xs md:text-sm font-medium text-slate-600 leading-relaxed bg-slate-50 border-l-2 border-slate-900 p-3.5 rounded-r-xl">
+              <p className="text-xs md:text-sm font-medium leading-relaxed p-3.5 rounded-r-xl" style={{ color: "rgba(255,255,255,0.55)", background: "rgba(255,255,255,0.03)", borderLeft: "2px solid rgba(233,30,140,0.5)" }}>
                 {product.description}
               </p>
             )}
@@ -301,28 +304,29 @@ function ProductDetailModal({
               <motion.section
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-blue-50/60 border border-blue-100/70 rounded-2xl p-4.5"
+                className="rounded-2xl p-4"
+                style={{ background: "rgba(233,30,140,0.08)", border: "1px solid rgba(233,30,140,0.2)" }}
               >
                 <div className="flex items-center gap-2 mb-2">
-                  <Sparkles className="w-4 h-4 text-blue-600" />
-                  <h3 className="text-[10px] font-black uppercase tracking-wider text-blue-700">
+                  <Sparkles className="w-4 h-4" style={{ color: "#E91E8C" }} />
+                  <h3 className="text-[10px] font-black uppercase tracking-wider" style={{ color: "#f9a8d4" }}>
                     Analyse Clinique GlowScan
                   </h3>
                 </div>
-                <p className="text-xs md:text-sm font-semibold text-slate-700 leading-relaxed">{reason}</p>
+                <p className="text-xs md:text-sm font-semibold leading-relaxed" style={{ color: "rgba(255,255,255,0.6)" }}>{reason}</p>
               </motion.section>
             )}
 
             {/* Liste des Actions Cutanées */}
             <section>
-              <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider mb-3.5">
-                Impact ciblé sur <span className="text-blue-600">{targetLabel}</span> :
+              <h3 className="text-xs font-black text-white uppercase tracking-wider mb-3.5">
+                Impact ciblé sur <span style={{ color: "#f9a8d4" }}>{targetLabel}</span> :
               </h3>
               <ul className="space-y-3">
                 {benefits.map((b, i) => (
-                  <li key={i} className="flex items-start gap-3 text-xs md:text-sm font-medium text-slate-700 leading-relaxed">
-                    <div className="w-5 h-5 rounded-md bg-emerald-50 border border-emerald-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <Check className="w-3 h-3 text-emerald-600" strokeWidth={3} />
+                  <li key={i} className="flex items-start gap-3 text-xs md:text-sm font-medium leading-relaxed" style={{ color: "rgba(255,255,255,0.65)" }}>
+                    <div className="w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: "rgba(233,30,140,0.15)", border: "1px solid rgba(233,30,140,0.25)" }}>
+                      <Check className="w-3 h-3" style={{ color: "#E91E8C" }} strokeWidth={3} />
                     </div>
                     <span>{b}</span>
                   </li>
@@ -331,9 +335,9 @@ function ProductDetailModal({
             </section>
             
             {/* Rappel Logistique */}
-            <div className="flex items-center gap-3 p-4 border border-slate-100 rounded-xl bg-slate-50/50 text-slate-500">
-              <Truck className="w-5 h-5 text-slate-400 shrink-0" />
-              <p className="text-[11px] font-medium leading-normal">
+            <div className="flex items-center gap-3 p-4 rounded-xl" style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)" }}>
+              <Truck className="w-5 h-5 shrink-0" style={{ color: "#6ee7b7" }} />
+              <p className="text-[11px] font-medium leading-normal" style={{ color: "rgba(110,231,183,0.8)" }}>
                 Livraison à domicile ou retrait disponible à Douala & Yaoundé sous 24/48h.
               </p>
             </div>
@@ -341,7 +345,7 @@ function ProductDetailModal({
         </div>
 
         {/* Bouton d'achat Sticky */}
-        <div className="border-t border-slate-100 bg-white p-4 flex-shrink-0">
+        <div className="p-4 flex-shrink-0" style={{ borderTop: "1px solid rgba(255,255,255,0.07)", background: "rgba(13,10,14,0.95)", backdropFilter: "blur(20px)" }}>
           <Button
             type="button"
             variant="premium"
@@ -404,13 +408,13 @@ export default function Shop() {
   // Écran d'attente / Connexion requis
   if (!user) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-6 bg-white">
-        <div className="w-16 h-16 rounded-2xl bg-slate-900 flex items-center justify-center mb-6 text-2xl text-white shadow-xl shadow-slate-950/10">🛍️</div>
-        <h1 className="text-xl font-black text-slate-900 uppercase tracking-wider mb-2">Boutique GlowScan</h1>
-        <p className="text-xs font-medium text-slate-500 text-center max-w-xs mb-8 leading-relaxed">
+      <div className="min-h-screen flex flex-col items-center justify-center px-6" style={{ background: "#0D0A0E" }}>
+        <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6 text-2xl" style={{ background: "rgba(233,30,140,0.12)", border: "1px solid rgba(233,30,140,0.25)" }}>🛍️</div>
+        <h1 className="text-xl font-black text-white uppercase tracking-wider mb-2">Boutique GlowScan</h1>
+        <p className="text-xs font-medium text-center max-w-xs mb-8 leading-relaxed" style={{ color: "rgba(255,255,255,0.45)" }}>
           Accède aux prescriptions cosmétiques calibrées pour ta mélanine et ton type de peau.
         </p>
-        <Button asChild size="lg" variant="default" className="w-full max-w-xs">
+        <Button asChild size="lg" variant="premium" className="w-full max-w-xs">
           <a href="/auth">Créer mon compte / Connexion</a>
         </Button>
       </div>
@@ -418,24 +422,24 @@ export default function Shop() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50/50 pb-24">
+    <div className="min-h-screen pb-24" style={{ background: "#0D0A0E" }}>
       <Navbar />
 
-      {/* En-tête de la Pharmacie Technologique */}
-      <header className="bg-white px-5 pt-6 pb-5 border-b border-slate-200/50">
-        <span className="text-[10px] font-black tracking-widest uppercase text-blue-600">Pharmacie IA ✦ GlowScan</span>
-        <h1 className="text-[24px] font-black text-slate-900 tracking-tight uppercase mt-1">
+      {/* En-tête */}
+      <header className="px-5 pt-6 pb-5" style={{ background: "rgba(255,255,255,0.02)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+        <span className="text-[10px] font-black tracking-widest uppercase" style={{ color: "#f9a8d4" }}>Pharmacie IA ✦ GlowScan</span>
+        <h1 className="text-[24px] font-black text-white tracking-tight uppercase mt-1">
           {hasProfile ? `Profil : Peau ${profile.skinType || ""}`.trim() : "Prescriptions Cosmétiques"}
         </h1>
-        <p className="text-xs font-semibold text-slate-400 mt-1.5 leading-normal">
+        <p className="text-xs font-semibold mt-1.5 leading-normal" style={{ color: "rgba(255,255,255,0.35)" }}>
           {hasProfile
             ? "Molécules et soins triés selon tes scans cliniques récents."
             : "Effectue un scan facial pour recevoir tes recommandations sur-mesure."}
         </p>
       </header>
 
-      {/* Filtres Horizontaux Fluides (Barre de défilement masquée) */}
-      <div className="bg-white sticky top-0 z-20 border-b border-slate-200/50">
+      {/* Filtres Horizontaux */}
+      <div className="sticky top-0 z-20" style={{ background: "rgba(13,10,14,0.95)", borderBottom: "1px solid rgba(255,255,255,0.06)", backdropFilter: "blur(20px)" }}>
         <div className="flex gap-2 overflow-x-auto px-4 py-3.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {PROBLEMS.map((p) => {
             const isActive = problemFilter === p.key;
@@ -443,11 +447,11 @@ export default function Shop() {
               <button
                 key={p.key}
                 onClick={() => setProblemFilter(p.key)}
-                className={`flex items-center gap-2 px-4.5 h-10 rounded-full text-xs font-black uppercase tracking-wider transition-all active:scale-[0.97] border ${
-                  isActive
-                    ? "bg-slate-950 border-slate-950 text-white shadow-md shadow-slate-950/10"
-                    : "bg-slate-50 border-slate-200/60 text-slate-600 hover:bg-slate-100"
-                }`}
+                className="flex items-center gap-2 px-4 h-9 rounded-full text-xs font-black uppercase tracking-wider transition-all active:scale-[0.97] flex-shrink-0"
+                style={isActive
+                  ? { background: "linear-gradient(135deg, #E91E8C, #f43f5e)", color: "white", boxShadow: "0 0 15px rgba(233,30,140,0.3)" }
+                  : { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.5)" }
+                }
               >
                 <span>{p.emoji}</span>
                 <span>{p.label}</span>
@@ -460,10 +464,10 @@ export default function Shop() {
       {/* Grille des produits ordonnés par pertinence IA */}
       <main className="px-4 py-6">
         {filtered.length === 0 ? (
-          <div className="text-center py-20 bg-white rounded-2xl border border-slate-200/60 p-6">
-            <Sparkles className="w-8 h-8 text-slate-300 mx-auto mb-3" />
-            <p className="text-xs font-black uppercase text-slate-800 tracking-wider">Aucune formule trouvée</p>
-            <p className="text-xs font-medium text-slate-400 mt-1">Sélectionne un autre filtre moléculaire.</p>
+          <div className="text-center py-20 rounded-2xl p-6" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+            <Sparkles className="w-8 h-8 mx-auto mb-3" style={{ color: "rgba(255,255,255,0.2)" }} />
+            <p className="text-xs font-black uppercase text-white tracking-wider">Aucune formule trouvée</p>
+            <p className="text-xs font-medium mt-1" style={{ color: "rgba(255,255,255,0.35)" }}>Sélectionne un autre filtre moléculaire.</p>
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-3.5">
@@ -478,37 +482,41 @@ export default function Shop() {
                   viewport={{ once: true }}
                   transition={{ delay: Math.min(i * 0.03, 0.25), duration: 0.35 }}
                   onClick={() => setSelectedProduct(product)}
-                  className="bg-white rounded-2xl overflow-hidden border border-slate-200/60 text-left active:scale-[0.98] transition-all flex flex-col hover:shadow-md hover:shadow-slate-100/50 group relative"
+                  className="rounded-2xl overflow-hidden text-left active:scale-[0.98] transition-all flex flex-col group relative"
+                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}
                 >
-                  <div className="relative aspect-square bg-slate-50 flex items-center justify-center border-b border-slate-100 overflow-hidden">
+                  <div className="relative aspect-square flex items-center justify-center overflow-hidden" style={{ background: "rgba(255,255,255,0.06)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
                     {img ? (
                       <img src={img} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                     ) : (
-                      <Sparkles className="w-6 h-6 text-slate-200" />
+                      <Sparkles className="w-6 h-6" style={{ color: "rgba(255,255,255,0.2)" }} />
                     )}
-                    
-                    {/* Badge de Recommandation Algorithmique */}
+
+                    {/* Badge Recommandé */}
                     {recommended && (
                       <div className="absolute top-2 left-2 right-2 z-10">
-                        <Badge variant="info" className="w-full justify-center gap-1 shadow-sm text-center py-1">
+                        <div
+                          className="w-full flex items-center justify-center gap-1 py-1 rounded-full text-[9px] font-black uppercase tracking-wider"
+                          style={{ background: "rgba(233,30,140,0.85)", color: "white" }}
+                        >
                           <Star className="w-2.5 h-2.5 fill-current shrink-0" />
                           Recommandé par l'IA
-                        </Badge>
+                        </div>
                       </div>
                     )}
                   </div>
-                  
-                  {/* Corps de la Carte */}
-                  <div className="p-3.5 flex-1 flex flex-col bg-white">
-                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider mb-1 truncate">
+
+                  {/* Corps */}
+                  <div className="p-3.5 flex-1 flex flex-col">
+                    <span className="text-[9px] font-black uppercase tracking-wider mb-1 truncate" style={{ color: "rgba(255,255,255,0.35)" }}>
                       {getProductBrand(product)}
                     </span>
-                    <h3 className="text-xs font-black text-slate-900 leading-snug line-clamp-2 mb-2 min-h-[32px] tracking-tight">
+                    <h3 className="text-xs font-black text-white leading-snug line-clamp-2 mb-2 min-h-[32px] tracking-tight">
                       {product.name}
                     </h3>
-                    <div className="text-xs font-black text-slate-950 mt-auto pt-1 flex justify-between items-center">
+                    <div className="text-xs font-black mt-auto pt-1 flex justify-between items-center text-white">
                       <span>{product.price ? formatPrice(product.price) : "Sur demande"}</span>
-                      <span className="text-[9px] font-bold text-blue-600 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">Voir</span>
+                      <span className="text-[9px] font-bold uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: "#f9a8d4" }}>Voir</span>
                     </div>
                   </div>
                 </motion.button>
