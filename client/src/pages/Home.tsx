@@ -429,8 +429,11 @@ export default function Home() {
 
   if (isLoading) {
     return (
-      <div className="fixed inset-0 bg-slate-950 flex items-center justify-center">
-        <Loader2 className="w-6 h-6 text-emerald-400 animate-spin" />
+      <div className="fixed inset-0 bg-white flex flex-col items-center justify-center gap-3">
+        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center shadow-lg shadow-pink-200">
+          <Loader2 className="w-6 h-6 text-white animate-spin" />
+        </div>
+        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Chargement…</p>
       </div>
     );
   }
@@ -461,61 +464,68 @@ export default function Home() {
   const scoreColors = getScoreColor(lastScore ?? 0);
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-28 text-slate-900 selection:bg-slate-950 selection:text-white" data-testid="page-home">
+    <div className="min-h-screen bg-gray-50 pb-28 text-gray-900" data-testid="page-home">
       <Onboarding />
 
-      {/* ─── Header Clinique ─── */}
-      <header className="bg-white px-5 pt-12 pb-4 border-b border-slate-200 sticky top-0 z-40 shadow-xs">
+      {/* ─── Header Apple Health ─── */}
+      <header className="bg-white px-5 pt-12 pb-4 sticky top-0 z-40 border-b border-gray-100">
         <div className="flex items-center justify-between">
-          <div className="flex flex-col text-left" data-testid="logo-glowscan">
-            <span className="text-[9px] font-black tracking-[0.3em] uppercase text-slate-400 font-mono">System Core</span>
-            <span className="text-base font-black uppercase tracking-wider text-slate-950 -mt-0.5">GlowScan</span>
+          <div className="flex items-center gap-2.5" data-testid="logo-glowscan">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center shadow-sm">
+              <img src="/logo-icon.jpg" alt="" className="w-6 h-6 rounded-lg object-cover" />
+            </div>
+            <span className="text-base font-black text-gray-900">GlowScan</span>
           </div>
           <button
             onClick={() => setExplorerOpen(true)}
-            className="w-9 h-9 rounded-xl bg-slate-950 text-white flex items-center justify-center active:scale-95 transition-all shadow-md"
+            className="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center active:scale-95 transition-all"
             data-testid="button-menu"
             aria-label="Ouvrir le menu"
           >
-            <Menu className="w-4 h-4 text-emerald-400" strokeWidth={2.5} />
+            <Menu className="w-4 h-4 text-gray-600" strokeWidth={2.5} />
           </button>
         </div>
       </header>
 
-      <main className="px-4 pt-6 space-y-8 max-w-md mx-auto">
-        {/* ─── Salutation technique ─── */}
+      <main className="px-4 pt-6 space-y-6 max-w-md mx-auto">
+        {/* ─── Salutation chaleureuse ─── */}
         <div>
-          <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.25em] font-mono">Session active</p>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight leading-none mt-1" data-testid="text-username">
-            ID: {firstName}
+          <p className="text-sm text-gray-400 font-medium">Bienvenue 👋</p>
+          <h1 className="text-2xl font-black text-gray-900 tracking-tight mt-0.5" data-testid="text-username">
+            Bonjour, {firstName} ✨
           </h1>
         </div>
 
-        {/* ─── Section 1: Panneau d'Analyse Principal ─── */}
+        {/* ─── Section 1: Hero Scan ─── */}
         <FadeUp delay={0}>
           <section
-            className="relative rounded-3xl overflow-hidden p-6 text-white shadow-xl bg-slate-950 border border-slate-900"
+            className="relative rounded-3xl overflow-hidden shadow-xl"
             data-testid="section-status"
+            style={{ background: "linear-gradient(135deg, #1A1A2E 0%, #2d1b69 50%, #1A1A2E 100%)" }}
           >
-            <div className="absolute top-0 right-0 p-4 opacity-10">
-              <Terminal className="w-24 h-24" />
-            </div>
+            {/* Orbes décoratifs */}
+            <div className="absolute top-[-30px] right-[-30px] w-32 h-32 rounded-full opacity-20" style={{ background: "radial-gradient(circle, #E91E8C, transparent)" }} />
+            <div className="absolute bottom-[-20px] left-[-20px] w-24 h-24 rounded-full opacity-15" style={{ background: "radial-gradient(circle, #f43f5e, transparent)" }} />
 
-            <div className="relative">
-              <p className="text-[9px] font-black tracking-[0.25em] uppercase text-emerald-400 font-mono mb-2">✦ Acquisition Bio</p>
-              <h2 className="text-lg font-black uppercase tracking-wide leading-tight mb-2">
-                Statut du Système Cutané
+            <div className="relative p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-2 h-2 rounded-full bg-pink-400 animate-pulse" />
+                <span className="text-[10px] font-bold text-pink-300 uppercase tracking-widest">Analyse IA disponible</span>
+              </div>
+              <h2 className="text-xl font-black text-white leading-tight mb-2">
+                Scanner ta peau
               </h2>
-              <p className="text-xs text-slate-400 leading-relaxed mb-6 font-medium">
+              <p className="text-xs text-white/60 leading-relaxed mb-5 font-medium">
                 {reminderMessage}
               </p>
               <button
                 onClick={() => setLocation("/analyze")}
                 data-testid="button-scan-now"
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white text-slate-950 font-black text-xs uppercase tracking-widest px-5 py-3.5 rounded-xl shadow-md active:scale-95 transition-all"
+                className="w-full h-12 rounded-2xl text-gray-900 font-black text-sm flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-lg"
+                style={{ background: "linear-gradient(135deg, #ffffff 0%, #fce7f3 100%)" }}
               >
-                <ScanLine className="w-4 h-4 text-slate-950" />
-                Lancer l'analyse optique
+                <ScanLine className="w-4 h-4 text-pink-600" />
+                Lancer mon analyse
               </button>
             </div>
           </section>
@@ -524,55 +534,58 @@ export default function Home() {
         {/* ─── Section 2: Métriques & Progression ─── */}
         <SlideLeft delay={0.08}>
           <section data-testid="section-progression">
-            <div className="mb-3 flex items-center gap-1.5">
-              <Target className="w-4 h-4 text-slate-400" />
-              <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest font-mono">Suivi Analytique</h2>
+            <div className="mb-3 flex items-center gap-2">
+              <div className="w-5 h-5 rounded-full bg-pink-100 flex items-center justify-center">
+                <Target className="w-3 h-3 text-pink-500" />
+              </div>
+              <h2 className="text-sm font-bold text-gray-700">Mon Glow Score</h2>
             </div>
 
             {lastScore != null ? (
-              <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-xs">
+              <div className="bg-white rounded-3xl p-5 border border-gray-100 shadow-sm">
                 <div className="flex items-center gap-5">
                   <CircularScore score={lastScore} color={scoreColors.hex} />
 
                   <div className="flex-1 min-w-0">
-                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 font-mono">Glow Index Actuel</p>
+                    <p className="text-xs text-gray-400 font-medium">Score actuel</p>
                     {delta != null ? (
                       <div className="flex items-center gap-1.5 mt-1 mb-3">
                         <span
-                          className={`text-sm font-black font-mono ${delta > 0 ? "text-emerald-500" : delta < 0 ? "text-red-500" : "text-slate-500"}`}
+                          className={`text-sm font-black ${delta > 0 ? "text-green-500" : delta < 0 ? "text-red-500" : "text-gray-400"}`}
                           data-testid="text-score-delta"
                         >
-                          {delta > 0 ? "▲" : delta < 0 ? "▼" : "■"} {delta > 0 ? "+" : ""}{delta}
+                          {delta > 0 ? "▲" : delta < 0 ? "▼" : "■"} {delta > 0 ? "+" : ""}{delta} pts
                         </span>
-                        <span className="text-[11px] text-slate-500 font-semibold">vs capture précédente</span>
+                        <span className="text-xs text-gray-400">depuis le dernier scan</span>
                       </div>
                     ) : (
-                      <p className="text-[11px] text-slate-400 font-semibold leading-tight mt-1 mb-3">
-                        Première indexation stabilisée. Prévoyez une seconde capture.
+                      <p className="text-xs text-gray-400 leading-tight mt-1 mb-3">
+                        Premier scan effectué ! Revenez dans 48h pour voir votre progression.
                       </p>
                     )}
                     <button
                       onClick={() => setLocation("/profile?tab=evolution")}
                       data-testid="button-see-evolution"
-                      className="inline-flex items-center gap-1 text-xs font-black text-slate-950 uppercase tracking-wider hover:underline transition-transform"
+                      className="inline-flex items-center gap-1 text-xs font-bold text-pink-600 hover:text-pink-700 transition-colors"
                     >
-                      Historique complet <ChevronRight className="w-3 h-3 text-emerald-500" />
+                      Voir l'évolution <ChevronRight className="w-3 h-3" />
                     </button>
                   </div>
                 </div>
               </div>
             ) : (
-              <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs text-center">
-                <TrendingUp className="w-6 h-6 text-slate-300 mx-auto mb-2" />
-                <p className="text-xs text-slate-500 font-medium mb-4">
-                  Aucune donnée disponible. Initialisez le premier diagnostic pour tracer la courbe.
-                </p>
+              <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm text-center">
+                <div className="w-12 h-12 rounded-2xl bg-pink-50 flex items-center justify-center mx-auto mb-3">
+                  <TrendingUp className="w-6 h-6 text-pink-400" />
+                </div>
+                <p className="text-sm font-bold text-gray-700 mb-1">Aucun scan encore</p>
+                <p className="text-xs text-gray-400 mb-4">Lance ton premier diagnostic pour voir ton Glow Score.</p>
                 <button
                   onClick={() => setLocation("/analyze")}
-                  className="inline-flex items-center gap-1 text-xs font-black text-slate-950 uppercase tracking-wider"
+                  className="inline-flex items-center gap-1 text-xs font-bold text-pink-600"
                   data-testid="button-start-first-scan"
                 >
-                  Démarrer le diagnostic <ChevronRight className="w-3 h-3 text-emerald-500" />
+                  Démarrer maintenant <ChevronRight className="w-3 h-3" />
                 </button>
               </div>
             )}
@@ -582,12 +595,14 @@ export default function Home() {
         {/* ─── Section 3: Recommandation Technique du jour ─── */}
         <DropTop delay={0.15}>
           <section data-testid="section-tip">
-            <div className="mb-3 flex items-center gap-1.5">
-              <Lightbulb className="w-4 h-4 text-slate-400" />
-              <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest font-mono">Rapport quotidien</h2>
+            <div className="mb-3 flex items-center gap-2">
+              <div className="w-5 h-5 rounded-full bg-amber-100 flex items-center justify-center">
+                <Lightbulb className="w-3 h-3 text-amber-500" />
+              </div>
+              <h2 className="text-sm font-bold text-gray-700">Conseil du jour</h2>
             </div>
 
-            <div className="rounded-3xl overflow-hidden border border-slate-200 shadow-xs bg-white">
+            <div className="rounded-3xl overflow-hidden border border-gray-100 shadow-sm bg-white">
               <motion.div
                 initial={{ opacity: 0, scale: 1.02 }}
                 whileInView={{ opacity: 1, scale: 1 }}
@@ -604,9 +619,9 @@ export default function Home() {
                   decoding="async"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent" />
-                <div className="absolute top-3 left-3 bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1 flex items-center gap-1.5 shadow-sm">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="text-[9px] font-black uppercase tracking-widest text-white font-mono">Observation</span>
+                <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm rounded-xl px-2.5 py-1 flex items-center gap-1.5 shadow-sm border border-white/50">
+                  <span className="w-1.5 h-1.5 rounded-full bg-pink-500 animate-pulse" />
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-gray-700">Astuce peau</span>
                 </div>
               </motion.div>
 
@@ -618,8 +633,8 @@ export default function Home() {
                 className="p-5 text-left"
               >
                 {skinTypeForTip && (
-                  <p className="text-[9px] font-black uppercase tracking-widest text-emerald-600 font-mono mb-1.5">
-                    Cible : Typologie {skinTypeForTip}
+                  <p className="text-[10px] font-bold text-pink-500 mb-1.5">
+                    Pour peau {skinTypeForTip}
                   </p>
                 )}
                 <p className="text-xs text-slate-600 leading-relaxed font-semibold mb-4" data-testid="text-tip">
@@ -628,9 +643,9 @@ export default function Home() {
                 <button
                   onClick={() => setLocation("/conseils")}
                   data-testid="button-all-tips"
-                  className="inline-flex items-center gap-1 text-xs font-black text-slate-950 uppercase tracking-wider"
+                  className="inline-flex items-center gap-1 text-xs font-bold text-pink-600"
                 >
-                  Ouvrir les guides techniques <ArrowRight className="w-3.5 h-3.5 text-emerald-500" />
+                  Voir tous les conseils <ArrowRight className="w-3.5 h-3.5" />
                 </button>
               </motion.div>
             </div>
@@ -640,9 +655,11 @@ export default function Home() {
         {/* ─── Section 4: Matrice de modules (Le savais-tu ?) ─── */}
         <FadeUp delay={0.22}>
           <section data-testid="section-knowledge">
-            <div className="mb-3 px-1 flex items-center gap-1.5">
-              <Terminal className="w-4 h-4 text-slate-400" />
-              <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest font-mono">Documentation Analytique</h2>
+            <div className="mb-3 px-1 flex items-center gap-2">
+              <div className="w-5 h-5 rounded-full bg-violet-100 flex items-center justify-center">
+                <Sparkles className="w-3 h-3 text-violet-500" />
+              </div>
+              <h2 className="text-sm font-bold text-gray-700">Explorer</h2>
             </div>
 
             <div
