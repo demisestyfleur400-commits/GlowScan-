@@ -4,7 +4,7 @@ import * as schema from "@shared/schema";
 
 const { Pool } = pg;
 
-const dbUrl = process.env.SUPABASE_URL || process.env.DATABASE_URL;
+const dbUrl = process.env.GLOWSCAN_DB || process.env.SUPABASE_URL || process.env.DATABASE_URL;
 
 if (!dbUrl) {
   throw new Error(
