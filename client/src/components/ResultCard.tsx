@@ -157,11 +157,11 @@ function normalizeStep(s: any, i: number): ProtocolStep {
 // ─── Composants UI réutilisables et personnalisés ───────────────────
 function SeverityBadge({ severity }: { severity: string }) {
   const s = severity?.toLowerCase() || "modérée";
-  let bg = "bg-pink-100 text-pink-700 border-pink-200";
-  if (s.includes("lég")) bg = "bg-emerald-100 text-emerald-700 border-emerald-200";
-  else if (s.includes("sév")) bg = "bg-rose-100 text-rose-700 border-rose-200";
+  let style = { background: "rgba(233,30,140,0.12)", border: "1px solid rgba(233,30,140,0.25)", color: "#f9a8d4" };
+  if (s.includes("lég")) style = { background: "rgba(16,185,129,0.12)", border: "1px solid rgba(16,185,129,0.25)", color: "#6ee7b7" };
+  else if (s.includes("sév")) style = { background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.25)", color: "#fca5a5" };
   return (
-    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${bg}`} data-testid="badge-severity">
+    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold" style={style} data-testid="badge-severity">
       <AlertTriangle className="w-3 h-3" /> {severity}
     </span>
   );
@@ -183,26 +183,29 @@ function GlowGauge({ score, observationsVisuelles }: { score: number; observatio
             <linearGradient id="gauge-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
               <stop offset="0%" stopColor="#ef4444" />
               <stop offset="50%" stopColor="#f59e0b" />
-              <stop offset="100%" stopColor="#10b981" />
+              <stop offset="100%" stopColor="#E91E8C" />
             </linearGradient>
           </defs>
-          <path d={`M ${cx - radius} ${cy} A ${radius} ${radius} 0 0 1 ${cx + radius} ${cy}`} fill="none" stroke="#e5e7eb" strokeWidth="14" strokeLinecap="round" />
+          <path d={`M ${cx - radius} ${cy} A ${radius} ${radius} 0 0 1 ${cx + radius} ${cy}`} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="14" strokeLinecap="round" />
           <path d={`M ${cx - radius} ${cy} A ${radius} ${radius} 0 0 1 ${cx + radius} ${cy}`} fill="none" stroke="url(#gauge-gradient)" strokeWidth="14" strokeLinecap="round" strokeDasharray={`${filled},${remaining}`} />
-          <text x={cx} y={cy - radius - 6} textAnchor="middle" className="fill-gray-400 text-[10px] font-bold">50</text>
-          <text x={cx - radius} y={cy + 22} textAnchor="middle" className="fill-gray-400 text-[10px] font-bold">0</text>
-          <text x={cx + radius} y={cy + 22} textAnchor="middle" className="fill-gray-400 text-[10px] font-bold">100</text>
+          <text x={cx} y={cy - radius - 6} textAnchor="middle" fill="rgba(255,255,255,0.3)" fontSize="10" fontWeight="bold">50</text>
+          <text x={cx - radius} y={cy + 22} textAnchor="middle" fill="rgba(255,255,255,0.3)" fontSize="10" fontWeight="bold">0</text>
+          <text x={cx + radius} y={cy + 22} textAnchor="middle" fill="rgba(255,255,255,0.3)" fontSize="10" fontWeight="bold">100</text>
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-end pb-4 pointer-events-none">
-          <p className="text-5xl font-black text-gray-900 leading-none">{safeScore}</p>
-          <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mt-1">Glow Score</p>
+          <p className="text-5xl font-black text-white leading-none">{safeScore}</p>
+          <p className="text-[11px] font-bold uppercase tracking-wider mt-1" style={{ color: "rgba(255,255,255,0.4)" }}>Glow Score</p>
         </div>
       </div>
       {observationsVisuelles && (
-        <div className="mt-3 bg-indigo-50/70 border border-indigo-100 rounded-xl p-3 text-left shadow-sm">
-          <p className="text-[11px] font-bold text-indigo-700 flex items-center gap-1 uppercase tracking-wider mb-1">
+        <div
+          className="mt-3 rounded-xl p-3 text-left"
+          style={{ background: "rgba(233,30,140,0.08)", border: "1px solid rgba(233,30,140,0.2)" }}
+        >
+          <p className="text-[11px] font-bold flex items-center gap-1 uppercase tracking-wider mb-1" style={{ color: "#f9a8d4" }}>
             <Sparkles className="w-3.5 h-3.5" /> L'avis du Doc'
           </p>
-          <p className="text-xs font-semibold text-gray-700 italic leading-relaxed">"{observationsVisuelles}"</p>
+          <p className="text-xs font-semibold italic leading-relaxed" style={{ color: "rgba(255,255,255,0.65)" }}>"{observationsVisuelles}"</p>
         </div>
       )}
     </div>
@@ -220,26 +223,30 @@ function StatTile({
   color: "amber" | "rose" | "blue" | "emerald";
   explicationContextuelle?: string;
 }) {
-  const palette: Record<string, string> = {
-    amber: "bg-amber-50 border-amber-100 text-amber-800",
-    rose: "bg-rose-50 border-rose-100 text-rose-800",
-    blue: "bg-blue-50 border-blue-100 text-blue-800",
-    emerald: "bg-emerald-50 border-emerald-100 text-emerald-800",
+  const accentMap: Record<string, string> = {
+    amber: "rgba(245,158,11,0.6)",
+    rose: "rgba(233,30,140,0.6)",
+    blue: "rgba(99,102,241,0.6)",
+    emerald: "rgba(16,185,129,0.6)",
   };
+  const accent = accentMap[color];
   return (
-    <div className={`rounded-2xl border ${palette[color]} p-3 flex flex-col gap-1.5 shadow-sm`}>
+    <div
+      className="rounded-2xl p-3 flex flex-col gap-1.5"
+      style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${accent}33`, backdropFilter: "blur(10px)" }}
+    >
       <div className="flex items-center gap-2.5">
         <div className="flex-shrink-0">{icon}</div>
         <div className="flex-1 min-w-0">
-          <p className="text-[10px] font-bold uppercase tracking-wide opacity-70">{label}</p>
-          <p className="text-lg font-black text-gray-900 leading-tight">
+          <p className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "rgba(255,255,255,0.4)" }}>{label}</p>
+          <p className="text-lg font-black text-white leading-tight">
             {value}{suffix && <span className="text-xs font-bold ml-0.5">{suffix}</span>}
-            {sub && <span className="text-[11px] font-semibold text-gray-500 ml-1.5">{sub}</span>}
+            {sub && <span className="text-[11px] font-semibold ml-1.5" style={{ color: "rgba(255,255,255,0.4)" }}>{sub}</span>}
           </p>
         </div>
       </div>
       {explicationContextuelle && (
-        <div className="text-[11px] font-medium border-t border-black/5 pt-1.5 opacity-80 leading-snug">
+        <div className="text-[11px] font-medium pt-1.5 leading-snug" style={{ color: "rgba(255,255,255,0.5)", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
           💡 {explicationContextuelle}
         </div>
       )}
@@ -249,12 +256,16 @@ function StatTile({
 
 function GridTile({ icon, label, value, testId }: { icon: React.ReactNode; label: string; value: string; testId?: string }) {
   return (
-    <div className="rounded-2xl bg-white border border-gray-100 px-3 py-3 flex flex-col items-center text-center shadow-sm" data-testid={testId}>
+    <div
+      className="rounded-2xl px-3 py-3 flex flex-col items-center text-center"
+      style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}
+      data-testid={testId}
+    >
       <div className="flex items-center gap-1.5 mb-1.5">
         {icon}
-        <p className="text-[9px] font-black uppercase tracking-wider text-gray-500">{label}</p>
+        <p className="text-[9px] font-black uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.35)" }}>{label}</p>
       </div>
-      <p className="text-[13px] font-extrabold text-gray-900 leading-tight">{value}</p>
+      <p className="text-[13px] font-extrabold text-white leading-tight">{value}</p>
     </div>
   );
 }
@@ -280,13 +291,13 @@ function RadarChart({ balance }: { balance: AnalysisResult["balance"] }) {
   return (
     <svg viewBox="0 0 240 240" className="w-full max-w-[260px] mx-auto" data-testid="radar-balance">
       {gridLevels.map((level) => (
-        <polygon key={level} points={labels.map((_, i) => `${getPoint(i, level * 10).x},${getPoint(i, level * 10).y}`).join(" ")} fill="none" stroke="#e5e7eb" strokeWidth="0.5" />
+        <polygon key={level} points={labels.map((_, i) => `${getPoint(i, level * 10).x},${getPoint(i, level * 10).y}`).join(" ")} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="0.5" />
       ))}
-      {labels.map((_, i) => <line key={i} x1={cx} y1={cy} x2={getPoint(i, 10).x} y2={getPoint(i, 10).y} stroke="#e5e7eb" strokeWidth="0.5" />)}
-      <path d={dataPath} fill="rgba(20, 184, 166, 0.18)" stroke="#14b8a6" strokeWidth="2" />
-      {dataPoints.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="4" fill="#14b8a6" stroke="white" strokeWidth="2" />)}
+      {labels.map((_, i) => <line key={i} x1={cx} y1={cy} x2={getPoint(i, 10).x} y2={getPoint(i, 10).y} stroke="rgba(255,255,255,0.08)" strokeWidth="0.5" />)}
+      <path d={dataPath} fill="rgba(233,30,140,0.15)" stroke="#E91E8C" strokeWidth="2" />
+      {dataPoints.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="4" fill="#E91E8C" stroke="rgba(13,10,14,0.8)" strokeWidth="2" />)}
       {labels.map((l, i) => (
-        <text key={i} x={getPoint(i, 12.5).x} y={getPoint(i, 12.5).y} textAnchor="middle" dominantBaseline="middle" className="fill-gray-500 text-[8px] font-bold uppercase">
+        <text key={i} x={getPoint(i, 12.5).x} y={getPoint(i, 12.5).y} textAnchor="middle" dominantBaseline="middle" fill="rgba(255,255,255,0.4)" fontSize="8" fontWeight="bold">
           {l.label}
         </text>
       ))}
@@ -297,16 +308,16 @@ function RadarChart({ balance }: { balance: AnalysisResult["balance"] }) {
 function ProtocolRow({ index, step }: { index: number; step: ProtocolStep }) {
   return (
     <li className="flex gap-2.5">
-      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-pink-600 text-white text-[11px] font-bold flex items-center justify-center mt-0.5">
+      <span className="flex-shrink-0 w-6 h-6 rounded-full text-white text-[11px] font-bold flex items-center justify-center mt-0.5" style={{ background: "linear-gradient(135deg, #E91E8C, #f43f5e)" }}>
         {index}
       </span>
       <div className="flex-1 min-w-0">
-        <p className="text-[13px] font-bold text-gray-900 leading-tight">{step.step}</p>
+        <p className="text-[13px] font-bold text-white leading-tight">{step.step}</p>
         {step.product && (
-          <p className="text-[12px] text-pink-600 font-medium leading-snug">{step.product}</p>
+          <p className="text-[12px] font-medium leading-snug" style={{ color: "#f9a8d4" }}>{step.product}</p>
         )}
         {step.why && (
-          <p className="text-[12px] text-gray-600 italic leading-snug mt-0.5">{step.why}</p>
+          <p className="text-[12px] italic leading-snug mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>{step.why}</p>
         )}
       </div>
     </li>
@@ -346,12 +357,12 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
   if (result.condition === "Image non exploitable") {
     return (
       <div className="max-w-lg mx-auto px-4" data-testid="result-unanalyzable">
-        <div className="bg-white rounded-3xl p-6 shadow-sm border border-amber-200 text-center">
-          <div className="w-16 h-16 mx-auto rounded-2xl bg-amber-100 flex items-center justify-center mb-4">
-            <Camera className="w-8 h-8 text-amber-600" />
+        <div className="rounded-3xl p-6 text-center" style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)" }}>
+          <div className="w-16 h-16 mx-auto rounded-2xl flex items-center justify-center mb-4" style={{ background: "rgba(245,158,11,0.12)", border: "1px solid rgba(245,158,11,0.25)" }}>
+            <Camera className="w-8 h-8" style={{ color: "#fbbf24" }} />
           </div>
-          <h2 className="text-lg font-black text-gray-900 mb-2">Photo non analysable</h2>
-          <p className="text-sm text-gray-600 leading-relaxed mb-5">
+          <h2 className="text-lg font-black text-white mb-2">Photo non analysable</h2>
+          <p className="text-sm leading-relaxed mb-5" style={{ color: "rgba(255,255,255,0.5)" }}>
             {result.details || "Cette photo ne montre pas une peau humaine analysable. Reprends une photo nette en pleine lumière, sans filtre, à 20-30 cm."}
           </p>
           <button
@@ -499,12 +510,12 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
         {/* ═══════════════════════════════════════════
             BLOC 1 — Carte Diagnostic principale
             ═══════════════════════════════════════════ */}
-        <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100" data-testid="block-diagnostic">
+        <div className="rounded-3xl p-5" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" } as React.CSSProperties} data-testid="block-diagnostic">
           <div className="flex items-center justify-between mb-3">
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Diagnostic & Stratégie</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: "rgba(255,255,255,0.35)" }}>Diagnostic & Stratégie</p>
             <SeverityBadge severity={result.severity || "Modérée"} />
           </div>
-          <h1 className="text-[22px] font-black text-gray-900 leading-tight mb-5 font-display" data-testid="text-condition">
+          <h1 className="text-[22px] font-black text-white leading-tight mb-5 font-display" data-testid="text-condition">
             {result.condition}
           </h1>
 
@@ -594,8 +605,8 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
             BLOC 3 — Radar Équilibre cutané
             ═══════════════════════════════════════════ */}
         {result.balance && (
-          <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100" data-testid="block-radar">
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-teal-600 mb-3 text-center">Équilibre cutané</p>
+          <div className="rounded-3xl p-5" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" } as React.CSSProperties} data-testid="block-radar">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-3 text-center" style={{ color: "#f9a8d4" }}>Équilibre cutané</p>
             <RadarChart balance={result.balance} />
           </div>
         )}
@@ -603,40 +614,40 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
         {/* ═══════════════════════════════════════════
             BLOC 4 — L'Ordonnance Clinique
             ═══════════════════════════════════════════ */}
-        <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100 relative overflow-hidden" data-testid="block-expert">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-teal-50/30 rounded-full blur-2xl pointer-events-none" />
+        <div className="rounded-3xl p-5 relative overflow-hidden" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" } as React.CSSProperties} data-testid="block-expert">
+          <div className="absolute top-0 right-0 w-24 h-24 rounded-full blur-2xl pointer-events-none" style={{ background: "radial-gradient(circle, rgba(233,30,140,0.15), transparent)" }} />
 
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-teal-50 flex items-center justify-center border border-teal-100">
-                <Sparkles className="w-4 h-4 text-teal-600" />
+              <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: "rgba(233,30,140,0.12)", border: "1px solid rgba(233,30,140,0.25)" }}>
+                <Sparkles className="w-4 h-4" style={{ color: "#E91E8C" }} />
               </div>
-              <h2 className="text-sm font-black uppercase tracking-wider text-gray-900">Conclusions du Dr. GlowScan</h2>
+              <h2 className="text-sm font-black uppercase tracking-wider text-white">Conclusions du Dr. GlowScan</h2>
             </div>
-            <span className="text-[9px] font-black bg-teal-600 text-white px-2 py-1 rounded-lg uppercase tracking-wide shadow-sm">
-              ✓ Approuvé IA Clinique
+            <span className="text-[9px] font-black px-2 py-1 rounded-lg uppercase tracking-wide" style={{ background: "rgba(233,30,140,0.15)", border: "1px solid rgba(233,30,140,0.3)", color: "#f9a8d4" }}>
+              ✓ Approuvé IA
             </span>
           </div>
 
           {result.details && (
-            <div className="bg-gray-50/50 border border-gray-100 rounded-2xl p-4 mb-4">
-              <p className="text-xs font-black uppercase tracking-wide text-gray-400 mb-1.5">Évaluation de la barrière cutanée :</p>
-              <p className="text-xs text-gray-700 leading-relaxed font-medium" data-testid="text-details">
+            <div className="rounded-2xl p-4 mb-4" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+              <p className="text-xs font-black uppercase tracking-wide mb-1.5" style={{ color: "rgba(255,255,255,0.35)" }}>Évaluation de la barrière cutanée :</p>
+              <p className="text-xs leading-relaxed font-medium" style={{ color: "rgba(255,255,255,0.65)" }} data-testid="text-details">
                 {result.details}
               </p>
             </div>
           )}
 
-          <div className="bg-gradient-to-r from-teal-50/70 to-emerald-50/40 border border-teal-100/60 rounded-2xl p-4 relative">
-            <div className="absolute -top-2 left-4 bg-white border border-teal-100 text-[9px] font-black text-teal-700 px-2 py-0.5 rounded-full uppercase">
+          <div className="rounded-2xl p-4 relative" style={{ background: "rgba(233,30,140,0.08)", border: "1px solid rgba(233,30,140,0.2)" }}>
+            <div className="absolute -top-2 left-4 text-[9px] font-black px-2 py-0.5 rounded-full uppercase" style={{ background: "rgba(13,10,14,0.9)", border: "1px solid rgba(233,30,140,0.3)", color: "#f9a8d4" }}>
               La recommandation clé
             </div>
-            <p className="text-[12px] text-teal-950 font-semibold leading-relaxed italic mt-1" data-testid="text-motivation">
+            <p className="text-[12px] font-semibold leading-relaxed italic mt-1" style={{ color: "rgba(255,255,255,0.7)" }} data-testid="text-motivation">
               "{expertCitation}"
             </p>
           </div>
 
-          <p className="text-[10px] text-gray-400 text-center font-medium mt-3.5">
+          <p className="text-[10px] text-center font-medium mt-3.5" style={{ color: "rgba(255,255,255,0.25)" }}>
             🔒 Vos données d'analyse clinique restent 100% confidentielles.
           </p>
         </div>
@@ -645,29 +656,29 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
             BLOC 5 — Cartographie visuelle des zones
             ═══════════════════════════════════════════ */}
         {result.zones && result.zones.length > 0 && (
-          <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100 relative overflow-hidden" data-testid="block-zones-map">
+          <div className="rounded-3xl p-5 relative overflow-hidden" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" } as React.CSSProperties} data-testid="block-zones-map">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-indigo-50 flex items-center justify-center border border-indigo-100">
-                  <ScanIcon className="w-4 h-4 text-indigo-600" />
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: "rgba(99,102,241,0.12)", border: "1px solid rgba(99,102,241,0.25)" }}>
+                  <ScanIcon className="w-4 h-4 text-indigo-400" />
                 </div>
                 <div>
-                  <h2 className="text-xs font-black uppercase tracking-wider text-gray-900">Cartographie Cutanée</h2>
-                  <p className="text-[10px] text-gray-400 font-semibold">Localisation des foyers à traiter</p>
+                  <h2 className="text-xs font-black uppercase tracking-wider text-white">Cartographie Cutanée</h2>
+                  <p className="text-[10px] font-semibold" style={{ color: "rgba(255,255,255,0.35)" }}>Localisation des foyers à traiter</p>
                 </div>
               </div>
-              
-              <span className="flex items-center gap-1.5 text-[9px] font-black bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-lg uppercase tracking-wide">
-                <span className="h-1.5 w-1.5 rounded-full bg-indigo-600 animate-pulse" />
+
+              <span className="flex items-center gap-1.5 text-[9px] font-black px-2.5 py-1 rounded-lg uppercase tracking-wide" style={{ background: "rgba(99,102,241,0.12)", border: "1px solid rgba(99,102,241,0.25)", color: "#a5b4fc" }}>
+                <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 animate-pulse" />
                 Analyse Rétinienne IA
               </span>
             </div>
 
-            <div className="bg-gradient-to-b from-gray-50/50 to-white rounded-2xl p-2 border border-gray-100/60 flex items-center justify-center">
+            <div className="rounded-2xl p-2 flex items-center justify-center" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
               <FaceZonesMap zones={result.zones} />
             </div>
 
-            <p className="text-[10px] text-gray-400 text-center font-medium mt-3">
+            <p className="text-[10px] text-center font-medium mt-3" style={{ color: "rgba(255,255,255,0.3)" }}>
               💡 Cliquez sur les zones colorées pour isoler les imperfections détectées.
             </p>
           </div>
@@ -677,29 +688,29 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
             BLOC 6 — Protocole de soin
             ═══════════════════════════════════════════ */}
         {(protocolMorning.length > 0 || protocolEvening.length > 0 || weekly) && (
-          <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100" data-testid="block-protocol">
+          <div className="rounded-3xl p-5" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" } as React.CSSProperties} data-testid="block-protocol">
             <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-pink-600" />
-                <h2 className="text-[15px] font-black text-gray-900 font-display">Mon Ordonnance d'Application</h2>
+                <Sparkles className="w-4 h-4" style={{ color: "#E91E8C" }} />
+                <h2 className="text-[15px] font-black text-white font-display">Mon Ordonnance d'Application</h2>
               </div>
-              <span className="text-[9px] bg-pink-50 text-pink-700 font-bold px-2 py-0.5 rounded-full">
+              <span className="text-[9px] font-bold px-2 py-0.5 rounded-full" style={{ background: "rgba(233,30,140,0.12)", border: "1px solid rgba(233,30,140,0.25)", color: "#f9a8d4" }}>
                 Cycle de 4 à 6 semaines
               </span>
             </div>
-            <p className="text-[11px] text-gray-400 mb-5">
+            <p className="text-[11px] mb-5" style={{ color: "rgba(255,255,255,0.35)" }}>
               Suivez rigoureusement cet ordre pour maximiser la pénétration des actifs sous le climat chaud.
             </p>
 
             <div className="space-y-6">
               {/* ☀️ LE PROTOCOLE DU MATIN */}
               {protocolMorning.length > 0 && (
-                <div className="relative pl-4 border-l-2 border-amber-200">
-                  <div className="absolute -left-[9px] top-0 bg-amber-500 text-white rounded-full p-0.5 shadow-sm">
+                <div className="relative pl-4" style={{ borderLeft: "2px solid rgba(245,158,11,0.4)" }}>
+                  <div className="absolute -left-[9px] top-0 text-white rounded-full p-0.5" style={{ background: "#f59e0b" }}>
                     <Sun className="w-3 h-3" />
                   </div>
-                  <h3 className="text-[12px] font-black uppercase tracking-wider text-amber-700 mb-3 flex items-center gap-1.5">
-                    Rituel du Matin <span className="text-[10px] font-medium text-gray-400 font-sans lowercase">(protection & régulation)</span>
+                  <h3 className="text-[12px] font-black uppercase tracking-wider mb-3 flex items-center gap-1.5" style={{ color: "#fbbf24" }}>
+                    Rituel du Matin <span className="text-[10px] font-medium font-sans lowercase" style={{ color: "rgba(255,255,255,0.3)" }}>(protection & régulation)</span>
                   </h3>
                   
                   <div className="space-y-3">
@@ -710,24 +721,24 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
                       );
 
                       return (
-                        <div key={`m-${i}`} className="bg-gray-50/70 border border-gray-100 rounded-2xl p-2.5 flex items-center gap-3 transition-all">
-                          <div className="w-5 h-5 rounded-lg bg-white border border-gray-200 text-[11px] font-black text-gray-700 flex items-center justify-center flex-shrink-0 shadow-sm">
+                        <div key={`m-${i}`} className="rounded-2xl p-2.5 flex items-center gap-3 transition-all" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                          <div className="w-5 h-5 rounded-lg text-[11px] font-black text-white flex items-center justify-center flex-shrink-0" style={{ background: "rgba(233,30,140,0.15)", border: "1px solid rgba(233,30,140,0.3)" }}>
                             {i + 1}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-wide">{stepData.step}</p>
-                            <p className="text-[12px] font-bold text-gray-900 truncate">
+                            <p className="text-[10px] font-black uppercase tracking-wide" style={{ color: "rgba(255,255,255,0.35)" }}>{stepData.step}</p>
+                            <p className="text-[12px] font-bold text-white truncate">
                               {matchedItem ? matchedItem.product.name : (stepData.product || stepData.step)}
                             </p>
-                            {stepData.why && <p className="text-[10px] text-gray-500 leading-snug mt-0.5 font-medium">{stepData.why}</p>}
+                            {stepData.why && <p className="text-[10px] leading-snug mt-0.5 font-medium" style={{ color: "rgba(255,255,255,0.4)" }}>{stepData.why}</p>}
                           </div>
-                          
+
                           {matchedItem && (
-                            <div className="w-10 h-10 rounded-xl bg-white border border-gray-200/60 p-0.5 flex-shrink-0 flex items-center justify-center shadow-inner">
-                              <img 
-                                src={productImages[matchedItem.product.id] || "/placeholder-product.png"} 
-                                alt={matchedItem.product.name} 
-                                className="w-full h-full object-contain mix-blend-multiply"
+                            <div className="w-10 h-10 rounded-xl p-0.5 flex-shrink-0 flex items-center justify-center" style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.1)" }}>
+                              <img
+                                src={productImages[matchedItem.product.id] || "/placeholder-product.png"}
+                                alt={matchedItem.product.name}
+                                className="w-full h-full object-contain"
                               />
                             </div>
                           )}
@@ -740,12 +751,12 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
 
               {/* 🌙 LE PROTOCOLE DU SOIR */}
               {protocolEvening.length > 0 && (
-                <div className="relative pl-4 border-l-2 border-indigo-200">
-                  <div className="absolute -left-[9px] top-0 bg-indigo-600 text-white rounded-full p-0.5 shadow-sm">
+                <div className="relative pl-4" style={{ borderLeft: "2px solid rgba(99,102,241,0.4)" }}>
+                  <div className="absolute -left-[9px] top-0 text-white rounded-full p-0.5" style={{ background: "#6366f1" }}>
                     <Moon className="w-3 h-3" />
                   </div>
-                  <h3 className="text-[12px] font-black uppercase tracking-wider text-indigo-700 mb-3 flex items-center gap-1.5">
-                    Rituel du Soir <span className="text-[10px] font-medium text-gray-400 font-sans lowercase">(réparation intense)</span>
+                  <h3 className="text-[12px] font-black uppercase tracking-wider mb-3 flex items-center gap-1.5" style={{ color: "#a5b4fc" }}>
+                    Rituel du Soir <span className="text-[10px] font-medium font-sans lowercase" style={{ color: "rgba(255,255,255,0.3)" }}>(réparation intense)</span>
                   </h3>
                   
                   <div className="space-y-3">
@@ -756,24 +767,24 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
                       );
 
                       return (
-                        <div key={`e-${i}`} className="bg-gray-50/70 border border-gray-100 rounded-2xl p-2.5 flex items-center gap-3 transition-all">
-                          <div className="w-5 h-5 rounded-lg bg-white border border-gray-200 text-[11px] font-black text-gray-700 flex items-center justify-center flex-shrink-0 shadow-sm">
+                        <div key={`e-${i}`} className="rounded-2xl p-2.5 flex items-center gap-3 transition-all" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                          <div className="w-5 h-5 rounded-lg text-[11px] font-black text-white flex items-center justify-center flex-shrink-0" style={{ background: "rgba(99,102,241,0.15)", border: "1px solid rgba(99,102,241,0.3)" }}>
                             {i + 1}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-wide">{stepData.step}</p>
-                            <p className="text-[12px] font-bold text-gray-900 truncate">
+                            <p className="text-[10px] font-black uppercase tracking-wide" style={{ color: "rgba(255,255,255,0.35)" }}>{stepData.step}</p>
+                            <p className="text-[12px] font-bold text-white truncate">
                               {matchedItem ? matchedItem.product.name : (stepData.product || stepData.step)}
                             </p>
-                            {stepData.why && <p className="text-[10px] text-gray-500 leading-snug mt-0.5 font-medium">{stepData.why}</p>}
+                            {stepData.why && <p className="text-[10px] leading-snug mt-0.5 font-medium" style={{ color: "rgba(255,255,255,0.4)" }}>{stepData.why}</p>}
                           </div>
-                          
+
                           {matchedItem && (
-                            <div className="w-10 h-10 rounded-xl bg-white border border-gray-200/60 p-0.5 flex-shrink-0 flex items-center justify-center shadow-inner">
-                              <img 
-                                src={productImages[matchedItem.product.id] || "/placeholder-product.png"} 
-                                alt={matchedItem.product.name} 
-                                className="w-full h-full object-contain mix-blend-multiply"
+                            <div className="w-10 h-10 rounded-xl p-0.5 flex-shrink-0 flex items-center justify-center" style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.1)" }}>
+                              <img
+                                src={productImages[matchedItem.product.id] || "/placeholder-product.png"}
+                                alt={matchedItem.product.name}
+                                className="w-full h-full object-contain"
                               />
                             </div>
                           )}
@@ -786,13 +797,13 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
 
               {/* 📅 SOIN HEBDOMADAIRE */}
               {weekly && (
-                <div className="rounded-2xl p-3.5 bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-100/70 flex items-center gap-3 shadow-sm">
-                  <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center border border-purple-200 text-purple-600 flex-shrink-0 shadow-sm">
+                <div className="rounded-2xl p-3.5 flex items-center gap-3" style={{ background: "rgba(168,85,247,0.08)", border: "1px solid rgba(168,85,247,0.2)" }}>
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "rgba(168,85,247,0.12)", border: "1px solid rgba(168,85,247,0.25)", color: "#c084fc" }}>
                     <Calendar className="w-4 h-4" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[9px] font-black uppercase tracking-wider text-purple-700">Soin Booster Hebdomadaire</p>
-                    <p className="text-[12px] text-gray-800 font-bold leading-tight mt-0.5">{weekly}</p>
+                    <p className="text-[9px] font-black uppercase tracking-wider" style={{ color: "#c084fc" }}>Soin Booster Hebdomadaire</p>
+                    <p className="text-[12px] font-bold leading-tight mt-0.5 text-white">{weekly}</p>
                   </div>
                 </div>
               )}
@@ -819,13 +830,13 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
               <div className="mt-6 space-y-5 px-1 animate-fade-in" data-testid="block-conversion-tunnel">
                 
                 {/* NOTIFICATION DE FOMO */}
-                <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200/70 flex items-center gap-2.5 shadow-sm">
-                  <span className="flex h-2 w-2 relative">
+                <div className="p-3.5 rounded-2xl flex items-center gap-2.5" style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)" }}>
+                  <span className="flex h-2 w-2 relative flex-shrink-0">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
                   </span>
-                  <p className="text-[11px] text-amber-950 font-bold leading-tight">
-                    🔥 <span className="text-red-600 font-extrabold">37 femmes</span> ont validé cette ordonnance à Douala aujourd'hui. Stock de la gamme <span className="underline">{brandLabel}</span> limité.
+                  <p className="text-[11px] font-bold leading-tight" style={{ color: "rgba(255,255,255,0.7)" }}>
+                    🔥 <span className="text-red-400 font-extrabold">37 femmes</span> ont validé cette ordonnance à Douala aujourd'hui. Stock de la gamme <span className="underline">{brandLabel}</span> limité.
                   </p>
                 </div>
 
@@ -833,28 +844,28 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
                 <div className="grid grid-cols-1 gap-4">
                   
                   {/* OFFRE 1 : L'EXPÉRIENCE TOTALE */}
-                  <div className="border border-gray-200 bg-white rounded-3xl p-5 shadow-sm flex flex-col justify-between transition-all hover:border-gray-300">
+                  <div className="rounded-3xl p-5 flex flex-col justify-between transition-all" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
                     <div>
                       <div className="flex justify-between items-start mb-1">
-                        <h4 className="font-black text-gray-900 text-sm flex items-center gap-1">
+                        <h4 className="font-black text-white text-sm flex items-center gap-1">
                           L'Expérience Totale 🚀
                         </h4>
-                        <span className="text-[9px] bg-emerald-100 text-emerald-800 font-black px-2 py-0.5 rounded-md uppercase tracking-wide">
+                        <span className="text-[9px] font-black px-2 py-0.5 rounded-md uppercase tracking-wide" style={{ background: "rgba(16,185,129,0.12)", border: "1px solid rgba(16,185,129,0.25)", color: "#6ee7b7" }}>
                           Économie : {formatPrice(totalSavingsRoutine)}
                         </span>
                       </div>
-                      <p className="text-[10px] font-semibold text-gray-500 mb-2">Traitement Global Synergique (Nettoyant + Sérum + Crème)</p>
-                      <p className="text-[11px] text-gray-600 leading-relaxed mb-4">
+                      <p className="text-[10px] font-semibold mb-2" style={{ color: "rgba(255,255,255,0.35)" }}>Traitement Global Synergique (Nettoyant + Sérum + Crème)</p>
+                      <p className="text-[11px] leading-relaxed mb-4" style={{ color: "rgba(255,255,255,0.5)" }}>
                         Zéro compromis. C'est la combinaison exacte recommandée par l'IA pour traiter le problème à la racine.
                       </p>
                     </div>
 
-                    <div className="flex items-center justify-between gap-2 border-t border-gray-100 pt-3.5 mt-1">
+                    <div className="flex items-center justify-between gap-2 pt-3.5 mt-1" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
                       <div>
-                        <p className="text-[9px] text-gray-400 font-bold line-through">{formatPrice(unitPriceTotal)}</p>
-                        <p className="text-lg font-black text-gray-950">{formatPrice(routineTotal)}</p>
+                        <p className="text-[9px] font-bold line-through" style={{ color: "rgba(255,255,255,0.25)" }}>{formatPrice(unitPriceTotal)}</p>
+                        <p className="text-lg font-black text-white">{formatPrice(routineTotal)}</p>
                       </div>
-                      <button 
+                      <button
                         onClick={() => {
                           const items: OrderItem[] = routineProducts.map(({ product }) => ({
                             productId: product.id,
@@ -866,7 +877,8 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
                           setOrderModalTitle("Commander la routine complète");
                           setShowOrderModal(true);
                         }}
-                        className="flex items-center gap-1.5 px-4 py-2.5 bg-gray-950 hover:bg-gray-900 text-white text-xs font-black rounded-xl transition-all shadow-md active:scale-95"
+                        className="flex items-center gap-1.5 px-4 py-2.5 text-white text-xs font-black rounded-xl transition-all active:scale-95"
+                        style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)" }}
                       >
                         <MessageCircle className="w-3.5 h-3.5 fill-current" />
                         Prendre la Totale
@@ -876,32 +888,32 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
 
                   {/* OFFRE 2 : LE DUO */}
                   {intermediateOffer && (
-                    <div className="border-2 border-pink-500 bg-gradient-to-br from-pink-50/20 via-white to-white rounded-3xl p-5 relative shadow-md shadow-pink-100/40 transition-all scale-[1.01]">
-                      <div className="absolute -top-3 right-5 bg-pink-500 text-white text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-wider shadow-sm">
+                    <div className="rounded-3xl p-5 relative transition-all scale-[1.01]" style={{ background: "linear-gradient(135deg, rgba(233,30,140,0.12) 0%, rgba(255,255,255,0.04) 100%)", border: "2px solid rgba(233,30,140,0.4)", boxShadow: "0 0 30px rgba(233,30,140,0.15)" }}>
+                      <div className="absolute -top-3 right-5 text-white text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-wider" style={{ background: "linear-gradient(135deg, #E91E8C, #f43f5e)", boxShadow: "0 0 15px rgba(233,30,140,0.5)" }}>
                         Le Compromis Idéal ✨
                       </div>
-                      
-                      <h4 className="font-black text-gray-950 text-sm mb-0.5">
+
+                      <h4 className="font-black text-white text-sm mb-0.5">
                         {intermediateOffer.copywriting.title}
                       </h4>
-                      <p className="text-[10px] font-bold text-pink-600 mb-2">{intermediateOffer.copywriting.subtitle}</p>
-                      <p className="text-[11px] text-gray-600 leading-relaxed mb-4">
-                        Vous n'avez pas le budget pour la totale ? Ce duo rassemble les **2 actifs majeurs** pour stopper l'urgence cutanée.
+                      <p className="text-[10px] font-bold mb-2" style={{ color: "#f9a8d4" }}>{intermediateOffer.copywriting.subtitle}</p>
+                      <p className="text-[11px] leading-relaxed mb-4" style={{ color: "rgba(255,255,255,0.5)" }}>
+                        Vous n'avez pas le budget pour la totale ? Ce duo rassemble les 2 actifs majeurs pour stopper l'urgence cutanée.
                       </p>
-                      
-                      <div className="space-y-2 mb-4 bg-white/80 rounded-xl p-2.5 border border-pink-100/40">
+
+                      <div className="space-y-2 mb-4 rounded-xl p-2.5" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(233,30,140,0.15)" }}>
                         {intermediateOffer.duo.map((item, idx) => (
-                          <div key={idx} className="text-[11px] font-bold text-gray-800 flex items-center gap-2">
-                            <span className="bg-pink-100 p-0.5 rounded text-xs">{item.role.emoji}</span> 
+                          <div key={idx} className="text-[11px] font-bold text-white flex items-center gap-2">
+                            <span className="p-0.5 rounded text-xs" style={{ background: "rgba(233,30,140,0.15)" }}>{item.role.emoji}</span>
                             <span className="truncate">{item.product.name}</span>
                           </div>
                         ))}
                       </div>
 
-                      <div className="flex items-center justify-between gap-2 border-t border-pink-100 pt-3.5">
+                      <div className="flex items-center justify-between gap-2 pt-3.5" style={{ borderTop: "1px solid rgba(233,30,140,0.2)" }}>
                         <div>
-                          <p className="text-[9px] text-gray-400 font-bold line-through">{formatPrice(unitPriceDuo)}</p>
-                          <p className="text-lg font-black text-pink-600">{formatPrice(duoTotal)}</p>
+                          <p className="text-[9px] font-bold line-through" style={{ color: "rgba(255,255,255,0.25)" }}>{formatPrice(unitPriceDuo)}</p>
+                          <p className="text-lg font-black" style={{ color: "#f9a8d4" }}>{formatPrice(duoTotal)}</p>
                         </div>
                         <button 
                           onClick={() => {
@@ -927,18 +939,19 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
                 </div>
 
                 {/* BLOC LOGISTIQUE */}
-                <div className="bg-emerald-50/80 px-4 py-3 rounded-2xl flex items-center gap-3 border border-emerald-100/80 shadow-sm">
-                  <Truck className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+                <div className="px-4 py-3 rounded-2xl flex items-center gap-3" style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)" }}>
+                  <Truck className="w-5 h-5 flex-shrink-0" style={{ color: "#6ee7b7" }} />
                   <div className="text-left">
-                    <p className="text-[11px] text-emerald-800 font-black leading-tight">Expédition Express au Cameroun</p>
-                    <p className="text-[10px] text-emerald-600 font-semibold mt-0.5">Livraison à domicile (Douala & Yaoundé) · Paiement Cash à la livraison</p>
+                    <p className="text-[11px] font-black leading-tight" style={{ color: "#6ee7b7" }}>Expédition Express au Cameroun</p>
+                    <p className="text-[10px] font-semibold mt-0.5" style={{ color: "rgba(110,231,183,0.7)" }}>Livraison à domicile (Douala & Yaoundé) · Paiement Cash à la livraison</p>
                   </div>
                 </div>
 
                 {/* Action secondaire */}
                 <button
                   onClick={() => setShowRoutineCard(true)}
-                  className="w-full py-2 text-gray-400 hover:text-gray-600 text-[11px] font-bold transition-all text-center underline tracking-wide"
+                  className="w-full py-2 text-[11px] font-bold transition-all text-center underline tracking-wide"
+                  style={{ color: "rgba(255,255,255,0.3)" }}
                 >
                   💾 Enregistrer ou partager mon ordonnance personnalisée
                 </button>
@@ -948,16 +961,16 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
         ) : null}
 
         {/* Footer Prévention Clinique */}
-        <div className="px-4 py-2.5 bg-slate-50 border-t border-slate-100 flex items-center gap-2 text-[10px] text-slate-400 font-semibold text-left">
-          <AlertTriangle className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+        <div className="px-4 py-2.5 flex items-center gap-2 text-[10px] font-semibold text-left rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.3)" }}>
+          <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "rgba(255,255,255,0.3)" }} />
           <span>Analyse indicative générée par GlowScan AI.</span>
         </div>
       </motion.div>
 
       {/* ── Disclaimer médical ── */}
-      <div className="flex items-center justify-center gap-2 py-3 px-4 rounded-2xl bg-gray-50 border border-gray-200" data-testid="disclaimer-medical">
+      <div className="flex items-center justify-center gap-2 py-3 px-4 rounded-2xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }} data-testid="disclaimer-medical">
         <span className="text-base flex-shrink-0">⚕️</span>
-        <p className="text-[11px] text-gray-500 font-medium leading-relaxed text-center">
+        <p className="text-[11px] font-medium leading-relaxed text-center" style={{ color: "rgba(255,255,255,0.35)" }}>
           Notre diagnostic ne remplace pas un dermatologue. Consultez un professionnel de santé pour tout problème persistant.
         </p>
       </div>
