@@ -2,7 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
-import { startCronJobs } from "./cron";
+//import { startCronJobs } from "./cron";
 import path from "path";
 
 const app = express();
