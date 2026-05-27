@@ -230,8 +230,8 @@ export function startCronJobs() {
 
   // ✅ CORRECTION 3: Vérification de DATABASE_URL au démarrage
   // Évite les crash au démarrage si la DB n'est pas configurée
-  if (!process.env.DATABASE_URL) {
-    log("⚠️ DATABASE_URL non configurée — crons désactivés pour éviter les erreurs");
+  if (!process.env.SUPABASE_URL && !process.env.DATABASE_URL) {
+    log("⚠️ SUPABASE_URL non configurée — crons désactivés pour éviter les erreurs");
     return;
   }
 

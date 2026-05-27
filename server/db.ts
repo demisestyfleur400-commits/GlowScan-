@@ -4,15 +4,17 @@ import * as schema from "@shared/schema";
 
 const { Pool } = pg;
 
-if (!process.env.DATABASE_URL) {
+const dbUrl = process.env.SUPABASE_URL || process.env.DATABASE_URL;
+
+if (!dbUrl) {
   throw new Error(
-    "DATABASE_URL must be set. Did you forget to provision a database?",
+    "SUPABASE_URL must be set. Did you forget to provision a database?",
   );
 }
 
 export const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL?.includes("supabase") ? { rejectUnauthorized: false } : false,
+  connectionString: dbUrl,
+  ssl: dbUrl.includes("supabase") ? { rejectUnauthorized: false } : false,
 });
 
 pool.on("error", (err) => {
