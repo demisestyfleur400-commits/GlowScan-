@@ -1,6 +1,6 @@
-//import cron from "node-cron";
-//import webpush from "web-push";
-//import { storage } from "./storage";
+import cron from "node-cron";
+import webpush from "web-push";
+import { storage } from "./storage";
 
 function log(msg: string) {
   const t = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
