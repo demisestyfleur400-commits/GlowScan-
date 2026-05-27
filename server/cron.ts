@@ -1,6 +1,6 @@
-import cron from "node-cron";
-import webpush from "web-push";
-import { storage } from "./storage";
+//import cron from "node-cron";
+//import webpush from "web-push";
+//import { storage } from "./storage";
 
 function log(msg: string) {
   const t = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
@@ -242,20 +242,20 @@ export function startCronJobs() {
     const mm = String(doualaDate.getMinutes()).padStart(2, "0");
     sendRoutineReminders(`${hh}:${mm}`);
   }, { timezone: "Africa/Douala" });
-  log("✅ Cron rappels routines actif — chaque minute (Douala)");
+  //log("✅ Cron rappels routines actif — chaque minute (Douala)");
 
-  cron.schedule("0 22 * * *", sendEveningMissedReminders, { timezone: "Africa/Douala" });
+  //cron.schedule("0 22 * * *", sendEveningMissedReminders, { timezone: "Africa/Douala" });
   log("✅ Cron rappel soir non complétée actif — 22h00 (Douala)");
 
-  cron.schedule("0 9 * * *", sendDay2Reminders, { timezone: "Africa/Douala" });
+  //cron.schedule("0 9 * * *", sendDay2Reminders, { timezone: "Africa/Douala" });
   log("✅ Cron J+2 actif — tous les jours à 9h00 (Douala)");
 
-  cron.schedule("30 9 * * *", sendDay7SkinBotReminders, { timezone: "Africa/Douala" });
-  log("✅ Cron J+7 SkinBot actif — tous les jours à 9h30 (Douala)");
+  //cron.schedule("30 9 * * *", sendDay7SkinBotReminders, { timezone: "Africa/Douala" });
+  //log("✅ Cron J+7 SkinBot actif — tous les jours à 9h30 (Douala)");
 
-  cron.schedule("0 10 * * *", sendDay14Reminders, { timezone: "Africa/Douala" });
+  //cron.schedule("0 10 * * *", sendDay14Reminders, { timezone: "Africa/Douala" });
   log("✅ Cron J+14 actif — tous les jours à 10h00 (Douala)");
 
-  cron.schedule("30 10 * * *", sendProductReminders, { timezone: "Africa/Douala" });
-  log("✅ Cron rappels produits 72h actif — tous les jours à 10h30 (Douala)");
+  //cron.schedule("30 10 * * *", sendProductReminders, { timezone: "Africa/Douala" });
+  //log("✅ Cron rappels produits 72h actif — tous les jours à 10h30 (Douala)");
 }
