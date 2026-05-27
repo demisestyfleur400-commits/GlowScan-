@@ -48,15 +48,14 @@ export function Navbar() {
                     key={link.href}
                     href={link.href}
                     className={`relative px-3.5 py-2 text-[11px] font-black uppercase tracking-wider transition-all rounded-lg flex items-center gap-1.5 ${
-                      isActive 
-                        ? "text-white bg-slate-950 shadow-md border border-gray-800" 
-                        : link.highlight 
-                          ? "text-emerald-400 hover:text-emerald-300"
-                          : "text-gray-400 hover:text-white"
+                      isActive
+                        ? "text-white bg-slate-950 shadow-md border border-gray-800"
+                        : "text-gray-400 hover:text-white"
                     }`}
+                    style={!isActive && link.highlight ? { color: "#f9a8d4" } : {}}
                     data-testid={`nav-link-${link.label.toLowerCase()}`}
                   >
-                    {link.highlight && <ScanLine className="w-3 h-3 text-emerald-400" />}
+                    {link.highlight && <ScanLine className="w-3 h-3" style={{ color: "#E91E8C" }} />}
                     {link.label}
                     {link.premium && (
                       <Crown className={`w-3 h-3 ${isActive ? "text-emerald-400" : "text-amber-500"}`} />
@@ -133,12 +132,12 @@ export function Navbar() {
                       isActive
                         ? "bg-slate-900 text-white border border-gray-800"
                         : link.highlight
-                          ? "bg-emerald-500/5 text-emerald-400 border border-emerald-500/10"
+                          ? "border"
                           : "text-gray-300 hover:bg-slate-900/50"
                     }`}
                   >
                     <div className="flex items-center gap-2">
-                      {link.highlight && <ScanLine className="w-3.5 h-3.5 text-emerald-400" />}
+                      {link.highlight && <ScanLine className="w-3.5 h-3.5" style={{ color: "#E91E8C" }} />}
                       <span>{link.label}</span>
                     </div>
                     {link.premium && <Crown className="w-3.5 h-3.5 text-amber-500" />}

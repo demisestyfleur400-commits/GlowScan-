@@ -112,15 +112,12 @@ export default function AuthPage() {
   }
 
   return (
-    <div className="min-h-screen w-full bg-slate-950 text-white flex flex-col px-6 py-10 relative overflow-hidden">
-      {/* Halo laser focalisé */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background:
-            "radial-gradient(circle at top center, rgba(37, 99, 235, 0.06) 0%, rgba(0,0,0,0) 70%)",
-        }}
-      />
+    <div className="min-h-screen w-full text-white flex flex-col px-6 py-10 relative overflow-hidden" style={{ background: "#0D0A0E" }}>
+      {/* Orbes d'ambiance */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[400px] h-[400px] rounded-full" style={{ background: "radial-gradient(circle, rgba(233,30,140,0.18) 0%, transparent 70%)" }} />
+        <div className="absolute bottom-[-5%] right-[-10%] w-[300px] h-[300px] rounded-full" style={{ background: "radial-gradient(circle, rgba(168,85,247,0.12) 0%, transparent 70%)" }} />
+      </div>
 
       {/* Header Médical Épuré */}
       <div className="flex items-center justify-between relative z-10 mb-8 max-w-sm mx-auto w-full">
@@ -148,9 +145,15 @@ export default function AuthPage() {
           {[1, 2, 3].map((n) => (
             <div
               key={n}
-              className={`h-0.5 rounded-full transition-all duration-500 ${
-                n === step ? "w-8 bg-blue-500" : n < step ? "w-5 bg-slate-500" : "w-5 bg-slate-800"
-              }`}
+              className="h-0.5 rounded-full transition-all duration-500"
+              style={{
+                width: n === step ? "2rem" : "1.25rem",
+                background: n === step
+                  ? "linear-gradient(90deg, #E91E8C, #f43f5e)"
+                  : n < step
+                  ? "rgba(255,255,255,0.3)"
+                  : "rgba(255,255,255,0.08)",
+              }}
             />
           ))}
         </div>
@@ -210,7 +213,8 @@ export default function AuthPage() {
                 setMode("register");
                 setStep(1);
               }}
-              className="text-blue-400 font-bold hover:underline"
+              className="font-bold hover:underline"
+              style={{ color: "#f9a8d4" }}
               data-testid="button-switch-to-register"
             >
               Créer un profil sécurisé
@@ -365,7 +369,7 @@ export default function AuthPage() {
 
       {/* Signature Institutionnelle */}
       <div className="text-center mt-auto pt-8 relative z-10 opacity-40 flex justify-center items-center gap-1.5 text-[9px] text-slate-500 font-black tracking-widest uppercase font-display">
-        <ShieldAlert className="w-3 h-3 text-blue-500" />
+        <ShieldAlert className="w-3 h-3" style={{ color: "#E91E8C" }} />
         <span>Données chiffrées de bout en bout</span>
       </div>
     </div>
@@ -400,7 +404,10 @@ function Field({
         onChange={(e) => onChange(e.target.value)}
         autoFocus={autoFocus}
         data-testid={testId}
-        className="w-full pl-11 pr-4 py-4 bg-slate-900/40 border border-slate-800/80 rounded-2xl text-xs font-bold text-white placeholder-slate-600 focus:outline-none focus:border-slate-700 focus:bg-slate-900 transition-all font-display"
+        className="w-full pl-11 pr-4 py-4 rounded-2xl text-xs font-bold text-white outline-none transition-all font-display"
+        style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}
+        onFocus={e => (e.target.style.borderColor = "rgba(233,30,140,0.5)")}
+        onBlur={e => (e.target.style.borderColor = "rgba(255,255,255,0.1)")}
       />
     </div>
   );
@@ -434,7 +441,10 @@ function PwdField({
         autoFocus={autoFocus}
         required
         data-testid={testId}
-        className="w-full pl-11 pr-12 py-4 bg-slate-900/40 border border-slate-800/80 rounded-2xl text-xs font-bold text-white placeholder-slate-600 focus:outline-none focus:border-slate-700 focus:bg-slate-900 transition-all font-display"
+        className="w-full pl-11 pr-12 py-4 rounded-2xl text-xs font-bold text-white outline-none transition-all font-display"
+        style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}
+        onFocus={e => (e.target.style.borderColor = "rgba(233,30,140,0.5)")}
+        onBlur={e => (e.target.style.borderColor = "rgba(255,255,255,0.1)")}
       />
       <button
         type="button"

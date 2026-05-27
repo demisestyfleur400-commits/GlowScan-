@@ -326,7 +326,7 @@ function ExplorerSheet({ open, onClose }: { open: boolean; onClose: () => void }
             <div className="px-5 pt-2 pb-4 flex items-center justify-between border-b border-slate-100">
               <div>
                 <p className="text-[9px] font-black tracking-[0.25em] uppercase text-slate-400 font-mono flex items-center gap-1">
-                  <Terminal className="w-3 h-3 text-emerald-500" /> Index des modules
+                  <Terminal className="w-3 h-3" style={{ color: "#E91E8C" }} /> Index des modules
                 </p>
                 <h2 id="explorer-title" className="text-lg font-black text-slate-900 uppercase tracking-tight mt-0.5">Console Globale</h2>
               </div>
@@ -747,7 +747,7 @@ export default function Home() {
                   data-testid="button-shop-all"
                   className="inline-flex items-center gap-1 text-[10px] font-black text-slate-950 uppercase tracking-wider"
                 >
-                  Tout voir <ChevronRight className="w-3 h-3 text-emerald-500" />
+                  Tout voir <ChevronRight className="w-3 h-3" style={{ color: "#E91E8C" }} />
                 </button>
               </div>
 

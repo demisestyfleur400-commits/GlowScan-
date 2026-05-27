@@ -264,7 +264,7 @@ export default function Analyze() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50/50 pb-24">
+    <div className="min-h-screen pb-24" style={{ background: "#0D0A0E" }}>
       <Navbar />
 
       <main className="max-w-xl mx-auto px-4 pt-8">
@@ -277,44 +277,66 @@ export default function Analyze() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-50 bg-slate-950 flex flex-col items-center justify-center px-5 text-white"
+              className="fixed inset-0 z-50 flex flex-col items-center justify-center px-5 text-white"
+              style={{ background: "#0D0A0E" }}
               data-testid="screen-analyzing"
             >
-              <div className="w-full max-w-xs text-center space-y-6">
+              {/* Orbs d'ambiance */}
+              <div className="pointer-events-none absolute inset-0 overflow-hidden">
+                <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[400px] h-[400px] rounded-full" style={{ background: "radial-gradient(circle, rgba(233,30,140,0.18) 0%, transparent 70%)" }} />
+              </div>
+
+              <div className="w-full max-w-xs text-center space-y-6 relative z-10">
                 <div className="flex items-center justify-center gap-2">
-                  <Badge className="bg-blue-600 text-white border-0 text-[9px] font-black tracking-widest py-1 uppercase animate-pulse">
-                    Core AI Diagnostic Active
-                  </Badge>
+                  <div
+                    className="flex items-center gap-2 rounded-full px-4 py-1.5 border text-[9px] font-black tracking-widest uppercase animate-pulse"
+                    style={{ background: "rgba(233,30,140,0.12)", borderColor: "rgba(233,30,140,0.3)", color: "#f9a8d4" }}
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-pink-400 animate-pulse" />
+                    IA Diagnostic Active
+                  </div>
                 </div>
 
-                {/* Cadre de Scan Laser Clinique */}
-                <div className="relative w-56 h-56 mx-auto rounded-2xl overflow-hidden border border-slate-800 bg-slate-900/50 shadow-2xl shadow-blue-500/5">
+                {/* Cadre de Scan */}
+                <div
+                  className="relative w-56 h-56 mx-auto rounded-2xl overflow-hidden shadow-2xl"
+                  style={{ border: "1px solid rgba(233,30,140,0.25)", background: "rgba(255,255,255,0.03)", boxShadow: "0 0 40px rgba(233,30,140,0.15)" }}
+                >
                   {uploadedImage ? (
                     <img src={uploadedImage} alt="Scanning Process" className="absolute inset-0 w-full h-full object-cover opacity-60" data-testid="img-scanning" />
                   ) : (
                     <div className="absolute inset-0 flex items-center justify-center text-4xl">🔬</div>
                   )}
-                  <div className="absolute inset-0 opacity-20" style={{ backgroundImage: "linear-gradient(#2563eb 1px, transparent 1px), linear-gradient(90deg, #2563eb 1px, transparent 1px)", backgroundSize: "20px 20px" }} />
-                  <motion.div 
-                    className="absolute left-0 right-0 h-0.5 bg-blue-500 shadow-[0_0_12px_rgba(37,99,235,1)]" 
-                    animate={{ top: ["0%", "100%", "0%"] }} 
-                    transition={{ duration: 2, ease: "easeInOut", repeat: Infinity }} 
+                  <div className="absolute inset-0 opacity-10" style={{ backgroundImage: "linear-gradient(rgba(233,30,140,0.8) 1px, transparent 1px), linear-gradient(90deg, rgba(233,30,140,0.8) 1px, transparent 1px)", backgroundSize: "20px 20px" }} />
+                  <motion.div
+                    className="absolute left-0 right-0 h-0.5"
+                    style={{ background: "linear-gradient(90deg, transparent, #E91E8C, transparent)", boxShadow: "0 0 12px rgba(233,30,140,1)" }}
+                    animate={{ top: ["0%", "100%", "0%"] }}
+                    transition={{ duration: 2, ease: "easeInOut", repeat: Infinity }}
                   />
                 </div>
 
                 {/* Stepper Progrès */}
-                <div className="space-y-1">
-                  <div className="flex justify-between text-[10px] font-black font-mono text-slate-500 uppercase tracking-wider">
+                <div className="space-y-1.5">
+                  <div className="flex justify-between text-[10px] font-black font-mono uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.4)" }}>
                     <span>{LOADING_STEPS[loadingStep].icon} {LOADING_STEPS[loadingStep].msg}</span>
-                    <span className="text-blue-400">{LOADING_STEPS[loadingStep].pct}%</span>
+                    <span style={{ color: "#f9a8d4" }}>{LOADING_STEPS[loadingStep].pct}%</span>
                   </div>
-                  <div className="w-full h-1 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
-                    <motion.div className="h-full bg-blue-600" animate={{ width: `${LOADING_STEPS[loadingStep].pct}%` }} transition={{ duration: 0.3 }} />
+                  <div className="w-full h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                    <motion.div
+                      className="h-full"
+                      style={{ background: "linear-gradient(90deg, #E91E8C, #f43f5e)" }}
+                      animate={{ width: `${LOADING_STEPS[loadingStep].pct}%` }}
+                      transition={{ duration: 0.3 }}
+                    />
                   </div>
                 </div>
 
-                {/* Conseil Scientifique de Remplacement */}
-                <p className="text-xs text-slate-400 leading-relaxed font-medium bg-white/[0.02] border border-white/5 p-3.5 rounded-xl min-h-[64px] flex items-center justify-center">
+                {/* Conseil */}
+                <p
+                  className="text-xs leading-relaxed font-medium p-3.5 rounded-xl min-h-[64px] flex items-center justify-center"
+                  style={{ color: "rgba(255,255,255,0.45)", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}
+                >
                   {LOADING_TIPS[loadingTip]}
                 </p>
               </div>
@@ -323,29 +345,40 @@ export default function Analyze() {
 
           {/* ══════════ ÉTAPE 1 : SÉLECTION DE LA ZONE ══════════ */}
           {step === "select" && !isAnalyzing && (
-            <motion.div key="select" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-5">
-              <div className="text-center">
-                <span className="text-[10px] font-black tracking-widest uppercase text-blue-600 block mb-1">Nouveau diagnostic</span>
-                <h1 className="text-xl font-black text-slate-900 uppercase tracking-tight">Cible d'analyse</h1>
+            <motion.div key="select" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
+              <div className="text-center pt-4">
+                <div
+                  className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-[10px] font-black tracking-widest uppercase mb-3"
+                  style={{ background: "rgba(233,30,140,0.12)", border: "1px solid rgba(233,30,140,0.25)", color: "#f9a8d4" }}
+                >
+                  <Sparkles className="w-3 h-3" />
+                  Nouveau diagnostic
+                </div>
+                <h1 className="text-xl font-black text-white uppercase tracking-tight">Que veux-tu analyser ?</h1>
+                <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.35)" }}>Choisis une zone pour commencer</p>
               </div>
 
               <div className="grid grid-cols-1 gap-3">
                 {([
-                  { id: "face", label: "Visage & Teint", desc: "Analyse des pores, sébum, acné et uniformité mélanique", icon: <ScanLine className="w-5 h-5 text-slate-900" /> },
+                  { id: "face", label: "Visage & Teint", desc: "Analyse des pores, sébum, acné et uniformité mélanique", icon: <ScanLine className="w-5 h-5" style={{ color: "#E91E8C" }} />, color: "#E91E8C" },
                 ] as const).map(area => (
                   <button
                     key={area.id}
                     onClick={() => handleAreaSelect(area.id)}
-                    className="bg-white border border-slate-200/80 rounded-2xl p-5 text-left flex items-start gap-4 hover:border-slate-900 active:scale-[0.99] transition-all shadow-xs"
+                    className="rounded-2xl p-5 text-left flex items-start gap-4 active:scale-[0.98] transition-all"
+                    style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", backdropFilter: "blur(10px)" }}
                   >
-                    <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-200/60 flex items-center justify-center shrink-0">
+                    <div
+                      className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                      style={{ background: `${area.color}22`, border: `1px solid ${area.color}44` }}
+                    >
                       {area.icon}
                     </div>
                     <div className="flex-1">
-                      <h3 className="text-sm font-black text-slate-900 uppercase tracking-wide">{area.label}</h3>
-                      <p className="text-xs text-slate-400 mt-0.5 leading-normal font-medium">{area.desc}</p>
+                      <h3 className="text-sm font-black text-white uppercase tracking-wide">{area.label}</h3>
+                      <p className="text-xs mt-0.5 leading-normal font-medium" style={{ color: "rgba(255,255,255,0.4)" }}>{area.desc}</p>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-slate-300 self-center" />
+                    <ChevronRight className="w-4 h-4 self-center" style={{ color: "rgba(255,255,255,0.2)" }} />
                   </button>
                 ))}
               </div>
@@ -356,13 +389,20 @@ export default function Analyze() {
           {step === "upload" && !isAnalyzing && (
             <motion.div key="upload" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-4">
               <div className="flex items-center gap-3">
-                <button onClick={() => setStep("select")} className="w-9 h-9 rounded-xl border border-slate-200/60 bg-white flex items-center justify-center text-slate-700 active:scale-95 transition-all">
+                <button
+                  onClick={() => setStep("select")}
+                  className="w-9 h-9 rounded-xl flex items-center justify-center active:scale-95 transition-all"
+                  style={{ border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.7)" }}
+                >
                   <ArrowLeft className="w-4 h-4" />
                 </button>
-                <span className="text-xs font-black uppercase tracking-widest text-slate-900">Capture Faciale</span>
+                <span className="text-xs font-black uppercase tracking-widest text-white">Capture Faciale</span>
               </div>
 
-              <div className="bg-white border border-slate-200/60 rounded-2xl p-5 shadow-xs">
+              <div
+                className="rounded-2xl p-5"
+                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", backdropFilter: "blur(10px)" }}
+              >
                 <FileUpload onFileSelect={handleFileSelect} />
               </div>
             </motion.div>
@@ -371,23 +411,30 @@ export default function Analyze() {
           {/* ══════════ ÉTAPE 3 : QUESTIONNAIRE INTERACTIF ══════════ */}
           {step === "questionnaire" && consultationData && !isAnalyzing && (
             <motion.div key="questionnaire" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-5">
-              <div className="bg-slate-950 text-white rounded-2xl p-5 border border-slate-900 shadow-xl relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/10 rounded-full blur-2xl pointer-events-none" />
-                <div className="flex items-center gap-2 text-blue-400 mb-1.5">
+              <div
+                className="text-white rounded-2xl p-5 shadow-xl relative overflow-hidden"
+                style={{ background: "rgba(233,30,140,0.08)", border: "1px solid rgba(233,30,140,0.2)" }}
+              >
+                <div className="absolute top-0 right-0 w-32 h-32 rounded-full blur-2xl pointer-events-none" style={{ background: "radial-gradient(circle, rgba(233,30,140,0.2), transparent)" }} />
+                <div className="flex items-center gap-2 mb-1.5" style={{ color: "#f9a8d4" }}>
                   <HelpCircle className="w-4 h-4" />
                   <span className="text-[9px] font-black tracking-widest uppercase">Première observation IA</span>
                 </div>
-                <p className="text-xs font-semibold text-slate-300 leading-relaxed italic">
+                <p className="text-xs font-semibold leading-relaxed italic" style={{ color: "rgba(255,255,255,0.7)" }}>
                   "{consultationData.observations_visuelles}"
                 </p>
               </div>
 
-              <form onSubmit={handleConsultationSubmit} className="space-y-4 bg-white rounded-2xl p-5 border border-slate-200/60 shadow-xs">
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-2">Affinage clinique requis</span>
-                
+              <form
+                onSubmit={handleConsultationSubmit}
+                className="space-y-4 rounded-2xl p-5"
+                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+              >
+                <span className="text-[10px] font-black uppercase tracking-widest block mb-2" style={{ color: "rgba(255,255,255,0.35)" }}>Affinage clinique requis</span>
+
                 {consultationData.questions.map((q) => (
                   <div key={q.id} className="space-y-1.5">
-                    <label className="text-xs font-black text-slate-800 leading-normal block">
+                    <label className="text-xs font-black leading-normal block text-white">
                       {q.label}
                     </label>
                     <input
@@ -396,7 +443,8 @@ export default function Analyze() {
                       placeholder="Saisis ta réponse ici..."
                       value={answers[q.id] || ""}
                       onChange={(e) => handleInputChange(q.id, e.target.value)}
-                      className="w-full px-3.5 py-2.5 text-xs font-bold text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-slate-950 outline-none transition-colors"
+                      className="w-full px-3.5 py-2.5 text-xs font-bold text-white rounded-xl outline-none transition-colors"
+                      style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}
                     />
                   </div>
                 ))}
@@ -417,13 +465,22 @@ export default function Analyze() {
 
           {/* ══════════ ÉTAPE 5 : ANONYMOUS QUOTA LIMIT LIMITATION ══════════ */}
           {step === "anon_limit" && !isAnalyzing && (
-            <motion.div key="anon_limit" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-2xl p-6 border border-slate-200 text-center space-y-4">
-              <div className="w-12 h-12 bg-slate-950 text-white rounded-xl flex items-center justify-center mx-auto shadow-md">
-                <Lock className="w-5 h-5" />
+            <motion.div
+              key="anon_limit"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="rounded-2xl p-6 text-center space-y-4"
+              style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+            >
+              <div
+                className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto"
+                style={{ background: "rgba(233,30,140,0.15)", border: "1px solid rgba(233,30,140,0.3)" }}
+              >
+                <Lock className="w-5 h-5" style={{ color: "#E91E8C" }} />
               </div>
               <div>
-                <h3 className="text-base font-black text-slate-900 uppercase tracking-tight">Quota anonyme saturé</h3>
-                <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                <h3 className="text-base font-black text-white uppercase tracking-tight">Quota anonyme saturé</h3>
+                <p className="text-xs mt-1 leading-relaxed" style={{ color: "rgba(255,255,255,0.45)" }}>
                   Pour sécuriser la sauvegarde de tes métriques et continuer à utiliser nos serveurs d'analyse, la création d'un compte sécurisé est obligatoire.
                 </p>
               </div>
