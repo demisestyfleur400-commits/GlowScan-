@@ -201,17 +201,36 @@ export default function Analyze() {
         retryOn5xx: true,
       });
 
-      if (analyzeRes.status === 403) {
-        const errData = await analyzeRes.json();
-        if (errData.code === "QUOTA_EXCEEDED") {
+      // Gestion des statuts d'erreur connus
+      if (!analyzeRes.ok) {
+        let errBody: any = {};
+        try { errBody = await analyzeRes.json(); } catch {}
+
+        if (analyzeRes.status === 403 && errBody.code === "QUOTA_EXCEEDED") {
           setIsAnalyzing(false);
           setShowUpgrade(true);
           setStep("upload");
           return;
         }
+        if (analyzeRes.status === 401) {
+          setIsAnalyzing(false);
+          setStep("anon_limit");
+          return;
+        }
+        if (analyzeRes.status === 422 && errBody.code === "AI_REFUSED") {
+          // L'IA a refusé d'analyser la photo (qualité insuffisante)
+          setIsAnalyzing(false);
+          toast({
+            title: "Photo difficile à analyser",
+            description: errBody.message || "Essaie avec une photo plus nette, bien éclairée et de face.",
+            variant: "destructive",
+          });
+          setStep("upload");
+          return;
+        }
+        // 503 ou autre erreur serveur — message clair
+        throw new Error(errBody.message || "Analyse temporairement indisponible");
       }
-
-      if (!analyzeRes.ok) throw new Error("Erreur diagnostic");
 
       const data = await analyzeRes.json() as AnalysisResult & { savedScanId?: number; isAnonymous?: boolean };
       setIsAnalyzing(false);
@@ -237,11 +256,11 @@ export default function Analyze() {
       }
 
       if (data.savedScanId) setSavedScanId(data.savedScanId);
-    } catch (err) {
+    } catch (err: any) {
       setIsAnalyzing(false);
       toast({
-        title: "Validation clinique impossible",
-        description: "Échec de la corrélation des données.",
+        title: "Analyse temporairement indisponible",
+        description: err?.message || "Réessaie dans quelques secondes.",
         variant: "destructive",
       });
       setStep("questionnaire");
