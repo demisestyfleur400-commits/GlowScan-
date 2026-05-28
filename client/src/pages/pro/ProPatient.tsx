@@ -22,6 +22,16 @@ import { ProLayout, ProCard, ProInput, StatusBadge } from "@/components/ProLayou
 import { useToast } from "@/hooks/use-toast";
 import { LoadingScreen } from "./ProDashboard";
 
+const NAVY = "#7c3aed";
+const INK = "#f3f0ff";
+const GREEN = "#10b981";
+
+const DS = {
+  body: "rgba(200,185,255,0.65)",
+  muted: "rgba(255,255,255,0.35)",
+  border: "rgba(255,255,255,0.07)",
+};
+
 export default function ProPatient() {
   const [, params] = useRoute("/pro/patient/:id");
   const [, setLocation] = useLocation();
@@ -94,7 +104,10 @@ export default function ProPatient() {
         <button
           onClick={handleDelete}
           data-testid="button-delete"
-          className="p-2 rounded-md text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+          className="p-2 rounded-xl transition-colors"
+          style={{ color: DS.muted }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = "#f87171")}
+          onMouseLeave={(e) => (e.currentTarget.style.color = DS.muted)}
         >
           <Trash2 className="w-4 h-4" />
         </button>
@@ -104,17 +117,17 @@ export default function ProPatient() {
       <ProCard className="p-5 mb-4">
         <div className="flex items-start gap-4 mb-4">
           <div
-            className="w-14 h-14 rounded-full flex items-center justify-center text-white font-bold text-base flex-shrink-0"
+            className="w-14 h-14 rounded-full flex items-center justify-center text-white font-extrabold text-base flex-shrink-0"
             style={{ background: NAVY }}
           >
             {p.firstName[0]}
             {p.lastName[0]}
           </div>
           <div className="flex-1 min-w-0">
-            <h2 className="text-lg font-bold" style={{ color: INK }} data-testid="text-patient-name">
+            <h2 className="text-lg font-extrabold" style={{ color: INK }} data-testid="text-patient-name">
               {p.firstName} {p.lastName}
             </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs mt-0.5" style={{ color: DS.muted }}>
               {p.age ? `${p.age} ans · ` : ""}
               {p.sex || ""}
               {p.whatsappNumber ? ` · ${p.whatsappNumber}` : ""}
@@ -129,7 +142,7 @@ export default function ProPatient() {
           <Link
             href={`/pro/analyse?patient=${p.id}`}
             data-testid="button-new-scan"
-            className="flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-white text-xs font-semibold transition-all hover:shadow-md"
+            className="flex items-center justify-center gap-1.5 py-2.5 rounded-full text-white text-xs font-extrabold transition-all active:scale-[0.97]"
             style={{ background: NAVY }}
           >
             <ScanLine className="w-3.5 h-3.5" />
@@ -138,8 +151,8 @@ export default function ProPatient() {
           <button
             onClick={sendWhatsApp}
             data-testid="button-whatsapp"
-            className="flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-white text-xs font-semibold transition-all hover:shadow-md"
-            style={{ background: GREEN }}
+            className="flex items-center justify-center gap-1.5 py-2.5 rounded-full text-white text-xs font-extrabold transition-all active:scale-[0.97]"
+            style={{ background: "linear-gradient(135deg, #25d366 0%, #128c7e 100%)" }}
           >
             <MessageCircle className="w-3.5 h-3.5" />
             WhatsApp
@@ -147,7 +160,8 @@ export default function ProPatient() {
           <button
             onClick={exportPdf}
             data-testid="button-pdf"
-            className="flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-semibold bg-white border border-slate-300 text-slate-800 hover:bg-slate-50 transition-colors"
+            className="flex items-center justify-center gap-1.5 py-2.5 rounded-full text-xs font-extrabold transition-all active:scale-[0.97]"
+            style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)", color: DS.body }}
           >
             <FileText className="w-3.5 h-3.5" />
             Export PDF
@@ -157,13 +171,18 @@ export default function ProPatient() {
 
       {/* Reminder 30j */}
       {showReminder && (
-        <ProCard className="p-4 mb-4 border-amber-200 bg-amber-50">
+        <ProCard className="p-4 mb-4" style={{ background: "rgba(251,191,36,0.08)", borderColor: "rgba(251,191,36,0.25)" }}>
           <div className="flex items-start gap-3">
-            <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+            <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: "#fbbf24" }} />
             <div className="flex-1">
-              <p className="text-sm font-semibold text-amber-900">Pas de suivi depuis {daysSinceLast} jours</p>
-              <p className="text-xs text-amber-700 mb-2">Envoyer un rappel à {p.firstName} ?</p>
-              <button onClick={sendWhatsApp} className="text-xs font-semibold underline" style={{ color: GREEN }} data-testid="button-send-reminder">
+              <p className="text-sm font-extrabold" style={{ color: "#fbbf24" }}>Pas de suivi depuis {daysSinceLast} jours</p>
+              <p className="text-xs mb-2" style={{ color: DS.body }}>Envoyer un rappel à {p.firstName} ?</p>
+              <button
+                onClick={sendWhatsApp}
+                className="text-xs font-extrabold underline"
+                style={{ color: GREEN }}
+                data-testid="button-send-reminder"
+              >
                 Envoyer un rappel WhatsApp
               </button>
             </div>
@@ -174,28 +193,39 @@ export default function ProPatient() {
       {/* Comparison avant/après */}
       {lastScan && previousScan && (
         <ProCard className="p-5 mb-4">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-3">
+          <p className="text-[11px] font-extrabold uppercase tracking-wider mb-3" style={{ color: DS.muted }}>
             Comparaison avant / après
           </p>
           <div className="grid grid-cols-2 gap-3">
-            <div className="text-center p-3 rounded-lg bg-slate-50">
-              <p className="text-[10px] text-slate-500">{new Date(previousScan.createdAt!).toLocaleDateString("fr-FR")}</p>
-              <p className="text-2xl font-bold text-slate-700 mt-1">{previousScan.score}<span className="text-sm text-slate-400">/100</span></p>
-              <p className="text-[10px] text-slate-500 truncate mt-1">{previousScan.condition}</p>
+            <div
+              className="text-center p-3 rounded-xl"
+              style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${DS.border}` }}
+            >
+              <p className="text-[10px]" style={{ color: DS.muted }}>{new Date(previousScan.createdAt!).toLocaleDateString("fr-FR")}</p>
+              <p className="text-2xl font-extrabold mt-1" style={{ color: INK }}>
+                {previousScan.score}<span className="text-sm" style={{ color: DS.muted }}>/100</span>
+              </p>
+              <p className="text-[10px] truncate mt-1" style={{ color: DS.body }}>{previousScan.condition}</p>
             </div>
-            <div className="text-center p-3 rounded-lg" style={{ background: (evolution || 0) >= 0 ? "#ECFDF5" : "#FEF3C7" }}>
-              <p className="text-[10px] font-semibold" style={{ color: (evolution || 0) >= 0 ? GREEN : "#B45309" }}>
+            <div
+              className="text-center p-3 rounded-xl"
+              style={{
+                background: (evolution || 0) >= 0 ? "rgba(16,185,129,0.1)" : "rgba(251,191,36,0.1)",
+                border: `1px solid ${(evolution || 0) >= 0 ? "rgba(16,185,129,0.25)" : "rgba(251,191,36,0.25)"}`,
+              }}
+            >
+              <p className="text-[10px] font-extrabold" style={{ color: (evolution || 0) >= 0 ? "#6ee7b7" : "#fbbf24" }}>
                 {new Date(lastScan.createdAt!).toLocaleDateString("fr-FR")}
               </p>
-              <p className="text-2xl font-bold mt-1" style={{ color: (evolution || 0) >= 0 ? GREEN : "#B45309" }}>
+              <p className="text-2xl font-extrabold mt-1" style={{ color: (evolution || 0) >= 0 ? "#6ee7b7" : "#fbbf24" }}>
                 {lastScan.score}<span className="text-sm opacity-70">/100</span>
               </p>
-              <p className="text-[10px] text-slate-600 truncate mt-1">{lastScan.condition}</p>
+              <p className="text-[10px] truncate mt-1" style={{ color: DS.body }}>{lastScan.condition}</p>
             </div>
           </div>
-          <p className="text-xs text-center mt-3 text-slate-600">
+          <p className="text-xs text-center mt-3" style={{ color: DS.body }}>
             Évolution :{" "}
-            <span className="font-bold" style={{ color: (evolution || 0) >= 0 ? GREEN : "#B45309" }}>
+            <span className="font-extrabold" style={{ color: (evolution || 0) >= 0 ? GREEN : "#fbbf24" }}>
               {(evolution || 0) >= 0 ? "+" : ""}
               {evolution} pts
             </span>
@@ -204,16 +234,16 @@ export default function ProPatient() {
       )}
 
       {/* Timeline */}
-      <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-2 px-1">
+      <p className="text-[11px] font-extrabold uppercase tracking-wider mb-2 px-1" style={{ color: DS.muted }}>
         Historique ({scans.length})
       </p>
 
       {scans.length === 0 ? (
         <ProCard className="p-8 text-center">
-          <p className="text-slate-500 text-sm mb-3">Aucune analyse encore</p>
+          <p className="text-sm mb-3" style={{ color: DS.body }}>Aucune analyse encore</p>
           <Link
             href={`/pro/analyse?patient=${p.id}`}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-white text-sm font-semibold"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-white text-sm font-extrabold active:scale-[0.97] transition-all"
             style={{ background: NAVY }}
             data-testid="link-first-scan"
           >
@@ -227,30 +257,40 @@ export default function ProPatient() {
             <ProCard key={s.id} className="p-4">
               <div className="flex items-start justify-between mb-3">
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-bold" style={{ color: INK }} data-testid={`text-condition-${s.id}`}>
+                  <p className="text-sm font-extrabold" style={{ color: INK }} data-testid={`text-condition-${s.id}`}>
                     {s.condition || "Diagnostic en attente"}
                   </p>
-                  <p className="text-[11px] text-slate-500 mt-0.5">
+                  <p className="text-[11px] mt-0.5" style={{ color: DS.muted }}>
                     {s.createdAt
                       ? new Date(s.createdAt).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
                       : ""}
                   </p>
                 </div>
                 <div className="text-right flex-shrink-0 ml-3">
-                  <p className="text-2xl font-bold" style={{ color: NAVY }}>{s.score}</p>
-                  <p className="text-[9px] uppercase text-slate-400 font-semibold tracking-wider">Glow</p>
+                  <p className="text-2xl font-extrabold" style={{ color: NAVY }}>{s.score}</p>
+                  <p className="text-[9px] uppercase font-extrabold tracking-wider" style={{ color: DS.muted }}>Glow</p>
                 </div>
               </div>
 
               {s.imageUrl && (
-                <img src={s.imageUrl} alt="" className="w-full h-44 object-cover rounded-lg mb-3 border border-slate-200" />
+                <img
+                  src={s.imageUrl}
+                  alt=""
+                  className="w-full h-44 object-cover rounded-xl mb-3"
+                  style={{ border: `1px solid ${DS.border}` }}
+                />
               )}
 
-              {s.analysis && <p className="text-xs text-slate-600 leading-relaxed mb-2">{s.analysis}</p>}
+              {s.analysis && (
+                <p className="text-xs leading-relaxed mb-2" style={{ color: DS.body }}>{s.analysis}</p>
+              )}
 
               {s.dermatoNote && (
-                <p className="text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 mb-2" style={{ color: INK }}>
-                  <strong>Note :</strong> {s.dermatoNote}
+                <p
+                  className="text-xs rounded-xl p-2.5 mb-2"
+                  style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${DS.border}`, color: INK }}
+                >
+                  <strong style={{ color: DS.body }}>Note :</strong> {s.dermatoNote}
                 </p>
               )}
 
@@ -260,26 +300,36 @@ export default function ProPatient() {
                 const items = ctx.questionnaireItems as { id: string; label: string; axis: string }[] | undefined;
                 if (!answers || !items || items.length === 0) return null;
                 return (
-                  <details className="mb-2 rounded-lg border border-slate-200 bg-white" data-testid={`questionnaire-${s.id}`}>
-                    <summary className="cursor-pointer text-[11px] font-semibold text-slate-700 px-3 py-2 hover:bg-slate-50">
+                  <details
+                    className="mb-2 rounded-xl overflow-hidden"
+                    style={{ border: `1px solid ${DS.border}` }}
+                    data-testid={`questionnaire-${s.id}`}
+                  >
+                    <summary
+                      className="cursor-pointer text-[11px] font-extrabold px-3 py-2 transition-colors"
+                      style={{ color: DS.body, background: "rgba(255,255,255,0.03)" }}
+                    >
                       Anamnèse ({Object.keys(answers).length} réponses)
                     </summary>
-                    <div className="p-3 pt-0 space-y-1.5">
+                    <div className="p-3 pt-0 space-y-1.5" style={{ background: "rgba(255,255,255,0.02)" }}>
                       {items.map((q) => {
                         const a = answers[q.id];
                         if (!a) return null;
                         const colorMap: any = {
-                          oui: { bg: "bg-emerald-50", text: "text-emerald-700", label: "Oui" },
-                          non: { bg: "bg-red-50", text: "text-red-700", label: "Non" },
-                          nsp: { bg: "bg-slate-100", text: "text-slate-600", label: "NSP" },
+                          oui: { bg: "rgba(16,185,129,0.1)", border: "rgba(16,185,129,0.25)", text: "#6ee7b7", label: "Oui" },
+                          non: { bg: "rgba(248,113,113,0.1)", border: "rgba(248,113,113,0.25)", text: "#f87171", label: "Non" },
+                          nsp: { bg: "rgba(255,255,255,0.05)", border: "rgba(255,255,255,0.1)", text: DS.muted, label: "NSP" },
                         };
                         const c = colorMap[a] || colorMap.nsp;
                         return (
-                          <div key={q.id} className="flex items-start gap-2 text-[11px]">
-                            <span className={`px-1.5 py-0.5 rounded font-bold flex-shrink-0 ${c.bg} ${c.text}`}>
+                          <div key={q.id} className="flex items-start gap-2 text-[11px] pt-1.5">
+                            <span
+                              className="px-1.5 py-0.5 rounded font-extrabold flex-shrink-0"
+                              style={{ background: c.bg, border: `1px solid ${c.border}`, color: c.text }}
+                            >
                               {c.label}
                             </span>
-                            <span className="text-slate-600">{q.label}</span>
+                            <span style={{ color: DS.body }}>{q.label}</span>
                           </div>
                         );
                       })}
@@ -295,27 +345,37 @@ export default function ProPatient() {
                 const conseil = fr.conseil_expert as string | undefined;
                 if (!zones && !justif && !conseil) return null;
                 return (
-                  <details className="mb-2 rounded-lg border border-slate-200 bg-white" data-testid={`technical-${s.id}`}>
-                    <summary className="cursor-pointer text-[11px] font-semibold text-slate-700 px-3 py-2 hover:bg-slate-50">
+                  <details
+                    className="mb-2 rounded-xl overflow-hidden"
+                    style={{ border: `1px solid ${DS.border}` }}
+                    data-testid={`technical-${s.id}`}
+                  >
+                    <summary
+                      className="cursor-pointer text-[11px] font-extrabold px-3 py-2"
+                      style={{ color: DS.body, background: "rgba(255,255,255,0.03)" }}
+                    >
                       Analyse technique par zone
                     </summary>
-                    <div className="p-3 pt-0 space-y-2">
+                    <div className="p-3 pt-0 space-y-2" style={{ background: "rgba(255,255,255,0.02)" }}>
                       {zones && Object.entries(zones).map(([zone, desc]) => (
                         <div key={zone} className="text-[11px]">
-                          <span className="font-bold uppercase tracking-wider text-slate-500">{zone}</span>
-                          <p className="text-slate-700 leading-snug">{desc}</p>
+                          <span className="font-extrabold uppercase tracking-wider" style={{ color: DS.muted }}>{zone}</span>
+                          <p className="leading-snug" style={{ color: DS.body }}>{desc}</p>
                         </div>
                       ))}
                       {justif && (
-                        <div className="text-[11px] pt-2 border-t border-slate-100">
-                          <span className="font-bold uppercase tracking-wider text-slate-500">Justification du score</span>
-                          <p className="text-slate-700 leading-snug">{justif}</p>
+                        <div className="text-[11px] pt-2" style={{ borderTop: `1px solid ${DS.border}` }}>
+                          <span className="font-extrabold uppercase tracking-wider" style={{ color: DS.muted }}>Justification du score</span>
+                          <p className="leading-snug" style={{ color: DS.body }}>{justif}</p>
                         </div>
                       )}
                       {conseil && (
-                        <div className="text-[11px] bg-amber-50 border border-amber-200 rounded p-2">
-                          <span className="font-bold uppercase tracking-wider text-amber-700">Conseil expert</span>
-                          <p className="text-slate-800 leading-snug mt-0.5">{conseil}</p>
+                        <div
+                          className="text-[11px] rounded-lg p-2"
+                          style={{ background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.25)" }}
+                        >
+                          <span className="font-extrabold uppercase tracking-wider" style={{ color: "#fbbf24" }}>Conseil expert</span>
+                          <p className="leading-snug mt-0.5" style={{ color: DS.body }}>{conseil}</p>
                         </div>
                       )}
                     </div>
@@ -324,7 +384,10 @@ export default function ProPatient() {
               })()}
 
               {s.isVerified && (
-                <div className="inline-flex items-center gap-1.5 text-[10px] font-semibold mt-2 px-2 py-1 rounded-md bg-emerald-50 border border-emerald-200" style={{ color: GREEN }}>
+                <div
+                  className="inline-flex items-center gap-1.5 text-[10px] font-extrabold mt-2 px-2 py-1 rounded-full"
+                  style={{ background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.25)", color: "#6ee7b7" }}
+                >
                   <CheckCircle2 className="w-3 h-3" />
                   Validé pour le dataset GlowScan {s.expertReviewer ? `· ${s.expertReviewer}` : ""}
                 </div>
@@ -337,7 +400,7 @@ export default function ProPatient() {
                     setValidateCorrection(s.condition || "");
                   }}
                   data-testid={`button-validate-${s.id}`}
-                  className="mt-3 inline-flex items-center gap-1.5 text-[11px] font-semibold hover:underline"
+                  className="mt-3 inline-flex items-center gap-1.5 text-[11px] font-extrabold hover:underline"
                   style={{ color: NAVY }}
                 >
                   <Sparkles className="w-3 h-3" />
@@ -346,7 +409,7 @@ export default function ProPatient() {
               )}
 
               {validatingId === s.id && (
-                <div className="mt-3 space-y-2 border-t border-slate-100 pt-3">
+                <div className="mt-3 space-y-2 pt-3" style={{ borderTop: `1px solid ${DS.border}` }}>
                   <ProInput
                     value={validateCorrection}
                     onChange={(e) => setValidateCorrection(e.target.value)}
@@ -359,14 +422,19 @@ export default function ProPatient() {
                     placeholder="Note dermato (optionnel)"
                     data-testid={`input-note-${s.id}`}
                     rows={2}
-                    className="w-full px-3 py-2 rounded-lg bg-white border border-slate-300 text-xs outline-none focus:border-blue-700 focus:ring-2 focus:ring-blue-100"
+                    className="w-full px-3 py-2 rounded-xl text-xs outline-none resize-none"
+                    style={{
+                      background: "rgba(255,255,255,0.05)",
+                      border: "1px solid rgba(167,139,250,0.2)",
+                      color: INK,
+                    }}
                   />
                   <div className="flex gap-2">
                     <button
                       onClick={() => handleValidate(s.id, true)}
                       disabled={validate.isPending}
                       data-testid={`button-confirm-validate-${s.id}`}
-                      className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-white text-xs font-semibold disabled:opacity-50"
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-full text-white text-xs font-extrabold disabled:opacity-50 active:scale-[0.97] transition-all"
                       style={{ background: GREEN }}
                     >
                       {validate.isPending ? (
@@ -382,14 +450,16 @@ export default function ProPatient() {
                       onClick={() => handleValidate(s.id, false)}
                       disabled={validate.isPending}
                       data-testid={`button-reject-${s.id}`}
-                      className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 rounded-lg bg-white border border-red-200 text-red-700 text-xs font-semibold hover:bg-red-50"
+                      className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 rounded-full text-xs font-extrabold active:scale-[0.97] transition-all"
+                      style={{ background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.25)", color: "#f87171" }}
                     >
                       <XCircle className="w-3 h-3" />
                       Rejeter
                     </button>
                     <button
                       onClick={() => setValidatingId(null)}
-                      className="px-3 py-2 rounded-lg text-slate-500 hover:bg-slate-100 text-xs"
+                      className="px-3 py-2 rounded-full text-xs font-extrabold"
+                      style={{ background: "rgba(255,255,255,0.06)", color: DS.muted }}
                     >
                       Annuler
                     </button>

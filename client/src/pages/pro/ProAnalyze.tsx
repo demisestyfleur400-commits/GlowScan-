@@ -31,6 +31,18 @@ import { useAnalyze } from "@/hooks/use-scans";
 import { useToast } from "@/hooks/use-toast";
 import type { AnalysisResult, Patient } from "@shared/schema";
 import { ProLayout, ProCard, ProInput } from "@/components/ProLayout";
+
+const NAVY = "#7c3aed";
+const INK = "#f3f0ff";
+const GREEN = "#10b981";
+
+const DS = {
+  surface: "#13101f",
+  body: "rgba(200,185,255,0.65)",
+  muted: "rgba(255,255,255,0.35)",
+  border: "rgba(255,255,255,0.07)",
+};
+
 type Step = 1 | 2 | 3 | 4 | 5;
 type AnswerValue = "oui" | "non" | "nsp";
 
@@ -225,7 +237,6 @@ export default function ProAnalyze() {
     try {
       const r = await analyze.mutateAsync({ image: photoBase64, area: "face" });
       setResult(r as any);
-      // En parallèle, on pré-charge déjà le questionnaire (gain de temps)
       genQuestionnaire.mutate({
         condition: (r as any).condition || "Affection cutanée",
         area: "face",
@@ -254,7 +265,6 @@ export default function ProAnalyze() {
   const goToQuestionnaire = () => {
     if (!result) return;
     if (questionnaire.length === 0) {
-      // Si pas encore arrivé, on relance
       genQuestionnaire.mutate({
         condition: result.condition || "Affection cutanée",
         area: "face",
@@ -273,7 +283,7 @@ export default function ProAnalyze() {
     const scanId = result?.savedScanId;
 
     if (!scanId) {
-      console.error("[pro/save] ❌ savedScanId manquant — le scan n'a pas pu être rattaché au dossier patient", { patientId, condition: result?.condition });
+      console.error("[pro/save] ❌ savedScanId manquant", { patientId, condition: result?.condition });
       toast({
         title: "Sauvegarde partielle",
         description: "Diagnostic affiché mais non rattaché au dossier. Recommencez l'analyse.",
@@ -304,11 +314,7 @@ export default function ProAnalyze() {
       setDossierSaved(true);
     }
     try {
-      await validate.mutateAsync({
-        scanId,
-        isVerified: true,
-        expertNote: null,
-      });
+      await validate.mutateAsync({ scanId, isVerified: true, expertNote: null });
       setDatasetSent(true);
     } catch (err: any) {
       console.warn("[pro/save] validate échoué (ignoré):", err?.message);
@@ -371,25 +377,37 @@ export default function ProAnalyze() {
                   <button
                     onClick={() => setPatientMode("new")}
                     data-testid="button-new-patient"
-                    className="group p-5 rounded-xl border-2 border-slate-200 hover:border-blue-700 bg-white text-left transition-all"
+                    className="group p-5 rounded-2xl text-left transition-all active:scale-[0.98]"
+                    style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}
+                    onMouseEnter={(e) => (e.currentTarget.style.borderColor = NAVY)}
+                    onMouseLeave={(e) => (e.currentTarget.style.borderColor = DS.border)}
                   >
-                    <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white mb-3" style={{ background: NAVY }}>
+                    <div
+                      className="w-10 h-10 rounded-xl flex items-center justify-center text-white mb-3"
+                      style={{ background: NAVY }}
+                    >
                       <UserPlus className="w-5 h-5" />
                     </div>
-                    <p className="font-bold text-base" style={{ color: INK }}>Nouveau patient</p>
-                    <p className="text-xs text-slate-500 mt-1">Créer un dossier (nom, âge, contact)</p>
+                    <p className="font-extrabold text-base" style={{ color: INK }}>Nouveau patient</p>
+                    <p className="text-xs mt-1" style={{ color: DS.body }}>Créer un dossier (nom, âge, contact)</p>
                   </button>
                   <button
                     onClick={() => setPatientMode("existing")}
                     data-testid="button-existing-patient"
                     disabled={(patientsData?.patients?.length || 0) === 0}
-                    className="group p-5 rounded-xl border-2 border-slate-200 hover:border-blue-700 bg-white text-left transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="group p-5 rounded-2xl text-left transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}
+                    onMouseEnter={(e) => { if (!e.currentTarget.disabled) e.currentTarget.style.borderColor = NAVY; }}
+                    onMouseLeave={(e) => (e.currentTarget.style.borderColor = DS.border)}
                   >
-                    <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white mb-3" style={{ background: GREEN }}>
+                    <div
+                      className="w-10 h-10 rounded-xl flex items-center justify-center text-white mb-3"
+                      style={{ background: GREEN }}
+                    >
                       <Users className="w-5 h-5" />
                     </div>
-                    <p className="font-bold text-base" style={{ color: INK }}>Patient existant</p>
-                    <p className="text-xs text-slate-500 mt-1">
+                    <p className="font-extrabold text-base" style={{ color: INK }}>Patient existant</p>
+                    <p className="text-xs mt-1" style={{ color: DS.body }}>
                       {patientsData?.patients?.length || 0} patient(s) au cabinet
                     </p>
                   </button>
@@ -400,7 +418,11 @@ export default function ProAnalyze() {
             {/* Formulaire nouveau patient */}
             {patientMode === "new" && (
               <ProCard className="p-5">
-                <button onClick={() => setPatientMode("choice")} className="text-xs text-slate-500 hover:text-slate-800 mb-3 inline-flex items-center gap-1">
+                <button
+                  onClick={() => setPatientMode("choice")}
+                  className="text-xs font-extrabold hover:underline mb-3 inline-flex items-center gap-1"
+                  style={{ color: DS.muted }}
+                >
                   <ArrowLeft className="w-3 h-3" /> Retour au choix
                 </button>
                 <StepHeader n={1} title="Nouveau patient" subtitle="Identité minimale pour ouvrir le dossier" />
@@ -410,12 +432,13 @@ export default function ProAnalyze() {
                   <div className="grid grid-cols-3 gap-3">
                     <ProInput label="Âge" type="number" value={age} onChange={(e) => setAge(e.target.value)} testid="input-age" placeholder="32" />
                     <div>
-                      <label className="text-xs font-semibold text-slate-700 mb-1.5 block">Sexe</label>
+                      <label className="text-xs font-extrabold mb-1.5 block" style={{ color: DS.body }}>Sexe</label>
                       <select
                         value={sex}
                         onChange={(e) => setSex(e.target.value as any)}
                         data-testid="select-sex"
-                        className="w-full px-3 py-2 rounded-lg bg-white border border-slate-300 text-sm outline-none focus:border-blue-700"
+                        className="w-full px-3 py-2 rounded-xl text-sm outline-none"
+                        style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(167,139,250,0.2)", color: INK }}
                       >
                         <option value="—">—</option>
                         <option value="F">Femme</option>
@@ -428,7 +451,7 @@ export default function ProAnalyze() {
                     type="submit"
                     disabled={createPatient.isPending}
                     data-testid="button-create-patient"
-                    className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-lg text-white text-sm font-semibold disabled:opacity-50"
+                    className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-full text-white text-sm font-extrabold disabled:opacity-50 active:scale-[0.98] transition-all"
                     style={{ background: NAVY }}
                   >
                     {createPatient.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Créer & continuer <ArrowRight className="w-4 h-4" /></>}
@@ -440,44 +463,55 @@ export default function ProAnalyze() {
             {/* Sélecteur patient existant */}
             {patientMode === "existing" && (
               <ProCard className="p-5">
-                <button onClick={() => setPatientMode("choice")} className="text-xs text-slate-500 hover:text-slate-800 mb-3 inline-flex items-center gap-1">
+                <button
+                  onClick={() => setPatientMode("choice")}
+                  className="text-xs font-extrabold hover:underline mb-3 inline-flex items-center gap-1"
+                  style={{ color: DS.muted }}
+                >
                   <ArrowLeft className="w-3 h-3" /> Retour au choix
                 </button>
                 <StepHeader n={1} title="Choisir un patient" subtitle="Tapez un nom ou téléphone pour filtrer" />
                 <div className="relative mb-3">
-                  <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+                  <Search className="w-4 h-4 absolute left-3 top-2.5" style={{ color: DS.muted }} />
                   <input
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     placeholder="Rechercher Mbarga, Marie, 677..."
                     data-testid="input-search-patient"
-                    className="w-full pl-9 pr-3 py-2 rounded-lg bg-white border border-slate-300 text-sm outline-none focus:border-blue-700"
+                    className="w-full pl-9 pr-3 py-2 rounded-xl text-sm outline-none"
+                    style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(167,139,250,0.2)", color: INK }}
                   />
                 </div>
                 <div className="space-y-1.5 max-h-80 overflow-y-auto">
                   {filteredPatients.length === 0 ? (
-                    <p className="text-sm text-slate-500 text-center py-6">Aucun patient trouvé</p>
+                    <p className="text-sm text-center py-6" style={{ color: DS.muted }}>Aucun patient trouvé</p>
                   ) : (
                     filteredPatients.map((p) => (
                       <button
                         key={p.id}
                         onClick={() => selectExisting(p)}
                         data-testid={`row-pick-patient-${p.id}`}
-                        className="w-full flex items-center gap-3 p-3 rounded-lg border border-slate-200 bg-white hover:border-blue-700 hover:bg-blue-50/30 transition-all text-left"
+                        className="w-full flex items-center gap-3 p-3 rounded-xl transition-all text-left active:scale-[0.99]"
+                        style={{ border: "1px solid rgba(255,255,255,0.07)", background: "rgba(255,255,255,0.03)" }}
+                        onMouseEnter={(e) => (e.currentTarget.style.borderColor = NAVY)}
+                        onMouseLeave={(e) => (e.currentTarget.style.borderColor = DS.border)}
                       >
-                        <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0" style={{ background: NAVY }}>
+                        <div
+                          className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-extrabold flex-shrink-0"
+                          style={{ background: NAVY }}
+                        >
                           {p.firstName[0]}{p.lastName[0]}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold truncate" style={{ color: INK }}>
+                          <p className="text-sm font-extrabold truncate" style={{ color: INK }}>
                             {p.firstName} {p.lastName}
                           </p>
-                          <p className="text-[11px] text-slate-500 truncate">
+                          <p className="text-[11px] truncate" style={{ color: DS.muted }}>
                             {p.age ? `${p.age} ans · ` : ""}
                             {p.lastScanAt ? `dernier scan ${new Date(p.lastScanAt).toLocaleDateString("fr-FR")}` : "jamais analysé"}
                           </p>
                         </div>
-                        <ArrowRight className="w-4 h-4 text-slate-300" />
+                        <ArrowRight className="w-4 h-4" style={{ color: DS.muted }} />
                       </button>
                     ))
                   )}
@@ -503,13 +537,15 @@ export default function ProAnalyze() {
                 }}
                 onClick={() => fileRef.current?.click()}
                 data-testid="dropzone"
-                className={`border-2 border-dashed rounded-lg p-10 text-center cursor-pointer transition-all ${
-                  dragOver ? "border-blue-700 bg-blue-50" : "border-slate-300 hover:border-slate-400 bg-slate-50"
-                }`}
+                className="rounded-2xl p-10 text-center cursor-pointer transition-all"
+                style={{
+                  border: `2px dashed ${dragOver ? NAVY : "rgba(167,139,250,0.3)"}`,
+                  background: dragOver ? "rgba(124,58,237,0.08)" : "rgba(255,255,255,0.03)",
+                }}
               >
-                <Upload className="w-8 h-8 mx-auto mb-2 text-slate-400" />
-                <p className="text-sm font-semibold" style={{ color: INK }}>Cliquez ou déposez la photo ici</p>
-                <p className="text-[11px] text-slate-500 mt-1">Compression auto vers WebP &lt; 500 Ko</p>
+                <Upload className="w-8 h-8 mx-auto mb-2" style={{ color: dragOver ? NAVY : "rgba(200,185,255,0.4)" }} />
+                <p className="text-sm font-extrabold" style={{ color: INK }}>Cliquez ou déposez la photo ici</p>
+                <p className="text-[11px] mt-1" style={{ color: DS.muted }}>Compression auto vers WebP &lt; 500 Ko</p>
                 <input
                   ref={fileRef}
                   type="file"
@@ -522,15 +558,22 @@ export default function ProAnalyze() {
               </div>
             ) : (
               <div>
-                <div className="relative rounded-lg overflow-hidden border border-slate-200 mb-3">
+                <div
+                  className="relative rounded-2xl overflow-hidden mb-3"
+                  style={{ border: `1px solid ${DS.border}` }}
+                >
                   <img src={photoBase64} alt="aperçu" className="w-full h-64 object-cover" data-testid="img-preview" />
-                  <span className="absolute top-2 right-2 px-2 py-1 rounded-md bg-emerald-50 border border-emerald-200 text-[11px] font-bold" style={{ color: GREEN }}>
+                  <span
+                    className="absolute top-2 right-2 px-2 py-1 rounded-lg text-[11px] font-extrabold"
+                    style={{ background: "rgba(16,185,129,0.15)", border: "1px solid rgba(16,185,129,0.3)", color: "#6ee7b7" }}
+                  >
                     {photoSize} Ko · WebP
                   </span>
                 </div>
                 <button
                   onClick={() => { setPhotoBase64(null); setPhotoSize(0); }}
-                  className="w-full text-xs font-semibold text-slate-500 hover:text-slate-800 py-1 mb-3"
+                  className="w-full text-xs font-extrabold py-1 mb-3"
+                  style={{ color: DS.muted }}
                   data-testid="button-replace"
                 >
                   Remplacer la photo
@@ -541,7 +584,8 @@ export default function ProAnalyze() {
             <div className="flex gap-2 mt-3">
               <button
                 onClick={() => setStep(1)}
-                className="px-4 py-2.5 rounded-lg bg-white border border-slate-300 text-slate-700 text-sm font-semibold hover:bg-slate-50 inline-flex items-center gap-1"
+                className="px-4 py-2.5 rounded-full text-sm font-extrabold inline-flex items-center gap-1 transition-all active:scale-[0.97]"
+                style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)", color: DS.body }}
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
                 Retour
@@ -550,7 +594,7 @@ export default function ProAnalyze() {
                 onClick={launchAnalysis}
                 disabled={!photoBase64}
                 data-testid="button-launch-analysis"
-                className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-lg text-white text-sm font-semibold disabled:opacity-50"
+                className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-full text-white text-sm font-extrabold disabled:opacity-50 active:scale-[0.98] transition-all"
                 style={{ background: NAVY }}
               >
                 Lancer l'analyse IA
@@ -571,36 +615,47 @@ export default function ProAnalyze() {
                   <StepHeader n={3} title="Diagnostic IA" subtitle={`${patientLabel} · ${result.skinType || "Phototype IV-VI"}`} />
 
                   <div className="grid grid-cols-2 gap-3 mb-4">
-                    <div className="p-4 rounded-lg border border-slate-200 bg-slate-50">
-                      <p className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">Diagnostic principal</p>
-                      <p className="text-base font-bold mt-1" style={{ color: INK }} data-testid="text-condition">
+                    <div
+                      className="p-4 rounded-xl"
+                      style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${DS.border}` }}
+                    >
+                      <p className="text-[10px] uppercase tracking-wider font-extrabold" style={{ color: DS.muted }}>Diagnostic principal</p>
+                      <p className="text-base font-extrabold mt-1" style={{ color: INK }} data-testid="text-condition">
                         {result.condition}
                       </p>
                     </div>
-                    <div className="p-4 rounded-lg border" style={{ borderColor: NAVY, background: "#EFF6FF" }}>
-                      <p className="text-[10px] uppercase tracking-wider font-bold" style={{ color: NAVY }}>Glow Score</p>
-                      <p className="text-3xl font-bold mt-1" style={{ color: NAVY }} data-testid="text-score">
-                        {result.score}<span className="text-base text-slate-400">/100</span>
+                    <div
+                      className="p-4 rounded-xl"
+                      style={{ border: `1px solid rgba(124,58,237,0.4)`, background: "rgba(124,58,237,0.1)" }}
+                    >
+                      <p className="text-[10px] uppercase tracking-wider font-extrabold" style={{ color: "#a78bfa" }}>Glow Score</p>
+                      <p className="text-3xl font-extrabold mt-1" style={{ color: NAVY }} data-testid="text-score">
+                        {result.score}<span className="text-base" style={{ color: DS.muted }}>/100</span>
                       </p>
                     </div>
                   </div>
 
-                  <p className="text-[11px] uppercase tracking-wider font-bold text-slate-500 mb-2">Analyse par zone</p>
+                  <p className="text-[11px] uppercase tracking-wider font-extrabold mb-2" style={{ color: DS.muted }}>Analyse par zone</p>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {zones.slice(0, 6).map((z, i) => {
                       const colorMap = {
-                        red: { bg: "bg-red-50", border: "border-red-200", dot: "bg-red-500", text: "text-red-700" },
-                        yellow: { bg: "bg-amber-50", border: "border-amber-200", dot: "bg-amber-500", text: "text-amber-700" },
-                        green: { bg: "bg-emerald-50", border: "border-emerald-200", dot: "bg-emerald-500", text: "text-emerald-700" },
+                        red: { bg: "rgba(248,113,113,0.1)", border: "rgba(248,113,113,0.25)", dot: "#f87171", text: "#f87171" },
+                        yellow: { bg: "rgba(251,191,36,0.1)", border: "rgba(251,191,36,0.25)", dot: "#fbbf24", text: "#fbbf24" },
+                        green: { bg: "rgba(16,185,129,0.1)", border: "rgba(16,185,129,0.25)", dot: "#6ee7b7", text: "#6ee7b7" },
                       };
                       const c = (colorMap as any)[z.status] || colorMap.green;
                       return (
-                        <div key={i} data-testid={`zone-${i}`} className={`p-3 rounded-lg border ${c.bg} ${c.border}`}>
+                        <div
+                          key={i}
+                          data-testid={`zone-${i}`}
+                          className="p-3 rounded-xl"
+                          style={{ background: c.bg, border: `1px solid ${c.border}` }}
+                        >
                           <div className="flex items-center gap-1.5 mb-1">
-                            <span className={`w-1.5 h-1.5 rounded-full ${c.dot}`} />
-                            <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-wide">{z.name}</p>
+                            <span className="w-1.5 h-1.5 rounded-full" style={{ background: c.dot }} />
+                            <p className="text-[10px] font-extrabold uppercase tracking-wide" style={{ color: DS.muted }}>{z.name}</p>
                           </div>
-                          <p className={`text-xs font-bold ${c.text}`}>{z.short}</p>
+                          <p className="text-xs font-extrabold" style={{ color: c.text }}>{z.short}</p>
                         </div>
                       );
                     })}
@@ -610,7 +665,8 @@ export default function ProAnalyze() {
                 <div className="flex gap-2 mt-3">
                   <button
                     onClick={() => setStep(2)}
-                    className="px-4 py-2.5 rounded-lg bg-white border border-slate-300 text-slate-700 text-sm font-semibold hover:bg-slate-50 inline-flex items-center gap-1"
+                    className="px-4 py-2.5 rounded-full text-sm font-extrabold inline-flex items-center gap-1 transition-all active:scale-[0.97]"
+                    style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)", color: DS.body }}
                   >
                     <ArrowLeft className="w-3.5 h-3.5" />
                     Retour
@@ -618,7 +674,7 @@ export default function ProAnalyze() {
                   <button
                     onClick={goToQuestionnaire}
                     data-testid="button-to-questionnaire"
-                    className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-lg text-white text-sm font-semibold"
+                    className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-full text-white text-sm font-extrabold active:scale-[0.98] transition-all"
                     style={{ background: NAVY }}
                   >
                     Anamnèse patient
@@ -636,32 +692,41 @@ export default function ProAnalyze() {
             <StepHeader
               n={4}
               title="Questionnaire d'anamnèse"
-              subtitle={questionnaire.length > 0 ? `${Object.keys(answers).length}/${questionnaire.length} questions répondues — généré par IA selon le diagnostic` : "L'IA prépare des questions ciblées..."}
+              subtitle={questionnaire.length > 0
+                ? `${Object.keys(answers).length}/${questionnaire.length} questions répondues — généré par IA selon le diagnostic`
+                : "L'IA prépare des questions ciblées..."}
             />
 
             {genQuestionnaire.isPending || questionnaire.length === 0 ? (
               <div className="py-10 text-center">
                 <Loader2 className="w-6 h-6 animate-spin mx-auto mb-3" style={{ color: NAVY }} />
-                <p className="text-sm font-semibold" style={{ color: INK }}>Préparation du questionnaire</p>
-                <p className="text-xs text-slate-500 mt-1">L'IA cible les questions selon "{result?.condition}"</p>
+                <p className="text-sm font-extrabold" style={{ color: INK }}>Préparation du questionnaire</p>
+                <p className="text-xs mt-1" style={{ color: DS.muted }}>L'IA cible les questions selon "{result?.condition}"</p>
               </div>
             ) : (
               <>
                 <div className="space-y-3">
                   {questionnaire.map((q, i) => (
-                    <div key={q.id} className="p-3 rounded-lg border border-slate-200 bg-white">
+                    <div
+                      key={q.id}
+                      className="p-3 rounded-xl"
+                      style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${DS.border}` }}
+                    >
                       <div className="flex items-start gap-2 mb-2">
-                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: "#EFF6FF", color: NAVY }}>
+                        <span
+                          className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-lg"
+                          style={{ background: "rgba(124,58,237,0.15)", color: NAVY }}
+                        >
                           Q{i + 1}
                         </span>
-                        <p className="text-sm font-semibold flex-1" style={{ color: INK }}>{q.label}</p>
+                        <p className="text-sm font-extrabold flex-1" style={{ color: INK }}>{q.label}</p>
                       </div>
-                      <p className="text-[10px] uppercase text-slate-400 font-semibold mb-2">{q.axis}</p>
+                      <p className="text-[10px] uppercase font-extrabold mb-2" style={{ color: DS.muted }}>{q.axis}</p>
                       <div className="grid grid-cols-3 gap-1.5">
                         {([
-                          { v: "oui" as AnswerValue, label: "Oui", icon: Check, color: GREEN, bg: "bg-emerald-50", border: "border-emerald-200" },
-                          { v: "non" as AnswerValue, label: "Non", icon: X, color: "#DC2626", bg: "bg-red-50", border: "border-red-200" },
-                          { v: "nsp" as AnswerValue, label: "Ne sait pas", icon: HelpCircle, color: "#64748B", bg: "bg-slate-100", border: "border-slate-200" },
+                          { v: "oui" as AnswerValue, label: "Oui", icon: Check, activeBg: "rgba(16,185,129,0.12)", activeBorder: "rgba(16,185,129,0.35)", activeColor: "#6ee7b7" },
+                          { v: "non" as AnswerValue, label: "Non", icon: X, activeBg: "rgba(248,113,113,0.12)", activeBorder: "rgba(248,113,113,0.35)", activeColor: "#f87171" },
+                          { v: "nsp" as AnswerValue, label: "Ne sait pas", icon: HelpCircle, activeBg: "rgba(255,255,255,0.08)", activeBorder: "rgba(255,255,255,0.15)", activeColor: DS.body },
                         ]).map((opt) => {
                           const on = answers[q.id] === opt.v;
                           const Icon = opt.icon;
@@ -670,10 +735,11 @@ export default function ProAnalyze() {
                               key={opt.v}
                               onClick={() => setAnswers({ ...answers, [q.id]: opt.v })}
                               data-testid={`answer-${q.id}-${opt.v}`}
-                              className={`px-2 py-2 rounded-lg text-xs font-semibold border-2 transition-all inline-flex items-center justify-center gap-1 ${
-                                on ? `${opt.bg} ${opt.border}` : "bg-white border-slate-200 hover:border-slate-400"
-                              }`}
-                              style={on ? { color: opt.color } : { color: "#64748B" }}
+                              className="px-2 py-2 rounded-xl text-xs font-extrabold border-2 transition-all inline-flex items-center justify-center gap-1 active:scale-[0.97]"
+                              style={on
+                                ? { background: opt.activeBg, borderColor: opt.activeBorder, color: opt.activeColor }
+                                : { background: "rgba(255,255,255,0.03)", borderColor: DS.border, color: DS.muted }
+                              }
                             >
                               <Icon className="w-3 h-3" />
                               {opt.label}
@@ -685,10 +751,11 @@ export default function ProAnalyze() {
                   ))}
                 </div>
 
-                <div className="flex gap-2 mt-4 pt-4 border-t border-slate-100">
+                <div className="flex gap-2 mt-4 pt-4" style={{ borderTop: `1px solid ${DS.border}` }}>
                   <button
                     onClick={() => setStep(3)}
-                    className="px-4 py-2.5 rounded-lg bg-white border border-slate-300 text-slate-700 text-sm font-semibold hover:bg-slate-50 inline-flex items-center gap-1"
+                    className="px-4 py-2.5 rounded-full text-sm font-extrabold inline-flex items-center gap-1 transition-all active:scale-[0.97]"
+                    style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)", color: DS.body }}
                   >
                     <ArrowLeft className="w-3.5 h-3.5" />
                     Retour
@@ -697,7 +764,7 @@ export default function ProAnalyze() {
                     onClick={saveDossier}
                     disabled={!allAnswered || attach.isPending}
                     data-testid="button-save-dossier"
-                    className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-lg text-white text-sm font-semibold disabled:opacity-50"
+                    className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-full text-white text-sm font-extrabold disabled:opacity-50 active:scale-[0.98] transition-all"
                     style={{ background: NAVY }}
                   >
                     {attach.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Enregistrer le dossier <CheckCircle2 className="w-4 h-4" /></>}
@@ -714,48 +781,57 @@ export default function ProAnalyze() {
             <ProCard className="p-6 text-center" testid="card-confirmation">
               {dossierSaved ? (
                 <>
-                  <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
-                    <CheckCircle2 className="w-8 h-8" style={{ color: GREEN }} />
+                  <div
+                    className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
+                    style={{ background: "rgba(16,185,129,0.12)", border: "1px solid rgba(16,185,129,0.25)" }}
+                  >
+                    <CheckCircle2 className="w-8 h-8" style={{ color: "#6ee7b7" }} />
                   </div>
-                  <h2 className="text-xl font-bold mb-2" style={{ color: INK }} data-testid="text-confirmation-title">
+                  <h2 className="text-xl font-extrabold mb-2" style={{ color: INK }} data-testid="text-confirmation-title">
                     Dossier de {patientLabel} mis à jour ✅
                   </h2>
-                  <p className="text-sm text-slate-600 mb-1">
+                  <p className="text-sm mb-1" style={{ color: DS.body }}>
                     Photo, diagnostic, anamnèse et produits enregistrés.
                   </p>
-                  <p className="text-xs text-slate-500 mb-5">
-                    Retrouvez ce dossier dans <strong>Patients → {patientLabel}</strong>
+                  <p className="text-xs mb-5" style={{ color: DS.muted }}>
+                    Retrouvez ce dossier dans <strong style={{ color: DS.body }}>Patients → {patientLabel}</strong>
                   </p>
 
                   {datasetSent && (
-                    <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-[11px] font-bold mb-5" style={{ color: GREEN }}>
+                    <div
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-extrabold mb-5"
+                      style={{ background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.25)", color: "#6ee7b7" }}
+                    >
                       <Sparkles className="w-3 h-3" />
                       Ajouté au dataset GlowScan (RLHF)
                     </div>
                   )}
 
                   {/* Récap dossier */}
-                  <div className="bg-slate-50 rounded-lg p-4 mb-5 text-left">
+                  <div
+                    className="rounded-2xl p-4 mb-5 text-left"
+                    style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${DS.border}` }}
+                  >
                     <div className="grid grid-cols-3 gap-3 mb-3">
                       {photoBase64 && (
-                        <img src={photoBase64} alt="" className="w-full h-20 object-cover rounded-md border border-slate-200" />
+                        <img src={photoBase64} alt="" className="w-full h-20 object-cover rounded-xl" style={{ border: `1px solid ${DS.border}` }} />
                       )}
                       <div className="col-span-2 space-y-1.5">
                         <Mini label="Diagnostic" value={result?.condition || "—"} />
                         <Mini label="Glow Score" value={`${result?.score || 0}/100`} accent={NAVY} />
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 text-[11px] text-slate-500">
-                      <CheckCircle2 className="w-3 h-3" style={{ color: GREEN }} />
+                    <div className="flex items-center gap-2 text-[11px]" style={{ color: DS.muted }}>
+                      <CheckCircle2 className="w-3 h-3" style={{ color: "#6ee7b7" }} />
                       Anamnèse complète : {Object.keys(answers).length} réponses
                     </div>
-                    <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-1">
-                      <CheckCircle2 className="w-3 h-3" style={{ color: GREEN }} />
+                    <div className="flex items-center gap-2 text-[11px] mt-1" style={{ color: DS.muted }}>
+                      <CheckCircle2 className="w-3 h-3" style={{ color: "#6ee7b7" }} />
                       Photo archivée · {new Date().toLocaleString("fr-FR")}
                     </div>
                     {result?.recommendations?.products && result.recommendations.products.length > 0 && (
-                      <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-1">
-                        <CheckCircle2 className="w-3 h-3" style={{ color: GREEN }} />
+                      <div className="flex items-center gap-2 text-[11px] mt-1" style={{ color: DS.muted }}>
+                        <CheckCircle2 className="w-3 h-3" style={{ color: "#6ee7b7" }} />
                         {result.recommendations.products.length} produit(s) recommandé(s)
                       </div>
                     )}
@@ -767,29 +843,36 @@ export default function ProAnalyze() {
                       const conseil = r?.conseil_expert as string | undefined;
                       if (!zones && !justif && !conseil) return null;
                       return (
-                        <div className="mt-3 pt-3 border-t border-slate-200 space-y-2 text-left">
+                        <div className="mt-3 pt-3 space-y-2 text-left" style={{ borderTop: `1px solid ${DS.border}` }}>
                           {zones && (
                             <div>
-                              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Analyse par zone</p>
+                              <p className="text-[10px] font-extrabold uppercase tracking-wider mb-1" style={{ color: DS.muted }}>Analyse par zone</p>
                               <div className="grid grid-cols-2 gap-1.5">
                                 {Object.entries(zones).map(([z, d]) => (
-                                  <div key={z} className="text-[10px] bg-white border border-slate-200 rounded p-1.5">
-                                    <span className="font-bold uppercase text-slate-500">{z}</span>
-                                    <p className="text-slate-700 leading-tight">{d}</p>
+                                  <div
+                                    key={z}
+                                    className="text-[10px] rounded-lg p-1.5"
+                                    style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${DS.border}` }}
+                                  >
+                                    <span className="font-extrabold uppercase" style={{ color: DS.muted }}>{z}</span>
+                                    <p className="leading-tight" style={{ color: DS.body }}>{d}</p>
                                   </div>
                                 ))}
                               </div>
                             </div>
                           )}
                           {justif && (
-                            <div className="text-[10px] text-slate-600">
-                              <span className="font-bold uppercase tracking-wider text-slate-500">Justification score :</span> {justif}
+                            <div className="text-[10px]" style={{ color: DS.body }}>
+                              <span className="font-extrabold uppercase tracking-wider" style={{ color: DS.muted }}>Justification score :</span> {justif}
                             </div>
                           )}
                           {conseil && (
-                            <div className="text-[11px] bg-amber-50 border border-amber-200 rounded p-2">
-                              <span className="font-bold uppercase tracking-wider text-amber-700 text-[10px]">Conseil expert</span>
-                              <p className="text-slate-800 leading-snug mt-0.5">{conseil}</p>
+                            <div
+                              className="text-[11px] rounded-lg p-2"
+                              style={{ background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.25)" }}
+                            >
+                              <span className="font-extrabold uppercase tracking-wider text-[10px]" style={{ color: "#fbbf24" }}>Conseil expert</span>
+                              <p className="leading-snug mt-0.5" style={{ color: DS.body }}>{conseil}</p>
                             </div>
                           )}
                         </div>
@@ -802,7 +885,7 @@ export default function ProAnalyze() {
                     <button
                       onClick={() => patientId && setLocation(`/pro/patient/${patientId}`)}
                       data-testid="button-view-dossier"
-                      className="inline-flex items-center justify-center gap-1.5 py-3 rounded-lg text-white text-sm font-semibold"
+                      className="inline-flex items-center justify-center gap-1.5 py-3 rounded-full text-white text-sm font-extrabold active:scale-[0.97] transition-all"
                       style={{ background: NAVY }}
                     >
                       <FileText className="w-4 h-4" />
@@ -811,8 +894,8 @@ export default function ProAnalyze() {
                     <button
                       onClick={handleWhatsApp}
                       data-testid="button-whatsapp"
-                      className="inline-flex items-center justify-center gap-1.5 py-3 rounded-lg text-white text-sm font-semibold"
-                      style={{ background: GREEN }}
+                      className="inline-flex items-center justify-center gap-1.5 py-3 rounded-full text-white text-sm font-extrabold active:scale-[0.97] transition-all"
+                      style={{ background: "linear-gradient(135deg, #25d366 0%, #128c7e 100%)" }}
                     >
                       <MessageCircle className="w-4 h-4" />
                       Envoyer diagnostic
@@ -822,7 +905,8 @@ export default function ProAnalyze() {
                     <button
                       onClick={exportPdf}
                       data-testid="button-pdf"
-                      className="inline-flex items-center justify-center gap-1.5 py-2.5 rounded-lg bg-white border border-slate-300 text-slate-800 text-xs font-semibold hover:bg-slate-50"
+                      className="inline-flex items-center justify-center gap-1.5 py-2.5 rounded-full text-xs font-extrabold active:scale-[0.97] transition-all"
+                      style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)", color: DS.body }}
                     >
                       <FileText className="w-3.5 h-3.5" />
                       Exporter PDF
@@ -830,7 +914,8 @@ export default function ProAnalyze() {
                     <button
                       onClick={resetAll}
                       data-testid="button-new"
-                      className="inline-flex items-center justify-center gap-1.5 py-2.5 rounded-lg bg-white border border-slate-300 text-slate-800 text-xs font-semibold hover:bg-slate-50"
+                      className="inline-flex items-center justify-center gap-1.5 py-2.5 rounded-full text-xs font-extrabold active:scale-[0.97] transition-all"
+                      style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)", color: DS.body }}
                     >
                       <RefreshCw className="w-3.5 h-3.5" />
                       Nouvelle analyse
@@ -840,7 +925,7 @@ export default function ProAnalyze() {
               ) : (
                 <div className="py-6">
                   <Loader2 className="w-6 h-6 animate-spin mx-auto mb-3" style={{ color: NAVY }} />
-                  <p className="text-sm font-semibold" style={{ color: INK }}>Enregistrement du dossier...</p>
+                  <p className="text-sm font-extrabold" style={{ color: INK }}>Enregistrement du dossier...</p>
                 </div>
               )}
             </ProCard>
@@ -870,15 +955,19 @@ function ProgressBar({ current }: { current: Step }) {
             <div key={s.n} className="flex-1 flex items-center gap-1">
               <div
                 className="flex-1 h-1 rounded-full transition-all"
-                style={{ background: done || active ? NAVY : "#E2E8F0" }}
+                style={{ background: done || active ? NAVY : "rgba(255,255,255,0.1)" }}
               />
             </div>
           );
         })}
       </div>
-      <div className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider">
+      <div className="flex items-center justify-between text-[10px] font-extrabold uppercase tracking-wider">
         {STEPS.map((s) => (
-          <span key={s.n} className="flex-1 text-center" style={{ color: s.n <= current ? NAVY : "#94A3B8" }}>
+          <span
+            key={s.n}
+            className="flex-1 text-center"
+            style={{ color: s.n <= current ? NAVY : "rgba(255,255,255,0.25)" }}
+          >
             {s.n}. {s.label}
           </span>
         ))}
@@ -889,10 +978,10 @@ function ProgressBar({ current }: { current: Step }) {
 
 function StepHeader({ n, title, subtitle }: { n: number; title: string; subtitle?: string }) {
   return (
-    <div className="mb-5 pb-4 border-b border-slate-100">
-      <p className="text-[10px] uppercase tracking-wider font-bold" style={{ color: NAVY }}>Étape {n}</p>
-      <h2 className="text-base font-bold mt-1" style={{ color: INK }}>{title}</h2>
-      {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
+    <div className="mb-5 pb-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+      <p className="text-[10px] uppercase tracking-wider font-extrabold" style={{ color: NAVY }}>Étape {n}</p>
+      <h2 className="text-base font-extrabold mt-1" style={{ color: INK }}>{title}</h2>
+      {subtitle && <p className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>{subtitle}</p>}
     </div>
   );
 }
@@ -913,23 +1002,26 @@ function ScanLoader({ photo }: { photo: string | null }) {
   return (
     <ProCard className="p-6 overflow-hidden">
       <div className="text-center mb-5">
-        <p className="text-[10px] uppercase tracking-wider font-bold" style={{ color: NAVY }}>Étape 3</p>
-        <h2 className="text-base font-bold mt-1" style={{ color: INK }}>Analyse IA en cours</h2>
+        <p className="text-[10px] uppercase tracking-wider font-extrabold" style={{ color: NAVY }}>Étape 3</p>
+        <h2 className="text-base font-extrabold mt-1" style={{ color: INK }}>Analyse IA en cours</h2>
       </div>
 
-      <div className="relative mx-auto w-56 h-56 rounded-2xl overflow-hidden border-2 mb-5" style={{ borderColor: NAVY }}>
+      <div
+        className="relative mx-auto w-56 h-56 rounded-2xl overflow-hidden border-2 mb-5"
+        style={{ borderColor: NAVY }}
+      >
         {photo ? (
           <img src={photo} alt="" className="absolute inset-0 w-full h-full object-cover" />
         ) : (
-          <div className="absolute inset-0 bg-slate-100" />
+          <div className="absolute inset-0" style={{ background: "rgba(255,255,255,0.04)" }} />
         )}
-        <div className="absolute inset-0 bg-gradient-to-b from-blue-900/20 via-transparent to-blue-900/30" />
+        <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, rgba(124,58,237,0.15), transparent, rgba(124,58,237,0.2))" }} />
         <span className="absolute top-2 left-2 w-5 h-5 border-t-2 border-l-2" style={{ borderColor: NAVY }} />
         <span className="absolute top-2 right-2 w-5 h-5 border-t-2 border-r-2" style={{ borderColor: NAVY }} />
         <span className="absolute bottom-2 left-2 w-5 h-5 border-b-2 border-l-2" style={{ borderColor: NAVY }} />
         <span className="absolute bottom-2 right-2 w-5 h-5 border-b-2 border-r-2" style={{ borderColor: NAVY }} />
         <div
-          className="absolute left-0 right-0 h-1 shadow-[0_0_18px_3px_rgba(30,64,175,0.8)]"
+          className="absolute left-0 right-0 h-1"
           style={{ background: `linear-gradient(90deg, transparent, ${NAVY}, transparent)`, animation: "scan 2.2s ease-in-out infinite" }}
         />
         <div className="absolute inset-0 flex items-center justify-center">
@@ -938,11 +1030,14 @@ function ScanLoader({ photo }: { photo: string | null }) {
       </div>
 
       <div className="text-center">
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-200 mb-3">
+        <div
+          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-3"
+          style={{ background: "rgba(124,58,237,0.12)", border: "1px solid rgba(124,58,237,0.3)" }}
+        >
           <ScanLine className="w-3.5 h-3.5 animate-pulse" style={{ color: NAVY }} />
-          <span className="text-xs font-bold" style={{ color: NAVY }}>{phases[phase]}</span>
+          <span className="text-xs font-extrabold" style={{ color: "#a78bfa" }}>{phases[phase]}</span>
         </div>
-        <p className="text-[11px] text-slate-500 mt-3">Détection automatique zone par zone</p>
+        <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.35)" }}>Détection automatique zone par zone</p>
       </div>
 
       <style>{`
@@ -958,9 +1053,9 @@ function ScanLoader({ photo }: { photo: string | null }) {
 
 function Mini({ label, value, accent }: { label: string; value: string; accent?: string }) {
   return (
-    <div className="p-2 rounded border border-slate-200 bg-white">
-      <p className="text-[9px] uppercase tracking-wider text-slate-500 font-semibold">{label}</p>
-      <p className="text-xs font-bold mt-0.5 truncate" style={{ color: accent || INK }}>{value}</p>
+    <div className="p-2 rounded-lg" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
+      <p className="text-[9px] uppercase tracking-wider font-extrabold" style={{ color: "rgba(255,255,255,0.35)" }}>{label}</p>
+      <p className="text-xs font-extrabold mt-0.5 truncate" style={{ color: accent || INK }}>{value}</p>
     </div>
   );
 }
