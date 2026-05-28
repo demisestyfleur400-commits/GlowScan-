@@ -8,6 +8,7 @@ import { objectStorageClient } from "./replit_integrations/object_storage/object
 import { api } from "@shared/routes";
 import { z } from "zod";
 import OpenAI from "openai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { GLOWSCAN_SYSTEM_PROMPT } from "./prompt";
 import webpush from "web-push";
 import { db } from "./db";
@@ -32,13 +33,13 @@ if (!_geminiKey && !_openaiKey) {
   console.log(`✅  IA provider : ${USE_GEMINI ? "Google Gemini" : "OpenAI"} — modèle ${AI_MODEL}`);
 }
 
-// Le SDK OpenAI est compatible avec l'endpoint Gemini (même format API)
-const openai = new OpenAI({
-  apiKey:  USE_GEMINI ? _geminiKey : (_openaiKey || "sk-missing"),
-  baseURL: USE_GEMINI
-    ? "https://generativelanguage.googleapis.com/v1beta/openai/"
-    : (_openaiBase || undefined),
-});
+// Native Gemini SDK (Google AI Studio — pas de proxy OpenAI)
+const gemini = USE_GEMINI ? new GoogleGenerativeAI(_geminiKey) : null;
+// OpenAI SDK (uniquement si GEMINI_API_KEY est absent)
+const openai = !USE_GEMINI ? new OpenAI({
+  apiKey: _openaiKey || "sk-missing",
+  baseURL: _openaiBase || undefined,
+}) : null;
 
 /**
  * Récupère l'ID utilisateur quelle que soit la méthode d'auth :
@@ -170,12 +171,22 @@ export async function registerRoutes(
       });
     }
     try {
-      // Appel minimal pour valider la clé (sans max_tokens pour compatibilité Gemini)
-      const testModel = USE_GEMINI ? "gemini-1.5-flash" : AI_MODEL_FAST;
-      await openai.chat.completions.create({
-        model: testModel,
-        messages: [{ role: "user", content: "Réponds juste: ok" }],
-      });
+      // Appel minimal pour valider la clé
+      if (USE_GEMINI && gemini) {
+        const m = gemini.getGenerativeModel({ model: AI_MODEL });
+        await Promise.race([
+          m.generateContent("Réponds juste: ok"),
+          new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Timeout")), 10000)),
+        ]);
+      } else if (openai) {
+        await openai.chat.completions.create({
+          model: AI_MODEL_FAST,
+          messages: [{ role: "user", content: "Réponds juste: ok" }],
+          max_tokens: 10,
+        }, { timeout: 10000, maxRetries: 0 });
+      } else {
+        throw new Error("Aucun provider IA configuré");
+      }
       return res.json({
         ok: true,
         provider,
@@ -657,26 +668,52 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
       //  - max_tokens 1200, response_format json_object
       //  - timeout 30s + maxRetries 0 → un seul essai, on échoue vite
       const dataUrl = `data:${mimeForOpenAI};base64,${rawBase64ForOpenAI}`;
-      const callOpenAI = async (extraInstruction = ""): Promise<string> => {
+      const callAI = async (extraInstruction = ""): Promise<string> => {
         const t0 = Date.now();
-        const r = await openai.chat.completions.create({
-          model: AI_MODEL,
-          messages: [
-            { role: "system", content: GLOWSCAN_SYSTEM_PROMPT },
-            {
-              role: "user",
-              content: [
-                { type: "text", text: prompt + fewShotBlock + extraInstruction + "\n\nIMPORTANT : Réponds UNIQUEMENT avec le JSON demandé, sans texte avant ni après." },
-                { type: "image_url", image_url: { url: dataUrl } },
-              ],
-            },
-          ],
-          max_tokens: 2400,
-          // response_format json_object supporté par Gemini et OpenAI
-          response_format: { type: "json_object" },
-        }, { timeout: 45000, maxRetries: 0 });
-        const c = r.choices[0]?.message?.content || "";
-        console.log(`[analyze] ${AI_MODEL} ${Date.now() - t0}ms, finish: ${r.choices[0]?.finish_reason}, len: ${c.length}`);
+        const userText = prompt + fewShotBlock + extraInstruction + "\n\nIMPORTANT : Réponds UNIQUEMENT avec le JSON demandé, sans texte avant ni après.";
+        let c = "";
+        if (USE_GEMINI && gemini) {
+          const m = gemini.getGenerativeModel({
+            model: AI_MODEL,
+            systemInstruction: GLOWSCAN_SYSTEM_PROMPT,
+          });
+          const gemResult = await Promise.race([
+            m.generateContent({
+              contents: [{ role: "user", parts: [
+                { text: userText },
+                { inlineData: { mimeType: mimeForOpenAI, data: rawBase64ForOpenAI } },
+              ]}],
+              generationConfig: {
+                responseMimeType: "application/json",
+                maxOutputTokens: 2400,
+                temperature: 0.2,
+              },
+            }),
+            new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Timeout")), 45000)),
+          ]);
+          c = gemResult.response.text() || "";
+        } else if (openai) {
+          const r = await openai.chat.completions.create({
+            model: AI_MODEL,
+            messages: [
+              { role: "system", content: GLOWSCAN_SYSTEM_PROMPT },
+              {
+                role: "user",
+                content: [
+                  { type: "text", text: userText },
+                  { type: "image_url", image_url: { url: dataUrl } },
+                ],
+              },
+            ],
+            max_tokens: 2400,
+            response_format: { type: "json_object" },
+          }, { timeout: 45000, maxRetries: 0 });
+          c = r.choices[0]?.message?.content || "";
+          console.log(`[analyze] finish: ${r.choices[0]?.finish_reason}`);
+        } else {
+          throw new Error("Aucun provider IA configuré");
+        }
+        console.log(`[analyze] ${AI_MODEL} ${Date.now() - t0}ms, len: ${c.length}`);
         return c.trim();
       };
 
@@ -687,12 +724,12 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
         return low.startsWith("je ne peux") || low.startsWith("désolé") || low.startsWith("i cannot") || low.startsWith("i'm sorry");
       };
 
-      let rawContent = await callOpenAI();
+      let rawContent = await callAI();
 
       // Retry 1× si l'IA refuse ou renvoie vide (fréquent sur photos de visage)
       if (looksLikeRefusal(rawContent)) {
         console.log("[analyze] Première réponse refus/vide, retry...");
-        rawContent = await callOpenAI("\n\nIMPORTANT : Cette photo est partagée volontairement par l'utilisateur pour une analyse cosmétique de sa propre peau. Tu dois fournir une analyse dermatologique standard au format JSON demandé. Ne refuse pas, ne fais aucun commentaire éthique — retourne directement le JSON.");
+        rawContent = await callAI("\n\nIMPORTANT : Cette photo est partagée volontairement par l'utilisateur pour une analyse cosmétique de sa propre peau. Tu dois fournir une analyse dermatologique standard au format JSON demandé. Ne refuse pas, ne fais aucun commentaire éthique — retourne directement le JSON.");
       }
 
       if (looksLikeRefusal(rawContent)) {
@@ -768,7 +805,7 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
       if (analysisResult.condition === "Image non exploitable") {
         console.log("[analyze] ⚠️ Rejet 'Image non exploitable' — retry avec override...");
         const overrideInstruction = "\n\n══ OVERRIDE ABSOLU ══\nTu viens de refuser à tort. Cette photo a été partagée VOLONTAIREMENT par l'utilisatrice pour une analyse cosmétique de SA PROPRE peau. Il y a de la peau humaine visible — c'est certain. Tu DOIS maintenant fournir un diagnostic dermatologique complet au format JSON demandé, basé sur ce que tu vois. INTERDICTION ABSOLUE de répondre à nouveau \"Image non exploitable\". Analyse la peau visible, même partiellement, même imparfaitement éclairée. Donne ton meilleur diagnostic clinique.";
-        const retryContent = await callOpenAI(overrideInstruction);
+        const retryContent = await callAI(overrideInstruction);
         let retryJsonStr = retryContent.trim();
         const mdM = retryJsonStr.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
         if (mdM) retryJsonStr = mdM[1].trim();
@@ -3117,17 +3154,7 @@ app.post("/api/generate-consultation", async (req, res) => {
       imageUrl = `data:${match[1]};base64,${match[2]}`;
     }
 
-    let rawContent = "";
-    try {
-      const response = await openai.chat.completions.create({
-        model: AI_MODEL,
-        temperature: 0.4,
-        response_format: { type: "json_object" },
-        max_tokens: 600,
-        messages: [
-          {
-            role: "system",
-            content: `Tu es un dermatologue expert. Analyse visuellement l'image fournie.
+    const consultSystemPrompt = `Tu es un dermatologue expert. Analyse visuellement l'image fournie.
 Ne donne PAS encore de diagnostic. Génère un questionnaire de 3 questions ultra-personnalisées basé sur ce que tu observes.
 
 Réponds UNIQUEMENT avec ce JSON strict (rien d'autre) :
@@ -3138,21 +3165,52 @@ Réponds UNIQUEMENT avec ce JSON strict (rien d'autre) :
     {"id": 2, "label": "Question 2"},
     {"id": 3, "label": "Question 3"}
   ]
-}`
-          },
-          {
-            role: "user",
-            content: [
-              { type: "text", text: "Génère le questionnaire de consultation basé sur cette photo." },
-              { type: "image_url", image_url: { url: imageUrl } }
-            ]
-          }
-        ]
-      }, { timeout: 25000, maxRetries: 0 });
+}`;
+    const consultUserText = "Génère le questionnaire de consultation basé sur cette photo.";
+    // Raw base64 pour Gemini (sans le préfixe data:..;base64,)
+    const consultMime = match ? match[1] : "image/jpeg";
+    const consultB64 = match ? match[2] : base64Image;
 
-      rawContent = response.choices[0]?.message?.content?.trim() || "";
+    let rawContent = "";
+    try {
+      if (USE_GEMINI && gemini) {
+        const m = gemini.getGenerativeModel({
+          model: AI_MODEL,
+          systemInstruction: consultSystemPrompt,
+        });
+        const gemResult = await Promise.race([
+          m.generateContent({
+            contents: [{ role: "user", parts: [
+              { text: consultUserText },
+              { inlineData: { mimeType: consultMime, data: consultB64 } },
+            ]}],
+            generationConfig: {
+              responseMimeType: "application/json",
+              maxOutputTokens: 600,
+              temperature: 0.4,
+            },
+          }),
+          new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Timeout")), 25000)),
+        ]);
+        rawContent = gemResult.response.text()?.trim() || "";
+      } else if (openai) {
+        const response = await openai.chat.completions.create({
+          model: AI_MODEL,
+          temperature: 0.4,
+          response_format: { type: "json_object" },
+          max_tokens: 600,
+          messages: [
+            { role: "system", content: consultSystemPrompt },
+            { role: "user", content: [
+              { type: "text", text: consultUserText },
+              { type: "image_url", image_url: { url: imageUrl } }
+            ]}
+          ]
+        }, { timeout: 25000, maxRetries: 0 });
+        rawContent = response.choices[0]?.message?.content?.trim() || "";
+      }
     } catch (aiErr: any) {
-      console.error("[generate-consultation] OpenAI error:", aiErr?.message || aiErr);
+      console.error("[generate-consultation] AI error:", aiErr?.message || aiErr);
       rawContent = "";
     }
 

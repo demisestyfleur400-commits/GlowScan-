@@ -5,6 +5,7 @@ import { eq, and, desc, sql, count, gte, isNotNull } from "drizzle-orm";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import OpenAI from "openai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Même logique provider que routes.ts : Gemini prioritaire
 const _proGeminiKey = process.env.GEMINI_API_KEY || "";
@@ -13,12 +14,13 @@ const _proOpenaiBase = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || undefined;
 const PRO_USE_GEMINI = !!_proGeminiKey;
 const PRO_AI_MODEL = PRO_USE_GEMINI ? "gemini-2.0-flash" : "gpt-4o-mini";
 
-const proOpenai = new OpenAI({
-  apiKey:  PRO_USE_GEMINI ? _proGeminiKey : (_proOpenaiKey || "sk-missing"),
-  baseURL: PRO_USE_GEMINI
-    ? "https://generativelanguage.googleapis.com/v1beta/openai/"
-    : (_proOpenaiBase || undefined),
-});
+// Native Gemini SDK (prioritaire)
+const proGemini = PRO_USE_GEMINI ? new GoogleGenerativeAI(_proGeminiKey) : null;
+// OpenAI SDK (uniquement si GEMINI_API_KEY absent)
+const proOpenai = !PRO_USE_GEMINI ? new OpenAI({
+  apiKey: _proOpenaiKey || "sk-missing",
+  baseURL: _proOpenaiBase || undefined,
+}) : null;
 
 // Cache mémoire des questionnaires par condition normalisée (24h)
 const questionnaireCache = new Map<string, { items: any[]; expiresAt: number }>();
@@ -660,14 +662,31 @@ Règles :
 
       let items: any[] = [];
       try {
-        const completion = await proOpenai.chat.completions.create({
-          model: PRO_AI_MODEL,
-          messages: [{ role: "user", content: prompt }],
-          response_format: { type: "json_object" },
-          temperature: 0.3,
-          max_tokens: 700,
-        });
-        const raw = completion.choices[0]?.message?.content || "{}";
+        let raw = "{}";
+        if (PRO_USE_GEMINI && proGemini) {
+          const m = proGemini.getGenerativeModel({ model: PRO_AI_MODEL });
+          const gemResult = await Promise.race([
+            m.generateContent({
+              contents: [{ role: "user", parts: [{ text: prompt }] }],
+              generationConfig: {
+                responseMimeType: "application/json",
+                maxOutputTokens: 700,
+                temperature: 0.3,
+              },
+            }),
+            new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Timeout")), 20000)),
+          ]);
+          raw = gemResult.response.text() || "{}";
+        } else if (proOpenai) {
+          const completion = await proOpenai.chat.completions.create({
+            model: PRO_AI_MODEL,
+            messages: [{ role: "user", content: prompt }],
+            response_format: { type: "json_object" },
+            temperature: 0.3,
+            max_tokens: 700,
+          });
+          raw = completion.choices[0]?.message?.content || "{}";
+        }
         const parsed = JSON.parse(raw);
         items = Array.isArray(parsed.items) ? parsed.items : [];
       } catch (err: any) {
