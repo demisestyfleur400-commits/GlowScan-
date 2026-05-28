@@ -646,7 +646,7 @@ export default function Analyze() {
       </main>
 
       <UpgradeModal open={showUpgrade} onOpenChange={setShowUpgrade} />
-      {needsConsent && <ConsentBanner onConsent={onConsentGiven} />}
+      {needsConsent && <ConsentBanner onAccept={onConsentGiven} userId={user?.id?.toString()} />}
     </div>
   );
 }

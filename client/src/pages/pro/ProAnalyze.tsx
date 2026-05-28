@@ -549,8 +549,7 @@ export default function ProAnalyze() {
                 <input
                   ref={fileRef}
                   type="file"
-                  accept="image/*"
-                  capture="environment"
+                  accept="image/jpeg,image/png,image/webp,image/*"
                   onChange={(e) => handleFile(e.target.files?.[0])}
                   className="hidden"
                   data-testid="input-file"
