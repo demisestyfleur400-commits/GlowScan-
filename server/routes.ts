@@ -170,11 +170,11 @@ export async function registerRoutes(
       });
     }
     try {
-      // Appel minimal pour valider la clé (1 token)
+      // Appel minimal pour valider la clé (sans max_tokens pour compatibilité Gemini)
+      const testModel = USE_GEMINI ? "gemini-1.5-flash" : AI_MODEL_FAST;
       await openai.chat.completions.create({
-        model: AI_MODEL_FAST,
-        messages: [{ role: "user", content: "ok" }],
-        max_tokens: 1,
+        model: testModel,
+        messages: [{ role: "user", content: "Réponds juste: ok" }],
       });
       return res.json({
         ok: true,
@@ -666,12 +666,13 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
             {
               role: "user",
               content: [
-                { type: "text", text: prompt + fewShotBlock + extraInstruction },
+                { type: "text", text: prompt + fewShotBlock + extraInstruction + "\n\nIMPORTANT : Réponds UNIQUEMENT avec le JSON demandé, sans texte avant ni après." },
                 { type: "image_url", image_url: { url: dataUrl } },
               ],
             },
           ],
           max_tokens: 2400,
+          // response_format json_object supporté par Gemini et OpenAI
           response_format: { type: "json_object" },
         }, { timeout: 45000, maxRetries: 0 });
         const c = r.choices[0]?.message?.content || "";
