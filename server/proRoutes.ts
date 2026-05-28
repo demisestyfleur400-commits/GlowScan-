@@ -11,7 +11,7 @@ const _proGeminiKey = process.env.GEMINI_API_KEY || "";
 const _proOpenaiKey = process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY || "";
 const _proOpenaiBase = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || undefined;
 const PRO_USE_GEMINI = !!_proGeminiKey;
-const PRO_AI_MODEL = PRO_USE_GEMINI ? "gemini-1.5-pro" : "gpt-4o-mini";
+const PRO_AI_MODEL = PRO_USE_GEMINI ? "gemini-2.0-flash" : "gpt-4o-mini";
 
 const proOpenai = new OpenAI({
   apiKey:  PRO_USE_GEMINI ? _proGeminiKey : (_proOpenaiKey || "sk-missing"),
