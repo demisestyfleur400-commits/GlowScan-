@@ -24,8 +24,8 @@ const _openaiKey  = process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OP
 const _openaiBase = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || process.env.OPENAI_BASE_URL || undefined;
 
 const USE_GEMINI = !!_geminiKey;
-const AI_MODEL      = USE_GEMINI ? "gemini-1.5-flash"  : "gpt-4o";
-const AI_MODEL_FAST = USE_GEMINI ? "gemini-1.5-flash"  : "gpt-4o-mini";
+const AI_MODEL      = USE_GEMINI ? "gemini-2.0-flash"  : "gpt-4o";
+const AI_MODEL_FAST = USE_GEMINI ? "gemini-2.0-flash"  : "gpt-4o-mini";
 
 if (!_geminiKey && !_openaiKey) {
   console.error("⚠️  IA : aucune clé trouvée (GEMINI_API_KEY ou OPENAI_API_KEY manquante)");
