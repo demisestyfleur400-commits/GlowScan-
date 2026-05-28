@@ -7,19 +7,23 @@ import bcrypt from "bcryptjs";
 import OpenAI from "openai";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// Même logique provider que routes.ts : Gemini prioritaire
+// Même logique provider que routes.ts : Groq > Gemini > OpenAI
+const _proGroqKey   = process.env.GROQ_API_KEY || "";
 const _proGeminiKey = process.env.GEMINI_API_KEY || "";
 const _proOpenaiKey = process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY || "";
 const _proOpenaiBase = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || undefined;
-const PRO_USE_GEMINI = !!_proGeminiKey;
-const PRO_AI_MODEL = PRO_USE_GEMINI ? "gemini-2.0-flash" : "gpt-4o-mini";
+const PRO_USE_GROQ   = !!_proGroqKey;
+const PRO_USE_GEMINI = !PRO_USE_GROQ && !!_proGeminiKey;
+const PRO_GROQ_MODEL = process.env.GROQ_MODEL || "llama-3.2-90b-vision-preview";
+const PRO_AI_MODEL   = PRO_USE_GROQ ? PRO_GROQ_MODEL
+                     : PRO_USE_GEMINI ? "gemini-2.0-flash" : "gpt-4o-mini";
 
-// Native Gemini SDK (prioritaire)
+// Gemini native SDK (uniquement sans clé Groq)
 const proGemini = PRO_USE_GEMINI ? new GoogleGenerativeAI(_proGeminiKey) : null;
-// OpenAI SDK (uniquement si GEMINI_API_KEY absent)
+// OpenAI SDK — Groq (prioritaire, gratuit, global) ou OpenAI standard
 const proOpenai = !PRO_USE_GEMINI ? new OpenAI({
-  apiKey: _proOpenaiKey || "sk-missing",
-  baseURL: _proOpenaiBase || undefined,
+  apiKey:  PRO_USE_GROQ ? _proGroqKey : (_proOpenaiKey || "sk-missing"),
+  baseURL: PRO_USE_GROQ ? "https://api.groq.com/openai/v1" : (_proOpenaiBase || undefined),
 }) : null;
 
 // Cache mémoire des questionnaires par condition normalisée (24h)
