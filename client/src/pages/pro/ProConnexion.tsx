@@ -5,8 +5,20 @@ import { ArrowLeft, ArrowRight, Loader2, LogIn, Stethoscope } from "lucide-react
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 
-const NAVY = "#1E40AF";
-const INK = "#1E293B";
+const DS = {
+  bg: "#0d0a0e",
+  surface: "#13101f",
+  violet: "#7c3aed",
+  violetMid: "#a78bfa",
+  violetLight: "#c4b5fd",
+  textPrimary: "#f3f0ff",
+  textBody: "rgba(200,185,255,0.65)",
+  textMuted: "rgba(255,255,255,0.35)",
+  inputBorder: "rgba(167,139,250,0.2)",
+  cardBorder: "rgba(255,255,255,0.07)",
+  cardVioletBorder: "rgba(167,139,250,0.18)",
+  font: `-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif`,
+};
 
 export default function ProConnexion() {
   const [, setLocation] = useLocation();
@@ -40,89 +52,245 @@ export default function ProConnexion() {
 
   return (
     <div
-      className="min-h-screen flex flex-col"
-      style={{ background: "#F8FAFC", color: INK, fontFamily: "Inter, system-ui, sans-serif" }}
+      style={{
+        minHeight: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        background: DS.bg,
+        color: DS.textPrimary,
+        fontFamily: DS.font,
+      }}
     >
-      <header className="bg-white border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center gap-3">
-          <Link href="/pro" data-testid="link-back" className="p-2 -ml-2 rounded-md text-slate-600 hover:bg-slate-100">
-            <ArrowLeft className="w-5 h-5" />
+      {/* Header */}
+      <header
+        style={{
+          borderBottom: `1px solid ${DS.cardBorder}`,
+          background: DS.surface,
+        }}
+      >
+        <div
+          style={{
+            maxWidth: 1120,
+            margin: "0 auto",
+            padding: "0 24px",
+            height: 56,
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+          }}
+        >
+          <Link
+            href="/pro"
+            data-testid="link-back"
+            style={{
+              padding: 8,
+              borderRadius: 10,
+              color: DS.textBody,
+              display: "flex",
+              alignItems: "center",
+              textDecoration: "none",
+              transition: "background 0.15s",
+            }}
+          >
+            <ArrowLeft style={{ width: 18, height: 18 }} />
           </Link>
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-md flex items-center justify-center" style={{ background: NAVY }}>
-              <Stethoscope className="w-4 h-4 text-white" />
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 10,
+                background: `rgba(167,139,250,0.15)`,
+                border: `1px solid ${DS.cardVioletBorder}`,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Stethoscope style={{ width: 16, height: 16, color: DS.violetMid }} />
             </div>
-            <p className="text-sm font-bold">GlowScan <span style={{ color: NAVY }}>Pro</span></p>
+            <span style={{ fontSize: 14, fontWeight: 700, color: DS.textPrimary }}>
+              GlowScan <span style={{ color: DS.violetMid }}>Pro</span>
+            </span>
           </div>
         </div>
       </header>
 
-      <main className="flex-1 flex items-center justify-center px-4 py-10">
+      {/* Main */}
+      <main
+        style={{
+          flex: 1,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "40px 16px",
+        }}
+      >
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-sm"
+          style={{ width: "100%", maxWidth: 380 }}
         >
-          <div className="text-center mb-7">
+          {/* Icon + title */}
+          <div style={{ textAlign: "center", marginBottom: 28 }}>
             <div
-              className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-4"
-              style={{ background: NAVY }}
+              style={{
+                width: 52,
+                height: 52,
+                borderRadius: 16,
+                background: `rgba(167,139,250,0.15)`,
+                border: `1px solid ${DS.cardVioletBorder}`,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                margin: "0 auto 16px",
+              }}
             >
-              <LogIn className="w-5 h-5 text-white" />
+              <LogIn style={{ width: 22, height: 22, color: DS.violetMid }} />
             </div>
-            <h1 className="text-2xl font-bold mb-1">Connexion Pro</h1>
-            <p className="text-sm text-slate-500">Accédez à votre cabinet GlowScan</p>
+            <h1
+              style={{
+                fontSize: 24,
+                fontWeight: 800,
+                color: DS.textPrimary,
+                margin: "0 0 6px",
+              }}
+            >
+              Connexion Pro
+            </h1>
+            <p style={{ fontSize: 14, color: DS.textBody, margin: 0 }}>
+              Accédez à votre cabinet GlowScan
+            </p>
           </div>
 
+          {/* Form card */}
           <form
             onSubmit={handleSubmit}
-            className="space-y-4 bg-white border border-slate-200 rounded-xl p-6 shadow-sm"
+            style={{
+              background: DS.surface,
+              border: `1px solid ${DS.cardBorder}`,
+              borderRadius: 24,
+              padding: "28px 24px",
+            }}
           >
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">Email professionnel</label>
+            <div style={{ marginBottom: 16 }}>
+              <label
+                style={{
+                  display: "block",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: DS.textBody,
+                  marginBottom: 8,
+                  letterSpacing: "0.02em",
+                }}
+              >
+                Email professionnel
+              </label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 data-testid="input-email"
-                className="w-full px-3.5 py-2.5 rounded-lg bg-white border border-slate-300 text-sm outline-none focus:border-blue-700 focus:ring-2 focus:ring-blue-100 transition-all"
+                style={{
+                  width: "100%",
+                  padding: "11px 14px",
+                  borderRadius: 12,
+                  background: DS.bg,
+                  border: `1px solid ${DS.inputBorder}`,
+                  color: DS.textPrimary,
+                  fontSize: 14,
+                  outline: "none",
+                  boxSizing: "border-box",
+                  fontFamily: DS.font,
+                }}
+                onFocus={(e) => (e.target.style.borderColor = DS.violetMid)}
+                onBlur={(e) => (e.target.style.borderColor = DS.inputBorder)}
               />
             </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">Mot de passe</label>
+
+            <div style={{ marginBottom: 24 }}>
+              <label
+                style={{
+                  display: "block",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: DS.textBody,
+                  marginBottom: 8,
+                  letterSpacing: "0.02em",
+                }}
+              >
+                Mot de passe
+              </label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 data-testid="input-password"
-                className="w-full px-3.5 py-2.5 rounded-lg bg-white border border-slate-300 text-sm outline-none focus:border-blue-700 focus:ring-2 focus:ring-blue-100 transition-all"
+                style={{
+                  width: "100%",
+                  padding: "11px 14px",
+                  borderRadius: 12,
+                  background: DS.bg,
+                  border: `1px solid ${DS.inputBorder}`,
+                  color: DS.textPrimary,
+                  fontSize: 14,
+                  outline: "none",
+                  boxSizing: "border-box",
+                  fontFamily: DS.font,
+                }}
+                onFocus={(e) => (e.target.style.borderColor = DS.violetMid)}
+                onBlur={(e) => (e.target.style.borderColor = DS.inputBorder)}
               />
             </div>
+
             <button
               type="submit"
               disabled={loading}
               data-testid="button-submit-login"
-              className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-lg text-white font-semibold text-sm shadow-sm hover:shadow-md disabled:opacity-50 transition-all"
-              style={{ background: NAVY }}
+              style={{
+                width: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 8,
+                padding: "13px 24px",
+                borderRadius: 9999,
+                background: DS.violet,
+                color: "#fff",
+                fontWeight: 800,
+                fontSize: 14,
+                border: "none",
+                cursor: loading ? "not-allowed" : "pointer",
+                opacity: loading ? 0.6 : 1,
+                fontFamily: DS.font,
+                transition: "opacity 0.15s",
+              }}
             >
               {loading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 style={{ width: 16, height: 16, animation: "spin 1s linear infinite" }} />
               ) : (
                 <>
                   Se connecter
-                  <ArrowRight className="w-4 h-4" />
+                  <ArrowRight style={{ width: 16, height: 16 }} />
                 </>
               )}
             </button>
-            <p className="text-center text-xs text-slate-500 pt-2">
+
+            <p
+              style={{
+                textAlign: "center",
+                fontSize: 13,
+                color: DS.textMuted,
+                marginTop: 16,
+              }}
+            >
               Pas encore de compte ?{" "}
               <Link
                 href="/pro/inscription"
-                className="font-semibold hover:underline"
-                style={{ color: NAVY }}
                 data-testid="link-register"
+                style={{ color: DS.violetMid, fontWeight: 700, textDecoration: "none" }}
               >
                 Créer mon compte Pro
               </Link>
@@ -130,6 +298,11 @@ export default function ProConnexion() {
           </form>
         </motion.div>
       </main>
+
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        input::placeholder { color: rgba(200,185,255,0.3); }
+      `}</style>
     </div>
   );
 }

@@ -4,9 +4,7 @@ import Uppy from "@uppy/core";
 import type { UppyFile, UploadResult } from "@uppy/core";
 import DashboardModal from "@uppy/react/dashboard-modal";
 import AwsS3 from "@uppy/aws-s3";
-import { Button } from "@/components/ui/button";
 
-// Importations obligatoires d'Uppy
 import "@uppy/core/css/style.min.css";
 import "@uppy/dashboard/css/style.min.css";
 
@@ -29,21 +27,20 @@ interface ObjectUploaderProps {
 
 export function ObjectUploader({
   maxNumberOfFiles = 1,
-  maxFileSize = 10485760, // 10 Mo par défaut
+  maxFileSize = 10485760,
   onGetUploadParameters,
   onComplete,
   buttonClassName,
   children,
 }: ObjectUploaderProps) {
   const [showModal, setShowModal] = useState(false);
-  
-  // Instance Uppy mémorisée dans le state pour éviter les réinitialisations au re-render
+
   const [uppy] = useState(() =>
     new Uppy({
       restrictions: {
         maxNumberOfFiles,
         maxFileSize,
-        allowedFileTypes: ["image/jpeg", "image/png", "image/webp"], // Sécurité : On restreint aux images skincare
+        allowedFileTypes: ["image/jpeg", "image/png", "image/webp"],
       },
       autoProceed: false,
     })
@@ -53,52 +50,63 @@ export function ObjectUploader({
       })
       .on("complete", (result) => {
         onComplete?.(result);
-        // Fermeture automatique et fluide après 800ms pour laisser l'utilisateur voir le succès "vert" d'Uppy
         setTimeout(() => setShowModal(false), 800);
       })
   );
 
   return (
     <div className="w-full inline-block">
-      {/* Bouton de déclenchement stylisé à l'image du design GlowScan */}
-      <Button 
+      <button
         type="button"
-        onClick={() => setShowModal(true)} 
-        className={`w-full h-14 rounded-2xl bg-gradient-to-r from-pink-600 to-purple-600 text-white font-black text-xs uppercase tracking-wider shadow-xl shadow-pink-600/10 active:scale-[0.98] transition-all hover:opacity-95 ${buttonClassName}`}
+        onClick={() => setShowModal(true)}
+        className={`w-full h-14 rounded-full flex items-center justify-center gap-2 font-extrabold text-xs tracking-wide text-white active:scale-[0.98] transition-transform ${buttonClassName || ""}`}
+        style={{ background: "#7c3aed" }}
       >
         {children}
-      </Button>
+      </button>
 
-      {/* Surcharges CSS injectées localement pour transformer l'identité visuelle d'Uppy */}
       <style>{`
         .uppy-DashboardModal .uppy-Dashboard-inner {
           border-radius: 1.5rem !important;
-          background-color: #f8fafc !important; /* slate-50 */
-          font-family: inherit !important;
-          border: 1px solid #f1f5f9 !important;
+          background-color: #13101f !important;
+          font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif !important;
+          border: 1px solid rgba(167,139,250,0.18) !important;
+          color: #f3f0ff !important;
         }
         .uppy-DashboardModal .uppy-Dashboard-browse {
-          color: #db2777 !important; /* pink-600 */
+          color: #a78bfa !important;
           font-weight: 800 !important;
         }
         .uppy-Dashboard-bgIcon {
-          color: #fbcfe8 !important; /* pink-200 */
+          color: rgba(167,139,250,0.3) !important;
         }
         .uppy-DashboardTabs-title, .uppy-Dashboard-Item-name {
           font-size: 11px !important;
           font-weight: 800 !important;
-          text-transform: uppercase !important;
-          letter-spacing: 0.05em !important;
-          color: #0f172a !important; /* slate-900 */
+          color: #f3f0ff !important;
+        }
+        .uppy-Dashboard-note, .uppy-DashboardContent-title {
+          color: rgba(200,185,255,0.65) !important;
         }
         .uppy-StatusBar-actionBtn--upload {
-          background-color: #db2777 !important; /* pink-600 */
-          background-image: linear-gradient(to right, #db2777, #9333ea) !important; /* Gradient GlowScan */
-          border-radius: 0.75rem !important;
-          font-size: 10px !important;
-          font-weight: 900 !important;
-          text-transform: uppercase !important;
-          letter-spacing: 0.05em !important;
+          background: #7c3aed !important;
+          border-radius: 9999px !important;
+          font-size: 11px !important;
+          font-weight: 800 !important;
+        }
+        .uppy-Dashboard-Item-previewImg {
+          border-radius: 12px !important;
+        }
+        .uppy-DashboardContent-bar {
+          background: #13101f !important;
+          border-bottom: 1px solid rgba(255,255,255,0.07) !important;
+        }
+        .uppy-StatusBar {
+          background: #13101f !important;
+          border-top: 1px solid rgba(255,255,255,0.07) !important;
+        }
+        .uppy-StatusBar-content {
+          color: rgba(200,185,255,0.65) !important;
         }
       `}</style>
 
@@ -113,9 +121,9 @@ export function ObjectUploader({
           strings: {
             dropPasteFiles: "Dépose tes fichiers ici ou %{browse}",
             browse: "parcours tes dossiers",
-            uploading: "Envoi en cours...",
-            complete: "Envoi réussi ✔"
-          }
+            uploading: "Envoi en cours…",
+            complete: "Envoi réussi ✔",
+          },
         }}
       />
     </div>

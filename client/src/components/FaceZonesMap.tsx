@@ -1,11 +1,9 @@
 import type { FaceZone } from "@shared/schema";
-import { ShieldAlert, Activity, CheckCircle } from "lucide-react";
 
 interface Props {
   zones: FaceZone[];
 }
 
-// Coordonnées normalisées des zones sur le visage SVG (viewBox 200×260)
 const ZONE_COORDS: Record<string, { cx: number; cy: number; rx: number; ry: number }> = {
   "front": { cx: 100, cy: 55, rx: 50, ry: 22 },
   "tempes": { cx: 100, cy: 75, rx: 70, ry: 12 },
@@ -19,21 +17,27 @@ const ZONE_COORDS: Record<string, { cx: number; cy: number; rx: number; ry: numb
 };
 
 const STATUS_FILL: Record<FaceZone["status"], string> = {
-  red: "rgba(239, 68, 68, 0.35)",
-  yellow: "rgba(245, 158, 11, 0.30)",
-  green: "rgba(34, 197, 94, 0.20)",
+  red: "rgba(233,30,140,0.3)",
+  yellow: "rgba(245,158,11,0.28)",
+  green: "rgba(16,185,129,0.2)",
 };
 
 const STATUS_STROKE: Record<FaceZone["status"], string> = {
-  red: "#dc2626",   // Rouge un peu plus soutenu pour le contraste
-  yellow: "#d97706", // Ambre plus lisible sur le web
-  green: "#16a34a",  // Vert plus pro
+  red: "#f9a8d4",
+  yellow: "#fbbf24",
+  green: "#6ee7b7",
+};
+
+const STATUS_STYLE: Record<FaceZone["status"], React.CSSProperties> = {
+  red: { background: "rgba(233,30,140,0.08)", border: "1px solid rgba(233,30,140,0.2)", color: "#f9a8d4" },
+  yellow: { background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)", color: "#fbbf24" },
+  green: { background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)", color: "#6ee7b7" },
 };
 
 const STATUS_LABEL: Record<FaceZone["status"], string> = {
   red: "Urgence active",
   yellow: "À surveiller",
-  green: "Zone équilibrée",
+  green: "Équilibrée",
 };
 
 export default function FaceZonesMap({ zones }: Props) {
@@ -46,56 +50,49 @@ export default function FaceZonesMap({ zones }: Props) {
   };
 
   return (
-    <div className="rounded-3xl bg-white border border-gray-100 p-5 shadow-xl shadow-gray-100/40" data-testid="face-zones-map">
-      {/* Top Header de la carte */}
-      <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-50">
+    <div
+      className="rounded-2xl p-5"
+      style={{
+        background: "rgba(255,255,255,0.04)",
+        border: "1px solid rgba(255,255,255,0.07)",
+        fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
+      }}
+      data-testid="face-zones-map"
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4 pb-3" style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
         <div>
-          <h3 className="text-xs font-black text-gray-900 uppercase tracking-wider">
-            Cartographie Faciale AI
+          <h3 className="text-xs font-extrabold uppercase tracking-widest" style={{ color: "#f3f0ff" }}>
+            Cartographie faciale IA
           </h3>
-          <p className="text-[10px] text-gray-400 font-medium">Analyse thermique par intelligence artificielle</p>
+          <p className="text-[10px] font-medium mt-0.5" style={{ color: "rgba(200,185,255,0.65)" }}>
+            Analyse thermique par intelligence artificielle
+          </p>
         </div>
-        <div className="flex items-center gap-2.5 text-[10px] font-black tracking-wider">
-          <span className="flex items-center gap-1 bg-red-50 text-red-700 px-2 py-0.5 rounded-md border border-red-100">
-            <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse" /> {counts.red}
+        <div className="flex items-center gap-2 text-[10px] font-extrabold">
+          <span className="flex items-center gap-1 px-2 py-0.5 rounded-lg" style={{ background: "rgba(233,30,140,0.1)", border: "1px solid rgba(233,30,140,0.2)", color: "#f9a8d4" }}>
+            <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: "#f43f5e" }} /> {counts.red}
           </span>
-          <span className="flex items-center gap-1 bg-amber-50 text-amber-700 px-2 py-0.5 rounded-md border border-amber-100">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" /> {counts.yellow}
+          <span className="flex items-center gap-1 px-2 py-0.5 rounded-lg" style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)", color: "#fbbf24" }}>
+            <span className="w-1.5 h-1.5 rounded-full" style={{ background: "#fbbf24" }} /> {counts.yellow}
           </span>
-          <span className="flex items-center gap-1 bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-md border border-emerald-100">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> {counts.green}
+          <span className="flex items-center gap-1 px-2 py-0.5 rounded-lg" style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)", color: "#6ee7b7" }}>
+            <span className="w-1.5 h-1.5 rounded-full" style={{ background: "#10b981" }} /> {counts.green}
           </span>
         </div>
       </div>
 
-      {/* Grid Visage + Détails */}
+      {/* Grid: SVG + details */}
       <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-6 items-center">
-        {/* SVG du visage ultra-stylisé et contrasté */}
-        <div className="flex justify-center bg-slate-50/60 p-4 rounded-2xl border border-gray-100/80">
-          <svg
-            viewBox="0 0 200 260"
-            className="w-40 h-auto filter drop-shadow-sm"
-            aria-label="Carte des zones du visage"
-          >
-            {/* Silhouette principale */}
-            <ellipse
-              cx="100"
-              cy="135"
-              rx="72"
-              ry="92"
-              fill="#ffffff"
-              stroke="#e2e8f0"
-              strokeWidth="2"
-            />
+        {/* Face SVG */}
+        <div className="flex justify-center p-4 rounded-2xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+          <svg viewBox="0 0 200 260" className="w-40 h-auto" aria-label="Carte des zones du visage">
+            {/* Silhouette */}
+            <ellipse cx="100" cy="135" rx="72" ry="92" fill="rgba(255,255,255,0.05)" stroke="rgba(167,139,250,0.2)" strokeWidth="1.5" />
             {/* Cou */}
-            <path
-              d="M 75 220 Q 100 245 125 220 L 130 255 L 70 255 Z"
-              fill="#ffffff"
-              stroke="#e2e8f0"
-              strokeWidth="2"
-            />
+            <path d="M 75 220 Q 100 245 125 220 L 130 255 L 70 255 Z" fill="rgba(255,255,255,0.05)" stroke="rgba(167,139,250,0.2)" strokeWidth="1.5" />
 
-            {/* Calques et zones dynamiques */}
+            {/* Zone highlights */}
             {zones.map((zone, i) => {
               const key = zone.name.toLowerCase().trim();
               const coord = ZONE_COORDS[key];
@@ -110,55 +107,43 @@ export default function FaceZonesMap({ zones }: Props) {
                   fill={STATUS_FILL[zone.status]}
                   stroke={STATUS_STROKE[zone.status]}
                   strokeWidth="1.5"
-                  strokeDasharray={zone.status === "yellow" ? "3 2" : "none"} // Effet pointillés stylé pour les zones à surveiller
+                  strokeDasharray={zone.status === "yellow" ? "3 2" : "none"}
                   opacity="0.9"
                 />
               );
             })}
 
-            {/* Yeux (Indicateurs discrets de position) */}
-            <circle cx="75" cy="105" r="2.5" fill="#cbd5e1" />
-            <circle cx="125" cy="105" r="2.5" fill="#cbd5e1" />
-            {/* Bouche */}
-            <path
-              d="M 90 195 Q 100 198 110 195"
-              fill="none"
-              stroke="#cbd5e1"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-            />
+            {/* Eyes */}
+            <circle cx="75" cy="105" r="2.5" fill="rgba(167,139,250,0.3)" />
+            <circle cx="125" cy="105" r="2.5" fill="rgba(167,139,250,0.3)" />
+            {/* Mouth */}
+            <path d="M 90 195 Q 100 198 110 195" fill="none" stroke="rgba(167,139,250,0.3)" strokeWidth="1.5" strokeLinecap="round" />
           </svg>
         </div>
 
-        {/* Liste descriptive des imperfections détectées */}
-        <div className="space-y-3">
+        {/* Zone list */}
+        <div className="space-y-2">
           {zones.map((zone, i) => (
             <div
               key={i}
-              className="flex items-start gap-3 bg-white p-2.5 rounded-xl border border-gray-50/80 shadow-sm hover:border-gray-100 transition-colors"
+              className="flex items-start gap-3 p-2.5 rounded-xl"
+              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}
               data-testid={`zone-${zone.status}-${i}`}
             >
-              {/* Petite puce colorée adaptative en fonction du statut */}
-              <span
-                className="mt-1 w-2 h-2 rounded-full flex-shrink-0 shadow-sm"
-                style={{ backgroundColor: STATUS_STROKE[zone.status] }}
-              />
-              
+              <span className="mt-1 w-2 h-2 rounded-full flex-shrink-0" style={{ background: STATUS_STROKE[zone.status] }} />
+
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xs font-black text-gray-950 uppercase tracking-wide">{zone.name}</span>
+                  <span className="text-xs font-extrabold uppercase tracking-wide" style={{ color: "#f3f0ff" }}>{zone.name}</span>
                   <span
-                    className="text-[9px] uppercase tracking-widest font-extrabold px-1.5 py-0.5 rounded-md"
-                    style={{ 
-                      color: STATUS_STROKE[zone.status],
-                      backgroundColor: zone.status === 'red' ? '#fef2f2' : zone.status === 'yellow' ? '#fffbeb' : '#f0fdf4'
-                    }}
+                    className="text-[9px] uppercase tracking-widest font-extrabold px-1.5 py-0.5 rounded-lg"
+                    style={STATUS_STYLE[zone.status]}
                   >
                     {STATUS_LABEL[zone.status]}
                   </span>
                 </div>
                 {zone.issue && (
-                  <p className="text-xs font-medium text-gray-600 mt-1 leading-normal">
+                  <p className="text-xs font-medium mt-1 leading-normal" style={{ color: "rgba(200,185,255,0.65)" }}>
                     {zone.issue}
                   </p>
                 )}

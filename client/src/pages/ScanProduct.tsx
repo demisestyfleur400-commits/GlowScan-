@@ -1,14 +1,20 @@
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { useLocation } from "wouter";
-import {
-  Search, Heart, Home as HomeIcon, ShoppingBag,
-  BarChart2, Clock, Camera, ChevronRight, Crown, Star,
-} from "lucide-react";
+import { Search, Heart, Camera, ChevronRight, Crown, ShoppingBag } from "lucide-react";
 import { catalog, formatPrice, getProductBrand } from "@shared/catalog";
 import { productImages, getSafetyScore } from "@/lib/productImages";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
+
+const DS = {
+  base: "#0d0a0e",
+  surface: "#13101f",
+  text: "#f3f0ff",
+  body: "rgba(200,185,255,0.65)",
+  muted: "rgba(255,255,255,0.35)",
+  border: "rgba(255,255,255,0.07)",
+};
 
 type Filter = "Tous" | "Nettoyant" | "Hydratant" | "Sérum" | "Visage" | "Corps" | "Cheveux";
 const FILTERS: Filter[] = ["Tous", "Nettoyant", "Hydratant", "Sérum", "Visage", "Corps", "Cheveux"];
@@ -26,44 +32,10 @@ function matchFilter(name: string, cat: string, targets: string[], filter: Filte
   return true;
 }
 
-function BottomNav() {
-  const [, setLocation] = useLocation();
-  return (
-    <nav
-      className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-50"
-      style={{ paddingBottom: "env(safe-area-inset-bottom, 8px)" }}
-      data-testid="nav-bottom"
-    >
-      <div className="flex justify-around items-end px-2 pt-2 pb-1">
-        <button onClick={() => setLocation("/")} className="flex flex-col items-center gap-0.5 flex-1 pb-1">
-          <HomeIcon className="w-5 h-5 text-gray-400" />
-          <span className="text-[9px] font-bold text-gray-400">Accueil</span>
-        </button>
-        <button onClick={() => setLocation("/shop")} className="flex flex-col items-center gap-0.5 flex-1 pb-1">
-          <ShoppingBag className="w-5 h-5 text-pink-600 fill-pink-600/20" />
-          <span className="text-[9px] font-bold text-pink-600">Boutique</span>
-        </button>
-        <button onClick={() => setLocation("/analyze")} className="flex flex-col items-center flex-1" style={{ marginTop: -20 }}>
-          <div className="w-14 h-14 rounded-full bg-pink-600 flex items-center justify-center shadow-xl shadow-pink-300/50 border-4 border-white active:scale-90 transition-all">
-            <Camera className="w-6 h-6 text-white" />
-          </div>
-        </button>
-        <button onClick={() => setLocation("/analyze")} className="flex flex-col items-center gap-0.5 flex-1 pb-1">
-          <BarChart2 className="w-5 h-5 text-gray-400" />
-          <span className="text-[9px] font-bold text-gray-400">Rapport</span>
-        </button>
-        <button onClick={() => setLocation("/profile")} className="flex flex-col items-center gap-0.5 flex-1 pb-1">
-          <Clock className="w-5 h-5 text-gray-400" />
-          <span className="text-[9px] font-bold text-gray-400">Historique</span>
-        </button>
-      </div>
-    </nav>
-  );
-}
-
 export default function ScanProduct() {
   const { user } = useAuth();
-  const { isPremium, isLoading: subLoading } = useSubscription();
+  const { isPremium } = useSubscription();
+  const [, setLocation] = useLocation();
   const [tab, setTab] = useState<"search" | "recommended">("search");
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("Tous");
@@ -95,90 +67,121 @@ export default function ScanProduct() {
 
   if (!user) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-6 pb-20" style={{ background: "linear-gradient(160deg, #f0fdf4 0%, #f5f3ff 100%)" }}>
-        <div className="w-20 h-20 rounded-3xl bg-white shadow-lg flex items-center justify-center mb-6 text-4xl">🔬</div>
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 bg-pink-50 border border-pink-200 rounded-full px-4 py-1.5 mb-4">
-            <Crown className="w-4 h-4 text-pink-500" />
-            <span className="text-xs font-bold text-pink-700">Fonctionnalité Premium</span>
+      <div
+        className="min-h-screen flex flex-col items-center justify-center px-6 pb-20"
+        style={{ background: DS.base, fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif' }}
+      >
+        {/* Glow orb */}
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[400px] h-[400px] rounded-full" style={{ background: "radial-gradient(circle, rgba(124,58,237,0.15) 0%, transparent 70%)" }} />
+        </div>
+
+        <div className="w-20 h-20 rounded-3xl flex items-center justify-center mb-6 text-4xl relative z-10" style={{ background: DS.surface, border: `1px solid ${DS.border}` }}>
+          🔬
+        </div>
+        <div className="text-center mb-8 relative z-10">
+          <div
+            className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 mb-4"
+            style={{ background: "rgba(167,139,250,0.15)", border: "1px solid rgba(167,139,250,0.3)" }}
+          >
+            <Crown className="w-4 h-4" style={{ color: "#a78bfa" }} />
+            <span className="text-xs font-extrabold" style={{ color: "#c4b5fd" }}>Fonctionnalité premium</span>
           </div>
-          <h1 className="text-2xl font-black text-gray-900 mb-3" style={{ fontFamily: "'Outfit', sans-serif" }}>Scan Produit</h1>
-          <p className="text-sm text-gray-500 leading-relaxed max-w-xs">
-            Analyse tes cosmétiques, vérifie leur composition et leur sécurité pour ta peau — <strong>500 FCFA/semaine</strong> ou <strong>2 000 FCFA/mois</strong>.
+          <h1 className="text-xl font-extrabold mb-3" style={{ color: DS.text }}>Scan produit</h1>
+          <p className="text-sm leading-relaxed max-w-xs" style={{ color: DS.body }}>
+            Analyse tes cosmétiques, vérifie leur composition et leur sécurité pour ta peau — <strong style={{ color: DS.text }}>500 FCFA/semaine</strong> ou <strong style={{ color: DS.text }}>2 000 FCFA/mois</strong>.
           </p>
         </div>
-        <div className="w-full max-w-sm space-y-3 mb-8">
+        <div className="w-full max-w-sm space-y-3 mb-8 relative z-10">
           {["Analyses de peau illimitées", "SkinBot IA — assistant peau 24h/24", "Scan Produit — vérifier tes cosmétiques", "Boutique — accès aux produits recommandés"].map(item => (
-            <div key={item} className="flex items-center gap-3 bg-white rounded-2xl p-3.5 shadow-sm border border-gray-50">
-              <div className="w-6 h-6 rounded-full bg-pink-50 flex items-center justify-center flex-shrink-0">
-                <span className="text-pink-500 text-xs font-bold">✓</span>
+            <div
+              key={item}
+              className="flex items-center gap-3 rounded-xl p-3.5"
+              style={{ background: DS.surface, border: `1px solid ${DS.border}` }}
+            >
+              <div
+                className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
+                style={{ background: "rgba(16,185,129,0.15)", border: "1px solid rgba(16,185,129,0.3)" }}
+              >
+                <span style={{ color: "#6ee7b7" }} className="text-xs font-extrabold">✓</span>
               </div>
-              <span className="text-sm font-medium text-gray-700">{item}</span>
+              <span className="text-sm font-medium" style={{ color: DS.body }}>{item}</span>
             </div>
           ))}
         </div>
-        <a href="/premium" className="w-full max-w-sm flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-sm text-white shadow-lg" style={{ background: "linear-gradient(135deg, #b8860b 0%, #d4a017 50%, #c9a84c 100%)", fontFamily: "'Outfit', sans-serif" }}>
+        <a
+          href="/premium"
+          className="w-full max-w-sm flex items-center justify-center gap-2 py-4 rounded-full font-extrabold text-sm text-white relative z-10"
+          style={{ background: "linear-gradient(135deg, #E91E8C, #f43f5e)" }}
+        >
           <Crown className="w-5 h-5" />
-          Passer Premium — 500 FCFA/semaine
+          Passer premium — 500 FCFA/semaine
         </a>
-        <a href="/" className="mt-4 text-sm text-gray-400 font-medium">← Retour à l'accueil</a>
+        <button onClick={() => setLocation("/")} className="mt-4 text-sm font-medium" style={{ color: DS.muted }}>← Retour à l'accueil</button>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen pb-28" style={{ background: "#f2f4f1" }} data-testid="page-scan-product">
-
-      {/* ── Header ── */}
-      <div className="bg-white px-5 pt-14 pb-5 border-b border-gray-50">
-        <h1 className="text-[22px] font-black text-gray-900 text-center tracking-tight">Produits</h1>
+    <div
+      className="min-h-screen pb-28"
+      style={{ background: DS.base, fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif' }}
+      data-testid="page-scan-product"
+    >
+      {/* Header */}
+      <div
+        className="px-5 pt-14 pb-5 sticky top-0 z-40"
+        style={{ background: "rgba(13,10,14,0.92)", backdropFilter: "blur(12px)", borderBottom: `1px solid ${DS.border}` }}
+      >
+        <h1 className="text-lg font-extrabold text-center" style={{ color: DS.text }}>Produits</h1>
       </div>
 
       <div className="px-4 pt-5 space-y-4">
 
-        {/* ── Tabs ── */}
-        <div className="flex bg-gray-100/80 rounded-2xl p-1.5 gap-1">
+        {/* Tabs */}
+        <div
+          className="flex rounded-2xl p-1.5 gap-1"
+          style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${DS.border}` }}
+        >
           {[
-            { key: "search", label: "Rechercher Produit" },
+            { key: "search", label: "Rechercher produit" },
             { key: "recommended", label: "Recommandés" },
           ].map(({ key, label }) => (
             <button
               key={key}
               onClick={() => setTab(key as "search" | "recommended")}
-              className={`flex-1 py-2.5 rounded-xl text-[13px] font-extrabold transition-all ${
-                tab === key
-                  ? "bg-pink-600 text-white shadow-md shadow-pink-100/50"
-                  : "text-gray-500"
-              }`}
+              className="flex-1 py-2.5 rounded-xl text-xs font-extrabold transition-all"
+              style={tab === key ? { background: "#7c3aed", color: "white" } : { color: DS.muted }}
             >
               {label}
             </button>
           ))}
         </div>
 
-        {/* ── Search bar ── */}
+        {/* Search */}
         <div className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-gray-400" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: DS.muted }} />
           <input
             value={query}
             onChange={e => setQuery(e.target.value)}
             placeholder="Rechercher un produit…"
-            className="w-full bg-white rounded-2xl pl-12 pr-4 py-4 text-sm text-gray-700 placeholder-gray-400 border-0 shadow-sm focus:outline-none focus:ring-2 focus:ring-pink-100"
+            className="w-full rounded-2xl pl-12 pr-4 py-4 text-sm focus:outline-none"
+            style={{ background: DS.surface, border: `1px solid ${DS.border}`, color: DS.text }}
             data-testid="input-product-search"
           />
         </div>
 
-        {/* ── Category chips ── */}
+        {/* Filter chips */}
         <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4" style={{ scrollbarWidth: "none" }}>
           {FILTERS.map(f => (
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`flex-shrink-0 px-4 py-2 rounded-full text-[13px] font-bold border transition-all ${
-                filter === f
-                  ? "bg-pink-600 text-white border-pink-600 shadow-sm"
-                  : "bg-white text-gray-600 border-gray-200"
-              }`}
+              className="flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold border transition-all"
+              style={filter === f
+                ? { background: "#7c3aed", color: "white", borderColor: "#7c3aed" }
+                : { background: "rgba(255,255,255,0.04)", color: DS.muted, borderColor: DS.border }
+              }
               data-testid={`filter-chip-${f.toLowerCase()}`}
             >
               {f}
@@ -186,14 +189,13 @@ export default function ScanProduct() {
           ))}
         </div>
 
-        {/* ── Product grid ── */}
+        {/* Product grid */}
         <div className="grid grid-cols-2 gap-3">
           {visibleProducts.map((product, i) => {
             const img = productImages[product.id];
             const safety = getSafetyScore(product.id);
             const brand = getProductBrand(product);
             const isFav = favorites.has(product.id);
-            const waPhone = product.whatsapp ? product.whatsapp.replace(/\D/g, "") : "";
             const topTargets = (product.targets || []).slice(0, 2);
 
             return (
@@ -202,57 +204,58 @@ export default function ScanProduct() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: Math.min(i * 0.04, 0.4) }}
-                className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100"
+                className="rounded-2xl overflow-hidden"
+                style={{ background: DS.surface, border: `1px solid ${DS.border}` }}
                 data-testid={`product-card-${product.id}`}
               >
-                {/* ── Zone image ── */}
-                <div className="relative flex items-center justify-center bg-gray-50" style={{ height: 160 }}>
-                  {/* Cœur favori */}
+                {/* Image zone */}
+                <div className="relative flex items-center justify-center" style={{ height: 160, background: "rgba(255,255,255,0.03)" }}>
+                  {/* Favorite */}
                   <button
                     onClick={() => toggleFav(product.id)}
-                    className="absolute top-2.5 left-2.5 z-10 w-7 h-7 rounded-full bg-white shadow-sm flex items-center justify-center active:scale-90 transition-all"
+                    className="absolute top-2.5 left-2.5 z-10 w-7 h-7 rounded-full flex items-center justify-center active:scale-90 transition-all"
+                    style={{ background: "rgba(0,0,0,0.4)", border: `1px solid ${DS.border}` }}
                     aria-label="Favori"
                   >
-                    <Heart className={`w-3.5 h-3.5 transition-colors ${isFav ? "fill-rose-500 text-rose-500" : "text-gray-300"}`} />
+                    <Heart className={`w-3.5 h-3.5 transition-colors ${isFav ? "fill-rose-400 text-rose-400" : "text-white/40"}`} />
                   </button>
 
-                  {/* Image produit */}
                   {img ? (
                     <img
                       src={img}
                       alt={product.name}
-                      className="h-32 w-auto object-contain drop-shadow"
+                      className="h-32 w-auto object-contain drop-shadow-md"
                       onError={e => { (e.target as HTMLImageElement).style.opacity = "0"; }}
                     />
                   ) : (
-                    <div className="w-16 h-28 rounded-xl bg-gray-200 flex items-center justify-center">
+                    <div className="w-16 h-28 rounded-xl flex items-center justify-center" style={{ background: "rgba(255,255,255,0.07)" }}>
                       <span className="text-xl">🧴</span>
                     </div>
                   )}
 
-                  {/* Badge sécurité */}
+                  {/* Safety badge */}
                   <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2">
-                    <span className="bg-pink-600 text-white text-[9px] font-bold px-2.5 py-1 rounded-full whitespace-nowrap shadow-sm">
+                    <span
+                      className="text-[9px] font-extrabold px-2.5 py-1 rounded-full whitespace-nowrap text-white"
+                      style={{ background: "rgba(124,58,237,0.8)" }}
+                    >
                       Safety: {safety}/100
                     </span>
                   </div>
                 </div>
 
-                {/* ── Infos produit ── */}
+                {/* Info */}
                 <div className="px-3 pt-2.5 pb-3 space-y-1.5">
-                  {/* Marque */}
-                  <p className="text-[9px] text-gray-400 font-medium uppercase tracking-wide leading-none">{brand}</p>
+                  <p className="text-[9px] font-medium uppercase tracking-wide leading-none" style={{ color: DS.muted }}>{brand}</p>
+                  <p className="text-[11px] font-bold leading-snug line-clamp-2" style={{ color: DS.text }}>{product.name}</p>
 
-                  {/* Nom produit */}
-                  <p className="text-[11px] font-semibold text-gray-900 leading-snug line-clamp-2">{product.name}</p>
-
-                  {/* Ce que ça soigne — tags */}
                   {topTargets.length > 0 && (
                     <div className="flex flex-wrap gap-1">
                       {topTargets.map(t => (
                         <span
                           key={t}
-                          className="text-[8px] font-medium text-pink-700 bg-pink-50 border border-pink-100 px-1.5 py-0.5 rounded-full leading-none capitalize"
+                          className="text-[8px] font-medium px-1.5 py-0.5 rounded-full leading-none capitalize"
+                          style={{ background: "rgba(167,139,250,0.15)", border: "1px solid rgba(167,139,250,0.3)", color: "#c4b5fd" }}
                         >
                           {t}
                         </span>
@@ -260,12 +263,10 @@ export default function ScanProduct() {
                     </div>
                   )}
 
-                  {/* Prix */}
-                  <p className="text-[12px] font-bold text-gray-900">
+                  <p className="text-[12px] font-extrabold" style={{ color: DS.text }}>
                     {product.price ? formatPrice(product.price) : "Prix sur demande"}
                   </p>
 
-                  {/* Bouton commander — toujours WhatsApp vers OWNER_PHONE (237674377959) */}
                   <a
                     href={`https://wa.me/237674377959?text=${encodeURIComponent(
                       `🛍️ Bonjour ! Je voudrais commander ce produit recommandé par GlowScan :\n\n• *${product.name}*\n💰 ${product.price ? formatPrice(product.price) : "À confirmer"}\n\nMerci !`
@@ -274,7 +275,7 @@ export default function ScanProduct() {
                     rel="noopener noreferrer"
                     onClick={e => e.stopPropagation()}
                     data-testid={`button-commander-${product.id}`}
-                    className="flex items-center justify-center gap-1 w-full py-1.5 rounded-xl text-white text-[10px] font-bold active:scale-[0.97] transition-all"
+                    className="flex items-center justify-center gap-1 w-full py-1.5 rounded-xl text-white text-[10px] font-extrabold active:scale-[0.97] transition-all"
                     style={{ background: "linear-gradient(135deg, #25d366 0%, #128c7e 100%)" }}
                   >
                     <svg viewBox="0 0 24 24" className="w-3 h-3 fill-white flex-shrink-0">
@@ -292,14 +293,11 @@ export default function ScanProduct() {
         {visibleProducts.length === 0 && (
           <div className="text-center py-16">
             <p className="text-5xl mb-3">🔍</p>
-            <p className="text-gray-700 font-extrabold text-base">Aucun produit trouvé</p>
-            <p className="text-gray-400 text-sm mt-1">Essaie un autre mot-clé ou filtre</p>
+            <p className="font-extrabold text-base" style={{ color: DS.text }}>Aucun produit trouvé</p>
+            <p className="text-sm mt-1" style={{ color: DS.muted }}>Essaie un autre mot-clé ou filtre</p>
           </div>
         )}
-
       </div>
-
-      <BottomNav />
     </div>
   );
 }

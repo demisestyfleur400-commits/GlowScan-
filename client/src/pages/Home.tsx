@@ -21,7 +21,25 @@ import cardEvolutionPhoto from "../lib/IMG_0131.png";
 import { productImages } from "@/lib/productImages";
 
 // ─────────────────────────────────────────────────────────────────────────
-//  Animations au scroll — variantes Framer Motion
+//  Design system constants
+// ─────────────────────────────────────────────────────────────────────────
+const DS = {
+  bg: "#0d0a0e",
+  surface: "#13101f",
+  element: "#0e0b1a",
+  textPrimary: "#f3f0ff",
+  textBody: "rgba(200,185,255,0.65)",
+  textMuted: "rgba(255,255,255,0.35)",
+  textHint: "rgba(255,255,255,0.25)",
+  violet: "#7c3aed",
+  violetMid: "#a78bfa",
+  violetLight: "#c4b5fd",
+  pink: "#E91E8C",
+  font: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
+} as const;
+
+// ─────────────────────────────────────────────────────────────────────────
+//  Scroll animation wrappers
 // ─────────────────────────────────────────────────────────────────────────
 const VIEW = { once: true, margin: "-80px" } as const;
 const EASE = [0.22, 1, 0.36, 1] as const;
@@ -66,7 +84,7 @@ function DropTop({ children, delay = 0 }: { children: React.ReactNode; delay?: n
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-//  Compteur animé 0 → score
+//  Animated counter 0 → score
 // ─────────────────────────────────────────────────────────────────────────
 function AnimatedCounter({ to, duration = 1.2, start = true }: { to: number; duration?: number; start?: boolean }) {
   const count = useMotionValue(0);
@@ -88,7 +106,7 @@ function AnimatedCounter({ to, duration = 1.2, start = true }: { to: number; dur
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-//  Jauge circulaire clinique
+//  Circular score gauge
 // ─────────────────────────────────────────────────────────────────────────
 function CircularScore({ score, color }: { score: number; color: string }) {
   const size = 80;
@@ -103,8 +121,8 @@ function CircularScore({ score, color }: { score: number; color: string }) {
       ref={ref}
       initial="hidden"
       animate={inView ? "visible" : "hidden"}
-      className="relative flex-shrink-0 font-mono"
-      style={{ width: size, height: size }}
+      className="relative flex-shrink-0"
+      style={{ width: size, height: size, fontFamily: DS.font }}
       data-testid="circular-score"
     >
       <svg width={size} height={size} className="-rotate-90">
@@ -113,7 +131,7 @@ function CircularScore({ score, color }: { score: number; color: string }) {
           cy={size / 2}
           r={radius}
           fill="transparent"
-          stroke="rgba(0, 0, 0, 0.04)"
+          stroke="rgba(167,139,250,0.12)"
           strokeWidth={stroke}
         />
         <motion.circle
@@ -137,12 +155,18 @@ function CircularScore({ score, color }: { score: number; color: string }) {
       <div className="absolute inset-0 flex items-center justify-center">
         <div className="text-center">
           <p
-            className="text-[22px] font-black leading-none tracking-tighter text-slate-900"
+            className="text-[22px] font-extrabold leading-none tracking-tighter"
+            style={{ color: DS.textPrimary }}
             data-testid="text-glowscore"
           >
             <AnimatedCounter to={score} start={inView} />
           </p>
-          <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">Index</p>
+          <p
+            className="text-[9px] font-bold uppercase tracking-[0.15em] mt-0.5"
+            style={{ color: DS.textMuted }}
+          >
+            Index
+          </p>
         </div>
       </div>
     </motion.div>
@@ -150,7 +174,7 @@ function CircularScore({ score, color }: { score: number; color: string }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-//  Cartes de connaissances techniques
+//  Knowledge cards data
 // ─────────────────────────────────────────────────────────────────────────
 const KNOWLEDGE_CARDS = [
   {
@@ -163,7 +187,7 @@ const KNOWLEDGE_CARDS = [
   },
   {
     photo: cardNutrimentsPhoto,
-    title: "Matrice des Nutriments",
+    title: "Matrice des nutriments",
     text: "GlowScan évalue l'impact biochimique de ton alimentation sur la barrière épidermique.",
     cta: "Analyser mes nutriments",
     path: "/nutriment-scan",
@@ -171,7 +195,7 @@ const KNOWLEDGE_CARDS = [
   },
   {
     photo: cardRoutinePhoto,
-    title: "Protocoles Sur-Mesure",
+    title: "Protocoles sur-mesure",
     text: "Aucun traitement générique. Chaque recommandation répond strictement à tes besoins cellulaires.",
     cta: "Accéder au protocole",
     path: "/routine",
@@ -179,7 +203,7 @@ const KNOWLEDGE_CARDS = [
   },
   {
     photo: cardEvolutionPhoto,
-    title: "Suivi Évolutif 48h",
+    title: "Suivi évolutif 48h",
     text: "Mesure les variations microscopiques et l'amélioration de tes indices d'analyse jour après jour.",
     cta: "Consulter les métriques",
     path: "/profile?tab=evolution",
@@ -232,7 +256,7 @@ const LOCAL_PRODUCT_IMAGES: Record<string, string> = productImages;
 const FALLBACK_FEATURED = [
   { productId: "serum-jeunesse", badge: "Anti-taches" },
   { productId: "tresor-cacao", badge: "Hydratation" },
-  { productId: "ebony-hair-soin-profond", badge: "Soin Capillaire" },
+  { productId: "ebony-hair-soin-profond", badge: "Soin capillaire" },
 ];
 
 type DisplayProduct = {
@@ -268,20 +292,20 @@ type MenuItem =
   | { kind: "logout"; label: string; desc: string; icon: React.ReactNode };
 
 const EXPLORER_ITEMS: MenuItem[] = [
-  { kind: "link", label: "Mon profil", desc: "Configuration de session, métriques, droits", path: "/profile", icon: <User className="w-4 h-4 text-slate-950" /> },
-  { kind: "link", label: "Scanner ma peau", desc: "Acquisition optique et diagnostic IA", path: "/analyze", icon: <ScanLine className="w-4 h-4 text-slate-950" /> },
-  { kind: "link", label: "SkinBot Engine", desc: "Agent conversationnel d'assistance", path: "/chat", icon: <Bot className="w-4 h-4 text-slate-950" /> },
-  { kind: "link", label: "Analyse des nutriments", desc: "Évaluation de l'impact nutritionnel", path: "/nutriment-scan", icon: <Apple className="w-4 h-4 text-slate-950" /> },
-  { kind: "link", label: "Boutique clinique", desc: "Formulations adaptées à vos indices", path: "/shop", icon: <ShoppingBag className="w-4 h-4 text-slate-950" /> },
-  { kind: "link", label: "Protocole de soin", desc: "Planification d'application matin & soir", path: "/routine", icon: <ListChecks className="w-4 h-4 text-slate-950" /> },
-  { kind: "link", label: "Base de connaissances", desc: "Documentation scientifique personnalisée", path: "/conseils", icon: <Lightbulb className="w-4 h-4 text-slate-950" /> },
-  { kind: "link", label: "Courbe d'évolution", desc: "Visualisation des variations biométriques", path: "/profile?tab=evolution", icon: <TrendingUp className="w-4 h-4 text-slate-950" /> },
-  { kind: "link", label: "Licence Pro / Premium", desc: "Extension globale des fonctionnalités", path: "/premium", icon: <Crown className="w-4 h-4 text-slate-950" /> },
-  { kind: "logout", label: "Terminer la session", desc: "Déconnexion sécurisée de la console", icon: <LogOut className="w-4 h-4 text-red-500" /> },
+  { kind: "link", label: "Mon profil", desc: "Configuration de session, métriques, droits", path: "/profile", icon: <User className="w-4 h-4" style={{ color: DS.violetMid }} strokeWidth={1.5} /> },
+  { kind: "link", label: "Scanner ma peau", desc: "Acquisition optique et diagnostic IA", path: "/analyze", icon: <ScanLine className="w-4 h-4" style={{ color: DS.violetMid }} strokeWidth={1.5} /> },
+  { kind: "link", label: "SkinBot Engine", desc: "Agent conversationnel d'assistance", path: "/chat", icon: <Bot className="w-4 h-4" style={{ color: DS.violetMid }} strokeWidth={1.5} /> },
+  { kind: "link", label: "Analyse des nutriments", desc: "Évaluation de l'impact nutritionnel", path: "/nutriment-scan", icon: <Apple className="w-4 h-4" style={{ color: DS.violetMid }} strokeWidth={1.5} /> },
+  { kind: "link", label: "Boutique clinique", desc: "Formulations adaptées à vos indices", path: "/shop", icon: <ShoppingBag className="w-4 h-4" style={{ color: DS.violetMid }} strokeWidth={1.5} /> },
+  { kind: "link", label: "Protocole de soin", desc: "Planification d'application matin & soir", path: "/routine", icon: <ListChecks className="w-4 h-4" style={{ color: DS.violetMid }} strokeWidth={1.5} /> },
+  { kind: "link", label: "Base de connaissances", desc: "Documentation scientifique personnalisée", path: "/conseils", icon: <Lightbulb className="w-4 h-4" style={{ color: DS.violetMid }} strokeWidth={1.5} /> },
+  { kind: "link", label: "Courbe d'évolution", desc: "Visualisation des variations biométriques", path: "/profile?tab=evolution", icon: <TrendingUp className="w-4 h-4" style={{ color: DS.violetMid }} strokeWidth={1.5} /> },
+  { kind: "link", label: "Licence Pro / Premium", desc: "Extension globale des fonctionnalités", path: "/premium", icon: <Crown className="w-4 h-4" style={{ color: DS.violetMid }} strokeWidth={1.5} /> },
+  { kind: "logout", label: "Terminer la session", desc: "Déconnexion sécurisée de la console", icon: <LogOut className="w-4 h-4" style={{ color: "#f9a8d4" }} strokeWidth={1.5} /> },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────
-//  MENU CONSOLE EXCLUSIF (Explorer)
+//  Explorer sheet (slide-up menu)
 // ─────────────────────────────────────────────────────────────────────────
 function ExplorerSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [, setLocation] = useLocation();
@@ -304,7 +328,8 @@ function ExplorerSheet({ open, onClose }: { open: boolean; onClose: () => void }
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-slate-950/40 z-[60] backdrop-blur-xs"
+            className="fixed inset-0 z-[60] backdrop-blur-sm"
+            style={{ background: "rgba(13,10,14,0.7)" }}
             onClick={onClose}
             data-testid="explorer-backdrop"
           />
@@ -313,33 +338,64 @@ function ExplorerSheet({ open, onClose }: { open: boolean; onClose: () => void }
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 30, stiffness: 300 }}
-            className="fixed left-0 right-0 bottom-0 z-[61] bg-white rounded-t-3xl shadow-2xl max-h-[82vh] overflow-hidden flex flex-col selection:bg-slate-950 selection:text-white"
+            className="fixed left-0 right-0 bottom-0 z-[61] max-h-[82vh] overflow-hidden flex flex-col"
+            style={{
+              background: DS.surface,
+              borderRadius: "28px 28px 0 0",
+              border: "1px solid rgba(167,139,250,0.15)",
+              borderBottom: "none",
+              fontFamily: DS.font,
+            }}
             data-testid="explorer-sheet"
             role="dialog"
             aria-modal="true"
             aria-labelledby="explorer-title"
           >
+            {/* Handle */}
             <div className="pt-3 pb-1 flex justify-center">
-              <div className="w-10 h-1 rounded-full bg-slate-200" />
+              <div
+                className="w-10 h-1 rounded-full"
+                style={{ background: "rgba(167,139,250,0.25)" }}
+              />
             </div>
 
-            <div className="px-5 pt-2 pb-4 flex items-center justify-between border-b border-slate-100">
+            {/* Header */}
+            <div
+              className="px-5 pt-2 pb-4 flex items-center justify-between"
+              style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}
+            >
               <div>
-                <p className="text-[9px] font-black tracking-[0.25em] uppercase text-slate-400 font-mono flex items-center gap-1">
-                  <Terminal className="w-3 h-3" style={{ color: "#E91E8C" }} /> Index des modules
+                <p
+                  className="flex items-center gap-1.5 text-[9px] font-bold tracking-[0.2em] uppercase"
+                  style={{ color: DS.textMuted }}
+                >
+                  <Terminal className="w-3 h-3" style={{ color: DS.violetMid }} strokeWidth={1.5} />
+                  Index des modules
                 </p>
-                <h2 id="explorer-title" className="text-lg font-black text-slate-900 uppercase tracking-tight mt-0.5">Console Globale</h2>
+                <h2
+                  id="explorer-title"
+                  className="text-lg font-extrabold tracking-tight mt-0.5"
+                  style={{ color: DS.textPrimary }}
+                >
+                  Console globale
+                </h2>
               </div>
               <button
                 onClick={onClose}
-                className="w-8 h-8 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center active:scale-90 transition-transform"
+                className="w-8 h-8 flex items-center justify-center active:scale-90 transition-transform"
+                style={{
+                  background: "rgba(255,255,255,0.05)",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  borderRadius: "12px",
+                }}
                 data-testid="explorer-close"
                 aria-label="Fermer"
               >
-                <X className="w-4 h-4 text-slate-600" />
+                <X className="w-4 h-4" style={{ color: DS.textMuted }} strokeWidth={1.5} />
               </button>
             </div>
 
+            {/* Items */}
             <div className="overflow-y-auto px-4 py-4 space-y-2">
               {EXPLORER_ITEMS.map((item, i) => (
                 <motion.button
@@ -350,21 +406,53 @@ function ExplorerSheet({ open, onClose }: { open: boolean; onClose: () => void }
                   onClick={() => handleClick(item)}
                   disabled={item.kind === "logout" && isLoggingOut}
                   data-testid={item.kind === "logout" ? "menu-item-logout" : `menu-item-${item.path.replace(/\//g, "-")}`}
-                  className={`w-full flex items-center gap-3.5 p-3.5 rounded-xl text-left active:scale-[0.99] transition-transform border border-slate-100 bg-slate-50/50 hover:bg-slate-50 ${item.kind === "logout" && isLoggingOut ? "opacity-40" : ""}`}
+                  className={`w-full flex items-center gap-3.5 p-3.5 text-left active:scale-[0.99] transition-transform ${item.kind === "logout" && isLoggingOut ? "opacity-40" : ""}`}
+                  style={{
+                    background: "rgba(255,255,255,0.03)",
+                    border: "1px solid rgba(255,255,255,0.06)",
+                    borderRadius: "16px",
+                  }}
                 >
-                  <div className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center shadow-xs flex-shrink-0">
+                  <div
+                    className="w-8 h-8 flex items-center justify-center flex-shrink-0"
+                    style={{
+                      background: item.kind === "logout"
+                        ? "rgba(233,30,140,0.08)"
+                        : "rgba(124,58,237,0.12)",
+                      border: item.kind === "logout"
+                        ? "1px solid rgba(233,30,140,0.2)"
+                        : "1px solid rgba(167,139,250,0.2)",
+                      borderRadius: "10px",
+                    }}
+                  >
                     {item.icon}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-black text-slate-900 uppercase tracking-wide">{item.label}</p>
-                    <p className="text-[11px] text-slate-500 mt-0.5 font-medium truncate">{item.desc}</p>
+                    <p
+                      className="text-xs font-bold"
+                      style={{
+                        color: item.kind === "logout" ? "#f9a8d4" : DS.textPrimary,
+                      }}
+                    >
+                      {item.label}
+                    </p>
+                    <p
+                      className="text-[11px] mt-0.5 font-medium truncate"
+                      style={{ color: DS.textBody }}
+                    >
+                      {item.desc}
+                    </p>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                  <ChevronRight
+                    className="w-4 h-4 flex-shrink-0"
+                    style={{ color: DS.textMuted }}
+                    strokeWidth={1.5}
+                  />
                 </motion.button>
               ))}
             </div>
           </motion.div>
-          </>
+        </>
       )}
     </AnimatePresence>
   );
@@ -377,13 +465,13 @@ function daysSince(date: string | Date) {
 }
 
 function getScoreColor(score: number) {
-  if (score >= 75) return { text: "text-emerald-500", bg: "bg-slate-900", border: "border-emerald-500/20", hex: "#10b981" };
-  if (score >= 50) return { text: "text-amber-500", bg: "bg-slate-900", border: "border-amber-500/20", hex: "#f59e0b" };
-  return { text: "text-red-500", bg: "bg-slate-900", border: "border-red-500/20", hex: "#ef4444" };
+  if (score >= 75) return { hex: "#10b981", stateBg: "rgba(16,185,129,0.08)", stateBorder: "rgba(16,185,129,0.2)", stateText: "#6ee7b7" };
+  if (score >= 50) return { hex: "#f59e0b", stateBg: "rgba(245,158,11,0.08)", stateBorder: "rgba(245,158,11,0.2)", stateText: "#fbbf24" };
+  return { hex: "#E91E8C", stateBg: "rgba(233,30,140,0.08)", stateBorder: "rgba(233,30,140,0.2)", stateText: "#f9a8d4" };
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-//  PAGE HOME CLINIQUE
+//  HOME PAGE
 // ─────────────────────────────────────────────────────────────────────────
 export default function Home() {
   const { user, isLoading } = useAuth();
@@ -405,7 +493,7 @@ export default function Home() {
     queryKey: ["/api/featured-products"],
     staleTime: 60_000,
   });
-  
+
   const featuredProducts = useMemo<DisplayProduct[]>(() => {
     const sorted = featuredRaw && featuredRaw.length > 0
       ? [...featuredRaw].sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
@@ -429,11 +517,31 @@ export default function Home() {
 
   if (isLoading) {
     return (
-      <div className="fixed inset-0 bg-white flex flex-col items-center justify-center gap-3">
-        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center shadow-lg shadow-pink-200">
-          <Loader2 className="w-6 h-6 text-white animate-spin" />
+      <div
+        className="fixed inset-0 flex flex-col items-center justify-center gap-3"
+        style={{ background: DS.bg, fontFamily: DS.font }}
+      >
+        {/* Glow orb — no box-shadow */}
+        <div
+          className="absolute w-64 h-64"
+          style={{ background: "radial-gradient(circle, rgba(124,58,237,0.15), transparent)" }}
+        />
+        <div
+          className="w-12 h-12 relative flex items-center justify-center"
+          style={{
+            background: DS.surface,
+            border: "1px solid rgba(167,139,250,0.2)",
+            borderRadius: "20px",
+          }}
+        >
+          <Loader2 className="w-6 h-6 animate-spin" style={{ color: DS.violetMid }} strokeWidth={1.5} />
         </div>
-        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Chargement…</p>
+        <p
+          className="text-[10px] font-bold tracking-[0.2em] uppercase"
+          style={{ color: DS.textMuted }}
+        >
+          Chargement…
+        </p>
       </div>
     );
   }
@@ -464,164 +572,298 @@ export default function Home() {
   const scoreColors = getScoreColor(lastScore ?? 0);
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-28 text-gray-900" data-testid="page-home">
+    <div
+      className="min-h-screen pb-28"
+      style={{ background: DS.bg, fontFamily: DS.font, color: DS.textPrimary }}
+      data-testid="page-home"
+    >
       <Onboarding />
 
-      {/* ─── Header Apple Health ─── */}
-      <header className="bg-white px-5 pt-12 pb-4 sticky top-0 z-40 border-b border-gray-100">
+      {/* Ambient glow orbs — no box-shadow */}
+      <div className="pointer-events-none fixed inset-0 overflow-hidden z-0" aria-hidden="true">
+        <div
+          className="absolute top-[-10%] right-[-5%] w-[400px] h-[400px]"
+          style={{ background: "radial-gradient(circle, rgba(124,58,237,0.12), transparent)" }}
+        />
+        <div
+          className="absolute bottom-[20%] left-[-10%] w-[300px] h-[300px]"
+          style={{ background: "radial-gradient(circle, rgba(124,58,237,0.08), transparent)" }}
+        />
+      </div>
+
+      {/* ─── Header ─── */}
+      <header
+        className="px-5 pt-12 pb-4 sticky top-0 z-40"
+        style={{
+          background: `${DS.bg}e6`,
+          borderBottom: "1px solid rgba(255,255,255,0.07)",
+          backdropFilter: "blur(20px)",
+        }}
+      >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5" data-testid="logo-glowscan">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center shadow-sm">
+            <div
+              className="w-8 h-8 flex items-center justify-center"
+              style={{
+                background: DS.surface,
+                border: "1px solid rgba(167,139,250,0.2)",
+                borderRadius: "12px",
+              }}
+            >
               <img src="/logo-icon.jpg" alt="" className="w-6 h-6 rounded-lg object-cover" />
             </div>
-            <span className="text-base font-black text-gray-900">GlowScan</span>
+            <span className="text-base font-extrabold" style={{ color: DS.textPrimary }}>GlowScan</span>
           </div>
           <button
             onClick={() => setExplorerOpen(true)}
-            className="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center active:scale-95 transition-all"
+            className="w-9 h-9 flex items-center justify-center active:scale-95 transition-all"
+            style={{
+              background: "rgba(255,255,255,0.05)",
+              border: "1px solid rgba(255,255,255,0.1)",
+              borderRadius: "12px",
+            }}
             data-testid="button-menu"
             aria-label="Ouvrir le menu"
           >
-            <Menu className="w-4 h-4 text-gray-600" strokeWidth={2.5} />
+            <Menu className="w-4 h-4" style={{ color: DS.textMuted }} strokeWidth={2} />
           </button>
         </div>
       </header>
 
-      <main className="px-4 pt-6 space-y-6 max-w-md mx-auto">
-        {/* ─── Salutation chaleureuse ─── */}
+      <main className="px-4 pt-6 space-y-6 max-w-md mx-auto relative z-10">
+
+        {/* ─── Greeting ─── */}
         <div>
-          <p className="text-sm text-gray-400 font-medium">Bienvenue 👋</p>
-          <h1 className="text-2xl font-black text-gray-900 tracking-tight mt-0.5" data-testid="text-username">
-            Bonjour, {firstName} ✨
+          <p
+            className="text-[10px] font-bold tracking-[0.18em] uppercase"
+            style={{ color: DS.textMuted }}
+          >
+            Bienvenue
+          </p>
+          <h1
+            className="text-2xl font-extrabold tracking-tight mt-1"
+            style={{ color: DS.textPrimary }}
+            data-testid="text-username"
+          >
+            Bonjour, {firstName}
           </h1>
         </div>
 
         {/* ─── Section 1: Hero Scan ─── */}
         <FadeUp delay={0}>
           <section
-            className="relative rounded-3xl overflow-hidden shadow-xl"
+            className="relative overflow-hidden"
             data-testid="section-status"
-            style={{ background: "linear-gradient(135deg, #1A1A2E 0%, #2d1b69 50%, #1A1A2E 100%)" }}
+            style={{
+              background: "rgba(124,58,237,0.08)",
+              border: "1px solid rgba(167,139,250,0.18)",
+              borderRadius: "24px",
+            }}
           >
-            {/* Orbes décoratifs */}
-            <div className="absolute top-[-30px] right-[-30px] w-32 h-32 rounded-full opacity-20" style={{ background: "radial-gradient(circle, #E91E8C, transparent)" }} />
-            <div className="absolute bottom-[-20px] left-[-20px] w-24 h-24 rounded-full opacity-15" style={{ background: "radial-gradient(circle, #f43f5e, transparent)" }} />
+            {/* Glow orb inside card */}
+            <div
+              className="absolute top-[-30px] right-[-30px] w-40 h-40"
+              style={{ background: "radial-gradient(circle, rgba(124,58,237,0.2), transparent)" }}
+            />
+            <div
+              className="absolute bottom-[-20px] left-[-20px] w-28 h-28"
+              style={{ background: "radial-gradient(circle, rgba(167,139,250,0.1), transparent)" }}
+            />
 
             <div className="relative p-6">
               <div className="flex items-center gap-2 mb-4">
-                <div className="w-2 h-2 rounded-full bg-pink-400 animate-pulse" />
-                <span className="text-[10px] font-bold text-pink-300 uppercase tracking-widest">Analyse IA disponible</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span
+                  className="text-[9px] font-bold tracking-[0.2em] uppercase"
+                  style={{ color: "#6ee7b7" }}
+                >
+                  Analyse IA disponible
+                </span>
               </div>
-              <h2 className="text-xl font-black text-white leading-tight mb-2">
+              <h2
+                className="text-xl font-extrabold leading-tight mb-2"
+                style={{ color: DS.textPrimary }}
+              >
                 Scanner ta peau
               </h2>
-              <p className="text-xs text-white/60 leading-relaxed mb-5 font-medium">
+              <p
+                className="text-xs leading-relaxed mb-5 font-medium"
+                style={{ color: DS.textBody }}
+              >
                 {reminderMessage}
               </p>
+              {/* Primary violet button */}
               <button
                 onClick={() => setLocation("/analyze")}
                 data-testid="button-scan-now"
-                className="w-full h-12 rounded-2xl text-gray-900 font-black text-sm flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-lg"
-                style={{ background: "linear-gradient(135deg, #ffffff 0%, #fce7f3 100%)" }}
+                className="w-full h-12 font-extrabold text-sm flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
+                style={{
+                  background: "#7c3aed",
+                  borderRadius: "9999px",
+                  color: "#f3f0ff",
+                }}
               >
-                <ScanLine className="w-4 h-4 text-pink-600" />
+                <ScanLine className="w-4 h-4" strokeWidth={1.5} />
                 Lancer mon analyse
               </button>
             </div>
           </section>
         </FadeUp>
 
-        {/* ─── Section 2: Métriques & Progression ─── */}
+        {/* ─── Section 2: Glow Score ─── */}
         <SlideLeft delay={0.08}>
           <section data-testid="section-progression">
             <div className="mb-3 flex items-center gap-2">
-              <div className="w-5 h-5 rounded-full bg-pink-100 flex items-center justify-center">
-                <Target className="w-3 h-3 text-pink-500" />
+              <div
+                className="w-5 h-5 rounded-full flex items-center justify-center"
+                style={{ background: "rgba(124,58,237,0.15)" }}
+              >
+                <Target className="w-3 h-3" style={{ color: DS.violetMid }} strokeWidth={1.5} />
               </div>
-              <h2 className="text-sm font-bold text-gray-700">Mon Glow Score</h2>
+              <h2 className="text-sm font-bold" style={{ color: DS.textBody }}>Mon Glow Score</h2>
             </div>
 
             {lastScore != null ? (
-              <div className="bg-white rounded-3xl p-5 border border-gray-100 shadow-sm">
+              <div
+                className="p-5"
+                style={{
+                  background: "rgba(255,255,255,0.04)",
+                  border: "1px solid rgba(255,255,255,0.07)",
+                  borderRadius: "24px",
+                }}
+              >
                 <div className="flex items-center gap-5">
                   <CircularScore score={lastScore} color={scoreColors.hex} />
 
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs text-gray-400 font-medium">Score actuel</p>
+                    <p
+                      className="text-xs font-medium"
+                      style={{ color: DS.textMuted }}
+                    >
+                      Score actuel
+                    </p>
                     {delta != null ? (
                       <div className="flex items-center gap-1.5 mt-1 mb-3">
                         <span
-                          className={`text-sm font-black ${delta > 0 ? "text-green-500" : delta < 0 ? "text-red-500" : "text-gray-400"}`}
+                          className="text-sm font-extrabold"
+                          style={{
+                            color: delta > 0 ? "#6ee7b7" : delta < 0 ? "#f9a8d4" : DS.textMuted,
+                          }}
                           data-testid="text-score-delta"
                         >
                           {delta > 0 ? "▲" : delta < 0 ? "▼" : "■"} {delta > 0 ? "+" : ""}{delta} pts
                         </span>
-                        <span className="text-xs text-gray-400">depuis le dernier scan</span>
+                        <span className="text-xs" style={{ color: DS.textMuted }}>depuis le dernier scan</span>
                       </div>
                     ) : (
-                      <p className="text-xs text-gray-400 leading-tight mt-1 mb-3">
+                      <p
+                        className="text-xs leading-tight mt-1 mb-3"
+                        style={{ color: DS.textBody }}
+                      >
                         Premier scan effectué ! Revenez dans 48h pour voir votre progression.
                       </p>
                     )}
                     <button
                       onClick={() => setLocation("/profile?tab=evolution")}
                       data-testid="button-see-evolution"
-                      className="inline-flex items-center gap-1 text-xs font-bold text-pink-600 hover:text-pink-700 transition-colors"
+                      className="inline-flex items-center gap-1 text-xs font-bold transition-colors"
+                      style={{ color: DS.violetMid }}
                     >
-                      Voir l'évolution <ChevronRight className="w-3 h-3" />
+                      Voir l'évolution <ChevronRight className="w-3 h-3" strokeWidth={2} />
                     </button>
                   </div>
                 </div>
               </div>
             ) : (
-              <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm text-center">
-                <div className="w-12 h-12 rounded-2xl bg-pink-50 flex items-center justify-center mx-auto mb-3">
-                  <TrendingUp className="w-6 h-6 text-pink-400" />
+              <div
+                className="p-6 text-center"
+                style={{
+                  background: "rgba(255,255,255,0.04)",
+                  border: "1px solid rgba(255,255,255,0.07)",
+                  borderRadius: "24px",
+                }}
+              >
+                <div
+                  className="w-12 h-12 flex items-center justify-center mx-auto mb-3"
+                  style={{
+                    background: "rgba(124,58,237,0.1)",
+                    border: "1px solid rgba(167,139,250,0.2)",
+                    borderRadius: "16px",
+                  }}
+                >
+                  <TrendingUp className="w-6 h-6" style={{ color: DS.violetMid }} strokeWidth={1.5} />
                 </div>
-                <p className="text-sm font-bold text-gray-700 mb-1">Aucun scan encore</p>
-                <p className="text-xs text-gray-400 mb-4">Lance ton premier diagnostic pour voir ton Glow Score.</p>
+                <p className="text-sm font-bold mb-1" style={{ color: DS.textPrimary }}>Aucun scan encore</p>
+                <p className="text-xs mb-4" style={{ color: DS.textBody }}>Lance ton premier diagnostic pour voir ton Glow Score.</p>
                 <button
                   onClick={() => setLocation("/analyze")}
-                  className="inline-flex items-center gap-1 text-xs font-bold text-pink-600"
+                  className="inline-flex items-center gap-1 text-xs font-bold"
+                  style={{ color: DS.violetMid }}
                   data-testid="button-start-first-scan"
                 >
-                  Démarrer maintenant <ChevronRight className="w-3 h-3" />
+                  Démarrer maintenant <ChevronRight className="w-3 h-3" strokeWidth={2} />
                 </button>
               </div>
             )}
           </section>
         </SlideLeft>
 
-        {/* ─── Section 3: Recommandation Technique du jour ─── */}
+        {/* ─── Section 3: Daily tip ─── */}
         <DropTop delay={0.15}>
           <section data-testid="section-tip">
             <div className="mb-3 flex items-center gap-2">
-              <div className="w-5 h-5 rounded-full bg-amber-100 flex items-center justify-center">
-                <Lightbulb className="w-3 h-3 text-amber-500" />
+              <div
+                className="w-5 h-5 rounded-full flex items-center justify-center"
+                style={{ background: "rgba(245,158,11,0.1)" }}
+              >
+                <Lightbulb className="w-3 h-3" style={{ color: "#fbbf24" }} strokeWidth={1.5} />
               </div>
-              <h2 className="text-sm font-bold text-gray-700">Conseil du jour</h2>
+              <h2 className="text-sm font-bold" style={{ color: DS.textBody }}>Conseil du jour</h2>
             </div>
 
-            <div className="rounded-3xl overflow-hidden border border-gray-100 shadow-sm bg-white">
+            <div
+              className="overflow-hidden"
+              style={{
+                background: "rgba(255,255,255,0.04)",
+                border: "1px solid rgba(255,255,255,0.07)",
+                borderRadius: "24px",
+              }}
+            >
               <motion.div
                 initial={{ opacity: 0, scale: 1.02 }}
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={VIEW}
                 transition={{ duration: 0.4, ease: EASE }}
-                className="relative w-full h-40 overflow-hidden bg-slate-950"
+                className="relative w-full h-40 overflow-hidden"
+                style={{ background: DS.element }}
               >
                 <img
                   src={tipPhoto}
                   alt="Documentation clinique"
-                  className="w-full h-full object-cover opacity-80"
+                  className="w-full h-full object-cover opacity-70"
                   data-testid="img-tip-photo"
                   loading="lazy"
                   decoding="async"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent" />
-                <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm rounded-xl px-2.5 py-1 flex items-center gap-1.5 shadow-sm border border-white/50">
-                  <span className="w-1.5 h-1.5 rounded-full bg-pink-500 animate-pulse" />
-                  <span className="text-[9px] font-bold uppercase tracking-wider text-gray-700">Astuce peau</span>
+                <div
+                  className="absolute inset-0"
+                  style={{ background: "linear-gradient(to top, rgba(13,10,14,0.9) 0%, transparent 60%)" }}
+                />
+                <div
+                  className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1"
+                  style={{
+                    background: "rgba(245,158,11,0.1)",
+                    border: "1px solid rgba(245,158,11,0.25)",
+                    borderRadius: "8px",
+                  }}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                  <span
+                    className="text-[9px] font-bold tracking-[0.18em] uppercase"
+                    style={{ color: "#fbbf24" }}
+                  >
+                    Astuce peau
+                  </span>
                 </div>
               </motion.div>
 
@@ -633,38 +875,49 @@ export default function Home() {
                 className="p-5 text-left"
               >
                 {skinTypeForTip && (
-                  <p className="text-[10px] font-bold text-pink-500 mb-1.5">
+                  <p
+                    className="text-[10px] font-bold mb-1.5 uppercase tracking-[0.15em]"
+                    style={{ color: DS.violetLight }}
+                  >
                     Pour peau {skinTypeForTip}
                   </p>
                 )}
-                <p className="text-xs text-slate-600 leading-relaxed font-semibold mb-4" data-testid="text-tip">
+                <p
+                  className="text-xs leading-relaxed font-semibold mb-4"
+                  style={{ color: DS.textBody }}
+                  data-testid="text-tip"
+                >
                   {tip}
                 </p>
                 <button
                   onClick={() => setLocation("/conseils")}
                   data-testid="button-all-tips"
-                  className="inline-flex items-center gap-1 text-xs font-bold text-pink-600"
+                  className="inline-flex items-center gap-1 text-xs font-bold"
+                  style={{ color: DS.violetMid }}
                 >
-                  Voir tous les conseils <ArrowRight className="w-3.5 h-3.5" />
+                  Voir tous les conseils <ArrowRight className="w-3.5 h-3.5" strokeWidth={2} />
                 </button>
               </motion.div>
             </div>
           </section>
         </DropTop>
 
-        {/* ─── Section 4: Matrice de modules (Le savais-tu ?) ─── */}
+        {/* ─── Section 4: Knowledge cards ─── */}
         <FadeUp delay={0.22}>
           <section data-testid="section-knowledge">
             <div className="mb-3 px-1 flex items-center gap-2">
-              <div className="w-5 h-5 rounded-full bg-violet-100 flex items-center justify-center">
-                <Sparkles className="w-3 h-3 text-violet-500" />
+              <div
+                className="w-5 h-5 rounded-full flex items-center justify-center"
+                style={{ background: "rgba(124,58,237,0.15)" }}
+              >
+                <Sparkles className="w-3 h-3" style={{ color: DS.violetMid }} strokeWidth={1.5} />
               </div>
-              <h2 className="text-sm font-bold text-gray-700">Explorer</h2>
+              <h2 className="text-sm font-bold" style={{ color: DS.textBody }}>Explorer</h2>
             </div>
 
             <div
               className="flex gap-3 overflow-x-auto pb-3 -mx-4 px-4 snap-x snap-mandatory"
-              style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+              style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}
             >
               {KNOWLEDGE_CARDS.map((card, i) => (
                 <motion.div
@@ -673,35 +926,60 @@ export default function Home() {
                   whileInView={{ opacity: 1, x: 0 }}
                   viewport={VIEW}
                   transition={{ duration: 0.4, delay: i * 0.08, ease: EASE }}
-                  className="min-w-[260px] max-w-[260px] snap-start rounded-3xl overflow-hidden shadow-xs bg-white border border-slate-200 relative flex flex-col text-left"
+                  className="min-w-[260px] max-w-[260px] snap-start overflow-hidden relative flex flex-col text-left"
+                  style={{
+                    background: "rgba(167,139,250,0.06)",
+                    border: "1px solid rgba(167,139,250,0.18)",
+                    borderRadius: "24px",
+                  }}
                   data-testid={`knowledge-card-${card.testid}`}
                 >
-                  <div className="relative w-full h-36 overflow-hidden bg-slate-950">
+                  <div
+                    className="relative w-full h-36 overflow-hidden"
+                    style={{ background: DS.element }}
+                  >
                     <img
                       src={card.photo}
                       alt={card.title}
-                      className="w-full h-full object-cover opacity-75"
+                      className="w-full h-full object-cover opacity-70"
                       loading="lazy"
                       decoding="async"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent" />
+                    <div
+                      className="absolute inset-0"
+                      style={{ background: "linear-gradient(to top, rgba(13,10,14,0.95) 0%, transparent 55%)" }}
+                    />
                     <div className="absolute bottom-3 left-3 right-3">
-                      <p className="text-xs font-black text-white uppercase tracking-wider font-mono">
+                      <p
+                        className="text-xs font-extrabold tracking-tight"
+                        style={{ color: DS.textPrimary }}
+                      >
                         {card.title}
                       </p>
                     </div>
                   </div>
 
                   <div className="p-4 flex-1 flex flex-col justify-between">
-                    <p className="text-[11px] leading-relaxed text-slate-500 font-semibold mb-4">
+                    <p
+                      className="text-[11px] leading-relaxed font-medium mb-4"
+                      style={{ color: DS.textBody }}
+                    >
                       {card.text}
                     </p>
+                    {/* Secondary button */}
                     <button
                       onClick={() => setLocation(card.path)}
                       data-testid={`button-knowledge-${card.testid}`}
-                      className="w-full py-3 rounded-xl bg-slate-950 text-white text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all shadow-md hover:bg-slate-900"
+                      className="w-full py-3 text-[10px] font-extrabold active:scale-95 transition-all"
+                      style={{
+                        background: "rgba(255,255,255,0.08)",
+                        border: "1px solid rgba(255,255,255,0.15)",
+                        borderRadius: "9999px",
+                        color: DS.textPrimary,
+                        letterSpacing: "0.05em",
+                      }}
                     >
-                      Exécuter le module
+                      Accéder au module
                     </button>
                   </div>
                 </motion.div>
@@ -710,50 +988,83 @@ export default function Home() {
           </section>
         </FadeUp>
 
-        {/* ─── Section 5: Lien Passerelle Professionnelle (Dermato) ─── */}
+        {/* ─── Section 5: Pro dermatologist CTA ─── */}
         <FadeUp delay={0.28}>
           <section data-testid="section-pro-cta">
             <button
               onClick={() => setLocation("/pro")}
               data-testid="button-pro-cta"
-              className="w-full text-left rounded-3xl p-4 bg-white border border-slate-200 shadow-xs hover:border-slate-300 active:scale-[0.99] transition-all"
+              className="w-full text-left p-4 active:scale-[0.99] transition-all"
+              style={{
+                background: "rgba(255,255,255,0.04)",
+                border: "1px solid rgba(255,255,255,0.07)",
+                borderRadius: "24px",
+              }}
             >
               <div className="flex items-center gap-3.5">
-                <div className="w-10 h-10 rounded-xl bg-slate-950 flex items-center justify-center text-xl flex-shrink-0 border border-slate-900 shadow-md">
-                  <ShieldAlert className="w-4 h-4 text-emerald-400" />
+                <div
+                  className="w-10 h-10 flex items-center justify-center flex-shrink-0"
+                  style={{
+                    background: "rgba(16,185,129,0.08)",
+                    border: "1px solid rgba(16,185,129,0.2)",
+                    borderRadius: "14px",
+                  }}
+                >
+                  <ShieldAlert className="w-4 h-4" style={{ color: "#6ee7b7" }} strokeWidth={1.5} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[9px] font-black tracking-[0.2em] uppercase text-slate-400 font-mono">Praticiens & Cliniques</p>
-                  <p className="text-xs font-black text-slate-950 uppercase tracking-wide mt-0.5">Interface Dermatologue</p>
-                  <p className="text-[11px] text-slate-500 font-medium truncate">Gérez votre patientèle via le tableau GlowScan Pro</p>
+                  <p
+                    className="text-[9px] font-bold tracking-[0.2em] uppercase"
+                    style={{ color: DS.textMuted }}
+                  >
+                    Praticiens & cliniques
+                  </p>
+                  <p
+                    className="text-xs font-extrabold tracking-tight mt-0.5"
+                    style={{ color: DS.textPrimary }}
+                  >
+                    Interface dermatologue
+                  </p>
+                  <p
+                    className="text-[11px] font-medium truncate mt-0.5"
+                    style={{ color: DS.textBody }}
+                  >
+                    Gérez votre patientèle via le tableau GlowScan Pro
+                  </p>
                 </div>
-                <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                <ChevronRight className="w-4 h-4 flex-shrink-0" style={{ color: DS.textMuted }} strokeWidth={1.5} />
               </div>
             </button>
           </section>
         </FadeUp>
 
-        {/* ─── Section 6: Boutique / Formulations Cliniques ─── */}
+        {/* ─── Section 6: Shop / featured products ─── */}
         {featuredProducts.length > 0 && (
           <FadeUp delay={0.32}>
             <section data-testid="section-shop">
               <div className="mb-3 px-1 flex items-end justify-between">
                 <div className="flex items-center gap-1.5">
-                  <ShoppingBag className="w-4 h-4 text-slate-400" />
-                  <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest font-mono">Prescriptions de pointe</h2>
+                  <ShoppingBag className="w-4 h-4" style={{ color: DS.textMuted }} strokeWidth={1.5} />
+                  <h2
+                    className="text-[10px] font-bold tracking-[0.18em] uppercase"
+                    style={{ color: DS.textMuted }}
+                  >
+                    Prescriptions de pointe
+                  </h2>
                 </div>
                 <button
                   onClick={() => setLocation("/shop")}
                   data-testid="button-shop-all"
-                  className="inline-flex items-center gap-1 text-[10px] font-black text-slate-950 uppercase tracking-wider"
+                  className="inline-flex items-center gap-1 text-[10px] font-extrabold"
+                  style={{ color: DS.violetMid }}
                 >
-                  Tout voir <ChevronRight className="w-3 h-3" style={{ color: "#E91E8C" }} />
+                  Tout voir <ChevronRight className="w-3 h-3" strokeWidth={2} />
                 </button>
               </div>
 
               <div
                 className="flex gap-3 overflow-x-auto pb-3 -mx-4 px-4 snap-x snap-mandatory"
-                style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+                style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}
               >
                 {featuredProducts.map((p, i) => (
                   <motion.div
@@ -762,38 +1073,79 @@ export default function Home() {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={VIEW}
                     transition={{ duration: 0.4, delay: i * 0.08, ease: EASE }}
-                    className="min-w-[170px] max-w-[170px] snap-start rounded-2xl overflow-hidden shadow-xs bg-white border border-slate-200 flex flex-col text-left"
+                    className="min-w-[170px] max-w-[170px] snap-start overflow-hidden flex flex-col text-left"
+                    style={{
+                      background: "rgba(255,255,255,0.04)",
+                      border: "1px solid rgba(255,255,255,0.07)",
+                      borderRadius: "20px",
+                    }}
                     data-testid={`featured-product-${p.id}`}
                   >
-                    <div className="relative w-full h-28 bg-slate-50 border-b border-slate-100 flex items-center justify-center p-3">
+                    <div
+                      className="relative w-full h-28 flex items-center justify-center p-3"
+                      style={{
+                        background: DS.element,
+                        borderBottom: "1px solid rgba(255,255,255,0.06)",
+                      }}
+                    >
                       {p.image ? (
                         <img
                           src={p.image}
                           alt={p.name}
-                          className="max-h-full max-w-full object-contain mix-blend-multiply"
+                          className="max-h-full max-w-full object-contain"
                           loading="lazy"
                           decoding="async"
                         />
                       ) : (
-                        <ShoppingBag className="w-8 h-8 text-slate-200" />
+                        <ShoppingBag className="w-8 h-8" style={{ color: DS.textMuted }} strokeWidth={1.5} />
                       )}
-                      <div className="absolute top-2 left-2 bg-slate-950 border border-slate-900 text-white font-mono text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md shadow-sm">
+                      {/* Badge violet */}
+                      <div
+                        className="absolute top-2 left-2 text-[8px] font-bold px-2 py-0.5"
+                        style={{
+                          background: "rgba(167,139,250,0.15)",
+                          border: "1px solid rgba(167,139,250,0.3)",
+                          borderRadius: "8px",
+                          color: DS.violetLight,
+                          letterSpacing: "0.05em",
+                        }}
+                      >
                         {p.badge}
                       </div>
                     </div>
                     <div className="p-3 flex-1 flex flex-col justify-between">
                       <div>
-                        <p className="text-[9px] font-black uppercase tracking-wider text-slate-400 font-mono truncate">{p.brand}</p>
-                        <p className="text-xs font-bold text-slate-900 leading-tight mt-0.5 line-clamp-2">
+                        <p
+                          className="text-[9px] font-bold tracking-[0.15em] uppercase truncate"
+                          style={{ color: DS.textMuted }}
+                        >
+                          {p.brand}
+                        </p>
+                        <p
+                          className="text-xs font-bold leading-tight mt-0.5 line-clamp-2"
+                          style={{ color: DS.textPrimary }}
+                        >
                           {p.name}
                         </p>
                       </div>
                       <div className="mt-2">
-                        <p className="text-xs font-mono font-black text-slate-950 mb-2">{p.price}</p>
+                        <p
+                          className="text-xs font-extrabold mb-2"
+                          style={{ color: DS.textPrimary }}
+                        >
+                          {p.price}
+                        </p>
+                        {/* CTA rose — purchase only */}
                         <button
                           onClick={() => setLocation("/shop")}
                           data-testid={`button-order-${p.id}`}
-                          className="w-full py-2 rounded-lg bg-slate-950 hover:bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all flex items-center justify-center gap-1 shadow-sm"
+                          className="w-full py-2 text-[10px] font-extrabold active:scale-95 transition-all flex items-center justify-center"
+                          style={{
+                            background: "linear-gradient(135deg, #E91E8C, #f43f5e)",
+                            borderRadius: "12px",
+                            color: "#f3f0ff",
+                            letterSpacing: "0.04em",
+                          }}
                         >
                           Réserver
                         </button>
@@ -807,10 +1159,15 @@ export default function Home() {
         )}
       </main>
 
-      {/* ─── Bottom Navigation de Contrôle Épurée ─── */}
+      {/* ─── Bottom navigation ─── */}
       <nav
-        className="fixed bottom-0 left-0 right-0 bg-slate-950/95 border-t border-slate-900 z-50 backdrop-blur-md"
-        style={{ paddingBottom: "env(safe-area-inset-bottom, 8px)" }}
+        className="fixed bottom-0 left-0 right-0 z-50"
+        style={{
+          background: `${DS.surface}f0`,
+          borderTop: "1px solid rgba(167,139,250,0.12)",
+          backdropFilter: "blur(20px)",
+          paddingBottom: "env(safe-area-inset-bottom, 8px)",
+        }}
         data-testid="nav-bottom"
       >
         <div className="px-5 pt-3 pb-2 flex justify-center">
@@ -818,10 +1175,21 @@ export default function Home() {
             onClick={() => setExplorerOpen(true)}
             data-testid="nav-explorer"
             whileTap={{ scale: 0.95 }}
-            className="relative flex items-center gap-2 px-8 py-3.5 bg-white text-slate-950 font-black text-xs uppercase tracking-widest rounded-xl shadow-xl overflow-hidden"
+            className="relative flex items-center gap-2 px-8 py-3.5 font-extrabold text-xs overflow-hidden"
+            style={{
+              background: "#7c3aed",
+              borderRadius: "9999px",
+              color: "#f3f0ff",
+              letterSpacing: "0.06em",
+            }}
           >
-            <Compass className="w-4 h-4 text-slate-950" />
-            <span>Ouvrir la Console</span>
+            {/* Glow orb inside button */}
+            <div
+              className="absolute inset-0"
+              style={{ background: "radial-gradient(circle at 30% 50%, rgba(196,181,253,0.15), transparent 70%)" }}
+            />
+            <Compass className="w-4 h-4 relative z-10" strokeWidth={1.5} />
+            <span className="relative z-10 uppercase tracking-widest">Ouvrir la console</span>
           </motion.button>
         </div>
       </nav>

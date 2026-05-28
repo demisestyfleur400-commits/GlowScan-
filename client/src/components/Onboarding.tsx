@@ -31,7 +31,7 @@ const STEPS: Step[] = [
     title: "Des boutons qui reviennent toujours ?",
     subtitle: "GlowScan analyse la racine du problème sous le climat camerounais et cible l'urgence.",
     cta: "Suivant",
-    accent: "#E91E8C",
+    accent: "#a78bfa",
   },
   {
     image: img3,
@@ -40,7 +40,7 @@ const STEPS: Step[] = [
     subtitle:
       "Une technologie de cartographie faciale IA avancée pour scanner tes imperfections en 3 secondes.",
     cta: "Découvrir",
-    accent: "#C2185B",
+    accent: "#c4b5fd",
   },
   {
     image: img4,
@@ -48,7 +48,7 @@ const STEPS: Step[] = [
     title: "Ta peau. Ton diagnostic. Ta routine.",
     subtitle: "Plus de 3 000 femmes accompagnées avec succès à Douala et Yaoundé.",
     cta: "Analyser ma peau maintenant",
-    accent: "#E91E8C",
+    accent: "#a78bfa",
   },
 ];
 
@@ -109,7 +109,8 @@ export default function Onboarding({ onFinish }: OnboardingProps) {
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.4 }}
-        className="fixed inset-0 z-[100] bg-black"
+        className="fixed inset-0 z-[100]"
+        style={{ background: "#0d0a0e" }}
         data-testid="onboarding-overlay"
       >
         {/* Image plein écran */}
@@ -131,25 +132,33 @@ export default function Onboarding({ onFinish }: OnboardingProps) {
           className="absolute inset-0"
           style={{
             background:
-              "linear-gradient(180deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.15) 35%, rgba(0,0,0,0.55) 75%, rgba(0,0,0,0.92) 100%)",
+              "linear-gradient(180deg, rgba(13,10,14,0.6) 0%, rgba(13,10,14,0.1) 35%, rgba(13,10,14,0.55) 70%, rgba(13,10,14,0.95) 100%)",
           }}
         />
 
         {/* Contenu */}
-        <div className="relative z-10 flex flex-col h-full px-6 pt-12 pb-10 text-white">
+        <div
+          className="relative z-10 flex flex-col h-full px-6 pt-12 pb-10"
+          style={{
+            fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
+          }}
+        >
           {/* Header : skip + indicateur */}
           <div className="flex items-center justify-between mb-2">
             <div className="flex gap-1.5">
               {STEPS.map((_, i) => (
                 <div
                   key={i}
-                  className={`h-1 rounded-full transition-all duration-500 ${
-                    i === step
-                      ? "w-8 bg-white"
-                      : i < step
-                      ? "w-4 bg-white/70"
-                      : "w-4 bg-white/25"
-                  }`}
+                  className="h-1 rounded-full transition-all duration-500"
+                  style={{
+                    width: i === step ? 32 : 16,
+                    background:
+                      i === step
+                        ? "#a78bfa"
+                        : i < step
+                        ? "rgba(167,139,250,0.5)"
+                        : "rgba(255,255,255,0.2)",
+                  }}
                 />
               ))}
             </div>
@@ -157,7 +166,8 @@ export default function Onboarding({ onFinish }: OnboardingProps) {
               <button
                 onClick={skip}
                 data-testid="button-skip-onboarding"
-                className="text-xs font-medium text-white/70 active:text-white"
+                className="text-xs font-medium active:opacity-70 transition-opacity"
+                style={{ color: "rgba(200,185,255,0.65)" }}
               >
                 Passer
               </button>
@@ -175,21 +185,19 @@ export default function Onboarding({ onFinish }: OnboardingProps) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.5, delay: 0.15 }}
-              className="space-y-3 mb-8"
+              className="space-y-3 mb-7"
             >
               <h2
-                className="text-3xl sm:text-4xl font-semibold leading-[1.15] tracking-tight font-display"
-                style={{ textShadow: "0 2px 12px rgba(0,0,0,0.4)" }}
+                className="text-3xl sm:text-4xl font-bold leading-[1.15] tracking-tight"
+                style={{ color: "#f3f0ff" }}
                 data-testid={`onboarding-title-${step}`}
               >
                 {current.title}
-                {current.emoji && (
-                  <span className="ml-2">{current.emoji}</span>
-                )}
+                {current.emoji && <span className="ml-2">{current.emoji}</span>}
               </h2>
               <p
-                className="text-base sm:text-lg text-white/85 leading-relaxed max-w-md"
-                style={{ textShadow: "0 1px 6px rgba(0,0,0,0.4)" }}
+                className="text-base sm:text-lg leading-relaxed max-w-md"
+                style={{ color: "rgba(200,185,255,0.65)" }}
               >
                 {current.subtitle}
               </p>
@@ -204,8 +212,20 @@ export default function Onboarding({ onFinish }: OnboardingProps) {
             transition={{ duration: 0.4, delay: 0.3 }}
             onClick={next}
             data-testid={`button-onboarding-${isLast ? "finish" : "next"}`}
-            className="w-full py-4 px-6 rounded-full bg-white text-black font-semibold text-base flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-2xl"
-            style={{ fontFamily: "'Inter', sans-serif" }}
+            className="w-full py-4 px-6 font-extrabold text-base flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+            style={
+              isLast
+                ? {
+                    background: "linear-gradient(135deg, #E91E8C, #f43f5e)",
+                    borderRadius: 12,
+                    color: "#fff",
+                  }
+                : {
+                    background: "#7c3aed",
+                    borderRadius: 9999,
+                    color: "#fff",
+                  }
+            }
           >
             {current.cta}
             {!isLast && <ChevronRight className="w-4 h-4" />}
@@ -213,8 +233,8 @@ export default function Onboarding({ onFinish }: OnboardingProps) {
 
           {/* Petite signature */}
           <p
-            className="text-center text-[10px] text-white/40 mt-4 tracking-widest uppercase"
-            style={{ fontFamily: "'Inter', sans-serif" }}
+            className="text-center text-[10px] mt-4 tracking-widest"
+            style={{ color: "rgba(255,255,255,0.35)" }}
           >
             GlowScan · Fait pour toi
           </p>

@@ -5,8 +5,23 @@ import { Stethoscope, ArrowLeft, ArrowRight, CheckCircle2, Loader2, ShieldCheck 
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 
-const NAVY = "#1E40AF";
-const INK = "#1E293B";
+const DS = {
+  bg: "#0d0a0e",
+  surface: "#13101f",
+  violet: "#7c3aed",
+  violetMid: "#a78bfa",
+  violetLight: "#c4b5fd",
+  textPrimary: "#f3f0ff",
+  textBody: "rgba(200,185,255,0.65)",
+  textMuted: "rgba(255,255,255,0.35)",
+  inputBorder: "rgba(167,139,250,0.2)",
+  cardBorder: "rgba(255,255,255,0.07)",
+  cardVioletBg: "rgba(167,139,250,0.06)",
+  cardVioletBorder: "rgba(167,139,250,0.18)",
+  subtleBg: "rgba(255,255,255,0.04)",
+  subtleBorder: "rgba(255,255,255,0.07)",
+  font: `-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif`,
+};
 
 export default function ProInscription() {
   const [, setLocation] = useLocation();
@@ -59,63 +74,171 @@ export default function ProInscription() {
 
   return (
     <div
-      className="min-h-screen flex flex-col"
-      style={{ background: "#F8FAFC", color: INK, fontFamily: "Inter, system-ui, sans-serif" }}
+      style={{
+        minHeight: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        background: DS.bg,
+        color: DS.textPrimary,
+        fontFamily: DS.font,
+      }}
     >
-      <header className="bg-white border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center gap-3">
-          <Link href="/pro" data-testid="link-back" className="p-2 -ml-2 rounded-md text-slate-600 hover:bg-slate-100">
-            <ArrowLeft className="w-5 h-5" />
+      {/* Header */}
+      <header
+        style={{
+          borderBottom: `1px solid ${DS.cardBorder}`,
+          background: DS.surface,
+        }}
+      >
+        <div
+          style={{
+            maxWidth: 1120,
+            margin: "0 auto",
+            padding: "0 24px",
+            height: 56,
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+          }}
+        >
+          <Link
+            href="/pro"
+            data-testid="link-back"
+            style={{
+              padding: 8,
+              borderRadius: 10,
+              color: DS.textBody,
+              display: "flex",
+              alignItems: "center",
+              textDecoration: "none",
+            }}
+          >
+            <ArrowLeft style={{ width: 18, height: 18 }} />
           </Link>
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-md flex items-center justify-center" style={{ background: NAVY }}>
-              <Stethoscope className="w-4 h-4 text-white" />
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 10,
+                background: "rgba(167,139,250,0.15)",
+                border: `1px solid ${DS.cardVioletBorder}`,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Stethoscope style={{ width: 16, height: 16, color: DS.violetMid }} />
             </div>
-            <p className="text-sm font-bold">GlowScan <span style={{ color: NAVY }}>Pro</span></p>
+            <span style={{ fontSize: 14, fontWeight: 700, color: DS.textPrimary }}>
+              GlowScan <span style={{ color: DS.violetMid }}>Pro</span>
+            </span>
           </div>
         </div>
       </header>
 
-      <main className="flex-1 px-4 py-8">
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="max-w-md mx-auto">
-          <div className="text-center mb-7">
+      {/* Main */}
+      <main style={{ flex: 1, padding: "32px 16px" }}>
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          style={{ maxWidth: 440, margin: "0 auto" }}
+        >
+          {/* Title */}
+          <div style={{ textAlign: "center", marginBottom: 28 }}>
             <div
-              className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-4"
-              style={{ background: NAVY }}
+              style={{
+                width: 52,
+                height: 52,
+                borderRadius: 16,
+                background: "rgba(167,139,250,0.15)",
+                border: `1px solid ${DS.cardVioletBorder}`,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                margin: "0 auto 16px",
+              }}
             >
-              <Stethoscope className="w-5 h-5 text-white" />
+              <Stethoscope style={{ width: 22, height: 22, color: DS.violetMid }} />
             </div>
-            <h1 className="text-2xl font-bold mb-1">Créer mon compte Pro</h1>
-            <p className="text-sm text-slate-500">14 jours d'essai gratuit · sans carte bancaire</p>
+            <h1 style={{ fontSize: 24, fontWeight: 800, color: DS.textPrimary, margin: "0 0 6px" }}>
+              Créer mon compte Pro
+            </h1>
+            <p style={{ fontSize: 14, color: DS.textBody, margin: 0 }}>
+              14 jours d'essai gratuit · sans carte bancaire
+            </p>
           </div>
 
+          {/* Form */}
           <form
             onSubmit={handleSubmit}
-            className="space-y-4 bg-white border border-slate-200 rounded-xl p-6 shadow-sm"
+            style={{
+              background: DS.surface,
+              border: `1px solid ${DS.cardBorder}`,
+              borderRadius: 24,
+              padding: "28px 24px",
+            }}
           >
-            <Field label="Nom complet *" placeholder="Dr Marie Mbarga" value={fullName} onChange={setFullName} required testid="input-fullname" />
-            <Field label="Email professionnel *" type="email" placeholder="cabinet@exemple.com" value={email} onChange={setEmail} required testid="input-email" />
-            <Field label="Mot de passe *" type="password" placeholder="Min. 6 caractères" value={password} onChange={setPassword} required minLength={6} testid="input-password" />
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <Field label="Nom complet *" placeholder="Dr Marie Mbarga" value={fullName} onChange={setFullName} required testid="input-fullname" />
+              <Field label="Email professionnel *" type="email" placeholder="cabinet@exemple.com" value={email} onChange={setEmail} required testid="input-email" />
+              <Field label="Mot de passe *" type="password" placeholder="Min. 6 caractères" value={password} onChange={setPassword} required minLength={6} testid="input-password" />
+            </div>
 
-            <div className="border-t border-slate-100 pt-4">
-              <p className="text-[11px] uppercase tracking-wider font-semibold text-slate-500 mb-3">Cabinet (optionnel)</p>
-              <div className="space-y-3">
+            {/* Cabinet section */}
+            <div
+              style={{
+                margin: "20px 0",
+                padding: "16px",
+                borderRadius: 16,
+                background: DS.subtleBg,
+                border: `1px solid ${DS.subtleBorder}`,
+              }}
+            >
+              <p
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: DS.textMuted,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  marginBottom: 12,
+                }}
+              >
+                Cabinet (optionnel)
+              </p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 <Field label="Nom du cabinet" placeholder="Cabinet Bonanjo" value={cabinetName} onChange={setCabinetName} testid="input-cabinet" />
                 <Field label="Téléphone WhatsApp" placeholder="237 6XX XX XX XX" value={phone} onChange={setPhone} testid="input-phone" />
                 <Field label="Ville" placeholder="Douala" value={city} onChange={setCity} testid="input-city" />
               </div>
             </div>
 
-            <label className="flex items-start gap-3 p-3 rounded-lg bg-slate-50 border border-slate-200 cursor-pointer hover:bg-slate-100 transition-colors">
+            {/* RGPD consent */}
+            <label
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                gap: 12,
+                padding: 14,
+                borderRadius: 12,
+                background: "rgba(167,139,250,0.06)",
+                border: `1px solid rgba(167,139,250,0.18)`,
+                cursor: "pointer",
+                marginBottom: 20,
+              }}
+            >
               <input
                 type="checkbox"
                 checked={consent}
                 onChange={(e) => setConsent(e.target.checked)}
-                className="mt-0.5 w-4 h-4 accent-blue-700"
+                style={{ marginTop: 2, width: 16, height: 16, accentColor: DS.violet, flexShrink: 0 }}
                 data-testid="checkbox-consent"
               />
-              <span className="text-xs text-slate-600 leading-relaxed">
-                <ShieldCheck className="inline w-3.5 h-3.5 mr-1" style={{ color: NAVY }} />
+              <span style={{ fontSize: 12, color: DS.textBody, lineHeight: 1.6 }}>
+                <ShieldCheck
+                  style={{ display: "inline", width: 13, height: 13, marginRight: 4, color: DS.violetMid, verticalAlign: "middle" }}
+                />
                 J'accepte que les photos et données médicales de mes patients soient utilisées de manière anonymisée pour améliorer le modèle IA de GlowScan, conformément au RGPD. Je suis le responsable du traitement vis-à-vis de mes patients.
               </span>
             </label>
@@ -124,37 +247,80 @@ export default function ProInscription() {
               type="submit"
               disabled={loading || !fullName || !email || !password || !consent}
               data-testid="button-submit-register"
-              className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-lg text-white font-semibold text-sm shadow-sm hover:shadow-md disabled:opacity-50 transition-all"
-              style={{ background: NAVY }}
+              style={{
+                width: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 8,
+                padding: "13px 24px",
+                borderRadius: 9999,
+                background: DS.violet,
+                color: "#fff",
+                fontWeight: 800,
+                fontSize: 14,
+                border: "none",
+                cursor: loading || !fullName || !email || !password || !consent ? "not-allowed" : "pointer",
+                opacity: loading || !fullName || !email || !password || !consent ? 0.5 : 1,
+                fontFamily: DS.font,
+                transition: "opacity 0.15s",
+              }}
             >
               {loading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
+                <Loader2 style={{ width: 18, height: 18, animation: "spin 1s linear infinite" }} />
               ) : (
                 <>
-                  <CheckCircle2 className="w-4 h-4" />
+                  <CheckCircle2 style={{ width: 16, height: 16 }} />
                   Démarrer mon essai gratuit
-                  <ArrowRight className="w-4 h-4" />
+                  <ArrowRight style={{ width: 16, height: 16 }} />
                 </>
               )}
             </button>
 
-            <p className="text-center text-xs text-slate-500 pt-1">
+            <p style={{ textAlign: "center", fontSize: 13, color: DS.textMuted, marginTop: 14 }}>
               Déjà inscrit ?{" "}
-              <Link href="/pro/connexion" className="font-semibold hover:underline" style={{ color: NAVY }} data-testid="link-login">
+              <Link
+                href="/pro/connexion"
+                data-testid="link-login"
+                style={{ color: DS.violetMid, fontWeight: 700, textDecoration: "none" }}
+              >
                 Se connecter
               </Link>
             </p>
           </form>
         </motion.div>
       </main>
+
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        input::placeholder { color: rgba(200,185,255,0.3); }
+      `}</style>
     </div>
   );
 }
 
-function Field({ label, value, onChange, type = "text", placeholder, required, minLength, testid }: any) {
+function Field({
+  label, value, onChange, type = "text", placeholder, required, minLength, testid,
+}: {
+  label: string; value: string; onChange: (v: string) => void; type?: string;
+  placeholder?: string; required?: boolean; minLength?: number; testid?: string;
+}) {
+  const inputBorder = "rgba(167,139,250,0.2)";
+  const violetMid = "#a78bfa";
   return (
     <div>
-      <label className="block text-xs font-semibold text-slate-700 mb-1.5">{label}</label>
+      <label
+        style={{
+          display: "block",
+          fontSize: 12,
+          fontWeight: 700,
+          color: "rgba(200,185,255,0.65)",
+          marginBottom: 7,
+          letterSpacing: "0.02em",
+        }}
+      >
+        {label}
+      </label>
       <input
         type={type}
         value={value}
@@ -163,7 +329,20 @@ function Field({ label, value, onChange, type = "text", placeholder, required, m
         required={required}
         minLength={minLength}
         data-testid={testid}
-        className="w-full px-3.5 py-2.5 rounded-lg bg-white border border-slate-300 text-sm outline-none focus:border-blue-700 focus:ring-2 focus:ring-blue-100 transition-all"
+        style={{
+          width: "100%",
+          padding: "11px 14px",
+          borderRadius: 12,
+          background: "#0d0a0e",
+          border: `1px solid ${inputBorder}`,
+          color: "#f3f0ff",
+          fontSize: 14,
+          outline: "none",
+          boxSizing: "border-box",
+          fontFamily: `-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif`,
+        }}
+        onFocus={(e) => (e.target.style.borderColor = violetMid)}
+        onBlur={(e) => (e.target.style.borderColor = inputBorder)}
       />
     </div>
   );

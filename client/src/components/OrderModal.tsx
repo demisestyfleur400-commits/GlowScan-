@@ -37,13 +37,12 @@ function generateOrderNumber() {
 export default function OrderModal({ isOpen, onClose, items, scanContext, title }: OrderModalProps) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
-  const [city, setCity] = useState("Douala"); // Pré-rempli par défaut pour aller vite
+  const [city, setCity] = useState("Douala");
   const [neighborhood, setNeighborhood] = useState("");
   const [notes, setNotes] = useState("");
   const [sent, setSent] = useState(false);
   const [orderNum, setOrderNum] = useState("");
 
-  // Validation stricte adaptée à la réalité locale
   const canSubmit = name.trim() && phone.trim() && city.trim() && neighborhood.trim();
 
   const handleSend = () => {
@@ -100,188 +99,382 @@ export default function OrderModal({ isOpen, onClose, items, scanContext, title 
     }, 300);
   };
 
+  const inputBase: React.CSSProperties = {
+    width: "100%",
+    background: "rgba(255,255,255,0.04)",
+    border: "1px solid rgba(255,255,255,0.07)",
+    borderRadius: 12,
+    color: "#f3f0ff",
+    fontSize: 13,
+    fontWeight: 500,
+    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
+    padding: "12px 16px",
+    outline: "none",
+    transition: "border-color 0.15s",
+  };
+
   return (
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center"
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 200,
+            display: "flex",
+            alignItems: "flex-end",
+            justifyContent: "center",
+          }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
         >
-          {/* Overlay arrière-plan */}
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={handleClose} />
+          {/* Overlay */}
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: "rgba(0,0,0,0.72)",
+              backdropFilter: "blur(8px)",
+            }}
+            onClick={handleClose}
+          />
 
-          {/* Feuille de formulaire */}
+          {/* Sheet */}
           <motion.div
-            className="relative w-full max-w-md bg-white rounded-t-[2.5rem] sm:rounded-3xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col"
+            style={{
+              position: "relative",
+              width: "100%",
+              maxWidth: 448,
+              background: "#13101f",
+              borderRadius: "28px 28px 0 0",
+              overflow: "hidden",
+              maxHeight: "92vh",
+              display: "flex",
+              flexDirection: "column",
+              border: "1px solid rgba(167,139,250,0.18)",
+              borderBottom: "none",
+            }}
             initial={{ y: "100%", opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: "100%", opacity: 0 }}
             transition={{ type: "spring", damping: 30, stiffness: 300 }}
           >
+            {/* Drag handle */}
+            <div style={{ display: "flex", justifyContent: "center", paddingTop: 12 }}>
+              <div style={{
+                width: 40,
+                height: 4,
+                borderRadius: 9999,
+                background: "rgba(255,255,255,0.15)",
+              }} />
+            </div>
+
             {/* Header */}
-            <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-gray-100 flex-shrink-0">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-pink-50 flex items-center justify-center">
-                  <Package className="w-4 h-4 text-pink-600" />
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "16px 24px 14px",
+              borderBottom: "1px solid rgba(255,255,255,0.07)",
+              flexShrink: 0,
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 10,
+                  background: "rgba(167,139,250,0.1)",
+                  border: "1px solid rgba(167,139,250,0.2)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}>
+                  <Package size={16} color="#a78bfa" strokeWidth={1.5} />
                 </div>
                 <div>
-                  <p className="text-sm font-black text-gray-950 uppercase tracking-wide">{title || "Finaliser la commande"}</p>
-                  <p className="text-[10px] text-gray-400 font-medium">Étape finale · Paiement sécurisé à la livraison</p>
+                  <p style={{
+                    fontSize: 13,
+                    fontWeight: 800,
+                    color: "#f3f0ff",
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
+                  }}>
+                    {title || "Finaliser la commande"}
+                  </p>
+                  <p style={{
+                    fontSize: 11,
+                    color: "rgba(200,185,255,0.65)",
+                    marginTop: 1,
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
+                  }}>
+                    Paiement à la livraison · F CFA
+                  </p>
                 </div>
               </div>
-              <button onClick={handleClose} className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center active:scale-90 transition-all border border-gray-100">
-                <X className="w-4 h-4 text-gray-500" />
+              <button
+                onClick={handleClose}
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 9999,
+                  background: "rgba(255,255,255,0.06)",
+                  border: "1px solid rgba(255,255,255,0.07)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                }}
+              >
+                <X size={14} color="rgba(255,255,255,0.5)" strokeWidth={1.5} />
               </button>
             </div>
 
-            {/* Corps défilant */}
-            <div className="px-6 py-4 overflow-y-auto flex-1 space-y-5 backend-scroll">
+            {/* Body */}
+            <div style={{ padding: "20px 24px", overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 20 }}>
               {sent ? (
-                /* Écran Succès */
                 <motion.div
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="py-8 text-center space-y-4"
+                  style={{ padding: "32px 0", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}
                 >
-                  <div className="w-16 h-16 rounded-full bg-emerald-50 flex items-center justify-center mx-auto border border-emerald-100">
-                    <Check className="w-8 h-8 text-emerald-600" />
+                  <div style={{
+                    width: 64,
+                    height: 64,
+                    borderRadius: 9999,
+                    background: "rgba(16,185,129,0.08)",
+                    border: "1px solid rgba(16,185,129,0.2)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}>
+                    <Check size={28} color="#6ee7b7" strokeWidth={1.5} />
                   </div>
                   <div>
-                    <p className="text-xl font-black text-gray-900">En route vers WhatsApp...</p>
-                    <p className="text-xs text-gray-400 mt-1">Numéro de suivi provisoire : <span className="font-extrabold text-pink-600">{orderNum}</span></p>
+                    <p style={{
+                      fontSize: 18,
+                      fontWeight: 800,
+                      color: "#f3f0ff",
+                      fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
+                    }}>
+                      En route vers WhatsApp...
+                    </p>
+                    <p style={{ fontSize: 12, color: "rgba(200,185,255,0.65)", marginTop: 4 }}>
+                      Suivi provisoire :{" "}
+                      <span style={{ fontWeight: 800, color: "#a78bfa" }}>{orderNum}</span>
+                    </p>
                   </div>
-                  <p className="text-xs text-gray-500 leading-relaxed max-w-xs mx-auto">
-                    Appuie sur envoyer dans l'application WhatsApp pour valider ton panier auprès du service client GlowScan.
+                  <p style={{
+                    fontSize: 12,
+                    color: "rgba(200,185,255,0.65)",
+                    lineHeight: 1.6,
+                    maxWidth: 280,
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
+                  }}>
+                    Appuie sur envoyer dans WhatsApp pour valider ton panier auprès du service client GlowScan.
                   </p>
                   <button
                     onClick={handleClose}
-                    className="w-full py-3.5 bg-gray-900 text-white text-xs font-black uppercase tracking-wider rounded-xl active:scale-[0.98] transition-all shadow-md"
+                    style={{
+                      width: "100%",
+                      padding: "14px 0",
+                      background: "#7c3aed",
+                      border: "none",
+                      borderRadius: 9999,
+                      color: "#fff",
+                      fontSize: 13,
+                      fontWeight: 800,
+                      cursor: "pointer",
+                      fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
+                    }}
                   >
                     Revenir à mon diagnostic
                   </button>
                 </motion.div>
               ) : (
-                <div className="space-y-5">
-                  {/* Récapitulatif produits */}
-                  <div className="bg-gradient-to-r from-gray-50 to-slate-50 rounded-2xl p-4 border border-gray-100 space-y-2.5">
-                    <p className="text-[9px] font-black uppercase tracking-widest text-gray-400">Détails du panier</p>
+                <>
+                  {/* Cart summary */}
+                  <div style={{
+                    background: "rgba(167,139,250,0.06)",
+                    border: "1px solid rgba(167,139,250,0.18)",
+                    borderRadius: 24,
+                    padding: 16,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 10,
+                  }}>
+                    <p style={{
+                      fontSize: 10,
+                      fontWeight: 700,
+                      color: "rgba(200,185,255,0.65)",
+                      letterSpacing: "0.1em",
+                      textTransform: "uppercase",
+                      fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
+                    }}>
+                      Détails du panier
+                    </p>
                     {items.map((item, i) => (
-                      <div key={i} className="flex items-start justify-between gap-4">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-black text-gray-900 truncate">{item.productName}</p>
-                          <p className="text-[10px] text-gray-400 font-medium">{item.brand}{item.quantity && item.quantity > 1 ? ` · Qté: ${item.quantity}` : ""}</p>
+                      <div key={i} style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{
+                            fontSize: 12,
+                            fontWeight: 700,
+                            color: "#f3f0ff",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                            fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
+                          }}>
+                            {item.productName}
+                          </p>
+                          <p style={{ fontSize: 11, color: "rgba(200,185,255,0.65)" }}>
+                            {item.brand}{item.quantity && item.quantity > 1 ? ` · Qté: ${item.quantity}` : ""}
+                          </p>
                         </div>
                         {item.price && (
-                          <span className="text-xs font-black text-gray-900 ml-2 flex-shrink-0">
+                          <span style={{ fontSize: 12, fontWeight: 700, color: "#f3f0ff", flexShrink: 0 }}>
                             {formatPrice(item.price * (item.quantity || 1))}
                           </span>
                         )}
                       </div>
                     ))}
                     {items.reduce((s, i) => s + (i.price || 0) * (i.quantity || 1), 0) > 0 && (
-                      <div className="pt-2.5 border-t border-gray-200/60 flex justify-between items-center">
-                        <span className="text-xs font-bold text-gray-600">Net à payer à la livraison</span>
-                        <span className="text-sm font-black text-pink-600">
+                      <div style={{
+                        paddingTop: 10,
+                        borderTop: "1px solid rgba(167,139,250,0.15)",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}>
+                        <span style={{ fontSize: 12, color: "rgba(200,185,255,0.65)", fontWeight: 600 }}>
+                          Net à payer à la livraison
+                        </span>
+                        <span style={{ fontSize: 14, fontWeight: 800, color: "#a78bfa" }}>
                           {formatPrice(items.reduce((s, i) => s + (i.price || 0) * (i.quantity || 1), 0))}
                         </span>
                       </div>
                     )}
                   </div>
 
-                  {/* Formulaire client ciblé Cameroun */}
-                  <div className="space-y-3.5">
-                    <p className="text-[9px] font-black uppercase tracking-widest text-gray-400">Coordonnées de livraison</p>
+                  {/* Form */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    <p style={{
+                      fontSize: 10,
+                      fontWeight: 700,
+                      color: "rgba(200,185,255,0.65)",
+                      letterSpacing: "0.1em",
+                      textTransform: "uppercase",
+                      fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
+                    }}>
+                      Coordonnées de livraison
+                    </p>
 
-                    <div className="relative">
-                      <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <div style={{ position: "relative" }}>
+                      <User size={15} color="rgba(167,139,250,0.6)" strokeWidth={1.5} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)" }} />
                       <input
                         type="text"
                         placeholder="Ton nom complet *"
                         value={name}
                         onChange={e => setName(e.target.value)}
-                        className="w-full pl-10 pr-4 py-3 bg-gray-50/50 border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:border-pink-500 focus:bg-white focus:ring-4 focus:ring-pink-50"
+                        style={{ ...inputBase, paddingLeft: 40 }}
                         data-testid="input-order-name"
                       />
                     </div>
 
-                    <div className="relative">
-                      <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <div style={{ position: "relative" }}>
+                      <Phone size={15} color="rgba(167,139,250,0.6)" strokeWidth={1.5} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)" }} />
                       <input
                         type="tel"
                         placeholder="Numéro de téléphone (WhatsApp ou MoMo) *"
                         value={phone}
                         onChange={e => setPhone(e.target.value)}
-                        className="w-full pl-10 pr-4 py-3 bg-gray-50/50 border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:border-pink-500 focus:bg-white focus:ring-4 focus:ring-pink-50"
+                        style={{ ...inputBase, paddingLeft: 40 }}
                         data-testid="input-order-phone"
                       />
                     </div>
 
-                    {/* Grille Ville + Quartier pour s'adapter à la réalité locale */}
-                    <div className="grid grid-cols-3 gap-2">
-                      <div className="relative col-span-1">
-                        <select
-                          value={city}
-                          onChange={e => setCity(e.target.value)}
-                          className="w-full px-3 py-3 bg-gray-50/50 border border-gray-200 rounded-xl text-xs font-bold focus:outline-none focus:border-pink-500 focus:bg-white"
-                        >
-                          <option value="Douala">Douala</option>
-                          <option value="Yaoundé">Yaoundé</option>
-                          <option value="Kribi">Kribi</option>
-                          <option value="Bafoussam">Bafoussam</option>
-                          <option value="Buea">Buea</option>
-                          <option value="Garoua">Garoua</option>
-                        </select>
-                      </div>
-                      
-                      <div className="relative col-span-2">
-                        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 8 }}>
+                      <select
+                        value={city}
+                        onChange={e => setCity(e.target.value)}
+                        style={{ ...inputBase, padding: "12px 10px", cursor: "pointer" }}
+                      >
+                        <option value="Douala">Douala</option>
+                        <option value="Yaoundé">Yaoundé</option>
+                        <option value="Kribi">Kribi</option>
+                        <option value="Bafoussam">Bafoussam</option>
+                        <option value="Buea">Buea</option>
+                        <option value="Garoua">Garoua</option>
+                      </select>
+
+                      <div style={{ position: "relative" }}>
+                        <MapPin size={15} color="rgba(167,139,250,0.6)" strokeWidth={1.5} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }} />
                         <input
                           type="text"
                           placeholder="Quartier ou point de repère *"
                           value={neighborhood}
                           onChange={e => setNeighborhood(e.target.value)}
-                          className="w-full pl-9 pr-4 py-3 bg-gray-50/50 border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:border-pink-500 focus:bg-white focus:ring-4 focus:ring-pink-50"
+                          style={{ ...inputBase, paddingLeft: 36 }}
                         />
                       </div>
                     </div>
 
-                    <div className="relative">
-                      <FileText className="absolute left-3 top-3.5 w-4 h-4 text-gray-400" />
+                    <div style={{ position: "relative" }}>
+                      <FileText size={15} color="rgba(167,139,250,0.6)" strokeWidth={1.5} style={{ position: "absolute", left: 14, top: 14 }} />
                       <textarea
                         placeholder="Précisions pour le livreur (Optionnel) — ex: Barrière blanche, à côté de la pharmacie..."
                         value={notes}
                         onChange={e => setNotes(e.target.value)}
                         rows={2}
-                        className="w-full pl-10 pr-4 py-3 bg-gray-50/50 border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:border-pink-500 focus:bg-white focus:ring-4 focus:ring-pink-50 resize-none/60"
+                        style={{
+                          ...inputBase,
+                          paddingLeft: 40,
+                          paddingTop: 12,
+                          resize: "none",
+                        }}
                         data-testid="input-order-notes"
                       />
                     </div>
                   </div>
 
-                  {/* Bouton d'action à forte valeur ajoutée */}
-                  <div className="space-y-2 pt-1">
+                  {/* CTA */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                     <button
                       onClick={handleSend}
                       disabled={!canSubmit}
                       data-testid="button-confirm-order"
-                      className={`w-full flex items-center justify-center gap-2.5 py-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-200 active:scale-[0.98] ${
-                        canSubmit
-                          ? "bg-gradient-to-r from-pink-600 to-purple-600 text-white shadow-xl shadow-pink-600/20 hover:opacity-95"
-                          : "bg-gray-100 text-gray-400 cursor-not-allowed"
-                      }`}
+                      style={{
+                        width: "100%",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 8,
+                        padding: "16px 0",
+                        borderRadius: 12,
+                        background: canSubmit
+                          ? "linear-gradient(135deg,#E91E8C,#f43f5e)"
+                          : "rgba(255,255,255,0.06)",
+                        border: "none",
+                        color: canSubmit ? "#fff" : "rgba(255,255,255,0.35)",
+                        fontSize: 13,
+                        fontWeight: 800,
+                        cursor: canSubmit ? "pointer" : "not-allowed",
+                        fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
+                        transition: "opacity 0.15s",
+                        opacity: canSubmit ? 1 : 0.7,
+                      }}
                     >
-                      <MessageCircle className="w-4 h-4 fill-current" />
+                      <MessageCircle size={16} strokeWidth={1.5} />
                       Envoyer ma commande sur WhatsApp
                     </button>
-                    
-                    <div className="flex items-center justify-center gap-1.5 text-[10px] text-gray-400 font-medium">
-                      <Sparkles className="w-3 h-3 text-pink-500" />
-                      <span>Des frais de livraison locaux s'appliquent selon la zone.</span>
+
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                      <Sparkles size={12} color="#a78bfa" strokeWidth={1.5} />
+                      <span style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>
+                        Des frais de livraison locaux s'appliquent selon la zone.
+                      </span>
                     </div>
                   </div>
-                </div>
+                </>
               )}
             </div>
           </motion.div>

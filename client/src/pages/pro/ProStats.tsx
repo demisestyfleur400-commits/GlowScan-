@@ -4,6 +4,11 @@ import { useProStats } from "@/hooks/use-pro";
 import { ProLayout, ProCard } from "@/components/ProLayout";
 import { LoadingScreen } from "./ProDashboard";
 
+// Design System tokens
+const NAVY = "#7c3aed";
+const INK = "#f3f0ff";
+const GREEN = "#10b981";
+
 export default function ProStats() {
   const { data, isLoading } = useProStats();
   if (isLoading || !data) return <LoadingScreen />;
@@ -15,23 +20,32 @@ export default function ProStats() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <KPI icon={<Users className="w-4 h-4" />} accent={NAVY} label="Patients" value={data.totalPatients} testid="kpi-patients" />
           <KPI icon={<BarChart3 className="w-4 h-4" />} accent={GREEN} label="Analyses" value={data.totalScans} testid="kpi-scans" />
-          <KPI icon={<TrendingUp className="w-4 h-4" />} accent="#0EA5E9" label="Glow Score moyen" value={`${data.avgGlowScore}/100`} testid="kpi-avg-score" />
+          <KPI icon={<TrendingUp className="w-4 h-4" />} accent="#a78bfa" label="Glow Score moyen" value={`${data.avgGlowScore}/100`} testid="kpi-avg-score" />
           <ProCard className="p-4">
-            <div className="w-8 h-8 rounded-md flex items-center justify-center text-white mb-2 bg-slate-700">
-              <Calendar className="w-4 h-4" />
+            <div
+              className="w-8 h-8 rounded-xl flex items-center justify-center text-white mb-2"
+              style={{ background: "rgba(124,58,237,0.15)", border: "1px solid rgba(167,139,250,0.3)" }}
+            >
+              <Calendar className="w-4 h-4" style={{ color: "#a78bfa" }} />
             </div>
-            <p className="text-[11px] font-semibold text-slate-500 mb-2">Statut patients</p>
-            <div className="flex items-center gap-3 text-xs font-semibold">
-              <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-red-500" />{data.statusBreakdown.red}</span>
-              <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-amber-500" />{data.statusBreakdown.yellow}</span>
-              <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />{data.statusBreakdown.green}</span>
+            <p className="text-[11px] font-extrabold uppercase tracking-widest mb-2" style={{ color: "rgba(200,185,255,0.65)" }}>Statut patients</p>
+            <div className="flex items-center gap-3 text-xs font-extrabold">
+              <span className="flex items-center gap-1" style={{ color: "#f9a8d4" }}>
+                <span className="w-1.5 h-1.5 rounded-full" style={{ background: "#f43f5e" }} />{data.statusBreakdown.red}
+              </span>
+              <span className="flex items-center gap-1" style={{ color: "#fbbf24" }}>
+                <span className="w-1.5 h-1.5 rounded-full" style={{ background: "#fbbf24" }} />{data.statusBreakdown.yellow}
+              </span>
+              <span className="flex items-center gap-1" style={{ color: "#6ee7b7" }}>
+                <span className="w-1.5 h-1.5 rounded-full" style={{ background: "#10b981" }} />{data.statusBreakdown.green}
+              </span>
             </div>
           </ProCard>
         </div>
 
         <div className="grid lg:grid-cols-2 gap-4">
           <Section title="Top 5 problèmes de peau" icon={<BarChart3 className="w-4 h-4" />} accent={NAVY}>
-            {data.topConditions.length === 0 && <p className="text-xs text-slate-400">Aucune donnée encore.</p>}
+            {data.topConditions.length === 0 && <p className="text-xs" style={{ color: "rgba(200,185,255,0.65)" }}>Aucune donnée encore.</p>}
             {data.topConditions.map((c, i) => {
               const max = data.topConditions[0]?.count || 1;
               return (
@@ -43,11 +57,11 @@ export default function ProStats() {
                   className="mb-3 last:mb-0"
                 >
                   <div className="flex items-center justify-between text-xs mb-1.5">
-                    <span className="text-slate-700 truncate flex-1 font-semibold">{c.name}</span>
-                    <span className="font-bold" style={{ color: NAVY }}>{c.count}</span>
+                    <span className="truncate flex-1 font-bold" style={{ color: "rgba(200,185,255,0.65)" }}>{c.name}</span>
+                    <span className="font-extrabold" style={{ color: NAVY }}>{c.count}</span>
                   </div>
-                  <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                    <div className="h-full rounded-full" style={{ width: `${(c.count / max) * 100}%`, background: NAVY }} />
+                  <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
+                    <div className="h-full rounded-full" style={{ width: `${(c.count / max) * 100}%`, background: "linear-gradient(90deg, #7c3aed, #a78bfa)" }} />
                   </div>
                 </motion.div>
               );
@@ -55,17 +69,17 @@ export default function ProStats() {
           </Section>
 
           <Section title="Top 5 produits recommandés" icon={<ShoppingBag className="w-4 h-4" />} accent={GREEN}>
-            {data.topProducts.length === 0 && <p className="text-xs text-slate-400">Aucune donnée encore.</p>}
+            {data.topProducts.length === 0 && <p className="text-xs" style={{ color: "rgba(200,185,255,0.65)" }}>Aucune donnée encore.</p>}
             {data.topProducts.map((p) => {
               const max = data.topProducts[0]?.count || 1;
               return (
                 <div key={p.name} className="mb-3 last:mb-0">
                   <div className="flex items-center justify-between text-xs mb-1.5">
-                    <span className="text-slate-700 truncate flex-1 font-semibold">{p.name}</span>
-                    <span className="font-bold" style={{ color: GREEN }}>{p.count}×</span>
+                    <span className="truncate flex-1 font-bold" style={{ color: "rgba(200,185,255,0.65)" }}>{p.name}</span>
+                    <span className="font-extrabold" style={{ color: "#6ee7b7" }}>{p.count}×</span>
                   </div>
-                  <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                    <div className="h-full rounded-full" style={{ width: `${(p.count / max) * 100}%`, background: GREEN }} />
+                  <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
+                    <div className="h-full rounded-full" style={{ width: `${(p.count / max) * 100}%`, background: `linear-gradient(90deg, ${GREEN}, #6ee7b7)` }} />
                   </div>
                 </div>
               );
@@ -73,22 +87,22 @@ export default function ProStats() {
           </Section>
         </div>
 
-        <Section title="Consultations par mois" icon={<Calendar className="w-4 h-4" />} accent="#0EA5E9">
-          {data.monthly.length === 0 && <p className="text-xs text-slate-400">Aucune donnée encore.</p>}
+        <Section title="Consultations par mois" icon={<Calendar className="w-4 h-4" />} accent="#a78bfa">
+          {data.monthly.length === 0 && <p className="text-xs" style={{ color: "rgba(200,185,255,0.65)" }}>Aucune donnée encore.</p>}
           {data.monthly.length > 0 && (
             <div className="flex items-end gap-1.5 h-32 mt-3">
               {data.monthly.map((m) => {
                 const max = Math.max(...data.monthly.map((x) => x.count), 1);
                 return (
                   <div key={m.month} className="flex-1 flex flex-col items-center gap-1.5 group">
-                    <span className="text-[10px] font-bold text-slate-700 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <span className="text-[10px] font-extrabold opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: "#a78bfa" }}>
                       {m.count}
                     </span>
                     <div
                       className="w-full rounded-t-md transition-all hover:opacity-80 min-h-[4px]"
-                      style={{ height: `${(m.count / max) * 100}%`, background: NAVY }}
+                      style={{ height: `${(m.count / max) * 100}%`, background: "linear-gradient(to top, #7c3aed, #a78bfa)" }}
                     />
-                    <span className="text-[10px] text-slate-500 font-medium">{m.month.slice(5)}</span>
+                    <span className="text-[10px] font-medium" style={{ color: "rgba(255,255,255,0.35)" }}>{m.month.slice(5)}</span>
                   </div>
                 );
               })}
@@ -103,11 +117,14 @@ export default function ProStats() {
 function KPI({ icon, accent, label, value, testid }: any) {
   return (
     <ProCard className="p-4" testid={testid}>
-      <div className="w-8 h-8 rounded-md flex items-center justify-center text-white mb-2" style={{ background: accent }}>
-        {icon}
+      <div
+        className="w-8 h-8 rounded-xl flex items-center justify-center text-white mb-2"
+        style={{ background: `${accent}26`, border: `1px solid ${accent}50` }}
+      >
+        <span style={{ color: accent }}>{icon}</span>
       </div>
-      <p className="text-2xl font-bold" style={{ color: INK }}>{value}</p>
-      <p className="text-[11px] text-slate-500 font-semibold mt-0.5">{label}</p>
+      <p className="text-2xl font-extrabold" style={{ color: INK }}>{value}</p>
+      <p className="text-[11px] font-extrabold uppercase tracking-widest mt-0.5" style={{ color: "rgba(200,185,255,0.65)" }}>{label}</p>
     </ProCard>
   );
 }
@@ -116,10 +133,13 @@ function Section({ title, icon, accent, children }: any) {
   return (
     <ProCard className="p-5">
       <div className="flex items-center gap-2 mb-4">
-        <div className="w-7 h-7 rounded-md flex items-center justify-center text-white" style={{ background: accent }}>
-          {icon}
+        <div
+          className="w-7 h-7 rounded-xl flex items-center justify-center"
+          style={{ background: `${accent}26`, border: `1px solid ${accent}50` }}
+        >
+          <span style={{ color: accent }}>{icon}</span>
         </div>
-        <p className="text-sm font-bold" style={{ color: INK }}>{title}</p>
+        <p className="text-sm font-extrabold" style={{ color: INK }}>{title}</p>
       </div>
       {children}
     </ProCard>

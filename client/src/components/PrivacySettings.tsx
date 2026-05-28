@@ -68,27 +68,59 @@ export function PrivacySettings() {
     }
   };
 
+  const ds = {
+    font: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
+  };
+
   return (
     <>
-      <div className="rounded-2xl p-5 mb-6" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }} data-testid="card-privacy-settings">
-        <div className="flex items-center gap-2 mb-4">
-          <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #E91E8C, #8b5cf6)" }}>
-            <ShieldCheck className="w-4 h-4 text-white" />
+      <div
+        className="rounded-2xl p-5 mb-6"
+        style={{
+          background: "rgba(167,139,250,0.06)",
+          border: "1px solid rgba(167,139,250,0.18)",
+          borderRadius: 24,
+          fontFamily: ds.font,
+        }}
+        data-testid="card-privacy-settings"
+      >
+        <div className="flex items-center gap-3 mb-5">
+          <div
+            className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+            style={{
+              background: "rgba(167,139,250,0.06)",
+              border: "1px solid rgba(167,139,250,0.18)",
+            }}
+          >
+            <ShieldCheck className="w-4 h-4" style={{ color: "#a78bfa" }} />
           </div>
           <div>
-            <h3 className="text-sm font-black text-white">Mes données & confidentialité</h3>
-            <p className="text-[10px]" style={{ color: "rgba(255,255,255,0.35)" }}>Conforme RGPD & loi camerounaise</p>
+            <h3 className="text-sm font-bold" style={{ color: "#f3f0ff" }}>
+              Mes données &amp; confidentialité
+            </h3>
+            <p className="text-[10px] mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>
+              Conforme RGPD &amp; loi camerounaise
+            </p>
           </div>
         </div>
 
         <div className="space-y-2">
           <Link href="/confidentialite">
-            <button className="w-full flex items-center justify-between px-4 py-3 rounded-xl active:scale-[0.99] transition-all" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.07)" }} data-testid="link-privacy">
+            <button
+              className="w-full flex items-center justify-between px-4 py-3 rounded-xl active:scale-[0.99] transition-all"
+              style={{
+                background: "rgba(255,255,255,0.04)",
+                border: "1px solid rgba(255,255,255,0.07)",
+              }}
+              data-testid="link-privacy"
+            >
               <span className="flex items-center gap-3">
-                <ShieldCheck className="w-4 h-4" style={{ color: "rgba(255,255,255,0.4)" }} />
-                <span className="text-sm font-bold" style={{ color: "rgba(255,255,255,0.7)" }}>Politique de confidentialité</span>
+                <ShieldCheck className="w-4 h-4" style={{ color: "#a78bfa" }} />
+                <span className="text-sm font-medium" style={{ color: "rgba(200,185,255,0.65)" }}>
+                  Politique de confidentialité
+                </span>
               </span>
-              <ChevronRight className="w-4 h-4" style={{ color: "rgba(255,255,255,0.3)" }} />
+              <ChevronRight className="w-4 h-4" style={{ color: "rgba(255,255,255,0.35)" }} />
             </button>
           </Link>
 
@@ -96,30 +128,41 @@ export function PrivacySettings() {
             onClick={handleExport}
             disabled={isExporting}
             className="w-full flex items-center justify-between px-4 py-3 rounded-xl active:scale-[0.99] transition-all disabled:opacity-60"
-            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.07)" }}
+            style={{
+              background: "rgba(255,255,255,0.04)",
+              border: "1px solid rgba(255,255,255,0.07)",
+            }}
             data-testid="button-export-data"
           >
             <span className="flex items-center gap-3">
-              {isExporting
-                ? <Loader2 className="w-4 h-4 animate-spin" style={{ color: "rgba(255,255,255,0.4)" }} />
-                : <Download className="w-4 h-4" style={{ color: "rgba(255,255,255,0.4)" }} />
-              }
-              <span className="text-sm font-bold" style={{ color: "rgba(255,255,255,0.7)" }}>Exporter mes données (JSON)</span>
+              {isExporting ? (
+                <Loader2 className="w-4 h-4 animate-spin" style={{ color: "#a78bfa" }} />
+              ) : (
+                <Download className="w-4 h-4" style={{ color: "#a78bfa" }} />
+              )}
+              <span className="text-sm font-medium" style={{ color: "rgba(200,185,255,0.65)" }}>
+                Exporter mes données (JSON)
+              </span>
             </span>
-            <ChevronRight className="w-4 h-4" style={{ color: "rgba(255,255,255,0.3)" }} />
+            <ChevronRight className="w-4 h-4" style={{ color: "rgba(255,255,255,0.35)" }} />
           </button>
 
           <button
             onClick={() => setShowDeleteModal(true)}
             className="w-full flex items-center justify-between px-4 py-3 rounded-xl active:scale-[0.99] transition-all"
-            style={{ background: "rgba(244,63,94,0.08)", border: "1px solid rgba(244,63,94,0.2)" }}
+            style={{
+              background: "rgba(233,30,140,0.08)",
+              border: "1px solid rgba(233,30,140,0.2)",
+            }}
             data-testid="button-open-delete-account"
           >
             <span className="flex items-center gap-3">
-              <Trash2 className="w-4 h-4" style={{ color: "#f43f5e" }} />
-              <span className="text-sm font-bold" style={{ color: "#f43f5e" }}>Supprimer mon compte</span>
+              <Trash2 className="w-4 h-4" style={{ color: "#f9a8d4" }} />
+              <span className="text-sm font-medium" style={{ color: "#f9a8d4" }}>
+                Supprimer mon compte
+              </span>
             </span>
-            <ChevronRight className="w-4 h-4" style={{ color: "rgba(244,63,94,0.5)" }} />
+            <ChevronRight className="w-4 h-4" style={{ color: "rgba(249,168,212,0.5)" }} />
           </button>
         </div>
       </div>
@@ -128,8 +171,8 @@ export function PrivacySettings() {
       <AnimatePresence>
         {showDeleteModal && (
           <motion.div
-            className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center backdrop-blur-sm px-4"
-            style={{ background: "rgba(0,0,0,0.75)" }}
+            className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center px-4"
+            style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(8px)" }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -140,34 +183,67 @@ export function PrivacySettings() {
             data-testid="modal-delete-account"
           >
             <motion.div
-              className="rounded-t-3xl sm:rounded-3xl w-full max-w-md p-6"
-              style={{ background: "#0D0A0E", border: "1px solid rgba(255,255,255,0.08)", boxShadow: "0 -20px 60px rgba(0,0,0,0.6)" }}
+              className="w-full max-w-md p-6"
+              style={{
+                background: "#13101f",
+                border: "1px solid rgba(233,30,140,0.2)",
+                borderRadius: 28,
+                fontFamily: ds.font,
+              }}
               initial={{ y: 80, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 80, opacity: 0 }}
               transition={{ type: "spring", damping: 24, stiffness: 220 }}
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Handle */}
-              <div className="flex justify-center mb-4 -mt-1">
-                <div className="w-10 h-1 rounded-full" style={{ background: "rgba(255,255,255,0.15)" }} />
+              {/* Handle bar */}
+              <div className="flex justify-center mb-5 -mt-1">
+                <div
+                  style={{
+                    width: 40,
+                    height: 4,
+                    borderRadius: 9999,
+                    background: "rgba(255,255,255,0.15)",
+                  }}
+                />
               </div>
 
-              <div className="flex items-start gap-3 mb-4">
-                <div className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ background: "rgba(244,63,94,0.12)", border: "1px solid rgba(244,63,94,0.25)" }}>
-                  <AlertTriangle className="w-6 h-6" style={{ color: "#f43f5e" }} />
+              <div className="flex items-start gap-3 mb-5">
+                <div
+                  className="w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0"
+                  style={{
+                    background: "rgba(233,30,140,0.08)",
+                    border: "1px solid rgba(233,30,140,0.2)",
+                  }}
+                >
+                  <AlertTriangle className="w-5 h-5" style={{ color: "#f9a8d4" }} />
                 </div>
                 <div className="flex-1">
-                  <h2 id="delete-modal-title" className="text-base font-black text-white leading-tight">
+                  <h2
+                    id="delete-modal-title"
+                    className="text-base font-bold leading-tight"
+                    style={{ color: "#f3f0ff" }}
+                  >
                     Supprimer définitivement ton compte ?
                   </h2>
-                  <p className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>Cette action est irréversible</p>
+                  <p className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>
+                    Cette action est irréversible
+                  </p>
                 </div>
               </div>
 
-              <div className="space-y-2 text-sm mb-4" style={{ color: "rgba(255,255,255,0.6)" }}>
-                <p>Tu vas perdre <strong className="text-white">définitivement</strong> :</p>
-                <ul className="list-disc ml-5 space-y-1 text-xs" style={{ color: "rgba(255,255,255,0.5)" }}>
+              <div
+                className="space-y-2 text-sm mb-5"
+                style={{ color: "rgba(200,185,255,0.65)" }}
+              >
+                <p>
+                  Tu vas perdre{" "}
+                  <strong style={{ color: "#f3f0ff", fontWeight: 700 }}>définitivement</strong> :
+                </p>
+                <ul
+                  className="list-disc ml-5 space-y-1 text-xs"
+                  style={{ color: "rgba(200,185,255,0.65)" }}
+                >
                   <li>Ton profil, ton email, ton mot de passe</li>
                   <li>Tous tes scans et diagnostics</li>
                   <li>Ta routine, ton historique bien-être, tes points de fidélité</li>
@@ -176,21 +252,35 @@ export function PrivacySettings() {
                   <li>Ton abonnement Premium éventuel (sans remboursement automatique)</li>
                 </ul>
                 <p className="text-xs italic mt-3" style={{ color: "rgba(255,255,255,0.35)" }}>
-                  Astuce : pense à <strong className="text-white">exporter tes données</strong> avant si tu veux les conserver.
+                  Astuce : pense à{" "}
+                  <strong style={{ color: "#f3f0ff", fontWeight: 700 }}>exporter tes données</strong>{" "}
+                  avant si tu veux les conserver.
                 </p>
               </div>
 
-              <div className="mb-4">
-                <label className="block text-xs font-bold mb-1.5" style={{ color: "rgba(255,255,255,0.6)" }}>
-                  Pour confirmer, tape <span className="font-mono" style={{ color: "#f43f5e" }}>SUPPRIMER</span> ci-dessous :
+              <div className="mb-5">
+                <label
+                  className="block text-xs font-medium mb-1.5"
+                  style={{ color: "rgba(200,185,255,0.65)" }}
+                >
+                  Pour confirmer, tape{" "}
+                  <span className="font-mono font-bold" style={{ color: "#f9a8d4" }}>
+                    SUPPRIMER
+                  </span>{" "}
+                  ci-dessous :
                 </label>
                 <input
                   type="text"
                   value={confirmText}
                   onChange={(e) => setConfirmText(e.target.value)}
                   placeholder="SUPPRIMER"
-                  className="w-full px-4 py-2.5 rounded-xl text-sm font-bold tracking-wider focus:outline-none transition-colors"
-                  style={{ background: "rgba(255,255,255,0.05)", border: `1px solid ${confirmText === "SUPPRIMER" ? "rgba(244,63,94,0.5)" : "rgba(255,255,255,0.1)"}`, color: "rgba(255,255,255,0.8)" }}
+                  className="w-full px-4 py-2.5 text-sm font-bold tracking-wider focus:outline-none transition-colors"
+                  style={{
+                    background: "#13101f",
+                    border: `1px solid ${confirmText === "SUPPRIMER" ? "rgba(233,30,140,0.4)" : "rgba(167,139,250,0.2)"}`,
+                    borderRadius: 12,
+                    color: "#f3f0ff",
+                  }}
                   data-testid="input-confirm-delete"
                   disabled={isDeleting}
                 />
@@ -200,8 +290,11 @@ export function PrivacySettings() {
                 <button
                   onClick={handleDelete}
                   disabled={confirmText !== "SUPPRIMER" || isDeleting}
-                  className="w-full py-3 rounded-2xl text-white font-black text-sm active:scale-[0.98] transition-transform disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                  style={{ background: "linear-gradient(135deg, #f43f5e, #e11d48)" }}
+                  className="w-full py-3 text-white font-extrabold text-sm active:scale-[0.98] transition-transform disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  style={{
+                    background: "linear-gradient(135deg, #E91E8C, #f43f5e)",
+                    borderRadius: 12,
+                  }}
                   data-testid="button-confirm-delete"
                 >
                   {isDeleting ? (

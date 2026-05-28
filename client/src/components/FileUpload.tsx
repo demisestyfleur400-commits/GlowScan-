@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Upload, X, Loader2, Play, Camera, RefreshCw, ImageIcon } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Button } from "@/components/ui/button";
 import { resizeBase64Image } from "@/lib/imageUtils";
 
 interface FileUploadProps {
@@ -121,186 +120,377 @@ export function FileUpload({ onFileSelect, isProcessing }: FileUploadProps) {
   };
 
   return (
-    <div className="w-full space-y-4">
-      <canvas ref={canvasRef} className="hidden" />
+    <div
+      style={{
+        width: "100%",
+        display: "flex",
+        flexDirection: "column",
+        gap: "16px",
+        fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
+      }}
+    >
+      <canvas ref={canvasRef} style={{ display: "none" }} />
 
       <AnimatePresence mode="wait">
 
-        {/* ── CAMÉRA LIVE ── */}
+        {/* CAMERA LIVE */}
         {mode === "camera" && (
           <motion.div
             key="camera"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="space-y-5"
+            style={{ display: "flex", flexDirection: "column", gap: "20px" }}
           >
-            {/* Viseur Caméra */}
-            <div className="relative overflow-hidden rounded-[2.5rem] bg-black shadow-inner border border-gray-100" style={{ aspectRatio: "3/4" }}>
+            {/* Viewfinder */}
+            <div
+              style={{
+                position: "relative",
+                overflow: "hidden",
+                borderRadius: "40px",
+                background: "#0d0a0e",
+                border: "1px solid rgba(167,139,250,0.18)",
+                aspectRatio: "3/4",
+              }}
+            >
               <video
                 ref={videoRef}
                 autoPlay
                 playsInline
                 muted
-                className="w-full h-full object-cover"
-                style={{ transform: facingMode === "user" ? "scaleX(-1)" : "none" }}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                  transform: facingMode === "user" ? "scaleX(-1)" : "none",
+                }}
               />
 
-              {/* Animation des repères de scan */}
+              {/* Scan corner markers */}
               {cameraReady && (
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    pointerEvents: "none",
+                  }}
+                >
                   {[
-                    "top-[15%] left-[10%] border-t-2 border-l-2 rounded-tl-2xl",
-                    "top-[15%] right-[10%] border-t-2 border-r-2 rounded-tr-2xl",
-                    "bottom-[15%] left-[10%] border-b-2 border-l-2 rounded-bl-2xl",
-                    "bottom-[15%] right-[10%] border-b-2 border-r-2 rounded-br-2xl",
-                  ].map((cls, i) => (
-                    <div key={i} className={`absolute w-10 h-10 border-white/80 ${cls}`} />
+                    { top: "15%", left: "10%", borderTop: "2px solid rgba(167,139,250,0.7)", borderLeft: "2px solid rgba(167,139,250,0.7)", borderRadius: "16px 0 0 0" },
+                    { top: "15%", right: "10%", borderTop: "2px solid rgba(167,139,250,0.7)", borderRight: "2px solid rgba(167,139,250,0.7)", borderRadius: "0 16px 0 0" },
+                    { bottom: "15%", left: "10%", borderBottom: "2px solid rgba(167,139,250,0.7)", borderLeft: "2px solid rgba(167,139,250,0.7)", borderRadius: "0 0 0 16px" },
+                    { bottom: "15%", right: "10%", borderBottom: "2px solid rgba(167,139,250,0.7)", borderRight: "2px solid rgba(167,139,250,0.7)", borderRadius: "0 0 16px 0" },
+                  ].map((style, i) => (
+                    <div
+                      key={i}
+                      style={{ position: "absolute", width: "40px", height: "40px", ...style }}
+                    />
                   ))}
                   <motion.div
-                    className="absolute left-[10%] right-[10%] h-0.5 bg-gradient-to-r from-transparent via-pink-400 to-transparent"
+                    style={{
+                      position: "absolute",
+                      left: "10%",
+                      right: "10%",
+                      height: "2px",
+                      background: "linear-gradient(90deg, transparent, #a78bfa, transparent)",
+                    }}
                     animate={{ top: ["16%", "84%", "16%"] }}
                     transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
                   />
                 </div>
               )}
 
-              {/* Loader de démarrage */}
+              {/* Camera loading state */}
               {!cameraReady && !cameraError && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 backdrop-blur-sm">
-                  <Loader2 className="w-6 h-6 text-pink-500 animate-spin mb-2" />
-                  <p className="text-white/90 text-xs font-black uppercase tracking-wider">Calibration de l'objectif…</p>
+                <div
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    background: "rgba(13,10,14,0.75)",
+                    backdropFilter: "blur(8px)",
+                    gap: "8px",
+                  }}
+                >
+                  <Loader2 style={{ width: "24px", height: "24px", color: "#a78bfa", animation: "spin 1s linear infinite" }} />
+                  <p style={{ color: "rgba(200,185,255,0.65)", fontSize: "12px", fontWeight: 600 }}>Calibration de l'objectif…</p>
                 </div>
               )}
             </div>
 
-            {/* Hub de contrôle */}
+            {/* Camera control hub */}
             <div
-              className="flex items-center justify-between px-6 py-2 rounded-3xl"
-              style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "8px 24px",
+                borderRadius: "9999px",
+                background: "rgba(255,255,255,0.04)",
+                border: "1px solid rgba(255,255,255,0.07)",
+              }}
             >
-              {/* Galerie */}
+              {/* Gallery button */}
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="w-11 h-11 rounded-full flex items-center justify-center active:scale-90 transition-all"
-                style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.6)" }}
                 title="Ouvrir la galerie"
+                style={{
+                  width: "44px",
+                  height: "44px",
+                  borderRadius: "9999px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  background: "rgba(255,255,255,0.08)",
+                  border: "1px solid rgba(255,255,255,0.15)",
+                  color: "rgba(200,185,255,0.65)",
+                  cursor: "pointer",
+                  transition: "transform 0.1s",
+                }}
               >
-                <ImageIcon className="w-4 h-4" />
+                <ImageIcon style={{ width: "18px", height: "18px" }} />
               </button>
 
-              {/* Déclencheur Photo Central */}
+              {/* Capture button */}
               <motion.button
                 whileTap={{ scale: 0.92 }}
                 onClick={capturePhoto}
                 disabled={!cameraReady || isProcessing}
-                className="w-16 h-16 rounded-full flex items-center justify-center shadow-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                style={{ background: "rgba(255,255,255,0.1)", border: "3px solid rgba(233,30,140,0.5)", boxShadow: "0 0 20px rgba(233,30,140,0.2)" }}
+                style={{
+                  width: "64px",
+                  height: "64px",
+                  borderRadius: "9999px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  background: "rgba(124,58,237,0.12)",
+                  border: "3px solid rgba(124,58,237,0.5)",
+                  cursor: cameraReady && !isProcessing ? "pointer" : "not-allowed",
+                  opacity: !cameraReady || isProcessing ? 0.4 : 1,
+                  transition: "opacity 0.15s",
+                }}
               >
-                <div className="w-11 h-11 rounded-full flex items-center justify-center" style={{ background: "linear-gradient(135deg, #E91E8C, #f43f5e)" }}>
-                  <Camera className="w-5 h-5 text-white" />
+                <div
+                  style={{
+                    width: "44px",
+                    height: "44px",
+                    borderRadius: "9999px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    background: "linear-gradient(135deg, #7c3aed, #a78bfa)",
+                  }}
+                >
+                  <Camera style={{ width: "20px", height: "20px", color: "#f3f0ff" }} />
                 </div>
               </motion.button>
 
-              {/* Pivot Caméra (Avant / Arrière) */}
+              {/* Flip camera button */}
               <button
                 type="button"
                 onClick={flipCamera}
                 disabled={!cameraReady}
-                className="w-11 h-11 rounded-full flex items-center justify-center active:scale-90 transition-all disabled:opacity-30"
-                style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.6)" }}
                 title="Changer de caméra"
+                style={{
+                  width: "44px",
+                  height: "44px",
+                  borderRadius: "9999px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  background: "rgba(255,255,255,0.08)",
+                  border: "1px solid rgba(255,255,255,0.15)",
+                  color: "rgba(200,185,255,0.65)",
+                  cursor: cameraReady ? "pointer" : "not-allowed",
+                  opacity: !cameraReady ? 0.3 : 1,
+                  transition: "transform 0.1s, opacity 0.15s",
+                }}
               >
-                <RefreshCw className="w-4 h-4" />
+                <RefreshCw style={{ width: "18px", height: "18px" }} />
               </button>
             </div>
           </motion.div>
         )}
 
-        {/* ── FALLBACK GALERIE ── */}
+        {/* GALLERY FALLBACK */}
         {mode === "gallery_fallback" && (
           <motion.div
             key="gallery"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="space-y-3"
+            style={{ display: "flex", flexDirection: "column", gap: "12px" }}
           >
             {cameraError && (
               <div
-                className="p-3.5 rounded-2xl text-center"
-                style={{ background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.2)" }}
+                style={{
+                  padding: "14px 16px",
+                  borderRadius: "16px",
+                  textAlign: "center",
+                  background: "rgba(245,158,11,0.1)",
+                  border: "1px solid rgba(245,158,11,0.25)",
+                }}
               >
-                <p className="text-xs font-bold leading-normal" style={{ color: "rgba(251,191,36,0.9)" }}>💡 {cameraError}</p>
+                <p style={{ fontSize: "12px", fontWeight: 600, color: "#fbbf24", lineHeight: 1.5 }}>
+                  {cameraError}
+                </p>
               </div>
             )}
             <button
               onClick={() => fileInputRef.current?.click()}
               data-testid="dropzone"
-              className="relative overflow-hidden rounded-[2.5rem] border-2 border-dashed w-full min-h-[300px] flex flex-col items-center justify-center gap-4 transition-all"
-              style={{ borderColor: "rgba(233,30,140,0.25)", background: "rgba(233,30,140,0.04)" }}
+              style={{
+                position: "relative",
+                overflow: "hidden",
+                borderRadius: "40px",
+                border: "2px dashed rgba(167,139,250,0.3)",
+                width: "100%",
+                minHeight: "300px",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "16px",
+                background: "rgba(167,139,250,0.04)",
+                cursor: "pointer",
+                transition: "border-color 0.15s, background 0.15s",
+              }}
             >
               <div
-                className="w-16 h-16 rounded-2xl flex items-center justify-center"
-                style={{ background: "rgba(233,30,140,0.12)", border: "1px solid rgba(233,30,140,0.25)" }}
+                style={{
+                  width: "64px",
+                  height: "64px",
+                  borderRadius: "20px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  background: "rgba(124,58,237,0.12)",
+                  border: "1px solid rgba(124,58,237,0.25)",
+                }}
               >
-                <Upload className="w-6 h-6" style={{ color: "#E91E8C" }} />
+                <Upload style={{ width: "24px", height: "24px", color: "#a78bfa" }} />
               </div>
-              <div className="text-center px-6">
-                <p className="text-sm font-black text-white uppercase tracking-wide">Importer un cliché</p>
-                <p className="text-xs mt-1 font-medium" style={{ color: "rgba(255,255,255,0.35)" }}>Prend en charge JPG, PNG, WEBP</p>
+              <div style={{ textAlign: "center", padding: "0 24px" }}>
+                <p style={{ fontSize: "14px", fontWeight: 700, color: "#f3f0ff" }}>Importer un cliché</p>
+                <p style={{ fontSize: "12px", marginTop: "4px", fontWeight: 500, color: "rgba(255,255,255,0.35)" }}>
+                  JPG, PNG, WEBP — max 10 Mo
+                </p>
               </div>
             </button>
           </motion.div>
         )}
 
-        {/* ── APERÇU + ANALYSER ── */}
+        {/* PREVIEW + ANALYZE */}
         {mode === "preview" && preview && (
           <motion.div
             key="preview"
             initial={{ opacity: 0, scale: 0.97 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0 }}
-            className="space-y-4"
+            style={{ display: "flex", flexDirection: "column", gap: "16px" }}
           >
-            <div className="relative overflow-hidden rounded-[2.5rem] border border-gray-100" style={{ aspectRatio: "3/4" }}>
-              <img src={preview} alt="Aperçu du visage" className="w-full h-full object-cover" />
+            <div
+              style={{
+                position: "relative",
+                overflow: "hidden",
+                borderRadius: "40px",
+                border: "1px solid rgba(167,139,250,0.18)",
+                aspectRatio: "3/4",
+              }}
+            >
+              <img src={preview} alt="Aperçu du visage" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
               <button
                 onClick={retake}
                 data-testid="button-retake"
-                className="absolute top-4 right-4 w-10 h-10 bg-black/40 backdrop-blur-md text-white rounded-full flex items-center justify-center border border-white/10 active:scale-90 transition-all"
+                style={{
+                  position: "absolute",
+                  top: "16px",
+                  right: "16px",
+                  width: "40px",
+                  height: "40px",
+                  background: "rgba(13,10,14,0.6)",
+                  backdropFilter: "blur(12px)",
+                  color: "#f3f0ff",
+                  borderRadius: "9999px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  border: "1px solid rgba(255,255,255,0.15)",
+                  cursor: "pointer",
+                  transition: "transform 0.1s",
+                }}
               >
-                <X className="w-5 h-5" />
+                <X style={{ width: "18px", height: "18px" }} />
               </button>
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2">
+
+              {/* Validated badge */}
+              <div
+                style={{
+                  position: "absolute",
+                  bottom: "16px",
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                }}
+              >
                 <span
-                  className="backdrop-blur text-white text-[10px] font-black uppercase tracking-wider px-4 py-2 rounded-full"
-                  style={{ background: "rgba(233,30,140,0.85)", boxShadow: "0 0 20px rgba(233,30,140,0.4)" }}
+                  style={{
+                    backdropFilter: "blur(12px)",
+                    color: "#f3f0ff",
+                    fontSize: "11px",
+                    fontWeight: 700,
+                    padding: "6px 16px",
+                    borderRadius: "9999px",
+                    background: "rgba(124,58,237,0.75)",
+                    border: "1px solid rgba(167,139,250,0.4)",
+                    whiteSpace: "nowrap",
+                  }}
                 >
-                  ✓ Cliché Validé
+                  Cliché validé
                 </span>
               </div>
             </div>
 
-            <Button
+            <button
               onClick={handleAnalyze}
               disabled={isProcessing}
               data-testid="button-upload"
-              className="w-full h-14 rounded-2xl bg-gradient-to-r from-pink-600 to-purple-600 text-white font-black text-xs uppercase tracking-wider shadow-xl shadow-pink-600/10 active:scale-[0.98] transition-transform"
+              style={{
+                width: "100%",
+                height: "56px",
+                borderRadius: "9999px",
+                background: "#7c3aed",
+                color: "#f3f0ff",
+                fontWeight: 800,
+                fontSize: "14px",
+                border: "none",
+                cursor: isProcessing ? "not-allowed" : "pointer",
+                opacity: isProcessing ? 0.7 : 1,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "8px",
+                transition: "opacity 0.15s, transform 0.1s",
+              }}
             >
               {isProcessing ? (
-                <span className="flex items-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                <>
+                  <Loader2 style={{ width: "18px", height: "18px", animation: "spin 1s linear infinite" }} />
                   Calcul cartographique...
-                </span>
+                </>
               ) : (
-                <span className="flex items-center gap-2">
-                  <Play className="w-3.5 h-3.5 fill-current" />
+                <>
+                  <Play style={{ width: "16px", height: "16px", fill: "currentColor" }} />
                   Analyser mon visage
-                </span>
+                </>
               )}
-            </Button>
+            </button>
           </motion.div>
         )}
       </AnimatePresence>
@@ -309,7 +499,7 @@ export function FileUpload({ onFileSelect, isProcessing }: FileUploadProps) {
         ref={fileInputRef}
         type="file"
         accept="image/jpeg,image/png,image/webp"
-        className="hidden"
+        style={{ display: "none" }}
         onChange={handleFileSelect}
         data-testid="input-file"
       />
@@ -318,7 +508,16 @@ export function FileUpload({ onFileSelect, isProcessing }: FileUploadProps) {
         <motion.p
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-destructive text-xs font-black text-center uppercase tracking-wide"
+          style={{
+            fontSize: "12px",
+            fontWeight: 600,
+            textAlign: "center",
+            color: "#f9a8d4",
+            background: "rgba(233,30,140,0.08)",
+            border: "1px solid rgba(233,30,140,0.2)",
+            padding: "10px 16px",
+            borderRadius: "12px",
+          }}
         >
           {error}
         </motion.p>

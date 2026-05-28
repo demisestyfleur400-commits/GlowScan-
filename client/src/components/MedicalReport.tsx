@@ -27,7 +27,7 @@ function zoneStatusShort(s: ZoneAnalysisItem["status"] | "red" | "yellow" | "gre
 // === Helpers ===
 
 function normalize(s: string): string {
-  return (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  return (s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 }
 
 interface DiagProblem { icon: string; label: string; key: string; }
@@ -40,7 +40,6 @@ function deriveProblems(result: AnalysisResult): DiagProblem[] {
   if ((b.scars || 0) >= 3) out.push({ icon: "🟤", label: "taches", key: "taches" });
   if ((b.pores || 0) >= 5) out.push({ icon: "🕳️", label: "pores dilatés", key: "pores" });
   if ((b.sensitivity || 0) >= 5) out.push({ icon: "🌡️", label: "peau sensible", key: "sensibilite" });
-  // Heuristique hydratation : sébum bas + score < 75 = peau probablement déshydratée
   if (((b.sebum || 0) <= 4 && (result.score || 100) < 75) || /deshydrat|sech|xerose/.test(normalize(result.condition || ""))) {
     out.push({ icon: "💧", label: "déshydratation", key: "hydratation" });
   }
@@ -61,7 +60,6 @@ function getMatchReasons(product: any, problems: DiagProblem[]): string[] {
   return Array.from(new Set(matched)).slice(0, 2);
 }
 
-// Étiquettes courtes par problème — utilisées dans la sous-ligne "Acné • Zone T"
 function shortReasonLabels(product: any, problems: DiagProblem[]): string[] {
   const reasons = getMatchReasons(product, problems);
   const map: Record<string, string> = {
@@ -75,7 +73,6 @@ function shortReasonLabels(product: any, problems: DiagProblem[]): string[] {
   return reasons.map((r) => map[r] || r).slice(0, 2);
 }
 
-// Copywriting court pour le produit intermédiaire (2000–4000 FCFA), adapté au problème principal
 function supplementCopy(problems: DiagProblem[]): string {
   if (problems.length === 0) return "Petit geste en plus — entretien quotidien à intégrer dans ta routine.";
   const k = problems[0].key;
@@ -89,19 +86,10 @@ function supplementCopy(problems: DiagProblem[]): string {
 }
 
 interface RoutineSelection {
-  main: any[];           // 3 produits cohérents d'une seule marque locale
-  supplement: any | null; // 4e produit intermédiaire 2000–4000 FCFA, même marque
-  sourceLabel: string;    // ex. "Andrea Skincare", "Ebony Hair", "Hair Bloom"
+  main: any[];
+  supplement: any | null;
+  sourceLabel: string;
 }
-
-// ═══════════════════════════════════════════════════════════════════════
-//   BUNDLES — 4 paliers calibrés Cameroun (résultat-promis, pas produit-vendu)
-//   Le bundle affiché est UNIQUE et choisi par sévérité du diagnostic.
-//   • Découverte  (1 prod)        : prix d'appel, déclic première commande
-//   • Essentiel   (2 prods)       : minimum viable, vraie conversion
-//   • Complète    (3 prods)       : routine experte, montée en gamme
-//   • Premium     (3 prods + rescan offert) : sévérité élevée, suivi inclus
-// ═══════════════════════════════════════════════════════════════════════
 
 export type BundleTier = "decouverte" | "essentiel" | "complete" | "premium";
 
@@ -109,14 +97,13 @@ export interface BundlePromise {
   tier: BundleTier;
   emoji: string;
   name: string;
-  tagline: string;          // promesse résultat (vendre le résultat, pas le produit)
-  bonus?: string;           // bonus inclus (ex. rescan offert)
-  ctaLabel: string;         // texte du bouton de commande
-  badge?: string;           // ex. "⭐ Le plus choisi"
+  tagline: string;
+  bonus?: string;
+  ctaLabel: string;
+  badge?: string;
 }
 
 function pickBundleTier(score: number): BundleTier {
-  // Le score est plafonné à 70 côté serveur, donc 70 = peau saine, < 35 = sévère
   if (score >= 60) return "decouverte";
   if (score >= 45) return "essentiel";
   if (score >= 30) return "complete";
@@ -125,7 +112,6 @@ function pickBundleTier(score: number): BundleTier {
 
 function bundleMeta(tier: BundleTier, problems: DiagProblem[]): BundlePromise {
   const mainProblem = problems[0]?.key;
-  // Promesse résultat ciblée par problème dominant
   const promiseByProblem: Record<string, Record<string, string>> = {
     decouverte: {
       acne: "Premiers résultats anti-imperfections en 14 jours",
@@ -159,25 +145,25 @@ function bundleMeta(tier: BundleTier, problems: DiagProblem[]): BundlePromise {
   const meta: Record<BundleTier, Omit<BundlePromise, "tier" | "tagline">> = {
     decouverte: {
       emoji: "🌱",
-      name: "Bundle Découverte",
+      name: "Bundle découverte",
       ctaLabel: "Tester ce produit",
     },
     essentiel: {
       emoji: "⭐",
-      name: "Bundle Essentiel",
+      name: "Bundle essentiel",
       badge: "Le plus choisi",
       ctaLabel: "Commander mon bundle",
     },
     complete: {
       emoji: "💎",
-      name: "Bundle Routine Complète",
+      name: "Bundle routine complète",
       ctaLabel: "Commander ma routine",
     },
     premium: {
       emoji: "👑",
-      name: "Bundle Premium",
-      bonus: "🎁 Rescan offert à J+14 (valeur 2 000 FCFA)",
-      ctaLabel: "Commander Premium",
+      name: "Bundle premium",
+      bonus: "Rescan offert à J+14 (valeur 2 000 FCFA)",
+      ctaLabel: "Commander premium",
     },
   };
 
@@ -195,13 +181,10 @@ function pickBundle(result: AnalysisResult, area: string, routine: RoutineSelect
   const counts: Record<BundleTier, number> = { decouverte: 1, essentiel: 2, complete: 3, premium: 3 };
   const wanted = counts[tier];
 
-  // 1) On part des produits déjà sélectionnés par findRoutineProducts (même source, ranking pertinence)
   let products = routine.main.slice(0, wanted);
 
-  // 2) Fallback (b) : si pas assez, complète avec un produit local générique de la bonne catégorie
   if (products.length < wanted) {
     const cat = area === "hair" ? "cheveux" : area === "body" ? "corps" : "visage";
-    // Marques locales = celles qui ont un whatsapp mappé dans BRAND_MAP
     const localGeneric = catalog.filter(
       (p) =>
         p.whatsapp &&
@@ -224,8 +207,6 @@ function findRoutineProducts(result: AnalysisResult, area: string): RoutineSelec
   const areaProducts = catalog.filter((p) => p.category === cat);
   const score = (p: any) => getMatchReasons(p, problems).length;
 
-  // Toutes les marques sont locales (Andrea Skincare, Ebony Hair, Hair Bloom)
-  // Groupées par numéro WhatsApp = par marque
   const localsByBrand = new Map<string, any[]>();
   for (const p of areaProducts.filter((x) => x.whatsapp)) {
     const k = p.whatsapp as string;
@@ -233,7 +214,6 @@ function findRoutineProducts(result: AnalysisResult, area: string): RoutineSelec
     localsByBrand.get(k)!.push(p);
   }
 
-  // Chaque "candidat" = 3 produits cohérents d'une même marque locale (1 livraison)
   type Candidate = { products: any[]; total: number; brandKey: string };
   const candidates: Candidate[] = [];
 
@@ -244,10 +224,8 @@ function findRoutineProducts(result: AnalysisResult, area: string): RoutineSelec
     candidates.push({ products: top3, total: top3.reduce((s, p) => s + score(p), 0), brandKey: waKey });
   }
 
-  // Choisir la marque locale qui matche le mieux le diagnostic
   candidates.sort((a, b) => b.total - a.total);
 
-  // Fallback robuste : prendre la première marque disponible même si <3 produits
   let winner: Candidate;
   if (candidates.length === 0) {
     const firstBrand = Array.from(localsByBrand.entries())[0];
@@ -262,13 +240,11 @@ function findRoutineProducts(result: AnalysisResult, area: string): RoutineSelec
   }
   const sourceLabel = BRAND_MAP[winner.brandKey] || "marque locale";
 
-  // Gamme intermédiaire (4000–6000 FCFA), MÊME marque, exclu des 3 principaux
   const sourcePool = localsByBrand.get(winner.brandKey) || [];
   const inRange = sourcePool.filter((p) =>
     typeof p.price === "number" && p.price >= 4000 && p.price <= 6000 &&
     !winner.products.some((w) => w.id === p.id)
   );
-  // Pertinence pour le diagnostic d'abord, prix ensuite ; supplément masqué si aucun lien diagnostic
   inRange.sort((a, b) => {
     const ds = score(b) - score(a);
     return ds !== 0 ? ds : (a.price! - b.price!);
@@ -278,15 +254,15 @@ function findRoutineProducts(result: AnalysisResult, area: string): RoutineSelec
   return { main: winner.products, supplement, sourceLabel };
 }
 
-// === Card médicale (cards flottantes spec utilisateur) ===
+// === Card médicale design system ===
 function MedCard({
   children,
-  accent = false,
+  violet = false,
   className = "",
   testId,
 }: {
   children: React.ReactNode;
-  accent?: boolean;
+  violet?: boolean;
   className?: string;
   testId?: string;
 }) {
@@ -296,9 +272,22 @@ function MedCard({
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, amount: 0.2 }}
       transition={{ duration: 0.4 }}
-      className={`relative rounded-[20px] bg-white shadow-[0_2px_12px_rgba(0,0,0,0.06)] p-5 ${
-        accent ? "border-l-[4px] border-l-pink-600" : "border border-gray-100"
-      } ${className}`}
+      style={
+        violet
+          ? {
+              background: "rgba(167,139,250,0.06)",
+              border: "1px solid rgba(167,139,250,0.18)",
+              borderRadius: 24,
+              padding: "1.25rem",
+            }
+          : {
+              background: "rgba(255,255,255,0.04)",
+              border: "1px solid rgba(255,255,255,0.07)",
+              borderRadius: 24,
+              padding: "1.25rem",
+            }
+      }
+      className={className}
       data-testid={testId}
     >
       {children}
@@ -311,7 +300,6 @@ function ZoneIcon({ status }: { status: ZoneAnalysisItem["status"] | "red" | "ye
   return <span className="text-base">{map[status] || "🟡"}</span>;
 }
 
-// Une ligne de zone à l'intérieur de l'accordion BLOC 5 — son propre "Voir plus" indépendant
 function ZoneRow({
   zone,
   index,
@@ -320,17 +308,25 @@ function ZoneRow({
   index: number;
 }) {
   return (
-    <div className="border-t border-gray-100 first:border-t-0 py-2" data-testid={`zone-row-${index}`}>
+    <div
+      style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}
+      className="first:border-t-0 py-2"
+      data-testid={`zone-row-${index}`}
+    >
       <div className="flex items-start gap-2">
         <ZoneIcon status={zone.status} />
         <div className="min-w-0 flex-1">
-          <p className="text-[13px] text-gray-800 leading-snug">
-            <span className="font-bold text-gray-900">{zone.name}</span>
-            <span className="text-gray-400"> — </span>
+          <p className="text-[13px] leading-snug" style={{ color: "rgba(200,185,255,0.65)" }}>
+            <span className="font-bold" style={{ color: "#f3f0ff" }}>{zone.name}</span>
+            <span style={{ color: "rgba(255,255,255,0.25)" }}> — </span>
             <span>{zone.short}</span>
           </p>
           {zone.long && (
-            <p className="mt-1 text-[12px] text-gray-600 leading-relaxed font-medical whitespace-pre-line" data-testid={`text-zone-long-${index}`}>
+            <p
+              className="mt-1 text-[12px] leading-relaxed whitespace-pre-line"
+              style={{ color: "rgba(200,185,255,0.5)" }}
+              data-testid={`text-zone-long-${index}`}
+            >
               {zone.long}
             </p>
           )}
@@ -343,25 +339,21 @@ function ZoneRow({
 // === Composant principal ===
 export default function MedicalReport({ result, scanId, area = "face", imageUrl, userFirstName, previousScore }: Props) {
   const reference = result.reference || (scanId ? `GS-${new Date().getFullYear()}-${String(scanId).padStart(4, "0")}` : `GS-${new Date().getFullYear()}-DEMO`);
-  // Date courte pour le header compact : "29 avril 2026"
   const dateLabel = useMemo(() => {
     const d = new Date();
     return d.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
   }, []);
 
-  // Delta GlowScore vs scan précédent (pour la flèche ↑ +10 / ↓ -5 sur la carte d'identité)
   const scoreDelta: number | null = (typeof previousScore === "number" && typeof result.score === "number")
     ? (result.score - previousScore)
     : null;
 
-  // Métriques avec fallback intelligent depuis balance si pas générées par IA
   const metrics = result.metrics ?? {
     hydratation: Math.max(20, Math.min(95, 90 - (result.balance?.sebum || 0) * 5 + ((result.score || 50) - 50) * 0.3)),
     eclat: Math.max(20, Math.min(95, (result.score || 50) - (result.balance?.scars || 0) * 5)),
     purete: Math.max(20, Math.min(95, 100 - (result.balance?.inflammation || 0) * 8 - (result.balance?.scars || 0) * 5)),
   };
 
-  // Zone analysis avec fallback depuis zones[] simples si pas générée
   const zoneAnalysis: ZoneAnalysisItem[] = result.zoneAnalysis && result.zoneAnalysis.length > 0
     ? result.zoneAnalysis
     : (result.zones || []).map((z) => ({
@@ -389,9 +381,6 @@ export default function MedicalReport({ result, scanId, area = "face", imageUrl,
     "Cas sévère — consultation médicale impérative"
   );
 
-  // Protocole avec fallback depuis recommendations.morning/evening
-  // ⚠️ L'IA peut renvoyer soit des chaînes, soit des objets {step, product, why}
-  // dans recommendations.morning/evening — on normalise pour éviter le crash React.
   const normalizeStep = (s: any, i: number): ProtocolStep => {
     if (s && typeof s === "object") {
       return {
@@ -409,12 +398,10 @@ export default function MedicalReport({ result, scanId, area = "face", imageUrl,
   const problems = deriveProblems(result);
   const bundle = pickBundle(result, area || "face", routine, problems);
 
-  // ── Modale "fiche commande" : nom, téléphone, adresse → WhatsApp 237674377959 ──
   const [showOrderModal, setShowOrderModal] = useState(false);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [orderTitle, setOrderTitle] = useState("Commander");
 
-  // Commander le bundle (1, 2 ou 3 produits selon palier) en un seul envoi WhatsApp
   const handleOrderBundle = () => {
     if (!bundle.products.length) return;
     setOrderItems(bundle.products.map((p) => ({
@@ -427,7 +414,6 @@ export default function MedicalReport({ result, scanId, area = "face", imageUrl,
     setShowOrderModal(true);
   };
 
-  // Sous-lignes courtes pour la carte d'identité — au plus 2 zones
   const identityZoneLines: string[] = (() => {
     const zones = (zoneAnalysis && zoneAnalysis.length > 0)
       ? zoneAnalysis
@@ -436,39 +422,48 @@ export default function MedicalReport({ result, scanId, area = "face", imageUrl,
   })();
 
   return (
-    <div className="space-y-2.5" data-testid="medical-report">
-      {/* ═══════════════════════════════════════════
-          BLOC 1 — Header compact (1 ligne, 30px max)
-          GlowScan • Analyse #GS-2024-XXXX • 29 avril 2026
-          ═══════════════════════════════════════════ */}
-      <div
-        className="px-1 flex items-center"
-        style={{ height: 30 }}
-        data-testid="block-header"
-      >
-        {/* Une seule zone texte tronquée pour rester fiable sur mobile étroit */}
-        <p className="text-[11px] text-gray-500 whitespace-nowrap overflow-hidden text-ellipsis w-full leading-none">
-          <span className="font-semibold text-gray-700">GlowScan</span>
-          <span className="text-gray-300"> • </span>
+    <div
+      className="space-y-2.5"
+      style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif' }}
+      data-testid="medical-report"
+    >
+      {/* ═══ BLOC 1 — Header compact ═══ */}
+      <div className="px-1 flex items-center" style={{ height: 30 }} data-testid="block-header">
+        <p
+          className="text-[11px] whitespace-nowrap overflow-hidden text-ellipsis w-full leading-none"
+          style={{ color: "rgba(255,255,255,0.35)" }}
+        >
+          <span className="font-semibold" style={{ color: "#c4b5fd" }}>GlowScan</span>
+          <span style={{ color: "rgba(255,255,255,0.2)" }}> • </span>
           <span>Analyse </span>
-          <span className="font-mono font-medium text-pink-600" data-testid="text-reference">#{reference}</span>
-          <span className="text-gray-300"> • </span>
+          <span className="font-mono font-semibold" style={{ color: "#a78bfa" }} data-testid="text-reference">
+            #{reference}
+          </span>
+          <span style={{ color: "rgba(255,255,255,0.2)" }}> • </span>
           <span>{dateLabel}</span>
         </p>
       </div>
 
-      {/* ═══════════════════════════════════════════
-          BLOC 2 — Carte identité (hauteur auto pour ne pas couper le diagnostic)
-          Photo 60×60 | Type de peau (texte complet) | GlowScore + delta
-          ═══════════════════════════════════════════ */}
+      {/* ═══ BLOC 2 — Carte identité ═══ */}
       <div
-        className="rounded-2xl border border-pink-200 bg-white shadow-sm px-3 py-3 flex items-start gap-3"
+        className="px-3 py-3 flex items-start gap-3"
+        style={{
+          background: "rgba(167,139,250,0.06)",
+          border: "1px solid rgba(167,139,250,0.18)",
+          borderRadius: 24,
+        }}
         data-testid="block-identity"
       >
-        {/* Photo 60×60 carré arrondi */}
+        {/* Photo 60×60 */}
         <div
-          className="rounded-xl overflow-hidden bg-pink-50 border border-pink-100 flex-shrink-0"
-          style={{ width: 60, height: 60 }}
+          className="overflow-hidden flex-shrink-0"
+          style={{
+            width: 60,
+            height: 60,
+            borderRadius: 14,
+            background: "rgba(167,139,250,0.1)",
+            border: "1px solid rgba(167,139,250,0.2)",
+          }}
         >
           {imageUrl ? (
             <img
@@ -479,49 +474,54 @@ export default function MedicalReport({ result, scanId, area = "face", imageUrl,
               loading="lazy"
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-pink-300 text-xl">
+            <div className="w-full h-full flex items-center justify-center text-xl" style={{ color: "rgba(167,139,250,0.4)" }}>
               👤
             </div>
           )}
         </div>
 
-        {/* Centre — type de peau bold complet (wrap autorisé) + sous-lignes zones */}
+        {/* Centre — type de peau */}
         <div className="flex-1 min-w-0">
           <p
-            className="text-[14px] font-bold text-gray-900 font-display leading-snug break-words"
+            className="text-[14px] font-bold leading-snug break-words"
+            style={{ color: "#f3f0ff" }}
             data-testid="text-skin-type"
           >
             {result.skinType || "Type indéterminé"}
           </p>
-          {identityZoneLines.length > 0 ? (
+          {identityZoneLines.length > 0 && (
             <div className="mt-1 space-y-0">
               {identityZoneLines.map((line, i) => (
-                <p key={i} className="text-[11px] text-gray-500 leading-snug break-words">{line}</p>
+                <p key={i} className="text-[11px] leading-snug break-words" style={{ color: "rgba(200,185,255,0.65)" }}>
+                  {line}
+                </p>
               ))}
             </div>
-          ) : null}
+          )}
         </div>
 
-        {/* Droite — GlowScore rose, chiffre grand + delta */}
+        {/* GlowScore */}
         <div className="flex-shrink-0 text-right pl-1 pt-1">
           <div className="flex items-baseline justify-end gap-0.5 leading-none">
             <motion.span
               initial={{ scale: 0.6, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ duration: 0.4, type: "spring" }}
-              className="text-[28px] font-bold text-pink-600 font-display"
+              className="text-[28px] font-bold"
+              style={{ color: "#a78bfa" }}
               data-testid="text-glowscore"
             >
               {result.score}
             </motion.span>
-            <span className="text-[11px] text-gray-400">/100</span>
+            <span className="text-[11px]" style={{ color: "rgba(255,255,255,0.35)" }}>/100</span>
           </div>
-          <p className="text-[9px] uppercase tracking-wider text-gray-400 font-semibold leading-none mt-0.5">GlowScore</p>
+          <p className="text-[9px] uppercase tracking-wider font-semibold leading-none mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>
+            GlowScore
+          </p>
           {scoreDelta !== null && scoreDelta !== 0 && (
             <p
-              className={`flex items-center justify-end gap-0.5 text-[10px] font-bold leading-none mt-1 ${
-                scoreDelta > 0 ? "text-emerald-600" : "text-orange-500"
-              }`}
+              className="flex items-center justify-end gap-0.5 text-[10px] font-bold leading-none mt-1"
+              style={{ color: scoreDelta > 0 ? "#6ee7b7" : "#fbbf24" }}
               data-testid="text-score-delta"
             >
               {scoreDelta > 0 ? <ArrowUp className="w-2.5 h-2.5" /> : <ArrowDown className="w-2.5 h-2.5" />}
@@ -531,85 +531,112 @@ export default function MedicalReport({ result, scanId, area = "face", imageUrl,
         </div>
       </div>
 
-      {/* ═══════════════════════════════════════════
-          BLOC 3 — 3 métriques pills horizontales (35px)
-          💧 Hydratation 65 • ✨ Éclat 70 • 🧼 Pureté 58
-          ═══════════════════════════════════════════ */}
+      {/* ═══ BLOC 3 — Métriques pills ═══ */}
       <div
-        className="rounded-full border border-pink-100 bg-white shadow-sm px-3 flex items-center justify-between gap-1 text-[12px]"
-        style={{ height: 35 }}
+        className="px-3 flex items-center justify-between gap-1 text-[12px]"
+        style={{
+          height: 40,
+          background: "rgba(255,255,255,0.04)",
+          border: "1px solid rgba(255,255,255,0.07)",
+          borderRadius: 9999,
+        }}
         data-testid="block-metrics-pills"
       >
-        <span className="flex items-center gap-1 font-medium text-gray-800 truncate" data-testid="metric-hydratation">
+        <span className="flex items-center gap-1 font-medium truncate" data-testid="metric-hydratation">
           <span aria-hidden="true">💧</span>
-          <span className="text-gray-600">Hydratation</span>
-          <span className="font-bold text-pink-600">{Math.round(metrics.hydratation)}</span>
+          <span style={{ color: "rgba(200,185,255,0.65)" }}>Hydratation</span>
+          <span className="font-bold" style={{ color: "#a78bfa" }}>{Math.round(metrics.hydratation)}</span>
         </span>
-        <span className="text-pink-200">•</span>
-        <span className="flex items-center gap-1 font-medium text-gray-800 truncate" data-testid="metric-eclat">
+        <span style={{ color: "rgba(167,139,250,0.3)" }}>•</span>
+        <span className="flex items-center gap-1 font-medium truncate" data-testid="metric-eclat">
           <span aria-hidden="true">✨</span>
-          <span className="text-gray-600">Éclat</span>
-          <span className="font-bold text-pink-600">{Math.round(metrics.eclat)}</span>
+          <span style={{ color: "rgba(200,185,255,0.65)" }}>Éclat</span>
+          <span className="font-bold" style={{ color: "#a78bfa" }}>{Math.round(metrics.eclat)}</span>
         </span>
-        <span className="text-pink-200">•</span>
-        <span className="flex items-center gap-1 font-medium text-gray-800 truncate" data-testid="metric-purete">
+        <span style={{ color: "rgba(167,139,250,0.3)" }}>•</span>
+        <span className="flex items-center gap-1 font-medium truncate" data-testid="metric-purete">
           <span aria-hidden="true">🧼</span>
-          <span className="text-gray-600">Pureté</span>
-          <span className="font-bold text-pink-600">{Math.round(metrics.purete)}</span>
+          <span style={{ color: "rgba(200,185,255,0.65)" }}>Pureté</span>
+          <span className="font-bold" style={{ color: "#a78bfa" }}>{Math.round(metrics.purete)}</span>
         </span>
       </div>
 
-      {/* ═══════════════════════════════════════════
-          BLOC 4 — Bundle unique recommandé (tier dynamique selon sévérité)
-          STRATÉGIE :
-          • UN SEUL bundle adapté au diagnostic (Découverte / Essentiel / Complète / Premium)
-          • Vendre LE RÉSULTAT (la promesse), pas la liste de produits
-          • UN seul bouton "Commander mon bundle"
-          • Bonus inclus si Premium (ex: rescan offert)
-          • Bloc copywriting de confiance en dessous
-          ═══════════════════════════════════════════ */}
-      <MedCard accent testId="block-products" className="!p-4">
+      {/* ═══ BLOC 4 — Bundle recommandé ═══ */}
+      <MedCard violet testId="block-products" className="!p-4">
         <div className="flex items-center gap-2 mb-1">
-          <ShoppingBag className="w-4 h-4 text-pink-600" />
-          <h2 className="text-[15px] font-bold text-gray-900 font-display">Recommandé pour toi</h2>
+          <ShoppingBag className="w-4 h-4" style={{ color: "#a78bfa" }} />
+          <h2 className="text-[15px] font-bold" style={{ color: "#f3f0ff" }}>Recommandé pour toi</h2>
         </div>
-        <p className="text-[11px] text-gray-500 mb-3 leading-snug">
+        <p className="text-[11px] mb-3 leading-snug" style={{ color: "rgba(200,185,255,0.65)" }}>
           Bundle adapté à ton diagnostic — {bundle.sourceLabel}, livraison directe par la marque.
         </p>
 
         <div
-          className="rounded-2xl border-2 border-pink-300 bg-gradient-to-br from-white via-pink-50/30 to-rose-50/40 overflow-hidden shadow-md"
+          style={{
+            border: "1px solid rgba(233,30,140,0.3)",
+            borderRadius: 20,
+            overflow: "hidden",
+            background: "rgba(233,30,140,0.04)",
+          }}
           data-testid={`card-bundle-${bundle.tier}`}
         >
-          {/* En-tête bundle : nom + tier + promesse résultat */}
-          <div className="px-4 pt-3.5 pb-3 border-b border-pink-100">
+          {/* En-tête bundle */}
+          <div
+            className="px-4 pt-3.5 pb-3"
+            style={{ borderBottom: "1px solid rgba(167,139,250,0.12)" }}
+          >
             <div className="flex items-center justify-between gap-2 mb-1.5">
               <div className="flex items-center gap-2 min-w-0">
                 <span className="text-2xl flex-shrink-0" aria-hidden="true">{bundle.emoji}</span>
-                <h3 className="text-[16px] font-black text-gray-900 leading-tight truncate font-display" data-testid="text-bundle-name">
+                <h3
+                  className="text-[16px] font-bold leading-tight truncate"
+                  style={{ color: "#f3f0ff" }}
+                  data-testid="text-bundle-name"
+                >
                   {bundle.name}
                 </h3>
               </div>
               {bundle.badge && (
-                <span className="flex-shrink-0 text-[10px] font-bold text-pink-700 bg-pink-100 border border-pink-200 px-2 py-0.5 rounded-full whitespace-nowrap" data-testid="badge-bundle">
+                <span
+                  className="flex-shrink-0 text-[10px] font-bold px-2 py-0.5 whitespace-nowrap"
+                  style={{
+                    background: "rgba(167,139,250,0.15)",
+                    border: "1px solid rgba(167,139,250,0.3)",
+                    borderRadius: 8,
+                    color: "#c4b5fd",
+                  }}
+                  data-testid="badge-bundle"
+                >
                   ⭐ {bundle.badge}
                 </span>
               )}
             </div>
-            <p className="text-[13px] font-semibold text-gray-800 leading-snug" data-testid="text-bundle-tagline">
+            <p className="text-[13px] font-semibold leading-snug" style={{ color: "rgba(200,185,255,0.8)" }} data-testid="text-bundle-tagline">
               {bundle.tagline}
             </p>
             {bundle.bonus && (
-              <p className="mt-2 text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1.5 leading-snug" data-testid="text-bundle-bonus">
-                {bundle.bonus}
+              <p
+                className="mt-2 text-[11px] font-bold px-2 py-1.5 leading-snug"
+                style={{
+                  background: "rgba(245,158,11,0.08)",
+                  border: "1px solid rgba(245,158,11,0.2)",
+                  borderRadius: 10,
+                  color: "#fbbf24",
+                }}
+                data-testid="text-bundle-bonus"
+              >
+                🎁 {bundle.bonus}
               </p>
             )}
           </div>
 
-          {/* Liste compacte des produits inclus */}
+          {/* Liste produits inclus */}
           {bundle.products.length > 0 && (
             <div className="px-4 py-2.5">
-              <p className="text-[10px] uppercase tracking-wider font-bold text-gray-500 mb-1.5">
+              <p
+                className="text-[10px] uppercase tracking-wider font-bold mb-1.5"
+                style={{ color: "rgba(255,255,255,0.35)" }}
+              >
                 Inclus dans ce bundle ({bundle.products.length} produit{bundle.products.length > 1 ? "s" : ""})
               </p>
               <div className="space-y-1.5">
@@ -622,25 +649,38 @@ export default function MedicalReport({ result, scanId, area = "face", imageUrl,
                       className="flex items-center gap-2.5"
                       data-testid={`card-bundle-product-${product.id}`}
                     >
-                      <div className="rounded-md overflow-hidden bg-white border border-pink-100 flex-shrink-0" style={{ width: 36, height: 36 }}>
+                      <div
+                        className="overflow-hidden flex-shrink-0"
+                        style={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: 8,
+                          background: "rgba(167,139,250,0.08)",
+                          border: "1px solid rgba(167,139,250,0.15)",
+                        }}
+                      >
                         {img ? (
                           <img src={img} alt={product.name} className="w-full h-full object-cover" loading="lazy" />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-sm text-pink-300">🧴</div>
+                          <div className="w-full h-full flex items-center justify-center text-sm" style={{ color: "rgba(167,139,250,0.4)" }}>🧴</div>
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h4 className="text-[12px] font-bold text-gray-900 leading-tight truncate" data-testid={`name-bundle-product-${product.id}`}>
+                        <h4
+                          className="text-[12px] font-bold leading-tight truncate"
+                          style={{ color: "#f3f0ff" }}
+                          data-testid={`name-bundle-product-${product.id}`}
+                        >
                           {product.name}
                         </h4>
                         {labels.length > 0 && (
-                          <p className="text-[10px] text-gray-500 leading-tight truncate">
+                          <p className="text-[10px] leading-tight truncate" style={{ color: "rgba(200,185,255,0.65)" }}>
                             {labels.join(" • ")}
                           </p>
                         )}
                       </div>
                       {typeof product.price === "number" && (
-                        <p className="text-[11px] font-semibold text-gray-600 leading-none whitespace-nowrap flex-shrink-0">
+                        <p className="text-[11px] font-semibold leading-none whitespace-nowrap flex-shrink-0" style={{ color: "#c4b5fd" }}>
                           {formatPrice(product.price)}
                         </p>
                       )}
@@ -653,11 +693,16 @@ export default function MedicalReport({ result, scanId, area = "face", imageUrl,
 
           {/* CTA Total + bouton commande */}
           {bundle.products.length > 0 && (
-            <div className="bg-gradient-to-r from-pink-600 to-rose-600 text-white px-4 py-3 flex items-center justify-between gap-3">
+            <div
+              className="px-4 py-3 flex items-center justify-between gap-3"
+              style={{ background: "linear-gradient(135deg,#E91E8C,#f43f5e)" }}
+            >
               <div className="leading-tight">
-                <p className="text-[10px] uppercase tracking-wider font-bold text-pink-100">Total bundle</p>
+                <p className="text-[10px] uppercase tracking-wider font-bold" style={{ color: "rgba(255,255,255,0.7)" }}>
+                  Total bundle
+                </p>
                 {bundle.total > 0 && (
-                  <p className="text-[18px] font-black" data-testid="text-bundle-total">
+                  <p className="text-[18px] font-bold text-white" data-testid="text-bundle-total">
                     {formatPrice(bundle.total)}
                   </p>
                 )}
@@ -665,7 +710,13 @@ export default function MedicalReport({ result, scanId, area = "face", imageUrl,
               <button
                 type="button"
                 onClick={handleOrderBundle}
-                className="flex-1 max-w-[210px] inline-flex items-center justify-center gap-1.5 rounded-xl px-3 py-2.5 text-[13px] font-black text-pink-700 bg-white shadow-md active:scale-[0.97] transition-transform"
+                className="flex-1 max-w-[210px] inline-flex items-center justify-center gap-1.5 text-[13px] font-bold active:scale-[0.97] transition-transform"
+                style={{
+                  background: "#fff",
+                  color: "#7c3aed",
+                  borderRadius: 9999,
+                  padding: "0.625rem 1rem",
+                }}
                 data-testid="button-order-bundle"
                 aria-label={`Commander ${bundle.name}`}
               >
@@ -675,53 +726,60 @@ export default function MedicalReport({ result, scanId, area = "face", imageUrl,
           )}
         </div>
 
-        {/* Bloc copywriting de confiance — réduit la friction avant la commande */}
+        {/* Bloc confiance */}
         <div
-          className="mt-3 rounded-xl bg-emerald-50/70 border border-emerald-100 p-3"
+          className="mt-3 p-3"
+          style={{
+            background: "rgba(16,185,129,0.08)",
+            border: "1px solid rgba(16,185,129,0.2)",
+            borderRadius: 14,
+          }}
           data-testid="block-trust"
         >
-          <p className="text-[10px] uppercase tracking-wider font-bold text-emerald-700 leading-none mb-2">
+          <p className="text-[10px] uppercase tracking-wider font-bold leading-none mb-2" style={{ color: "#6ee7b7" }}>
             Commander en confiance
           </p>
-          <ul className="space-y-1.5 text-[12px] text-gray-800 leading-snug">
+          <ul className="space-y-1.5 text-[12px] leading-snug" style={{ color: "rgba(200,185,255,0.65)" }}>
             <li className="flex items-start gap-2">
-              <span aria-hidden="true" className="text-emerald-600 font-bold flex-shrink-0">✓</span>
-              <span><span className="font-semibold">Paiement à la livraison</span> — tu ne paies que quand tu reçois ton colis.</span>
+              <span style={{ color: "#6ee7b7" }} className="font-bold flex-shrink-0">✓</span>
+              <span><span className="font-semibold" style={{ color: "#f3f0ff" }}>Paiement à la livraison</span> — tu ne paies que quand tu reçois ton colis.</span>
             </li>
             <li className="flex items-start gap-2">
-              <span aria-hidden="true" className="text-emerald-600 font-bold flex-shrink-0">✓</span>
-              <span><span className="font-semibold">Livraison Douala &amp; Yaoundé</span> sous 24–48h, partout au Cameroun en 3–5 jours.</span>
+              <span style={{ color: "#6ee7b7" }} className="font-bold flex-shrink-0">✓</span>
+              <span><span className="font-semibold" style={{ color: "#f3f0ff" }}>Livraison Douala &amp; Yaoundé</span> sous 24–48h, partout au Cameroun en 3–5 jours.</span>
             </li>
             <li className="flex items-start gap-2">
-              <span aria-hidden="true" className="text-emerald-600 font-bold flex-shrink-0">✓</span>
-              <span><span className="font-semibold">Une conseillère GlowScan</span> te confirme la commande sur WhatsApp avant l'envoi.</span>
+              <span style={{ color: "#6ee7b7" }} className="font-bold flex-shrink-0">✓</span>
+              <span><span className="font-semibold" style={{ color: "#f3f0ff" }}>Une conseillère GlowScan</span> te confirme la commande sur WhatsApp avant l'envoi.</span>
             </li>
             <li className="flex items-start gap-2">
-              <span aria-hidden="true" className="text-emerald-600 font-bold flex-shrink-0">✓</span>
-              <span><span className="font-semibold">Produits 100% authentiques</span>, sélectionnés pour les peaux africaines.</span>
+              <span style={{ color: "#6ee7b7" }} className="font-bold flex-shrink-0">✓</span>
+              <span><span className="font-semibold" style={{ color: "#f3f0ff" }}>Produits 100% authentiques</span>, sélectionnés pour les peaux africaines.</span>
             </li>
           </ul>
         </div>
       </MedCard>
 
-      {/* ═══════════════════════════════════════════
-          BLOC 5 — Analyse détaillée (accordion)
-          Contient : carte des zones du visage (si dispo) + 1 ligne par zone avec son "Voir plus"
-          ═══════════════════════════════════════════ */}
+      {/* ═══ BLOC 5 — Analyse complète (zones) ═══ */}
       {(zoneAnalysis.length > 0 || (result.zones && result.zones.length > 0)) && (
-        <MedCard accent testId="block-zone-analysis">
+        <MedCard violet testId="block-zone-analysis">
           <div className="flex items-center gap-2 mb-2">
-            <ScanLine className="w-4 h-4 text-pink-600" />
-            <h2 className="text-[15px] font-bold text-gray-900 font-display">Analyse complète</h2>
+            <ScanLine className="w-4 h-4" style={{ color: "#a78bfa" }} />
+            <h2 className="text-[15px] font-bold" style={{ color: "#f3f0ff" }}>Analyse complète</h2>
           </div>
           {result.zones && result.zones.length > 0 && (
             <div className="mb-3" data-testid="block-face-map">
-              <p className="text-[10px] uppercase tracking-wider font-semibold text-gray-500 mb-1.5">Carte des zones</p>
+              <p
+                className="text-[10px] uppercase tracking-wider font-semibold mb-1.5"
+                style={{ color: "rgba(255,255,255,0.35)" }}
+              >
+                Carte des zones
+              </p>
               <FaceZonesMap zones={result.zones} />
             </div>
           )}
           {zoneAnalysis.length > 0 && (
-            <div className="divide-y divide-gray-100">
+            <div>
               {zoneAnalysis.map((zone, i) => (
                 <ZoneRow key={i} zone={zone} index={i} />
               ))}
@@ -730,78 +788,98 @@ export default function MedicalReport({ result, scanId, area = "face", imageUrl,
         </MedCard>
       )}
 
-      {/* ═══════════════════════════════════════════
-          BLOC 6 — Mon protocole de soin (carte plate)
-          ═══════════════════════════════════════════ */}
-      <MedCard accent testId="block-protocol">
+      {/* ═══ BLOC 6 — Protocole de soin ═══ */}
+      <MedCard violet testId="block-protocol">
         <div className="flex items-center gap-2 mb-1">
-          <Sparkles className="w-4 h-4 text-pink-600" />
-          <h2 className="text-[15px] font-bold text-gray-900 font-display">Mon protocole de soin</h2>
+          <Sparkles className="w-4 h-4" style={{ color: "#a78bfa" }} />
+          <h2 className="text-[15px] font-bold" style={{ color: "#f3f0ff" }}>Mon protocole de soin</h2>
         </div>
-        <p className="text-[11px] text-gray-500 italic mb-3">Applique-le 4 à 6 semaines avant de réévaluer.</p>
+        <p className="text-[11px] italic mb-3" style={{ color: "rgba(200,185,255,0.5)" }}>
+          Applique-le 4 à 6 semaines avant de réévaluer.
+        </p>
         <div className="space-y-3">
           <div>
             <div className="flex items-center gap-1.5 mb-1.5">
-              <Sun className="w-4 h-4 text-amber-500" />
-              <h3 className="text-[13px] font-bold text-gray-900">🌅 Matin</h3>
+              <Sun className="w-4 h-4" style={{ color: "#fbbf24" }} />
+              <h3 className="text-[13px] font-bold" style={{ color: "#f3f0ff" }}>🌅 Matin</h3>
             </div>
             <ol className="space-y-1.5 ml-1">
               {protocolMorning.map((s, i) => (
                 <ProtocolRow key={i} index={i + 1} step={s} compact />
               ))}
               {protocolMorning.length === 0 && (
-                <li className="text-[12px] text-gray-400 italic">Aucune étape disponible.</li>
+                <li className="text-[12px] italic" style={{ color: "rgba(255,255,255,0.35)" }}>Aucune étape disponible.</li>
               )}
             </ol>
           </div>
           <div>
             <div className="flex items-center gap-1.5 mb-1.5">
-              <Moon className="w-4 h-4 text-indigo-500" />
-              <h3 className="text-[13px] font-bold text-gray-900">🌙 Soir</h3>
+              <Moon className="w-4 h-4" style={{ color: "#c4b5fd" }} />
+              <h3 className="text-[13px] font-bold" style={{ color: "#f3f0ff" }}>🌙 Soir</h3>
             </div>
             <ol className="space-y-1.5 ml-1">
               {protocolEvening.map((s, i) => (
                 <ProtocolRow key={i} index={i + 1} step={s} compact />
               ))}
               {protocolEvening.length === 0 && (
-                <li className="text-[12px] text-gray-400 italic">Aucune étape disponible.</li>
+                <li className="text-[12px] italic" style={{ color: "rgba(255,255,255,0.35)" }}>Aucune étape disponible.</li>
               )}
             </ol>
           </div>
           {result.recommendations?.weekly && (
-            <div className="rounded-lg p-2.5 bg-pink-50 border border-pink-100">
-              <p className="text-[10px] uppercase tracking-wider font-bold text-pink-600 mb-0.5">Hebdo</p>
-              <p className="text-[12px] text-gray-800 font-medical leading-snug">{result.recommendations.weekly}</p>
+            <div
+              className="p-2.5"
+              style={{
+                background: "rgba(167,139,250,0.06)",
+                border: "1px solid rgba(167,139,250,0.18)",
+                borderRadius: 12,
+              }}
+            >
+              <p className="text-[10px] uppercase tracking-wider font-bold mb-0.5" style={{ color: "#a78bfa" }}>Hebdo</p>
+              <p className="text-[12px] leading-snug" style={{ color: "rgba(200,185,255,0.65)" }}>
+                {result.recommendations.weekly}
+              </p>
             </div>
           )}
         </div>
       </MedCard>
 
       {severityLevel >= 4 && (
-        <div className="rounded-2xl bg-rose-50 border border-rose-200 px-3.5 py-2.5 flex items-start gap-2" data-testid="alert-severity-high">
-          <AlertTriangle className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" />
-          <p className="text-[12px] text-rose-900 leading-snug">
+        <div
+          className="px-3.5 py-2.5 flex items-start gap-2"
+          style={{
+            background: "rgba(233,30,140,0.08)",
+            border: "1px solid rgba(233,30,140,0.2)",
+            borderRadius: 20,
+          }}
+          data-testid="alert-severity-high"
+        >
+          <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: "#f9a8d4" }} />
+          <p className="text-[12px] leading-snug" style={{ color: "#f9a8d4" }}>
             <span className="font-bold">Consultation dermatologique recommandée</span> — {severityLabel.toLowerCase()} (niveau {severityLevel}/5).
           </p>
         </div>
       )}
 
-      {/* ═══════════════════════════════════════════
-          BLOC 7 — Message de rétention simple
-          ═══════════════════════════════════════════ */}
+      {/* ═══ BLOC 7 — Message de rétention ═══ */}
       <div
-        className="rounded-2xl border border-pink-200 bg-pink-50 px-4 py-3 text-center"
+        className="px-4 py-3 text-center"
+        style={{
+          background: "rgba(167,139,250,0.06)",
+          border: "1px solid rgba(167,139,250,0.18)",
+          borderRadius: 24,
+        }}
         data-testid="block-retention-message"
       >
-        <p className="text-[13px] font-bold text-pink-700 leading-snug">
+        <p className="text-[13px] font-bold leading-snug" style={{ color: "#c4b5fd" }}>
           ✨ Suis ta routine 4 semaines et reviens scanner —
         </p>
-        <p className="text-[12px] text-gray-700 leading-snug mt-1">
-          on mesurera ensemble tes vrais progrès. <span className="font-semibold text-pink-700">Rescan offert</span> au bout du parcours 🎁
+        <p className="text-[12px] leading-snug mt-1" style={{ color: "rgba(200,185,255,0.65)" }}>
+          on mesurera ensemble tes vrais progrès.{" "}
+          <span className="font-semibold" style={{ color: "#a78bfa" }}>Rescan offert</span> au bout du parcours 🎁
         </p>
       </div>
 
-      {/* Modale fiche commande — toutes les commandes vont vers WhatsApp 237 674 377 959 */}
       <OrderModal
         isOpen={showOrderModal}
         onClose={() => setShowOrderModal(false)}
@@ -820,18 +898,32 @@ export default function MedicalReport({ result, scanId, area = "face", imageUrl,
 function ProtocolRow({ index, step, compact = false }: { index: number; step: ProtocolStep; compact?: boolean }) {
   return (
     <li className="flex gap-2.5">
-      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-pink-600 text-white text-[11px] font-bold flex items-center justify-center mt-0.5">
+      <span
+        className="flex-shrink-0 w-6 h-6 text-[11px] font-bold flex items-center justify-center mt-0.5"
+        style={{
+          background: "#7c3aed",
+          color: "#fff",
+          borderRadius: 9999,
+        }}
+      >
         {index}
       </span>
       <div className="flex-1 min-w-0">
-        <p className={`${compact ? "text-[13px]" : "text-[14px]"} font-bold text-gray-900 leading-tight`}>
+        <p
+          className={`${compact ? "text-[13px]" : "text-[14px]"} font-bold leading-tight`}
+          style={{ color: "#f3f0ff" }}
+        >
           {step.step}
         </p>
         {step.product && (
-          <p className="text-[12px] text-pink-600 font-medium leading-snug">{step.product}</p>
+          <p className="text-[12px] font-medium leading-snug" style={{ color: "#a78bfa" }}>
+            {step.product}
+          </p>
         )}
         {!compact && step.why && (
-          <p className="text-[12px] text-gray-600 italic leading-snug mt-1">{step.why}</p>
+          <p className="text-[12px] italic leading-snug mt-1" style={{ color: "rgba(200,185,255,0.5)" }}>
+            {step.why}
+          </p>
         )}
       </div>
     </li>

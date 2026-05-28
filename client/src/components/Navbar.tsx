@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import { Sparkles, User, LogOut, Menu, X, Crown, ScanLine } from "lucide-react";
+import { User, LogOut, Menu, X, Crown, ScanLine } from "lucide-react";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -23,74 +23,161 @@ export function Navbar() {
   }
 
   return (
-    <nav className="sticky top-0 z-[200] w-full bg-slate-950/90 backdrop-blur-md border-b border-gray-900">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          
-          {/* Zone Logo */}
-          <Link href="/" className="flex items-center group transition-transform active:scale-95" data-testid="logo-glowscan">
-            <div className="bg-white rounded-xl p-1 shadow-sm border border-slate-800">
+    <nav
+      style={{
+        position: "sticky",
+        top: 0,
+        zIndex: 200,
+        width: "100%",
+        background: "rgba(13,10,14,0.92)",
+        backdropFilter: "blur(20px)",
+        borderBottom: "1px solid rgba(255,255,255,0.07)",
+        fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
+      }}
+    >
+      <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 16px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", height: "64px" }}>
+
+          {/* Logo */}
+          <Link href="/" data-testid="logo-glowscan" style={{ display: "flex", alignItems: "center", transition: "transform 0.15s", textDecoration: "none" }}>
+            <div
+              style={{
+                background: "rgba(255,255,255,0.06)",
+                borderRadius: "12px",
+                padding: "4px",
+                border: "1px solid rgba(255,255,255,0.1)",
+              }}
+            >
               <img
                 src="/logo-glowscan.jpeg"
                 alt="GlowScan Logo"
-                className="h-9 w-auto object-contain"
+                style={{ height: "36px", width: "auto", objectFit: "contain", borderRadius: "8px" }}
               />
             </div>
           </Link>
 
-          {/* Desktop Navigation (Épurée & Style Labo Technique) */}
-          <div className="hidden md:flex items-center gap-6">
-            <div className="flex items-center gap-1 bg-slate-900/60 p-1 rounded-xl border border-gray-800/80">
+          {/* Desktop Navigation */}
+          <div style={{ display: "none" }} className="md-flex-nav">
+            <style>{`
+              @media (min-width: 768px) {
+                .md-flex-nav { display: flex !important; align-items: center; gap: 24px; }
+                .md-hidden { display: none !important; }
+              }
+              @media (max-width: 767px) {
+                .md-flex-nav { display: none !important; }
+                .md-hidden { display: flex !important; }
+              }
+            `}</style>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "4px",
+                background: "rgba(19,16,31,0.8)",
+                padding: "4px",
+                borderRadius: "16px",
+                border: "1px solid rgba(255,255,255,0.07)",
+              }}
+            >
               {navLinks.map((link) => {
                 const isActive = location === link.href;
                 return (
                   <Link
                     key={link.href}
                     href={link.href}
-                    className={`relative px-3.5 py-2 text-[11px] font-black uppercase tracking-wider transition-all rounded-lg flex items-center gap-1.5 ${
-                      isActive
-                        ? "text-white bg-slate-950 shadow-md border border-gray-800"
-                        : "text-gray-400 hover:text-white"
-                    }`}
-                    style={!isActive && link.highlight ? { color: "#f9a8d4" } : {}}
                     data-testid={`nav-link-${link.label.toLowerCase()}`}
+                    style={{
+                      position: "relative",
+                      padding: "8px 14px",
+                      fontSize: "11px",
+                      fontWeight: 700,
+                      letterSpacing: "0.04em",
+                      transition: "all 0.15s",
+                      borderRadius: "12px",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      textDecoration: "none",
+                      background: isActive ? "rgba(124,58,237,0.18)" : "transparent",
+                      border: isActive ? "1px solid rgba(124,58,237,0.35)" : "1px solid transparent",
+                      color: isActive
+                        ? "#c4b5fd"
+                        : link.highlight
+                        ? "#E91E8C"
+                        : "rgba(200,185,255,0.65)",
+                    }}
                   >
-                    {link.highlight && <ScanLine className="w-3 h-3" style={{ color: "#E91E8C" }} />}
+                    {link.highlight && <ScanLine style={{ width: "12px", height: "12px", color: "#E91E8C" }} />}
                     {link.label}
                     {link.premium && (
-                      <Crown className={`w-3 h-3 ${isActive ? "text-emerald-400" : "text-amber-500"}`} />
+                      <Crown style={{ width: "12px", height: "12px", color: isActive ? "#a78bfa" : "#fbbf24" }} />
                     )}
                   </Link>
                 );
               })}
             </div>
 
-            {/* Hub Utilisateur (Profil / Connexion Neutre) */}
-            <div className="pl-4 border-l border-gray-900">
+            {/* User Hub */}
+            <div style={{ paddingLeft: "16px", borderLeft: "1px solid rgba(255,255,255,0.07)" }}>
               {user ? (
-                <div className="flex items-center gap-3">
-                  <Link href="/profile" className="flex items-center gap-2 group cursor-pointer">
-                    <div className="w-8 h-8 rounded-xl bg-slate-900 flex items-center justify-center text-white text-xs font-black uppercase border border-gray-800 group-hover:border-slate-700 transition-colors">
-                      {user.firstName?.[0] || <User className="w-3.5 h-3.5" />}
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <Link href="/profile" style={{ display: "flex", alignItems: "center", gap: "8px", textDecoration: "none" }}>
+                    <div
+                      style={{
+                        width: "32px",
+                        height: "32px",
+                        borderRadius: "10px",
+                        background: "rgba(124,58,237,0.15)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "#c4b5fd",
+                        fontSize: "12px",
+                        fontWeight: 700,
+                        border: "1px solid rgba(124,58,237,0.3)",
+                      }}
+                    >
+                      {user.firstName?.[0] || <User style={{ width: "14px", height: "14px" }} />}
                     </div>
-                    <span className="text-[11px] font-black uppercase tracking-wider hidden lg:block text-gray-400 group-hover:text-white transition-colors">
+                    <span style={{ fontSize: "11px", fontWeight: 700, color: "rgba(200,185,255,0.65)" }}>
                       {user.firstName || "Profil"}
                     </span>
                   </Link>
                   <button
                     onClick={() => logout()}
-                    className="text-gray-500 hover:text-red-400 p-1.5 rounded-lg hover:bg-slate-900/50 transition-all active:scale-90"
-                    title="Déconnexion"
                     data-testid="button-logout"
+                    title="Déconnexion"
+                    style={{
+                      background: "transparent",
+                      border: "none",
+                      cursor: "pointer",
+                      padding: "6px",
+                      borderRadius: "8px",
+                      color: "rgba(255,255,255,0.35)",
+                      display: "flex",
+                      alignItems: "center",
+                      transition: "color 0.15s",
+                    }}
                   >
-                    <LogOut className="w-4 h-4" />
+                    <LogOut style={{ width: "16px", height: "16px" }} />
                   </button>
                 </div>
               ) : (
                 <Link
                   href="/auth"
-                  className="px-4 py-2.5 rounded-xl bg-white text-slate-950 text-[11px] font-black uppercase tracking-widest shadow-xs hover:bg-gray-100 active:scale-[0.98] transition-all"
                   data-testid="button-connexion"
+                  style={{
+                    padding: "8px 18px",
+                    borderRadius: "9999px",
+                    background: "#7c3aed",
+                    color: "#f3f0ff",
+                    fontSize: "11px",
+                    fontWeight: 800,
+                    textDecoration: "none",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    transition: "opacity 0.15s",
+                  }}
                 >
                   Connexion
                 </Link>
@@ -98,19 +185,32 @@ export function Navbar() {
             </div>
           </div>
 
-          {/* Bouton Technique 3 Traits (Mobile) */}
+          {/* Mobile menu button */}
           <button
-            className="md:hidden w-10 h-10 rounded-xl bg-slate-900 border border-gray-800 flex items-center justify-center text-white active:scale-90 transition-transform"
+            className="md-hidden"
             onClick={() => setIsOpen(!isOpen)}
             data-testid="button-mobile-menu"
             aria-label="Menu de navigation"
+            style={{
+              width: "40px",
+              height: "40px",
+              borderRadius: "12px",
+              background: "rgba(255,255,255,0.06)",
+              border: "1px solid rgba(255,255,255,0.1)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#f3f0ff",
+              cursor: "pointer",
+              transition: "transform 0.1s",
+            }}
           >
-            {isOpen ? <X className="w-5 h-5 text-gray-400" /> : <Menu className="w-5 h-5 text-white" />}
+            {isOpen ? <X style={{ width: "20px", height: "20px", color: "rgba(200,185,255,0.65)" }} /> : <Menu style={{ width: "20px", height: "20px" }} />}
           </button>
         </div>
       </div>
 
-      {/* Menu Déroulant Mobile Clinique */}
+      {/* Mobile dropdown */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -118,9 +218,19 @@ export function Navbar() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.12 }}
-            className="md:hidden border-b border-gray-900 bg-slate-950/98 backdrop-blur-xl overflow-hidden fixed left-0 right-0 top-16 shadow-2xl z-50"
+            style={{
+              position: "fixed",
+              left: 0,
+              right: 0,
+              top: "64px",
+              background: "rgba(13,10,14,0.98)",
+              backdropFilter: "blur(24px)",
+              borderBottom: "1px solid rgba(255,255,255,0.07)",
+              zIndex: 50,
+              overflow: "hidden",
+            }}
           >
-            <div className="px-4 py-4 space-y-1.5">
+            <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "6px" }}>
               {navLinks.map((link) => {
                 const isActive = location === link.href;
                 return (
@@ -128,40 +238,77 @@ export function Navbar() {
                     key={link.href}
                     href={link.href}
                     onClick={() => setIsOpen(false)}
-                    className={`flex items-center justify-between px-4 py-3.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${
-                      isActive
-                        ? "bg-slate-900 text-white border border-gray-800"
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "12px 16px",
+                      borderRadius: "16px",
+                      fontSize: "13px",
+                      fontWeight: 700,
+                      letterSpacing: "0.02em",
+                      textDecoration: "none",
+                      transition: "all 0.12s",
+                      background: isActive
+                        ? "rgba(124,58,237,0.15)"
+                        : "transparent",
+                      border: isActive
+                        ? "1px solid rgba(124,58,237,0.3)"
+                        : "1px solid transparent",
+                      color: isActive
+                        ? "#c4b5fd"
                         : link.highlight
-                          ? "border"
-                          : "text-gray-300 hover:bg-slate-900/50"
-                    }`}
+                        ? "#E91E8C"
+                        : "rgba(200,185,255,0.65)",
+                    }}
                   >
-                    <div className="flex items-center gap-2">
-                      {link.highlight && <ScanLine className="w-3.5 h-3.5" style={{ color: "#E91E8C" }} />}
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      {link.highlight && <ScanLine style={{ width: "14px", height: "14px", color: "#E91E8C" }} />}
                       <span>{link.label}</span>
                     </div>
-                    {link.premium && <Crown className="w-3.5 h-3.5 text-amber-500" />}
+                    {link.premium && <Crown style={{ width: "14px", height: "14px", color: "#fbbf24" }} />}
                   </Link>
                 );
               })}
-              
-              <div className="pt-3 mt-1 border-t border-gray-900">
+
+              <div style={{ paddingTop: "12px", marginTop: "4px", borderTop: "1px solid rgba(255,255,255,0.07)" }}>
                 {user ? (
                   <button
-                    onClick={() => {
-                      setIsOpen(false);
-                      logout();
+                    onClick={() => { setIsOpen(false); logout(); }}
+                    style={{
+                      width: "100%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "12px 16px",
+                      borderRadius: "16px",
+                      fontSize: "13px",
+                      fontWeight: 700,
+                      background: "rgba(233,30,140,0.08)",
+                      border: "1px solid rgba(233,30,140,0.2)",
+                      color: "#f9a8d4",
+                      cursor: "pointer",
                     }}
-                    className="w-full flex items-center justify-between px-4 py-3.5 rounded-xl text-[11px] font-black uppercase tracking-widest text-red-400 bg-red-950/20 border border-red-900/30"
                   >
                     <span>Déconnexion</span>
-                    <LogOut className="w-3.5 h-3.5" />
+                    <LogOut style={{ width: "14px", height: "14px" }} />
                   </button>
                 ) : (
                   <Link
                     href="/auth"
                     onClick={() => setIsOpen(false)}
-                    className="block w-full text-center px-4 py-3.5 rounded-xl bg-white text-slate-950 text-[11px] font-black uppercase tracking-widest shadow-md"
+                    style={{
+                      display: "block",
+                      width: "100%",
+                      textAlign: "center",
+                      padding: "12px 16px",
+                      borderRadius: "9999px",
+                      background: "#7c3aed",
+                      color: "#f3f0ff",
+                      fontSize: "13px",
+                      fontWeight: 800,
+                      textDecoration: "none",
+                    }}
                   >
                     Se connecter
                   </Link>

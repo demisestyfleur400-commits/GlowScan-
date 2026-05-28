@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Loader2, Sparkles, CheckCircle } from "lucide-react";
 
 interface Question {
   id: number;
@@ -10,22 +11,31 @@ interface ConsultationData {
   questions: Question[];
 }
 
+const DS = {
+  base: "#0d0a0e",
+  surface: "#13101f",
+  text: "#f3f0ff",
+  body: "rgba(200,185,255,0.65)",
+  muted: "rgba(255,255,255,0.35)",
+  border: "rgba(255,255,255,0.07)",
+  inputBorder: "rgba(167,139,250,0.2)",
+};
+
 export default function ConsultationForm() {
-  const [image, setImage] = useState<string>(""); // L'URL ou base64 de la photo de peau
+  const [image, setImage] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
   const [consultation, setConsultation] = useState<ConsultationData | null>(null);
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [diagnosticFinal, setDiagnosticFinal] = useState<string>("");
 
-  // Étape 1 : Envoyer la photo en Base64 pour recevoir le questionnaire sur mesure
   const demarrerConsultation = async () => {
-    if (!image) return alert("Veuillez d'abord prendre une photo.");
+    if (!image) return;
     setLoading(true);
     try {
       const response = await fetch("/api/generate-consultation", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ base64Image: image }), // 🛠️ Modification ici : imageUrl devient base64Image
+        body: JSON.stringify({ base64Image: image }),
       });
       const data = await response.json();
       setConsultation(data);
@@ -36,25 +46,21 @@ export default function ConsultationForm() {
     }
   };
 
-
-  // Gérer la saisie des réponses par l'utilisateur
   const handleInputChange = (questionId: number, value: string) => {
     setAnswers({ ...answers, [questionId]: value });
   };
 
-  // Étape 2 : Envoyer la photo + les réponses pour le diagnostic final
   const soumettreConsultation = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      // Ici, on appelle ton ancienne route de diagnostic en lui passant tout
       const response = await fetch("/api/generate-diagnostic", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ imageUrl: image, reponses: answers }),
       });
       const data = await response.json();
-      setDiagnosticFinal(data.diagnostic); // Adapter selon la structure de ta route
+      setDiagnosticFinal(data.diagnostic);
     } catch (error) {
       console.error("Erreur diagnostic:", error);
     } finally {
@@ -63,68 +69,102 @@ export default function ConsultationForm() {
   };
 
   return (
-    <div className="p-4 max-w-md mx-auto bg-white rounded-xl shadow-md">
-      <h2 className="text-xl font-bold mb-4 text-center text-indigo-600">Consultation GlowScan AI</h2>
+    <div
+      className="p-5 max-w-md mx-auto rounded-2xl"
+      style={{
+        background: DS.surface,
+        border: `1px solid ${DS.border}`,
+        fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
+      }}
+    >
+      <div className="flex items-center gap-2 mb-5">
+        <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: "rgba(124,58,237,0.15)", border: "1px solid rgba(167,139,250,0.3)" }}>
+          <Sparkles className="w-4 h-4" style={{ color: "#a78bfa" }} />
+        </div>
+        <h2 className="text-sm font-extrabold" style={{ color: DS.text }}>Consultation GlowScan AI</h2>
+      </div>
 
-      {/* Zone de capture/affichage de la photo */}
+      {/* Phase 1: image URL */}
       {!consultation && (
-        <div className="text-center">
-          {/* Simule une sélection d'image pour l'exemple */}
-          <input 
-            type="text" 
-            placeholder="URL de la photo de peau" 
-            className="w-full p-2 border rounded mb-3"
-            value={image}
-            onChange={(e) => setImage(e.target.value)}
-          />
-          <button 
+        <div className="space-y-4">
+          <div>
+            <label className="block text-[10px] font-extrabold uppercase tracking-wider mb-1.5" style={{ color: DS.muted }}>
+              URL ou base64 de la photo de peau
+            </label>
+            <input
+              type="text"
+              placeholder="URL de la photo..."
+              className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all"
+              style={{ background: DS.base, border: `1px solid ${DS.inputBorder}`, color: DS.text }}
+              value={image}
+              onChange={(e) => setImage(e.target.value)}
+            />
+          </div>
+          <button
             onClick={demarrerConsultation}
-            disabled={loading}
-            className="w-full bg-indigo-600 text-white p-3 rounded-lg font-semibold hover:bg-indigo-700 disabled:bg-gray-400"
+            disabled={loading || !image}
+            className="w-full py-3 rounded-full font-extrabold text-xs text-white transition-all active:scale-[0.98] disabled:opacity-40 flex items-center justify-center gap-2"
+            style={{ background: "#7c3aed" }}
           >
-            {loading ? "Analyse de la photo en cours..." : "Lancer mon analyse cutanée"}
+            {loading ? (
+              <><Loader2 className="w-4 h-4 animate-spin" /> Analyse en cours…</>
+            ) : (
+              "Lancer mon analyse cutanée"
+            )}
           </button>
         </div>
       )}
 
-      {/* Formulaire de consultation généré dynamiquement par l'IA */}
+      {/* Phase 2: questionnaire */}
       {consultation && !diagnosticFinal && (
         <form onSubmit={soumettreConsultation} className="space-y-4">
-          {/* La phrase d'observation personnalisée qui crée la confiance */}
-          <div className="bg-indigo-50 p-3 rounded-lg border border-indigo-100 text-indigo-900 text-sm italic">
-            <strong>Docteur GlowScan :</strong> "{consultation.observations_visuelles}"
+          <div
+            className="p-4 rounded-xl text-xs italic leading-relaxed"
+            style={{ background: "rgba(167,139,250,0.06)", border: "1px solid rgba(167,139,250,0.18)", color: DS.body }}
+          >
+            <span className="font-extrabold not-italic" style={{ color: "#c4b5fd" }}>Dr GlowScan : </span>
+            "{consultation.observations_visuelles}"
           </div>
 
-          <h3 className="font-semibold text-gray-700">Questions complémentaires :</h3>
-          
+          <p className="text-xs font-extrabold uppercase tracking-wider" style={{ color: DS.muted }}>Questions complémentaires :</p>
+
           {consultation.questions.map((q) => (
-            <div key={q.id} className="flex flex-col">
-              <label className="text-sm font-medium text-gray-600 mb-1">{q.label}</label>
+            <div key={q.id} className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold" style={{ color: DS.body }}>{q.label}</label>
               <input
                 type="text"
                 required
-                className="p-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
-                placeholder="Votre réponse..."
+                className="w-full px-4 py-2.5 rounded-xl text-sm outline-none transition-all"
+                style={{ background: DS.base, border: `1px solid ${DS.inputBorder}`, color: DS.text }}
+                placeholder="Votre réponse…"
                 onChange={(e) => handleInputChange(q.id, e.target.value)}
               />
             </div>
           ))}
 
-          <button 
+          <button
             type="submit"
             disabled={loading}
-            className="w-full bg-green-600 text-white p-3 rounded-lg font-semibold hover:bg-green-700 disabled:bg-gray-400"
+            className="w-full py-3 rounded-full font-extrabold text-xs text-white transition-all active:scale-[0.98] disabled:opacity-40 flex items-center justify-center gap-2"
+            style={{ background: "#7c3aed" }}
           >
-            {loading ? "Génération du diagnostic..." : "Obtenir mon ordonnance personnalisée"}
+            {loading ? (
+              <><Loader2 className="w-4 h-4 animate-spin" /> Génération du diagnostic…</>
+            ) : (
+              "Obtenir mon ordonnance personnalisée"
+            )}
           </button>
         </form>
       )}
 
-      {/* Affichage du Diagnostic Final */}
+      {/* Phase 3: résultat */}
       {diagnosticFinal && (
-        <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-          <h3 className="font-bold text-green-800 mb-2">Votre Diagnostic & Routine :</h3>
-          <p className="text-gray-700 whitespace-pre-line">{diagnosticFinal}</p>
+        <div className="mt-4 p-4 rounded-xl space-y-3" style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)" }}>
+          <div className="flex items-center gap-2">
+            <CheckCircle className="w-4 h-4" style={{ color: "#6ee7b7" }} />
+            <h3 className="text-xs font-extrabold uppercase tracking-wider" style={{ color: "#6ee7b7" }}>Diagnostic & routine :</h3>
+          </div>
+          <p className="text-xs leading-relaxed whitespace-pre-line" style={{ color: DS.body }}>{diagnosticFinal}</p>
         </div>
       )}
     </div>

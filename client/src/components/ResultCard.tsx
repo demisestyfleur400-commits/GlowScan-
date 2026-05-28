@@ -1,7 +1,7 @@
 // ─── SYSTÈME DE CORRESPONDANCE DE L'OMBRE (ANTI-FUITE) ─────────────
 const getClinicalNomenclature = (productName: string, role: string): { anonymousName: string; secretCode: string } => {
   const nameLower = productName.toLowerCase();
-  
+
   // Génération d'un code unique basé sur le nom du produit
   let hash = 0;
   for (let i = 0; i < productName.length; i++) hash = ((hash << 5) - hash + productName.charCodeAt(i)) | 0;
@@ -13,25 +13,25 @@ const getClinicalNomenclature = (productName: string, role: string): { anonymous
     if (nameLower.includes("savon") || nameLower.includes("acn")) ingredients = "Soufre & Arbre à Thé";
     if (nameLower.includes("gommage")) ingredients = "Micro-Acides de Fruits (AHA)";
     return {
-      anonymousName: `GlowScan Solution 🧴 Nettoyant Purifiant ${ingredients}`,
+      anonymousName: `GlowScan Solution Nettoyant Purifiant ${ingredients}`,
       secretCode: `#GS-N${padId}`
     };
   }
-  
+
   if (role === "serum") {
     let ingredients = "Niacinamide 10% & Acide Hyaluronique";
     if (nameLower.includes("chebe") || nameLower.includes("bloom")) ingredients = "Complexe Capillaire Chébé Bio Active";
     if (nameLower.includes("huile") || nameLower.includes("oil")) ingredients = "Éclat Botanique Oxygénante";
     return {
-      anonymousName: `GlowScan Concentré 💧 Sérum Actif Cblé ${ingredients}`,
+      anonymousName: `GlowScan Concentré Sérum Actif Ciblé ${ingredients}`,
       secretCode: `#GS-S${padId}`
     };
   }
-  
+
   let ingredients = "Vitamine C & Filtres Barrières";
   if (nameLower.includes("creme") || nameLower.includes("cacao")) ingredients = "Beurre de Cacao Pur & Lipides Protecteurs";
   return {
-    anonymousName: `GlowScan Formule 🛡️ Soin Régénérant ${ingredients}`,
+    anonymousName: `GlowScan Formule Soin Régénérant ${ingredients}`,
     secretCode: `#GS-C${padId}`
   };
 };
@@ -40,8 +40,8 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import {
   Sparkles, MessageCircle, AlertTriangle, Eye, Droplets, ShieldAlert,
-  Scan as ScanIcon, Share2, Truck, ImageIcon, Lock, Sun, Moon, Calendar,
-  Bell, MapPin, Activity, Leaf, Heart, CheckCircle2, Camera,
+  Scan as ScanIcon, Truck, Camera,
+  Sun, Moon, Calendar, MapPin, Leaf, CheckCircle2,
 } from "lucide-react";
 import type { AnalysisResult, ProtocolStep } from "@shared/schema";
 import { ShareCard } from "./ShareCard";
@@ -154,15 +154,57 @@ function normalizeStep(s: any, i: number): ProtocolStep {
   return { step: `Étape ${i + 1}`, product: typeof s === "string" ? s : String(s) };
 }
 
-// ─── Composants UI réutilisables et personnalisés ───────────────────
+// ─── DS tokens (inline) ─────────────────────────────────────────────
+const DS = {
+  font: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
+  bg: "#0d0a0e",
+  surface: "#13101f",
+  element: "#0e0b1a",
+  textPrimary: "#f3f0ff",
+  textBody: "rgba(200,185,255,0.65)",
+  textMuted: "rgba(255,255,255,0.35)",
+  violet: "#7c3aed",
+  violetMid: "#a78bfa",
+  violetLight: "#c4b5fd",
+  pink: "#E91E8C",
+  subtleCard: {
+    background: "rgba(255,255,255,0.04)",
+    border: "1px solid rgba(255,255,255,0.07)",
+    borderRadius: "24px",
+  } as React.CSSProperties,
+  violetCard: {
+    background: "rgba(167,139,250,0.06)",
+    border: "1px solid rgba(167,139,250,0.18)",
+    borderRadius: "24px",
+  } as React.CSSProperties,
+};
+
+// ─── Composants UI ──────────────────────────────────────────────────
+
 function SeverityBadge({ severity }: { severity: string }) {
   const s = severity?.toLowerCase() || "modérée";
-  let style = { background: "rgba(233,30,140,0.12)", border: "1px solid rgba(233,30,140,0.25)", color: "#f9a8d4" };
-  if (s.includes("lég")) style = { background: "rgba(16,185,129,0.12)", border: "1px solid rgba(16,185,129,0.25)", color: "#6ee7b7" };
-  else if (s.includes("sév")) style = { background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.25)", color: "#fca5a5" };
+  let bg = "rgba(233,30,140,0.08)";
+  let border = "rgba(233,30,140,0.2)";
+  let color = "#f9a8d4";
+  if (s.includes("lég")) { bg = "rgba(16,185,129,0.1)"; border = "rgba(16,185,129,0.25)"; color = "#6ee7b7"; }
+  else if (s.includes("sév")) { bg = "rgba(233,30,140,0.12)"; border = "rgba(233,30,140,0.3)"; color = "#f9a8d4"; }
   return (
-    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold" style={style} data-testid="badge-severity">
-      <AlertTriangle className="w-3 h-3" /> {severity}
+    <span
+      data-testid="badge-severity"
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "6px",
+        padding: "4px 12px",
+        borderRadius: "8px",
+        background: bg,
+        border: `1px solid ${border}`,
+        color,
+        fontSize: "11px",
+        fontWeight: 700,
+      }}
+    >
+      <AlertTriangle style={{ width: "12px", height: "12px" }} /> {severity}
     </span>
   );
 }
@@ -176,36 +218,67 @@ function GlowGauge({ score, observationsVisuelles }: { score: number; observatio
   const remaining = (Math.PI * radius) - filled;
 
   return (
-    <div className="w-full max-w-[280px] mx-auto text-center" data-testid="glow-gauge">
-      <div className="relative">
-        <svg viewBox="0 0 240 140" className="w-full">
+    <div style={{ width: "100%", maxWidth: "280px", margin: "0 auto", textAlign: "center" }} data-testid="glow-gauge">
+      <div style={{ position: "relative" }}>
+        <svg viewBox="0 0 240 140" style={{ width: "100%" }}>
           <defs>
             <linearGradient id="gauge-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#ef4444" />
-              <stop offset="50%" stopColor="#f59e0b" />
-              <stop offset="100%" stopColor="#E91E8C" />
+              <stop offset="0%" stopColor="#7c3aed" />
+              <stop offset="100%" stopColor="#c4b5fd" />
             </linearGradient>
           </defs>
-          <path d={`M ${cx - radius} ${cy} A ${radius} ${radius} 0 0 1 ${cx + radius} ${cy}`} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="14" strokeLinecap="round" />
-          <path d={`M ${cx - radius} ${cy} A ${radius} ${radius} 0 0 1 ${cx + radius} ${cy}`} fill="none" stroke="url(#gauge-gradient)" strokeWidth="14" strokeLinecap="round" strokeDasharray={`${filled},${remaining}`} />
-          <text x={cx} y={cy - radius - 6} textAnchor="middle" fill="rgba(255,255,255,0.3)" fontSize="10" fontWeight="bold">50</text>
-          <text x={cx - radius} y={cy + 22} textAnchor="middle" fill="rgba(255,255,255,0.3)" fontSize="10" fontWeight="bold">0</text>
-          <text x={cx + radius} y={cy + 22} textAnchor="middle" fill="rgba(255,255,255,0.3)" fontSize="10" fontWeight="bold">100</text>
+          {/* Track */}
+          <path
+            d={`M ${cx - radius} ${cy} A ${radius} ${radius} 0 0 1 ${cx + radius} ${cy}`}
+            fill="none"
+            stroke="rgba(167,139,250,0.1)"
+            strokeWidth="14"
+            strokeLinecap="round"
+          />
+          {/* Fill */}
+          <path
+            d={`M ${cx - radius} ${cy} A ${radius} ${radius} 0 0 1 ${cx + radius} ${cy}`}
+            fill="none"
+            stroke="url(#gauge-gradient)"
+            strokeWidth="14"
+            strokeLinecap="round"
+            strokeDasharray={`${filled},${remaining}`}
+          />
+          <text x={cx} y={cy - radius - 6} textAnchor="middle" fill="rgba(200,185,255,0.35)" fontSize="10" fontWeight="bold">50</text>
+          <text x={cx - radius} y={cy + 22} textAnchor="middle" fill="rgba(200,185,255,0.35)" fontSize="10" fontWeight="bold">0</text>
+          <text x={cx + radius} y={cy + 22} textAnchor="middle" fill="rgba(200,185,255,0.35)" fontSize="10" fontWeight="bold">100</text>
         </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-end pb-4 pointer-events-none">
-          <p className="text-5xl font-black text-white leading-none">{safeScore}</p>
-          <p className="text-[11px] font-bold uppercase tracking-wider mt-1" style={{ color: "rgba(255,255,255,0.4)" }}>Glow Score</p>
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "flex-end",
+            paddingBottom: "16px",
+            pointerEvents: "none",
+          }}
+        >
+          <p style={{ fontSize: "48px", fontWeight: 800, color: DS.textPrimary, lineHeight: 1 }}>{safeScore}</p>
+          <p style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.12em", marginTop: "4px", color: DS.textMuted }}>Glow Score</p>
         </div>
       </div>
       {observationsVisuelles && (
         <div
-          className="mt-3 rounded-xl p-3 text-left"
-          style={{ background: "rgba(233,30,140,0.08)", border: "1px solid rgba(233,30,140,0.2)" }}
+          style={{
+            marginTop: "12px",
+            borderRadius: "12px",
+            padding: "12px",
+            textAlign: "left",
+            background: "rgba(167,139,250,0.06)",
+            border: "1px solid rgba(167,139,250,0.18)",
+          }}
         >
-          <p className="text-[11px] font-bold flex items-center gap-1 uppercase tracking-wider mb-1" style={{ color: "#f9a8d4" }}>
-            <Sparkles className="w-3.5 h-3.5" /> L'avis du Doc'
+          <p style={{ fontSize: "11px", fontWeight: 700, display: "flex", alignItems: "center", gap: "4px", letterSpacing: "0.08em", marginBottom: "4px", color: DS.violetLight }}>
+            <Sparkles style={{ width: "14px", height: "14px" }} /> Observations cliniques
           </p>
-          <p className="text-xs font-semibold italic leading-relaxed" style={{ color: "rgba(255,255,255,0.65)" }}>"{observationsVisuelles}"</p>
+          <p style={{ fontSize: "12px", fontWeight: 500, fontStyle: "italic", lineHeight: 1.5, color: DS.textBody }}>"{observationsVisuelles}"</p>
         </div>
       )}
     </div>
@@ -224,30 +297,49 @@ function StatTile({
   explicationContextuelle?: string;
 }) {
   const accentMap: Record<string, string> = {
-    amber: "rgba(245,158,11,0.6)",
-    rose: "rgba(233,30,140,0.6)",
-    blue: "rgba(99,102,241,0.6)",
-    emerald: "rgba(16,185,129,0.6)",
+    amber: "rgba(245,158,11,0.25)",
+    rose: "rgba(233,30,140,0.2)",
+    blue: "rgba(167,139,250,0.25)",
+    emerald: "rgba(16,185,129,0.25)",
   };
-  const accent = accentMap[color];
+  const bgMap: Record<string, string> = {
+    amber: "rgba(245,158,11,0.1)",
+    rose: "rgba(233,30,140,0.08)",
+    blue: "rgba(167,139,250,0.08)",
+    emerald: "rgba(16,185,129,0.1)",
+  };
+  const colorMap: Record<string, string> = {
+    amber: "#fbbf24",
+    rose: "#f9a8d4",
+    blue: DS.violetLight,
+    emerald: "#6ee7b7",
+  };
   return (
     <div
-      className="rounded-2xl p-3 flex flex-col gap-1.5"
-      style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${accent}33`, backdropFilter: "blur(10px)" }}
+      style={{
+        borderRadius: "16px",
+        padding: "12px",
+        display: "flex",
+        flexDirection: "column",
+        gap: "6px",
+        background: bgMap[color],
+        border: `1px solid ${accentMap[color]}`,
+      }}
     >
-      <div className="flex items-center gap-2.5">
-        <div className="flex-shrink-0">{icon}</div>
-        <div className="flex-1 min-w-0">
-          <p className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "rgba(255,255,255,0.4)" }}>{label}</p>
-          <p className="text-lg font-black text-white leading-tight">
-            {value}{suffix && <span className="text-xs font-bold ml-0.5">{suffix}</span>}
-            {sub && <span className="text-[11px] font-semibold ml-1.5" style={{ color: "rgba(255,255,255,0.4)" }}>{sub}</span>}
+      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+        <div style={{ flexShrink: 0 }}>{icon}</div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.08em", color: DS.textMuted }}>{label}</p>
+          <p style={{ fontSize: "18px", fontWeight: 800, color: DS.textPrimary, lineHeight: 1.2 }}>
+            {value}
+            {suffix && <span style={{ fontSize: "12px", fontWeight: 700, marginLeft: "2px" }}>{suffix}</span>}
+            {sub && <span style={{ fontSize: "11px", fontWeight: 600, marginLeft: "6px", color: colorMap[color] }}>{sub}</span>}
           </p>
         </div>
       </div>
       {explicationContextuelle && (
-        <div className="text-[11px] font-medium pt-1.5 leading-snug" style={{ color: "rgba(255,255,255,0.5)", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-          💡 {explicationContextuelle}
+        <div style={{ fontSize: "11px", fontWeight: 500, paddingTop: "6px", lineHeight: 1.4, color: DS.textBody, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+          {explicationContextuelle}
         </div>
       )}
     </div>
@@ -257,15 +349,21 @@ function StatTile({
 function GridTile({ icon, label, value, testId }: { icon: React.ReactNode; label: string; value: string; testId?: string }) {
   return (
     <div
-      className="rounded-2xl px-3 py-3 flex flex-col items-center text-center"
-      style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}
       data-testid={testId}
+      style={{
+        ...DS.subtleCard,
+        padding: "12px 8px",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        textAlign: "center",
+      }}
     >
-      <div className="flex items-center gap-1.5 mb-1.5">
+      <div style={{ display: "flex", alignItems: "center", gap: "4px", marginBottom: "6px" }}>
         {icon}
-        <p className="text-[9px] font-black uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.35)" }}>{label}</p>
+        <p style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.1em", color: DS.textMuted }}>{label}</p>
       </div>
-      <p className="text-[13px] font-extrabold text-white leading-tight">{value}</p>
+      <p style={{ fontSize: "13px", fontWeight: 700, color: DS.textPrimary, lineHeight: 1.3 }}>{value}</p>
     </div>
   );
 }
@@ -289,15 +387,15 @@ function RadarChart({ balance }: { balance: AnalysisResult["balance"] }) {
   const dataPoints = labels.map((l, i) => getPoint(i, balance[l.key as keyof typeof balance] || 0));
   const dataPath = dataPoints.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ") + " Z";
   return (
-    <svg viewBox="0 0 240 240" className="w-full max-w-[260px] mx-auto" data-testid="radar-balance">
+    <svg viewBox="0 0 240 240" style={{ width: "100%", maxWidth: "260px", margin: "0 auto", display: "block" }} data-testid="radar-balance">
       {gridLevels.map((level) => (
-        <polygon key={level} points={labels.map((_, i) => `${getPoint(i, level * 10).x},${getPoint(i, level * 10).y}`).join(" ")} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="0.5" />
+        <polygon key={level} points={labels.map((_, i) => `${getPoint(i, level * 10).x},${getPoint(i, level * 10).y}`).join(" ")} fill="none" stroke="rgba(167,139,250,0.12)" strokeWidth="0.5" />
       ))}
-      {labels.map((_, i) => <line key={i} x1={cx} y1={cy} x2={getPoint(i, 10).x} y2={getPoint(i, 10).y} stroke="rgba(255,255,255,0.08)" strokeWidth="0.5" />)}
-      <path d={dataPath} fill="rgba(233,30,140,0.15)" stroke="#E91E8C" strokeWidth="2" />
-      {dataPoints.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="4" fill="#E91E8C" stroke="rgba(13,10,14,0.8)" strokeWidth="2" />)}
+      {labels.map((_, i) => <line key={i} x1={cx} y1={cy} x2={getPoint(i, 10).x} y2={getPoint(i, 10).y} stroke="rgba(167,139,250,0.12)" strokeWidth="0.5" />)}
+      <path d={dataPath} fill="rgba(124,58,237,0.18)" stroke="#7c3aed" strokeWidth="2" />
+      {dataPoints.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="4" fill="#a78bfa" stroke="rgba(13,10,14,0.8)" strokeWidth="2" />)}
       {labels.map((l, i) => (
-        <text key={i} x={getPoint(i, 12.5).x} y={getPoint(i, 12.5).y} textAnchor="middle" dominantBaseline="middle" fill="rgba(255,255,255,0.4)" fontSize="8" fontWeight="bold">
+        <text key={i} x={getPoint(i, 12.5).x} y={getPoint(i, 12.5).y} textAnchor="middle" dominantBaseline="middle" fill="rgba(200,185,255,0.45)" fontSize="8" fontWeight="bold">
           {l.label}
         </text>
       ))}
@@ -307,24 +405,39 @@ function RadarChart({ balance }: { balance: AnalysisResult["balance"] }) {
 
 function ProtocolRow({ index, step }: { index: number; step: ProtocolStep }) {
   return (
-    <li className="flex gap-2.5">
-      <span className="flex-shrink-0 w-6 h-6 rounded-full text-white text-[11px] font-bold flex items-center justify-center mt-0.5" style={{ background: "linear-gradient(135deg, #E91E8C, #f43f5e)" }}>
+    <li style={{ display: "flex", gap: "10px" }}>
+      <span
+        style={{
+          flexShrink: 0,
+          width: "24px",
+          height: "24px",
+          borderRadius: "9999px",
+          color: DS.textPrimary,
+          fontSize: "11px",
+          fontWeight: 700,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          marginTop: "2px",
+          background: "linear-gradient(135deg, #7c3aed, #a78bfa)",
+        }}
+      >
         {index}
       </span>
-      <div className="flex-1 min-w-0">
-        <p className="text-[13px] font-bold text-white leading-tight">{step.step}</p>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ fontSize: "13px", fontWeight: 700, color: DS.textPrimary, lineHeight: 1.3 }}>{step.step}</p>
         {step.product && (
-          <p className="text-[12px] font-medium leading-snug" style={{ color: "#f9a8d4" }}>{step.product}</p>
+          <p style={{ fontSize: "12px", fontWeight: 500, lineHeight: 1.4, color: DS.violetLight }}>{step.product}</p>
         )}
         {step.why && (
-          <p className="text-[12px] italic leading-snug mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>{step.why}</p>
+          <p style={{ fontSize: "12px", fontStyle: "italic", lineHeight: 1.4, marginTop: "2px", color: DS.textMuted }}>{step.why}</p>
         )}
       </div>
     </li>
   );
 }
 
-// ─── COMPOSANT PRINCIPAL SÉCURISÉ ───────────────────────────────────
+// ─── COMPOSANT PRINCIPAL ─────────────────────────────────────────────
 interface ResultCardProps {
   result: AnalysisResult;
   scanId?: number | null;
@@ -344,7 +457,6 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
   const [orderModalItems, setOrderModalItems] = useState<OrderItem[]>([]);
   const [orderModalTitle, setOrderModalTitle] = useState("");
 
-  // ─── Déclarer les variables manquantes ─────────────────────────────
   const ageCutane = deriveAgeCutane(result);
   const indiceAcne = deriveIndiceAcne(result);
   const hydratation = deriveHydratation(result);
@@ -356,19 +468,50 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
 
   if (result.condition === "Image non exploitable") {
     return (
-      <div className="max-w-lg mx-auto px-4" data-testid="result-unanalyzable">
-        <div className="rounded-3xl p-6 text-center" style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)" }}>
-          <div className="w-16 h-16 mx-auto rounded-2xl flex items-center justify-center mb-4" style={{ background: "rgba(245,158,11,0.12)", border: "1px solid rgba(245,158,11,0.25)" }}>
-            <Camera className="w-8 h-8" style={{ color: "#fbbf24" }} />
+      <div style={{ maxWidth: "512px", margin: "0 auto", padding: "0 16px" }} data-testid="result-unanalyzable">
+        <div
+          style={{
+            borderRadius: "24px",
+            padding: "24px",
+            textAlign: "center",
+            background: "rgba(245,158,11,0.1)",
+            border: "1px solid rgba(245,158,11,0.25)",
+          }}
+        >
+          <div
+            style={{
+              width: "64px",
+              height: "64px",
+              margin: "0 auto 16px",
+              borderRadius: "20px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: "rgba(245,158,11,0.12)",
+              border: "1px solid rgba(245,158,11,0.25)",
+            }}
+          >
+            <Camera style={{ width: "28px", height: "28px", color: "#fbbf24" }} />
           </div>
-          <h2 className="text-lg font-black text-white mb-2">Photo non analysable</h2>
-          <p className="text-sm leading-relaxed mb-5" style={{ color: "rgba(255,255,255,0.5)" }}>
+          <h2 style={{ fontSize: "18px", fontWeight: 800, color: DS.textPrimary, marginBottom: "8px" }}>Photo non analysable</h2>
+          <p style={{ fontSize: "14px", lineHeight: 1.6, marginBottom: "20px", color: DS.textBody }}>
             {result.details || "Cette photo ne montre pas une peau humaine analysable. Reprends une photo nette en pleine lumière, sans filtre, à 20-30 cm."}
           </p>
           <button
             onClick={() => window.location.reload()}
             data-testid="button-rescan"
-            className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-pink-500 to-rose-500 text-white text-sm font-extrabold shadow-lg shadow-pink-200 active:scale-[0.98] transition-all"
+            style={{
+              width: "100%",
+              padding: "14px",
+              borderRadius: "9999px",
+              background: "#7c3aed",
+              color: DS.textPrimary,
+              fontSize: "14px",
+              fontWeight: 800,
+              border: "none",
+              cursor: "pointer",
+              transition: "opacity 0.15s",
+            }}
           >
             Reprendre une photo
           </button>
@@ -398,7 +541,7 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
   const findRoutineProducts = () => {
     const consultationText = (result as any).consultationData?.observations_visuelles || "";
     const searchText = ((result.condition || "") + " " + (result.details || "") + " " + consultationText).toLowerCase();
-    
+
     const areaProducts = catalog.filter(p => {
       if (currentArea === "cheveux") return p.category === "cheveux";
       if (currentArea === "corps") return p.category === "corps" || p.category === "visage";
@@ -460,7 +603,6 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
     return winner.products.map((p, i) => {
       const roleKey = getProductRole(p);
       const { anonymousName, secretCode } = getClinicalNomenclature(p.name, roleKey);
-      
       return {
         product: {
           ...p,
@@ -481,14 +623,13 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
     const duoProducts = routineProducts.slice(0, 2);
     const totalPriceDuo = duoProducts.reduce((sum, item) => sum + item.product.price, 0);
     const orderCodes = duoProducts.map(item => (item.product as any).secretCode).join(" + ");
-    
     return {
       duo: duoProducts,
       totalPrice: totalPriceDuo,
       secretCodes: orderCodes,
       copywriting: {
-        title: "Le Compromis Idéal ✨",
-        subtitle: currentArea === "cheveux" ? "Le Kit Duo Croissance" : "Le Protocole Duo Action Ciblée",
+        title: "Le Compromis Idéal",
+        subtitle: currentArea === "cheveux" ? "Kit Duo Croissance" : "Protocole Duo Action Ciblée",
         description: `Le strict minimum requis par notre IA pour saturer les récepteurs de votre peau sans surcharger votre budget.`
       }
     };
@@ -500,32 +641,52 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
   //  RENDU
   // ═══════════════════════════════════════════════════════════════════
   return (
-    <div className="max-w-lg mx-auto space-y-4" data-testid="result-card">
+    <div
+      data-testid="result-card"
+      style={{
+        maxWidth: "512px",
+        margin: "0 auto",
+        display: "flex",
+        flexDirection: "column",
+        gap: "16px",
+        fontFamily: DS.font,
+      }}
+    >
       <motion.div
         initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35 }}
-        className="space-y-4"
+        style={{ display: "flex", flexDirection: "column", gap: "16px" }}
       >
-        {/* ═══════════════════════════════════════════
-            BLOC 1 — Carte Diagnostic principale
-            ═══════════════════════════════════════════ */}
-        <div className="rounded-3xl p-5" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" } as React.CSSProperties} data-testid="block-diagnostic">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: "rgba(255,255,255,0.35)" }}>Diagnostic & Stratégie</p>
+        {/* ═══ BLOC 1 — Diagnostic principal ═══ */}
+        <div
+          data-testid="block-diagnostic"
+          style={{ ...DS.subtleCard, padding: "20px" }}
+        >
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
+            <p style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.2em", color: DS.textMuted }}>Diagnostic & Stratégie</p>
             <SeverityBadge severity={result.severity || "Modérée"} />
           </div>
-          <h1 className="text-[22px] font-black text-white leading-tight mb-5 font-display" data-testid="text-condition">
+          <h1
+            data-testid="text-condition"
+            style={{ fontSize: "22px", fontWeight: 800, color: DS.textPrimary, lineHeight: 1.3, marginBottom: "20px" }}
+          >
             {result.condition}
           </h1>
 
-          <GlowGauge 
-            score={result.score} 
-            observationsVisuelles={result.consultationData?.observations_visuelles || (result as any).observationsVisuelles} 
+          <GlowGauge
+            score={result.score}
+            observationsVisuelles={result.consultationData?.observations_visuelles || (result as any).observationsVisuelles}
           />
-          <div className="grid grid-cols-2 gap-2 mt-4">
+
+          {/* Progress bar */}
+          <div style={{ marginTop: "16px", height: "3px", borderRadius: "9999px", background: "rgba(167,139,250,0.1)", overflow: "hidden" }}>
+            <div style={{ height: "100%", width: `${clamp(result.score || 0, 0, 100)}%`, background: "linear-gradient(90deg, #7c3aed, #a78bfa)", borderRadius: "9999px" }} />
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginTop: "16px" }}>
             <StatTile
-              icon={<Sun className="w-5 h-5 text-amber-500" />}
+              icon={<Sun style={{ width: "20px", height: "20px", color: "#fbbf24" }} />}
               label="Âge cutané"
               value={`${ageCutane} ans`}
               sub="estimé"
@@ -533,7 +694,7 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
               explicationContextuelle={(result as any).consultationData?.impact_facteurs?.age || (result as any).facteurAge}
             />
             <StatTile
-              icon={<div className="w-3 h-3 rounded-full bg-rose-500" />}
+              icon={<div style={{ width: "12px", height: "12px", borderRadius: "9999px", background: "#f9a8d4" }} />}
               label="Indice acné"
               value={`${indiceAcne.value}%`}
               sub={indiceAcne.label}
@@ -541,7 +702,7 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
               explicationContextuelle={(result as any).consultationData?.impact_facteurs?.inflammation || (result as any).facteurInflammation}
             />
             <StatTile
-              icon={<Droplets className="w-5 h-5 text-blue-500" />}
+              icon={<Droplets style={{ width: "20px", height: "20px", color: DS.violetMid }} />}
               label="Hydratation"
               value={`${hydratation.value}%`}
               sub={hydratation.label}
@@ -549,7 +710,7 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
               explicationContextuelle={(result as any).consultationData?.impact_facteurs?.hydratation || (result as any).facteurHydratation}
             />
             <StatTile
-              icon={<Leaf className="w-5 h-5 text-emerald-500" />}
+              icon={<Leaf style={{ width: "20px", height: "20px", color: "#6ee7b7" }} />}
               label="Rides"
               value={rides.value}
               sub={rides.label}
@@ -558,187 +719,354 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
             />
           </div>
         </div>
-           
-        {/* ═══════════════════════════════════════════
-            BLOC 2 — Grille 6 tuiles
-            ═══════════════════════════════════════════ */}
-        <div className="grid grid-cols-3 gap-2">
+
+        {/* ═══ BLOC 2 — Grille 6 tuiles ═══ */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px" }}>
           <GridTile
-            icon={<Droplets className="w-3.5 h-3.5 text-cyan-500" />}
+            icon={<Droplets style={{ width: "14px", height: "14px", color: DS.violetLight }} />}
             label="Type Peau"
             value={((result as any).consultationData?.type_peau || result.skinType || "Mixte").split("(")[0].trim()}
             testId="tile-skintype"
           />
           <GridTile
-            icon={<Eye className="w-3.5 h-3.5 text-rose-500" />}
+            icon={<Eye style={{ width: "14px", height: "14px", color: "#f9a8d4" }} />}
             label="Lésions"
             value={deriveLesionsLabel(result).replace("inflammatoires ", "")}
             testId="tile-lesions"
           />
           <GridTile
-            icon={<ScanIcon className="w-3.5 h-3.5 text-indigo-500" />}
+            icon={<ScanIcon style={{ width: "14px", height: "14px", color: DS.violetMid }} />}
             label="Pores"
             value={derivePoresLabel(result)}
             testId="tile-pores"
           />
           <GridTile
-            icon={<ShieldAlert className="w-3.5 h-3.5 text-amber-500" />}
+            icon={<ShieldAlert style={{ width: "14px", height: "14px", color: "#fbbf24" }} />}
             label="Marques"
             value={deriveMarquesLabel(result)}
             testId="tile-marques"
           />
           <GridTile
-            icon={<MapPin className="w-3.5 h-3.5 text-violet-500" />}
+            icon={<MapPin style={{ width: "14px", height: "14px", color: DS.violetLight }} />}
             label="Zones"
             value={deriveZonesLabel(result)}
             testId="tile-zones"
           />
           <GridTile
-            icon={<Sparkles className="w-3.5 h-3.5 text-emerald-500" />}
+            icon={<Sparkles style={{ width: "14px", height: "14px", color: "#6ee7b7" }} />}
             label="Score"
             value={`${result.score}%`}
             testId="tile-score"
           />
         </div>
 
-        {/* ═══════════════════════════════════════════
-            BLOC 3 — Radar Équilibre cutané
-            ═══════════════════════════════════════════ */}
+        {/* ═══ BLOC 3 — Radar Équilibre cutané ═══ */}
         {result.balance && (
-          <div className="rounded-3xl p-5" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" } as React.CSSProperties} data-testid="block-radar">
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-3 text-center" style={{ color: "#f9a8d4" }}>Équilibre cutané</p>
+          <div
+            data-testid="block-radar"
+            style={{ ...DS.subtleCard, padding: "20px" }}
+          >
+            <p style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.2em", marginBottom: "12px", textAlign: "center", color: DS.violetLight }}>
+              Équilibre cutané
+            </p>
             <RadarChart balance={result.balance} />
           </div>
         )}
 
-        {/* ═══════════════════════════════════════════
-            BLOC 4 — L'Ordonnance Clinique
-            ═══════════════════════════════════════════ */}
-        <div className="rounded-3xl p-5 relative overflow-hidden" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" } as React.CSSProperties} data-testid="block-expert">
-          <div className="absolute top-0 right-0 w-24 h-24 rounded-full blur-2xl pointer-events-none" style={{ background: "radial-gradient(circle, rgba(233,30,140,0.15), transparent)" }} />
+        {/* ═══ BLOC 4 — Conclusions cliniques ═══ */}
+        <div
+          data-testid="block-expert"
+          style={{ ...DS.violetCard, padding: "20px", position: "relative", overflow: "hidden" }}
+        >
+          {/* Glow accent — radial-gradient div, NO box-shadow */}
+          <div
+            style={{
+              position: "absolute",
+              top: 0,
+              right: 0,
+              width: "120px",
+              height: "120px",
+              pointerEvents: "none",
+              background: "radial-gradient(circle at top right, rgba(124,58,237,0.2), transparent 70%)",
+            }}
+          />
 
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: "rgba(233,30,140,0.12)", border: "1px solid rgba(233,30,140,0.25)" }}>
-                <Sparkles className="w-4 h-4" style={{ color: "#E91E8C" }} />
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <div
+                style={{
+                  width: "32px",
+                  height: "32px",
+                  borderRadius: "10px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  background: "rgba(124,58,237,0.15)",
+                  border: "1px solid rgba(124,58,237,0.3)",
+                }}
+              >
+                <Sparkles style={{ width: "16px", height: "16px", color: DS.violetMid }} />
               </div>
-              <h2 className="text-sm font-black uppercase tracking-wider text-white">Conclusions du Dr. GlowScan</h2>
+              <h2 style={{ fontSize: "14px", fontWeight: 800, color: DS.textPrimary }}>Conclusions du Dr. GlowScan</h2>
             </div>
-            <span className="text-[9px] font-black px-2 py-1 rounded-lg uppercase tracking-wide" style={{ background: "rgba(233,30,140,0.15)", border: "1px solid rgba(233,30,140,0.3)", color: "#f9a8d4" }}>
-              ✓ Approuvé IA
+            <span
+              style={{
+                fontSize: "9px",
+                fontWeight: 700,
+                padding: "4px 8px",
+                borderRadius: "8px",
+                letterSpacing: "0.08em",
+                background: "rgba(167,139,250,0.15)",
+                border: "1px solid rgba(167,139,250,0.3)",
+                color: DS.violetLight,
+              }}
+            >
+              Approuvé IA
             </span>
           </div>
 
           {result.details && (
-            <div className="rounded-2xl p-4 mb-4" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
-              <p className="text-xs font-black uppercase tracking-wide mb-1.5" style={{ color: "rgba(255,255,255,0.35)" }}>Évaluation de la barrière cutanée :</p>
-              <p className="text-xs leading-relaxed font-medium" style={{ color: "rgba(255,255,255,0.65)" }} data-testid="text-details">
+            <div
+              style={{
+                borderRadius: "16px",
+                padding: "16px",
+                marginBottom: "16px",
+                background: "rgba(255,255,255,0.03)",
+                border: "1px solid rgba(255,255,255,0.06)",
+              }}
+            >
+              <p style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.08em", marginBottom: "6px", color: DS.textMuted }}>
+                Évaluation de la barrière cutanée :
+              </p>
+              <p
+                data-testid="text-details"
+                style={{ fontSize: "12px", lineHeight: 1.6, fontWeight: 500, color: DS.textBody }}
+              >
                 {result.details}
               </p>
             </div>
           )}
 
-          <div className="rounded-2xl p-4 relative" style={{ background: "rgba(233,30,140,0.08)", border: "1px solid rgba(233,30,140,0.2)" }}>
-            <div className="absolute -top-2 left-4 text-[9px] font-black px-2 py-0.5 rounded-full uppercase" style={{ background: "rgba(13,10,14,0.9)", border: "1px solid rgba(233,30,140,0.3)", color: "#f9a8d4" }}>
+          <div
+            style={{
+              borderRadius: "16px",
+              padding: "16px",
+              position: "relative",
+              background: "rgba(124,58,237,0.08)",
+              border: "1px solid rgba(124,58,237,0.2)",
+            }}
+          >
+            <div
+              style={{
+                position: "absolute",
+                top: "-10px",
+                left: "16px",
+                fontSize: "9px",
+                fontWeight: 700,
+                padding: "2px 8px",
+                borderRadius: "9999px",
+                letterSpacing: "0.06em",
+                background: DS.bg,
+                border: "1px solid rgba(124,58,237,0.3)",
+                color: DS.violetLight,
+              }}
+            >
               La recommandation clé
             </div>
-            <p className="text-[12px] font-semibold leading-relaxed italic mt-1" style={{ color: "rgba(255,255,255,0.7)" }} data-testid="text-motivation">
+            <p
+              data-testid="text-motivation"
+              style={{ fontSize: "12px", fontWeight: 500, lineHeight: 1.6, fontStyle: "italic", marginTop: "4px", color: DS.textBody }}
+            >
               "{expertCitation}"
             </p>
           </div>
 
-          <p className="text-[10px] text-center font-medium mt-3.5" style={{ color: "rgba(255,255,255,0.25)" }}>
-            🔒 Vos données d'analyse clinique restent 100% confidentielles.
+          <p style={{ fontSize: "10px", textAlign: "center", fontWeight: 500, marginTop: "14px", color: "rgba(255,255,255,0.25)" }}>
+            Vos données d'analyse clinique restent 100% confidentielles.
           </p>
         </div>
 
-        {/* ═══════════════════════════════════════════
-            BLOC 5 — Cartographie visuelle des zones
-            ═══════════════════════════════════════════ */}
+        {/* ═══ BLOC 5 — Cartographie des zones ═══ */}
         {result.zones && result.zones.length > 0 && (
-          <div className="rounded-3xl p-5 relative overflow-hidden" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" } as React.CSSProperties} data-testid="block-zones-map">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: "rgba(99,102,241,0.12)", border: "1px solid rgba(99,102,241,0.25)" }}>
-                  <ScanIcon className="w-4 h-4 text-indigo-400" />
+          <div
+            data-testid="block-zones-map"
+            style={{ ...DS.subtleCard, padding: "20px", position: "relative", overflow: "hidden" }}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <div
+                  style={{
+                    width: "32px",
+                    height: "32px",
+                    borderRadius: "10px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    background: "rgba(124,58,237,0.12)",
+                    border: "1px solid rgba(124,58,237,0.25)",
+                  }}
+                >
+                  <ScanIcon style={{ width: "16px", height: "16px", color: DS.violetMid }} />
                 </div>
                 <div>
-                  <h2 className="text-xs font-black uppercase tracking-wider text-white">Cartographie Cutanée</h2>
-                  <p className="text-[10px] font-semibold" style={{ color: "rgba(255,255,255,0.35)" }}>Localisation des foyers à traiter</p>
+                  <h2 style={{ fontSize: "12px", fontWeight: 800, color: DS.textPrimary }}>Cartographie Cutanée</h2>
+                  <p style={{ fontSize: "10px", fontWeight: 500, color: DS.textMuted }}>Localisation des foyers à traiter</p>
                 </div>
               </div>
-
-              <span className="flex items-center gap-1.5 text-[9px] font-black px-2.5 py-1 rounded-lg uppercase tracking-wide" style={{ background: "rgba(99,102,241,0.12)", border: "1px solid rgba(99,102,241,0.25)", color: "#a5b4fc" }}>
-                <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 animate-pulse" />
-                Analyse Rétinienne IA
+              <span
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  fontSize: "9px",
+                  fontWeight: 700,
+                  padding: "4px 10px",
+                  borderRadius: "8px",
+                  letterSpacing: "0.08em",
+                  background: "rgba(167,139,250,0.15)",
+                  border: "1px solid rgba(167,139,250,0.3)",
+                  color: DS.violetLight,
+                }}
+              >
+                <span style={{ width: "6px", height: "6px", borderRadius: "9999px", background: DS.violetMid, animation: "pulse 2s infinite" }} />
+                Analyse IA
               </span>
             </div>
 
-            <div className="rounded-2xl p-2 flex items-center justify-center" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
+            <div
+              style={{
+                borderRadius: "16px",
+                padding: "8px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "rgba(255,255,255,0.02)",
+                border: "1px solid rgba(255,255,255,0.05)",
+              }}
+            >
               <FaceZonesMap zones={result.zones} />
             </div>
 
-            <p className="text-[10px] text-center font-medium mt-3" style={{ color: "rgba(255,255,255,0.3)" }}>
-              💡 Cliquez sur les zones colorées pour isoler les imperfections détectées.
+            <p style={{ fontSize: "10px", textAlign: "center", fontWeight: 500, marginTop: "12px", color: DS.textMuted }}>
+              Cliquez sur les zones colorées pour isoler les imperfections détectées.
             </p>
           </div>
         )}
 
-        {/* ═══════════════════════════════════════════
-            BLOC 6 — Protocole de soin
-            ═══════════════════════════════════════════ */}
+        {/* ═══ BLOC 6 — Protocole de soin ═══ */}
         {(protocolMorning.length > 0 || protocolEvening.length > 0 || weekly) && (
-          <div className="rounded-3xl p-5" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" } as React.CSSProperties} data-testid="block-protocol">
-            <div className="flex items-center justify-between mb-1">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4" style={{ color: "#E91E8C" }} />
-                <h2 className="text-[15px] font-black text-white font-display">Mon Ordonnance d'Application</h2>
+          <div
+            data-testid="block-protocol"
+            style={{ ...DS.subtleCard, padding: "20px" }}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "4px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Sparkles style={{ width: "16px", height: "16px", color: DS.violetMid }} />
+                <h2 style={{ fontSize: "15px", fontWeight: 800, color: DS.textPrimary }}>Mon Ordonnance d'Application</h2>
               </div>
-              <span className="text-[9px] font-bold px-2 py-0.5 rounded-full" style={{ background: "rgba(233,30,140,0.12)", border: "1px solid rgba(233,30,140,0.25)", color: "#f9a8d4" }}>
-                Cycle de 4 à 6 semaines
+              <span
+                style={{
+                  fontSize: "9px",
+                  fontWeight: 700,
+                  padding: "3px 8px",
+                  borderRadius: "8px",
+                  background: "rgba(167,139,250,0.15)",
+                  border: "1px solid rgba(167,139,250,0.3)",
+                  color: DS.violetLight,
+                }}
+              >
+                4 à 6 semaines
               </span>
             </div>
-            <p className="text-[11px] mb-5" style={{ color: "rgba(255,255,255,0.35)" }}>
-              Suivez rigoureusement cet ordre pour maximiser la pénétration des actifs sous le climat chaud.
+            <p style={{ fontSize: "11px", marginBottom: "20px", color: DS.textMuted }}>
+              Suivez rigoureusement cet ordre pour maximiser la pénétration des actifs.
             </p>
 
-            <div className="space-y-6">
-              {/* ☀️ LE PROTOCOLE DU MATIN */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+              {/* Matin */}
               {protocolMorning.length > 0 && (
-                <div className="relative pl-4" style={{ borderLeft: "2px solid rgba(245,158,11,0.4)" }}>
-                  <div className="absolute -left-[9px] top-0 text-white rounded-full p-0.5" style={{ background: "#f59e0b" }}>
-                    <Sun className="w-3 h-3" />
+                <div style={{ position: "relative", paddingLeft: "16px", borderLeft: "2px solid rgba(245,158,11,0.35)" }}>
+                  <div
+                    style={{
+                      position: "absolute",
+                      left: "-9px",
+                      top: 0,
+                      background: "#f59e0b",
+                      borderRadius: "9999px",
+                      padding: "2px",
+                    }}
+                  >
+                    <Sun style={{ width: "12px", height: "12px", color: "#0d0a0e" }} />
                   </div>
-                  <h3 className="text-[12px] font-black uppercase tracking-wider mb-3 flex items-center gap-1.5" style={{ color: "#fbbf24" }}>
-                    Rituel du Matin <span className="text-[10px] font-medium font-sans lowercase" style={{ color: "rgba(255,255,255,0.3)" }}>(protection & régulation)</span>
+                  <h3 style={{ fontSize: "12px", fontWeight: 700, letterSpacing: "0.08em", marginBottom: "12px", display: "flex", alignItems: "center", gap: "6px", color: "#fbbf24" }}>
+                    Rituel du Matin
+                    <span style={{ fontSize: "10px", fontWeight: 500, color: DS.textMuted }}>protection & régulation</span>
                   </h3>
-                  
-                  <div className="space-y-3">
-                    {protocolMorning.map((s, i) => {
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    {protocolMorning.map((s: any, i: number) => {
                       const stepData = normalizeStep(s, i);
-                      const matchedItem = routineProducts.find(rp => 
+                      const matchedItem = routineProducts.find(rp =>
                         stepData.product && rp.product.name.toLowerCase().includes(stepData.product.toLowerCase())
                       );
-
                       return (
-                        <div key={`m-${i}`} className="rounded-2xl p-2.5 flex items-center gap-3 transition-all" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                          <div className="w-5 h-5 rounded-lg text-[11px] font-black text-white flex items-center justify-center flex-shrink-0" style={{ background: "rgba(233,30,140,0.15)", border: "1px solid rgba(233,30,140,0.3)" }}>
+                        <div
+                          key={`m-${i}`}
+                          style={{
+                            borderRadius: "14px",
+                            padding: "10px",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "10px",
+                            background: "rgba(255,255,255,0.03)",
+                            border: "1px solid rgba(255,255,255,0.06)",
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: "20px",
+                              height: "20px",
+                              borderRadius: "8px",
+                              fontSize: "11px",
+                              fontWeight: 800,
+                              color: DS.textPrimary,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              flexShrink: 0,
+                              background: "rgba(124,58,237,0.18)",
+                              border: "1px solid rgba(124,58,237,0.3)",
+                            }}
+                          >
                             {i + 1}
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-[10px] font-black uppercase tracking-wide" style={{ color: "rgba(255,255,255,0.35)" }}>{stepData.step}</p>
-                            <p className="text-[12px] font-bold text-white truncate">
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.08em", color: DS.textMuted }}>{stepData.step}</p>
+                            <p style={{ fontSize: "12px", fontWeight: 700, color: DS.textPrimary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                               {matchedItem ? matchedItem.product.name : (stepData.product || stepData.step)}
                             </p>
-                            {stepData.why && <p className="text-[10px] leading-snug mt-0.5 font-medium" style={{ color: "rgba(255,255,255,0.4)" }}>{stepData.why}</p>}
+                            {stepData.why && (
+                              <p style={{ fontSize: "10px", lineHeight: 1.4, marginTop: "2px", fontWeight: 500, color: DS.textMuted }}>{stepData.why}</p>
+                            )}
                           </div>
-
                           {matchedItem && (
-                            <div className="w-10 h-10 rounded-xl p-0.5 flex-shrink-0 flex items-center justify-center" style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.1)" }}>
+                            <div
+                              style={{
+                                width: "40px",
+                                height: "40px",
+                                borderRadius: "12px",
+                                padding: "2px",
+                                flexShrink: 0,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                background: "rgba(255,255,255,0.06)",
+                                border: "1px solid rgba(255,255,255,0.1)",
+                              }}
+                            >
                               <img
                                 src={productImages[matchedItem.product.id] || "/placeholder-product.png"}
                                 alt={matchedItem.product.name}
-                                className="w-full h-full object-contain"
+                                style={{ width: "100%", height: "100%", objectFit: "contain" }}
                               />
                             </div>
                           )}
@@ -749,42 +1077,90 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
                 </div>
               )}
 
-              {/* 🌙 LE PROTOCOLE DU SOIR */}
+              {/* Soir */}
               {protocolEvening.length > 0 && (
-                <div className="relative pl-4" style={{ borderLeft: "2px solid rgba(99,102,241,0.4)" }}>
-                  <div className="absolute -left-[9px] top-0 text-white rounded-full p-0.5" style={{ background: "#6366f1" }}>
-                    <Moon className="w-3 h-3" />
+                <div style={{ position: "relative", paddingLeft: "16px", borderLeft: "2px solid rgba(124,58,237,0.35)" }}>
+                  <div
+                    style={{
+                      position: "absolute",
+                      left: "-9px",
+                      top: 0,
+                      background: "#7c3aed",
+                      borderRadius: "9999px",
+                      padding: "2px",
+                    }}
+                  >
+                    <Moon style={{ width: "12px", height: "12px", color: "#f3f0ff" }} />
                   </div>
-                  <h3 className="text-[12px] font-black uppercase tracking-wider mb-3 flex items-center gap-1.5" style={{ color: "#a5b4fc" }}>
-                    Rituel du Soir <span className="text-[10px] font-medium font-sans lowercase" style={{ color: "rgba(255,255,255,0.3)" }}>(réparation intense)</span>
+                  <h3 style={{ fontSize: "12px", fontWeight: 700, letterSpacing: "0.08em", marginBottom: "12px", display: "flex", alignItems: "center", gap: "6px", color: DS.violetLight }}>
+                    Rituel du Soir
+                    <span style={{ fontSize: "10px", fontWeight: 500, color: DS.textMuted }}>réparation intense</span>
                   </h3>
-                  
-                  <div className="space-y-3">
-                    {protocolEvening.map((s, i) => {
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    {protocolEvening.map((s: any, i: number) => {
                       const stepData = normalizeStep(s, i);
-                      const matchedItem = routineProducts.find(rp => 
+                      const matchedItem = routineProducts.find(rp =>
                         stepData.product && rp.product.name.toLowerCase().includes(stepData.product.toLowerCase())
                       );
-
                       return (
-                        <div key={`e-${i}`} className="rounded-2xl p-2.5 flex items-center gap-3 transition-all" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                          <div className="w-5 h-5 rounded-lg text-[11px] font-black text-white flex items-center justify-center flex-shrink-0" style={{ background: "rgba(99,102,241,0.15)", border: "1px solid rgba(99,102,241,0.3)" }}>
+                        <div
+                          key={`e-${i}`}
+                          style={{
+                            borderRadius: "14px",
+                            padding: "10px",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "10px",
+                            background: "rgba(255,255,255,0.03)",
+                            border: "1px solid rgba(255,255,255,0.06)",
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: "20px",
+                              height: "20px",
+                              borderRadius: "8px",
+                              fontSize: "11px",
+                              fontWeight: 800,
+                              color: DS.textPrimary,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              flexShrink: 0,
+                              background: "rgba(124,58,237,0.18)",
+                              border: "1px solid rgba(124,58,237,0.3)",
+                            }}
+                          >
                             {i + 1}
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-[10px] font-black uppercase tracking-wide" style={{ color: "rgba(255,255,255,0.35)" }}>{stepData.step}</p>
-                            <p className="text-[12px] font-bold text-white truncate">
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.08em", color: DS.textMuted }}>{stepData.step}</p>
+                            <p style={{ fontSize: "12px", fontWeight: 700, color: DS.textPrimary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                               {matchedItem ? matchedItem.product.name : (stepData.product || stepData.step)}
                             </p>
-                            {stepData.why && <p className="text-[10px] leading-snug mt-0.5 font-medium" style={{ color: "rgba(255,255,255,0.4)" }}>{stepData.why}</p>}
+                            {stepData.why && (
+                              <p style={{ fontSize: "10px", lineHeight: 1.4, marginTop: "2px", fontWeight: 500, color: DS.textMuted }}>{stepData.why}</p>
+                            )}
                           </div>
-
                           {matchedItem && (
-                            <div className="w-10 h-10 rounded-xl p-0.5 flex-shrink-0 flex items-center justify-center" style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.1)" }}>
+                            <div
+                              style={{
+                                width: "40px",
+                                height: "40px",
+                                borderRadius: "12px",
+                                padding: "2px",
+                                flexShrink: 0,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                background: "rgba(255,255,255,0.06)",
+                                border: "1px solid rgba(255,255,255,0.1)",
+                              }}
+                            >
                               <img
                                 src={productImages[matchedItem.product.id] || "/placeholder-product.png"}
                                 alt={matchedItem.product.name}
-                                className="w-full h-full object-contain"
+                                style={{ width: "100%", height: "100%", objectFit: "contain" }}
                               />
                             </div>
                           )}
@@ -795,15 +1171,38 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
                 </div>
               )}
 
-              {/* 📅 SOIN HEBDOMADAIRE */}
+              {/* Hebdomadaire */}
               {weekly && (
-                <div className="rounded-2xl p-3.5 flex items-center gap-3" style={{ background: "rgba(168,85,247,0.08)", border: "1px solid rgba(168,85,247,0.2)" }}>
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "rgba(168,85,247,0.12)", border: "1px solid rgba(168,85,247,0.25)", color: "#c084fc" }}>
-                    <Calendar className="w-4 h-4" />
+                <div
+                  style={{
+                    borderRadius: "16px",
+                    padding: "14px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "12px",
+                    background: "rgba(167,139,250,0.08)",
+                    border: "1px solid rgba(167,139,250,0.18)",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: "36px",
+                      height: "36px",
+                      borderRadius: "12px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                      background: "rgba(167,139,250,0.12)",
+                      border: "1px solid rgba(167,139,250,0.25)",
+                      color: DS.violetLight,
+                    }}
+                  >
+                    <Calendar style={{ width: "16px", height: "16px" }} />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[9px] font-black uppercase tracking-wider" style={{ color: "#c084fc" }}>Soin Booster Hebdomadaire</p>
-                    <p className="text-[12px] font-bold leading-tight mt-0.5 text-white">{weekly}</p>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.1em", color: DS.violetLight }}>Soin Booster Hebdomadaire</p>
+                    <p style={{ fontSize: "12px", fontWeight: 700, lineHeight: 1.4, marginTop: "2px", color: DS.textPrimary }}>{weekly}</p>
                   </div>
                 </div>
               )}
@@ -811,59 +1210,81 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
           </div>
         )}
 
-        {/* ═══════════════════════════════════════════
-            BLOC 7 : TUNNEL D'ACHAT
-            ═══════════════════════════════════════════ */}
+        {/* ═══ BLOC 7 — Tunnel d'achat ═══ */}
         {routineProducts.length > 0 ? (
           (() => {
             const routineTotal = routineProducts.reduce((sum, { product }) => sum + (product.price || 0), 0);
             const brandLabel = getProductBrand(routineProducts[0].product);
-            
             const unitPriceTotal = Math.round(routineTotal * 1.2);
             const totalSavingsRoutine = unitPriceTotal - routineTotal;
-            
             const duoTotal = intermediateOffer ? intermediateOffer.totalPrice : 0;
             const unitPriceDuo = Math.round(duoTotal * 1.15);
             const totalSavingsDuo = unitPriceDuo - duoTotal;
 
             return (
-              <div className="mt-6 space-y-5 px-1 animate-fade-in" data-testid="block-conversion-tunnel">
-                
-                {/* NOTIFICATION DE FOMO */}
-                <div className="p-3.5 rounded-2xl flex items-center gap-2.5" style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)" }}>
-                  <span className="flex h-2 w-2 relative flex-shrink-0">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+              <div data-testid="block-conversion-tunnel" style={{ marginTop: "8px", display: "flex", flexDirection: "column", gap: "16px" }}>
+
+                {/* FOMO notification */}
+                <div
+                  style={{
+                    padding: "14px 16px",
+                    borderRadius: "16px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                    background: "rgba(245,158,11,0.1)",
+                    border: "1px solid rgba(245,158,11,0.25)",
+                  }}
+                >
+                  <span style={{ position: "relative", width: "8px", height: "8px", flexShrink: 0 }}>
+                    <span style={{
+                      position: "absolute", inset: 0, borderRadius: "9999px",
+                      background: "rgba(249,168,212,0.7)", animation: "ping 1s cubic-bezier(0,0,0.2,1) infinite"
+                    }} />
+                    <span style={{ position: "relative", width: "8px", height: "8px", borderRadius: "9999px", background: "#f9a8d4", display: "block" }} />
                   </span>
-                  <p className="text-[11px] font-bold leading-tight" style={{ color: "rgba(255,255,255,0.7)" }}>
-                    🔥 <span className="text-red-400 font-extrabold">37 femmes</span> ont validé cette ordonnance à Douala aujourd'hui. Stock de la gamme <span className="underline">{brandLabel}</span> limité.
+                  <p style={{ fontSize: "11px", fontWeight: 600, lineHeight: 1.4, color: DS.textBody }}>
+                    <span style={{ color: "#f9a8d4", fontWeight: 800 }}>37 femmes</span> ont validé cette ordonnance à Douala aujourd'hui. Stock de la gamme{" "}
+                    <span style={{ textDecoration: "underline" }}>{brandLabel}</span> limité.
                   </p>
                 </div>
 
-                {/* DOUBLE OFFRE COMPARATIVE */}
-                <div className="grid grid-cols-1 gap-4">
-                  
-                  {/* OFFRE 1 : L'EXPÉRIENCE TOTALE */}
-                  <div className="rounded-3xl p-5 flex flex-col justify-between transition-all" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                {/* Offres comparatives */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+
+                  {/* OFFRE 1 — Expérience Totale */}
+                  <div style={{ ...DS.subtleCard, padding: "20px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
                     <div>
-                      <div className="flex justify-between items-start mb-1">
-                        <h4 className="font-black text-white text-sm flex items-center gap-1">
-                          L'Expérience Totale 🚀
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "4px" }}>
+                        <h4 style={{ fontWeight: 800, color: DS.textPrimary, fontSize: "14px" }}>
+                          L'Expérience Totale
                         </h4>
-                        <span className="text-[9px] font-black px-2 py-0.5 rounded-md uppercase tracking-wide" style={{ background: "rgba(16,185,129,0.12)", border: "1px solid rgba(16,185,129,0.25)", color: "#6ee7b7" }}>
+                        <span
+                          style={{
+                            fontSize: "9px",
+                            fontWeight: 700,
+                            padding: "3px 8px",
+                            borderRadius: "8px",
+                            letterSpacing: "0.06em",
+                            background: "rgba(16,185,129,0.1)",
+                            border: "1px solid rgba(16,185,129,0.25)",
+                            color: "#6ee7b7",
+                          }}
+                        >
                           Économie : {formatPrice(totalSavingsRoutine)}
                         </span>
                       </div>
-                      <p className="text-[10px] font-semibold mb-2" style={{ color: "rgba(255,255,255,0.35)" }}>Traitement Global Synergique (Nettoyant + Sérum + Crème)</p>
-                      <p className="text-[11px] leading-relaxed mb-4" style={{ color: "rgba(255,255,255,0.5)" }}>
+                      <p style={{ fontSize: "10px", fontWeight: 600, marginBottom: "8px", color: DS.textMuted }}>
+                        Traitement Global Synergique (Nettoyant + Sérum + Crème)
+                      </p>
+                      <p style={{ fontSize: "11px", lineHeight: 1.6, marginBottom: "16px", color: DS.textBody }}>
                         Zéro compromis. C'est la combinaison exacte recommandée par l'IA pour traiter le problème à la racine.
                       </p>
                     </div>
-
-                    <div className="flex items-center justify-between gap-2 pt-3.5 mt-1" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", paddingTop: "14px", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
                       <div>
-                        <p className="text-[9px] font-bold line-through" style={{ color: "rgba(255,255,255,0.25)" }}>{formatPrice(unitPriceTotal)}</p>
-                        <p className="text-lg font-black text-white">{formatPrice(routineTotal)}</p>
+                        <p style={{ fontSize: "9px", fontWeight: 700, textDecoration: "line-through", color: DS.textMuted }}>{formatPrice(unitPriceTotal)}</p>
+                        <p style={{ fontSize: "18px", fontWeight: 800, color: DS.textPrimary }}>{formatPrice(routineTotal)}</p>
                       </div>
                       <button
                         onClick={() => {
@@ -877,45 +1298,92 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
                           setOrderModalTitle("Commander la routine complète");
                           setShowOrderModal(true);
                         }}
-                        className="flex items-center gap-1.5 px-4 py-2.5 text-white text-xs font-black rounded-xl transition-all active:scale-95"
-                        style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)" }}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "6px",
+                          padding: "10px 16px",
+                          color: DS.textPrimary,
+                          fontSize: "12px",
+                          fontWeight: 700,
+                          borderRadius: "9999px",
+                          cursor: "pointer",
+                          transition: "transform 0.1s",
+                          background: "rgba(255,255,255,0.08)",
+                          border: "1px solid rgba(255,255,255,0.15)",
+                        }}
                       >
-                        <MessageCircle className="w-3.5 h-3.5 fill-current" />
+                        <MessageCircle style={{ width: "14px", height: "14px", fill: "currentColor" }} />
                         Prendre la Totale
                       </button>
                     </div>
                   </div>
 
-                  {/* OFFRE 2 : LE DUO */}
+                  {/* OFFRE 2 — Duo (CTA rose pour achat) */}
                   {intermediateOffer && (
-                    <div className="rounded-3xl p-5 relative transition-all scale-[1.01]" style={{ background: "linear-gradient(135deg, rgba(233,30,140,0.12) 0%, rgba(255,255,255,0.04) 100%)", border: "2px solid rgba(233,30,140,0.4)", boxShadow: "0 0 30px rgba(233,30,140,0.15)" }}>
-                      <div className="absolute -top-3 right-5 text-white text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-wider" style={{ background: "linear-gradient(135deg, #E91E8C, #f43f5e)", boxShadow: "0 0 15px rgba(233,30,140,0.5)" }}>
-                        Le Compromis Idéal ✨
+                    <div
+                      style={{
+                        borderRadius: "24px",
+                        padding: "20px",
+                        position: "relative",
+                        background: "rgba(233,30,140,0.06)",
+                        border: "2px solid rgba(233,30,140,0.35)",
+                      }}
+                    >
+                      {/* Badge urgence */}
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: "-12px",
+                          right: "20px",
+                          fontSize: "9px",
+                          fontWeight: 800,
+                          padding: "4px 12px",
+                          borderRadius: "9999px",
+                          color: "#f3f0ff",
+                          letterSpacing: "0.06em",
+                          background: "linear-gradient(135deg, #E91E8C, #f43f5e)",
+                        }}
+                      >
+                        Le Compromis Idéal
                       </div>
 
-                      <h4 className="font-black text-white text-sm mb-0.5">
+                      <h4 style={{ fontWeight: 800, color: DS.textPrimary, fontSize: "14px", marginBottom: "2px" }}>
                         {intermediateOffer.copywriting.title}
                       </h4>
-                      <p className="text-[10px] font-bold mb-2" style={{ color: "#f9a8d4" }}>{intermediateOffer.copywriting.subtitle}</p>
-                      <p className="text-[11px] leading-relaxed mb-4" style={{ color: "rgba(255,255,255,0.5)" }}>
+                      <p style={{ fontSize: "10px", fontWeight: 700, marginBottom: "8px", color: "#f9a8d4" }}>
+                        {intermediateOffer.copywriting.subtitle}
+                      </p>
+                      <p style={{ fontSize: "11px", lineHeight: 1.6, marginBottom: "16px", color: DS.textBody }}>
                         Vous n'avez pas le budget pour la totale ? Ce duo rassemble les 2 actifs majeurs pour stopper l'urgence cutanée.
                       </p>
 
-                      <div className="space-y-2 mb-4 rounded-xl p-2.5" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(233,30,140,0.15)" }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "8px",
+                          marginBottom: "16px",
+                          borderRadius: "14px",
+                          padding: "10px",
+                          background: "rgba(255,255,255,0.04)",
+                          border: "1px solid rgba(233,30,140,0.15)",
+                        }}
+                      >
                         {intermediateOffer.duo.map((item, idx) => (
-                          <div key={idx} className="text-[11px] font-bold text-white flex items-center gap-2">
-                            <span className="p-0.5 rounded text-xs" style={{ background: "rgba(233,30,140,0.15)" }}>{item.role.emoji}</span>
-                            <span className="truncate">{item.product.name}</span>
+                          <div key={idx} style={{ fontSize: "11px", fontWeight: 700, color: DS.textPrimary, display: "flex", alignItems: "center", gap: "8px" }}>
+                            <span style={{ padding: "2px 4px", borderRadius: "8px", fontSize: "12px", background: "rgba(233,30,140,0.12)" }}>{item.role.emoji}</span>
+                            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.product.name}</span>
                           </div>
                         ))}
                       </div>
 
-                      <div className="flex items-center justify-between gap-2 pt-3.5" style={{ borderTop: "1px solid rgba(233,30,140,0.2)" }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", paddingTop: "14px", borderTop: "1px solid rgba(233,30,140,0.2)" }}>
                         <div>
-                          <p className="text-[9px] font-bold line-through" style={{ color: "rgba(255,255,255,0.25)" }}>{formatPrice(unitPriceDuo)}</p>
-                          <p className="text-lg font-black" style={{ color: "#f9a8d4" }}>{formatPrice(duoTotal)}</p>
+                          <p style={{ fontSize: "9px", fontWeight: 700, textDecoration: "line-through", color: DS.textMuted }}>{formatPrice(unitPriceDuo)}</p>
+                          <p style={{ fontSize: "18px", fontWeight: 800, color: "#f9a8d4" }}>{formatPrice(duoTotal)}</p>
                         </div>
-                        <button 
+                        <button
                           onClick={() => {
                             const items: OrderItem[] = intermediateOffer.duo.map(({ product }) => ({
                               productId: product.id,
@@ -927,55 +1395,116 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
                             setOrderModalTitle("Commander le Compromis Idéal");
                             setShowOrderModal(true);
                           }}
-                          className="flex items-center gap-1.5 px-5 py-2.5 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white text-xs font-black rounded-xl transition-all shadow-md active:scale-95"
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "6px",
+                            padding: "10px 20px",
+                            color: "#f3f0ff",
+                            fontSize: "12px",
+                            fontWeight: 800,
+                            borderRadius: "12px",
+                            cursor: "pointer",
+                            border: "none",
+                            transition: "opacity 0.15s, transform 0.1s",
+                            background: "linear-gradient(135deg, #E91E8C, #f43f5e)",
+                          }}
                         >
-                          <MessageCircle className="w-3.5 h-3.5 fill-current" />
+                          <MessageCircle style={{ width: "14px", height: "14px", fill: "currentColor" }} />
                           Prendre le Duo
                         </button>
                       </div>
                     </div>
                   )}
-
                 </div>
 
-                {/* BLOC LOGISTIQUE */}
-                <div className="px-4 py-3 rounded-2xl flex items-center gap-3" style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)" }}>
-                  <Truck className="w-5 h-5 flex-shrink-0" style={{ color: "#6ee7b7" }} />
-                  <div className="text-left">
-                    <p className="text-[11px] font-black leading-tight" style={{ color: "#6ee7b7" }}>Expédition Express au Cameroun</p>
-                    <p className="text-[10px] font-semibold mt-0.5" style={{ color: "rgba(110,231,183,0.7)" }}>Livraison à domicile (Douala & Yaoundé) · Paiement Cash à la livraison</p>
+                {/* Bloc logistique */}
+                <div
+                  style={{
+                    padding: "12px 16px",
+                    borderRadius: "16px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "12px",
+                    background: "rgba(16,185,129,0.08)",
+                    border: "1px solid rgba(16,185,129,0.2)",
+                  }}
+                >
+                  <Truck style={{ width: "20px", height: "20px", flexShrink: 0, color: "#6ee7b7" }} />
+                  <div style={{ textAlign: "left" }}>
+                    <p style={{ fontSize: "11px", fontWeight: 800, lineHeight: 1.3, color: "#6ee7b7" }}>Expédition Express au Cameroun</p>
+                    <p style={{ fontSize: "10px", fontWeight: 500, marginTop: "2px", color: "rgba(110,231,183,0.7)" }}>
+                      Livraison à domicile (Douala & Yaoundé) · Paiement Cash à la livraison
+                    </p>
                   </div>
                 </div>
 
                 {/* Action secondaire */}
                 <button
                   onClick={() => setShowRoutineCard(true)}
-                  className="w-full py-2 text-[11px] font-bold transition-all text-center underline tracking-wide"
-                  style={{ color: "rgba(255,255,255,0.3)" }}
+                  style={{
+                    width: "100%",
+                    padding: "8px",
+                    fontSize: "11px",
+                    fontWeight: 700,
+                    textAlign: "center",
+                    textDecoration: "underline",
+                    letterSpacing: "0.04em",
+                    background: "transparent",
+                    border: "none",
+                    cursor: "pointer",
+                    color: DS.textMuted,
+                    transition: "color 0.15s",
+                  }}
                 >
-                  💾 Enregistrer ou partager mon ordonnance personnalisée
+                  Enregistrer ou partager mon ordonnance personnalisée
                 </button>
               </div>
             );
           })()
         ) : null}
 
-        {/* Footer Prévention Clinique */}
-        <div className="px-4 py-2.5 flex items-center gap-2 text-[10px] font-semibold text-left rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.3)" }}>
-          <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "rgba(255,255,255,0.3)" }} />
+        {/* Footer avertissement */}
+        <div
+          style={{
+            padding: "10px 16px",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            fontSize: "10px",
+            fontWeight: 500,
+            borderRadius: "12px",
+            background: "rgba(255,255,255,0.03)",
+            border: "1px solid rgba(255,255,255,0.05)",
+            color: DS.textMuted,
+          }}
+        >
+          <AlertTriangle style={{ width: "14px", height: "14px", flexShrink: 0, color: DS.textMuted }} />
           <span>Analyse indicative générée par GlowScan AI.</span>
         </div>
       </motion.div>
 
-      {/* ── Disclaimer médical ── */}
-      <div className="flex items-center justify-center gap-2 py-3 px-4 rounded-2xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }} data-testid="disclaimer-medical">
-        <span className="text-base flex-shrink-0">⚕️</span>
-        <p className="text-[11px] font-medium leading-relaxed text-center" style={{ color: "rgba(255,255,255,0.35)" }}>
+      {/* Disclaimer médical */}
+      <div
+        data-testid="disclaimer-medical"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "8px",
+          padding: "12px 16px",
+          borderRadius: "16px",
+          background: "rgba(255,255,255,0.03)",
+          border: "1px solid rgba(255,255,255,0.06)",
+        }}
+      >
+        <span style={{ fontSize: "16px", flexShrink: 0 }}>⚕️</span>
+        <p style={{ fontSize: "11px", fontWeight: 500, lineHeight: 1.6, textAlign: "center", color: DS.textMuted }}>
           Notre diagnostic ne remplace pas un dermatologue. Consultez un professionnel de santé pour tout problème persistant.
         </p>
       </div>
 
-      {/* ── Modals ── */}
+      {/* Modals */}
       <OrderModal
         isOpen={showOrderModal}
         onClose={() => setShowOrderModal(false)}
