@@ -10,6 +10,8 @@ export interface Product {
   whatsapp?: string;
   shopUrl?: string;
   brand?: string;
+  /** Référence sourcing interne — usage propriétaire uniquement, jamais affiché client */
+  sourceRef?: string;
 }
 
 export function formatPrice(price: number): string {
@@ -20,6 +22,7 @@ export const BRAND_MAP: Record<string, string> = {
   "+237658651775": "Andrea Skincare",
   "+237688978963": "Hair Bloom",
   "+237655728663": "Ebony Hair",
+  "+237674377959": "GlowScan Dermo",
 };
 
 export function getBrandByWhatsapp(whatsapp: string): string {
@@ -464,5 +467,212 @@ export const catalog: Product[] = [
     targets: ["peau sèche", "cuir chevelu sec", "nutrition peau", "sécheresse", "hydratation naturelle"],
     usagePoints: ["Combat efficacement la sécheresse cutanée", "Nourrit et assouplit la peau", "Convient peau et cheveux"],
     whatsapp: "+237655728663"
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // GLOWSCAN DERMO — Sélection Dermocosmétique Premium
+  // Formules référencées et recommandées par GlowScan AI
+  // Nommées par ingrédient actif (pas par marque commerciale)
+  // Commande & livraison via GlowScan : +237674377959
+  // ═══════════════════════════════════════════════════════════════
+
+  // ── VISAGE — Nettoyants ──────────────────────────────────────────
+  {
+    id: "gs-gel-nettoyant-sebum",
+    name: "Gel Nettoyant Anti-Sébum Pores Net",
+    brand: "GlowScan Dermo",
+    description: "Gel nettoyant dermatologique formulé pour peaux grasses et acnéiques. Régule le sébum, désobstrue les pores, préserve le film hydrolipidique. Sans savon. 200ml.",
+    category: "visage",
+    price: 9500,
+    targets: ["acné", "peau grasse", "pores dilatés", "points noirs", "excès de sébum", "brillance", "comédons", "impuretés visage"],
+    usagePoints: [
+      "Purifie les pores sans agresser la barrière cutanée",
+      "Régule la production de sébum dès 2 semaines",
+      "Formule dermo testée dermatologiquement"
+    ],
+    whatsapp: "+237674377959",
+    sourceRef: "CeraVe Foaming Facial Cleanser 236ml — ou — Bioderma Sebium Gel Moussant 200ml",
+  },
+  {
+    id: "gs-masque-argile-kaolin",
+    name: "Masque Argile Kaolin & Charbon Activé",
+    brand: "GlowScan Dermo",
+    description: "Masque purifiant bi-actif argile kaolin + charbon activé. Absorbe l'excès de sébum, désintoxique les pores et resserre le grain de peau. 75ml.",
+    category: "visage",
+    price: 8000,
+    targets: ["peau grasse", "pores bouchés", "impuretés", "points noirs", "excès de sébum", "teint brouillé", "purification visage"],
+    usagePoints: [
+      "Absorbe l'excès de sébum en 10 minutes",
+      "Désintoxique et resserre les pores visibles",
+      "Utilisation 1 à 2 fois par semaine"
+    ],
+    whatsapp: "+237674377959",
+    sourceRef: "L'Oréal Skincare Pure Clay Mask Charbon 50ml — ou — Cattier Argile Blanche Masque 100ml",
+  },
+
+  // ── VISAGE — Sérums actifs ────────────────────────────────────────
+  {
+    id: "gs-serum-niacinamide",
+    name: "Sérum Niacinamide 10% + Zinc PCA",
+    brand: "GlowScan Dermo",
+    description: "Sérum haute concentration en Niacinamide (Vitamine B3) et Zinc PCA. Resserre les pores, atténue les taches post-acné et régule le film sébacé. 30ml.",
+    category: "visage",
+    price: 7500,
+    targets: ["pores dilatés", "taches post-acné", "peau grasse", "teint terne", "texture irrégulière", "acné", "hyperpigmentation", "imperfections"],
+    usagePoints: [
+      "Resserre les pores visibles en 4 semaines",
+      "Atténue les taches et irrégularités de teint",
+      "Régule le sébum sans effet desséchant"
+    ],
+    whatsapp: "+237674377959",
+    sourceRef: "The Ordinary Niacinamide 10% + Zinc 1% — 30ml",
+  },
+  {
+    id: "gs-lotion-bha-acne",
+    name: "Lotion Exfoliante BHA 2% Anti-Comédons",
+    brand: "GlowScan Dermo",
+    description: "Lotion exfoliante à l'acide salicylique (BHA 2%). Pénètre dans les pores pour déloger comédons ouverts et fermés. Texture légère, non grasse. 200ml.",
+    category: "visage",
+    price: 8500,
+    targets: ["comédons", "points noirs", "pores dilatés", "acné", "texture irrégulière", "peau grasse", "exfoliation chimique", "bouchons sébacés"],
+    usagePoints: [
+      "Désengorge les pores et déloger les comédons dès 2 semaines",
+      "Exfoliation chimique douce, sans abrasion",
+      "Régularise la texture du grain de peau"
+    ],
+    whatsapp: "+237674377959",
+    sourceRef: "Paula's Choice Skin Perfecting 2% BHA Liquid 118ml — ou — The Ordinary Salicylic Acid 2% Solution 30ml",
+  },
+  {
+    id: "gs-serum-vitamine-c",
+    name: "Sérum Éclat Vitamine C 15% Stabilisée",
+    brand: "GlowScan Dermo",
+    description: "Sérum antioxydant à haute dose de Vitamine C pure stabilisée. Illumine le teint, unifie les irrégularités et protège contre le photovieillissement. 30ml.",
+    category: "visage",
+    price: 12000,
+    targets: ["teint terne", "taches brunes", "éclat visage", "anti-âge", "hyperpigmentation", "unification teint", "fatigue cutanée", "taches solaires"],
+    usagePoints: [
+      "Illumine et unifie le teint en 2 à 3 semaines",
+      "Antioxydant puissant contre le vieillissement solaire",
+      "Réduit l'apparence des taches brunes et solaires"
+    ],
+    whatsapp: "+237674377959",
+    sourceRef: "The Ordinary Vitamin C Suspension 23% + HA Spheres 2% 30ml — ou — Timeless Vitamin C + E Ferulic Serum 30ml",
+  },
+  {
+    id: "gs-creme-antitaches-nuit",
+    name: "Crème Dermo Anti-Taches Nuit Acide Azélaïque",
+    brand: "GlowScan Dermo",
+    description: "Crème de nuit dépigmentante à l'acide azélaïque 10% et niacinamide. Estompe le mélasma, les taches post-acné et les irrégularités de teint progressivement. 50ml.",
+    category: "visage",
+    price: 9000,
+    targets: ["melasma", "taches brunes", "hyperpigmentation", "taches post-acné", "teint irrégulier", "peau terne", "masque de grossesse"],
+    usagePoints: [
+      "Réduit les taches visibles dès 4 semaines d'utilisation",
+      "Formule nuit à action prolongée sur la mélanine",
+      "Compatible peaux sensibles, peaux noires et métissées"
+    ],
+    whatsapp: "+237674377959",
+    sourceRef: "The Ordinary Azelaic Acid Suspension 10% 30ml — ou — COSRX AHA/BHA Clarifying Treatment Toner 150ml",
+  },
+  {
+    id: "gs-serum-retinol",
+    name: "Sérum Réparateur Rétinol 0.3% Nuit",
+    brand: "GlowScan Dermo",
+    description: "Sérum anti-âge au rétinol 0.3% encapsulé pour libération progressive. Renouvelle les cellules, lisse les ridules et améliore la densité cutanée. 30ml.",
+    category: "visage",
+    price: 10500,
+    targets: ["rides", "ridules", "anti-âge", "vieillissement cutané", "taches brunes", "texture irrégulière", "affaissement cutané", "renouvellement cellulaire"],
+    usagePoints: [
+      "Stimule le renouvellement cellulaire nuit après nuit",
+      "Lisse les ridules en 4 à 8 semaines",
+      "Rétinol encapsulé — tolérance maximale même sur peaux sensibles"
+    ],
+    whatsapp: "+237674377959",
+    sourceRef: "The Ordinary Retinol 0.3% in Squalane 30ml — ou — CeraVe Resurfacing Retinol Serum 30ml",
+  },
+
+  // ── VISAGE — Protection & Crèmes ─────────────────────────────────
+  {
+    id: "gs-spf50-dermo",
+    name: "Crème Solaire Dermo SPF 50+ Invisible",
+    brand: "GlowScan Dermo",
+    description: "Protection solaire dermatologique haute protection SPF 50+. Texture ultra-légère, fini invisible et non blanc sur toutes les carnations africaines. 50ml.",
+    category: "visage",
+    price: 12500,
+    targets: ["protection solaire", "anti-taches", "photovieillissement", "teint terne", "peau sensible", "hyperpigmentation", "prévention taches", "rides solaires"],
+    usagePoints: [
+      "Protection SPF 50+ validée dermo — résiste à la chaleur équatoriale",
+      "Fini invisible sur peau noire, métissée et caramel",
+      "Prévient activement la reformation des taches traitées"
+    ],
+    whatsapp: "+237674377959",
+    sourceRef: "La Roche-Posay Anthelios Invisible SPF50+ Fluid 50ml — ou — Bioderma Photoderm MAX SPF50+ Spray 150ml",
+  },
+  {
+    id: "gs-creme-barriere-hydra",
+    name: "Crème Barrière Hydra-Repair Céramides",
+    brand: "GlowScan Dermo",
+    description: "Crème réparatrice riche en céramides, acide hyaluronique et beurre de karité. Restaure la barrière cutanée affaiblie et scelle l'hydratation. 50ml.",
+    category: "visage",
+    price: 10000,
+    targets: ["peau sèche", "peau déshydratée", "barrière cutanée", "tiraillements", "peau sensible", "réparation cutanée", "eczéma léger", "peau fragilisée"],
+    usagePoints: [
+      "Restaure la barrière cutanée affaiblie en 72h",
+      "Formule riche en céramides identiques aux céramides naturels",
+      "Hydratation non-grasse, compatible toutes saisons"
+    ],
+    whatsapp: "+237674377959",
+    sourceRef: "CeraVe Moisturizing Cream 177ml — ou — Bioderma Atoderm Intensive Baume 200ml",
+  },
+
+  // ── KITS PREMIUM — Circuit GlowScan fermé, AOV élevé ─────────────
+  {
+    id: "kit-peau-nette-30j",
+    name: "Kit Peau Nette 30J — Acné & Pores",
+    brand: "GlowScan Dermo",
+    description: "Protocole anti-acné complet sur 30 jours. Inclus : Gel Nettoyant Anti-Sébum + Lotion BHA 2% + Sérum Niacinamide 10%. Sélection validée par GlowScan AI pour peaux acnéiques.",
+    category: "visage",
+    price: 25000,
+    targets: ["acné", "peau grasse", "pores dilatés", "points noirs", "comédons", "boutons", "sébum excessif", "imperfections", "peau mixte"],
+    usagePoints: [
+      "3 produits synergiques protocole complet anti-acné",
+      "Résultats visibles et mesurables en 4 semaines",
+      "Gel Nettoyant + Lotion BHA + Sérum Niacinamide inclus"
+    ],
+    whatsapp: "+237674377959",
+    sourceRef: "① CeraVe Foaming Cleanser 236ml  ② Paula's Choice BHA 2% 118ml  ③ The Ordinary Niacinamide 10% 30ml",
+  },
+  {
+    id: "kit-eclat-antitaches-30j",
+    name: "Kit Éclat & Teint Unifié — Taches & Hyperpigmentation",
+    brand: "GlowScan Dermo",
+    description: "Protocole dermo anti-taches complet. Inclus : Sérum Vitamine C 15% + Crème Anti-Taches Nuit + Crème Solaire SPF50+. Trio synergique pour unifier et illuminer.",
+    category: "visage",
+    price: 31000,
+    targets: ["hyperpigmentation", "taches brunes", "melasma", "teint terne", "unification teint", "éclat visage", "taches solaires", "masque de grossesse", "taches post-acné"],
+    usagePoints: [
+      "3 produits synergiques protocole anti-taches complet",
+      "Résultats visibles en 30 jours d'utilisation régulière",
+      "Vitamine C + Anti-Taches Nuit + SPF50+ inclus"
+    ],
+    whatsapp: "+237674377959",
+    sourceRef: "① The Ordinary Vit C 23% 30ml  ② The Ordinary Azelaic Acid 10% 30ml  ③ La Roche-Posay Anthelios SPF50+ 50ml",
+  },
+  {
+    id: "kit-anti-age-30j",
+    name: "Kit Anti-Âge Restructurant 30J",
+    brand: "GlowScan Dermo",
+    description: "Protocole anti-âge haute performance. Inclus : Sérum Rétinol 0.3% + Sérum Vitamine C 15% + Crème Barrière Céramides. Pour peaux matures et perte de tonicité.",
+    category: "visage",
+    price: 30000,
+    targets: ["rides", "anti-âge", "affaissement cutané", "vieillissement cutané", "taches brunes", "perte de fermeté", "peau mature", "ridules", "éclat"],
+    usagePoints: [
+      "Trio restructurant haute concentration en actifs dermo",
+      "Résultats sur rides et fermeté en 6 à 8 semaines",
+      "Rétinol 0.3% + Vitamine C 15% + Céramides inclus"
+    ],
+    whatsapp: "+237674377959",
+    sourceRef: "① The Ordinary Retinol 0.3% 30ml  ② Timeless Vit C+E Ferulic 30ml  ③ CeraVe Moisturizing Cream 177ml",
   },
 ];

@@ -9,13 +9,13 @@ export function Navbar() {
   const { user, logout } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
 
-  // 1. INJECTION DE "SCANNER PRODUIT" DANS LE ROUTAGE MAÎTRE
   const navLinks = [
     { href: "/", label: "Accueil" },
-    { href: "/analyze", label: "Analyse Faciale" },
-    { href: "/product-scan", label: "Scanner Produit", highlight: true }, // Notre module retrouvé
+    { href: "/analyze", label: "Analyse IA" },
+    { href: "/product-scan-camera", label: "Scan Produit", highlight: true, premium: true },
+    { href: "/routine", label: "Ma Routine", premium: true },
     { href: "/shop", label: "Boutique" },
-    { href: "/pro", label: "GlowScan Pro", premium: true },
+    { href: "/premium", label: "Premium" },
   ];
 
   if (user) {

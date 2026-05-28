@@ -1,40 +1,51 @@
-// ─── SYSTÈME DE CORRESPONDANCE DE L'OMBRE (ANTI-FUITE) ─────────────
-const getClinicalNomenclature = (productName: string, role: string): { anonymousName: string; secretCode: string } => {
-  const nameLower = productName.toLowerCase();
+// ─── Copywriting personnalisé par produit & condition ───────────────
+function buildWhyText(
+  product: typeof catalog[0],
+  condition: string,
+  skinType?: string,
+  area?: "visage" | "corps" | "cheveux",
+  role?: "nettoyant" | "serum" | "creme"
+): string {
+  const condLower = (condition || "").toLowerCase();
+  const r = role || "creme";
 
-  // Génération d'un code unique basé sur le nom du produit
-  let hash = 0;
-  for (let i = 0; i < productName.length; i++) hash = ((hash << 5) - hash + productName.charCodeAt(i)) | 0;
-  const uniqueId = Math.abs(hash % 99) + 1;
-  const padId = uniqueId < 10 ? `0${uniqueId}` : uniqueId;
-
-  if (role === "nettoyant") {
-    let ingredients = "Céramides & Zinc PCA";
-    if (nameLower.includes("savon") || nameLower.includes("acn")) ingredients = "Soufre & Arbre à Thé";
-    if (nameLower.includes("gommage")) ingredients = "Micro-Acides de Fruits (AHA)";
-    return {
-      anonymousName: `GlowScan Solution Nettoyant Purifiant ${ingredients}`,
-      secretCode: `#GS-N${padId}`
-    };
+  if (area === "cheveux") {
+    if (r === "nettoyant") return "Purifie le cuir chevelu en profondeur sans altérer les pigments mélaniques naturels de tes cheveux.";
+    if (r === "serum") return "Concentré en actifs capillaires pour stimuler la microcirculation et renforcer la fibre pilaire.";
+    return "Nourrit et scelle les écailles de la tige capillaire pour un brillant et une résistance accrus.";
   }
 
-  if (role === "serum") {
-    let ingredients = "Niacinamide 10% & Acide Hyaluronique";
-    if (nameLower.includes("chebe") || nameLower.includes("bloom")) ingredients = "Complexe Capillaire Chébé Bio Active";
-    if (nameLower.includes("huile") || nameLower.includes("oil")) ingredients = "Éclat Botanique Oxygénante";
-    return {
-      anonymousName: `GlowScan Concentré Sérum Actif Ciblé ${ingredients}`,
-      secretCode: `#GS-S${padId}`
-    };
+  if (area === "corps") {
+    if (r === "nettoyant") return "Élimine les impuretés corpo tout en préservant le film hydrolipidique essentiel à ta peau.";
+    return "Apport lipidique intense pour les zones sèches identifiées lors du diagnostic cutané.";
   }
 
-  let ingredients = "Vitamine C & Filtres Barrières";
-  if (nameLower.includes("creme") || nameLower.includes("cacao")) ingredients = "Beurre de Cacao Pur & Lipides Protecteurs";
-  return {
-    anonymousName: `GlowScan Formule Soin Régénérant ${ingredients}`,
-    secretCode: `#GS-C${padId}`
-  };
-};
+  // visage
+  if (r === "nettoyant") {
+    if (condLower.includes("acné") || condLower.includes("acne") || condLower.includes("comédons"))
+      return "Formule sébo-régulatrice qui élimine le sébum excédentaire — première cause des boutons identifiée dans ton profil.";
+    if (condLower.includes("sensib") || condLower.includes("réactiv"))
+      return "Nettoyage doux qui respecte la barrière cutanée fragile identifiée dans ton diagnostic.";
+    return "Prépare la peau à recevoir les actifs suivants en éliminant la couche lipidique oxydée.";
+  }
+  if (r === "serum") {
+    if (condLower.includes("tache") || condLower.includes("hyperpigment") || condLower.includes("mélasma"))
+      return "Actifs dépigmentants pour cibler les taches identifiées lors de ta cartographie — résultats visibles en 3–4 semaines.";
+    if (condLower.includes("acné") || condLower.includes("acne"))
+      return "Niacinamide & anti-inflammatoires pour calmer les lésions actives et réguler la sécrétion sébacée.";
+    if (condLower.includes("rides") || condLower.includes("anti-âge") || condLower.includes("vieilliss"))
+      return "Booster de collagène pour rebondir les volumes faciaux et réduire les rides de contraction détectées.";
+    if (condLower.includes("déshydrat") || condLower.includes("sèch"))
+      return "Acide hyaluronique multi-poids pour reconstituer les réserves hydriques cutanées à tous les niveaux.";
+    return "Concentré d'actifs ciblés pour traiter directement la problématique identifiée dans ton Glow Score.";
+  }
+  // creme
+  if (condLower.includes("déshydrat") || condLower.includes("sèch") || condLower.includes("tiraillem"))
+    return "Scelle l'hydratation et répare la barrière cutanée affaiblie — essentiel en dernière étape de rituel.";
+  if (condLower.includes("acné") || condLower.includes("gras") || condLower.includes("brillan"))
+    return "Texture légère non-comédogène pour hydrater sans boucher les pores ni aggraver l'état acnéique détecté.";
+  return "Renforce la barrière cutanée détectée comme fragilisée et protège des agressions environnementales locales.";
+}
 
 import { useState } from "react";
 import { motion } from "framer-motion";
@@ -533,16 +544,38 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
 
   const getProductRole = (p: typeof catalog[0]): "nettoyant" | "serum" | "creme" => {
     const n = p.name.toLowerCase();
-    if (n.includes("savon") || n.includes("soap") || n.includes("gel de douche") || n.includes("gel douche") || n.includes("gommage") || n.includes("shampoo") || n.includes("shampoing")) return "nettoyant";
-    if (n.includes("sérum") || n.includes("serum") || n.includes("huile") || n.includes("oil") || n.includes("lotion") || n.includes("tonic") || n.includes("tonique") || n.includes("potion")) return "serum";
+    if (
+      n.includes("savon") || n.includes("soap") || n.includes("gel de douche") ||
+      n.includes("gel douche") || n.includes("gommage") || n.includes("shampoo") ||
+      n.includes("shampoing") || n.includes("nettoyant") || n.includes("purif")
+    ) return "nettoyant";
+    if (
+      n.includes("sérum") || n.includes("serum") || n.includes("huile") || n.includes("oil") ||
+      n.includes("lotion") || n.includes("tonic") || n.includes("tonique") || n.includes("potion") ||
+      n.includes("bha") || n.includes("spray")
+    ) return "serum";
     return "creme";
+  };
+
+  // Trouve le kit GlowScan Dermo le plus pertinent selon la condition détectée
+  const findBestKit = (): typeof catalog[0] | null => {
+    if (currentArea !== "visage") return null;
+    const kits = catalog.filter(p => p.id.startsWith("kit-") && p.category === "visage");
+    if (kits.length === 0) return null;
+    const searchText = ((result.condition || "") + " " + (result.details || "")).toLowerCase();
+    const scored = kits
+      .map(k => ({ kit: k, score: k.targets.filter(t => searchText.includes(t.toLowerCase())).length }))
+      .sort((a, b) => b.score - a.score);
+    return scored[0]?.score > 0 ? scored[0].kit : kits[0];
   };
 
   const findRoutineProducts = () => {
     const consultationText = (result as any).consultationData?.observations_visuelles || "";
     const searchText = ((result.condition || "") + " " + (result.details || "") + " " + consultationText).toLowerCase();
 
+    // Exclure les kits des recommandations 3-produits (ils ont leur propre section)
     const areaProducts = catalog.filter(p => {
+      if (p.id.startsWith("kit-")) return false;
       if (currentArea === "cheveux") return p.category === "cheveux";
       if (currentArea === "corps") return p.category === "corps" || p.category === "visage";
       return p.category === "visage";
@@ -602,35 +635,28 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
     }
     return winner.products.map((p, i) => {
       const roleKey = getProductRole(p);
-      const { anonymousName, secretCode } = getClinicalNomenclature(p.name, roleKey);
       return {
-        product: {
-          ...p,
-          name: anonymousName,
-          secretCode: secretCode,
-          brand: "GlowScan Clinic"
-        },
+        product: { ...p },
         role: roleLabels[roleKey] || roleLabels["creme"],
         index: i + 1,
+        why: buildWhyText(p, result.condition, result.skinType, currentArea, roleKey),
       };
     });
   };
 
   const routineProducts = findRoutineProducts();
+  const bestKit = findBestKit();
 
   const getIntermediateOffer = () => {
     if (routineProducts.length < 2) return null;
     const duoProducts = routineProducts.slice(0, 2);
     const totalPriceDuo = duoProducts.reduce((sum, item) => sum + item.product.price, 0);
-    const orderCodes = duoProducts.map(item => (item.product as any).secretCode).join(" + ");
     return {
       duo: duoProducts,
       totalPrice: totalPriceDuo,
-      secretCodes: orderCodes,
       copywriting: {
         title: "Le Compromis Idéal",
         subtitle: currentArea === "cheveux" ? "Kit Duo Croissance" : "Protocole Duo Action Ciblée",
-        description: `Le strict minimum requis par notre IA pour saturer les récepteurs de votre peau sans surcharger votre budget.`
       }
     };
   };
@@ -1224,6 +1250,105 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
             return (
               <div data-testid="block-conversion-tunnel" style={{ marginTop: "8px", display: "flex", flexDirection: "column", gap: "16px" }}>
 
+                {/* ── Kit GlowScan Dermo — Offre Premium AOV élevé ── */}
+                {bestKit && (
+                  <div
+                    style={{
+                      borderRadius: "24px",
+                      padding: "20px",
+                      position: "relative",
+                      overflow: "hidden",
+                      background: "linear-gradient(135deg, rgba(124,58,237,0.12), rgba(233,30,140,0.06))",
+                      border: "2px solid rgba(124,58,237,0.35)",
+                    }}
+                  >
+                    {/* Glow orb */}
+                    <div style={{ position: "absolute", top: "-30px", right: "-30px", width: "120px", height: "120px", background: "radial-gradient(circle, rgba(124,58,237,0.2), transparent)", pointerEvents: "none" }} />
+
+                    {/* Badge */}
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
+                      <span
+                        style={{
+                          fontSize: "9px", fontWeight: 800, padding: "3px 10px",
+                          borderRadius: "9999px", letterSpacing: "0.08em",
+                          background: "linear-gradient(135deg, #7c3aed, #a78bfa)",
+                          color: "#fff",
+                        }}
+                      >
+                        ✦ GlowScan Dermo
+                      </span>
+                      <span
+                        style={{
+                          fontSize: "9px", fontWeight: 700, padding: "3px 8px",
+                          borderRadius: "8px", letterSpacing: "0.06em",
+                          background: "rgba(16,185,129,0.12)", border: "1px solid rgba(16,185,129,0.25)",
+                          color: "#6ee7b7",
+                        }}
+                      >
+                        Kit complet — meilleur rapport
+                      </span>
+                    </div>
+
+                    <h4 style={{ fontSize: "15px", fontWeight: 800, color: DS.textPrimary, marginBottom: "4px", lineHeight: 1.3 }}>
+                      {bestKit.name}
+                    </h4>
+                    <p style={{ fontSize: "11px", fontWeight: 500, lineHeight: 1.6, color: DS.textBody, marginBottom: "14px" }}>
+                      {bestKit.description}
+                    </p>
+
+                    {/* Inclus dans le kit */}
+                    {bestKit.usagePoints && bestKit.usagePoints.length > 0 && (
+                      <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginBottom: "16px" }}>
+                        {bestKit.usagePoints.map((point, idx) => (
+                          <div key={idx} style={{ display: "flex", alignItems: "flex-start", gap: "8px" }}>
+                            <CheckCircle2 style={{ width: "13px", height: "13px", flexShrink: 0, marginTop: "1px", color: "#a78bfa" }} />
+                            <span style={{ fontSize: "11px", fontWeight: 600, color: DS.textBody, lineHeight: 1.4 }}>{point}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", paddingTop: "14px", borderTop: "1px solid rgba(124,58,237,0.2)" }}>
+                      <div>
+                        <p style={{ fontSize: "9px", fontWeight: 700, color: DS.textMuted }}>Prix protocole complet</p>
+                        <p style={{ fontSize: "22px", fontWeight: 800, color: DS.violetLight, lineHeight: 1 }}>
+                          {formatPrice(bestKit.price || 0)}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setOrderModalItems([{
+                            productId: bestKit.id,
+                            productName: bestKit.name,
+                            brand: getProductBrand(bestKit),
+                            price: bestKit.price || 0,
+                            sourceRef: bestKit.sourceRef,
+                          }]);
+                          setOrderModalTitle(bestKit.name);
+                          setShowOrderModal(true);
+                        }}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                          padding: "12px 20px",
+                          color: "#fff",
+                          fontSize: "12px",
+                          fontWeight: 800,
+                          borderRadius: "12px",
+                          cursor: "pointer",
+                          border: "none",
+                          transition: "opacity 0.15s, transform 0.1s",
+                          background: "linear-gradient(135deg, #7c3aed, #a78bfa)",
+                        }}
+                      >
+                        <MessageCircle style={{ width: "14px", height: "14px", fill: "currentColor" }} />
+                        Commander ce Kit
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 {/* FOMO notification */}
                 <div
                   style={{
@@ -1274,12 +1399,85 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
                           Économie : {formatPrice(totalSavingsRoutine)}
                         </span>
                       </div>
-                      <p style={{ fontSize: "10px", fontWeight: 600, marginBottom: "8px", color: DS.textMuted }}>
-                        Traitement Global Synergique (Nettoyant + Sérum + Crème)
+                      <p style={{ fontSize: "10px", fontWeight: 600, marginBottom: "12px", color: DS.textMuted }}>
+                        Traitement Global Synergique — {routineProducts.length} produits sélectionnés pour ton profil
                       </p>
-                      <p style={{ fontSize: "11px", lineHeight: 1.6, marginBottom: "16px", color: DS.textBody }}>
-                        Zéro compromis. C'est la combinaison exacte recommandée par l'IA pour traiter le problème à la racine.
-                      </p>
+
+                      {/* Product cards ecommerce */}
+                      <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "16px" }}>
+                        {routineProducts.map(({ product, role, why }, idx) => {
+                          const img = productImages[product.id];
+                          const brand = getProductBrand(product);
+                          const social = getSocialProof(product.id);
+                          return (
+                            <div
+                              key={product.id}
+                              style={{
+                                display: "flex",
+                                gap: "10px",
+                                alignItems: "flex-start",
+                                padding: "10px",
+                                borderRadius: "14px",
+                                background: "rgba(255,255,255,0.04)",
+                                border: "1px solid rgba(255,255,255,0.07)",
+                              }}
+                            >
+                              {/* Photo */}
+                              <div
+                                style={{
+                                  width: "52px",
+                                  height: "52px",
+                                  borderRadius: "10px",
+                                  flexShrink: 0,
+                                  overflow: "hidden",
+                                  background: "rgba(124,58,237,0.08)",
+                                  border: "1px solid rgba(167,139,250,0.2)",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                }}
+                              >
+                                {img
+                                  ? <img src={img} alt={product.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                  : <span style={{ fontSize: "22px" }}>{role.emoji}</span>
+                                }
+                              </div>
+
+                              {/* Info */}
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "2px" }}>
+                                  <span style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.1em", color: DS.textMuted }}>{brand}</span>
+                                  <span
+                                    style={{
+                                      fontSize: "8px",
+                                      fontWeight: 700,
+                                      padding: "1px 6px",
+                                      borderRadius: "6px",
+                                      background: "rgba(167,139,250,0.12)",
+                                      border: "1px solid rgba(167,139,250,0.25)",
+                                      color: DS.violetLight,
+                                    }}
+                                  >
+                                    {role.label}
+                                  </span>
+                                </div>
+                                <p style={{ fontSize: "12px", fontWeight: 800, color: DS.textPrimary, lineHeight: 1.25, marginBottom: "4px" }}>
+                                  {product.name}
+                                </p>
+                                {why && (
+                                  <p style={{ fontSize: "10px", fontWeight: 500, lineHeight: 1.4, color: DS.textBody }}>
+                                    {why}
+                                  </p>
+                                )}
+                                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px" }}>
+                                  <span style={{ fontSize: "11px", fontWeight: 800, color: DS.textPrimary }}>{formatPrice(product.price)}</span>
+                                  <span style={{ fontSize: "9px", color: DS.textMuted }}>· {social} femmes ce mois</span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", paddingTop: "14px", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
                       <div>
@@ -1293,6 +1491,7 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
                             productName: product.name,
                             brand: getProductBrand(product),
                             price: product.price,
+                            sourceRef: product.sourceRef,
                           }));
                           setOrderModalItems(items);
                           setOrderModalTitle("Commander la routine complète");
@@ -1358,24 +1557,60 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
                         Vous n'avez pas le budget pour la totale ? Ce duo rassemble les 2 actifs majeurs pour stopper l'urgence cutanée.
                       </p>
 
-                      <div
-                        style={{
-                          display: "flex",
-                          flexDirection: "column",
-                          gap: "8px",
-                          marginBottom: "16px",
-                          borderRadius: "14px",
-                          padding: "10px",
-                          background: "rgba(255,255,255,0.04)",
-                          border: "1px solid rgba(233,30,140,0.15)",
-                        }}
-                      >
-                        {intermediateOffer.duo.map((item, idx) => (
-                          <div key={idx} style={{ fontSize: "11px", fontWeight: 700, color: DS.textPrimary, display: "flex", alignItems: "center", gap: "8px" }}>
-                            <span style={{ padding: "2px 4px", borderRadius: "8px", fontSize: "12px", background: "rgba(233,30,140,0.12)" }}>{item.role.emoji}</span>
-                            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.product.name}</span>
-                          </div>
-                        ))}
+                      <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "16px" }}>
+                        {intermediateOffer.duo.map((item, idx) => {
+                          const img = productImages[item.product.id];
+                          const brand = getProductBrand(item.product);
+                          const duoWhy = item.why;
+                          return (
+                            <div
+                              key={idx}
+                              style={{
+                                display: "flex",
+                                gap: "10px",
+                                alignItems: "flex-start",
+                                padding: "10px",
+                                borderRadius: "14px",
+                                background: "rgba(233,30,140,0.05)",
+                                border: "1px solid rgba(233,30,140,0.15)",
+                              }}
+                            >
+                              <div
+                                style={{
+                                  width: "48px",
+                                  height: "48px",
+                                  borderRadius: "10px",
+                                  flexShrink: 0,
+                                  overflow: "hidden",
+                                  background: "rgba(233,30,140,0.08)",
+                                  border: "1px solid rgba(233,30,140,0.2)",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                }}
+                              >
+                                {img
+                                  ? <img src={img} alt={item.product.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                  : <span style={{ fontSize: "20px" }}>{item.role.emoji}</span>
+                                }
+                              </div>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <span style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.1em", color: "rgba(249,168,212,0.6)" }}>{brand}</span>
+                                <p style={{ fontSize: "12px", fontWeight: 800, color: DS.textPrimary, lineHeight: 1.25, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                  {item.product.name}
+                                </p>
+                                {duoWhy && (
+                                  <p style={{ fontSize: "10px", fontWeight: 500, lineHeight: 1.4, color: DS.textBody, marginTop: "2px" }}>
+                                    {duoWhy}
+                                  </p>
+                                )}
+                                <span style={{ fontSize: "11px", fontWeight: 800, color: "#f9a8d4", marginTop: "4px", display: "block" }}>
+                                  {formatPrice(item.product.price)}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
 
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", paddingTop: "14px", borderTop: "1px solid rgba(233,30,140,0.2)" }}>
@@ -1390,6 +1625,7 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
                               productName: product.name,
                               brand: getProductBrand(product),
                               price: product.price,
+                              sourceRef: product.sourceRef,
                             }));
                             setOrderModalItems(items);
                             setOrderModalTitle("Commander le Compromis Idéal");

@@ -2,8 +2,10 @@ import { useState, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 import { useDropzone } from "react-dropzone";
-import { ArrowLeft, Camera, Upload, X, ShieldCheck, Sparkles, AlertTriangle, CheckCircle2, ShoppingBag, Calendar } from "lucide-react";
+import { ArrowLeft, Camera, Upload, X, ShieldCheck, Sparkles, AlertTriangle, CheckCircle2, ShoppingBag, Calendar, Crown, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
+import { useSubscription } from "@/hooks/use-subscription";
 
 const DS = {
   base: "#0d0a0e",
@@ -55,15 +57,134 @@ function ScoreCircle({ score, color, label }: { score: number; color: string; la
   );
 }
 
+const pageFont = '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif';
+
+function PremiumGate({ setLocation }: { setLocation: (to: string) => void }) {
+  return (
+    <div
+      className="min-h-screen flex flex-col items-center justify-center p-6 text-center"
+      style={{ background: DS.base, fontFamily: pageFont }}
+    >
+      {/* Ambient orb */}
+      <div
+        style={{
+          position: "fixed", top: "-80px", left: "50%", transform: "translateX(-50%)",
+          width: "500px", height: "500px",
+          background: "radial-gradient(circle, rgba(124,58,237,0.12), transparent)",
+          pointerEvents: "none",
+        }}
+      />
+
+      <div
+        className="w-16 h-16 rounded-2xl flex items-center justify-center mb-5"
+        style={{ background: "rgba(233,30,140,0.1)", border: "1px solid rgba(233,30,140,0.3)" }}
+      >
+        <Lock className="w-7 h-7" style={{ color: "#f9a8d4" }} />
+      </div>
+
+      <div
+        className="inline-flex items-center gap-1.5 px-3 py-1 mb-4"
+        style={{ background: "rgba(233,30,140,0.12)", border: "1px solid rgba(233,30,140,0.3)", borderRadius: "9999px" }}
+      >
+        <Crown className="w-3 h-3" style={{ color: "#f9a8d4" }} />
+        <span className="text-[10px] font-bold tracking-widest" style={{ color: "#f9a8d4" }}>FONCTIONNALITÉ PREMIUM</span>
+      </div>
+
+      <h1 className="text-xl font-extrabold tracking-tight mb-2" style={{ color: DS.text, fontWeight: 800 }}>
+        Scan Produit IA
+      </h1>
+      <p className="text-xs max-w-xs mx-auto mb-2 leading-relaxed" style={{ color: DS.body }}>
+        Prends en photo n'importe quel cosmétique — l'IA analyse les ingrédients, évalue la compatibilité avec ta peau et te dit si c'est safe.
+      </p>
+      <p className="text-[11px] max-w-[220px] mx-auto mb-8 font-bold" style={{ color: "rgba(255,255,255,0.3)" }}>
+        Tes analyses faciales restent gratuites et illimitées.
+      </p>
+
+      <div className="w-full max-w-xs space-y-3">
+        <button
+          onClick={() => setLocation("/premium")}
+          className="w-full py-4 text-sm font-extrabold flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+          style={{ background: "linear-gradient(135deg,#E91E8C,#f43f5e)", borderRadius: "12px", color: "#fff", fontWeight: 800 }}
+        >
+          <Crown className="w-4 h-4" />
+          Débloquer pour 2 000 FCFA
+        </button>
+        <button
+          onClick={() => setLocation("/")}
+          className="w-full py-3 text-xs font-bold transition-all active:scale-[0.98]"
+          style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "12px", color: DS.body }}
+        >
+          Retour à l'accueil
+        </button>
+      </div>
+
+      {/* Teaser features */}
+      <div className="mt-8 w-full max-w-xs space-y-2">
+        {[
+          "Détection des ingrédients irritants / perturbateurs",
+          "Score de compatibilité avec ton profil de peau",
+          "Conseil personnalisé usage & application",
+        ].map(f => (
+          <div key={f} className="flex items-center gap-2.5 text-[11px]" style={{ color: "rgba(200,185,255,0.5)" }}>
+            <Sparkles className="w-3 h-3 flex-shrink-0" style={{ color: "#a78bfa" }} />
+            <span>{f}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function ProductScanCamera() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { user, isLoading: authLoading } = useAuth();
+  const { isPremium, isLoading: subLoading } = useSubscription();
   const [preview, setPreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ProductScanResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [addedToRoutine, setAddedToRoutine] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // ── Loading ──
+  if (authLoading || subLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: DS.base }}>
+        <div className="w-8 h-8 rounded-full border-2 animate-spin" style={{ borderColor: "rgba(167,139,250,0.15)", borderTopColor: "#7c3aed" }} />
+      </div>
+    );
+  }
+
+  // ── Gate : connexion requise ──
+  if (!user) {
+    return (
+      <div
+        className="min-h-screen flex flex-col items-center justify-center p-6 text-center"
+        style={{ background: DS.base, fontFamily: pageFont }}
+      >
+        <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5" style={{ background: "rgba(124,58,237,0.12)", border: "1px solid rgba(167,139,250,0.3)" }}>
+          <Sparkles className="w-6 h-6" style={{ color: "#a78bfa" }} />
+        </div>
+        <h2 className="text-sm font-extrabold mb-1" style={{ color: DS.text }}>Connexion requise</h2>
+        <p className="text-xs max-w-[260px] mx-auto leading-relaxed mb-6" style={{ color: DS.body }}>
+          Connecte-toi pour accéder au Scan Produit IA.
+        </p>
+        <button
+          onClick={() => setLocation("/auth")}
+          className="px-6 py-3 rounded-full text-xs font-extrabold text-white"
+          style={{ background: "#7c3aed" }}
+        >
+          Se connecter
+        </button>
+      </div>
+    );
+  }
+
+  // ── Gate : premium requis ──
+  if (!isPremium) {
+    return <PremiumGate setLocation={setLocation} />;
+  }
 
   const processFile = useCallback((file: File) => {
     const reader = new FileReader();

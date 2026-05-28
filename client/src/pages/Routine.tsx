@@ -2,9 +2,10 @@ import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useLocation } from "wouter";
-import { Sun, Moon, Plus, Trash2, Bell, BellOff, Flame, ChevronLeft, X, Check, Sparkles, Search, CheckCircle2, Loader2 } from "lucide-react";
+import { Sun, Moon, Plus, Trash2, Bell, BellOff, Flame, ChevronLeft, X, Check, Sparkles, Search, CheckCircle2, Loader2, Crown, Lock } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { useAuth } from "@/hooks/use-auth";
+import { useSubscription } from "@/hooks/use-subscription";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { catalog, type Product, getProductBrand } from "@shared/catalog";
@@ -432,14 +433,15 @@ function RoutineCard({ period, routine, todayCompletions }: { period: Period; ro
 // ─────────────────────────────────────────────────────────────────────
 export default function Routine() {
   const { user, isLoading: authLoading } = useAuth();
+  const { isPremium, isLoading: subLoading } = useSubscription();
   const [, setLocation] = useLocation();
 
   const { data, isLoading } = useQuery<RoutinesResponse>({
     queryKey: ["/api/routines"],
-    enabled: !!user,
+    enabled: !!user && isPremium,
   });
 
-  if (authLoading || isLoading) {
+  if (authLoading || subLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: DS.base }}>
         <Loader2 className="w-6 h-6 animate-spin" style={{ color: "#a78bfa" }} />
@@ -466,6 +468,81 @@ export default function Routine() {
             Se connecter
           </a>
         </Link>
+      </div>
+    );
+  }
+
+  // ── Gate : premium requis ──
+  if (!isPremium) {
+    return (
+      <div
+        className="min-h-screen flex flex-col items-center justify-center p-6 text-center"
+        style={{ background: DS.base, fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif' }}
+      >
+        <div
+          style={{
+            position: "fixed", top: "-80px", left: "50%", transform: "translateX(-50%)",
+            width: "500px", height: "500px",
+            background: "radial-gradient(circle, rgba(124,58,237,0.12), transparent)",
+            pointerEvents: "none",
+          }}
+        />
+
+        <div
+          className="w-16 h-16 rounded-2xl flex items-center justify-center mb-5"
+          style={{ background: "rgba(233,30,140,0.1)", border: "1px solid rgba(233,30,140,0.3)" }}
+        >
+          <Lock className="w-7 h-7" style={{ color: "#f9a8d4" }} />
+        </div>
+
+        <div
+          className="inline-flex items-center gap-1.5 px-3 py-1 mb-4"
+          style={{ background: "rgba(233,30,140,0.12)", border: "1px solid rgba(233,30,140,0.3)", borderRadius: "9999px" }}
+        >
+          <Crown className="w-3 h-3" style={{ color: "#f9a8d4" }} />
+          <span className="text-[10px] font-bold tracking-widest" style={{ color: "#f9a8d4" }}>FONCTIONNALITÉ PREMIUM</span>
+        </div>
+
+        <h1 className="text-xl font-extrabold tracking-tight mb-2" style={{ color: DS.text, fontWeight: 800 }}>
+          Routine Tracker
+        </h1>
+        <p className="text-xs max-w-xs mx-auto mb-2 leading-relaxed" style={{ color: DS.body }}>
+          Programme tes soins matin et soir, coche chaque étape et construis des habitudes qui transforment ta peau en 30 jours.
+        </p>
+        <p className="text-[11px] max-w-[220px] mx-auto mb-8 font-bold" style={{ color: "rgba(255,255,255,0.3)" }}>
+          Tes analyses faciales restent gratuites et illimitées.
+        </p>
+
+        <div className="w-full max-w-xs space-y-3">
+          <button
+            onClick={() => setLocation("/premium")}
+            className="w-full py-4 text-sm font-extrabold flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+            style={{ background: "linear-gradient(135deg,#E91E8C,#f43f5e)", borderRadius: "12px", color: "#fff", fontWeight: 800 }}
+          >
+            <Crown className="w-4 h-4" />
+            Débloquer pour 2 000 FCFA
+          </button>
+          <button
+            onClick={() => setLocation("/")}
+            className="w-full py-3 text-xs font-bold transition-all active:scale-[0.98]"
+            style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "12px", color: DS.body }}
+          >
+            Retour à l'accueil
+          </button>
+        </div>
+
+        <div className="mt-8 w-full max-w-xs space-y-2">
+          {[
+            "Protocoles matin & soir personnalisables",
+            "Rappels chrono selon ta chronobiologie",
+            "Streak de régularité et taux de complétion",
+          ].map(f => (
+            <div key={f} className="flex items-center gap-2.5 text-[11px]" style={{ color: "rgba(200,185,255,0.5)" }}>
+              <Sparkles className="w-3 h-3 flex-shrink-0" style={{ color: "#a78bfa" }} />
+              <span>{f}</span>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }

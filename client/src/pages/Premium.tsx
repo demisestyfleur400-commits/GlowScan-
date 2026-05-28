@@ -12,18 +12,19 @@ import { Badge } from "@/components/ui/badge";
 const MTN_NUMBER = "674377959";
 const ORANGE_NUMBER = "690501392";
 
+// Ce que le plan gratuit inclut DÉJÀ (analyses illimitées !)
 const FEATURES_FREE = [
-  { text: "1 analyse faciale IA par mois" },
-  { text: "Métriques cutanées de base" },
+  { text: "Analyses IA faciales illimitées gratuites" },
+  { text: "Diagnostic complet : Glow Score + cartographie" },
   { text: "Historique de tes scans sauvegardé" },
 ];
 
+// Ce que le premium débloque EN PLUS
 const FEATURES_PREMIUM = [
-  { text: "Analyses IA illimitées 24h/24" },
-  { text: "Génération de routines matin & soir" },
-  { text: "Recommandations de molécules et produits ciblés" },
-  { text: "Rapport d'évolution PDF exportable pour spécialiste" },
-  { text: "Accès illimité au modèle d'analyse SkinBot" },
+  { text: "Scan Produit IA — analyser n'importe quel cosmétique" },
+  { text: "Routine Tracker matin & soir avec rappels chrono" },
+  { text: "Suivi de progression cutanée semaine par semaine" },
+  { text: "Recommandations produits ultra-personnalisées" },
   { text: "Crédit de +100 points de fidélité immédiat" },
 ];
 
@@ -246,7 +247,7 @@ export default function Premium() {
                     Mise à niveau à vie
                   </h2>
                   <p className="text-xs mb-6" style={{ color: "rgba(200,185,255,0.65)" }}>
-                    Débloque la puissance maximale de l'analyse cutanée faciale.
+                    Débloque le Scan Produit IA et le Routine Tracker — conçus pour transformer ta peau.
                   </p>
                   <div
                     className="px-5 py-3.5 w-full"
@@ -269,12 +270,12 @@ export default function Premium() {
               >
                 <div>
                   <span className="text-[9px] font-bold uppercase tracking-widest block mb-2.5" style={{ color: "rgba(255,255,255,0.35)" }}>
-                    Accès standard (limité)
+                    Plan Gratuit — déjà disponible
                   </span>
                   <div className="space-y-2">
                     {FEATURES_FREE.map(f => (
-                      <div key={f.text} className="flex items-start gap-2.5 text-xs font-medium" style={{ color: "rgba(255,255,255,0.35)" }}>
-                        <span className="mt-0.5" style={{ color: "rgba(255,255,255,0.2)" }}>✕</span>
+                      <div key={f.text} className="flex items-start gap-2.5 text-xs font-medium" style={{ color: "rgba(200,185,255,0.55)" }}>
+                        <CheckCircle2 className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style={{ color: "#6ee7b7" }} />
                         <span>{f.text}</span>
                       </div>
                     ))}
@@ -283,7 +284,7 @@ export default function Premium() {
 
                 <div className="pt-4" style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}>
                   <span className="text-[9px] font-bold uppercase tracking-widest block mb-2.5" style={{ color: "#c4b5fd" }}>
-                    Fonctionnalités débloquées — premium
+                    Fonctionnalités premium débloquées
                   </span>
                   <div className="space-y-2.5">
                     {FEATURES_PREMIUM.map(f => (

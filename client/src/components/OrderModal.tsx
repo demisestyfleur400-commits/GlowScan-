@@ -13,6 +13,8 @@ export interface OrderItem {
   brand: string;
   price?: number;
   quantity?: number;
+  /** Référence sourcing interne — visible UNIQUEMENT dans le message WhatsApp propriétaire */
+  sourceRef?: string;
 }
 
 interface OrderModalProps {
@@ -54,7 +56,8 @@ export default function OrderModal({ isOpen, onClose, items, scanContext, title 
     const itemsList = items.map(item => {
       const qty = item.quantity && item.quantity > 1 ? ` ×${item.quantity}` : "";
       const priceStr = item.price ? ` — ${formatPrice(item.price * (item.quantity || 1))}` : "";
-      return `• ${item.productName}${qty}${priceStr} (${item.brand})`;
+      const refLine = item.sourceRef ? `\n   → Sourcing: ${item.sourceRef}` : "";
+      return `• ${item.productName}${qty}${priceStr} (${item.brand})${refLine}`;
     }).join("\n");
 
     const total = items.reduce((s, i) => s + (i.price || 0) * (i.quantity || 1), 0);

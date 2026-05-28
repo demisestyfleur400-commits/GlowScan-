@@ -2574,26 +2574,45 @@ Si tu ne reconnais pas le produit, fais de ton mieux avec ce que tu vois.
 Ne mentionne JAMAIS la qualité de l'image.`;
 
       const base64Data = image.replace(/^data:image\/\w+;base64,/, "");
+      const mimeMatch = image.match(/^data:(image\/[a-z+]+);base64,/);
+      const mimeType = (mimeMatch ? mimeMatch[1] : "image/jpeg") as string;
 
-      const response = await openai.chat.completions.create({
-        model: AI_MODEL,
-        messages: [
-          {
+      let raw = "";
+      if (USE_GEMINI && gemini) {
+        const m = gemini.getGenerativeModel({ model: AI_MODEL });
+        const gemResult = await Promise.race([
+          m.generateContent({
+            contents: [{
+              role: "user",
+              parts: [
+                { text: prompt },
+                { inlineData: { mimeType, data: base64Data } },
+              ],
+            }],
+            generationConfig: { responseMimeType: "application/json", maxOutputTokens: 800, temperature: 0.3 },
+          }),
+          new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Timeout")), 30000)),
+        ]);
+        raw = gemResult.response.text()?.trim() || "";
+      } else if (openai) {
+        const response = await openai.chat.completions.create({
+          model: AI_MODEL,
+          messages: [{
             role: "user",
             content: [
               { type: "text", text: prompt },
-              {
-                type: "image_url",
-                image_url: { url: `data:image/jpeg;base64,${base64Data}` },
-              },
+              { type: "image_url", image_url: { url: `data:image/jpeg;base64,${base64Data}` } },
             ],
-          },
-        ],
-        max_tokens: 800,
-        temperature: 0.3,
-      });
+          }],
+          max_tokens: 800,
+          temperature: 0.3,
+          response_format: { type: "json_object" },
+        }, { timeout: 30000, maxRetries: 0 });
+        raw = response.choices[0]?.message?.content || "";
+      } else {
+        return res.status(503).json({ message: "Aucun provider IA configuré" });
+      }
 
-      const raw = response.choices[0]?.message?.content || "";
       const jsonMatch = raw.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
         return res.status(500).json({ message: "Réponse IA invalide" });
