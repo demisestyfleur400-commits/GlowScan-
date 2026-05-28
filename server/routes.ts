@@ -16,15 +16,28 @@ import { users } from "@shared/models/auth";
 import { eq, and, sql, gte, count, lte, desc, avg } from "drizzle-orm";
 import { whatsappClicks, orders, pageVisits } from "@shared/schema";
 
-// Support multi-env : Replit (AI_INTEGRATIONS_*) + Railway (OPENAI_API_KEY standard)
-const _openaiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY || "";
+// ── Sélection automatique du provider IA ────────────────────────────────
+// Priorité : GEMINI_API_KEY → OPENAI_API_KEY → AI_INTEGRATIONS_OPENAI_API_KEY
+const _geminiKey  = process.env.GEMINI_API_KEY || "";
+const _openaiKey  = process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY || "";
 const _openaiBase = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || process.env.OPENAI_BASE_URL || undefined;
-if (!_openaiKey) {
-  console.error("⚠️  OPENAI : aucune clé API trouvée (AI_INTEGRATIONS_OPENAI_API_KEY ou OPENAI_API_KEY)");
+
+const USE_GEMINI = !!_geminiKey;
+const AI_MODEL      = USE_GEMINI ? "gemini-1.5-pro"    : "gpt-4o";
+const AI_MODEL_FAST = USE_GEMINI ? "gemini-1.5-flash"  : "gpt-4o-mini";
+
+if (!_geminiKey && !_openaiKey) {
+  console.error("⚠️  IA : aucune clé trouvée (GEMINI_API_KEY ou OPENAI_API_KEY manquante)");
+} else {
+  console.log(`✅  IA provider : ${USE_GEMINI ? "Google Gemini" : "OpenAI"} — modèle ${AI_MODEL}`);
 }
+
+// Le SDK OpenAI est compatible avec l'endpoint Gemini (même format API)
 const openai = new OpenAI({
-  apiKey: _openaiKey || "sk-missing",
-  ...(_openaiBase ? { baseURL: _openaiBase } : {}),
+  apiKey:  USE_GEMINI ? _geminiKey : (_openaiKey || "sk-missing"),
+  baseURL: USE_GEMINI
+    ? "https://generativelanguage.googleapis.com/v1beta/openai/"
+    : (_openaiBase || undefined),
 });
 
 /**
@@ -635,22 +648,22 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
       const callOpenAI = async (extraInstruction = ""): Promise<string> => {
         const t0 = Date.now();
         const r = await openai.chat.completions.create({
-          model: "gpt-4o",
+          model: AI_MODEL,
           messages: [
             { role: "system", content: GLOWSCAN_SYSTEM_PROMPT },
             {
               role: "user",
               content: [
                 { type: "text", text: prompt + fewShotBlock + extraInstruction },
-                { type: "image_url", image_url: { url: dataUrl, detail: "low" } },
+                { type: "image_url", image_url: { url: dataUrl } },
               ],
             },
           ],
           max_tokens: 2400,
           response_format: { type: "json_object" },
-        }, { timeout: 30000, maxRetries: 0 });
+        }, { timeout: 45000, maxRetries: 0 });
         const c = r.choices[0]?.message?.content || "";
-        console.log(`[analyze] OpenAI ${Date.now() - t0}ms, finish: ${r.choices[0]?.finish_reason}, len: ${c.length}`);
+        console.log(`[analyze] ${AI_MODEL} ${Date.now() - t0}ms, finish: ${r.choices[0]?.finish_reason}, len: ${c.length}`);
         return c.trim();
       };
 
@@ -1575,7 +1588,7 @@ Réponds en 2-4 phrases max, sois direct et utile.`;
     res.setHeader("Connection", "keep-alive");
 
     try {
-      const stream = await openai.chat.completions.create({ model: "gpt-4o-mini", messages, stream: true });
+      const stream = await openai.chat.completions.create({ model: AI_MODEL_FAST, messages, stream: true });
       for await (const chunk of stream) {
         const content = chunk.choices[0]?.delta?.content || "";
         if (content) res.write(`data: ${JSON.stringify({ content })}\n\n`);
@@ -2509,7 +2522,7 @@ Ne mentionne JAMAIS la qualité de l'image.`;
       const base64Data = image.replace(/^data:image\/\w+;base64,/, "");
 
       const response = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: AI_MODEL,
         messages: [
           {
             role: "user",
@@ -2517,7 +2530,7 @@ Ne mentionne JAMAIS la qualité de l'image.`;
               { type: "text", text: prompt },
               {
                 type: "image_url",
-                image_url: { url: `data:image/jpeg;base64,${base64Data}`, detail: "high" },
+                image_url: { url: `data:image/jpeg;base64,${base64Data}` },
               },
             ],
           },
@@ -2600,7 +2613,7 @@ Règles :
       const base64Data = image.replace(/^data:image\/\w+;base64,/, "");
 
       const response = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: AI_MODEL,
         messages: [
           {
             role: "user",
@@ -2608,7 +2621,7 @@ Règles :
               { type: "text", text: prompt },
               {
                 type: "image_url",
-                image_url: { url: `data:image/jpeg;base64,${base64Data}`, detail: "high" },
+                image_url: { url: `data:image/jpeg;base64,${base64Data}` },
               },
             ],
           },
@@ -3003,7 +3016,7 @@ Règles :
 Règles : pas de marque, pas d'ingrédient interdit en Afrique, ton chaleureux, actionnable, adapté au climat tropical/humide. Réponds UNIQUEMENT en JSON : {"tips":["...","...","...","..."]}`;
 
       const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
+        model: AI_MODEL_FAST,
         messages: [{ role: "user", content: prompt }],
         max_tokens: 400,
         temperature: 0.7,
@@ -3094,7 +3107,7 @@ app.post("/api/generate-consultation", async (req, res) => {
     let rawContent = "";
     try {
       const response = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: AI_MODEL,
         temperature: 0.4,
         response_format: { type: "json_object" },
         max_tokens: 600,
@@ -3118,7 +3131,7 @@ Réponds UNIQUEMENT avec ce JSON strict (rien d'autre) :
             role: "user",
             content: [
               { type: "text", text: "Génère le questionnaire de consultation basé sur cette photo." },
-              { type: "image_url", image_url: { url: imageUrl, detail: "low" } }
+              { type: "image_url", image_url: { url: imageUrl } }
             ]
           }
         ]

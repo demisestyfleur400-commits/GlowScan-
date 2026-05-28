@@ -6,9 +6,18 @@ import { z } from "zod";
 import bcrypt from "bcryptjs";
 import OpenAI from "openai";
 
+// Même logique provider que routes.ts : Gemini prioritaire
+const _proGeminiKey = process.env.GEMINI_API_KEY || "";
+const _proOpenaiKey = process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY || "";
+const _proOpenaiBase = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || undefined;
+const PRO_USE_GEMINI = !!_proGeminiKey;
+const PRO_AI_MODEL = PRO_USE_GEMINI ? "gemini-1.5-pro" : "gpt-4o-mini";
+
 const proOpenai = new OpenAI({
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+  apiKey:  PRO_USE_GEMINI ? _proGeminiKey : (_proOpenaiKey || "sk-missing"),
+  baseURL: PRO_USE_GEMINI
+    ? "https://generativelanguage.googleapis.com/v1beta/openai/"
+    : (_proOpenaiBase || undefined),
 });
 
 // Cache mémoire des questionnaires par condition normalisée (24h)
@@ -652,7 +661,7 @@ Règles :
       let items: any[] = [];
       try {
         const completion = await proOpenai.chat.completions.create({
-          model: "gpt-4o-mini",
+          model: PRO_AI_MODEL,
           messages: [{ role: "user", content: prompt }],
           response_format: { type: "json_object" },
           temperature: 0.3,
