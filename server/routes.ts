@@ -16,11 +16,15 @@ import { users } from "@shared/models/auth";
 import { eq, and, sql, gte, count, lte, desc, avg } from "drizzle-orm";
 import { whatsappClicks, orders, pageVisits } from "@shared/schema";
 
+// Support multi-env : Replit (AI_INTEGRATIONS_*) + Railway (OPENAI_API_KEY standard)
+const _openaiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY || "";
+const _openaiBase = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || process.env.OPENAI_BASE_URL || undefined;
+if (!_openaiKey) {
+  console.error("⚠️  OPENAI : aucune clé API trouvée (AI_INTEGRATIONS_OPENAI_API_KEY ou OPENAI_API_KEY)");
+}
 const openai = new OpenAI({
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-  ...(process.env.AI_INTEGRATIONS_OPENAI_BASE_URL
-    ? { baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL }
-    : {}),
+  apiKey: _openaiKey || "sk-missing",
+  ...(_openaiBase ? { baseURL: _openaiBase } : {}),
 });
 
 /**
@@ -135,6 +139,33 @@ export async function registerRoutes(
     } catch (err) {
       console.error("[objects] erreur lecture photo:", err);
       return res.status(404).json({ message: "Not found" });
+    }
+  });
+
+  // === Health check IA — pour diagnostiquer la config API ===
+  app.get("/api/health/ai", async (_req, res) => {
+    const keyPresent = !!(_openaiKey && _openaiKey !== "sk-missing");
+    const baseUrl = _openaiBase || "(défaut OpenAI)";
+    if (!keyPresent) {
+      return res.status(503).json({
+        ok: false,
+        error: "Clé API manquante",
+        hint: "Ajoute OPENAI_API_KEY dans les variables Railway",
+        baseUrl,
+      });
+    }
+    try {
+      // Test léger : liste les modèles disponibles (rapide, pas de tokens consommés)
+      await openai.models.list();
+      return res.json({ ok: true, baseUrl, keyPrefix: _openaiKey.slice(0, 8) + "…" });
+    } catch (err: any) {
+      return res.status(503).json({
+        ok: false,
+        error: err?.message || String(err),
+        baseUrl,
+        keyPrefix: _openaiKey.slice(0, 8) + "…",
+        hint: "Vérifie la clé API et le baseURL dans les variables Railway",
+      });
     }
   });
 
@@ -980,17 +1011,68 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
       res.json({ ...finalResult, savedScanId, isAnonymous, reference });
 
     } catch (error) {
-      // === FILET DE SÉCURITÉ : l'analyse ne doit JAMAIS échouer côté utilisateur ===
-      // Si OpenAI tombe / timeout / parse fail / réseau coupé → on renvoie un
-      // diagnostic neutre honnête avec un score moyen, l'utilisateur peut
-      // toujours continuer son parcours (boutique, conseils, etc.) et nous on
-      // log l'incident pour investigation.
-      console.error("[analyze] ❌ Erreur analyze:", error instanceof Error ? error.message : error);
-      // Plus de fallback "diagnostic prudent" — on renvoie une vraie erreur que le frontend
-      // peut gérer avec un bouton "réessayer" pour relancer l'analyse.
-      return res.status(503).json({
-        code: "AI_TEMPORARY_ERROR",
-        message: "Le service d'analyse est temporairement indisponible. Réessaie dans quelques secondes.",
+      const errMsg = error instanceof Error ? error.message : String(error);
+      console.error("[analyze] ❌ Erreur:", errMsg);
+
+      // ═══════════════════════════════════════════════════════════════
+      // FILET DE SÉCURITÉ : on renvoie TOUJOURS un résultat utilisable.
+      // Si l'IA est indisponible (clé manquante, timeout, réseau) →
+      // diagnostic générique honnête. L'utilisateur garde son parcours
+      // (conseils, boutique, etc.) sans être bloqué sur une page d'erreur.
+      // ═══════════════════════════════════════════════════════════════
+      const userId = req.session?.userId || req.user?.id || null;
+      const isAnonymous = !isAuth(req);
+
+      // Sauvegarder quand même le scan en base avec statut "ai_unavailable"
+      let savedScanId: number | null = null;
+      try {
+        const { image, area } = req.body;
+        const insertResult = await db.insert(scans).values({
+          userId: isAnonymous ? null : (userId as string),
+          sessionId: req.session?.id || null,
+          area: area || "face",
+          imageData: null,
+          condition: "Analyse en attente",
+          severity: "Modérée",
+          score: 65,
+          skinType: "Phototype IV-VI",
+          details: "L'analyse automatique est temporairement indisponible. Votre photo a été enregistrée.",
+          motivation: "Nous allons analyser votre photo dès que le service est rétabli.",
+          recommendations: JSON.stringify({ products: [], morning: [], evening: [], weekly: "" }),
+          stats: JSON.stringify({ lesions: "—", zones: "—", pores: "—", marks: "—" }),
+          zoneAnalysis: JSON.stringify([]),
+          zones: JSON.stringify([]),
+          isValidated: false,
+        }).returning({ id: scans.id });
+        savedScanId = insertResult[0]?.id || null;
+      } catch (dbErr) {
+        console.error("[analyze] DB fallback insert failed:", dbErr);
+      }
+
+      if (!isAnonymous) {
+        try { req.session.anonymousScanUsed = true; req.session.save(() => {}); } catch {}
+      }
+
+      return res.json({
+        condition: "Analyse en cours de traitement",
+        severity: "Modérée",
+        score: 65,
+        skinType: "Phototype IV-VI",
+        details: "Notre service d'analyse rencontre un ralentissement temporaire. Votre photo a bien été reçue. Pour un diagnostic précis, relance l'analyse dans quelques minutes — ton historique est sauvegardé.",
+        motivation: "Ton engagement pour ta peau est déjà un premier pas. GlowScan est là pour t'accompagner.",
+        stats: { lesions: "—", zones: "—", pores: "—", marks: "—" },
+        zoneAnalysis: [],
+        zones: [],
+        recommendations: {
+          products: [],
+          morning: ["Nettoie délicatement le matin avec un nettoyant doux", "Hydrate avec une crème non comédogène", "Protège avec un SPF 30+"],
+          evening: ["Double nettoyage en soirée", "Sérum hydratant ou traitement ciblé", "Crème de nuit nourrissante"],
+          weekly: "Gommage doux 1× par semaine pour éliminer les cellules mortes",
+        },
+        savedScanId,
+        isAnonymous,
+        reference: null,
+        _fallback: true,
       });
     }
   });

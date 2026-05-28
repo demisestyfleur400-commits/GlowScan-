@@ -228,14 +228,22 @@ export default function Analyze() {
           setStep("upload");
           return;
         }
-        // 503 ou autre erreur serveur — message clair
+        // Erreur inattendue — on throw pour le catch
         throw new Error(errBody.message || "Analyse temporairement indisponible");
       }
 
-      const data = await analyzeRes.json() as AnalysisResult & { savedScanId?: number; isAnonymous?: boolean };
+      const data = await analyzeRes.json() as AnalysisResult & { savedScanId?: number; isAnonymous?: boolean; _fallback?: boolean };
       setIsAnalyzing(false);
       setResult(data);
       setStep("result");
+
+      // Si le serveur a renvoyé un résultat de fallback, on l'indique discrètement
+      if ((data as any)._fallback) {
+        toast({
+          title: "Analyse partielle",
+          description: "Le service IA était lent — relance l'analyse pour un diagnostic complet.",
+        });
+      }
 
       try {
         const wasFirst = !localStorage.getItem("glowscan_first_scan_done");
