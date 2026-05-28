@@ -14,7 +14,7 @@ const _proOpenaiKey = process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_
 const _proOpenaiBase = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || undefined;
 const PRO_USE_GROQ   = !!_proGroqKey;
 const PRO_USE_GEMINI = !PRO_USE_GROQ && !!_proGeminiKey;
-const PRO_GROQ_MODEL = process.env.GROQ_MODEL || "llama-3.2-90b-vision-preview";
+const PRO_GROQ_MODEL = process.env.GROQ_MODEL || "meta-llama/llama-4-scout-17b-16e-instruct";
 const PRO_AI_MODEL   = PRO_USE_GROQ ? PRO_GROQ_MODEL
                      : PRO_USE_GEMINI ? "gemini-2.0-flash" : "gpt-4o-mini";
 

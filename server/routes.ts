@@ -27,9 +27,9 @@ const _openaiBase = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || process.env.O
 const USE_GROQ   = !!_groqKey;
 const USE_GEMINI = !USE_GROQ && !!_geminiKey;
 const AI_PROVIDER   = USE_GROQ ? "Groq" : USE_GEMINI ? "Gemini" : "OpenAI";
-// Modèle Groq : llama-3.2-90b-vision-preview (vision + text, free tier)
+// Modèle Groq : meta-llama/llama-4-scout-17b-16e-instruct (seul modèle vision actif)
 // Surcharge possible via GROQ_MODEL env var
-const GROQ_MODEL    = process.env.GROQ_MODEL || "llama-3.2-90b-vision-preview";
+const GROQ_MODEL    = process.env.GROQ_MODEL || "meta-llama/llama-4-scout-17b-16e-instruct";
 const AI_MODEL      = USE_GROQ ? GROQ_MODEL : USE_GEMINI ? "gemini-2.0-flash" : "gpt-4o";
 const AI_MODEL_FAST = USE_GROQ ? GROQ_MODEL : USE_GEMINI ? "gemini-2.0-flash" : "gpt-4o-mini";
 
