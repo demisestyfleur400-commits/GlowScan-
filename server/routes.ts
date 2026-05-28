@@ -155,29 +155,41 @@ export async function registerRoutes(
     }
   });
 
-  // === Health check IA — pour diagnostiquer la config API ===
+  // === Health check IA ===
   app.get("/api/health/ai", async (_req, res) => {
-    const keyPresent = !!(_openaiKey && _openaiKey !== "sk-missing");
-    const baseUrl = _openaiBase || "(défaut OpenAI)";
-    if (!keyPresent) {
+    const provider = USE_GEMINI ? "Gemini" : "OpenAI";
+    const activeKey = USE_GEMINI ? _geminiKey : _openaiKey;
+    if (!activeKey) {
       return res.status(503).json({
         ok: false,
-        error: "Clé API manquante",
-        hint: "Ajoute OPENAI_API_KEY dans les variables Railway",
-        baseUrl,
+        provider,
+        error: "Aucune clé API trouvée",
+        hint: USE_GEMINI
+          ? "GEMINI_API_KEY manquante dans Railway"
+          : "OPENAI_API_KEY manquante dans Railway",
       });
     }
     try {
-      // Test léger : liste les modèles disponibles (rapide, pas de tokens consommés)
-      await openai.models.list();
-      return res.json({ ok: true, baseUrl, keyPrefix: _openaiKey.slice(0, 8) + "…" });
+      // Appel minimal pour valider la clé (1 token)
+      await openai.chat.completions.create({
+        model: AI_MODEL_FAST,
+        messages: [{ role: "user", content: "ok" }],
+        max_tokens: 1,
+      });
+      return res.json({
+        ok: true,
+        provider,
+        model: AI_MODEL,
+        modelFast: AI_MODEL_FAST,
+        keyPrefix: activeKey.slice(0, 8) + "…",
+      });
     } catch (err: any) {
       return res.status(503).json({
         ok: false,
+        provider,
         error: err?.message || String(err),
-        baseUrl,
-        keyPrefix: _openaiKey.slice(0, 8) + "…",
-        hint: "Vérifie la clé API et le baseURL dans les variables Railway",
+        keyPrefix: activeKey.slice(0, 8) + "…",
+        hint: "Vérifie la clé API dans Railway",
       });
     }
   });
