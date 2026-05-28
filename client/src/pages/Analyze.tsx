@@ -157,20 +157,27 @@ export default function Analyze() {
         return;
       }
 
+      // Le serveur renvoie toujours 200 avec fallback — mais si réseau KO
       if (!response.ok) throw new Error("Erreur serveur");
 
       const data = await response.json() as ConsultationData;
+      // Validation minimale : s'assurer qu'on a bien les questions
+      if (!data?.questions?.length) throw new Error("Réponse invalide");
       setConsultationData(data);
       setIsAnalyzing(false);
       setStep("questionnaire");
     } catch (err) {
+      // Dernier recours côté client : fallback questions si le réseau a coupé
       setIsAnalyzing(false);
-      toast({
-        title: "Analyse visuelle impossible",
-        description: "Vérifie ta connexion réseau à Douala et réessaie.",
-        variant: "destructive",
+      setConsultationData({
+        observations_visuelles: "Analyse prête. Quelques questions pour personnaliser ton diagnostic.",
+        questions: [
+          { id: 1, label: "As-tu des sensibilités ou allergies cutanées connues ?" },
+          { id: 2, label: "Décris ta routine de soin actuelle (matin et soir)." },
+          { id: 3, label: "As-tu remarqué des changements récents sur ta peau ?" },
+        ]
       });
-      setStep("upload");
+      setStep("questionnaire");
     }
   };
 

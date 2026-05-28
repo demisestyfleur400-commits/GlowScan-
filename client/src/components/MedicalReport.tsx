@@ -746,7 +746,7 @@ export default function MedicalReport({ result, scanId, area = "face", imageUrl,
             </li>
             <li className="flex items-start gap-2">
               <span style={{ color: "#6ee7b7" }} className="font-bold flex-shrink-0">✓</span>
-              <span><span className="font-semibold" style={{ color: "#f3f0ff" }}>Livraison Douala &amp; Yaoundé</span> sous 24–48h, partout au Cameroun en 3–5 jours.</span>
+              <span><span className="font-semibold" style={{ color: "#f3f0ff" }}>Livraison express</span> sous 24–48h dans les grandes villes, partout ailleurs en 3–5 jours.</span>
             </li>
             <li className="flex items-start gap-2">
               <span style={{ color: "#6ee7b7" }} className="font-bold flex-shrink-0">✓</span>

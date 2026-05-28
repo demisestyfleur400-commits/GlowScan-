@@ -2993,55 +2993,96 @@ Règles : pas de marque, pas d'ingrédient interdit en Afrique, ton chaleureux, 
 // Route pour analyser la photo en Base64 et générer le questionnaire de consultation sur mesure
 app.post("/api/generate-consultation", async (req, res) => {
   try {
-    const { base64Image } = req.body; // On récupère directement le flux Base64 du frontend
+    const { base64Image } = req.body;
 
     if (!base64Image) {
       return res.status(400).json({ error: "La photo au format Base64 est requise." });
     }
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
-      temperature: 0.5,
-      response_format: { type: "json_object" },
-      messages: [
-        {
-          role: "system",
-          content: `Tu es un dermatologue expert de garde. Analyse visuellement l'image fournie. 
-          Ne donne PAS encore de diagnostic. À la place, génère un questionnaire de 3 questions ultra-personnalisées 
-          basé sur ce que tu observes (ex: si tu vois des boutons, pose des questions sur l'alimentation, le stress ou la douleur).
-          Le but est que l'utilisateur se sente pris en charge dans une vraie consultation médicale.
-          
-          Tu dois impérativement répondre sous ce format JSON strict :
-          {
-            "observations_visuelles": "Une phrase courte disant ce que tu remarques pour créer de la familiarité et de la confiance",
-            "questions": [
-              {"id": 1, "label": "Texte de la question 1"},
-              {"id": 2, "label": "Texte de la question 2"},
-              {"id": 3, "label": "Texte de la question 3"}
-            ]
-          }`
-        },
-        {
-          role: "user",
-          content: [
-            { type: "text", text: "Génère mon questionnaire de consultation basé sur cette photo." },
-            { 
-              type: "image_url", 
-              image_url: { 
-                url: base64Image // GPT-4o prend directement le "data:image/jpeg;base64,..." ici !
-              } 
-            }
-          ]
-        }
-      ]
-    });
+    // Extraire le mime-type et le raw base64 pour OpenAI
+    let imageUrl = base64Image;
+    const match = (base64Image as string).match(/^data:([^;]+);base64,(.+)$/);
+    if (match) {
+      imageUrl = `data:${match[1]};base64,${match[2]}`;
+    }
 
-    const consultationData = JSON.parse(response.choices[0].message.content);
-    res.json(consultationData);
+    let rawContent = "";
+    try {
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        temperature: 0.4,
+        response_format: { type: "json_object" },
+        max_tokens: 600,
+        messages: [
+          {
+            role: "system",
+            content: `Tu es un dermatologue expert. Analyse visuellement l'image fournie.
+Ne donne PAS encore de diagnostic. Génère un questionnaire de 3 questions ultra-personnalisées basé sur ce que tu observes.
+
+Réponds UNIQUEMENT avec ce JSON strict (rien d'autre) :
+{
+  "observations_visuelles": "Une phrase courte sur ce que tu remarques",
+  "questions": [
+    {"id": 1, "label": "Question 1"},
+    {"id": 2, "label": "Question 2"},
+    {"id": 3, "label": "Question 3"}
+  ]
+}`
+          },
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "Génère le questionnaire de consultation basé sur cette photo." },
+              { type: "image_url", image_url: { url: imageUrl, detail: "low" } }
+            ]
+          }
+        ]
+      }, { timeout: 25000, maxRetries: 0 });
+
+      rawContent = response.choices[0]?.message?.content?.trim() || "";
+    } catch (aiErr: any) {
+      console.error("[generate-consultation] OpenAI error:", aiErr?.message || aiErr);
+      rawContent = "";
+    }
+
+    // Si l'IA n'a rien renvoyé ou a refusé → fallback questions génériques
+    if (!rawContent || !rawContent.includes("{")) {
+      return res.json({
+        observations_visuelles: "Je prépare ton diagnostic personnalisé.",
+        questions: [
+          { id: 1, label: "As-tu des sensibilités ou allergies cutanées connues ?" },
+          { id: 2, label: "Décris ta routine de soin actuelle (matin et soir)." },
+          { id: 3, label: "As-tu remarqué des changements récents sur ta peau ?" },
+        ]
+      });
+    }
+
+    try {
+      const consultationData = JSON.parse(rawContent);
+      return res.json(consultationData);
+    } catch {
+      // JSON invalide → fallback
+      return res.json({
+        observations_visuelles: "Analyse en cours, quelques questions pour affiner.",
+        questions: [
+          { id: 1, label: "As-tu des sensibilités ou allergies cutanées connues ?" },
+          { id: 2, label: "Décris ta routine de soin actuelle (matin et soir)." },
+          { id: 3, label: "As-tu remarqué des changements récents sur ta peau ?" },
+        ]
+      });
+    }
 
   } catch (error) {
-    console.error("Erreur lors de la génération de la consultation:", error);
-    res.status(500).json({ error: "Impossible de générer le questionnaire." });
+    console.error("[generate-consultation] Erreur inattendue:", error);
+    // Ne jamais bloquer l'utilisateur — renvoyer les questions génériques
+    return res.json({
+      observations_visuelles: "Analyse en cours.",
+      questions: [
+        { id: 1, label: "As-tu des sensibilités ou allergies cutanées connues ?" },
+        { id: 2, label: "Décris ta routine de soin actuelle (matin et soir)." },
+        { id: 3, label: "As-tu remarqué des changements récents sur ta peau ?" },
+      ]
+    });
   }
 });
 

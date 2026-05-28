@@ -1244,7 +1244,7 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
                     <span style={{ position: "relative", width: "8px", height: "8px", borderRadius: "9999px", background: "#f9a8d4", display: "block" }} />
                   </span>
                   <p style={{ fontSize: "11px", fontWeight: 600, lineHeight: 1.4, color: DS.textBody }}>
-                    <span style={{ color: "#f9a8d4", fontWeight: 800 }}>37 femmes</span> ont validé cette ordonnance à Douala aujourd'hui. Stock de la gamme{" "}
+                    <span style={{ color: "#f9a8d4", fontWeight: 800 }}>37 femmes</span> ont validé cette ordonnance aujourd'hui. Stock de la gamme{" "}
                     <span style={{ textDecoration: "underline" }}>{brandLabel}</span> limité.
                   </p>
                 </div>
@@ -1434,7 +1434,7 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
                   <div style={{ textAlign: "left" }}>
                     <p style={{ fontSize: "11px", fontWeight: 800, lineHeight: 1.3, color: "#6ee7b7" }}>Expédition Express au Cameroun</p>
                     <p style={{ fontSize: "10px", fontWeight: 500, marginTop: "2px", color: "rgba(110,231,183,0.7)" }}>
-                      Livraison à domicile (Douala & Yaoundé) · Paiement Cash à la livraison
+                      Livraison à domicile · Paiement Cash à la livraison
                     </p>
                   </div>
                 </div>

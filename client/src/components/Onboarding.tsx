@@ -46,7 +46,7 @@ const STEPS: Step[] = [
     image: img4,
     emoji: "🇨🇲",
     title: "Ta peau. Ton diagnostic. Ta routine.",
-    subtitle: "Plus de 3 000 femmes accompagnées avec succès à Douala et Yaoundé.",
+    subtitle: "Plus de 3 000 femmes accompagnées avec succès à travers l'Afrique.",
     cta: "Analyser ma peau maintenant",
     accent: "#a78bfa",
   },
