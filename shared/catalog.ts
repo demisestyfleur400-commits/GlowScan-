@@ -483,7 +483,7 @@ export const catalog: Product[] = [
     brand: "GlowScan Dermo",
     description: "Gel nettoyant dermatologique formulé pour peaux grasses et acnéiques. Régule le sébum, désobstrue les pores, préserve le film hydrolipidique. Sans savon. 200ml.",
     category: "visage",
-    price: 9500,
+    price: 11000,
     targets: ["acné", "peau grasse", "pores dilatés", "points noirs", "excès de sébum", "brillance", "comédons", "impuretés visage"],
     usagePoints: [
       "Purifie les pores sans agresser la barrière cutanée",
@@ -499,7 +499,7 @@ export const catalog: Product[] = [
     brand: "GlowScan Dermo",
     description: "Masque purifiant bi-actif argile kaolin + charbon activé. Absorbe l'excès de sébum, désintoxique les pores et resserre le grain de peau. 75ml.",
     category: "visage",
-    price: 8000,
+    price: 10000,
     targets: ["peau grasse", "pores bouchés", "impuretés", "points noirs", "excès de sébum", "teint brouillé", "purification visage"],
     usagePoints: [
       "Absorbe l'excès de sébum en 10 minutes",
@@ -517,7 +517,7 @@ export const catalog: Product[] = [
     brand: "GlowScan Dermo",
     description: "Sérum haute concentration en Niacinamide (Vitamine B3) et Zinc PCA. Resserre les pores, atténue les taches post-acné et régule le film sébacé. 30ml.",
     category: "visage",
-    price: 7500,
+    price: 11000,
     targets: ["pores dilatés", "taches post-acné", "peau grasse", "teint terne", "texture irrégulière", "acné", "hyperpigmentation", "imperfections"],
     usagePoints: [
       "Resserre les pores visibles en 4 semaines",
@@ -533,7 +533,7 @@ export const catalog: Product[] = [
     brand: "GlowScan Dermo",
     description: "Lotion exfoliante à l'acide salicylique (BHA 2%). Pénètre dans les pores pour déloger comédons ouverts et fermés. Texture légère, non grasse. 200ml.",
     category: "visage",
-    price: 8500,
+    price: 11500,
     targets: ["comédons", "points noirs", "pores dilatés", "acné", "texture irrégulière", "peau grasse", "exfoliation chimique", "bouchons sébacés"],
     usagePoints: [
       "Désengorge les pores et déloger les comédons dès 2 semaines",
@@ -549,7 +549,7 @@ export const catalog: Product[] = [
     brand: "GlowScan Dermo",
     description: "Sérum antioxydant à haute dose de Vitamine C pure stabilisée. Illumine le teint, unifie les irrégularités et protège contre le photovieillissement. 30ml.",
     category: "visage",
-    price: 12000,
+    price: 14000,
     targets: ["teint terne", "taches brunes", "éclat visage", "anti-âge", "hyperpigmentation", "unification teint", "fatigue cutanée", "taches solaires"],
     usagePoints: [
       "Illumine et unifie le teint en 2 à 3 semaines",
@@ -565,7 +565,7 @@ export const catalog: Product[] = [
     brand: "GlowScan Dermo",
     description: "Crème de nuit dépigmentante à l'acide azélaïque 10% et niacinamide. Estompe le mélasma, les taches post-acné et les irrégularités de teint progressivement. 50ml.",
     category: "visage",
-    price: 9000,
+    price: 11000,
     targets: ["melasma", "taches brunes", "hyperpigmentation", "taches post-acné", "teint irrégulier", "peau terne", "masque de grossesse"],
     usagePoints: [
       "Réduit les taches visibles dès 4 semaines d'utilisation",
@@ -581,7 +581,7 @@ export const catalog: Product[] = [
     brand: "GlowScan Dermo",
     description: "Sérum anti-âge au rétinol 0.3% encapsulé pour libération progressive. Renouvelle les cellules, lisse les ridules et améliore la densité cutanée. 30ml.",
     category: "visage",
-    price: 10500,
+    price: 13000,
     targets: ["rides", "ridules", "anti-âge", "vieillissement cutané", "taches brunes", "texture irrégulière", "affaissement cutané", "renouvellement cellulaire"],
     usagePoints: [
       "Stimule le renouvellement cellulaire nuit après nuit",
@@ -599,7 +599,7 @@ export const catalog: Product[] = [
     brand: "GlowScan Dermo",
     description: "Protection solaire dermatologique haute protection SPF 50+. Texture ultra-légère, fini invisible et non blanc sur toutes les carnations africaines. 50ml.",
     category: "visage",
-    price: 12500,
+    price: 14000,
     targets: ["protection solaire", "anti-taches", "photovieillissement", "teint terne", "peau sensible", "hyperpigmentation", "prévention taches", "rides solaires"],
     usagePoints: [
       "Protection SPF 50+ validée dermo — résiste à la chaleur équatoriale",
@@ -615,7 +615,7 @@ export const catalog: Product[] = [
     brand: "GlowScan Dermo",
     description: "Crème réparatrice riche en céramides, acide hyaluronique et beurre de karité. Restaure la barrière cutanée affaiblie et scelle l'hydratation. 50ml.",
     category: "visage",
-    price: 10000,
+    price: 11000,
     targets: ["peau sèche", "peau déshydratée", "barrière cutanée", "tiraillements", "peau sensible", "réparation cutanée", "eczéma léger", "peau fragilisée"],
     usagePoints: [
       "Restaure la barrière cutanée affaiblie en 72h",
@@ -631,12 +631,12 @@ export const catalog: Product[] = [
     id: "kit-peau-nette-30j",
     name: "Kit Peau Nette 30J — Acné & Pores",
     brand: "GlowScan Dermo",
-    description: "Protocole anti-acné complet sur 30 jours. Inclus : Gel Nettoyant Anti-Sébum + Lotion BHA 2% + Sérum Niacinamide 10%. Sélection validée par GlowScan AI pour peaux acnéiques.",
+    description: "Protocole anti-acné complet sur 30 jours. Inclus : Gel Nettoyant Anti-Sébum + Lotion BHA 2% + Sérum Niacinamide 10%. Valeur séparée : 33 500 FCFA — kit à 25 000 FCFA.",
     category: "visage",
     price: 25000,
     targets: ["acné", "peau grasse", "pores dilatés", "points noirs", "comédons", "boutons", "sébum excessif", "imperfections", "peau mixte"],
     usagePoints: [
-      "3 produits synergiques protocole complet anti-acné",
+      "3 produits synergiques — valeur séparée 33 500 FCFA",
       "Résultats visibles et mesurables en 4 semaines",
       "Gel Nettoyant + Lotion BHA + Sérum Niacinamide inclus"
     ],
@@ -647,12 +647,12 @@ export const catalog: Product[] = [
     id: "kit-eclat-antitaches-30j",
     name: "Kit Éclat & Teint Unifié — Taches & Hyperpigmentation",
     brand: "GlowScan Dermo",
-    description: "Protocole dermo anti-taches complet. Inclus : Sérum Vitamine C 15% + Crème Anti-Taches Nuit + Crème Solaire SPF50+. Trio synergique pour unifier et illuminer.",
+    description: "Protocole dermo anti-taches complet. Inclus : Sérum Vitamine C 15% + Crème Anti-Taches Nuit + Crème Solaire SPF50+. Valeur séparée : 39 000 FCFA — kit à 25 000 FCFA.",
     category: "visage",
-    price: 31000,
+    price: 25000,
     targets: ["hyperpigmentation", "taches brunes", "melasma", "teint terne", "unification teint", "éclat visage", "taches solaires", "masque de grossesse", "taches post-acné"],
     usagePoints: [
-      "3 produits synergiques protocole anti-taches complet",
+      "3 produits synergiques — valeur séparée 39 000 FCFA",
       "Résultats visibles en 30 jours d'utilisation régulière",
       "Vitamine C + Anti-Taches Nuit + SPF50+ inclus"
     ],
@@ -663,12 +663,12 @@ export const catalog: Product[] = [
     id: "kit-anti-age-30j",
     name: "Kit Anti-Âge Restructurant 30J",
     brand: "GlowScan Dermo",
-    description: "Protocole anti-âge haute performance. Inclus : Sérum Rétinol 0.3% + Sérum Vitamine C 15% + Crème Barrière Céramides. Pour peaux matures et perte de tonicité.",
+    description: "Protocole anti-âge haute performance. Inclus : Sérum Rétinol 0.3% + Sérum Vitamine C 15% + Crème Barrière Céramides. Valeur séparée : 38 000 FCFA — kit à 25 000 FCFA.",
     category: "visage",
-    price: 30000,
+    price: 25000,
     targets: ["rides", "anti-âge", "affaissement cutané", "vieillissement cutané", "taches brunes", "perte de fermeté", "peau mature", "ridules", "éclat"],
     usagePoints: [
-      "Trio restructurant haute concentration en actifs dermo",
+      "3 produits synergiques — valeur séparée 38 000 FCFA",
       "Résultats sur rides et fermeté en 6 à 8 semaines",
       "Rétinol 0.3% + Vitamine C 15% + Céramides inclus"
     ],
