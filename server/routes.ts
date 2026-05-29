@@ -2097,85 +2097,127 @@ Réponds en 2-4 phrases max, sois direct et utile.`;
     }
   });
 
-  // GET /api/admin/retention — segments de rétention avec numéros WhatsApp
-  // Croise users + premiumRequests (phone) + subscriptions (statut) + scans (activité)
+  // GET /api/admin/retention — segments de rétention, couvre TOUS les utilisateurs
+  // Sources contact : premiumRequests.phone (prioritaire) > email faux tel-XXX@phone.glowscan.cm > email réel
   app.get("/api/admin/retention", async (req: any, res) => {
     if (!checkAdminKey(req)) return res.status(403).json({ message: "Accès refusé" });
     try {
-      const now = new Date();
-      const in7d  = new Date(now.getTime() + 7  * 24 * 60 * 60 * 1000);
+      const now    = new Date();
+      const in7d   = new Date(now.getTime() + 7  * 24 * 60 * 60 * 1000);
+      const ago7d  = new Date(now.getTime() - 7  * 24 * 60 * 60 * 1000);
       const ago30d = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-      // Récupérer tous les utilisateurs avec au moins une demande premium (phone dispo)
-      const allReqs = await db.select().from(premiumRequests).orderBy(desc(premiumRequests.createdAt));
-
-      // Map userId → meilleur numéro (confirmed en priorité, sinon pending, sinon rejected)
-      const phoneMap = new Map<string, { phone: string; method: string }>();
-      for (const r of allReqs) {
-        const existing = phoneMap.get(r.userId);
-        const priority = r.status === "confirmed" ? 3 : r.status === "pending" ? 2 : 1;
-        const existingPriority = !existing ? 0 : r.status === "confirmed" ? 3 : r.status === "pending" ? 2 : 1;
-        if (priority > existingPriority) phoneMap.set(r.userId, { phone: r.phone, method: r.method });
-      }
-
-      const userIds = [...phoneMap.keys()];
+      // ── 1. Tous les utilisateurs (pas de filtre) ──────────────────────
+      const allUsersRows = await db.select().from(users).orderBy(desc(users.createdAt));
+      const userIds = allUsersRows.map((u) => u.id);
       if (userIds.length === 0) return res.json({ segments: {}, total: 0, contacts: [] });
 
-      // Récupérer les users + subs + scans en parallèle
-      const [allUsersRows, allSubs, recentScans] = await Promise.all([
-        db.select().from(users).where(sql`${users.id} = ANY(${userIds})`),
-        db.select().from(subscriptions).where(sql`${subscriptions.userId} = ANY(${userIds})`).orderBy(desc(subscriptions.expiresAt)),
-        db.select({ userId: scans.userId, createdAt: scans.createdAt }).from(scans)
-          .where(and(sql`${scans.userId} = ANY(${userIds})`, gte(scans.createdAt, ago30d)))
+      // ── 2. phoneMap depuis premiumRequests (confirmed > pending > rejected) ──
+      const allReqs = await db.select().from(premiumRequests).orderBy(desc(premiumRequests.createdAt));
+      const phoneMap  = new Map<string, { phone: string; method: string; reqStatus: string }>();
+      const priorityOf = (s: string) => s === "confirmed" ? 3 : s === "pending" ? 2 : 1;
+      for (const r of allReqs) {
+        const existing = phoneMap.get(r.userId);
+        if (!existing || priorityOf(r.status) > priorityOf(existing.reqStatus)) {
+          phoneMap.set(r.userId, { phone: r.phone, method: r.method, reqStatus: r.status });
+        }
+      }
+
+      // ── 3. Subs + scans en parallèle ─────────────────────────────────
+      const [allSubs, allScans] = await Promise.all([
+        db.select().from(subscriptions)
+          .where(sql`${subscriptions.userId} = ANY(${userIds})`)
+          .orderBy(desc(subscriptions.expiresAt)),
+        db.select({ userId: scans.userId, createdAt: scans.createdAt })
+          .from(scans)
+          .where(sql`${scans.userId} = ANY(${userIds})`)
           .orderBy(desc(scans.createdAt)),
       ]);
 
-      // Map pour accès rapide
-      const subByUser = new Map<string, typeof allSubs[0]>();
+      const subByUser  = new Map<string, typeof allSubs[0]>();
       for (const s of allSubs) {
-        if (!subByUser.has(s.userId) || (s.expiresAt > (subByUser.get(s.userId)!.expiresAt))) {
+        if (!subByUser.has(s.userId) || s.expiresAt > subByUser.get(s.userId)!.expiresAt)
           subByUser.set(s.userId, s);
-        }
       }
-      const lastScanByUser = new Map<string, Date>();
-      for (const sc of recentScans) {
-        if (sc.userId && !lastScanByUser.has(sc.userId)) lastScanByUser.set(sc.userId, sc.createdAt!);
+      const lastScanByUser  = new Map<string, Date>();
+      const scanCountByUser = new Map<string, number>();
+      for (const sc of allScans) {
+        if (!sc.userId) continue;
+        if (!lastScanByUser.has(sc.userId)) lastScanByUser.set(sc.userId, sc.createdAt!);
+        scanCountByUser.set(sc.userId, (scanCountByUser.get(sc.userId) ?? 0) + 1);
       }
 
+      // ── 4. Construire les contacts ────────────────────────────────────
       const contacts = allUsersRows.map((u) => {
-        const ph   = phoneMap.get(u.id)!;
-        const sub  = subByUser.get(u.id);
-        const last = lastScanByUser.get(u.id) ?? null;
-        const name = [u.firstName, u.lastName].filter(Boolean).join(" ") || u.email?.split("@")[0] || "client";
+        const sub       = subByUser.get(u.id);
+        const lastScan  = lastScanByUser.get(u.id) ?? null;
+        const scanCount = scanCountByUser.get(u.id) ?? 0;
+        const premPh    = phoneMap.get(u.id);
 
-        // Segment
-        let segment: "active" | "expiring_soon" | "recently_expired" | "churned" | "pending";
-        if (sub && sub.status === "active" && sub.expiresAt >= now) {
-          segment = sub.expiresAt <= in7d ? "expiring_soon" : "active";
-        } else if (sub && sub.expiresAt >= ago30d) {
+        // Contact : premiumRequest.phone > faux email tel-XXX > email réel
+        let phone: string | null = null;
+        let method = "unknown";
+        let contactType: "whatsapp" | "email" = "email";
+        let displayEmail: string | null = null;
+
+        if (premPh) {
+          phone = premPh.phone;
+          method = premPh.method;
+          contactType = "whatsapp";
+        } else if (u.email?.endsWith("@phone.glowscan.cm")) {
+          phone = u.email.replace(/^tel-/, "").replace(/@phone\.glowscan\.cm$/, "");
+          method = "phone";
+          contactType = "whatsapp";
+        } else if (u.email) {
+          displayEmail = u.email;
+          contactType = "email";
+        }
+
+        // Ignorer si aucun moyen de contact
+        if (!phone && !displayEmail) return null;
+
+        // Nom affiché
+        const rawName = [u.firstName, u.lastName].filter(Boolean).join(" ");
+        const name = rawName || phone || displayEmail?.split("@")[0] || "client";
+
+        // Segment — ordre de priorité : sub active > sub expirée > jamais payé + inactif
+        const hasSub = !!sub;
+        let segment: string;
+        if (hasSub && sub!.status === "active" && sub!.expiresAt >= now) {
+          segment = sub!.expiresAt <= in7d ? "expiring_soon" : "active";
+        } else if (hasSub && sub!.expiresAt >= ago30d) {
           segment = "recently_expired";
-        } else if (sub) {
+        } else if (hasSub) {
           segment = "churned";
+        } else if (premPh && premPh.reqStatus !== "confirmed") {
+          // A demandé mais paiement jamais confirmé
+          segment = "pending";
+        } else if (!hasSub && (!lastScan || lastScan <= ago30d) && u.createdAt! <= ago30d) {
+          segment = "dormant_30d";
+        } else if (!hasSub && (!lastScan || lastScan <= ago7d) && u.createdAt! <= ago7d) {
+          segment = "dormant_7d";
         } else {
-          segment = "pending"; // a soumis une demande mais n'a jamais été confirmé
+          segment = "new"; // inscrit récemment ou actif sans sub
         }
 
         return {
           userId: u.id,
           name,
-          email: u.email,
-          phone: ph.phone,
-          method: ph.method,
+          email: displayEmail,
+          phone,
+          method,
+          contactType,
           segment,
-          expiresAt: sub?.expiresAt?.toISOString() ?? null,
-          isPremium: sub?.status === "active" && sub?.expiresAt >= now,
-          lastScanAt: last?.toISOString() ?? null,
+          expiresAt:  sub?.expiresAt?.toISOString() ?? null,
+          isPremium:  hasSub && sub!.status === "active" && sub!.expiresAt >= now,
+          lastScanAt: lastScan?.toISOString() ?? null,
+          scanCount,
+          createdAt:  u.createdAt?.toISOString() ?? null,
         };
-      });
+      }).filter(Boolean) as NonNullable<ReturnType<typeof allUsersRows[0] extends infer U ? any : never>>[];
 
-      // Compter par segment
-      const segments: Record<string, number> = { active: 0, expiring_soon: 0, recently_expired: 0, churned: 0, pending: 0 };
-      for (const c of contacts) segments[c.segment] = (segments[c.segment] || 0) + 1;
+      const segments: Record<string, number> = {};
+      for (const c of contacts) segments[c.segment] = (segments[c.segment] ?? 0) + 1;
 
       res.json({ segments, total: contacts.length, contacts });
     } catch (err) {

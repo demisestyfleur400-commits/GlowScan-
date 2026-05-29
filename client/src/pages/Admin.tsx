@@ -6,7 +6,7 @@ import {
   Eye, BarChart3, RefreshCw, Calendar, CalendarDays, CalendarRange, Infinity,
   Package, DollarSign, Phone, User, Crown, CheckCircle2, XCircle, Loader2,
   BarChart2, Store, Plus, Trash2, ToggleLeft, ToggleRight, ChevronDown,
-  ChevronUp, Stethoscope,
+  ChevronUp, Stethoscope, Mail,
 } from "lucide-react";
 import { formatPrice, catalog, type Product } from "@shared/catalog";
 import { TractionDashboard } from "@/components/admin/TractionDashboard";
@@ -94,7 +94,7 @@ export default function Admin() {
   const [partnerMsg, setPartnerMsg] = useState("");
   const [retentionData, setRetentionData] = useState<any>(null);
   const [retentionLoading, setRetentionLoading] = useState(false);
-  const [retentionSegment, setRetentionSegment] = useState<"all" | "expiring_soon" | "recently_expired" | "churned" | "active" | "pending">("expiring_soon");
+  const [retentionSegment, setRetentionSegment] = useState<string>("expiring_soon");
 
   const savedKey = sessionStorage.getItem("glowscan_admin_key");
 
@@ -1190,46 +1190,90 @@ function FeaturedTab({ featuredItems, featuredLoading, featuredMsg, featuredCatS
 // DatasetTab, DatasetCard, DatasetStatCard → importés depuis @/components/admin/DatasetReview
 
 // ── RetentionTab ──────────────────────────────────────────────────────────────
-const SEGMENT_CONFIG = {
-  expiring_soon:    { label: "🔥 Expire < 7j",       color: "#f43f5e", bg: "rgba(244,63,94,0.1)",   border: "rgba(244,63,94,0.3)",   msg: (name: string) => `Salut ${name} ! 👋\n\nTon abonnement GlowScan Premium expire dans moins d'une semaine.\n\nRenouvelle maintenant pour continuer à profiter du Scan Produit IA et de ta Routine Tracker 💜\n\n💛 MTN MoMo : 674377959\n🟠 Orange Money : 690501392\n\nSeulement 2 000 FCFA ! Envoie ton reçu ici et je t'active immédiatement 🙏` },
-  recently_expired: { label: "😴 Expiré < 30j",      color: "#fb923c", bg: "rgba(251,146,60,0.1)",  border: "rgba(251,146,60,0.3)",  msg: (name: string) => `Salut ${name} ! 👋\n\nTon abonnement GlowScan Premium a expiré récemment.\n\nTu manques le Scan Produit IA et le suivi de ta peau semaine après semaine 🌿\n\nReviens pour seulement 2 000 FCFA !\n\n💛 MTN MoMo : 674377959\n🟠 Orange Money : 690501392\n\nJ'attends ton reçu pour te réactiver immédiatement 💕` },
-  churned:          { label: "💤 Churné > 30j",       color: "#a78bfa", bg: "rgba(167,139,250,0.1)", border: "rgba(167,139,250,0.3)", msg: (name: string) => `Salut ${name} ! 🌟\n\nCa fait un moment qu'on ne t'a pas vu sur GlowScan !\n\nOn a amélioré l'IA avec de vraies corrections de dermatologues experts — elle reconnaît maintenant bien mieux les peaux africaines 🩺\n\nReviens tester pour 2 000 FCFA !\n\n💛 MTN MoMo : 674377959\n🟠 Orange Money : 690501392` },
-  active:           { label: "💎 Premium actif",      color: "#6ee7b7", bg: "rgba(16,185,129,0.1)",  border: "rgba(16,185,129,0.3)",  msg: (name: string) => `Salut ${name} ! 💜\n\nMerci de faire confiance à GlowScan Premium !\n\nN'oublie pas d'utiliser ton Scan Produit IA pour analyser tes cosmétiques avant de les acheter — c'est inclus dans ton abonnement 🌿\n\nDes questions ? Je suis là !` },
-  pending:          { label: "🕐 Jamais confirmé",    color: "#fbbf24", bg: "rgba(251,191,36,0.1)",  border: "rgba(251,191,36,0.3)",  msg: (name: string) => `Salut ${name} ! 👋\n\nTu avais essayé de passer Premium sur GlowScan mais on n'a pas reçu ta confirmation de paiement.\n\nSi tu veux débloquer le Scan Produit IA et la Routine Tracker :\n\n💛 MTN MoMo : 674377959\n🟠 Orange Money : 690501392\n\n2 000 FCFA seulement — envoie ton reçu ici 🙏` },
-  all:              { label: "Tous",                  color: DS.violetMid, bg: "rgba(167,139,250,0.1)", border: "rgba(167,139,250,0.3)", msg: (name: string) => `Salut ${name} !` },
+const SEGMENT_CONFIG: Record<string, { label: string; color: string; bg: string; border: string; msg: (name: string) => string }> = {
+  // ─ Premium (utilisateurs qui ont déjà payé ou essayé de payer) ─
+  expiring_soon: {
+    label: "🔥 Expire < 7j", color: "#f43f5e", bg: "rgba(244,63,94,0.1)", border: "rgba(244,63,94,0.3)",
+    msg: (name) => `Salut ${name} ! 👋\n\nTon abonnement GlowScan Premium expire dans moins d'une semaine.\n\nRenouvelle maintenant pour continuer à profiter du Scan Produit IA et de ta Routine Tracker 💜\n\n💛 MTN MoMo : 674377959\n🟠 Orange Money : 690501392\n\nSeulement 2 000 FCFA ! Envoie ton reçu ici et je t'active immédiatement 🙏`,
+  },
+  recently_expired: {
+    label: "😴 Expiré < 30j", color: "#fb923c", bg: "rgba(251,146,60,0.1)", border: "rgba(251,146,60,0.3)",
+    msg: (name) => `Salut ${name} ! 👋\n\nTon abonnement GlowScan Premium a expiré récemment.\n\nTu manques le Scan Produit IA et le suivi de ta peau semaine après semaine 🌿\n\nReviens pour seulement 2 000 FCFA !\n\n💛 MTN MoMo : 674377959\n🟠 Orange Money : 690501392\n\nJ'attends ton reçu pour te réactiver immédiatement 💕`,
+  },
+  churned: {
+    label: "💤 Churné > 30j", color: "#a78bfa", bg: "rgba(167,139,250,0.1)", border: "rgba(167,139,250,0.3)",
+    msg: (name) => `Salut ${name} ! 🌟\n\nÇa fait un moment qu'on ne t'a pas vu sur GlowScan !\n\nOn a amélioré l'IA avec de vraies corrections de dermatologues experts — elle reconnaît maintenant bien mieux les peaux africaines 🩺\n\nReviens tester pour 2 000 FCFA !\n\n💛 MTN MoMo : 674377959\n🟠 Orange Money : 690501392`,
+  },
+  active: {
+    label: "💎 Premium actif", color: "#6ee7b7", bg: "rgba(16,185,129,0.1)", border: "rgba(16,185,129,0.3)",
+    msg: (name) => `Salut ${name} ! 💜\n\nMerci de faire confiance à GlowScan Premium !\n\nN'oublie pas d'utiliser ton Scan Produit IA pour analyser tes cosmétiques avant de les acheter — c'est inclus dans ton abonnement 🌿\n\nDes questions ? Je suis là !`,
+  },
+  pending: {
+    label: "🕐 Jamais confirmé", color: "#fbbf24", bg: "rgba(251,191,36,0.1)", border: "rgba(251,191,36,0.3)",
+    msg: (name) => `Salut ${name} ! 👋\n\nTu avais essayé de passer Premium sur GlowScan mais on n'a pas reçu ta confirmation de paiement.\n\nSi tu veux débloquer le Scan Produit IA et la Routine Tracker :\n\n💛 MTN MoMo : 674377959\n🟠 Orange Money : 690501392\n\n2 000 FCFA seulement — envoie ton reçu ici 🙏`,
+  },
+  // ─ Utilisateurs gratuits inactifs (ne savent pas que le premium existe) ─
+  dormant_7d: {
+    label: "💤 Inactif 7j+", color: "#60a5fa", bg: "rgba(96,165,250,0.1)", border: "rgba(96,165,250,0.3)",
+    msg: (name) => `Salut ${name} ! 👋\n\nTu as créé ton compte GlowScan mais tu n'as pas encore tout découvert !\n\nVoici ce que tu peux faire GRATUITEMENT :\n🔬 Analyse IA de ta peau (visage, cheveux, corps)\n📊 Glow Score — évalue l'état de ta peau en 30s\n💊 Détecte : dartre, acné, hyperpigmentation, PIH...\n🧴 Reçois une routine skincare adaptée à ta peau\n📁 Historique de toutes tes analyses\n\n✨ Et en Premium (2 000 FCFA/mois) :\n📦 Scan Produit IA — analyse tes cosmétiques avant achat\n🌿 Routine Tracker — suis ta skincare jour après jour\n📈 Suivi des progrès semaine après semaine\n\nAnalyse ta peau maintenant → glow-scan.com 💜`,
+  },
+  dormant_30d: {
+    label: "😶 Inactif 30j+", color: "#818cf8", bg: "rgba(129,140,248,0.1)", border: "rgba(129,140,248,0.3)",
+    msg: (name) => `Salut ${name} ! 🌟\n\nOn ne t'a pas vu depuis un moment sur GlowScan !\n\nGlowScan c'est l'IA dermatologique spécialisée peaux africaines — gratuite et disponible 24h/24 :\n\n🔬 Analyse visage, cheveux et corps\n📊 Reçois ton Glow Score personnalisé\n💊 Diagnostic : dartre, PIH, acné, hyperpigmentation...\n🧴 Produits recommandés adaptés aux peaux africaines\n\nTes amies utilisent peut-être déjà GlowScan 😄\n\nReviens faire une analyse → glow-scan.com 💜`,
+  },
+  new: {
+    label: "🆕 Nouveau", color: "#34d399", bg: "rgba(52,211,153,0.1)", border: "rgba(52,211,153,0.3)",
+    msg: (name) => `Salut ${name} ! 🎉\n\nBienvenue sur GlowScan !\n\nN'oublie pas de faire ta première analyse IA — c'est 100% gratuit et ça prend 30 secondes 🔬\n\n→ glow-scan.com/analyze\n\nDes questions ? Je suis là 💜`,
+  },
+  all: {
+    label: "Tous", color: "#7c3aed", bg: "rgba(124,58,237,0.1)", border: "rgba(124,58,237,0.3)",
+    msg: (name) => `Salut ${name} ! 👋`,
+  },
 };
+
+// Ordre d'affichage des segments dans les stats cards
+const SEGMENT_ORDER = ["expiring_soon", "recently_expired", "churned", "active", "pending", "dormant_7d", "dormant_30d", "new"] as const;
 
 function RetentionTab({ data, loading, segment, setSegment, onRefresh }: {
   data: any; loading: boolean;
-  segment: keyof typeof SEGMENT_CONFIG;
-  setSegment: (s: keyof typeof SEGMENT_CONFIG) => void;
+  segment: string;
+  setSegment: (s: string) => void;
   onRefresh: () => void;
 }) {
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const contacts: any[] = data?.contacts ?? [];
   const filtered = segment === "all" ? contacts : contacts.filter((c: any) => c.segment === segment);
-  const cfg = SEGMENT_CONFIG[segment];
 
-  const waLink = (phone: string, name: string) => {
-    const clean = phone.replace(/\D/g, "");
-    const num = clean.startsWith("237") ? clean : `237${clean}`;
-    return `https://wa.me/${num}?text=${encodeURIComponent(SEGMENT_CONFIG[segment === "all" ? "active" : segment].msg(name))}`;
+  const getMsgForContact = (c: any) => {
+    const seg = c.segment as string;
+    const cfg = SEGMENT_CONFIG[seg] ?? SEGMENT_CONFIG.dormant_7d;
+    return cfg.msg(c.name);
   };
 
-  const copyPhone = (phone: string, id: string) => {
-    navigator.clipboard.writeText(phone.replace(/\D/g, "")).catch(() => {});
-    setCopiedId(id); setTimeout(() => setCopiedId(null), 1500);
+  const waLink = (phone: string, c: any) => {
+    const clean = phone.replace(/\D/g, "");
+    const num = clean.startsWith("237") ? clean : `237${clean}`;
+    return `https://wa.me/${num}?text=${encodeURIComponent(getMsgForContact(c))}`;
+  };
+
+  const copyContact = (c: any) => {
+    const val = c.phone ? c.phone.replace(/\D/g, "") : (c.email ?? "");
+    navigator.clipboard.writeText(val).catch(() => {});
+    setCopiedId(c.userId); setTimeout(() => setCopiedId(null), 1500);
   };
 
   const fmtDate = (iso: string | null) => {
     if (!iso) return "—";
-    const d = new Date(iso);
-    const diff = Math.floor((Date.now() - d.getTime()) / 86400000);
+    const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
     if (diff === 0) return "aujourd'hui";
     if (diff === 1) return "hier";
+    if (diff < 0) return `dans ${Math.abs(diff)}j`;
     return `il y a ${diff}j`;
   };
+
+  // Segments qui ont des contacts
+  const activeSegs = SEGMENT_ORDER.filter((s) => (data?.segments?.[s] ?? 0) > 0);
 
   return (
     <div className="space-y-4" data-testid="tab-retention">
@@ -1237,10 +1281,10 @@ function RetentionTab({ data, loading, segment, setSegment, onRefresh }: {
       <div className="rounded-2xl p-5 flex items-start justify-between gap-4" style={{ background: "rgba(244,63,94,0.06)", border: "1px solid rgba(244,63,94,0.25)" }}>
         <div>
           <h2 className="text-base font-extrabold flex items-center gap-2" style={{ color: "#f87171" }}>
-            <MessageCircle className="w-5 h-5" /> Rétention WhatsApp
+            <MessageCircle className="w-5 h-5" /> Rétention & Engagement
           </h2>
           <p className="text-xs mt-1" style={{ color: DS.body }}>
-            {data?.total ?? 0} contacts avec numéro · Clique sur un contact pour ouvrir WhatsApp avec le message pré-rédigé.
+            {data?.total ?? 0} utilisateurs contactables · WhatsApp ou email · Messages pré-rédigés par segment.
           </p>
         </div>
         <button onClick={onRefresh} disabled={loading} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-extrabold transition-all active:scale-95" style={{ background: "rgba(255,255,255,0.07)", border: `1px solid ${DS.border}`, color: DS.muted }}>
@@ -1250,30 +1294,36 @@ function RetentionTab({ data, loading, segment, setSegment, onRefresh }: {
 
       {/* Segment stats */}
       {data && (
-        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-          {(["expiring_soon", "recently_expired", "churned", "active", "pending"] as const).map((seg) => {
+        <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
+          {SEGMENT_ORDER.map((seg) => {
             const c = SEGMENT_CONFIG[seg];
             const n = data.segments?.[seg] ?? 0;
             return (
               <button key={seg} onClick={() => setSegment(seg)}
-                className="rounded-xl p-3 text-left transition-all"
-                style={{ background: segment === seg ? c.bg : "rgba(255,255,255,0.03)", border: `1px solid ${segment === seg ? c.border : DS.border}` }}
+                className="rounded-xl p-2.5 text-left transition-all"
+                style={{ background: segment === seg ? c.bg : "rgba(255,255,255,0.03)", border: `1px solid ${segment === seg ? c.border : DS.border}`, opacity: n === 0 ? 0.45 : 1 }}
               >
                 <p className="text-lg font-extrabold" style={{ color: c.color }}>{n}</p>
-                <p className="text-[10px] font-extrabold leading-tight mt-0.5" style={{ color: segment === seg ? c.color : DS.muted }}>{c.label}</p>
+                <p className="text-[9px] font-extrabold leading-tight mt-0.5" style={{ color: segment === seg ? c.color : DS.muted }}>{c.label}</p>
               </button>
             );
           })}
         </div>
       )}
 
-      {/* Filtre tous */}
-      <div className="flex items-center gap-2">
+      {/* Filtre Tous + résumé */}
+      <div className="flex items-center gap-2 flex-wrap">
         <button onClick={() => setSegment("all")} className="text-xs font-extrabold px-3 py-1.5 rounded-full transition-all"
           style={segment === "all" ? { background: DS.violet, color: "white" } : { background: "rgba(255,255,255,0.06)", color: DS.muted }}>
           Tous ({data?.total ?? 0})
         </button>
-        <span className="text-xs" style={{ color: DS.muted }}>{filtered.length} contact{filtered.length > 1 ? "s" : ""} dans ce segment</span>
+        {activeSegs.filter(s => s !== segment && s !== "all").slice(0, 4).map(s => (
+          <button key={s} onClick={() => setSegment(s)} className="text-xs px-2.5 py-1 rounded-full transition-all"
+            style={{ background: SEGMENT_CONFIG[s].bg, color: SEGMENT_CONFIG[s].color, border: `1px solid ${SEGMENT_CONFIG[s].border}` }}>
+            {SEGMENT_CONFIG[s].label} ({data?.segments?.[s] ?? 0})
+          </button>
+        ))}
+        <span className="text-xs ml-auto" style={{ color: DS.muted }}>{filtered.length} contact{filtered.length > 1 ? "s" : ""}</span>
       </div>
 
       {loading && <p className="text-center text-sm py-8" style={{ color: DS.muted }}>Chargement…</p>}
@@ -1287,9 +1337,10 @@ function RetentionTab({ data, loading, segment, setSegment, onRefresh }: {
       {/* Liste contacts */}
       <div className="space-y-2">
         {filtered.map((c: any) => {
-          const segCfg = SEGMENT_CONFIG[c.segment as keyof typeof SEGMENT_CONFIG] ?? SEGMENT_CONFIG.active;
+          const segCfg = SEGMENT_CONFIG[c.segment] ?? SEGMENT_CONFIG.dormant_7d;
+          const hasWA = !!c.phone;
           return (
-            <div key={c.userId} className="rounded-2xl p-4 flex items-center gap-4" style={{ background: DS.surface, border: `1px solid ${DS.border}` }}>
+            <div key={c.userId} className="rounded-2xl p-4 flex items-center gap-3" style={{ background: DS.surface, border: `1px solid ${DS.border}` }}>
               {/* Avatar */}
               <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-extrabold" style={{ background: segCfg.bg, border: `1px solid ${segCfg.border}`, color: segCfg.color }}>
                 {(c.name?.[0] || "?").toUpperCase()}
@@ -1298,29 +1349,38 @@ function RetentionTab({ data, loading, segment, setSegment, onRefresh }: {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <p className="text-sm font-extrabold truncate" style={{ color: DS.text }}>{c.name}</p>
-                  <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full" style={{ background: segCfg.bg, color: segCfg.color }}>{segCfg.label}</span>
-                  {c.method === "mtn_momo" && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-extrabold" style={{ background: "rgba(251,191,36,0.15)", color: "#fbbf24" }}>MTN</span>}
-                  {c.method === "orange_money" && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-extrabold" style={{ background: "rgba(251,146,60,0.15)", color: "#fb923c" }}>Orange</span>}
+                  <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded-full" style={{ background: segCfg.bg, color: segCfg.color }}>{segCfg.label}</span>
+                  {c.method === "mtn_momo"    && <span className="text-[9px] px-1.5 py-0.5 rounded-full font-extrabold" style={{ background: "rgba(251,191,36,0.15)", color: "#fbbf24" }}>MTN</span>}
+                  {c.method === "orange_money" && <span className="text-[9px] px-1.5 py-0.5 rounded-full font-extrabold" style={{ background: "rgba(251,146,60,0.15)", color: "#fb923c" }}>Orange</span>}
+                  {!hasWA && <span className="text-[9px] px-1.5 py-0.5 rounded-full font-extrabold" style={{ background: "rgba(148,163,184,0.15)", color: "#94a3b8" }}>✉️ Email</span>}
                 </div>
-                <p className="text-xs font-mono mt-0.5" style={{ color: DS.body }}>{c.phone}</p>
+                <p className="text-xs font-mono mt-0.5" style={{ color: DS.body }}>{c.phone ?? c.email}</p>
                 <div className="flex items-center gap-3 mt-0.5 flex-wrap">
-                  {c.expiresAt && <p className="text-[11px]" style={{ color: DS.muted }}>Expire {fmtDate(c.expiresAt)}</p>}
-                  {c.lastScanAt && <p className="text-[11px]" style={{ color: DS.muted }}>Dernier scan {fmtDate(c.lastScanAt)}</p>}
-                  {c.email && <p className="text-[11px] truncate max-w-[140px]" style={{ color: DS.muted }}>{c.email}</p>}
+                  {c.expiresAt  && <p className="text-[10px]" style={{ color: DS.muted }}>Expire {fmtDate(c.expiresAt)}</p>}
+                  {c.lastScanAt && <p className="text-[10px]" style={{ color: DS.muted }}>Dernier scan {fmtDate(c.lastScanAt)}</p>}
+                  {!c.lastScanAt && c.createdAt && <p className="text-[10px]" style={{ color: DS.muted }}>Inscrit {fmtDate(c.createdAt)}</p>}
+                  {c.scanCount > 0 && <p className="text-[10px]" style={{ color: DS.muted }}>{c.scanCount} analyse{c.scanCount > 1 ? "s" : ""}</p>}
                 </div>
               </div>
               {/* Actions */}
               <div className="flex flex-col gap-1.5 flex-shrink-0">
-                <a href={waLink(c.phone, c.name)} target="_blank" rel="noreferrer"
-                  className="flex items-center gap-1.5 text-white font-extrabold text-xs px-3 py-2 rounded-xl transition-all active:scale-95"
-                  style={{ background: "#25D366" }}>
-                  <MessageCircle className="w-3.5 h-3.5 fill-current" />
-                  WhatsApp
-                </a>
-                <button onClick={() => copyPhone(c.phone, c.userId)}
+                {hasWA ? (
+                  <a href={waLink(c.phone, c)} target="_blank" rel="noreferrer"
+                    className="flex items-center gap-1.5 text-white font-extrabold text-xs px-3 py-2 rounded-xl transition-all active:scale-95"
+                    style={{ background: "#25D366" }}>
+                    <MessageCircle className="w-3.5 h-3.5 fill-current" /> WhatsApp
+                  </a>
+                ) : (
+                  <a href={`mailto:${c.email}?subject=GlowScan%20%E2%80%94%20On%20pense%20%C3%A0%20toi%20%F0%9F%92%9C&body=${encodeURIComponent(getMsgForContact(c))}`}
+                    className="flex items-center gap-1.5 text-white font-extrabold text-xs px-3 py-2 rounded-xl transition-all active:scale-95"
+                    style={{ background: "#6366f1" }}>
+                    <Mail className="w-3.5 h-3.5" /> Email
+                  </a>
+                )}
+                <button onClick={() => copyContact(c)}
                   className="text-xs font-extrabold px-3 py-1.5 rounded-xl transition-all"
                   style={{ background: "rgba(255,255,255,0.06)", border: `1px solid ${DS.border}`, color: DS.muted }}>
-                  {copiedId === c.userId ? "✅ Copié" : "📋 Numéro"}
+                  {copiedId === c.userId ? "✅ Copié" : hasWA ? "📋 Numéro" : "📋 Email"}
                 </button>
               </div>
             </div>
