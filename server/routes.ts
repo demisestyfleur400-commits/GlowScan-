@@ -2097,6 +2097,93 @@ Réponds en 2-4 phrases max, sois direct et utile.`;
     }
   });
 
+  // GET /api/admin/retention — segments de rétention avec numéros WhatsApp
+  // Croise users + premiumRequests (phone) + subscriptions (statut) + scans (activité)
+  app.get("/api/admin/retention", async (req: any, res) => {
+    if (!checkAdminKey(req)) return res.status(403).json({ message: "Accès refusé" });
+    try {
+      const now = new Date();
+      const in7d  = new Date(now.getTime() + 7  * 24 * 60 * 60 * 1000);
+      const ago30d = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+      // Récupérer tous les utilisateurs avec au moins une demande premium (phone dispo)
+      const allReqs = await db.select().from(premiumRequests).orderBy(desc(premiumRequests.createdAt));
+
+      // Map userId → meilleur numéro (confirmed en priorité, sinon pending, sinon rejected)
+      const phoneMap = new Map<string, { phone: string; method: string }>();
+      for (const r of allReqs) {
+        const existing = phoneMap.get(r.userId);
+        const priority = r.status === "confirmed" ? 3 : r.status === "pending" ? 2 : 1;
+        const existingPriority = !existing ? 0 : r.status === "confirmed" ? 3 : r.status === "pending" ? 2 : 1;
+        if (priority > existingPriority) phoneMap.set(r.userId, { phone: r.phone, method: r.method });
+      }
+
+      const userIds = [...phoneMap.keys()];
+      if (userIds.length === 0) return res.json({ segments: {}, total: 0, contacts: [] });
+
+      // Récupérer les users + subs + scans en parallèle
+      const [allUsersRows, allSubs, recentScans] = await Promise.all([
+        db.select().from(users).where(sql`${users.id} = ANY(${userIds})`),
+        db.select().from(subscriptions).where(sql`${subscriptions.userId} = ANY(${userIds})`).orderBy(desc(subscriptions.expiresAt)),
+        db.select({ userId: scans.userId, createdAt: scans.createdAt }).from(scans)
+          .where(and(sql`${scans.userId} = ANY(${userIds})`, gte(scans.createdAt, ago30d)))
+          .orderBy(desc(scans.createdAt)),
+      ]);
+
+      // Map pour accès rapide
+      const subByUser = new Map<string, typeof allSubs[0]>();
+      for (const s of allSubs) {
+        if (!subByUser.has(s.userId) || (s.expiresAt > (subByUser.get(s.userId)!.expiresAt))) {
+          subByUser.set(s.userId, s);
+        }
+      }
+      const lastScanByUser = new Map<string, Date>();
+      for (const sc of recentScans) {
+        if (sc.userId && !lastScanByUser.has(sc.userId)) lastScanByUser.set(sc.userId, sc.createdAt!);
+      }
+
+      const contacts = allUsersRows.map((u) => {
+        const ph   = phoneMap.get(u.id)!;
+        const sub  = subByUser.get(u.id);
+        const last = lastScanByUser.get(u.id) ?? null;
+        const name = [u.firstName, u.lastName].filter(Boolean).join(" ") || u.email?.split("@")[0] || "client";
+
+        // Segment
+        let segment: "active" | "expiring_soon" | "recently_expired" | "churned" | "pending";
+        if (sub && sub.status === "active" && sub.expiresAt >= now) {
+          segment = sub.expiresAt <= in7d ? "expiring_soon" : "active";
+        } else if (sub && sub.expiresAt >= ago30d) {
+          segment = "recently_expired";
+        } else if (sub) {
+          segment = "churned";
+        } else {
+          segment = "pending"; // a soumis une demande mais n'a jamais été confirmé
+        }
+
+        return {
+          userId: u.id,
+          name,
+          email: u.email,
+          phone: ph.phone,
+          method: ph.method,
+          segment,
+          expiresAt: sub?.expiresAt?.toISOString() ?? null,
+          isPremium: sub?.status === "active" && sub?.expiresAt >= now,
+          lastScanAt: last?.toISOString() ?? null,
+        };
+      });
+
+      // Compter par segment
+      const segments: Record<string, number> = { active: 0, expiring_soon: 0, recently_expired: 0, churned: 0, pending: 0 };
+      for (const c of contacts) segments[c.segment] = (segments[c.segment] || 0) + 1;
+
+      res.json({ segments, total: contacts.length, contacts });
+    } catch (err) {
+      console.error("[admin/retention] error:", err);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
   // POST /api/leads/track — crée un lead WhatsApp avec code de référence unique
   app.post("/api/leads/track", async (req: any, res) => {
     const { brandPhone, brandName, productNames, totalPrice } = req.body;
