@@ -1194,36 +1194,36 @@ const SEGMENT_CONFIG: Record<string, { label: string; color: string; bg: string;
   // ─ Premium (utilisateurs qui ont déjà payé ou essayé de payer) ─
   expiring_soon: {
     label: "🔥 Expire < 7j", color: "#f43f5e", bg: "rgba(244,63,94,0.1)", border: "rgba(244,63,94,0.3)",
-    msg: (name) => `Salut ${name} ! 👋\n\nTon abonnement GlowScan Premium expire dans moins d'une semaine.\n\nRenouvelle maintenant pour continuer à profiter du Scan Produit IA et de ta Routine Tracker 💜\n\n💛 MTN MoMo : 674377959\n🟠 Orange Money : 690501392\n\nSeulement 2 000 FCFA ! Envoie ton reçu ici et je t'active immédiatement 🙏`,
+    msg: (name) => `Salut ${name} ! 💜\n\nTon suivi dermatologique GlowScan expire bientôt. Pour continuer à prendre soin de ta peau, renouvelle pour 2 000 FCFA.\n\n💛 MTN MoMo : 674377959\n🟠 Orange Money : 690501392\n\nEnvoie ton reçu ici, je t'active dans la foulée 🙏`,
   },
   recently_expired: {
     label: "😴 Expiré < 30j", color: "#fb923c", bg: "rgba(251,146,60,0.1)", border: "rgba(251,146,60,0.3)",
-    msg: (name) => `Salut ${name} ! 👋\n\nTon abonnement GlowScan Premium a expiré récemment.\n\nTu manques le Scan Produit IA et le suivi de ta peau semaine après semaine 🌿\n\nReviens pour seulement 2 000 FCFA !\n\n💛 MTN MoMo : 674377959\n🟠 Orange Money : 690501392\n\nJ'attends ton reçu pour te réactiver immédiatement 💕`,
+    msg: (name) => `Salut ${name} ! 💜\n\nTon accès GlowScan Premium a expiré. Ta peau mérite un suivi régulier — reviens quand tu veux, je suis là.\n\n💛 MTN MoMo : 674377959\n🟠 Orange Money : 690501392\n\n2 000 FCFA/mois. Envoie ton reçu et je t'active 🙏`,
   },
   churned: {
     label: "💤 Churné > 30j", color: "#a78bfa", bg: "rgba(167,139,250,0.1)", border: "rgba(167,139,250,0.3)",
-    msg: (name) => `Salut ${name} ! 🌟\n\nÇa fait un moment qu'on ne t'a pas vu sur GlowScan !\n\nOn a amélioré l'IA avec de vraies corrections de dermatologues experts — elle reconnaît maintenant bien mieux les peaux africaines 🩺\n\nReviens tester pour 2 000 FCFA !\n\n💛 MTN MoMo : 674377959\n🟠 Orange Money : 690501392`,
+    msg: (name) => `Salut ${name} ! 💜\n\nNotre IA dermatologique s'est vraiment améliorée depuis ta dernière visite — corrections de vrais dermatologues sur peaux africaines 🩺\n\nSi tu veux reprendre le suivi de ta peau : 2 000 FCFA/mois.\n💛 674377959 (MTN) | 🟠 690501392 (Orange)`,
   },
   active: {
     label: "💎 Premium actif", color: "#6ee7b7", bg: "rgba(16,185,129,0.1)", border: "rgba(16,185,129,0.3)",
-    msg: (name) => `Salut ${name} ! 💜\n\nMerci de faire confiance à GlowScan Premium !\n\nN'oublie pas d'utiliser ton Scan Produit IA pour analyser tes cosmétiques avant de les acheter — c'est inclus dans ton abonnement 🌿\n\nDes questions ? Je suis là !`,
+    msg: (name) => `Salut ${name} ! 💜\n\nPense à analyser ta peau régulièrement — une photo suffit, l'IA fait le reste 🔬\n\nDes questions sur ton diagnostic ou ta routine ? Je suis là.`,
   },
   pending: {
     label: "🕐 Jamais confirmé", color: "#fbbf24", bg: "rgba(251,191,36,0.1)", border: "rgba(251,191,36,0.3)",
-    msg: (name) => `Salut ${name} ! 👋\n\nTu avais essayé de passer Premium sur GlowScan mais on n'a pas reçu ta confirmation de paiement.\n\nSi tu veux débloquer le Scan Produit IA et la Routine Tracker :\n\n💛 MTN MoMo : 674377959\n🟠 Orange Money : 690501392\n\n2 000 FCFA seulement — envoie ton reçu ici 🙏`,
+    msg: (name) => `Salut ${name} ! 👋\n\nTu avais demandé un accès Premium GlowScan — on n'a pas reçu ton paiement.\n\nSi tu es encore intéressé(e) : 2 000 FCFA via\n💛 674377959 (MTN) | 🟠 690501392 (Orange)`,
   },
   // ─ Utilisateurs gratuits inactifs (ne savent pas que le premium existe) ─
   dormant_7d: {
     label: "💤 Inactif 7j+", color: "#60a5fa", bg: "rgba(96,165,250,0.1)", border: "rgba(96,165,250,0.3)",
-    msg: (name) => `Salut ${name} ! 👋\n\nTu as créé ton compte GlowScan mais tu n'as pas encore tout découvert !\n\nVoici ce que tu peux faire GRATUITEMENT :\n🔬 Analyse IA de ta peau (visage, cheveux, corps)\n📊 Glow Score — évalue l'état de ta peau en 30s\n💊 Détecte : dartre, acné, hyperpigmentation, PIH...\n🧴 Reçois une routine skincare adaptée à ta peau\n📁 Historique de toutes tes analyses\n\n✨ Et en Premium (2 000 FCFA/mois) :\n📦 Scan Produit IA — analyse tes cosmétiques avant achat\n🌿 Routine Tracker — suis ta skincare jour après jour\n📈 Suivi des progrès semaine après semaine\n\nAnalyse ta peau maintenant → glow-scan.com 💜`,
+    msg: (name) => `Salut ${name} ! 🔬\n\nGlowScan peut analyser ta peau gratuitement — diagnostic IA spécialisé peaux africaines en 30 secondes.\n\nDartre, acné, hyperpigmentation, Glow Score... tout est inclus sans payer.\n\n→ glow-scan.com 💜`,
   },
   dormant_30d: {
     label: "😶 Inactif 30j+", color: "#818cf8", bg: "rgba(129,140,248,0.1)", border: "rgba(129,140,248,0.3)",
-    msg: (name) => `Salut ${name} ! 🌟\n\nOn ne t'a pas vu depuis un moment sur GlowScan !\n\nGlowScan c'est l'IA dermatologique spécialisée peaux africaines — gratuite et disponible 24h/24 :\n\n🔬 Analyse visage, cheveux et corps\n📊 Reçois ton Glow Score personnalisé\n💊 Diagnostic : dartre, PIH, acné, hyperpigmentation...\n🧴 Produits recommandés adaptés aux peaux africaines\n\nTes amies utilisent peut-être déjà GlowScan 😄\n\nReviens faire une analyse → glow-scan.com 💜`,
+    msg: (name) => `Salut ${name} ! 💜\n\nGlowScan est toujours là pour prendre soin de ta peau.\n\nDiagnostic gratuit, spécialisé peaux africaines — 30 secondes et une photo suffisent 🔬\n\n→ glow-scan.com`,
   },
   new: {
     label: "🆕 Nouveau", color: "#34d399", bg: "rgba(52,211,153,0.1)", border: "rgba(52,211,153,0.3)",
-    msg: (name) => `Salut ${name} ! 🎉\n\nBienvenue sur GlowScan !\n\nN'oublie pas de faire ta première analyse IA — c'est 100% gratuit et ça prend 30 secondes 🔬\n\n→ glow-scan.com/analyze\n\nDes questions ? Je suis là 💜`,
+    msg: (name) => `Salut ${name} ! 💜\n\nBienvenue sur GlowScan ! Ta première analyse est gratuite — une photo et l'IA s'occupe du reste 🔬\n\n→ glow-scan.com/analyze`,
   },
   all: {
     label: "Tous", color: "#7c3aed", bg: "rgba(124,58,237,0.1)", border: "rgba(124,58,237,0.3)",
