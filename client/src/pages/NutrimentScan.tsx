@@ -199,7 +199,7 @@ export default function NutrimentScan() {
           }}
         >
           <Crown className="w-5 h-5" />
-          Passer premium — 2 000 FCFA à vie
+          Passer premium — 2 000 FCFA/mois
         </a>
         <a href="/" className="mt-4 text-sm font-medium" style={{ color: "rgba(255,255,255,0.35)" }}>
           ← Retour à l'accueil

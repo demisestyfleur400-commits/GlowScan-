@@ -667,10 +667,10 @@ export default function Analyze() {
 
               <div>
                 <h3 className="text-base font-bold" style={{ color: "#f3f0ff" }}>
-                  Quota anonyme atteint
+                  Garde ta peau en mémoire
                 </h3>
                 <p className="text-xs mt-2 leading-relaxed" style={{ color: "rgba(200,185,255,0.65)" }}>
-                  Pour sécuriser la sauvegarde de tes métriques et continuer à utiliser nos serveurs d'analyse, la création d'un compte est nécessaire.
+                  Crée ton compte gratuit pour sauvegarder tes analyses, suivre l'évolution de ta peau et accéder à ton historique à tout moment.
                 </p>
               </div>
 
@@ -683,7 +683,7 @@ export default function Analyze() {
                   color: "#fff",
                 }}
               >
-                Créer mon compte GlowScan
+                Créer mon compte — c'est gratuit
               </button>
             </motion.div>
           )}

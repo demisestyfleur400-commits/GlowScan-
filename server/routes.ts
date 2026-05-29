@@ -222,7 +222,7 @@ export async function registerRoutes(
   // === AI Analysis Endpoint ===
   // === Helper: vérifier statut abonnement + comptage scans du mois ===
   const FREE_SCAN_LIMIT = 9999;
-  const PREMIUM_PRICE_FCFA = 1000;
+  const PREMIUM_PRICE_FCFA = 2000;
 
   async function checkScanQuota(userId: string): Promise<{ allowed: boolean; isPremium: boolean; scansThisMonth: number; reason?: string }> {
     // 1. Vérifier abonnement actif
@@ -1841,7 +1841,7 @@ Réponds en 2-4 phrases max, sois direct et utile.`;
   // PREMIUM REQUESTS — Demandes de paiement Mobile Money
   // ─────────────────────────────────────────────────────────
   const OWNER_WHATSAPP = "237674377959";
-  const PREMIUM_PRICE = 1000;
+  const PREMIUM_PRICE = 2000;
 
   // POST /api/premium/request — soumettre une demande de paiement
   app.post("/api/premium/request", async (req: any, res) => {
@@ -2584,10 +2584,10 @@ Réponds en 2-4 phrases max, sois direct et utile.`;
       const totalPremiumAllTime = Number(totalPremiumResult[0]?.count ?? 0);
 
       const premiumRevenueResult = await db
-        .select({ total: sql<number>`COALESCE(SUM(1000), 0)::integer` })
+        .select({ total: sql<number>`COALESCE(SUM(2000), 0)::integer` })
         .from(subscriptions)
         .where(eq(subscriptions.status, "active"));
-      const premiumRevenue = activePremium * 1000; // 1000 FCFA/mois
+      const premiumRevenue = activePremium * 2000; // 2000 FCFA/mois
 
       // ── WHATSAPP & CONVERSION ─────────────────────────────────
       const totalWAResult = await db.select({ count: count() }).from(whatsappClicks);

@@ -115,7 +115,7 @@ export default function Premium() {
           Licence active
         </h1>
         <p className="text-xs max-w-xs mx-auto mb-6" style={{ color: "rgba(200,185,255,0.65)" }}>
-          Tu disposes d'un accès à vie complet aux infrastructures et analyses de GlowScan.
+          Ton abonnement GlowScan Premium est actif. Profite de toutes les fonctionnalités sans limite.
         </p>
         <Button onClick={() => setLocation("/")} variant="premium" className="w-full max-w-xs">
           Retour au tableau de bord
@@ -244,7 +244,7 @@ export default function Premium() {
                     className="text-xl font-extrabold tracking-tight mb-1"
                     style={{ color: "#f3f0ff", fontWeight: 800 }}
                   >
-                    Mise à niveau à vie
+                    Activer mon abonnement
                   </h2>
                   <p className="text-xs mb-6" style={{ color: "rgba(200,185,255,0.65)" }}>
                     Débloque le Scan Produit IA et le Routine Tracker — conçus pour transformer ta peau.
@@ -254,7 +254,7 @@ export default function Premium() {
                     style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: "16px" }}
                   >
                     <p className="text-2xl font-extrabold tracking-tight" style={{ color: "#f3f0ff", fontWeight: 800 }}>
-                      2 000 FCFA — accès à vie
+                      2 000 FCFA / mois
                     </p>
                     <p className="text-[10px] font-medium mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>
                       Aucun abonnement caché · Paiement unique
@@ -313,7 +313,7 @@ export default function Premium() {
                     Note d'ingénierie
                   </span>
                   <p className="text-xs font-medium leading-relaxed mt-1" style={{ color: "rgba(200,185,255,0.65)" }}>
-                    "Nous développons des modèles algorithmiques entraînés spécifiquement sur les variations mélaniques et climatiques d'Afrique centrale. L'accès à vie nous permet de financer la puissance de calcul sans imposer de rentes récurrentes à notre communauté."
+                    "Nous développons des modèles algorithmiques entraînés spécifiquement sur les variations mélaniques et climatiques d'Afrique centrale. L'abonnement mensuel nous permet de financer la puissance de calcul et d'améliorer continuellement l'IA pour notre communauté."
                   </p>
                   <span className="text-[10px] font-bold block mt-1.5" style={{ color: "rgba(255,255,255,0.35)" }}>
                     — Demise Essawe, Fondateur GlowScan

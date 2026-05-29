@@ -17,7 +17,7 @@ export function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
 
   const handleWhatsApp = () => {
     setLoading(true);
-    const text = `🌟 *ACTIVATION GLOWSCAN AI & SCAN NUTRITIONNEL*\n\nJe souhaite débloquer l'accès à vie à l'IA GlowScan et au module de Scan Nutritionnel.\n\n💵 *Tarif Unique :* ${PREMIUM_PRICE.toLocaleString()} FCFA (Accès à vie)\n📲 *Paiement :* Orange Money ou MTN MoMo au *674 37 79 59*\n\nJe vous envoie la capture d'écran de mon reçu de paiement pour activer mes accès premium immédiatement ! ✨`;
+    const text = `🌟 *ACTIVATION GLOWSCAN PREMIUM*\n\nJe souhaite activer mon abonnement GlowScan Premium.\n\n💵 *Tarif :* ${PREMIUM_PRICE.toLocaleString()} FCFA/mois\n📲 *Paiement :* Orange Money ou MTN MoMo au *674 37 79 59*\n\nJe vous envoie la capture d'écran de mon reçu de paiement pour activer mon accès immédiatement ! ✨`;
 
     window.open(`https://wa.me/${ADMIN_WHATSAPP.replace(/\D/g, "")}?text=${encodeURIComponent(text)}`, "_blank");
 
@@ -151,7 +151,7 @@ export function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
                       borderRadius: 8,
                     }}
                   >
-                    À vie
+                    /mois
                   </span>
                 </div>
                 <p
@@ -296,7 +296,7 @@ export function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
                 }}
               >
                 <MessageCircle className="w-4 h-4 fill-current" />
-                {loading ? "Ouverture de WhatsApp…" : "Activer mon accès à vie à 2 000 FCFA"}
+                {loading ? "Ouverture de WhatsApp…" : "Activer mon abonnement — 2 000 FCFA/mois"}
               </button>
               <p
                 className="text-[10px] text-center mt-2.5 font-medium"
