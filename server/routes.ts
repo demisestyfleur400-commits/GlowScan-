@@ -1743,20 +1743,45 @@ Réponds en 2-4 phrases max, sois direct et utile.`;
   // ═════════════════════════════════════════════════════════
   // DATASET RLHF — Validation par dermatologue expert
   // ═════════════════════════════════════════════════════════
+  const DERMATO_KEY = process.env.DERMATO_KEY || "dermato2024";
+
   function checkAdminKey(req: any): boolean {
     const k = (req.query.key as string) || (req.headers["x-admin-key"] as string) || req.body?.adminKey;
     const ok = k === process.env.ADMIN_KEY || k === "glowscan2024admin";
-    if (ok && req.session) {
-      // Marque la session comme admin → autorise la lecture des photos via /objects/scans/*
-      // sans exposer la clé dans les URL <img src="...">
-      (req.session as any).isAdmin = true;
-    }
+    if (ok && req.session) (req.session as any).isAdmin = true;
     return ok;
   }
 
+  /** Accepte clé admin OU clé dermato (accès lecture dataset uniquement) */
+  function checkDatasetKey(req: any): boolean {
+    const k = (req.query.key as string) || (req.headers["x-admin-key"] as string) || req.body?.adminKey;
+    return (k === process.env.ADMIN_KEY || k === "glowscan2024admin" || k === DERMATO_KEY);
+  }
+
+  // GET /api/admin/scan-image/:scanId — Proxy image dataset (admin ou dermato key)
+  // Évite la dépendance à la session pour les balises <img> dans l'interface de review.
+  app.get("/api/admin/scan-image/:scanId", async (req: any, res) => {
+    if (!checkDatasetKey(req)) return res.status(403).json({ message: "Accès refusé" });
+    const scanId = parseInt(req.params.scanId);
+    if (!scanId) return res.status(400).json({ message: "ID invalide" });
+    try {
+      const scan = await storage.getScan(scanId);
+      if (!scan || !scan.imageUrl) return res.status(404).json({ message: "Image non disponible" });
+      if (!scan.imageUrl.startsWith("/objects/scans/")) return res.status(404).json({ message: "Image non disponible" });
+      const { ObjectStorageService } = await import("./replit_integrations/object_storage/objectStorage");
+      const svc = new ObjectStorageService();
+      const file = await svc.getObjectEntityFile(scan.imageUrl);
+      res.setHeader("Cache-Control", "private, max-age=3600");
+      await svc.downloadObject(file, res);
+    } catch (err) {
+      console.error("[scan-image] erreur:", err);
+      return res.status(404).json({ message: "Image introuvable" });
+    }
+  });
+
   // GET /api/admin/dataset?status=&area=&page=&limit=
   app.get("/api/admin/dataset", async (req: any, res) => {
-    if (!checkAdminKey(req)) return res.status(403).json({ message: "Accès refusé" });
+    if (!checkDatasetKey(req)) return res.status(403).json({ message: "Accès refusé" });
     try {
       const status = (req.query.status as string) || "pending";
       const area = (req.query.area as string) || "all";
@@ -1772,7 +1797,7 @@ Réponds en 2-4 phrases max, sois direct et utile.`;
 
   // GET /api/admin/dataset/stats
   app.get("/api/admin/dataset/stats", async (req: any, res) => {
-    if (!checkAdminKey(req)) return res.status(403).json({ message: "Accès refusé" });
+    if (!checkDatasetKey(req)) return res.status(403).json({ message: "Accès refusé" });
     try {
       const stats = await storage.getDatasetStats();
       res.json(stats);
@@ -1784,7 +1809,7 @@ Réponds en 2-4 phrases max, sois direct et utile.`;
 
   // POST /api/admin/dataset/:id/review
   app.post("/api/admin/dataset/:id/review", async (req: any, res) => {
-    if (!checkAdminKey(req)) return res.status(403).json({ message: "Accès refusé" });
+    if (!checkDatasetKey(req)) return res.status(403).json({ message: "Accès refusé" });
     try {
       const id = parseInt(req.params.id);
       if (!id) return res.status(400).json({ message: "id invalide" });

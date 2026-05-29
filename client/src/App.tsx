@@ -30,6 +30,7 @@ import ProAnalyze from "@/pages/pro/ProAnalyze";
 import ProStats from "@/pages/pro/ProStats";
 import ProCabinet from "@/pages/pro/ProCabinet";
 import Privacy from "@/pages/Privacy";
+import DermatoPortal from "@/pages/DermatoPortal";
 import NotFound from "@/pages/not-found";
 import ReconnectBanner from "@/components/ReconnectBanner";
 import ErrorBoundary from "@/components/ErrorBoundary";
@@ -72,6 +73,7 @@ function Router() {
       <Route path="/pro/statistiques" component={ProStats} />
       <Route path="/pro/cabinet" component={ProCabinet} />
       <Route path="/confidentialite" component={Privacy} />
+      <Route path="/dermato" component={DermatoPortal} />
       <Route path="/challenge/:token" component={Challenge} />
       <Route path="/ref/:code" component={RefRedirect} />
       <Route component={NotFound} />
