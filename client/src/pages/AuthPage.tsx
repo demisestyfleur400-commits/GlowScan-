@@ -93,6 +93,13 @@ export default function AuthPage() {
       });
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
 
+      // Meta Pixel — inscription réussie
+      try {
+        if (typeof (window as any).fbq === "function") {
+          (window as any).fbq("track", "CompleteRegistration", { content_name: "GlowScan" });
+        }
+      } catch {}
+
       toast({
         title: "Compte sécurisé",
         description: "Initialisation du profil d'analyse effectuée.",

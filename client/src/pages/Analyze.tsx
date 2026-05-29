@@ -245,6 +245,18 @@ export default function Analyze() {
         });
       }
 
+      // Meta Pixel — analyse complétée
+      try {
+        if (typeof (window as any).fbq === "function") {
+          (window as any).fbq("track", "ViewContent", {
+            content_name: "Analyse peau GlowScan",
+            content_category: selectedArea ?? "visage",
+            value: data.glowScore ?? 0,
+            currency: "XAF",
+          });
+        }
+      } catch {}
+
       try {
         const wasFirst = !localStorage.getItem("glowscan_first_scan_done");
         localStorage.setItem("glowscan_first_scan_done", "1");
