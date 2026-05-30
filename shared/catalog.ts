@@ -977,6 +977,59 @@ export const catalog: Product[] = [
     whatsapp: "+237674377959",
   },
 
+  // ═══════════════════════════════════════════════════════════════════
+  // TOPICREM — Dermatologie Pharmacie (disponible Cameroun)
+  // ═══════════════════════════════════════════════════════════════════
+
+  {
+    id: "topicrem-ac-gel-nettoyant",
+    name: "AC Control Gel Nettoyant Purifiant",
+    brand: "Topicrem",
+    description: "Gel nettoyant purifiant pour peaux mixtes à grasses sujettes aux imperfections. Élimine l'excès de sébum, nettoie en profondeur et prévient les boutons. 200ml.",
+    category: "visage",
+    price: 7500,
+    image: "https://fr.topicrem.com/cdn/shop/files/PRODUIT-ACCONTROL-GELNETTOYANT200ML-Visuel1_2a40657a-6116-405f-a455-a5411a0f1b3a.jpg?v=1722265476&width=1946",
+    targets: ["peau grasse", "acné", "boutons", "sébum excessif", "pores bouchés", "imperfections", "peau mixte", "nettoyant visage"],
+    usagePoints: ["Purifie et régule le sébum", "Prévient les imperfections", "Nettoyage profond sans agresser"],
+    whatsapp: "+237674377959",
+  },
+  {
+    id: "topicrem-ac-masque",
+    name: "AC Control Masque Purifiant",
+    brand: "Topicrem",
+    description: "Masque purifiant à l'argile pour peaux grasses et acnéiques. Absorbe l'excès de sébum, désobstrue les pores et réduit les boutons visibles. À utiliser 1 à 2 fois par semaine.",
+    category: "visage",
+    price: 9000,
+    image: "https://fr.topicrem.com/cdn/shop/files/PRODUIT-ACCONTROL-MASQUE-Visuel1_70d8bef5-ef01-4b68-83b1-dfcb6270ba33.jpg?v=1722265454&width=713",
+    targets: ["peau grasse", "acné", "pores dilatés", "points noirs", "sébum", "masque purifiant", "imperfections", "excès de gras"],
+    usagePoints: ["Absorbe l'excès de sébum en 10 min", "Désobstrue les pores visibles", "Masque purifiant 1-2×/semaine"],
+    whatsapp: "+237674377959",
+  },
+  {
+    id: "topicrem-uh-lait-douche",
+    name: "UH Lait de Douche Ultra-Hydratant",
+    brand: "Topicrem",
+    description: "Lait de douche ultra-hydratant pour peaux sèches et sensibles. Nettoie en douceur, nourrit et laisse la peau douce et confortable après chaque douche. 400ml.",
+    category: "corps",
+    price: 8000,
+    image: "https://fr.topicrem.com/cdn/shop/files/PRODUIT-UH-LAIT_DOUCHE_PACKSHOT-AVANT.jpg?v=1755091767&width=713",
+    targets: ["peau sèche corps", "peau sensible", "nettoyant corps doux", "hydratation corps", "sécheresse cutanée", "confort"],
+    usagePoints: ["Nettoie et hydrate en un geste", "Peau douce après douche", "Formule douce peau sèche et sensible"],
+    whatsapp: "+237674377959",
+  },
+  {
+    id: "topicrem-sun-protect-mousse",
+    name: "Sun Protect Mousse Solaire SPF50+",
+    brand: "Topicrem",
+    description: "Mousse solaire protection très haute SPF50+ pour visage et corps. Texture mousse légère et originale, absorption rapide. Protection UVA/UVB, résistante à l'eau.",
+    category: "visage",
+    price: 12000,
+    image: "https://fr.topicrem.com/cdn/shop/files/PRODUIT-SUN-PROTECT-MOUSSE-Visuel1_780283f2-e886-433b-bd9e-41b7ffa7cff6.jpg?v=1773757164&width=713",
+    targets: ["protection solaire", "SPF50", "écran solaire", "anti-UV", "texture mousse", "visage corps", "exposition solaire"],
+    usagePoints: ["SPF50+ protection très haute", "Texture mousse légère originale", "Résistant à l'eau"],
+    whatsapp: "+237674377959",
+  },
+
   // ── KITS PREMIUM — Circuit GlowScan fermé, AOV élevé ─────────────
   {
     id: "kit-peau-nette-30j",
