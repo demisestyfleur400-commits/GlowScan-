@@ -493,23 +493,6 @@ export const catalog: Product[] = [
     whatsapp: "+237674377959",
     sourceRef: "CeraVe Foaming Facial Cleanser 236ml — ou — Bioderma Sebium Gel Moussant 200ml",
   },
-  {
-    id: "gs-masque-argile-kaolin",
-    name: "Masque Argile Kaolin & Charbon Activé",
-    brand: "GlowScan Dermo",
-    description: "Masque purifiant bi-actif argile kaolin + charbon activé. Absorbe l'excès de sébum, désintoxique les pores et resserre le grain de peau. 75ml.",
-    category: "visage",
-    price: 10000,
-    targets: ["peau grasse", "pores bouchés", "impuretés", "points noirs", "excès de sébum", "teint brouillé", "purification visage"],
-    usagePoints: [
-      "Absorbe l'excès de sébum en 10 minutes",
-      "Désintoxique et resserre les pores visibles",
-      "Utilisation 1 à 2 fois par semaine"
-    ],
-    whatsapp: "+237674377959",
-    sourceRef: "L'Oréal Skincare Pure Clay Mask Charbon 50ml — ou — Cattier Argile Blanche Masque 100ml",
-  },
-
   // ── VISAGE — Sérums actifs ────────────────────────────────────────
   {
     id: "gs-serum-niacinamide",
@@ -624,6 +607,166 @@ export const catalog: Product[] = [
     ],
     whatsapp: "+237674377959",
     sourceRef: "CeraVe Moisturizing Cream 177ml — ou — Bioderma Atoderm Intensive Baume 200ml",
+  },
+
+  // ═══════════════════════════════════════════════════════════════════
+  // BIODERMA — Dermatologie Pharmacie (disponible Cameroun)
+  // ═══════════════════════════════════════════════════════════════════
+
+  // ── Gamme Atoderm (peaux sèches / atopiques / eczéma) ──
+  {
+    id: "bio-atoderm-gel-douche",
+    name: "Atoderm Gel Douche",
+    brand: "Bioderma",
+    description: "Gel nettoyant corps doux pour peaux normales à sèches. Nettoie sans agresser le film hydrolipidique. Peau propre, douce et confortable au quotidien. 500ml.",
+    category: "corps",
+    price: 9500,
+    image: "https://www.bioderma.ae/sites/ae/files/styles/ultrawide_product_list_thumbnail/public/products/%7B166060%7D_%7BBIO_ATODERM_GEL_DOUCHE%7D_%7B28119D%7D.png?itok=vKo1Z0e1",
+    targets: ["peau sèche corps", "nettoyant corps", "peau sensible", "hydratation corps", "sécheresse cutanée"],
+    usagePoints: ["Nettoie en douceur", "Respecte le film hydrolipidique", "Usage quotidien corps"],
+    whatsapp: "+237674377959",
+  },
+  {
+    id: "bio-atoderm-huile-douche",
+    name: "Atoderm Huile de Douche",
+    brand: "Bioderma",
+    description: "Huile lavante ultra-nourrissante pour peaux très sèches et atopiques. Apaise les tiraillements et nourrit intensément en un seul geste. 200ml.",
+    category: "corps",
+    price: 10500,
+    image: "https://www.bioderma.ae/sites/ae/files/styles/ultrawide_product_list_thumbnail/public/products/%7B203352%7D_%7BBIO_ATODERM_HUILE_DE_DOUCHE%7D_%7BA01013300%7D.png?itok=z971RqoV",
+    targets: ["peau très sèche", "peau atopique", "eczéma corps", "xérose sévère", "tiraillements"],
+    usagePoints: ["Nourrit intensément peau atopique", "Apaise les tiraillements", "Formule huile ultra-nourrissante"],
+    whatsapp: "+237674377959",
+  },
+  {
+    id: "bio-atoderm-intensive-gel",
+    name: "Atoderm Intensive Gel Moussant",
+    brand: "Bioderma",
+    description: "Gel nettoyant surconcentré pour peaux atopiques sujettes aux poussées d'eczéma. Apaise les démangeaisons et protège la barrière cutanée fragilisée. 200ml.",
+    category: "corps",
+    price: 10000,
+    image: "https://www.bioderma.ae/sites/ae/files/styles/ultrawide_product_list_thumbnail/public/products/%7B178231%7D_%7BBIO_ATODERM_INTENSIVE_GEL_MOUSSANT%7D_%7B28134B%7D.png?itok=y4nbKWKz",
+    targets: ["eczéma atopique", "peau atopique", "dermatite atopique", "barrière cutanée", "démangeaisons corps"],
+    usagePoints: ["Calme les poussées d'eczéma", "Renforce la barrière cutanée", "Sans savon — formule surconcentrée"],
+    whatsapp: "+237674377959",
+  },
+  {
+    id: "bio-atoderm-intensive-pain",
+    name: "Atoderm Intensive Pain Dermatologique",
+    brand: "Bioderma",
+    description: "Pain de soin sans savon pour peaux atopiques et très sensibles. Nettoie, apaise et protège sans irriter la barrière cutanée. 150g.",
+    category: "corps",
+    price: 9000,
+    image: "https://www.bioderma.ae/sites/ae/files/styles/ultrawide_product_list_thumbnail/public/products/%7B158296%7D_%7BBIO_ATODERM_INTENSIVE_PAIN%7D_%7B28092C%7D.png?itok=C3Slenq-",
+    targets: ["eczéma atopique", "peau sèche sévère", "peau très sensible", "nettoyant doux corps", "bébé"],
+    usagePoints: ["Sans savon agressif", "Peaux très sensibles et atopiques", "Apaise et protège la barrière"],
+    whatsapp: "+237674377959",
+  },
+
+  // ── Gamme Sébium (peaux mixtes / grasses / acnéiques) ──
+  {
+    id: "bio-sebium-gel-moussant",
+    name: "Sébium Gel Moussant Purifiant",
+    brand: "Bioderma",
+    description: "Gel nettoyant moussant purifiant pour peaux mixtes à grasses et acnéiques. Régule le sébum, purifie les pores et prévient les boutons. 200ml.",
+    category: "visage",
+    price: 9000,
+    image: "https://www.bioderma.ae/sites/ae/files/styles/ultrawide_product_list_thumbnail/public/products/%7B202461%7D_%7BBIO_SEBIUM_GEL_MOUSSANT%7D_%7B28664B%7D.png?itok=3jrGsuMc",
+    targets: ["peau grasse", "acné", "pores dilatés", "sébum excessif", "boutons", "peau mixte", "imperfections visage"],
+    usagePoints: ["Régule le sébum en profondeur", "Prévient les boutons", "Purifie sans assécher"],
+    whatsapp: "+237674377959",
+  },
+  {
+    id: "bio-sebium-gel-gommant",
+    name: "Sébium Gel Gommant Exfoliant",
+    brand: "Bioderma",
+    description: "Gel exfoliant purifiant pour peaux mixtes à grasses. Élimine les cellules mortes, désobstrue les pores, réduit les points noirs et unifie le teint. 100ml.",
+    category: "visage",
+    price: 9500,
+    image: "https://www.bioderma.ae/sites/ae/files/styles/ultrawide_product_list_thumbnail/public/products/%7B158818%7D_%7BBIO_SEBIUM_GEL_GOMMANT%7D_%7B28625I%7D.png?itok=7ULZh92c",
+    targets: ["peau grasse", "comédons", "pores dilatés", "exfoliation visage", "points noirs", "acné rétentionnelle"],
+    usagePoints: ["Désobstrue les pores en profondeur", "Élimine les points noirs", "Gommage doux 2×/semaine"],
+    whatsapp: "+237674377959",
+  },
+
+  // ── Gamme Pigmentbio (hyperpigmentation — peaux noires) ──
+  {
+    id: "bio-pigmentbio-foaming-cream",
+    name: "Pigmentbio Foaming Cream Anti-Taches",
+    brand: "Bioderma",
+    description: "Crème lavante éclat anti-taches pour peaux hyperpigmentées. Agit dès le nettoyage sur les taches brunes et le mélasma. Conçu pour peaux noires et métissées. 200ml.",
+    category: "visage",
+    price: 12500,
+    image: "https://www.bioderma.ae/sites/ae/files/styles/ultrawide_product_list_thumbnail/public/products/%7B158659%7D_%7BBIO_PIGMENTBIO_FOAMING_CREAM%7D_%7B28914B%7D.png?itok=1QDm1XXr",
+    targets: ["taches brunes", "hyperpigmentation", "PIH", "mélasma", "teint terne", "peau noire", "taches post-acné", "unification teint", "éclat"],
+    usagePoints: ["Agit dès le nettoyage sur les taches", "Formule spéciale peaux noires et métissées", "Prépare les soins anti-taches"],
+    whatsapp: "+237674377959",
+  },
+  {
+    id: "bio-pigmentbio-h2o",
+    name: "Pigmentbio H2O Eau Micellaire",
+    brand: "Bioderma",
+    description: "Eau micellaire démaquillante anti-taches pour peaux hyperpigmentées. Nettoie, démaquille et agit progressivement sur les taches en un seul geste. 250ml.",
+    category: "visage",
+    price: 12000,
+    image: "https://www.bioderma.ae/sites/ae/files/styles/ultrawide_product_list_thumbnail/public/products/%7B224370%7D_%7BBIO_PIGMENTBIO_H2O%7D_%7BA01006600%7D.png?itok=T5ouo7Gc",
+    targets: ["taches brunes", "hyperpigmentation", "maquillage", "démaquillant", "PIH", "peau noire", "mélasma", "taches solaires"],
+    usagePoints: ["Nettoie et démaquille anti-taches", "Action éclat progressive", "Idéal peaux noires et métissées"],
+    whatsapp: "+237674377959",
+  },
+
+  // ── Gamme Sensibio / Hydrabio (peaux sensibles / déshydratées) ──
+  {
+    id: "bio-sensibio-gel-moussant",
+    name: "Sensibio Gel Moussant Douceur",
+    brand: "Bioderma",
+    description: "Gel nettoyant ultra-doux pour peaux sensibles et réactives. Nettoie respectueusement sans agresser ni dessécher. Sans parfum, sans alcool. 200ml.",
+    category: "visage",
+    price: 9500,
+    image: "https://www.bioderma.ae/sites/ae/files/styles/fancybox_2000_2000/public/products/%7B157474%7D_%7B%7D_%7B28727%7D.jpg?itok=gn2h9U6D",
+    targets: ["peau sensible", "peau réactive", "nettoyant doux visage", "intolérance cutanée", "peau fragile", "eczéma visage"],
+    usagePoints: ["Ultra douceur sans agression", "Respecte les peaux réactives", "Sans parfum ni alcool"],
+    whatsapp: "+237674377959",
+  },
+  {
+    id: "bio-hydrabio-gel-moussant",
+    name: "Hydrabio Gel Moussant",
+    brand: "Bioderma",
+    description: "Gel nettoyant moussant pour peaux normales à mixtes déshydratées. Nettoie en profondeur tout en préservant le niveau d'hydratation cutanée. 150ml.",
+    category: "visage",
+    price: 9500,
+    image: "https://www.bioderma.ae/sites/ae/files/styles/ultrawide_product_list_thumbnail/public/products/%7B173051%7D_%7BBIO_HYDRABIO_GEL_MOUSSANT%7D_%7B28384%7D.png?itok=wRpju0Ge",
+    targets: ["peau déshydratée", "nettoyant visage", "peau mixte", "hydratation visage", "tiraillements visage"],
+    usagePoints: ["Nettoie sans assécher", "Préserve l'hydratation naturelle", "Pour peaux déshydratées"],
+    whatsapp: "+237674377959",
+  },
+
+  // ── Gamme Node DS (cuir chevelu / pellicules) ──
+  {
+    id: "bio-node-ds",
+    name: "Node DS Shampooing Antipelliculaire",
+    brand: "Bioderma",
+    description: "Shampooing traitant antipelliculaire pour dermite séborrhéique du cuir chevelu. Réduit les pellicules, démangeaisons et squames. 125ml.",
+    category: "cheveux",
+    price: 10000,
+    image: "https://www.bioderma.ae/sites/ae/files/styles/ultrawide_product_list_thumbnail/public/products/%7B158425%7D_%7BBIO_NODE_DS%7D_%7B28438A%7D.png?itok=5K9fBnE2",
+    targets: ["pellicules", "dermite séborrhéique", "cuir chevelu gras", "démangeaisons cuir chevelu", "squames"],
+    usagePoints: ["Élimine les pellicules et squames", "Apaise le cuir chevelu irrité", "Shampooing traitant dermatologique"],
+    whatsapp: "+237674377959",
+  },
+
+  // ── Photoderm (protection solaire peaux foncées) ──
+  {
+    id: "bio-photoderm-xdefense-spf50",
+    name: "Photoderm XDefense Ultra Fluid SPF50+ T03",
+    brand: "Bioderma",
+    description: "Fluide solaire ultra-léger SPF50+ Teinte 03 pour peaux foncées et africaines. Protection UVA/UVB très haute, fini naturel sans effet blanc sur peaux noires. 40ml.",
+    category: "visage",
+    price: 15000,
+    image: "https://www.bioderma.ae/sites/ae/files/styles/product_packshot_slider/public/products/%7B142519%7D_%7B%7D_%7B28598%7D.png?itok=ZGiq3ck4",
+    targets: ["protection solaire", "SPF50", "peau noire", "teinte foncée", "phototype IV V VI", "écran solaire", "anti-UV", "taches solaires"],
+    usagePoints: ["Protection SPF50+ très haute", "Teinte 03 adaptée peaux africaines", "Fini invisible sans effet blanc"],
+    whatsapp: "+237674377959",
   },
 
   // ── KITS PREMIUM — Circuit GlowScan fermé, AOV élevé ─────────────

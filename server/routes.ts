@@ -335,7 +335,7 @@ Retourne UNIQUEMENT ce JSON valide et complet, sans texte avant ni après :
   },
   "recommendations": {
     "products": [
-      "UN SEUL produit (le plus essentiel pour le diagnostic). Tableau d'1 élément maximum. RÈGLE STRICTE : recommander UNIQUEMENT une marque locale camerounaise — Andrea Skincare, Ebony Hair, ou Hair Bloom. Ce sont nos seuls partenaires, accessibles, abordables, formulés pour peaux noires. INTERDIT de recommander une marque internationale (Garnier, Nivea, CeraVe, La Roche-Posay, Bioderma, Neutrogena, Ambi, Kojie San, L'Oréal, Dove, etc.) — elles ne sont PAS disponibles dans l'app. Pour CHEVEUX/CUIR CHEVELU = TOUJOURS Ebony Hair (Bain d'Huile, Soin Profond Lekie, Shampoing Solide, Spray Démêlant, Mousse Karité, Activateur de Repousse pour alopécie, Huile de Ricin/Avocat/Ail/Neem/Coco/Fenugrec selon le besoin) ou Hair Bloom (Shampooing/Huile/Crème/Poudre Chebe, Sérum Hair Bloom). Pour VISAGE = Andrea Skincare uniquement (Crème Visage, Sérum Jeunesse Bluffant, Solution Douceur Lotion Traitante anti-imperfections, Potion Lumière Super Éclat anti-taches, Gel Contour des Yeux). Pour CORPS = Andrea Skincare (Cocon Lumineux, Trésor de Cacao, Gel Douche Éclat, Gommage Éclat, Savon Radiance, Sérum Mains/Pieds, Huile Éclat) ou Ebony Hair (Savon Noir, Savon Exfoliant, Savon Surgras, Glycérine Végétale, Huile Moringa/Carotte/Sésame)."
+      "UN SEUL produit — le plus pertinent pour CE diagnostic précis. Choisis dans ces marques disponibles au Cameroun : MARQUES LOCALES PARTENAIRES (priorité) : Andrea Skincare pour visage/corps (Crème Visage, Sérum Jeunesse, Solution Douceur anti-imperfections, Potion Lumière anti-taches, Gel Contour Yeux, Cocon Lumineux, Trésor Cacao, Gommage Éclat) — Ebony Hair ou Hair Bloom pour cheveux (Bain d'Huile, Soin Profond Lekie, Spray Démêlant, Activateur Repousse, Huile Ricin/Avocat/Ail). MARQUES DERMO PHARMACIE CAMEROUN : Bioderma → Sébium Gel Moussant (acné/peau grasse), Sébium Gel Gommant (points noirs/exfoliation), Pigmentbio Foaming Cream ou H2O (taches/hyperpigmentation/peau noire), Sensibio (peau sensible), Hydrabio (déshydratée), Atoderm (peau sèche/eczéma/corps), Photoderm XDefense SPF50+ Shade 03 (protection solaire peaux foncées), Node DS (pellicules). CeraVe, Topicrem, Uriage, Nubiance, La Roche-Posay, Eucerin également disponibles. INTERDIT : Garnier, Nivea, L'Oréal, Neutrogena, Ambi, Kojie San, Dove."
     ],
     "morning": [
       "Étape 1 matin précise avec produit nommé",
@@ -615,20 +615,23 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
 
       const { catalog } = await import("@shared/catalog");
       // ─── Règles métier strictes (priorité dermato Cameroun) ──────
-      // 1) Plafond prix : 10 000 FCFA max (incluant la marge GlowScan de 3000)
-      // 2) Marques locales prioritaires : Andrea Skincare, Ebony Hair, Hair Bloom, IN'OYA
-      // 3) Un seul produit recommandé (le plus essentiel)
-      const PRICE_CAP = 10000;
+      // 1) Plafond prix : 16 000 FCFA (couvre les marques dermo pharmacie)
+      // 2) Priorité 1 : marques locales partenaires (Andrea, Ebony, Hair Bloom)
+      // 3) Priorité 2 : marques dermo pharmacie (Bioderma, Topicrem, Uriage, etc.)
+      // 4) Un seul produit recommandé (le plus pertinent pour le diagnostic)
+      const PRICE_CAP = 16000;
       const LOCAL_BRANDS = new Set(["Andrea Skincare", "Ebony Hair", "Hair Bloom", "IN'OYA"]);
+      const DERMO_BRANDS = new Set(["Bioderma", "Topicrem", "Uriage", "Nubiance", "La Roche-Posay", "Eucerin", "CeraVe"]);
       const isLocal = (item: any) => LOCAL_BRANDS.has(item.brand || "");
+      const isDermo = (item: any) => DERMO_BRANDS.has(item.brand || "");
       const isAffordable = (item: any) => !item.price || item.price <= PRICE_CAP;
 
-      // Catalogue éligible : prix ≤ plafond
+      // Catalogue éligible : prix ≤ plafond (exclut les kits >16k)
       const affordableCatalog = catalog.filter(isAffordable);
 
       const findBestMatch = (query: string) => {
         const q = query.toLowerCase();
-        // Tentative 1 : match nom/id/targets dans le catalogue abordable, locale d'abord
+        // Tentative 1 : match nom/id/targets dans le catalogue éligible
         const candidates = affordableCatalog.filter((item) => {
           const name = item.name.toLowerCase();
           return (
@@ -640,9 +643,10 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
         });
         // Trier : marques locales en premier, puis par prix croissant
         candidates.sort((a, b) => {
-          const la = isLocal(a) ? 0 : 1;
-          const lb = isLocal(b) ? 0 : 1;
-          if (la !== lb) return la - lb;
+          // Priorité : local (0) > dermo pharmacie (1) > autre (2)
+          const pa = isLocal(a) ? 0 : isDermo(a) ? 1 : 2;
+          const pb = isLocal(b) ? 0 : isDermo(b) ? 1 : 2;
+          if (pa !== pb) return pa - pb;
           return (a.price || 0) - (b.price || 0);
         });
         return candidates[0];
@@ -656,10 +660,13 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
       if (!chosen && analysisResult.condition) {
         chosen = findBestMatch(String(analysisResult.condition));
       }
-      // Ultime fallback : un produit local universel selon zone
+      // Ultime fallback : produit local ou dermo selon la zone
       if (!chosen) {
         const zoneIsHair = (area === "hair") || /cheveux|cuir chevelu|alopécie|pellicule/i.test(String(analysisResult.condition || ""));
-        chosen = affordableCatalog.find((p) => isLocal(p) && (zoneIsHair ? p.category === "cheveux" : p.category === "visage"));
+        const category = zoneIsHair ? "cheveux" : "visage";
+        // Priorité local, puis dermo pharmacie
+        chosen = affordableCatalog.find((p) => isLocal(p) && p.category === category)
+          ?? affordableCatalog.find((p) => isDermo(p) && p.category === category);
       }
       const recommendedProducts = chosen ? [chosen.name] : [];
       console.log(`[analyze] 🛒 Recommandation: ${chosen?.name || "aucune"} (${chosen?.brand || "-"}, ${chosen?.price || 0} FCFA, local=${chosen ? isLocal(chosen) : false})`);
