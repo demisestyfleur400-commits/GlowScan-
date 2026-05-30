@@ -1063,6 +1063,99 @@ export const catalog: Product[] = [
     whatsapp: "+237674377959",
   },
 
+  // ═══════════════════════════════════════════════════════════════════
+  // NUBIANCE — Dermatologie Spéciale Peaux Noires & Métissées
+  // Marque française conçue exclusivement pour les peaux africaines
+  // ═══════════════════════════════════════════════════════════════════
+
+  // ── Produits individuels ──
+  {
+    id: "nubiance-nettoyant",
+    name: "Gel Nettoyant Douceur",
+    brand: "Nubiance",
+    description: "Gel nettoyant formulé pour peaux noires et métissées. Nettoie en douceur sans déssécher, respecte la barrière cutanée et prépare la peau aux soins éclat. Convient à tous types de peaux africaines.",
+    category: "visage",
+    price: 10000,
+    image: "https://nubiance.fr/cdn/shop/files/PACKSHOT-Nettoyant.png?v=1774537347&width=713",
+    targets: ["nettoyant visage", "peau noire", "peau mixte", "peau sensible", "nettoyage doux", "routine peau africaine"],
+    usagePoints: ["Formulé exclusivement pour peaux noires et métissées", "Nettoie sans agresser", "Prépare la peau aux soins"],
+    whatsapp: "+237674377959",
+  },
+  {
+    id: "nubiance-creme-eclat",
+    name: "Crème Éclat Anti-Taches",
+    brand: "Nubiance",
+    description: "Crème éclat conçue pour les peaux noires et métissées. Atténue les taches brunes, unifie le teint et révèle l'éclat naturel des peaux africaines. Sans hydroquinone. 50ml.",
+    category: "visage",
+    price: 13500,
+    image: "https://nubiance.fr/cdn/shop/files/PACKSHOT-Creme-eclat.jpg?v=1774340192&width=713",
+    targets: ["taches brunes", "hyperpigmentation", "PIH", "mélasma", "teint terne", "peau noire", "éclat", "taches post-acné", "unification teint"],
+    usagePoints: ["Conçu spécifiquement pour peaux noires et métissées", "Atténue taches et hyperpigmentation", "Sans hydroquinone — sécurisé"],
+    whatsapp: "+237674377959",
+  },
+  {
+    id: "nubiance-lait-corps",
+    name: "Lait Hydratant Corps",
+    brand: "Nubiance",
+    description: "Lait corps nourrissant formulé pour peaux noires et métissées. Hydrate, unifie et révèle l'éclat naturel du corps. Texture légère absorbée rapidement sans film gras.",
+    category: "corps",
+    price: 11000,
+    image: "https://nubiance.fr/cdn/shop/files/PACKSHOT-Lait_1.png?v=1774537224&width=713",
+    targets: ["hydratation corps", "peau sèche corps", "éclat corps", "teint unifié corps", "peau noire corps", "nutrition corps"],
+    usagePoints: ["Hydratation + éclat pour peaux noires", "Texture légère non grasse", "Unifie le teint du corps"],
+    whatsapp: "+237674377959",
+  },
+
+  // ── DUO Nubiance (sets 2 produits) ──
+  {
+    id: "nubiance-duo-hydratant-visage-corps",
+    name: "DUO Hydratant Visage + Corps",
+    brand: "Nubiance",
+    description: "Set duo hydratation complète pour peaux noires et métissées. Inclus : Crème Éclat visage + Lait Hydratant corps. Hydratation, nutrition et éclat de la tête aux pieds. Conçu pour les peaux africaines.",
+    category: "visage",
+    price: 22000,
+    image: "https://nubiance.fr/cdn/shop/files/PACKSHOTS-DUO-HydratantVisage_Corps.jpg?v=1774940317&width=713",
+    targets: ["hydratation visage corps", "peau noire", "éclat", "routine complète", "nutrition", "peau sèche africaine"],
+    usagePoints: [
+      "Hydratation complète visage + corps en un set",
+      "Formulé exclusivement pour peaux noires et métissées",
+      "Crème Éclat + Lait Corps inclus"
+    ],
+    whatsapp: "+237674377959",
+  },
+  {
+    id: "nubiance-duo-anti-imperfections",
+    name: "DUO Anti-Imperfections",
+    brand: "Nubiance",
+    description: "Set duo anti-imperfections pour peaux noires et métissées sujettes aux boutons et taches. Protocole complet contre l'acné et les marques qu'elle laisse sur peaux africaines.",
+    category: "visage",
+    price: 21000,
+    image: "https://nubiance.fr/cdn/shop/files/PACKSHOTS-DUOAnti-Imperfections.jpg?v=1774940243&width=713",
+    targets: ["acné", "boutons", "taches post-acné", "PIH", "imperfections", "peau noire acnéique", "hyperpigmentation", "peau grasse"],
+    usagePoints: [
+      "Double action : traite les boutons ET les taches qu'ils laissent",
+      "Spécial peaux noires et métissées acnéiques",
+      "Protocole anti-imperfections complet"
+    ],
+    whatsapp: "+237674377959",
+  },
+  {
+    id: "nubiance-duo-hydratant-anti-imperfections",
+    name: "DUO Hydratant + Anti-Imperfections",
+    brand: "Nubiance",
+    description: "Set duo polyvalent hydratation + soin des imperfections pour peaux noires et métissées. L'équilibre parfait entre nourrir la peau et traiter les boutons et taches. Formule exclusive peaux africaines.",
+    category: "visage",
+    price: 23000,
+    image: "https://nubiance.fr/cdn/shop/files/PACKSHOTS-DUOHydratantAnti-Imperfections.jpg?v=1774940307&width=713",
+    targets: ["peau noire", "hydratation", "acné", "taches", "PIH", "équilibre cutané", "routine complète peaux africaines", "imperfections"],
+    usagePoints: [
+      "Hydratation + anti-imperfections en un seul set",
+      "Formulé exclusivement pour peaux noires et métissées",
+      "La routine complète pour peaux africaines mixtes"
+    ],
+    whatsapp: "+237674377959",
+  },
+
   // ── KITS PREMIUM — Circuit GlowScan fermé, AOV élevé ─────────────
   {
     id: "kit-peau-nette-30j",
