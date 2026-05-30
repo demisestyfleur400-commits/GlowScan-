@@ -1030,6 +1030,39 @@ export const catalog: Product[] = [
     whatsapp: "+237674377959",
   },
 
+  // ═══════════════════════════════════════════════════════════════════
+  // LA ROCHE-POSAY — Dermatologie Pharmacie (disponible Cameroun)
+  // ═══════════════════════════════════════════════════════════════════
+
+  {
+    id: "lrp-effaclar-gel-nettoyant",
+    name: "Effaclar Gel Nettoyant Purifiant 400ml",
+    brand: "La Roche-Posay",
+    description: "Gel nettoyant purifiant dermatologique pour peaux grasses et à tendance acnéique. Élimine l'excès de sébum, nettoie les pores et réduit les imperfections sans assécher. 400ml.",
+    category: "visage",
+    price: 9500,
+    image: "https://www.laroche-posay.fr/dw/image/v2/AAQP_PRD/on/demandware.static/-/Sites-lrp-ng-master-catalog/fr_FR/dwffe33bc9/LRP_Product/Effaclar/3337872411991_Effaclar-Purifying-Cleansing-Gel_400ml_01_La-Roche-Posay.jpg?sw=1080&sh=1080&sm=cut&sfrm=jpg&q=70",
+    targets: ["peau grasse", "acné", "boutons", "sébum excessif", "pores bouchés", "imperfections", "nettoyant visage", "peau mixte"],
+    usagePoints: ["Purifie sans agresser la peau", "Élimine l'excès de sébum", "Formule dermatologique testée"],
+    whatsapp: "+237674377959",
+  },
+  {
+    id: "lrp-effaclar-duo-m-set",
+    name: "Effaclar DUO+M Set — Acné & Taches Post-Acné",
+    brand: "La Roche-Posay",
+    description: "Set dermatologique duo anti-acné avec technologie Melasyl. Traite les boutons actifs ET les taches post-inflammatoires (PIH) laissées sur peaux noires. Idéal pour peaux africaines. Gel nettoyant + Soin DUO+M inclus.",
+    category: "visage",
+    price: 22000,
+    image: "https://www.laroche-posay.fr/dw/image/v2/AAQP_PRD/on/demandware.static/-/Sites-lrp-ng-master-catalog/fr_FR/dw6fd45529/LRP_Product_set/LRP_DUO-M-10/LRP_DUO-M-10-1.jpg?sw=1080&sh=1080&sm=cut&sfrm=jpg&q=70",
+    targets: ["acné", "taches post-acné", "PIH", "hyperpigmentation", "boutons", "peau noire", "mélasma", "imperfections", "peau grasse"],
+    usagePoints: [
+      "Traite l'acné active ET les taches qu'elle laisse — double action unique",
+      "Technologie Melasyl cliniquement prouvée sur peaux foncées",
+      "Set complet gel nettoyant + soin DUO+M"
+    ],
+    whatsapp: "+237674377959",
+  },
+
   // ── KITS PREMIUM — Circuit GlowScan fermé, AOV élevé ─────────────
   {
     id: "kit-peau-nette-30j",
