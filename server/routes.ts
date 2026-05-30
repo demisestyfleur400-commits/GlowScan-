@@ -92,34 +92,41 @@ async function uploadScanImageToStorage(base64DataUrl: string): Promise<string |
     const buffer = Buffer.from(b64, "base64");
     if (buffer.length === 0) return null;
 
-    const ext = (mime.split("/")[1] || "jpg").replace("jpeg", "jpg");
+    // ── Chemin 1 : Replit Object Storage (si PRIVATE_OBJECT_DIR défini) ──
     const privateDir = process.env.PRIVATE_OBJECT_DIR || "";
-    if (!privateDir) {
-      console.error("[analyze] ❌ PRIVATE_OBJECT_DIR non défini — photo non sauvegardée");
-      return null;
+    if (privateDir) {
+      try {
+        const ext = (mime.split("/")[1] || "jpg").replace("jpeg", "jpg");
+        const objectId = `${randomUUID()}.${ext}`;
+        const fullPath = `${privateDir.startsWith("/") ? "" : "/"}${privateDir}/scans/${objectId}`;
+        const parts = fullPath.split("/").filter(Boolean);
+        const bucketName = parts[0];
+        const objectName = parts.slice(1).join("/");
+        const bucket = objectStorageClient.bucket(bucketName);
+        const file = bucket.file(objectName);
+        await file.save(buffer, {
+          contentType: mime,
+          resumable: false,
+          metadata: {
+            metadata: {
+              "custom:aclPolicy": JSON.stringify({ owner: "system", visibility: "private" }),
+            },
+          },
+        });
+        console.log(`[analyze] 📸 Photo archivée Object Storage (${Math.round(buffer.length / 1024)}KB)`);
+        return `/objects/scans/${objectId}`;
+      } catch (storErr) {
+        console.error("[analyze] ⚠️ Object Storage échoué, fallback base64:", storErr);
+      }
     }
 
-    const objectId = `${randomUUID()}.${ext}`;
-    const fullPath = `${privateDir.startsWith("/") ? "" : "/"}${privateDir}/scans/${objectId}`;
-    const parts = fullPath.split("/").filter(Boolean);
-    const bucketName = parts[0];
-    const objectName = parts.slice(1).join("/");
-
-    const bucket = objectStorageClient.bucket(bucketName);
-    const file = bucket.file(objectName);
-    await file.save(buffer, {
-      contentType: mime,
-      resumable: false,
-      metadata: {
-        metadata: {
-          "custom:aclPolicy": JSON.stringify({ owner: "system", visibility: "private" }),
-        },
-      },
-    });
-
-    return `/objects/scans/${objectId}`;
+    // ── Chemin 2 : fallback base64 (Railway / pas d'Object Storage configuré) ──
+    // Stockage de la data URL directement en DB — ~50-300KB par scan, OK pour
+    // le dataset RLHF tant que le volume est < 1000 scans.
+    console.log(`[analyze] 📸 Photo sauvegardée en base64 (${Math.round(buffer.length / 1024)}KB) — Object Storage non configuré`);
+    return base64DataUrl;
   } catch (err) {
-    console.error("[analyze] ❌ Échec upload photo vers Object Storage:", err);
+    console.error("[analyze] ❌ Échec stockage photo:", err);
     return null;
   }
 }

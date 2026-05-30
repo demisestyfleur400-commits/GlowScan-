@@ -488,7 +488,8 @@ export class DatabaseStorage implements IStorage {
     else if (opts.status === "rejected") conds.push(and(eq(scans.isVerified, false), sql`${scans.expertReviewedAt} IS NOT NULL`));
     else if (opts.status === "pending") conds.push(and(eq(scans.isVerified, false), sql`${scans.expertReviewedAt} IS NULL`));
     if (opts.area && opts.area !== "all") conds.push(eq(scans.area, opts.area));
-    conds.push(sql`${scans.imageUrl} LIKE '/objects/scans/%'`);
+    // Inclure les deux types de stockage : Object Storage (/objects/scans/) ET base64 (data:image/)
+    conds.push(sql`(${scans.imageUrl} LIKE '/objects/scans/%' OR ${scans.imageUrl} LIKE 'data:image/%')`);
     const whereClause = conds.length ? and(...conds) : undefined;
     const items = await db.select().from(scans).where(whereClause as any).orderBy(desc(scans.createdAt)).limit(limit).offset(offset);
     const totalRow = await db.select({ c: count() }).from(scans).where(whereClause as any);
@@ -500,7 +501,7 @@ export class DatabaseStorage implements IStorage {
     const [ver] = await db.select({ c: count() }).from(scans).where(eq(scans.isVerified, true));
     const [rej] = await db.select({ c: count() }).from(scans).where(and(eq(scans.isVerified, false), sql`${scans.expertReviewedAt} IS NOT NULL`));
     const [pen] = await db.select({ c: count() }).from(scans).where(and(eq(scans.isVerified, false), sql`${scans.expertReviewedAt} IS NULL`));
-    const [img] = await db.select({ c: count() }).from(scans).where(sql`${scans.imageUrl} LIKE '/objects/scans/%'`);
+    const [img] = await db.select({ c: count() }).from(scans).where(sql`(${scans.imageUrl} LIKE '/objects/scans/%' OR ${scans.imageUrl} LIKE 'data:image/%')`);
     const areaRows = await db.select({ a: scans.area, c: count() }).from(scans).groupBy(scans.area);
     const byArea: Record<string, number> = {};
     for (const r of areaRows) byArea[r.a] = r.c;
