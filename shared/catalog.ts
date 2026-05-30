@@ -1156,6 +1156,59 @@ export const catalog: Product[] = [
     whatsapp: "+237674377959",
   },
 
+  // ═══════════════════════════════════════════════════════════════════
+  // CERAVE — Dermatologie Pharmacie (disponible Cameroun)
+  // ═══════════════════════════════════════════════════════════════════
+
+  {
+    id: "cerave-anti-blemish-clay",
+    name: "Anti-Blemish Foaming Clay Nettoyant",
+    brand: "CeraVe",
+    description: "Nettoyant argile moussant anti-imperfections avec acide salicylique et niacinamide. Nettoie en profondeur, désobstrue les pores et réduit les boutons tout en préservant la barrière cutanée. 236ml.",
+    category: "visage",
+    price: 9500,
+    image: "https://www.cerave.fr/-/media/project/loreal/brand-sites/cerave/emea/fr/products/anti-blemish-cleansing-foaming-clay/new/images/clay-to-foam-1-lg.webp?rev=-1?w=130&hash=91E33F4578962031F6430555020704F1",
+    targets: ["acné", "boutons", "pores dilatés", "peau grasse", "imperfections", "points noirs", "excès de sébum", "acide salicylique"],
+    usagePoints: ["Argile + acide salicylique — double action anti-acné", "Nettoie sans détruire la barrière cutanée", "Avec niacinamide pour réduire les rougeurs"],
+    whatsapp: "+237674377959",
+  },
+  {
+    id: "cerave-gel-moussant",
+    name: "Gel Moussant Nettoyant",
+    brand: "CeraVe",
+    description: "Gel nettoyant moussant pour peaux normales à grasses avec céramides et acide hyaluronique. Nettoie en profondeur sans perturber la barrière cutanée naturelle. Sans parfum. 236ml.",
+    category: "visage",
+    price: 8500,
+    image: "https://www.cerave.fr/-/media/project/loreal/brand-sites/cerave/emea/fr/fr-all-product-details-latest/new-pdp-images/gel-moussant/foaming-cleanser-icon-fr-lg.webp?rev=-1?w=800&hash=EE5DD2512B635A34E8274222581A4DEE",
+    targets: ["peau grasse", "peau normale", "nettoyant visage", "sébum", "pores", "acné légère", "nettoyage quotidien"],
+    usagePoints: ["Céramides + acide hyaluronique préservent la barrière", "Sans parfum ni alcool", "Nettoyage profond pour peaux grasses"],
+    whatsapp: "+237674377959",
+  },
+  {
+    id: "cerave-lotion-spf30",
+    name: "Lotion Hydratante Visage SPF30",
+    brand: "CeraVe",
+    description: "Lotion hydratante légère avec protection solaire SPF30 pour le visage. Hydrate, protège du soleil et préserve la barrière cutanée en un seul geste. Sans parfum, non comédogène.",
+    category: "visage",
+    price: 11000,
+    image: "https://www.cerave.fr/-/media/project/loreal/brand-sites/cerave/emea/fr/products/facial-mositurising-lotion-spf-30/spf30-lg.jpg?rev=-1?w=800&hash=2B3D3C1FAA19B2FAA8584E0FB58FB5BF",
+    targets: ["protection solaire", "SPF30", "hydratation visage", "soin quotidien", "peau normale à mixte", "écran solaire visage", "anti-UV"],
+    usagePoints: ["Hydratation + SPF30 en un seul geste", "Non comédogène — ne bouche pas les pores", "Soin de jour idéal"],
+    whatsapp: "+237674377959",
+  },
+  {
+    id: "cerave-creme-lavante",
+    name: "Crème Lavante Hydratante",
+    brand: "CeraVe",
+    description: "Crème lavante ultra-douce pour peaux sèches à normales. Nettoie sans savon, hydrate et restaure la barrière cutanée avec les 3 céramides essentiels. 236ml.",
+    category: "visage",
+    price: 8500,
+    image: "https://www.cerave.fr/-/media/project/loreal/brand-sites/cerave/emea/fr/fr-all-product-details-latest/new-pdp-images/crme-lavante/hydrating-cleanser-icon-fr-lg.webp?rev=-1?w=800&hash=40C35B23F14093C1750D8F2080D5A287",
+    targets: ["peau sèche", "peau normale", "nettoyant doux", "barrière cutanée", "céramides", "peau sensible", "nettoyage doux"],
+    usagePoints: ["Nettoie sans savon agressif", "3 céramides essentiels restaurent la barrière", "Idéal peaux sèches et sensibles"],
+    whatsapp: "+237674377959",
+  },
+
   // ── KITS PREMIUM — Circuit GlowScan fermé, AOV élevé ─────────────
   {
     id: "kit-peau-nette-30j",
