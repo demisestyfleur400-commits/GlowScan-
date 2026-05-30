@@ -175,12 +175,41 @@ export default function Landing() {
           </p>
         </motion.div>
 
+        {/* ── CTA visible sans scroll — au-dessus du fold ── */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.38, duration: 0.55 }}
+          className="w-full mb-8"
+        >
+          <button
+            onClick={go}
+            data-testid="button-commencer-top"
+            className="w-full h-14 font-extrabold text-sm flex items-center justify-center gap-2.5 active:scale-[0.97] transition-transform relative overflow-hidden"
+            style={{
+              background: "linear-gradient(135deg, #E91E8C, #f43f5e)",
+              borderRadius: "16px",
+              color: "#f3f0ff",
+            }}
+          >
+            <div
+              className="absolute top-0 left-0 right-0 h-1/2"
+              style={{ background: "linear-gradient(to bottom, rgba(255,255,255,0.1), transparent)", borderRadius: "16px 16px 0 0" }}
+            />
+            <Sparkles className="w-4 h-4 relative z-10" strokeWidth={1.5} />
+            <span className="relative z-10">Analyser ma peau — C'est gratuit</span>
+          </button>
+          <p className="text-center text-[10px] mt-2 font-medium" style={{ color: "rgba(255,255,255,0.3)" }}>
+            30 secondes · Sans carte bancaire · 100% privé
+          </p>
+        </motion.div>
+
         {/* Quick stats */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.45 }}
-          className="flex items-center gap-8 mb-10"
+          className="flex items-center gap-8 mb-8"
         >
           {STATS.map((s, i) => (
             <div key={i} className="flex flex-col items-center gap-0.5">
@@ -208,16 +237,18 @@ export default function Landing() {
           className="w-full space-y-3 mb-10"
         >
           {FEATURES.map((f, i) => (
-            <motion.div
+            <motion.button
               key={i}
+              onClick={go}
               initial={{ opacity: 0, x: -16 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.55 + i * 0.07 }}
-              className="flex items-center gap-4 px-4 py-3.5"
+              className="w-full flex items-center gap-4 px-4 py-3.5 active:scale-[0.98] transition-transform text-left"
               style={{
                 background: "rgba(255,255,255,0.04)",
                 border: "1px solid rgba(255,255,255,0.07)",
                 borderRadius: "24px",
+                cursor: "pointer",
               }}
             >
               <div
@@ -231,7 +262,7 @@ export default function Landing() {
                 <p className="text-xs mt-0.5" style={{ color: "rgba(200,185,255,0.65)" }}>{f.sub}</p>
               </div>
               <ArrowRight className="w-4 h-4 flex-shrink-0" style={{ color: "rgba(255,255,255,0.25)" }} strokeWidth={1.5} />
-            </motion.div>
+            </motion.button>
           ))}
         </motion.div>
       </div>
