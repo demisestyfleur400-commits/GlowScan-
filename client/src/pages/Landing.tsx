@@ -74,15 +74,18 @@ export default function Landing() {
       <div className="w-full px-6 pt-14 flex justify-between items-center relative z-10">
         <span
           className="text-[10px] font-bold tracking-[0.2em] uppercase"
-          style={{ color: "rgba(255,255,255,0.35)" }}
+          style={{ color: "rgba(255,255,255,0.35)", cursor: "default" }}
         >
           GlowScan
         </span>
-        <div
-          className="flex items-center gap-1.5 rounded-full px-3 py-1"
+        {/* Badge IA Active → cliquable, emmène vers l'inscription */}
+        <button
+          onClick={go}
+          className="flex items-center gap-1.5 rounded-full px-3 py-1 active:scale-95 transition-transform"
           style={{
             background: "rgba(16,185,129,0.08)",
             border: "1px solid rgba(16,185,129,0.25)",
+            cursor: "pointer",
           }}
         >
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -90,9 +93,9 @@ export default function Landing() {
             className="text-[9px] font-bold tracking-[0.18em] uppercase"
             style={{ color: "#6ee7b7" }}
           >
-            IA Active
+            IA Active — Essayer
           </span>
-        </div>
+        </button>
       </div>
 
       {/* ── Main body ── */}
@@ -297,8 +300,8 @@ export default function Landing() {
           <span className="relative z-10">Commencer mon analyse</span>
         </button>
 
-        {/* Trust signals */}
-        <div className="flex items-center gap-5">
+        {/* Trust signals — non-cliquables (cursor:default) */}
+        <div className="flex items-center gap-5" style={{ cursor: "default", userSelect: "none" }}>
           {[
             { icon: ShieldCheck, text: "100% privé" },
             { icon: Zap, text: "30 secondes" },

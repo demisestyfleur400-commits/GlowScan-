@@ -10,7 +10,7 @@ type Mode = "login" | "register";
 export default function AuthPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const [mode, setMode] = useState<Mode>("login");
+  const [mode, setMode] = useState<Mode>("register");
   const [loading, setLoading] = useState(false);
   const [showPwd, setShowPwd] = useState(false);
 
