@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useScans } from "@/hooks/use-scans";
 import { useProAccount } from "@/hooks/use-pro";
 import { useQuery } from "@tanstack/react-query";
-import { User, Sparkles, ScanLine, Bot, Apple, ListChecks, TrendingUp, ChevronRight, X, Compass, ShoppingBag, ArrowRight, Menu, Crown, LogOut, Lightbulb, Terminal, Target, ShieldAlert, Loader2 } from "lucide-react";
+import { User, Sparkles, ScanLine, Bot, Apple, ListChecks, TrendingUp, ChevronRight, X, Compass, ShoppingBag, ArrowRight, Menu, Crown, LogOut, Lightbulb, Terminal, Target, ShieldAlert, Loader2, Star, Quote } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { trackPageVisit } from "@/lib/analytics";
 import Landing from "@/pages/Landing";
@@ -172,6 +172,60 @@ function CircularScore({ score, color }: { score: number; color: string }) {
     </motion.div>
   );
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+//  Testimonials data
+// ─────────────────────────────────────────────────────────────────────────
+const TESTIMONIALS = [
+  {
+    name: "Christelle M.",
+    city: "Douala",
+    age: 28,
+    text: "Enfin un outil qui comprend les peaux noires. Mon dermatologue m'avait dit 'c'est normal' depuis des années. GlowScan a détecté une dartre en 30 secondes et m'a expliqué exactement quoi faire.",
+    tag: "Dartre identifiée",
+    score: null,
+  },
+  {
+    name: "Mariama K.",
+    city: "Yaoundé",
+    age: 23,
+    text: "J'avais des taches depuis mes boutons d'adolescence. GlowScan m'a dit exactement pourquoi et quoi utiliser. 3 semaines après, les taches ont diminué de moitié. Je recommande à toutes.",
+    tag: "Taches post-acné",
+    score: null,
+  },
+  {
+    name: "Prince T.",
+    city: "Bafoussam",
+    age: 25,
+    text: "Mon Glow Score est passé de 48 à 71 en 5 semaines. Je ne savais pas que mon mélange de produits créait des réactions. L'IA m'a tout expliqué, j'ai changé de routine et c'est visible.",
+    tag: "+23 pts en 5 sem.",
+    score: 71,
+  },
+  {
+    name: "Alima B.",
+    city: "Douala",
+    age: 31,
+    text: "J'ai essayé tellement de crèmes sans résultat. GlowScan m'a expliqué que le karité brut bouchait mes pores. Ça paraît simple mais aucun professionnel ne me l'avait dit. Maintenant ma peau respire.",
+    tag: "Acné cosmética",
+    score: null,
+  },
+  {
+    name: "Fatou D.",
+    city: "Douala",
+    age: 26,
+    text: "J'avais peur d'avoir du vitiligo. GlowScan a détecté que c'était de la dartre — guérie en 4 semaines avec une simple crème hydratante. Ce diagnostic m'a évité beaucoup d'angoisse et de dépenses inutiles.",
+    tag: "Diagnostic précis",
+    score: null,
+  },
+  {
+    name: "Reine N.",
+    city: "Yaoundé",
+    age: 24,
+    text: "Le diagnostic m'a appris que ma peau est déshydratée et non sèche. Ce ne sont pas les mêmes produits ! Cette distinction a tout changé. Trois semaines plus tard mon teint est transformé.",
+    tag: "Routine optimisée",
+    score: null,
+  },
+];
 
 // ─────────────────────────────────────────────────────────────────────────
 //  Knowledge cards data
@@ -1038,7 +1092,91 @@ export default function Home() {
           </section>
         </FadeUp>
 
-        {/* ─── Section 6: Shop / featured products ─── */}
+        {/* ─── Section 6: Testimonials ─── */}
+        <FadeUp delay={0.30}>
+          <section data-testid="section-testimonials">
+            <div className="mb-3 px-1 flex items-center gap-2">
+              <div
+                className="w-5 h-5 rounded-full flex items-center justify-center"
+                style={{ background: "rgba(233,30,140,0.1)" }}
+              >
+                <Star className="w-3 h-3" style={{ color: "#f9a8d4" }} strokeWidth={1.5} />
+              </div>
+              <h2 className="text-sm font-bold" style={{ color: DS.textBody }}>Elles ont scanné leur peau</h2>
+            </div>
+
+            <div
+              className="flex gap-3 overflow-x-auto pb-3 -mx-4 px-4 snap-x snap-mandatory"
+              style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}
+            >
+              {TESTIMONIALS.map((t, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, x: 30 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={VIEW}
+                  transition={{ duration: 0.4, delay: i * 0.07, ease: EASE }}
+                  className="min-w-[270px] max-w-[270px] snap-start flex flex-col p-5"
+                  style={{
+                    background: "rgba(255,255,255,0.04)",
+                    border: "1px solid rgba(167,139,250,0.15)",
+                    borderRadius: "24px",
+                    position: "relative",
+                  }}
+                >
+                  {/* Quote icon */}
+                  <div className="absolute top-4 right-4 opacity-10">
+                    <Quote className="w-8 h-8" style={{ color: DS.violetMid }} />
+                  </div>
+
+                  {/* Stars */}
+                  <div className="flex gap-0.5 mb-3">
+                    {[...Array(5)].map((_, j) => (
+                      <Star key={j} className="w-3 h-3 fill-current" style={{ color: "#fbbf24" }} strokeWidth={0} />
+                    ))}
+                  </div>
+
+                  {/* Text */}
+                  <p
+                    className="text-[11px] leading-relaxed font-medium flex-1 mb-4"
+                    style={{ color: DS.textBody }}
+                  >
+                    "{t.text}"
+                  </p>
+
+                  {/* Footer */}
+                  <div className="flex items-end justify-between gap-2 mt-auto">
+                    <div>
+                      <p className="text-xs font-bold" style={{ color: DS.textPrimary }}>{t.name}</p>
+                      <p className="text-[10px] font-medium mt-0.5" style={{ color: DS.textMuted }}>
+                        {t.city} · {t.age} ans
+                      </p>
+                    </div>
+                    <div
+                      className="flex-shrink-0 px-2 py-1"
+                      style={{
+                        background: t.score
+                          ? "rgba(16,185,129,0.1)"
+                          : "rgba(167,139,250,0.1)",
+                        border: `1px solid ${t.score ? "rgba(16,185,129,0.25)" : "rgba(167,139,250,0.25)"}`,
+                        borderRadius: "8px",
+                      }}
+                    >
+                      <span
+                        className="text-[9px] font-extrabold tracking-wide"
+                        style={{ color: t.score ? "#6ee7b7" : DS.violetLight }}
+                      >
+                        {t.tag}
+                      </span>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </section>
+        </FadeUp>
+
+        {/* ─── Section 7: Shop / featured products ─── */}
         {featuredProducts.length > 0 && (
           <FadeUp delay={0.32}>
             <section data-testid="section-shop">
