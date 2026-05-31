@@ -10,7 +10,7 @@ import { ResultCard } from "@/components/ResultCard";
 import { UpgradeModal } from "@/components/UpgradeModal";
 import { ConsentBanner, hasUserConsented } from "@/components/ConsentBanner";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Sparkles, Lock, ChevronRight, HelpCircle, ScanLine } from "lucide-react";
+import { ArrowLeft, Sparkles, Lock, ChevronRight, HelpCircle, ScanLine, Scissors } from "lucide-react";
 import type { AnalysisResult } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -470,10 +470,16 @@ export default function Analyze() {
                   {
                     id: "face" as AnalysisArea,
                     label: "Visage et teint",
-                    desc: "Analyse des pores, sébum, acné et uniformité mélanique",
+                    desc: "Analyse des pores, sébum, acné, taches et uniformité mélanique",
                     icon: <ScanLine className="w-5 h-5" style={{ color: "#a78bfa" }} />,
                   },
-                ] as const).map(area => (
+                  {
+                    id: "hair" as AnalysisArea,
+                    label: "Cheveux et cuir chevelu",
+                    desc: "Analyse capillaire : chute, pellicules, sécheresse, densité et santé du cuir chevelu",
+                    icon: <Scissors className="w-5 h-5" style={{ color: "#f9a8d4" }} />,
+                  },
+                ] as { id: AnalysisArea; label: string; desc: string; icon: React.ReactNode }[]).map(area => (
                   <button
                     key={area.id}
                     onClick={() => handleAreaSelect(area.id)}
