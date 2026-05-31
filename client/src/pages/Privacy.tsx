@@ -38,109 +38,107 @@ export default function Privacy() {
             <h1 className="text-xl font-extrabold" style={{ color: DS.text }} data-testid="text-privacy-title">
               Politique de confidentialité
             </h1>
-            <p className="text-xs mt-0.5" style={{ color: DS.muted }}>Dernière mise à jour : 30 avril 2026</p>
+            <p className="text-xs mt-0.5" style={{ color: DS.muted }}>Dernière mise à jour : 31 mai 2026</p>
           </div>
         </div>
 
         <p className="text-sm leading-relaxed mb-6" style={{ color: DS.body }}>
-          Chez <strong style={{ color: DS.text }}>GlowScan</strong>, ta vie privée compte. Cette page t'explique en français simple
-          quelles données nous collectons, pourquoi, et quels droits tu as. Conforme au <strong style={{ color: DS.text }}>RGPD</strong> (UE)
-          et à la loi camerounaise n° 2010-012 du 21 décembre 2010.
+          Chez <strong style={{ color: DS.text }}>GlowScan</strong>, ta vie privée compte. Cette page t'explique
+          clairement quelles données nous collectons, pourquoi, et quels droits tu as.
         </p>
 
         <Section icon={<FileText className="w-4 h-4" style={{ color: "#a78bfa" }} />} title="1. Qui sommes-nous ?">
           <p>
-            GlowScan est une application d'analyse dermatologique assistée par IA, opérée depuis le Cameroun.
-            Pour toute question, contacte-nous :{" "}
-            <a href="mailto:contact@glow-scan.com" style={{ color: "#a78bfa" }}>contact@glow-scan.com</a>.
+            GlowScan est une application d'analyse dermatologique assistée par IA, créée et opérée depuis Douala, Cameroun,
+            par <strong style={{ color: DS.text }}>Démise Essawe</strong>. Site :{" "}
+            <a href="https://glow-scan.com" style={{ color: "#a78bfa" }}>glow-scan.com</a>. Contact :{" "}
+            <a href="mailto:demiseessawe12@gmail.com" style={{ color: "#a78bfa" }}>demiseessawe12@gmail.com</a>
           </p>
         </Section>
 
-        <Section icon={<FileText className="w-4 h-4" style={{ color: "#a78bfa" }} />} title="2. Quelles données nous collectons">
+        <Section icon={<FileText className="w-4 h-4" style={{ color: "#a78bfa" }} />} title="2. Données collectées">
           <ul className="list-disc ml-5 space-y-1.5">
-            <li><strong style={{ color: DS.text }}>Compte</strong> : email, prénom, mot de passe (chiffré avec bcrypt).</li>
-            <li><strong style={{ color: DS.text }}>Photos</strong> : les images que tu téléverses pour analyse (visage, corps, cheveux).</li>
-            <li><strong style={{ color: DS.text }}>Diagnostics</strong> : type de peau, score, conditions détectées, recommandations.</li>
-            <li><strong style={{ color: DS.text }}>Activité</strong> : historique de scans, routines, journal bien-être, points de fidélité.</li>
-            <li><strong style={{ color: DS.text }}>Commandes</strong> : nom, téléphone, adresse de livraison (uniquement quand tu commandes via WhatsApp).</li>
-            <li><strong style={{ color: DS.text }}>Données techniques</strong> : pages visitées (anonymisées), pour améliorer l'app.</li>
+            <li><strong style={{ color: DS.text }}>Identité</strong> : prénom, email ou numéro de téléphone, mot de passe (chiffré bcrypt — jamais visible).</li>
+            <li><strong style={{ color: DS.text }}>Photos uploadées</strong> : images de visage ou de cheveux envoyées pour l'analyse. Elles sont traitées par l'IA puis <strong style={{ color: DS.text }}>non stockées de façon permanente</strong>.</li>
+            <li><strong style={{ color: DS.text }}>Diagnostics</strong> : type de peau, Glow Score, conditions détectées, recommandations produits.</li>
+            <li><strong style={{ color: DS.text }}>Données d'utilisation</strong> : pages visitées, historique de scans (anonymisé pour améliorer l'app).</li>
           </ul>
         </Section>
 
-        <Section icon={<FileText className="w-4 h-4" style={{ color: "#a78bfa" }} />} title="3. Pourquoi nous les collectons">
+        <Section icon={<FileText className="w-4 h-4" style={{ color: "#a78bfa" }} />} title="3. Utilisation des données">
           <ul className="list-disc ml-5 space-y-1.5">
-            <li>Te fournir une analyse dermatologique personnalisée.</li>
-            <li>Te recommander des produits adaptés à ta peau.</li>
-            <li>Te permettre de suivre l'évolution de ta peau dans le temps.</li>
-            <li>Faciliter tes commandes auprès de nos partenaires (pharmacies, marques).</li>
-            <li>Améliorer l'app (statistiques anonymisées).</li>
+            <li>Générer ton <strong style={{ color: DS.text }}>diagnostic cutané personnalisé</strong>.</li>
+            <li>Te recommander des routines et produits adaptés à ta peau.</li>
+            <li>Suivre l'évolution de ta peau dans le temps.</li>
+            <li>Améliorer le modèle IA GlowScan (données anonymisées uniquement).</li>
           </ul>
         </Section>
 
-        <Section icon={<Globe className="w-4 h-4" style={{ color: "#a78bfa" }} />} title="4. Où vont tes données">
-          <p className="mb-2">
-            Nos serveurs sont hébergés via <strong style={{ color: DS.text }}>Railway</strong>. La base de données PostgreSQL stocke ton compte,
-            tes diagnostics et ton historique.
+        <Section icon={<Globe className="w-4 h-4" style={{ color: "#a78bfa" }} />} title="4. Partage des données">
+          <p className="mb-3">
+            Nous ne vendons <strong style={{ color: DS.text }}>jamais</strong> tes données personnelles à des tiers.
+            Aucune publicité ciblée n'est diffusée dans l'app.
           </p>
-          <p className="mb-2">
-            <strong style={{ color: "#fbbf24" }}>Important — Analyse IA :</strong> les photos que tu téléverses sont envoyées
-            à <strong style={{ color: DS.text }}>OpenAI</strong> (États-Unis) pour produire l'analyse dermatologique. OpenAI ne conserve pas tes images
-            au-delà du temps nécessaire à l'analyse (selon leur politique). Aucun humain ne consulte tes photos.
-          </p>
+          <div
+            className="rounded-xl p-3 mb-3"
+            style={{ background: "rgba(251,191,36,0.06)", border: "1px solid rgba(251,191,36,0.2)" }}
+          >
+            <p className="text-xs font-bold mb-1" style={{ color: "#fbbf24" }}>⚠ Seule exception — Analyse IA</p>
+            <p>
+              Les photos que tu uploades sont transmises à <strong style={{ color: DS.text }}>Groq API</strong> (modèle Llama 4)
+              pour générer l'analyse dermatologique. Groq ne conserve pas tes images au-delà du temps nécessaire au traitement.
+              Aucun humain ne consulte tes photos. Elles ne sont <strong style={{ color: DS.text }}>pas stockées de façon permanente</strong> ni partagées avec d'autres tiers.
+            </p>
+          </div>
           <p>
-            Nous ne vendons <strong style={{ color: DS.text }}>jamais</strong> tes données à des tiers. Aucune publicité ciblée n'est diffusée dans l'app.
+            Infrastructure d'hébergement : <strong style={{ color: DS.text }}>Railway</strong> avec base de données
+            PostgreSQL sécurisée.
           </p>
         </Section>
 
-        <Section icon={<FileText className="w-4 h-4" style={{ color: "#a78bfa" }} />} title="5. Combien de temps">
-          <p>
-            Tes données sont conservées tant que ton compte est actif. Si tu supprimes ton compte (voir §7),{" "}
-            <strong style={{ color: DS.text }}>tout est effacé immédiatement</strong>.
-            Les statistiques anonymisées (sans aucun identifiant rattaché à toi) peuvent être conservées pour le suivi de l'app.
-          </p>
-        </Section>
-
-        <Section icon={<Lock className="w-4 h-4" style={{ color: "#a78bfa" }} />} title="6. Comment nous protégeons tes données">
+        <Section icon={<Lock className="w-4 h-4" style={{ color: "#a78bfa" }} />} title="5. Sécurité">
           <ul className="list-disc ml-5 space-y-1.5">
-            <li>Connexion HTTPS chiffrée pour toutes les communications.</li>
-            <li>Mots de passe stockés chiffrés (bcrypt) — nous ne les voyons jamais en clair.</li>
+            <li>Connexion <strong style={{ color: DS.text }}>HTTPS</strong> chiffrée pour toutes les communications.</li>
+            <li>Mots de passe hachés avec <strong style={{ color: DS.text }}>bcrypt</strong> — nous ne les voyons jamais en clair.</li>
             <li>Sessions sécurisées (cookie httpOnly) avec expiration automatique.</li>
-            <li>Accès admin restreint et authentifié.</li>
+            <li>Données stockées sur <strong style={{ color: DS.text }}>Railway + PostgreSQL</strong>, accès sécurisé et restreint.</li>
           </ul>
         </Section>
 
-        <Section icon={<ShieldCheck className="w-4 h-4" style={{ color: "#a78bfa" }} />} title="7. Tes droits">
-          <p className="mb-3">Tu peux à tout moment, depuis ton profil :</p>
+        <Section icon={<ShieldCheck className="w-4 h-4" style={{ color: "#a78bfa" }} />} title="6. Tes droits">
+          <p className="mb-3">Tu peux à tout moment :</p>
           <ul className="list-disc ml-5 space-y-1.5 mb-3">
             <li>
               <strong className="inline-flex items-center gap-1" style={{ color: DS.text }}>
                 <Download className="w-3.5 h-3.5" /> Exporter tes données
               </strong>{" "}
-              — au format JSON (droit d'accès, art. 15 RGPD).
+              — depuis ton profil, au format JSON.
             </li>
             <li>
               <strong className="inline-flex items-center gap-1" style={{ color: DS.text }}>
-                <Trash2 className="w-3.5 h-3.5" /> Supprimer ton compte
+                <Trash2 className="w-3.5 h-3.5" /> Demander la suppression de ton compte
               </strong>{" "}
-              — efface définitivement tout (droit à l'oubli, art. 17 RGPD).
+              — tout est effacé définitivement. Envoie un email à{" "}
+              <a href="mailto:demiseessawe12@gmail.com" style={{ color: "#a78bfa" }}>demiseessawe12@gmail.com</a>.
             </li>
-            <li>Modifier ton profil (rectification, art. 16 RGPD).</li>
-            <li>Retirer ton consentement à tout moment (art. 7 RGPD).</li>
+            <li>Rectifier tes informations personnelles depuis les paramètres de ton profil.</li>
+            <li>Retirer ton consentement à tout moment.</li>
           </ul>
-          <p>
-            Pour toute demande complémentaire (opposition, limitation, portabilité), écris-nous à{" "}
-            <a href="mailto:contact@glow-scan.com" style={{ color: "#a78bfa" }}>contact@glow-scan.com</a>.
-          </p>
         </Section>
 
-        <Section icon={<Mail className="w-4 h-4" style={{ color: "#a78bfa" }} />} title="8. Contact & réclamations">
-          <p className="mb-2">
-            Email :{" "}
-            <a href="mailto:contact@glow-scan.com" style={{ color: "#a78bfa" }}>contact@glow-scan.com</a>
+        <Section icon={<Mail className="w-4 h-4" style={{ color: "#a78bfa" }} />} title="7. Contact">
+          <p className="mb-1">
+            Pour toute question sur tes données ou demande de suppression :
           </p>
           <p>
-            Si tu estimes que tes droits ne sont pas respectés, tu peux saisir l'autorité de protection des données
-            de ton pays (CNIL en France, ANTIC au Cameroun, etc.).
+            📧{" "}
+            <a href="mailto:demiseessawe12@gmail.com" style={{ color: "#a78bfa" }} className="font-bold">
+              demiseessawe12@gmail.com
+            </a>
+          </p>
+          <p className="mt-1">
+            🌐{" "}
+            <a href="https://glow-scan.com" style={{ color: "#a78bfa" }}>glow-scan.com</a>
           </p>
         </Section>
 
