@@ -335,7 +335,7 @@ Retourne UNIQUEMENT ce JSON valide et complet, sans texte avant ni après :
   },
   "recommendations": {
     "products": [
-      "UN SEUL produit — le plus pertinent pour CE diagnostic précis. Choisis dans ces marques disponibles au Cameroun : MARQUES LOCALES PARTENAIRES (priorité) : Andrea Skincare pour visage/corps (Crème Visage, Sérum Jeunesse, Solution Douceur anti-imperfections, Potion Lumière anti-taches, Gel Contour Yeux, Cocon Lumineux, Trésor Cacao, Gommage Éclat) — Ebony Hair ou Hair Bloom pour cheveux (Bain d'Huile, Soin Profond Lekie, Spray Démêlant, Activateur Repousse, Huile Ricin/Avocat/Ail). MARQUES DERMO PHARMACIE CAMEROUN : Bioderma → Sébium Gel Moussant (acné/peau grasse), Sébium Gel Gommant (points noirs/exfoliation), Pigmentbio Foaming Cream ou H2O (taches/hyperpigmentation/peau noire), Sensibio (peau sensible), Hydrabio (déshydratée), Atoderm (peau sèche/eczéma/corps), Photoderm XDefense SPF50+ Shade 03 (protection solaire peaux foncées), Node DS (pellicules). CeraVe, Topicrem, Uriage, Nubiance, La Roche-Posay, Eucerin également disponibles. INTERDIT : Garnier, Nivea, L'Oréal, Neutrogena, Ambi, Kojie San, Dove."
+      "UN SEUL produit partenaire GlowScan — RÈGLE ABSOLUE. MARQUES LOCALES (priorité absolue) : Andrea Skincare visage/corps (Crème Visage, Sérum Jeunesse Bluffant, Solution Douceur anti-imperfections, Potion Lumière anti-taches, Gel Contour Yeux, Cocon Lumineux, Trésor Cacao, Gommage Éclat, Savon Radiance) — Ebony Hair ou Hair Bloom cheveux (Bain d'Huile, Soin Profond Lekie, Spray Démêlant, Activateur Repousse, Huile Ricin/Avocat/Ail/Neem, Poudre Chebe). GLOWSCAN DERMO (si local insuffisant) : Kit Peau Nette 30J, Kit Éclat Anti-Taches, Kit Anti-Âge, Gel Nettoyant Anti-Sébum, Sérum Niacinamide 10%, Sérum Vitamine C 15%, Crème Anti-Taches Nuit, Sérum Rétinol, Crème SPF50+, Crème Barrière Céramides. INTERDIT ABSOLU dans ce champ : Bioderma, Uriage, Topicrem, Nubiance, La Roche-Posay, Eucerin, CeraVe, Garnier, Nivea, L'Oréal — boutique /shop uniquement, jamais ici."
     ],
     "morning": [
       "Étape 1 matin précise avec produit nommé",
@@ -614,25 +614,31 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
       }
 
       const { catalog } = await import("@shared/catalog");
-      // ─── Règles métier strictes (priorité dermato Cameroun) ──────
-      // 1) Plafond prix : 16 000 FCFA (couvre les marques dermo pharmacie)
-      // 2) Priorité 1 : marques locales partenaires (Andrea, Ebony, Hair Bloom)
-      // 3) Priorité 2 : marques dermo pharmacie (Bioderma, Topicrem, Uriage, etc.)
-      // 4) Un seul produit recommandé (le plus pertinent pour le diagnostic)
-      const PRICE_CAP = 16000;
+      // ─── Règles métier B2B strictes ────────────────────────────────
+      // ResultCard recommande UNIQUEMENT :
+      //   1) Marques locales partenaires (Andrea, Ebony, Hair Bloom) → commission B2B
+      //   2) GlowScan Dermo (kits & produits) → marge propre
+      // Les marques internationales (Bioderma, Uriage, Topicrem, etc.)
+      // sont dans la boutique /shop UNIQUEMENT — jamais dans le ResultCard.
+      // Raison : pas de commission sur les internationales → casse le modèle B2B.
+      const PRICE_CAP_LOCAL = 12000; // plafond pour marques locales
       const LOCAL_BRANDS = new Set(["Andrea Skincare", "Ebony Hair", "Hair Bloom", "IN'OYA"]);
-      const DERMO_BRANDS = new Set(["Bioderma", "Topicrem", "Uriage", "Nubiance", "La Roche-Posay", "Eucerin", "CeraVe"]);
-      const isLocal = (item: any) => LOCAL_BRANDS.has(item.brand || "");
-      const isDermo = (item: any) => DERMO_BRANDS.has(item.brand || "");
-      const isAffordable = (item: any) => !item.price || item.price <= PRICE_CAP;
+      const INTL_BRANDS  = new Set(["Bioderma", "Topicrem", "Uriage", "Nubiance", "La Roche-Posay", "Eucerin", "CeraVe"]);
 
-      // Catalogue éligible : prix ≤ plafond (exclut les kits >16k)
-      const affordableCatalog = catalog.filter(isAffordable);
+      const isLocal        = (item: any) => LOCAL_BRANDS.has(item.brand || "");
+      const isGlowScanDerm = (item: any) => item.brand === "GlowScan Dermo";
+      const isIntl         = (item: any) => INTL_BRANDS.has(item.brand || "");
+
+      // Catalogue éligible ResultCard : local ≤ 12k + GlowScan Dermo (tous prix)
+      // Les marques internationales sont EXCLUES du ResultCard
+      const recommendableCatalog = catalog.filter((item) =>
+        (isLocal(item) && (!item.price || item.price <= PRICE_CAP_LOCAL)) ||
+        isGlowScanDerm(item)
+      );
 
       const findBestMatch = (query: string) => {
         const q = query.toLowerCase();
-        // Tentative 1 : match nom/id/targets dans le catalogue éligible
-        const candidates = affordableCatalog.filter((item) => {
+        const candidates = recommendableCatalog.filter((item) => {
           const name = item.name.toLowerCase();
           return (
             name.includes(q) ||
@@ -641,11 +647,10 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
             item.targets.some((t: string) => q.includes(t.toLowerCase()) || t.toLowerCase().includes(q.split(" ")[0]))
           );
         });
-        // Trier : marques locales en premier, puis par prix croissant
+        // Priorité : local (0) > GlowScan Dermo kit (1) > GlowScan Dermo produit (2)
         candidates.sort((a, b) => {
-          // Priorité : local (0) > dermo pharmacie (1) > autre (2)
-          const pa = isLocal(a) ? 0 : isDermo(a) ? 1 : 2;
-          const pb = isLocal(b) ? 0 : isDermo(b) ? 1 : 2;
+          const pa = isLocal(a) ? 0 : (isGlowScanDerm(a) && (a.id.startsWith("kit") || a.id.includes("kit")) ? 1 : 2);
+          const pb = isLocal(b) ? 0 : (isGlowScanDerm(b) && (b.id.startsWith("kit") || b.id.includes("kit")) ? 1 : 2);
           if (pa !== pb) return pa - pb;
           return (a.price || 0) - (b.price || 0);
         });
@@ -653,20 +658,18 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
       };
 
       const productList: string[] = analysisResult.recommendations?.products || [];
-      // Garde 1 seul produit final, en privilégiant ce que l'IA a suggéré comme principal
       const firstSuggestion = productList[0];
       let chosen = firstSuggestion ? findBestMatch(firstSuggestion) : undefined;
-      // Fallback : si aucun match abordable, on cherche par mots-clés du diagnostic
+      // Fallback : mots-clés du diagnostic
       if (!chosen && analysisResult.condition) {
         chosen = findBestMatch(String(analysisResult.condition));
       }
-      // Ultime fallback : produit local ou dermo selon la zone
+      // Ultime fallback : produit local selon la zone
       if (!chosen) {
         const zoneIsHair = (area === "hair") || /cheveux|cuir chevelu|alopécie|pellicule/i.test(String(analysisResult.condition || ""));
         const category = zoneIsHair ? "cheveux" : "visage";
-        // Priorité local, puis dermo pharmacie
-        chosen = affordableCatalog.find((p) => isLocal(p) && p.category === category)
-          ?? affordableCatalog.find((p) => isDermo(p) && p.category === category);
+        chosen = recommendableCatalog.find((p) => isLocal(p) && p.category === category)
+          ?? recommendableCatalog.find((p) => isGlowScanDerm(p) && p.category === category);
       }
       const recommendedProducts = chosen ? [chosen.name] : [];
       console.log(`[analyze] 🛒 Recommandation: ${chosen?.name || "aucune"} (${chosen?.brand || "-"}, ${chosen?.price || 0} FCFA, local=${chosen ? isLocal(chosen) : false})`);
