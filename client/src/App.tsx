@@ -3,38 +3,39 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { useEffect } from "react";
+import { useEffect, lazy, Suspense } from "react";
 import { useAutoTheme } from "@/hooks/use-auto-theme";
 
-import Home from "@/pages/Home";
-import Analyze from "@/pages/Analyze";
-import Profile from "@/pages/Profile";
-import Shop from "@/pages/Shop";
-import Admin from "@/pages/Admin";
-import Challenge from "@/pages/Challenge";
-import Chat from "@/pages/Chat";
-import ScanProduct from "@/pages/ScanProduct";
-import ProductScanCamera from "@/pages/ProductScanCamera";
-import NutrimentScan from "@/pages/NutrimentScan";
-import Routine from "@/pages/Routine";
-import Conseils from "@/pages/Conseils";
-import AuthPage from "@/pages/AuthPage";
-import Premium from "@/pages/Premium";
-import Pro from "@/pages/Pro";
-import ProInscription from "@/pages/pro/ProInscription";
-import ProConnexion from "@/pages/pro/ProConnexion";
-import ProDashboard from "@/pages/pro/ProDashboard";
-import ProPatients from "@/pages/pro/ProPatients";
-import ProPatient from "@/pages/pro/ProPatient";
-import ProAnalyze from "@/pages/pro/ProAnalyze";
-import ProStats from "@/pages/pro/ProStats";
-import ProCabinet from "@/pages/pro/ProCabinet";
-import Privacy from "@/pages/Privacy";
-import DermatoPortal from "@/pages/DermatoPortal";
-import NotFound from "@/pages/not-found";
 import ReconnectBanner from "@/components/ReconnectBanner";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import PWAInstallBanner from "@/components/PWAInstallBanner";
+
+const Home = lazy(() => import("@/pages/Home"));
+const Analyze = lazy(() => import("@/pages/Analyze"));
+const Profile = lazy(() => import("@/pages/Profile"));
+const Shop = lazy(() => import("@/pages/Shop"));
+const Admin = lazy(() => import("@/pages/Admin"));
+const Challenge = lazy(() => import("@/pages/Challenge"));
+const Chat = lazy(() => import("@/pages/Chat"));
+const ScanProduct = lazy(() => import("@/pages/ScanProduct"));
+const ProductScanCamera = lazy(() => import("@/pages/ProductScanCamera"));
+const NutrimentScan = lazy(() => import("@/pages/NutrimentScan"));
+const Routine = lazy(() => import("@/pages/Routine"));
+const Conseils = lazy(() => import("@/pages/Conseils"));
+const AuthPage = lazy(() => import("@/pages/AuthPage"));
+const Premium = lazy(() => import("@/pages/Premium"));
+const Pro = lazy(() => import("@/pages/Pro"));
+const ProInscription = lazy(() => import("@/pages/pro/ProInscription"));
+const ProConnexion = lazy(() => import("@/pages/pro/ProConnexion"));
+const ProDashboard = lazy(() => import("@/pages/pro/ProDashboard"));
+const ProPatients = lazy(() => import("@/pages/pro/ProPatients"));
+const ProPatient = lazy(() => import("@/pages/pro/ProPatient"));
+const ProAnalyze = lazy(() => import("@/pages/pro/ProAnalyze"));
+const ProStats = lazy(() => import("@/pages/pro/ProStats"));
+const ProCabinet = lazy(() => import("@/pages/pro/ProCabinet"));
+const Privacy = lazy(() => import("@/pages/Privacy"));
+const DermatoPortal = lazy(() => import("@/pages/DermatoPortal"));
+const NotFound = lazy(() => import("@/pages/not-found"));
 
 function RefRedirect() {
   const params = new URLSearchParams(window.location.search);
@@ -49,6 +50,7 @@ function RefRedirect() {
 
 function Router() {
   return (
+    <Suspense fallback={<div style={{ background: "#0d0a0e", minHeight: "100vh" }} />}>
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/analyze" component={Analyze} />
@@ -78,6 +80,7 @@ function Router() {
       <Route path="/ref/:code" component={RefRedirect} />
       <Route component={NotFound} />
     </Switch>
+    </Suspense>
   );
 }
 

@@ -535,8 +535,48 @@ export default function Analyze() {
                   <ArrowLeft className="w-4 h-4" />
                 </button>
                 <span className="text-xs font-bold" style={{ color: "#f3f0ff" }}>
-                  Capture faciale
+                  {selectedArea === "hair" ? "Photo du cuir chevelu" : "Capture faciale"}
                 </span>
+              </div>
+
+              {/* ── Guidage photo ── */}
+              <div
+                className="rounded-2xl p-4"
+                style={{
+                  background: "rgba(251,191,36,0.06)",
+                  border: "1px solid rgba(251,191,36,0.2)",
+                }}
+              >
+                <div className="flex items-start gap-3">
+                  <span className="text-base leading-none mt-0.5">📸</span>
+                  <div>
+                    <p className="text-xs font-bold mb-1.5" style={{ color: "#fbbf24" }}>
+                      Pour une analyse précise, ta photo doit :
+                    </p>
+                    <ul className="space-y-1">
+                      {(selectedArea === "hair"
+                        ? [
+                            "Montrer clairement le cuir chevelu ou la longueur des cheveux",
+                            "Être prise dans une bonne lumière naturelle",
+                            "Être nette — pas floue ni trop sombre",
+                          ]
+                        : [
+                            "Être un selfie bien éclairé, visage centré et de face",
+                            "Montrer ton visage de près (pas en plein pied)",
+                            "Être nette — pas floue, pas de filtre",
+                          ]
+                      ).map((tip, i) => (
+                        <li key={i} className="flex items-start gap-1.5 text-[11px]" style={{ color: "rgba(251,191,36,0.85)" }}>
+                          <span className="mt-px">✓</span>
+                          <span>{tip}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="text-[10px] mt-2 font-medium" style={{ color: "rgba(255,255,255,0.35)" }}>
+                      Une photo floue ou trop éloignée empêche l'analyse — l'IA a besoin de voir ta peau clairement.
+                    </p>
+                  </div>
+                </div>
               </div>
 
               <div
