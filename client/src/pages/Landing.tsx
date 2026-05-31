@@ -4,32 +4,32 @@ import { useAuth } from "@/hooks/use-auth";
 import { ScanFace, Sparkles, ShieldCheck, Star, ArrowRight, Zap } from "lucide-react";
 
 const STATS = [
-  { value: "30s", label: "Analyse complète" },
-  { value: "100%", label: "Privé & sécurisé" },
-  { value: "IA", label: "Gpt-4o Vision" },
+  { value: "100%", label: "Gratuit pour toi" },
+  { value: "30s", label: "Résultat rapide" },
+  { value: "✓", label: "Peaux africaines" },
 ];
 
 const FEATURES = [
   {
     icon: ScanFace,
-    label: "Scan cutané IA",
-    sub: "Photo → diagnostic en 30 secondes",
+    label: "Bilan peau personnalisé",
+    sub: "Une photo suffit — reçois ton diagnostic complet en 30 secondes",
     color: "#a78bfa",
     colorBg: "rgba(167,139,250,0.12)",
     colorBorder: "rgba(167,139,250,0.25)",
   },
   {
     icon: Star,
-    label: "Glow Score",
-    sub: "Ton score de peau personnalisé sur 100",
+    label: "Ton score de peau sur 100",
+    sub: "Suis l'évolution de ta peau semaine après semaine",
     color: "#fbbf24",
     colorBg: "rgba(245,158,11,0.1)",
     colorBorder: "rgba(245,158,11,0.25)",
   },
   {
     icon: Zap,
-    label: "Produits adaptés",
-    sub: "Recommandés pour les peaux africaines",
+    label: "Les bons soins pour ta peau",
+    sub: "Produits et routines adaptés aux peaux noires et métissées",
     color: "#c4b5fd",
     colorBg: "rgba(167,139,250,0.08)",
     colorBorder: "rgba(167,139,250,0.2)",
@@ -93,7 +93,7 @@ export default function Landing() {
             className="text-[9px] font-bold tracking-[0.18em] uppercase"
             style={{ color: "#6ee7b7" }}
           >
-            IA Active — Essayer
+            En ligne — Essayer gratuitement
           </span>
         </button>
       </div>
@@ -145,7 +145,7 @@ export default function Landing() {
             }}
           >
             <Sparkles className="w-3 h-3" />
-            Analyse dermatologique IA — Afrique
+            Soins dermato · Peaux africaines · Gratuit
           </div>
         </motion.div>
 
@@ -157,24 +157,24 @@ export default function Landing() {
           className="text-center mb-5"
         >
           <h1
-            className="text-[2.3rem] font-extrabold leading-[1.1] tracking-tight mb-4"
+            className="text-[2.1rem] font-extrabold leading-[1.15] tracking-tight mb-4"
             data-testid="text-welcome"
             style={{ color: "#f3f0ff" }}
           >
-            Ta peau,{" "}
+            Ton bilan peau gratuit,{" "}
             <span
               className="text-transparent bg-clip-text"
-              style={{ backgroundImage: "linear-gradient(135deg, #a78bfa 0%, #7c3aed 100%)" }}
+              style={{ backgroundImage: "linear-gradient(135deg, #f9a8d4 0%, #E91E8C 100%)" }}
             >
-              révélée par l'IA
+              fait pour ta peau
             </span>
           </h1>
           <p
-            className="text-sm leading-relaxed max-w-[260px] mx-auto"
+            className="text-sm leading-relaxed max-w-[270px] mx-auto"
             style={{ color: "rgba(200,185,255,0.65)" }}
             data-testid="text-tagline"
           >
-            Diagnostic personnalisé pour les peaux d'Afrique centrale. Résultat en 30 secondes.
+            Tes taches, tes boutons, ta sécheresse — tout expliqué avec les soins qu'il te faut vraiment. Sans rendez-vous, sans payer.
           </p>
         </motion.div>
 
@@ -200,10 +200,10 @@ export default function Landing() {
               style={{ background: "linear-gradient(to bottom, rgba(255,255,255,0.1), transparent)", borderRadius: "16px 16px 0 0" }}
             />
             <Sparkles className="w-4 h-4 relative z-10" strokeWidth={1.5} />
-            <span className="relative z-10">Analyser ma peau — C'est gratuit</span>
+            <span className="relative z-10">Obtenir mon bilan gratuit</span>
           </button>
           <p className="text-center text-[10px] mt-2 font-medium" style={{ color: "rgba(255,255,255,0.3)" }}>
-            30 secondes · Sans carte bancaire · 100% privé
+            Gratuit · 30 secondes · Tes données restent chez toi
           </p>
         </motion.div>
 
