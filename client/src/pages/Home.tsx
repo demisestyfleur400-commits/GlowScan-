@@ -8,7 +8,6 @@ import { User, Sparkles, ScanLine, Bot, Apple, ListChecks, TrendingUp, ChevronRi
 import { useEffect, useMemo, useRef, useState } from "react";
 import { trackPageVisit } from "@/lib/analytics";
 import Landing from "@/pages/Landing";
-import Onboarding from "@/components/Onboarding";
 import { catalog, formatPrice, type Product } from "@shared/catalog";
 import type { FeaturedProduct } from "@shared/schema";
 
@@ -631,8 +630,6 @@ export default function Home() {
       style={{ background: DS.bg, fontFamily: DS.font, color: DS.textPrimary }}
       data-testid="page-home"
     >
-      <Onboarding />
-
       {/* Ambient glow orbs — no box-shadow */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden z-0" aria-hidden="true">
         <div
