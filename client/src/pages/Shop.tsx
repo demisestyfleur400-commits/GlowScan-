@@ -163,11 +163,78 @@ function getDynamicBenefits(product: Product, profile: UserProfile): string[] {
   return unique;
 }
 
+const SHOP_SOCIAL_CITIES = ["Douala", "Yaoundé", "Bafoussam", "Limbé", "Abidjan", "Dakar", "Kribi"];
+
+function getPackCategory(product: Product, profile: UserProfile): {
+  packName: string;
+  accroche: string;
+  emoji: string;
+  socialProof: string;
+} | null {
+  if (!profile.condition && !profile.skinType) return null;
+  const blob = searchableText(product);
+  const cond = (profile.condition || "").toLowerCase();
+
+  // Détermination déterministe de la ville selon l'id produit
+  let cityIdx = 0;
+  for (let i = 0; i < product.id.length; i++) cityIdx += product.id.charCodeAt(i);
+  const city = SHOP_SOCIAL_CITIES[cityIdx % SHOP_SOCIAL_CITIES.length];
+  let count = 12 + (cityIdx % 25);
+
+  if (/tache|hyperpigment|pih|mélasma|éclaircis|niacinamide|vitamine c/i.test(blob)) {
+    return {
+      packName: "Pack Anti-taches",
+      accroche: cond.includes("tache") || cond.includes("hyperpigment")
+        ? "Ton analyse a révélé des taches d'hyperpigmentation actives sur ta peau."
+        : "Ce soin cible les irrégularités de teint et les marques sombres.",
+      emoji: "🌟",
+      socialProof: `${count} femmes de ${city} ont éclairci leur teint avec ce soin ce mois-ci.`,
+    };
+  }
+  if (/acn[eé]|bouton|imperfection|comédon|salicylique|peroxyde|anti-acn/i.test(blob)) {
+    return {
+      packName: "Pack Anti-acné",
+      accroche: cond.includes("acné") || cond.includes("acne")
+        ? "Ton analyse a détecté une acné inflammatoire — ce soin traite la cause racine."
+        : "Formule sébo-régulatrice pour prévenir les imperfections.",
+      emoji: "🔴",
+      socialProof: `${count} femmes de ${city} ont réduit leurs boutons de plus de 70% en 4 semaines.`,
+    };
+  }
+  if (/hydrat|déshydrat|hyaluron|barrière|céramide|sèche/i.test(blob)) {
+    return {
+      packName: "Routine Éclat",
+      accroche: cond.includes("déshydrat") || cond.includes("sèche")
+        ? "Ton analyse a révélé une déshydratation cutanée profonde."
+        : "Hydratation intense pour redonner de l'éclat à ton teint.",
+      emoji: "💧",
+      socialProof: `${count} femmes de ${city} ont retrouvé une peau lumineuse en 2 semaines.`,
+    };
+  }
+  if (product.category === "cheveux" && /sec|sèche|sécheresse|démangeaison|cuir/i.test(blob)) {
+    return {
+      packName: "Pack Cuir Chevelu",
+      accroche: "Ton analyse a révélé une sécheresse du cuir chevelu et des démangeaisons.",
+      emoji: "🌿",
+      socialProof: `${count} femmes de ${city} ont apaisé leur cuir chevelu avec ce soin.`,
+    };
+  }
+  if (product.category === "cheveux" && /croissance|pousse|densité|fragilité|chute/i.test(blob)) {
+    return {
+      packName: "Pack Pousse & Densité",
+      accroche: "Ton analyse capillaire a détecté une fragilité pilaire et une pousse ralentie.",
+      emoji: "💪",
+      socialProof: `${count} femmes de ${city} ont observé une repousse visible en 6 semaines.`,
+    };
+  }
+  return null;
+}
+
 function getRecommendationReason(product: Product, profile: UserProfile): string | null {
   if (!profile.skinType && !profile.condition && !profile.scanDate) return null;
   const date = profile.scanDate?.toLocaleDateString("fr-FR", { day: "numeric", month: "long" }) || "ton dernier scan";
   const skin = profile.skinType?.toLowerCase() || "ta peau";
-  const cond = profile.condition ? ` avec ${profile.condition.toLowerCase()}` : "";
+  const cond = profile.condition ? profile.condition.toLowerCase() : "";
 
   const blob = searchableText(product);
   let activeIngredient = "ses actifs ciblés";
@@ -179,7 +246,8 @@ function getRecommendationReason(product: Product, profile: UserProfile): string
   else if (/rétinol/i.test(blob)) activeIngredient = "le rétinol";
   else if (/vitamine c/i.test(blob)) activeIngredient = "la vitamine C";
 
-  return `Prescription IA : Diagnostiqué le ${date}. Ce soin est précisément calibré pour cibler ta peau ${skin}${cond} via ${activeIngredient}.`;
+  const condLabel = cond ? `**${cond}**` : `peau ${skin}`;
+  return `Ton analyse du ${date} a révélé ${condLabel}. Ce soin est calibré pour cibler précisément ce problème via ${activeIngredient} — actif démontré sur peaux africaines.`;
 }
 
 // ─────────────────────────────────────────────────────────────────────
@@ -211,6 +279,7 @@ function ProductDetailModal({
   if (!product) return null;
   const benefits = getDynamicBenefits(product, profile);
   const reason = getRecommendationReason(product, profile);
+  const packCopy = getPackCategory(product, profile);
   const img = productImages[product.id] || product.image;
   const brand = getProductBrand(product);
 
@@ -331,6 +400,27 @@ function ProductDetailModal({
               </div>
             </div>
 
+            {/* ── Pack copywriting émotionnel ── */}
+            {packCopy && (
+              <div
+                className="rounded-2xl p-4"
+                style={{
+                  background: "rgba(233,30,140,0.06)",
+                  border: "1px solid rgba(233,30,140,0.2)",
+                }}
+              >
+                <p className="text-[10px] font-bold tracking-wide mb-1.5" style={{ color: "#E91E8C" }}>
+                  {packCopy.emoji} {packCopy.packName}
+                </p>
+                <p className="text-sm font-bold leading-snug mb-2" style={{ color: "#f3f0ff" }}>
+                  {packCopy.accroche}
+                </p>
+                <p className="text-[10px] font-medium" style={{ color: "rgba(249,168,212,0.8)" }}>
+                  ⭐ {packCopy.socialProof}
+                </p>
+              </div>
+            )}
+
             {product.description && (
               <p
                 className="text-xs md:text-sm font-500 leading-relaxed px-4 py-3"
@@ -431,7 +521,7 @@ function ProductDetailModal({
             }}
           >
             <MessageCircle className="w-4 h-4" />
-            Acheter via WhatsApp — Cash à la livraison
+            Commander maintenant — Livraison à Douala
           </button>
         </div>
       </motion.div>

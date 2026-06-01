@@ -77,11 +77,71 @@ const SOCIAL_PROOF: Record<string, number> = {
   "serum-hairbloom": 13,
 };
 
-function getSocialProof(productId: string): number {
-  if (SOCIAL_PROOF[productId]) return SOCIAL_PROOF[productId];
-  let h = 0;
-  for (let i = 0; i < productId.length; i++) h = ((h << 5) - h + productId.charCodeAt(i)) | 0;
-  return 8 + (Math.abs(h) % 20);
+const SOCIAL_CITIES = ["Douala", "Yaoundé", "Bafoussam", "Limbé", "Kribi", "Abidjan", "Dakar"];
+
+function getSocialProof(productId: string): { count: number; city: string } {
+  const base = SOCIAL_PROOF[productId] ?? (() => {
+    let h = 0;
+    for (let i = 0; i < productId.length; i++) h = ((h << 5) - h + productId.charCodeAt(i)) | 0;
+    return 8 + (Math.abs(h) % 20);
+  })();
+  let cityIdx = 0;
+  for (let i = 0; i < productId.length; i++) cityIdx += productId.charCodeAt(i);
+  return { count: base, city: SOCIAL_CITIES[cityIdx % SOCIAL_CITIES.length] };
+}
+
+// ─── Hook émotionnel par catégorie de condition ──────────────────────
+function getConditionHook(condition: string, area: "visage" | "corps" | "cheveux"): { accroche: string; urgence: string; emoji: string } {
+  const c = (condition || "").toLowerCase();
+
+  if (area === "cheveux") {
+    if (/sécheresse|sec|déshydrat/.test(c)) return {
+      emoji: "🌿",
+      accroche: "Ton analyse a révélé une sécheresse capillaire avancée.",
+      urgence: "Tes cheveux perdent leur éclat et leur élasticité. Sans soin adapté, la casse et la fragilité s'aggravent.",
+    };
+    if (/chute|perte|fragilité/.test(c)) return {
+      emoji: "💪",
+      accroche: "Ton analyse a détecté une fragilité pilaire qui favorise la chute.",
+      urgence: "Tes racines ont besoin de nutrients ciblés pour arrêter la casse et relancer la pousse.",
+    };
+    return {
+      emoji: "✨",
+      accroche: "Ton analyse capillaire est prête.",
+      urgence: "Découvre la routine personnalisée qui correspond à tes cheveux.",
+    };
+  }
+
+  if (/tache|hyperpigment|mélasma|pih|dyschromie/.test(c)) return {
+    emoji: "🌟",
+    accroche: "Ton analyse a révélé des taches d'hyperpigmentation actives.",
+    urgence: "Les taches sur peau noire s'aggravent au soleil sans protection ciblée. Chaque jour sans traitement = 2 jours de retard.",
+  };
+  if (/acné|acne|bouton|comédon|imperfection/.test(c)) return {
+    emoji: "🔴",
+    accroche: "Ton analyse a détecté une acné inflammatoire à traiter en urgence.",
+    urgence: "L'acné non traitée laisse des marques durables sur les peaux melanisées. Le bon protocole arrête les lésions en 3 semaines.",
+  };
+  if (/déshydrat|sèche|tiraillement/.test(c)) return {
+    emoji: "💧",
+    accroche: "Ton analyse a révélé une peau déshydratée et une barrière fragilisée.",
+    urgence: "Une peau déshydratée produit plus de sébum en réaction — c'est un cercle vicieux. Brise-le avec les bons actifs.",
+  };
+  if (/ride|anti-âge|vieilliss/.test(c)) return {
+    emoji: "⏳",
+    accroche: "Ton analyse a identifié des premiers signes de relâchement cutané.",
+    urgence: "La peau africaine vieillit différemment — mieux, mais elle a ses propres besoins. Agis maintenant.",
+  };
+  if (/sensib|réactiv|rougeur/.test(c)) return {
+    emoji: "🌸",
+    accroche: "Ton analyse a révélé une peau réactive avec une barrière cutanée fragilisée.",
+    urgence: "Une peau sensible mal soignée s'enflamme facilement. Les bons actifs doux changent tout.",
+  };
+  return {
+    emoji: "✨",
+    accroche: `Ton analyse a révélé : ${condition}.`,
+    urgence: "Ta peau a un profil unique. Voici la routine calibrée pour toi.",
+  };
 }
 
 // ─── Helpers numériques pour les tuiles ─────────────────────────────
@@ -541,6 +601,7 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
     return "visage";
   };
   const currentArea = detectArea();
+  const conditionHook = getConditionHook(result.condition, currentArea as "visage" | "corps" | "cheveux");
 
   const getProductRole = (p: typeof catalog[0]): "nettoyant" | "serum" | "creme" => {
     const n = p.name.toLowerCase();
@@ -728,9 +789,28 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
             <p style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.2em", color: DS.textMuted }}>Diagnostic & Stratégie</p>
             <SeverityBadge severity={result.severity || "Modérée"} />
           </div>
+
+          {/* ── Hook émotionnel personnalisé ── */}
+          <div
+            style={{
+              borderRadius: "16px",
+              padding: "14px 16px",
+              marginBottom: "16px",
+              background: "rgba(233,30,140,0.06)",
+              border: "1px solid rgba(233,30,140,0.2)",
+            }}
+          >
+            <p style={{ fontSize: "15px", fontWeight: 800, color: DS.textPrimary, lineHeight: 1.35, marginBottom: "6px" }}>
+              {conditionHook.emoji} {conditionHook.accroche}
+            </p>
+            <p style={{ fontSize: "12px", fontWeight: 500, lineHeight: 1.6, color: "rgba(249,168,212,0.85)" }}>
+              {conditionHook.urgence}
+            </p>
+          </div>
+
           <h1
             data-testid="text-condition"
-            style={{ fontSize: "22px", fontWeight: 800, color: DS.textPrimary, lineHeight: 1.3, marginBottom: "20px" }}
+            style={{ fontSize: "20px", fontWeight: 800, color: DS.textPrimary, lineHeight: 1.3, marginBottom: "20px" }}
           >
             {result.condition}
           </h1>
@@ -1469,8 +1549,8 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
                     <span style={{ position: "relative", width: "8px", height: "8px", borderRadius: "9999px", background: "#f9a8d4", display: "block" }} />
                   </span>
                   <p style={{ fontSize: "11px", fontWeight: 600, lineHeight: 1.4, color: DS.textBody }}>
-                    <span style={{ color: "#f9a8d4", fontWeight: 800 }}>37 femmes</span> ont validé cette ordonnance aujourd'hui. Stock de la gamme{" "}
-                    <span style={{ textDecoration: "underline" }}>{brandLabel}</span> limité.
+                    <span style={{ color: "#f9a8d4", fontWeight: 800 }}>+40 femmes de Douala et Yaoundé</span> ont commandé cette routine cette semaine. Stock{" "}
+                    <span style={{ textDecoration: "underline" }}>{brandLabel}</span> limité — livraison sous 24h.
                   </p>
                 </div>
 
@@ -1500,7 +1580,7 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
                         </span>
                       </div>
                       <p style={{ fontSize: "10px", fontWeight: 600, marginBottom: "12px", color: DS.textMuted }}>
-                        Traitement Global Synergique — {routineProducts.length} produits sélectionnés pour ton profil
+                        {routineProducts.length} soins sélectionnés par l'IA pour ton profil · Résultats visibles en 3–4 semaines
                       </p>
 
                       {/* Product cards ecommerce */}
@@ -1571,7 +1651,7 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
                                 )}
                                 <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px" }}>
                                   <span style={{ fontSize: "11px", fontWeight: 800, color: DS.textPrimary }}>{formatPrice(product.price)}</span>
-                                  <span style={{ fontSize: "9px", color: DS.textMuted }}>· {social} femmes ce mois</span>
+                                  <span style={{ fontSize: "9px", color: DS.textMuted }}>· {social.count} femmes de {social.city}</span>
                                 </div>
                               </div>
                             </div>
@@ -1654,7 +1734,7 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
                         {intermediateOffer.copywriting.subtitle}
                       </p>
                       <p style={{ fontSize: "11px", lineHeight: 1.6, marginBottom: "16px", color: DS.textBody }}>
-                        Vous n'avez pas le budget pour la totale ? Ce duo rassemble les 2 actifs majeurs pour stopper l'urgence cutanée.
+                        Pas de budget pour la routine complète ? Ce duo cible les 2 urgences détectées dans ton diagnostic — l'essentiel pour démarrer ta transformation.
                       </p>
 
                       <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "16px" }}>
