@@ -6,11 +6,12 @@ import { resizeBase64Image } from "@/lib/imageUtils";
 interface FileUploadProps {
   onFileSelect: (base64: string) => void;
   isProcessing?: boolean;
+  autoStart?: boolean; // démarre la caméra immédiatement (défaut: true)
 }
 
 type Mode = "camera" | "preview" | "gallery_fallback";
 
-export function FileUpload({ onFileSelect, isProcessing }: FileUploadProps) {
+export function FileUpload({ onFileSelect, isProcessing, autoStart = true }: FileUploadProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -37,7 +38,7 @@ export function FileUpload({ onFileSelect, isProcessing }: FileUploadProps) {
     setCameraReady(false);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 } },
+        video: { facingMode: { ideal: facing }, width: { ideal: 640 }, height: { ideal: 480 } },
         audio: false,
       });
       streamRef.current = stream;
@@ -61,9 +62,14 @@ export function FileUpload({ onFileSelect, isProcessing }: FileUploadProps) {
   }, []);
 
   useEffect(() => {
+    if (!autoStart) {
+      // Pas de démarrage auto → affiche le fallback galerie directement
+      setMode("gallery_fallback");
+      return;
+    }
     startCamera(facingMode);
     return () => stopStream();
-  }, [facingMode, startCamera]);
+  }, [facingMode, startCamera, autoStart]);
 
   const flipCamera = async () => {
     const next = facingMode === "user" ? "environment" : "user";

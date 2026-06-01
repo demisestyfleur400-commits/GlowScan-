@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { trackPageVisit } from "@/lib/analytics";
 import { fetchWithRetry } from "@/lib/imageUtils";
@@ -6,9 +6,13 @@ import { triggerPWAInstallPrompt } from "@/hooks/use-pwa-install";
 import { useSubscription } from "@/hooks/use-subscription";
 import { Navbar } from "@/components/Navbar";
 import { FileUpload } from "@/components/FileUpload";
-import { ResultCard } from "@/components/ResultCard";
 import { UpgradeModal } from "@/components/UpgradeModal";
 import { ConsentBanner, hasUserConsented } from "@/components/ConsentBanner";
+
+// ResultCard est énorme (~1900 lignes) — on le charge seulement quand on en a besoin
+const ResultCard = lazy(() =>
+  import("@/components/ResultCard").then((m) => ({ default: m.ResultCard }))
+);
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Sparkles, Lock, ChevronRight, HelpCircle, ScanLine, Scissors } from "lucide-react";
 import type { AnalysisResult } from "@shared/schema";
@@ -71,6 +75,32 @@ export default function Analyze() {
   const [consultationData, setConsultationData] = useState<ConsultationData | null>(null);
   const [answers, setAnswers] = useState<Record<number, string>>({});
 
+  // ── Sauvegarde de l'état du questionnaire dans sessionStorage ──────
+  const SESSION_KEY = "glowscan_questionnaire_draft";
+
+  const saveQuestionnaireDraft = (
+    data: ConsultationData,
+    area: AnalysisArea,
+    img: string,
+    ans: Record<number, string>
+  ) => {
+    try {
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify({
+        consultationData: data,
+        selectedArea: area,
+        // On ne stocke pas l'image (trop lourde) — on garde une flag
+        hasImage: !!img,
+        answers: ans,
+        savedAt: Date.now(),
+      }));
+    } catch {}
+  };
+
+  const clearQuestionnaireDraft = () => {
+    try { sessionStorage.removeItem(SESSION_KEY); } catch {}
+  };
+
+  // ── Restauration après auth ────────────────────────────────────────
   useEffect(() => {
     if (user && result === null && step !== "result") {
       try {
@@ -84,6 +114,7 @@ export default function Analyze() {
               setSelectedArea(saved.area || "face");
               setStep("result");
               localStorage.removeItem("glowscan_pending_scan");
+              clearQuestionnaireDraft();
             }
           }
         } else {
@@ -134,6 +165,8 @@ export default function Analyze() {
     }
     setUploadedImage(base64);
     setIsAnalyzing(true);
+    // Précharger ResultCard pendant que l'IA analyse — 0 délai supplémentaire perçu
+    import("@/components/ResultCard").catch(() => {});
 
     try {
       const response = await fetchWithRetry("/api/generate-consultation", {
@@ -166,18 +199,21 @@ export default function Analyze() {
       setConsultationData(data);
       setIsAnalyzing(false);
       setStep("questionnaire");
+      saveQuestionnaireDraft(data, selectedArea, base64, {});
     } catch (err) {
       // Dernier recours côté client : fallback questions si le réseau a coupé
       setIsAnalyzing(false);
-      setConsultationData({
+      const fallback: ConsultationData = {
         observations_visuelles: "Analyse prête. Quelques questions pour personnaliser ton diagnostic.",
         questions: [
           { id: 1, label: "As-tu des sensibilités ou allergies cutanées connues ?" },
           { id: 2, label: "Décris ta routine de soin actuelle (matin et soir)." },
           { id: 3, label: "As-tu remarqué des changements récents sur ta peau ?" },
         ]
-      });
+      };
+      setConsultationData(fallback);
       setStep("questionnaire");
+      saveQuestionnaireDraft(fallback, selectedArea, base64, {});
     }
   };
 
@@ -214,7 +250,16 @@ export default function Analyze() {
         }
         if (analyzeRes.status === 401) {
           setIsAnalyzing(false);
-          setStep("anon_limit");
+          // Sauvegarder les réponses avant de rediriger
+          if (consultationData) {
+            saveQuestionnaireDraft(consultationData, selectedArea, uploadedImage || "", answers);
+          }
+          localStorage.setItem("glowscan_after_auth", "restore_questionnaire");
+          toast({
+            title: "Session expirée",
+            description: "Connecte-toi pour continuer — tes réponses sont sauvegardées.",
+          });
+          setTimeout(() => { window.location.href = "/auth"; }, 1500);
           return;
         }
         if (analyzeRes.status === 422 && errBody.code === "AI_REFUSED") {
@@ -236,6 +281,7 @@ export default function Analyze() {
       setIsAnalyzing(false);
       setResult(data);
       setStep("result");
+      clearQuestionnaireDraft();
 
       // Si le serveur a renvoyé un résultat de fallback, on l'indique discrètement
       if ((data as any)._fallback) {
@@ -586,7 +632,8 @@ export default function Analyze() {
                   border: "1px solid rgba(255,255,255,0.07)",
                 }}
               >
-                <FileUpload onFileSelect={handleFileSelect} />
+                {/* autoStart=true : la caméra démarre seulement quand cette section est montée */}
+                <FileUpload onFileSelect={handleFileSelect} autoStart={true} />
               </div>
             </motion.div>
           )}
@@ -685,7 +732,13 @@ export default function Analyze() {
               exit={{ opacity: 0 }}
               className="space-y-5"
             >
-              <ResultCard result={result} savedScanId={savedScanId} area={selectedArea} />
+              <Suspense fallback={
+                <div style={{ display: "flex", justifyContent: "center", padding: "48px 0" }}>
+                  <div style={{ width: "32px", height: "32px", border: "3px solid rgba(167,139,250,0.3)", borderTopColor: "#a78bfa", borderRadius: "9999px", animation: "spin 0.8s linear infinite" }} />
+                </div>
+              }>
+                <ResultCard result={result} savedScanId={savedScanId} area={selectedArea} />
+              </Suspense>
             </motion.div>
           )}
 
