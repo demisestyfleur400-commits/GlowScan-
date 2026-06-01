@@ -213,6 +213,195 @@ function deriveZonesLabel(result: AnalysisResult): string {
   return names.join(" · ");
 }
 
+// ─── Bénéfice lisible (sans nom commercial) ─────────────────────────
+function getBenefitLabel(
+  role: "nettoyant" | "serum" | "creme",
+  condition: string,
+  area: "visage" | "corps" | "cheveux"
+): string {
+  const c = condition.toLowerCase();
+  if (area === "cheveux") {
+    if (role === "nettoyant") return "Shampooing Purifiant Cuir Chevelu";
+    if (role === "serum") return "Huile Fortifiante Capillaire";
+    return "Masque Nutrition Intensive";
+  }
+  if (role === "nettoyant") {
+    if (/acn[eé]|bouton|comédon/.test(c)) return "Gel Nettoyant Anti-Acné";
+    if (/tache|hyperpigment|pih/.test(c)) return "Nettoyant Éclat Unifiant";
+    if (/sèche|déshydrat/.test(c)) return "Lait Nettoyant Doux Hydratant";
+    return "Nettoyant Sébo-Régulateur";
+  }
+  if (role === "serum") {
+    if (/tache|hyperpigment|pih|mélasma/.test(c)) return "Sérum Anti-Taches Intensif";
+    if (/acn[eé]|bouton/.test(c)) return "Sérum Anti-Imperfections";
+    if (/sèche|déshydrat/.test(c)) return "Sérum Hydratation Profonde";
+    if (/ride|anti-âge/.test(c)) return "Sérum Anti-Âge Repulpant";
+    return "Sérum Éclat Ciblé";
+  }
+  // creme
+  if (/tache|hyperpigment/.test(c)) return "Crème Unifiante SPF";
+  if (/acn[eé]|bouton/.test(c)) return "Fluide Matifiant Non-Comédogène";
+  if (/sèche|déshydrat/.test(c)) return "Crème Barrière Nourrissante";
+  if (/ride|anti-âge/.test(c)) return "Crème Fermeté Anti-Âge";
+  return "Crème Hydratante Protectrice";
+}
+
+// ─── Copywriting par diagnostic + zone ──────────────────────────────
+function getDiagnosisCopy(condition: string, zone: string): string {
+  const c = condition.toLowerCase();
+  const z = zone || "tes zones sensibles";
+  if (/tache|hyperpigment|pih|mélasma/.test(c))
+    return `Sélectionné pour effacer tes taches sur ${z}`;
+  if (/acn[eé]|bouton|comédon/.test(c))
+    return `Formulé pour calmer ton acné sur ${z} sans laisser de traces`;
+  if (/sèche|déshydrat|tiraillement/.test(c))
+    return `Hydratation intensive conçue pour ta peau africaine`;
+  if (/cuir chevelu|cheveu|capillaire/.test(c))
+    return `Traitement ciblé pour ton cuir chevelu — résultats en 3 semaines`;
+  if (/ride|anti-âge|vieilliss/.test(c))
+    return `Conçu pour lisser et repulper ${z}`;
+  return `Sélectionné pour ${z} par notre IA GlowScan`;
+}
+
+// ─── Zones affectées en texte lisible ───────────────────────────────
+function getAffectedZoneLabel(zones: any[]): string {
+  if (!zones || zones.length === 0) return "ton visage";
+  const affected = zones.filter((z: any) => z.status === "red" || z.status === "yellow");
+  if (affected.length === 0) return "ton visage";
+  return affected.slice(0, 2).map((z: any) => z.name?.toLowerCase()).filter(Boolean).join(" et ") || "ton visage";
+}
+
+// ─── Carte Ordonnance produit ────────────────────────────────────────
+function ProductRecommendationCard({
+  photo,
+  benefit,
+  zone,
+  diagnosis,
+  price,
+  onOrder,
+  delay = 0,
+}: {
+  photo?: string;
+  benefit: string;
+  zone: string;
+  diagnosis: string;
+  price: number;
+  onOrder: () => void;
+  delay?: number;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.45, delay }}
+      style={{
+        borderRadius: "20px",
+        padding: "16px",
+        display: "flex",
+        flexDirection: "column",
+        gap: "14px",
+        background: "#1a0a2e",
+        border: "1px solid #7c3aed",
+        boxShadow: "0 0 16px rgba(124,58,237,0.15)",
+        position: "relative",
+        overflow: "hidden",
+      }}
+    >
+      {/* Ambient glow */}
+      <div style={{
+        position: "absolute", top: "-20px", right: "-20px",
+        width: "100px", height: "100px", pointerEvents: "none",
+        background: "radial-gradient(circle, rgba(124,58,237,0.2), transparent)",
+      }} />
+
+      {/* Photo + Info */}
+      <div style={{ display: "flex", gap: "14px", alignItems: "flex-start" }}>
+
+        {/* Photo carré 80×80 avec watermark */}
+        <div style={{
+          width: "80px", height: "80px", borderRadius: "14px",
+          flexShrink: 0, overflow: "hidden", position: "relative",
+          border: "1px solid rgba(124,58,237,0.45)",
+          background: "rgba(124,58,237,0.08)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}>
+          {photo
+            ? <img src={photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            : <Sparkles style={{ width: "24px", height: "24px", color: "rgba(167,139,250,0.35)" }} />
+          }
+          {/* Watermark GlowScan */}
+          <div style={{
+            position: "absolute", inset: 0, display: "flex",
+            alignItems: "center", justifyContent: "center", pointerEvents: "none",
+          }}>
+            <span style={{
+              fontSize: "8px", fontWeight: 800, letterSpacing: "0.12em",
+              color: "rgba(255,255,255,0.15)", transform: "rotate(-30deg)",
+              userSelect: "none",
+            }}>
+              GlowScan
+            </span>
+          </div>
+        </div>
+
+        {/* Texte */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ fontSize: "15px", fontWeight: 800, color: DS.textPrimary, lineHeight: 1.3, marginBottom: "6px" }}>
+            ✨ {benefit}
+          </p>
+          <p style={{ fontSize: "11px", fontWeight: 500, fontStyle: "italic", lineHeight: 1.55, color: DS.violetLight, marginBottom: "8px" }}>
+            "{diagnosis}"
+          </p>
+          {/* Badge validé */}
+          <div style={{
+            display: "inline-flex", alignItems: "center", gap: "4px",
+            padding: "3px 8px", borderRadius: "6px",
+            background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.25)",
+          }}>
+            <span style={{ fontSize: "8px", fontWeight: 700, color: "#6ee7b7", letterSpacing: "0.04em" }}>
+              ✓ Validé pour peaux africaines
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Prix + CTA */}
+      <div>
+        <p style={{ fontSize: "20px", fontWeight: 800, color: DS.textPrimary, marginBottom: "10px" }}>
+          {formatPrice(price)}
+        </p>
+
+        {/* Bouton pulsant */}
+        <motion.button
+          onClick={onOrder}
+          animate={{ boxShadow: [
+            "0 0 10px #E91E8C30",
+            "0 0 22px #E91E8C60",
+            "0 0 10px #E91E8C30",
+          ]}}
+          transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+          style={{
+            width: "100%", padding: "14px",
+            borderRadius: "12px",
+            background: "linear-gradient(135deg, #E91E8C, #f43f5e)",
+            color: "#fff", fontSize: "13px", fontWeight: 800,
+            border: "none", cursor: "pointer",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            gap: "8px",
+          }}
+        >
+          <MessageCircle style={{ width: "14px", height: "14px", fill: "currentColor" }} />
+          Commander maintenant →
+        </motion.button>
+
+        <p style={{ fontSize: "10px", textAlign: "center", marginTop: "8px", color: DS.textMuted }}>
+          🚚 Livraison à Douala · Cash à la livraison
+        </p>
+      </div>
+    </motion.div>
+  );
+}
+
 // ─── Normalise les étapes de protocole ──────────────────────────────
 function normalizeStep(s: any, i: number): ProtocolStep {
   if (s && typeof s === "object") {
@@ -1416,469 +1605,101 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
           </div>
         )}
 
-        {/* ═══ BLOC 7 — Tunnel d'achat ═══ */}
-        {routineProducts.length > 0 ? (
-          (() => {
-            const routineTotal = routineProducts.reduce((sum, { product }) => sum + (product.price || 0), 0);
-            const brandLabel = getProductBrand(routineProducts[0].product);
-            const unitPriceTotal = Math.round(routineTotal * 1.2);
-            const totalSavingsRoutine = unitPriceTotal - routineTotal;
-            const duoTotal = intermediateOffer ? intermediateOffer.totalPrice : 0;
-            const unitPriceDuo = Math.round(duoTotal * 1.15);
-            const totalSavingsDuo = unitPriceDuo - duoTotal;
+        {/* ═══ BLOC 7 — Ordonnance produits (max 3 cartes) ═══ */}
+        {routineProducts.length > 0 && (() => {
+          const zoneLabel = getAffectedZoneLabel(result.zones || []);
+          const top3 = routineProducts.slice(0, 3);
 
-            return (
-              <div data-testid="block-conversion-tunnel" style={{ marginTop: "8px", display: "flex", flexDirection: "column", gap: "16px" }}>
+          return (
+            <div data-testid="block-conversion-tunnel" style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
 
-                {/* ── Kit GlowScan Dermo — Offre Premium AOV élevé ── */}
-                {bestKit && (
-                  <div
-                    style={{
-                      borderRadius: "24px",
-                      padding: "20px",
-                      position: "relative",
-                      overflow: "hidden",
-                      background: "linear-gradient(135deg, rgba(124,58,237,0.12), rgba(233,30,140,0.06))",
-                      border: "2px solid rgba(124,58,237,0.35)",
-                    }}
-                  >
-                    {/* Glow orb */}
-                    <div style={{ position: "absolute", top: "-30px", right: "-30px", width: "120px", height: "120px", background: "radial-gradient(circle, rgba(124,58,237,0.2), transparent)", pointerEvents: "none" }} />
-
-                    {/* Badge */}
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
-                      <span
-                        style={{
-                          fontSize: "9px", fontWeight: 800, padding: "3px 10px",
-                          borderRadius: "9999px", letterSpacing: "0.08em",
-                          background: "linear-gradient(135deg, #7c3aed, #a78bfa)",
-                          color: "#fff",
-                        }}
-                      >
-                        ✦ GlowScan Dermo
-                      </span>
-                      <span
-                        style={{
-                          fontSize: "9px", fontWeight: 700, padding: "3px 8px",
-                          borderRadius: "8px", letterSpacing: "0.06em",
-                          background: "rgba(16,185,129,0.12)", border: "1px solid rgba(16,185,129,0.25)",
-                          color: "#6ee7b7",
-                        }}
-                      >
-                        Kit complet — meilleur rapport
-                      </span>
-                    </div>
-
-                    <h4 style={{ fontSize: "15px", fontWeight: 800, color: DS.textPrimary, marginBottom: "4px", lineHeight: 1.3 }}>
-                      {bestKit.name}
-                    </h4>
-                    <p style={{ fontSize: "11px", fontWeight: 500, lineHeight: 1.6, color: DS.textBody, marginBottom: "14px" }}>
-                      {bestKit.description}
-                    </p>
-
-                    {/* Inclus dans le kit */}
-                    {bestKit.usagePoints && bestKit.usagePoints.length > 0 && (
-                      <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginBottom: "16px" }}>
-                        {bestKit.usagePoints.map((point, idx) => (
-                          <div key={idx} style={{ display: "flex", alignItems: "flex-start", gap: "8px" }}>
-                            <CheckCircle2 style={{ width: "13px", height: "13px", flexShrink: 0, marginTop: "1px", color: "#a78bfa" }} />
-                            <span style={{ fontSize: "11px", fontWeight: 600, color: DS.textBody, lineHeight: 1.4 }}>{point}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", paddingTop: "14px", borderTop: "1px solid rgba(124,58,237,0.2)" }}>
-                      <div>
-                        <p style={{ fontSize: "9px", fontWeight: 700, color: DS.textMuted }}>Prix protocole complet</p>
-                        <p style={{ fontSize: "22px", fontWeight: 800, color: DS.violetLight, lineHeight: 1 }}>
-                          {formatPrice(bestKit.price || 0)}
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => {
-                          setOrderModalItems([{
-                            productId: bestKit.id,
-                            productName: bestKit.name,
-                            brand: getProductBrand(bestKit),
-                            price: bestKit.price || 0,
-                            sourceRef: bestKit.sourceRef,
-                          }]);
-                          setOrderModalTitle(bestKit.name);
-                          setShowOrderModal(true);
-                        }}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "8px",
-                          padding: "12px 20px",
-                          color: "#fff",
-                          fontSize: "12px",
-                          fontWeight: 800,
-                          borderRadius: "12px",
-                          cursor: "pointer",
-                          border: "none",
-                          transition: "opacity 0.15s, transform 0.1s",
-                          background: "linear-gradient(135deg, #7c3aed, #a78bfa)",
-                        }}
-                      >
-                        <MessageCircle style={{ width: "14px", height: "14px", fill: "currentColor" }} />
-                        Commander ce Kit
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* FOMO notification */}
-                <div
-                  style={{
-                    padding: "14px 16px",
-                    borderRadius: "16px",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "10px",
-                    background: "rgba(245,158,11,0.1)",
-                    border: "1px solid rgba(245,158,11,0.25)",
-                  }}
-                >
-                  <span style={{ position: "relative", width: "8px", height: "8px", flexShrink: 0 }}>
-                    <span style={{
-                      position: "absolute", inset: 0, borderRadius: "9999px",
-                      background: "rgba(249,168,212,0.7)", animation: "ping 1s cubic-bezier(0,0,0.2,1) infinite"
-                    }} />
-                    <span style={{ position: "relative", width: "8px", height: "8px", borderRadius: "9999px", background: "#f9a8d4", display: "block" }} />
-                  </span>
-                  <p style={{ fontSize: "11px", fontWeight: 600, lineHeight: 1.4, color: DS.textBody }}>
-                    <span style={{ color: "#f9a8d4", fontWeight: 800 }}>+40 femmes de Douala et Yaoundé</span> ont commandé cette routine cette semaine. Stock{" "}
-                    <span style={{ textDecoration: "underline" }}>{brandLabel}</span> limité — livraison sous 24h.
-                  </p>
+              {/* Header ordonnance */}
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <div style={{
+                  width: "28px", height: "28px", borderRadius: "8px",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  background: "rgba(233,30,140,0.12)", border: "1px solid rgba(233,30,140,0.25)",
+                }}>
+                  <Sparkles style={{ width: "13px", height: "13px", color: "#f9a8d4" }} />
                 </div>
-
-                {/* Offres comparatives */}
-                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-
-                  {/* OFFRE 1 — Expérience Totale */}
-                  <div style={{ ...DS.subtleCard, padding: "20px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-                    <div>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "4px" }}>
-                        <h4 style={{ fontWeight: 800, color: DS.textPrimary, fontSize: "14px" }}>
-                          L'Expérience Totale
-                        </h4>
-                        <span
-                          style={{
-                            fontSize: "9px",
-                            fontWeight: 700,
-                            padding: "3px 8px",
-                            borderRadius: "8px",
-                            letterSpacing: "0.06em",
-                            background: "rgba(16,185,129,0.1)",
-                            border: "1px solid rgba(16,185,129,0.25)",
-                            color: "#6ee7b7",
-                          }}
-                        >
-                          Économie : {formatPrice(totalSavingsRoutine)}
-                        </span>
-                      </div>
-                      <p style={{ fontSize: "10px", fontWeight: 600, marginBottom: "12px", color: DS.textMuted }}>
-                        {routineProducts.length} soins sélectionnés par l'IA pour ton profil · Résultats visibles en 3–4 semaines
-                      </p>
-
-                      {/* Product cards ecommerce */}
-                      <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "16px" }}>
-                        {routineProducts.map(({ product, role, why }, idx) => {
-                          const img = productImages[product.id];
-                          const brand = getProductBrand(product);
-                          const social = getSocialProof(product.id);
-                          return (
-                            <div
-                              key={product.id}
-                              style={{
-                                display: "flex",
-                                gap: "10px",
-                                alignItems: "flex-start",
-                                padding: "10px",
-                                borderRadius: "14px",
-                                background: "rgba(255,255,255,0.04)",
-                                border: "1px solid rgba(255,255,255,0.07)",
-                              }}
-                            >
-                              {/* Photo */}
-                              <div
-                                style={{
-                                  width: "52px",
-                                  height: "52px",
-                                  borderRadius: "10px",
-                                  flexShrink: 0,
-                                  overflow: "hidden",
-                                  background: "rgba(124,58,237,0.08)",
-                                  border: "1px solid rgba(167,139,250,0.2)",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                }}
-                              >
-                                {img
-                                  ? <img src={img} alt={product.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                                  : <span style={{ fontSize: "22px" }}>{role.emoji}</span>
-                                }
-                              </div>
-
-                              {/* Info */}
-                              <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "2px" }}>
-                                  <span style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.1em", color: DS.textMuted }}>{brand}</span>
-                                  <span
-                                    style={{
-                                      fontSize: "8px",
-                                      fontWeight: 700,
-                                      padding: "1px 6px",
-                                      borderRadius: "6px",
-                                      background: "rgba(167,139,250,0.12)",
-                                      border: "1px solid rgba(167,139,250,0.25)",
-                                      color: DS.violetLight,
-                                    }}
-                                  >
-                                    {role.label}
-                                  </span>
-                                </div>
-                                <p style={{ fontSize: "12px", fontWeight: 800, color: DS.textPrimary, lineHeight: 1.25, marginBottom: "4px" }}>
-                                  {product.name}
-                                </p>
-                                {why && (
-                                  <p style={{ fontSize: "10px", fontWeight: 500, lineHeight: 1.4, color: DS.textBody }}>
-                                    {why}
-                                  </p>
-                                )}
-                                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px" }}>
-                                  <span style={{ fontSize: "11px", fontWeight: 800, color: DS.textPrimary }}>{formatPrice(product.price)}</span>
-                                  <span style={{ fontSize: "9px", color: DS.textMuted }}>· {social.count} femmes de {social.city}</span>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", paddingTop: "14px", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-                      <div>
-                        <p style={{ fontSize: "9px", fontWeight: 700, textDecoration: "line-through", color: DS.textMuted }}>{formatPrice(unitPriceTotal)}</p>
-                        <p style={{ fontSize: "18px", fontWeight: 800, color: DS.textPrimary }}>{formatPrice(routineTotal)}</p>
-                      </div>
-                      <button
-                        onClick={() => {
-                          const items: OrderItem[] = routineProducts.map(({ product }) => ({
-                            productId: product.id,
-                            productName: product.name,
-                            brand: getProductBrand(product),
-                            price: product.price,
-                            sourceRef: product.sourceRef,
-                          }));
-                          setOrderModalItems(items);
-                          setOrderModalTitle("Commander la routine complète");
-                          setShowOrderModal(true);
-                        }}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "6px",
-                          padding: "10px 16px",
-                          color: DS.textPrimary,
-                          fontSize: "12px",
-                          fontWeight: 700,
-                          borderRadius: "9999px",
-                          cursor: "pointer",
-                          transition: "transform 0.1s",
-                          background: "rgba(255,255,255,0.08)",
-                          border: "1px solid rgba(255,255,255,0.15)",
-                        }}
-                      >
-                        <MessageCircle style={{ width: "14px", height: "14px", fill: "currentColor" }} />
-                        Prendre la Totale
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* OFFRE 2 — Duo (CTA rose pour achat) */}
-                  {intermediateOffer && (
-                    <div
-                      style={{
-                        borderRadius: "24px",
-                        padding: "20px",
-                        position: "relative",
-                        background: "rgba(233,30,140,0.06)",
-                        border: "2px solid rgba(233,30,140,0.35)",
-                      }}
-                    >
-                      {/* Badge urgence */}
-                      <div
-                        style={{
-                          position: "absolute",
-                          top: "-12px",
-                          right: "20px",
-                          fontSize: "9px",
-                          fontWeight: 800,
-                          padding: "4px 12px",
-                          borderRadius: "9999px",
-                          color: "#f3f0ff",
-                          letterSpacing: "0.06em",
-                          background: "linear-gradient(135deg, #E91E8C, #f43f5e)",
-                        }}
-                      >
-                        Le Compromis Idéal
-                      </div>
-
-                      <h4 style={{ fontWeight: 800, color: DS.textPrimary, fontSize: "14px", marginBottom: "2px" }}>
-                        {intermediateOffer.copywriting.title}
-                      </h4>
-                      <p style={{ fontSize: "10px", fontWeight: 700, marginBottom: "8px", color: "#f9a8d4" }}>
-                        {intermediateOffer.copywriting.subtitle}
-                      </p>
-                      <p style={{ fontSize: "11px", lineHeight: 1.6, marginBottom: "16px", color: DS.textBody }}>
-                        Pas de budget pour la routine complète ? Ce duo cible les 2 urgences détectées dans ton diagnostic — l'essentiel pour démarrer ta transformation.
-                      </p>
-
-                      <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "16px" }}>
-                        {intermediateOffer.duo.map((item, idx) => {
-                          const img = productImages[item.product.id];
-                          const brand = getProductBrand(item.product);
-                          const duoWhy = item.why;
-                          return (
-                            <div
-                              key={idx}
-                              style={{
-                                display: "flex",
-                                gap: "10px",
-                                alignItems: "flex-start",
-                                padding: "10px",
-                                borderRadius: "14px",
-                                background: "rgba(233,30,140,0.05)",
-                                border: "1px solid rgba(233,30,140,0.15)",
-                              }}
-                            >
-                              <div
-                                style={{
-                                  width: "48px",
-                                  height: "48px",
-                                  borderRadius: "10px",
-                                  flexShrink: 0,
-                                  overflow: "hidden",
-                                  background: "rgba(233,30,140,0.08)",
-                                  border: "1px solid rgba(233,30,140,0.2)",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                }}
-                              >
-                                {img
-                                  ? <img src={img} alt={item.product.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                                  : <span style={{ fontSize: "20px" }}>{item.role.emoji}</span>
-                                }
-                              </div>
-                              <div style={{ flex: 1, minWidth: 0 }}>
-                                <span style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.1em", color: "rgba(249,168,212,0.6)" }}>{brand}</span>
-                                <p style={{ fontSize: "12px", fontWeight: 800, color: DS.textPrimary, lineHeight: 1.25, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                  {item.product.name}
-                                </p>
-                                {duoWhy && (
-                                  <p style={{ fontSize: "10px", fontWeight: 500, lineHeight: 1.4, color: DS.textBody, marginTop: "2px" }}>
-                                    {duoWhy}
-                                  </p>
-                                )}
-                                <span style={{ fontSize: "11px", fontWeight: 800, color: "#f9a8d4", marginTop: "4px", display: "block" }}>
-                                  {formatPrice(item.product.price)}
-                                </span>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", paddingTop: "14px", borderTop: "1px solid rgba(233,30,140,0.2)" }}>
-                        <div>
-                          <p style={{ fontSize: "9px", fontWeight: 700, textDecoration: "line-through", color: DS.textMuted }}>{formatPrice(unitPriceDuo)}</p>
-                          <p style={{ fontSize: "18px", fontWeight: 800, color: "#f9a8d4" }}>{formatPrice(duoTotal)}</p>
-                        </div>
-                        <button
-                          onClick={() => {
-                            const items: OrderItem[] = intermediateOffer.duo.map(({ product }) => ({
-                              productId: product.id,
-                              productName: product.name,
-                              brand: getProductBrand(product),
-                              price: product.price,
-                              sourceRef: product.sourceRef,
-                            }));
-                            setOrderModalItems(items);
-                            setOrderModalTitle("Commander le Compromis Idéal");
-                            setShowOrderModal(true);
-                          }}
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "6px",
-                            padding: "10px 20px",
-                            color: "#f3f0ff",
-                            fontSize: "12px",
-                            fontWeight: 800,
-                            borderRadius: "12px",
-                            cursor: "pointer",
-                            border: "none",
-                            transition: "opacity 0.15s, transform 0.1s",
-                            background: "linear-gradient(135deg, #E91E8C, #f43f5e)",
-                          }}
-                        >
-                          <MessageCircle style={{ width: "14px", height: "14px", fill: "currentColor" }} />
-                          Prendre le Duo
-                        </button>
-                      </div>
-                    </div>
-                  )}
+                <div>
+                  <p style={{ fontSize: "13px", fontWeight: 800, color: DS.textPrimary }}>Ton ordonnance GlowScan</p>
+                  <p style={{ fontSize: "10px", color: DS.textMuted }}>Calibrée pour ton profil · Résultats en 3–4 semaines</p>
                 </div>
-
-                {/* Bloc logistique */}
-                <div
-                  style={{
-                    padding: "12px 16px",
-                    borderRadius: "16px",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "12px",
-                    background: "rgba(16,185,129,0.08)",
-                    border: "1px solid rgba(16,185,129,0.2)",
-                  }}
-                >
-                  <Truck style={{ width: "20px", height: "20px", flexShrink: 0, color: "#6ee7b7" }} />
-                  <div style={{ textAlign: "left" }}>
-                    <p style={{ fontSize: "11px", fontWeight: 800, lineHeight: 1.3, color: "#6ee7b7" }}>Expédition Express au Cameroun</p>
-                    <p style={{ fontSize: "10px", fontWeight: 500, marginTop: "2px", color: "rgba(110,231,183,0.7)" }}>
-                      Livraison à domicile · Paiement Cash à la livraison
-                    </p>
-                  </div>
-                </div>
-
-                {/* Action secondaire */}
-                <button
-                  onClick={() => setShowRoutineCard(true)}
-                  style={{
-                    width: "100%",
-                    padding: "8px",
-                    fontSize: "11px",
-                    fontWeight: 700,
-                    textAlign: "center",
-                    textDecoration: "underline",
-                    letterSpacing: "0.04em",
-                    background: "transparent",
-                    border: "none",
-                    cursor: "pointer",
-                    color: DS.textMuted,
-                    transition: "color 0.15s",
-                  }}
-                >
-                  Enregistrer ou partager mon ordonnance personnalisée
-                </button>
               </div>
-            );
-          })()
-        ) : null}
+
+              {/* 3 cartes produits */}
+              {top3.map(({ product, why }, idx) => {
+                const roleKey = (() => {
+                  const n = product.name.toLowerCase();
+                  if (/savon|soap|gel de douche|gel douche|gommage|shampoo|shampoing|nettoyant|purif/.test(n)) return "nettoyant" as const;
+                  if (/sérum|serum|huile|oil|lotion|tonic|tonique|potion|bha|spray/.test(n)) return "serum" as const;
+                  return "creme" as const;
+                })();
+                const benefit = getBenefitLabel(roleKey, result.condition, currentArea);
+                const copy = getDiagnosisCopy(result.condition, zoneLabel);
+                const img = productImages[product.id] || product.image;
+                const social = getSocialProof(product.id);
+
+                return (
+                  <ProductRecommendationCard
+                    key={product.id}
+                    photo={img}
+                    benefit={benefit}
+                    zone={zoneLabel}
+                    diagnosis={copy}
+                    price={product.price || 0}
+                    delay={idx * 0.15}
+                    onOrder={() => {
+                      setOrderModalItems([{
+                        productId: product.id,
+                        productName: product.name,
+                        brand: getProductBrand(product),
+                        price: product.price,
+                        sourceRef: product.sourceRef,
+                      }]);
+                      setOrderModalTitle(benefit);
+                      setShowOrderModal(true);
+                    }}
+                  />
+                );
+              })}
+
+              {/* Badge réservation 24h */}
+              <div style={{
+                padding: "12px 16px",
+                borderRadius: "14px",
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+                background: "rgba(124,58,237,0.08)",
+                border: "1px solid rgba(124,58,237,0.2)",
+              }}>
+                <span style={{ fontSize: "16px", flexShrink: 0 }}>🔒</span>
+                <p style={{ fontSize: "12px", fontWeight: 700, color: DS.violetLight, lineHeight: 1.4 }}>
+                  Ces produits sont réservés 24h pour toi
+                  <span style={{ display: "block", fontSize: "10px", fontWeight: 500, color: DS.textMuted, marginTop: "2px" }}>
+                    Commande maintenant pour garantir la disponibilité
+                  </span>
+                </p>
+              </div>
+
+              {/* Action secondaire — partager ordonnance */}
+              <button
+                onClick={() => setShowRoutineCard(true)}
+                style={{
+                  width: "100%", padding: "8px",
+                  fontSize: "11px", fontWeight: 700,
+                  textAlign: "center", textDecoration: "underline",
+                  background: "transparent", border: "none",
+                  cursor: "pointer", color: DS.textMuted,
+                }}
+              >
+                Enregistrer ou partager mon ordonnance
+              </button>
+            </div>
+          );
+        })()}
 
         {/* Footer avertissement */}
         <div
