@@ -1039,7 +1039,7 @@ export function ResultCard({ result, scanId, savedScanId, area, imageUrl, userFi
   };
 
   // ── Téléchargement PDF via print window (zéro dépendance, 100% mobile) ──
-  const handleDownloadPDF = () => {
+  const handleDownloadPDF = async () => {
     if (pdfGenerating) return;
     setPdfGenerating(true);
 
