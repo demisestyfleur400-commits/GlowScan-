@@ -737,7 +737,13 @@ export default function Analyze() {
                   <div style={{ width: "32px", height: "32px", border: "3px solid rgba(167,139,250,0.3)", borderTopColor: "#a78bfa", borderRadius: "9999px", animation: "spin 0.8s linear infinite" }} />
                 </div>
               }>
-                <ResultCard result={result} savedScanId={savedScanId} area={selectedArea} />
+                <ResultCard
+                  result={result}
+                  savedScanId={savedScanId}
+                  area={selectedArea}
+                  imageUrl={uploadedImage}
+                  userFirstName={user?.firstName || null}
+                />
               </Suspense>
             </motion.div>
           )}

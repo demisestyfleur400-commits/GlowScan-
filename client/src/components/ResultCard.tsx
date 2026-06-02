@@ -797,6 +797,7 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
   const [showOrderModal, setShowOrderModal] = useState(false);
   const [orderModalItems, setOrderModalItems] = useState<OrderItem[]>([]);
   const [orderModalTitle, setOrderModalTitle] = useState("");
+  const [pdfGenerating, setPdfGenerating] = useState(false);
 
   const ageCutane = deriveAgeCutane(result);
   const indiceAcne = deriveIndiceAcne(result);
@@ -872,6 +873,69 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
   };
   const currentArea = detectArea();
   const conditionHook = getConditionHook(result.condition, currentArea as "visage" | "corps" | "cheveux");
+
+  // ── Meilleur produit (hissé au niveau composant pour le partager avec le PDF) ──
+  const _bestProduct = findBestSingleProduct(result.condition, result.skinType, currentArea as "visage" | "corps" | "cheveux");
+  const _bestRoleKey = _bestProduct ? (() => {
+    const n = _bestProduct.name.toLowerCase();
+    if (/savon|soap|gel|shampoo|shampoing|nettoyant|purif|gommage|mousse/.test(n)) return "nettoyant" as const;
+    if (/sérum|serum|huile|lotion|tonic|tonique|potion|bha|spray|essence/.test(n)) return "serum" as const;
+    return "creme" as const;
+  })() : "creme" as const;
+  const _benefit = getBenefitLabel(_bestRoleKey, result.condition, currentArea as "visage" | "corps" | "cheveux");
+
+  // ── Numéro de rapport unique (stable pour cette session) ──
+  const reportNumber = `GS-${new Date().getFullYear()}-${Math.abs(
+    result.condition.split("").reduce((h, c) => ((h << 5) - h + c.charCodeAt(0)) | 0, 0)
+  ).toString(36).slice(0, 5).toUpperCase()}`;
+
+  // ── Téléchargement PDF ──
+  const handleDownloadPDF = async () => {
+    if (pdfGenerating) return;
+    setPdfGenerating(true);
+    try {
+      // Import dynamique — ne charge le bundle que si l'utilisateur clique
+      const [QRCodeLib, { pdf }, { GlowScanPDFDocument }] = await Promise.all([
+        import("qrcode"),
+        import("@react-pdf/renderer"),
+        import("./GlowScanPDFReport"),
+      ]);
+
+      const qrDataUrl = await QRCodeLib.default.toDataURL("https://glow-scan.com", {
+        width: 160,
+        margin: 1,
+        color: { dark: "#7c3aed", light: "#ffffff" },
+      });
+
+      const blob = await pdf(
+        // @ts-ignore — JSX dans un contexte async import
+        GlowScanPDFDocument({
+          result,
+          imageUrl,
+          userName: userFirstName,
+          area: area || "face",
+          qrCode: qrDataUrl,
+          bestProduct: _bestProduct,
+          benefit: _benefit,
+          reportNumber,
+        })
+      ).toBlob();
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `GlowScan-Rapport-${reportNumber}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("PDF generation failed:", err);
+      toast({ title: "Erreur PDF", description: "Impossible de générer le rapport. Réessaie.", variant: "destructive" });
+    } finally {
+      setPdfGenerating(false);
+    }
+  };
 
   const getProductRole = (p: typeof catalog[0]): "nettoyant" | "serum" | "creme" => {
     const n = p.name.toLowerCase();
@@ -1133,18 +1197,11 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
 
         {/* ═══ BLOC 7 — 1 seul produit recommandé (juste après le diagnostic) ═══ */}
         {(() => {
-          const bestProduct = findBestSingleProduct(result.condition, result.skinType, currentArea);
+          const bestProduct = _bestProduct;
           if (!bestProduct) return null;
 
           const zoneLabel = getAffectedZoneLabel(result.zones || []);
-          const roleKey = (() => {
-            const n = bestProduct.name.toLowerCase();
-            if (/savon|soap|gel|shampoo|shampoing|nettoyant|purif|gommage|mousse/.test(n)) return "nettoyant" as const;
-            if (/sérum|serum|huile|lotion|tonic|tonique|potion|bha|spray|essence/.test(n)) return "serum" as const;
-            return "creme" as const;
-          })();
-
-          const benefit = getBenefitLabel(roleKey, result.condition, currentArea);
+          const benefit = _benefit;
           const copy = getDiagnosisCopy(result.condition, zoneLabel);
           const img = getProductImage(bestProduct);
           const social = getSocialProof(bestProduct.id);
@@ -1771,6 +1828,46 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
             </div>
           </div>
         )}
+
+        {/* ── Bouton export PDF ── */}
+        <button
+          onClick={handleDownloadPDF}
+          disabled={pdfGenerating}
+          data-testid="button-download-pdf"
+          style={{
+            width: "100%",
+            padding: "14px",
+            borderRadius: "14px",
+            border: "none",
+            cursor: pdfGenerating ? "not-allowed" : "pointer",
+            opacity: pdfGenerating ? 0.7 : 1,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: "3px",
+            background: DS.violet,
+            transition: "opacity 0.15s, transform 0.1s",
+          }}
+        >
+          <span style={{ fontSize: "14px", fontWeight: 800, color: "#fff", display: "flex", alignItems: "center", gap: "8px" }}>
+            {pdfGenerating ? (
+              <>
+                <span style={{ width: "14px", height: "14px", border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", display: "inline-block", animation: "spin 0.8s linear infinite" }} />
+                Génération en cours...
+              </>
+            ) : (
+              <>
+                <span>📄</span>
+                Télécharger mon rapport
+              </>
+            )}
+          </span>
+          {!pdfGenerating && (
+            <span style={{ fontSize: "10px", color: "rgba(255,255,255,0.6)", fontWeight: 500 }}>
+              Partageable avec votre dermatologue
+            </span>
+          )}
+        </button>
 
         {/* Footer avertissement */}
         <div
