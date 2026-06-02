@@ -47,7 +47,7 @@ function buildWhyText(
   return "Renforce la barrière cutanée détectée comme fragilisée et protège des agressions environnementales locales.";
 }
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { motion } from "framer-motion";
 import {
   Sparkles, MessageCircle, AlertTriangle, Eye, Droplets, ShieldAlert,
@@ -907,19 +907,18 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
         color: { dark: "#7c3aed", light: "#ffffff" },
       });
 
-      const blob = await pdf(
-        // @ts-ignore — JSX dans un contexte async import
-        GlowScanPDFDocument({
-          result,
-          imageUrl,
-          userName: userFirstName,
-          area: area || "face",
-          qrCode: qrDataUrl,
-          bestProduct: _bestProduct,
-          benefit: _benefit,
-          reportNumber,
-        })
-      ).toBlob();
+      const element = React.createElement(GlowScanPDFDocument, {
+        result,
+        imageUrl,
+        userName: userFirstName,
+        area: area || "face",
+        qrCode: qrDataUrl,
+        bestProduct: _bestProduct,
+        benefit: _benefit,
+        reportNumber,
+      });
+
+      const blob = await pdf(element).toBlob();
 
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
