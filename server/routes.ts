@@ -307,7 +307,35 @@ export async function registerRoutes(
       };
       const areaLabel = areaLabels[area] || area;
 
-      const prompt = `Analyse la photo de ${areaLabel} (zone : ${area}).
+      // ── Données patient (formulaire d'intake) ─────────────────────────────
+      const intake = (req.body as any).intake as {
+        fullName?: string;
+        phone?: string;
+        age?: string;
+        duration?: string;
+        previousProducts?: string;
+        allergies?: string;
+      } | undefined;
+
+      // Construction du contexte patient pour enrichir le prompt IA
+      const patientContext = intake ? `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+DOSSIER PATIENT — INFORMATIONS CLINIQUES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${intake.age ? `• Âge de la patiente : ${intake.age}` : ""}
+${intake.duration ? `• Problème présent depuis : ${intake.duration}` : ""}
+${intake.previousProducts?.trim() ? `• Produits / crèmes déjà utilisés : ${intake.previousProducts}` : "• Aucun produit déjà utilisé mentionné"}
+${intake.allergies?.trim() ? `• Allergies cutanées connues : ${intake.allergies}` : "• Aucune allergie connue signalée"}
+
+INSTRUCTIONS OBLIGATOIRES basées sur ce contexte :
+${intake.age ? `- L'âge ${intake.age} impacte le diagnostic : adapter le profil hormonal, le type d'acné probable, la production de sébum et les risques de PIH attendus à cet âge sur peau africaine.` : ""}
+${intake.duration ? `- Ce problème dure depuis ${intake.duration}. Calibrer l'urgence du traitement : pathologie récente = stade débutant, chronique = risque de fixation des taches/cicatrices plus élevé.` : ""}
+${intake.previousProducts?.trim() ? `- Elle a DÉJÀ essayé ces produits : "${intake.previousProducts}". NE PAS recommander les mêmes dans le protocole. Si ces produits contiennent des ingrédients nocifs (éclaircissants, mercure, corticoïdes), mentionner le risque dans le diagnostic.` : ""}
+${intake.allergies?.trim() ? `- ALLERGIES CONNUES : "${intake.allergies}". NE JAMAIS recommander des produits ou ingrédients pouvant déclencher ces allergies.` : ""}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+` : "";
+
+      const prompt = `${patientContext}Analyse la photo de ${areaLabel} (zone : ${area}).
 
 Retourne UNIQUEMENT ce JSON valide et complet, sans texte avant ni après :
 {

@@ -39,7 +39,16 @@ const LOADING_TIPS = [
 ];
 
 type AnalysisArea = "face" | "body" | "hair";
-type AnalysisStep = "select" | "upload" | "questionnaire" | "result" | "anon_limit";
+type AnalysisStep = "select" | "upload" | "intake" | "questionnaire" | "result" | "anon_limit";
+
+interface PatientIntake {
+  fullName: string;
+  phone: string;
+  age: string;
+  duration: string;
+  previousProducts: string;
+  allergies: string;
+}
 
 interface Question {
   id: number;
@@ -74,6 +83,18 @@ export default function Analyze() {
 
   const [consultationData, setConsultationData] = useState<ConsultationData | null>(null);
   const [answers, setAnswers] = useState<Record<number, string>>({});
+
+  // ── Formulaire d'intake patient ────────────────────────────────────────
+  const [intake, setIntake] = useState<PatientIntake>({
+    fullName: user?.firstName || "",
+    phone: "",
+    age: "",
+    duration: "",
+    previousProducts: "",
+    allergies: "",
+  });
+  const updateIntake = (k: keyof PatientIntake, v: string) =>
+    setIntake(prev => ({ ...prev, [k]: v }));
 
   // ── Sauvegarde de l'état du questionnaire dans sessionStorage ──────
   const SESSION_KEY = "glowscan_questionnaire_draft";
@@ -156,7 +177,7 @@ export default function Analyze() {
     setStep("upload");
   };
 
-  const handleFileSelect = async (base64: string) => {
+  const handleFileSelect = (base64: string) => {
     if (!base64) return;
     if (!hasUserConsented(user?.id)) {
       pendingImageRef.current = base64;
@@ -164,60 +185,13 @@ export default function Analyze() {
       return;
     }
     setUploadedImage(base64);
-    setIsAnalyzing(true);
-    // Précharger ResultCard pendant que l'IA analyse — 0 délai supplémentaire perçu
+    // Précharger ResultCard en arrière-plan
     import("@/components/ResultCard").catch(() => {});
-
-    try {
-      const response = await fetchWithRetry("/api/generate-consultation", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ base64Image: base64 }),
-        maxRetries: 2,
-        baseDelayMs: 800,
-        retryOn5xx: true,
-      });
-
-      if (response.status === 401) {
-        const errData = await response.json();
-        setIsAnalyzing(false);
-        if (errData.code === "ANON_QUOTA_EXCEEDED") {
-          setStep("anon_limit");
-          return;
-        }
-        window.location.href = "/auth";
-        return;
-      }
-
-      // Le serveur renvoie toujours 200 avec fallback — mais si réseau KO
-      if (!response.ok) throw new Error("Erreur serveur");
-
-      const data = await response.json() as ConsultationData;
-      // Validation minimale : s'assurer qu'on a bien les questions
-      if (!data?.questions?.length) throw new Error("Réponse invalide");
-      setConsultationData(data);
-      setIsAnalyzing(false);
-      setStep("questionnaire");
-      saveQuestionnaireDraft(data, selectedArea, base64, {});
-    } catch (err) {
-      // Dernier recours côté client : fallback questions si le réseau a coupé
-      setIsAnalyzing(false);
-      const fallback: ConsultationData = {
-        observations_visuelles: "Analyse prête. Quelques questions pour personnaliser ton diagnostic.",
-        questions: [
-          { id: 1, label: "As-tu des sensibilités ou allergies cutanées connues ?" },
-          { id: 2, label: "Décris ta routine de soin actuelle (matin et soir)." },
-          { id: 3, label: "As-tu remarqué des changements récents sur ta peau ?" },
-        ]
-      };
-      setConsultationData(fallback);
-      setStep("questionnaire");
-      saveQuestionnaireDraft(fallback, selectedArea, base64, {});
-    }
+    // Aller directement au formulaire patient (plus d'appel generate-consultation)
+    setStep("intake");
   };
 
-  const handleConsultationSubmit = async (e: React.FormEvent) => {
+  const handleIntakeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!uploadedImage) return;
     setIsAnalyzing(true);
@@ -231,6 +205,14 @@ export default function Analyze() {
           image: uploadedImage,
           area: selectedArea,
           reponses: answers,
+          intake: {
+            fullName: intake.fullName.trim() || undefined,
+            phone: intake.phone.trim() || undefined,
+            age: intake.age || undefined,
+            duration: intake.duration || undefined,
+            previousProducts: intake.previousProducts.trim() || undefined,
+            allergies: intake.allergies.trim() || undefined,
+          },
         }),
         maxRetries: 2,
         baseDelayMs: 800,
@@ -329,7 +311,7 @@ export default function Analyze() {
         description: err?.message || "Réessaie dans quelques secondes.",
         variant: "destructive",
       });
-      setStep("questionnaire");
+      setStep("intake");
     }
   };
 
@@ -342,6 +324,8 @@ export default function Analyze() {
     setSavedScanId(null);
     setConsultationData(null);
     setAnswers({});
+    setUploadedImage(null);
+    setIntake({ fullName: user?.firstName || "", phone: "", age: "", duration: "", previousProducts: "", allergies: "" });
     setStep("select");
   };
 
@@ -638,7 +622,185 @@ export default function Analyze() {
             </motion.div>
           )}
 
-          {/* ══════════ STEP 3 : QUESTIONNAIRE ══════════ */}
+          {/* ══════════ STEP 3 : FORMULAIRE PATIENT ══════════ */}
+          {step === "intake" && !isAnalyzing && (
+            <motion.div
+              key="intake"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="space-y-4"
+            >
+              {/* Header */}
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setStep("upload")}
+                  className="w-9 h-9 rounded-xl flex items-center justify-center transition-all active:scale-95"
+                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(200,185,255,0.65)" }}
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                </button>
+                <div>
+                  <p className="text-sm font-bold" style={{ color: "#f3f0ff" }}>Votre dossier de consultation</p>
+                  <p className="text-[10px]" style={{ color: "rgba(255,255,255,0.35)" }}>Pour personnaliser votre diagnostic</p>
+                </div>
+              </div>
+
+              {/* Aperçu photo */}
+              {uploadedImage && (
+                <div className="flex items-center gap-3 rounded-2xl p-3" style={{ background: "rgba(167,139,250,0.06)", border: "1px solid rgba(167,139,250,0.18)" }}>
+                  <img src={uploadedImage} alt="Photo" className="w-12 h-12 rounded-xl object-cover border-2" style={{ borderColor: "#7c3aed" }} />
+                  <div>
+                    <p className="text-xs font-bold" style={{ color: "#c4b5fd" }}>Photo reçue ✓</p>
+                    <p className="text-[10px]" style={{ color: "rgba(255,255,255,0.35)" }}>Analyse prête — complète le dossier</p>
+                  </div>
+                </div>
+              )}
+
+              <form onSubmit={handleIntakeSubmit} className="space-y-3">
+                <div className="rounded-2xl p-4 space-y-3" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                  <p className="text-[10px] font-bold tracking-wider uppercase" style={{ color: "rgba(255,255,255,0.35)" }}>
+                    Informations personnelles
+                  </p>
+
+                  {/* Nom et Prénom */}
+                  <div>
+                    <label className="text-xs font-bold block mb-1.5" style={{ color: "#f3f0ff" }}>
+                      👤 Nom et Prénom <span style={{ color: "rgba(255,255,255,0.35)", fontWeight: 400 }}>(optionnel)</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ex : Aminata Diallo"
+                      value={intake.fullName}
+                      onChange={e => updateIntake("fullName", e.target.value)}
+                      className="w-full px-3.5 py-2.5 text-xs font-medium outline-none transition-colors"
+                      style={{ background: "#13101f", border: "1px solid rgba(167,139,250,0.2)", borderRadius: "10px", color: "#f3f0ff" }}
+                      onFocus={e => (e.target.style.borderColor = "rgba(167,139,250,0.5)")}
+                      onBlur={e => (e.target.style.borderColor = "rgba(167,139,250,0.2)")}
+                    />
+                  </div>
+
+                  {/* Téléphone */}
+                  <div>
+                    <label className="text-xs font-bold block mb-1.5" style={{ color: "#f3f0ff" }}>
+                      📞 Numéro de téléphone <span style={{ color: "rgba(255,255,255,0.35)", fontWeight: 400 }}>(optionnel)</span>
+                    </label>
+                    <input
+                      type="tel"
+                      placeholder="Ex : +237 6XX XXX XXX"
+                      value={intake.phone}
+                      onChange={e => updateIntake("phone", e.target.value)}
+                      className="w-full px-3.5 py-2.5 text-xs font-medium outline-none transition-colors"
+                      style={{ background: "#13101f", border: "1px solid rgba(167,139,250,0.2)", borderRadius: "10px", color: "#f3f0ff" }}
+                      onFocus={e => (e.target.style.borderColor = "rgba(167,139,250,0.5)")}
+                      onBlur={e => (e.target.style.borderColor = "rgba(167,139,250,0.2)")}
+                    />
+                  </div>
+
+                  {/* Âge */}
+                  <div>
+                    <label className="text-xs font-bold block mb-1.5" style={{ color: "#f3f0ff" }}>
+                      ⏳ Âge <span style={{ color: "#E91E8C" }}>*</span>
+                    </label>
+                    <select
+                      required
+                      value={intake.age}
+                      onChange={e => updateIntake("age", e.target.value)}
+                      className="w-full px-3.5 py-2.5 text-xs font-medium outline-none transition-colors"
+                      style={{ background: "#13101f", border: "1px solid rgba(167,139,250,0.2)", borderRadius: "10px", color: intake.age ? "#f3f0ff" : "rgba(255,255,255,0.35)" }}
+                    >
+                      <option value="" disabled>Sélectionne ton âge</option>
+                      <option value="moins de 15 ans">Moins de 15 ans</option>
+                      <option value="15-19 ans">15 – 19 ans</option>
+                      <option value="20-25 ans">20 – 25 ans</option>
+                      <option value="26-30 ans">26 – 30 ans</option>
+                      <option value="31-40 ans">31 – 40 ans</option>
+                      <option value="41-50 ans">41 – 50 ans</option>
+                      <option value="plus de 50 ans">Plus de 50 ans</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl p-4 space-y-3" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                  <p className="text-[10px] font-bold tracking-wider uppercase" style={{ color: "rgba(255,255,255,0.35)" }}>
+                    Antécédents et symptômes
+                  </p>
+
+                  {/* Durée du problème */}
+                  <div>
+                    <label className="text-xs font-bold block mb-1.5" style={{ color: "#f3f0ff" }}>
+                      🩺 Depuis combien de temps avez-vous ce problème ? <span style={{ color: "#E91E8C" }}>*</span>
+                    </label>
+                    <select
+                      required
+                      value={intake.duration}
+                      onChange={e => updateIntake("duration", e.target.value)}
+                      className="w-full px-3.5 py-2.5 text-xs font-medium outline-none transition-colors"
+                      style={{ background: "#13101f", border: "1px solid rgba(167,139,250,0.2)", borderRadius: "10px", color: intake.duration ? "#f3f0ff" : "rgba(255,255,255,0.35)" }}
+                    >
+                      <option value="" disabled>Sélectionne la durée</option>
+                      <option value="quelques jours">Quelques jours (moins d'une semaine)</option>
+                      <option value="quelques semaines (1-3 semaines)">Quelques semaines (1 – 3 sem.)</option>
+                      <option value="1 à 3 mois">1 à 3 mois</option>
+                      <option value="3 à 6 mois">3 à 6 mois</option>
+                      <option value="plus de 6 mois">Plus de 6 mois</option>
+                      <option value="plus d'un an">Plus d'un an (problème chronique)</option>
+                      <option value="depuis toujours (peau naturellement ainsi)">Depuis toujours</option>
+                    </select>
+                  </div>
+
+                  {/* Produits déjà utilisés */}
+                  <div>
+                    <label className="text-xs font-bold block mb-1.5" style={{ color: "#f3f0ff" }}>
+                      🛍️ Avez-vous déjà appliqué des produits ou des crèmes ?
+                    </label>
+                    <textarea
+                      placeholder="Ex : Crème éclaircissante, savon noir, gel aloe vera... (ou écris 'Aucun')"
+                      value={intake.previousProducts}
+                      onChange={e => updateIntake("previousProducts", e.target.value)}
+                      rows={2}
+                      className="w-full px-3.5 py-2.5 text-xs font-medium outline-none transition-colors resize-none"
+                      style={{ background: "#13101f", border: "1px solid rgba(167,139,250,0.2)", borderRadius: "10px", color: "#f3f0ff" }}
+                      onFocus={e => (e.target.style.borderColor = "rgba(167,139,250,0.5)")}
+                      onBlur={e => (e.target.style.borderColor = "rgba(167,139,250,0.2)")}
+                    />
+                  </div>
+
+                  {/* Allergies */}
+                  <div>
+                    <label className="text-xs font-bold block mb-1.5" style={{ color: "#f3f0ff" }}>
+                      ⚠️ Avez-vous des allergies cutanées connues ?
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ex : Allergie au parfum, à la lanoline... (ou écris 'Aucune')"
+                      value={intake.allergies}
+                      onChange={e => updateIntake("allergies", e.target.value)}
+                      className="w-full px-3.5 py-2.5 text-xs font-medium outline-none transition-colors"
+                      style={{ background: "#13101f", border: "1px solid rgba(167,139,250,0.2)", borderRadius: "10px", color: "#f3f0ff" }}
+                      onFocus={e => (e.target.style.borderColor = "rgba(167,139,250,0.5)")}
+                      onBlur={e => (e.target.style.borderColor = "rgba(167,139,250,0.2)")}
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full py-4 text-sm font-extrabold transition-all active:scale-[0.98] relative overflow-hidden"
+                  style={{ background: "linear-gradient(135deg, #E91E8C, #f43f5e)", borderRadius: "14px", color: "#fff" }}
+                >
+                  <div className="absolute top-0 left-0 right-0 h-1/2" style={{ background: "linear-gradient(to bottom, rgba(255,255,255,0.1), transparent)", borderRadius: "14px 14px 0 0" }} />
+                  <span className="relative z-10">✦ Lancer mon analyse GlowScan</span>
+                </button>
+
+                <p className="text-center text-[10px]" style={{ color: "rgba(255,255,255,0.25)" }}>
+                  Tes données restent privées · Analyse en 30 secondes
+                </p>
+              </form>
+            </motion.div>
+          )}
+
+          {/* ══════════ STEP 3 : QUESTIONNAIRE (legacy) ══════════ */}
           {step === "questionnaire" && consultationData && !isAnalyzing && (
             <motion.div
               key="questionnaire"
@@ -742,7 +904,15 @@ export default function Analyze() {
                   savedScanId={savedScanId}
                   area={selectedArea}
                   imageUrl={uploadedImage}
-                  userFirstName={user?.firstName || null}
+                  userFirstName={intake.fullName || user?.firstName || null}
+                  patientIntake={{
+                    fullName: intake.fullName || user?.firstName || undefined,
+                    phone: intake.phone || undefined,
+                    age: intake.age || undefined,
+                    duration: intake.duration || undefined,
+                    previousProducts: intake.previousProducts || undefined,
+                    allergies: intake.allergies || undefined,
+                  }}
                 />
               </Suspense>
             </motion.div>

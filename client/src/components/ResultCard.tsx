@@ -779,15 +779,26 @@ function ProtocolRow({ index, step }: { index: number; step: ProtocolStep }) {
 }
 
 // ─── COMPOSANT PRINCIPAL ─────────────────────────────────────────────
+interface PatientIntakeProp {
+  fullName?: string;
+  phone?: string;
+  age?: string;
+  duration?: string;
+  previousProducts?: string;
+  allergies?: string;
+}
+
 interface ResultCardProps {
   result: AnalysisResult;
   scanId?: number | null;
+  savedScanId?: number | null;
   area?: string;
   imageUrl?: string | null;
   userFirstName?: string | null;
+  patientIntake?: PatientIntakeProp | null;
 }
 
-export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: ResultCardProps) {
+export function ResultCard({ result, scanId, savedScanId, area, imageUrl, userFirstName, patientIntake }: ResultCardProps) {
   const { toast } = useToast();
   const { user } = useAuth();
   const { isPremium } = useSubscription();
@@ -1156,6 +1167,21 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
   </div>
   <button class="print-btn" onclick="window.print()">⬇ Télécharger en PDF</button>
 </div>
+
+<!-- ══ 0. INFOS PATIENT ══ -->
+${(patientIntake?.fullName || patientIntake?.phone || patientIntake?.age) ? `
+<div class="section" style="margin-top:12px">
+  <div class="section-title"><span class="section-icon">📋</span> Informations Patient</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;background:#f8f7ff;border:1px solid #e8e3ff;border-radius:10px;padding:12px">
+    ${patientIntake?.fullName ? `<div><span style="font-size:9px;color:#7c3aed;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Nom</span><br><span style="font-size:12px;font-weight:700;color:#0d0a0e">${patientIntake.fullName}</span></div>` : ""}
+    ${patientIntake?.phone ? `<div><span style="font-size:9px;color:#7c3aed;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Téléphone</span><br><span style="font-size:12px;font-weight:700;color:#0d0a0e">${patientIntake.phone}</span></div>` : ""}
+    ${patientIntake?.age ? `<div><span style="font-size:9px;color:#7c3aed;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Âge</span><br><span style="font-size:12px;font-weight:700;color:#0d0a0e">${patientIntake.age}</span></div>` : ""}
+    ${patientIntake?.duration ? `<div><span style="font-size:9px;color:#7c3aed;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Problème depuis</span><br><span style="font-size:12px;font-weight:700;color:#0d0a0e">${patientIntake.duration}</span></div>` : ""}
+    ${patientIntake?.previousProducts ? `<div style="grid-column:1/-1"><span style="font-size:9px;color:#7c3aed;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Produits déjà utilisés</span><br><span style="font-size:11px;color:#374151">${patientIntake.previousProducts}</span></div>` : ""}
+    ${patientIntake?.allergies ? `<div style="grid-column:1/-1"><span style="font-size:9px;color:#E91E8C;font-weight:700;text-transform:uppercase;letter-spacing:.05em">⚠ Allergies connues</span><br><span style="font-size:11px;color:#374151">${patientIntake.allergies}</span></div>` : ""}
+  </div>
+</div>
+` : ""}
 
 <!-- ══ 1. PROFIL CUTANÉ ══ -->
 <div class="section">
