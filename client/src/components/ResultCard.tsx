@@ -1274,6 +1274,11 @@ ${(patientIntake?.fullName || patientIntake?.phone || patientIntake?.age) ? `
         ${patientIntake?.duration ? `<span style="font-size:8px;padding:2px 6px;border-radius:4px;background:#f3f4f6;color:#6b7280">Depuis : ${patientIntake.duration}</span>` : ""}
         ${patientIntake?.allergies && patientIntake.allergies.toLowerCase() !== "aucune" ? `<span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:4px;background:rgba(233,30,140,.08);color:#E91E8C">⚠ Allergie : ${patientIntake.allergies}</span>` : ""}
       </div>
+      <div style="padding:5px 8px;border-radius:7px;background:rgba(233,30,140,.07);border:1px solid rgba(233,30,140,.18);margin-bottom:4px">
+        <div style="font-size:7px;font-weight:700;color:rgba(233,30,140,.7);text-transform:uppercase;letter-spacing:.06em;margin-bottom:1px">Diagnostic clinique</div>
+        <div style="font-size:12px;font-weight:800;color:#0d0a0e">${result.condition}</div>
+        <div style="font-size:8px;color:#6b7280;margin-top:1px">${result.severity || ""} · ${(result.skinType || "").split("(")[0].trim()}</div>
+      </div>
       ${patientIntake?.previousProducts && patientIntake.previousProducts.toLowerCase() !== "aucun" ? `<div style="font-size:9px;color:#9ca3af">Produits utilisés : ${patientIntake.previousProducts.slice(0,70)}${patientIntake.previousProducts.length>70?"…":""}</div>` : ""}
     </div>
     <div style="text-align:center;background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.3);border-radius:10px;padding:8px 10px;flex-shrink:0">
@@ -2002,7 +2007,7 @@ ${pdfBestProduct ? `
                     {userFirstName}
                   </p>
                 )}
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginBottom: "5px" }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginBottom: "6px" }}>
                   {patientIntake?.age && (
                     <span style={{ fontSize: "9px", fontWeight: 700, padding: "2px 7px", borderRadius: "4px", background: "rgba(124,58,237,0.1)", color: DS.violetLight }}>
                       {patientIntake.age}
@@ -2010,15 +2015,32 @@ ${pdfBestProduct ? `
                   )}
                   {patientIntake?.duration && (
                     <span style={{ fontSize: "9px", fontWeight: 700, padding: "2px 7px", borderRadius: "4px", background: "rgba(255,255,255,0.06)", color: DS.textMuted }}>
-                      Problème depuis : {patientIntake.duration}
-                    </span>
-                  )}
-                  {patientIntake?.allergies && patientIntake.allergies.toLowerCase() !== "aucune" && (
-                    <span style={{ fontSize: "9px", fontWeight: 700, padding: "2px 7px", borderRadius: "4px", background: "rgba(233,30,140,0.1)", color: "#f9a8d4" }}>
-                      ⚠ Allergie : {patientIntake.allergies}
+                      Depuis : {patientIntake.duration}
                     </span>
                   )}
                 </div>
+                {/* ── Diagnostic clinique — la pathologie africaine identifiée ── */}
+                <div style={{
+                  padding: "6px 10px", borderRadius: "8px", marginBottom: "5px",
+                  background: "rgba(233,30,140,0.08)", border: "1px solid rgba(233,30,140,0.2)",
+                }}>
+                  <p style={{ fontSize: "8px", fontWeight: 700, color: "rgba(249,168,212,0.7)", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: "2px" }}>
+                    Diagnostic clinique
+                  </p>
+                  <p style={{ fontSize: "12px", fontWeight: 800, color: DS.textPrimary, lineHeight: 1.3 }}>
+                    {result.condition}
+                  </p>
+                  {result.severity && (
+                    <p style={{ fontSize: "9px", color: "rgba(249,168,212,0.65)", marginTop: "2px" }}>
+                      Sévérité : {result.severity} · {result.skinType?.split("(")[0].trim() || ""}
+                    </p>
+                  )}
+                </div>
+                {patientIntake?.allergies && patientIntake.allergies.toLowerCase() !== "aucune" && (
+                  <span style={{ display: "inline-block", fontSize: "9px", fontWeight: 700, padding: "2px 7px", borderRadius: "4px", background: "rgba(233,30,140,0.1)", color: "#f9a8d4" }}>
+                    ⚠ Allergie : {patientIntake.allergies}
+                  </span>
+                )}
                 {patientIntake?.previousProducts && patientIntake.previousProducts.toLowerCase() !== "aucun" && (
                   <p style={{ fontSize: "9px", color: DS.textMuted, lineHeight: 1.4 }}>
                     Produits utilisés : {patientIntake.previousProducts.slice(0, 60)}{patientIntake.previousProducts.length > 60 ? "…" : ""}
