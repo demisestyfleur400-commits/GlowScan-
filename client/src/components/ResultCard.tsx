@@ -889,48 +889,218 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
     result.condition.split("").reduce((h, c) => ((h << 5) - h + c.charCodeAt(0)) | 0, 0)
   ).toString(36).slice(0, 5).toUpperCase()}`;
 
-  // ── Téléchargement PDF ──
+  // ── Téléchargement PDF via jsPDF (100% browser-compatible) ──
   const handleDownloadPDF = async () => {
     if (pdfGenerating) return;
     setPdfGenerating(true);
     try {
-      // Import dynamique — ne charge le bundle que si l'utilisateur clique
-      const [QRCodeLib, { pdf }, { GlowScanPDFDocument }] = await Promise.all([
+      const [{ jsPDF }, QRCodeLib] = await Promise.all([
+        import("jspdf"),
         import("qrcode"),
-        import("@react-pdf/renderer"),
-        import("./GlowScanPDFReport"),
       ]);
 
-      const qrDataUrl = await QRCodeLib.default.toDataURL("https://glow-scan.com", {
-        width: 160,
-        margin: 1,
-        color: { dark: "#7c3aed", light: "#ffffff" },
-      });
+      const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const W = 210, M = 18;
+      const score = Math.max(0, Math.min(100, result.score || 0));
+      const zones = result.zones || [];
+      const morning: any[] = (result as any).protocol?.morning || [];
+      const evening: any[] = (result as any).protocol?.evening || [];
+      let y = 0;
 
-      const element = React.createElement(GlowScanPDFDocument, {
-        result,
-        imageUrl,
-        userName: userFirstName,
-        area: area || "face",
-        qrCode: qrDataUrl,
-        bestProduct: _bestProduct,
-        benefit: _benefit,
-        reportNumber,
-      });
+      // ── Helpers ──
+      const hex2rgb = (h: string): [number, number, number] => {
+        const v = h.replace("#", "");
+        return [parseInt(v.slice(0,2),16), parseInt(v.slice(2,4),16), parseInt(v.slice(4,6),16)];
+      };
+      const txt = (t: string, x: number, yy: number, size: number, color: string, bold = false) => {
+        doc.setFontSize(size);
+        doc.setFont("helvetica", bold ? "bold" : "normal");
+        doc.setTextColor(...hex2rgb(color));
+        doc.text(t, x, yy);
+      };
+      const fillRect = (x: number, yy: number, w: number, h: number, color: string) => {
+        doc.setFillColor(...hex2rgb(color));
+        doc.rect(x, yy, w, h, "F");
+      };
+      const wrapText = (t: string, maxW: number): string[] => doc.splitTextToSize(t, maxW);
 
-      const blob = await pdf(element).toBlob();
+      // ══ HEADER ══
+      fillRect(0, 0, W, 42, "#0d0a0e");
+      txt("GlowScan", M, 14, 20, "#7c3aed", true);
+      txt("Rapport de Pre-Analyse Cutanee", M, 23, 13, "#f3f0ff", true);
+      txt("Genere par IA - Specialise Peaux Africaines", M, 29, 8, "#a78bfa");
+      const dateStr = new Date().toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+      txt(`Date : ${dateStr}   |   Ref : ${reportNumber}`, M, 36, 7.5, "#6b7280");
+      y = 50;
 
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `GlowScan-Rapport-${reportNumber}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      // ══ PROFIL ══
+      doc.setDrawColor(...hex2rgb("#e8e3ff"));
+      doc.setFillColor(...hex2rgb("#f8f7ff"));
+      doc.roundedRect(M, y, W - 2*M, 44, 3, 3, "FD");
+
+      let photoEndX = M + 8;
+      if (imageUrl) {
+        try {
+          doc.addImage(imageUrl, "JPEG", M + 5, y + 5, 32, 32);
+          doc.setDrawColor(...hex2rgb("#7c3aed"));
+          doc.setLineWidth(0.4);
+          doc.roundedRect(M + 5, y + 5, 32, 32, 2, 2);
+          photoEndX = M + 43;
+        } catch {}
+      }
+
+      txt(userFirstName || "Utilisatrice GlowScan", photoEndX, y + 12, 14, "#0d0a0e", true);
+      txt(result.condition.slice(0, 50), photoEndX, y + 18, 8, "#6b7280");
+      txt(`${score}`, photoEndX, y + 31, 28, "#7c3aed", true);
+      txt("/100  Glow Score", photoEndX + 18, y + 31, 9, "#6b7280");
+
+      // Barre de progression
+      const barX = photoEndX, barW = W - M - photoEndX - 8;
+      fillRect(barX, y + 34, barW, 3, "#d1d5db");
+      fillRect(barX, y + 34, (barW * score) / 100, 3, "#E91E8C");
+      txt(`Type de peau : ${result.skinType || "Non determine"}`, photoEndX, y + 41, 8, "#374151");
+      y += 52;
+
+      // ══ ZONES ══
+      if (zones.length > 0) {
+        txt("DIAGNOSTIC ZONE PAR ZONE", M, y, 9.5, "#7c3aed", true);
+        doc.setDrawColor(...hex2rgb("#e8e3ff"));
+        doc.line(M, y + 1.5, W - M, y + 1.5);
+        y += 6;
+
+        const zW = (W - 2*M - 12) / 4;
+        zones.slice(0, 8).forEach((z: any, i: number) => {
+          const col = i % 4;
+          const row = Math.floor(i / 4);
+          const zx = M + col * (zW + 4);
+          const zy = y + row * 24;
+          const dotColor = z.status === "red" ? "#E91E8C" : z.status === "yellow" ? "#f59e0b" : "#10b981";
+          const bgColor = z.status === "red" ? "#fff1f2" : z.status === "yellow" ? "#fffbeb" : "#f0fdf4";
+          const bdColor = z.status === "red" ? "#fecdd3" : z.status === "yellow" ? "#fef3c7" : "#d1fae5";
+          doc.setFillColor(...hex2rgb(bgColor));
+          doc.setDrawColor(...hex2rgb(bdColor));
+          doc.roundedRect(zx, zy, zW, 21, 2, 2, "FD");
+          doc.setFillColor(...hex2rgb(dotColor));
+          doc.circle(zx + 5, zy + 5.5, 2, "F");
+          txt(z.name || "", zx + 9, zy + 6.5, 7.5, "#374151", true);
+          const statusLabel = z.status === "red" ? "Attention" : z.status === "yellow" ? "A surveiller" : "Zone saine";
+          txt(statusLabel, zx + 4, zy + 13, 6.5, "#6b7280");
+          if (z.note) txt(z.note.slice(0, 28), zx + 4, zy + 18, 6, "#9ca3af");
+        });
+        y += Math.ceil(zones.slice(0, 8).length / 4) * 24 + 6;
+      }
+
+      // ══ EVALUATION CLINIQUE ══
+      if (result.details) {
+        txt("EVALUATION CLINIQUE", M, y, 9.5, "#7c3aed", true);
+        doc.setDrawColor(...hex2rgb("#e8e3ff"));
+        doc.line(M, y + 1.5, W - M, y + 1.5);
+        y += 6;
+        doc.setFillColor(...hex2rgb("#f3f4f6"));
+        doc.setDrawColor(...hex2rgb("#d1d5db"));
+        const lines = wrapText(result.details, W - 2*M - 10);
+        const boxH = lines.length * 4.5 + 8;
+        doc.roundedRect(M, y, W - 2*M, boxH, 2, 2, "FD");
+        doc.setFontSize(8.5);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(...hex2rgb("#374151"));
+        doc.text(lines, M + 5, y + 7, { lineHeightFactor: 1.5 });
+        y += boxH + 6;
+      }
+
+      // ══ SOIN RECOMMANDE ══
+      if (_bestProduct) {
+        // Nouvelle page si pas assez de place
+        if (y > 220) { doc.addPage(); y = 20; }
+        txt("SOIN RECOMMANDE", M, y, 9.5, "#7c3aed", true);
+        doc.setDrawColor(...hex2rgb("#e8e3ff"));
+        doc.line(M, y + 1.5, W - M, y + 1.5);
+        y += 6;
+        doc.setFillColor(...hex2rgb("#fdf2f8"));
+        doc.setDrawColor(...hex2rgb("#fbcfe8"));
+        doc.roundedRect(M, y, W - 2*M, 38, 3, 3, "FD");
+        // Image produit placeholder
+        doc.setFillColor(...hex2rgb("#f3e8ff"));
+        doc.setDrawColor(...hex2rgb("#ddd6fe"));
+        doc.roundedRect(M + 5, y + 5, 28, 28, 3, 3, "FD");
+        txt("*", M + 16, y + 22, 18, "#7c3aed", true);
+        // Badge
+        doc.setFillColor(...hex2rgb("#d1fae5"));
+        doc.roundedRect(M + 38, y + 4, 52, 5, 1, 1, "F");
+        txt("Valide pour peaux africaines", M + 39, y + 8, 6.5, "#059669", true);
+        txt(_benefit || "Soin personnalise", M + 38, y + 17, 12, "#0d0a0e", true);
+        txt(`${_bestProduct.price?.toLocaleString("fr-FR")} FCFA`, M + 38, y + 25, 13, "#E91E8C", true);
+        (_bestProduct.usagePoints || []).slice(0, 2).forEach((pt: string, i: number) => {
+          txt(`• ${pt.slice(0, 55)}`, M + 38, y + 31 + i * 4.5, 7, "#6b7280");
+        });
+        y += 46;
+      }
+
+      // ══ PROTOCOLE ══
+      if (morning.length > 0 || evening.length > 0) {
+        if (y > 215) { doc.addPage(); y = 20; }
+        txt("PROTOCOLE PERSONNALISE", M, y, 9.5, "#7c3aed", true);
+        doc.setDrawColor(...hex2rgb("#e8e3ff"));
+        doc.line(M, y + 1.5, W - M, y + 1.5);
+        y += 8;
+
+        const renderSteps = (steps: any[], label: string, color: string) => {
+          if (!steps.length) return;
+          if (y > 250) { doc.addPage(); y = 20; }
+          doc.setFillColor(...hex2rgb(color === "#f59e0b" ? "#fffbeb" : "#f5f3ff"));
+          doc.roundedRect(M, y, W - 2*M, 7, 2, 2, "F");
+          txt(label, M + 4, y + 5, 9, color, true);
+          y += 10;
+          steps.forEach((s: any, i: number) => {
+            const step = typeof s === "object" ? s : { step: String(s) };
+            const stepTxt = step.step || `Etape ${i+1}`;
+            const prodTxt = step.product ? ` — ${step.product}` : "";
+            if (y > 260) { doc.addPage(); y = 20; }
+            doc.setFillColor(...hex2rgb("#7c3aed"));
+            doc.circle(M + 4, y + 0.5, 3, "F");
+            txt(String(i+1), M + 2.7, y + 1.5, 6.5, "#ffffff", true);
+            const lines2 = wrapText(`${stepTxt}${prodTxt}`, W - 2*M - 14);
+            doc.setFontSize(8.5);
+            doc.setFont("helvetica", "normal");
+            doc.setTextColor(...hex2rgb("#374151"));
+            doc.text(lines2, M + 9, y + 1.5, { lineHeightFactor: 1.5 });
+            y += lines2.length * 4.5 + 2;
+          });
+          y += 4;
+        };
+
+        renderSteps(morning, "Rituel du Matin — protection & regulation", "#f59e0b");
+        renderSteps(evening, "Rituel du Soir — reparation intense", "#7c3aed");
+      }
+
+      // ══ FOOTER sur chaque page ══
+      const totalPages = doc.getNumberOfPages();
+      for (let p = 1; p <= totalPages; p++) {
+        doc.setPage(p);
+        const footerY = 272;
+        fillRect(0, footerY, W, 25, "#0d0a0e");
+        try {
+          const qrDataUrl = await QRCodeLib.default.toDataURL("https://glow-scan.com", { width: 100, margin: 1 });
+          doc.addImage(qrDataUrl, "PNG", M, footerY + 4, 16, 16);
+        } catch {}
+        doc.setFontSize(6.5);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(...hex2rgb("#a78bfa"));
+        doc.text("Ce rapport est un outil de pre-analyse cutanee genere par IA.", M + 20, footerY + 9);
+        doc.text("Il ne remplace pas une consultation medicale professionnelle.", M + 20, footerY + 13);
+        doc.text("Refaites votre analyse ou partagez avec vos proches", M + 20, footerY + 17);
+        doc.setFontSize(8);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(...hex2rgb("#7c3aed"));
+        doc.text("glow-scan.com", M + 20, footerY + 22);
+        txt(`${p}/${totalPages}`, W - M, footerY + 22, 7, "#6b7280");
+      }
+
+      doc.save(`GlowScan-Rapport-${reportNumber}.pdf`);
+
     } catch (err) {
       console.error("PDF generation failed:", err);
-      toast({ title: "Erreur PDF", description: "Impossible de générer le rapport. Réessaie.", variant: "destructive" });
+      toast({ title: "Erreur PDF", description: "Impossible de generer le rapport. Reessaie.", variant: "destructive" });
     } finally {
       setPdfGenerating(false);
     }

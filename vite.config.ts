@@ -47,14 +47,11 @@ export default defineConfig({
           ],
           "vendor-charts": ["recharts"],
           "vendor-icons": ["lucide-react"],
-          "vendor-pdf": ["@react-pdf/renderer"],
+          "vendor-pdf": ["jspdf"],
           "vendor-qrcode": ["qrcode"],
         },
       },
     },
-  },
-  optimizeDeps: {
-    exclude: ["@react-pdf/renderer"],
   },
   server: {
     fs: {
