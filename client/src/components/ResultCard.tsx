@@ -889,6 +889,81 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
     result.condition.split("").reduce((h, c) => ((h << 5) - h + c.charCodeAt(0)) | 0, 0)
   ).toString(36).slice(0, 5).toUpperCase()}`;
 
+  // ── Ingrédients toxiques selon le diagnostic ──────────────────────────────
+  const getToxicIngredients = () => {
+    const c = (result.condition + " " + (result.skinType || "")).toLowerCase();
+    const base = [
+      { name: "Alcool dénat. (Alcohol Denat.)", why: "Détruit le film hydrolipidique, fragilise la barrière cutanée", level: "Élevé" },
+      { name: "Sodium Lauryl Sulfate (SLS)", why: "Détergent ultra-agressif — décape la peau et aggrave les rougeurs", level: "Élevé" },
+      { name: "Fragrance / Parfum synthétique", why: "Principale cause d'allergie cutanée et d'irritations chroniques", level: "Moyen" },
+      { name: "Parabènes (Methylparaben, Propylparaben)", why: "Perturbateurs endocriniens suspectés — pénètrent dans la peau", level: "Moyen" },
+    ];
+    const specific: { name: string; why: string; level: string }[] = [];
+    if (/tache|hyperpigment|pih|mélasma/.test(c)) {
+      specific.push(
+        { name: "Mercure (Mercury / Hg)", why: "Présent dans certaines crèmes africaines — TOXIQUE, neurotoxique, interdit", level: "CRITIQUE" },
+        { name: "Hydroquinone >2%", why: "Rebond pigmentaire sur peaux noires, risque de bleu-grisâtre (ochronose)", level: "Élevé" },
+        { name: "Corticoïdes sans prescription", why: "Amincissement cutané, rebond des taches à l'arrêt", level: "Élevé" },
+        { name: "Huile minérale (Mineral Oil)", why: "Obstrue les pores, emprisonne les pigments oxydés", level: "Moyen" },
+      );
+    }
+    if (/acn[eé]|bouton|comédon|imperfection/.test(c)) {
+      specific.push(
+        { name: "Huile de coco (visage)", why: "Score comédogène 4/5 — bouche les pores et aggrave l'acné", level: "Élevé" },
+        { name: "Beurre de cacao (visage)", why: "Très comédogène sur le visage — réservé au corps uniquement", level: "Élevé" },
+        { name: "Dimethicone / Silicones", why: "Forment un film occlusif qui emprisonne le sébum et les bactéries", level: "Moyen" },
+        { name: "Isopropyl Myristate", why: "Pénétrant comédogène — présent dans de nombreuses crèmes bon marché", level: "Moyen" },
+      );
+    }
+    if (/sèche|déshydrat|tiraillement/.test(c)) {
+      specific.push(
+        { name: "Alcool isopropylique / éthylique", why: "Assèche intensément — contreproductif sur peau déjà déshydratée", level: "Élevé" },
+        { name: "Menthol / Camphre", why: "Sensation fraîche trompeuse — irritants cutanés à éviter", level: "Moyen" },
+      );
+    }
+    if (/sensib|réactiv|rougeur/.test(c)) {
+      specific.push(
+        { name: "Rétinol (sans prescription)", why: "Trop puissant pour peaux réactives — inflammations et desquamations", level: "Élevé" },
+        { name: "AHA/BHA en concentration élevée", why: "Exfoliants agressifs qui sur-irritent les peaux déjà réactives", level: "Moyen" },
+      );
+    }
+    return [...specific, ...base];
+  };
+
+  // ── Conseils d'hygiène personnalisés ──────────────────────────────────────
+  const getHygieneAdvice = () => {
+    const c = (result.condition + " " + (result.skinType || "")).toLowerCase();
+    const base = [
+      "🚿 Nettoyer le visage matin et soir avec de l'eau tiède (jamais chaude — dilate les pores)",
+      "☀️ Protection solaire SPF 50+ tous les matins — indispensable sous le soleil équatorial",
+      "💧 Boire minimum 1,5L d'eau par jour — l'hydratation interne se reflète sur la peau",
+      "🛏️ Changer la taie d'oreiller toutes les 2 à 3 nuits — source majeure de bactéries",
+      "🙌 Ne jamais toucher ou percer les boutons — cicatrices et taches durables sur peaux noires",
+    ];
+    const specific: string[] = [];
+    if (/tache|hyperpigment/.test(c)) {
+      specific.push(
+        "🕶️ Porter un chapeau ou rester à l'ombre entre 11h et 15h — les UV aggravent activement les taches",
+        "🚫 Éviter toute crème éclaircissante non certifiée — elles contiennent souvent du mercure",
+        "🍊 Consommer des aliments riches en vitamine C (mangue, papaye, citron) — action anti-pigmentaire naturelle",
+      );
+    }
+    if (/acn[eé]|bouton/.test(c)) {
+      specific.push(
+        "🍬 Réduire le sucre raffiné et les fritures — index glycémique élevé = plus de sébum",
+        "📱 Désinfecter l'écran du téléphone quotidiennement — contact direct avec la peau du visage",
+        "🧖 Masque purifiant à l'argile 1× par semaine maximum — trop souvent = irritation",
+      );
+    }
+    if (/sèche|déshydrat/.test(c)) {
+      specific.push(
+        "🛁 Douche courte à l'eau tiède — l'eau chaude détruit la barrière lipidique",
+        "🧴 Appliquer la crème visage sur peau encore légèrement humide — absorption optimale",
+      );
+    }
+    return [...specific, ...base].slice(0, 6);
+  };
+
   // ── Téléchargement PDF via print window (zéro dépendance, 100% mobile) ──
   const handleDownloadPDF = () => {
     if (pdfGenerating) return;
@@ -899,6 +974,8 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
       const zones = result.zones || [];
       const morning: any[] = (result as any).protocol?.morning || [];
       const evening: any[] = (result as any).protocol?.evening || [];
+      const toxics = getToxicIngredients();
+      const hygiene = getHygieneAdvice();
       const date = new Date().toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
 
       const zoneStatusColor = (s: string) =>
@@ -927,157 +1004,342 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
           </div>`;
       };
 
+      const levelColor = (l: string) =>
+        l === "CRITIQUE" ? "#dc2626" : l === "Élevé" ? "#E91E8C" : "#f59e0b";
+      const levelBg = (l: string) =>
+        l === "CRITIQUE" ? "#fef2f2" : l === "Élevé" ? "#fdf2f8" : "#fffbeb";
+
       const html = `<!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>GlowScan — Rapport ${reportNumber}</title>
+<title>GlowScan — Consultation ${reportNumber}</title>
 <style>
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family: Arial, sans-serif; background:#fff; color:#1f2937; }
-  @media print {
-    body { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
-    .no-print { display:none; }
-    @page { margin: 0; }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:Arial,sans-serif;background:#fff;color:#1f2937;font-size:13px}
+  @media print{
+    body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .no-print{display:none!important}
+    @page{margin:0;size:A4}
+    .page-break{page-break-before:always}
   }
 
-  .header { background:#0d0a0e; padding:24px 28px; }
-  .brand { font-size:22px; font-weight:900; color:#7c3aed; margin-bottom:4px; }
-  .title { font-size:16px; font-weight:700; color:#f3f0ff; margin-bottom:3px; }
-  .subtitle { font-size:9px; color:#a78bfa; margin-bottom:10px; line-height:1.4; }
-  .meta { font-size:9px; color:#6b7280; }
+  /* ── Header ── */
+  .header{background:#0d0a0e;padding:20px 28px 16px;display:flex;justify-content:space-between;align-items:flex-start}
+  .header-left{}
+  .brand{font-size:24px;font-weight:900;color:#7c3aed;letter-spacing:-.5px;margin-bottom:2px}
+  .report-title{font-size:15px;font-weight:700;color:#f3f0ff;margin-bottom:2px}
+  .report-sub{font-size:9px;color:#a78bfa;line-height:1.5;margin-bottom:8px}
+  .report-meta{font-size:9px;color:#6b7280}
+  .report-meta b{color:#a78bfa}
+  .stamp{border:2px solid #7c3aed;border-radius:8px;padding:8px 12px;text-align:center;min-width:100px}
+  .stamp-top{font-size:8px;font-weight:700;color:#a78bfa;letter-spacing:.05em;text-transform:uppercase}
+  .stamp-price{font-size:20px;font-weight:900;color:#7c3aed;line-height:1.2}
+  .stamp-currency{font-size:10px;color:#7c3aed;font-weight:700}
+  .stamp-label{font-size:7px;color:#6b7280;margin-top:2px}
 
-  .body { padding:20px 28px; }
+  /* ── Body ── */
+  .body{padding:18px 28px 0}
 
-  .profile-card { background:#f8f7ff; border:1px solid #e8e3ff; border-radius:12px; padding:16px; display:flex; gap:16px; align-items:flex-start; margin-bottom:20px; }
-  .profile-photo { width:80px; height:80px; border-radius:10px; border:2px solid #7c3aed; object-fit:cover; flex-shrink:0; }
-  .profile-photo-placeholder { width:80px; height:80px; border-radius:10px; border:2px solid #7c3aed; background:#f3e8ff; display:flex; align-items:center; justify-content:center; font-size:32px; flex-shrink:0; }
-  .profile-name { font-size:18px; font-weight:800; color:#0d0a0e; margin-bottom:2px; }
-  .profile-condition { font-size:10px; color:#6b7280; margin-bottom:8px; }
-  .score { font-size:36px; font-weight:900; color:#7c3aed; line-height:1; }
-  .score-label { font-size:11px; color:#6b7280; margin-left:4px; vertical-align:middle; }
-  .progress-track { height:6px; background:#e5e7eb; border-radius:3px; margin:8px 0; overflow:hidden; }
-  .progress-fill { height:6px; border-radius:3px; background:linear-gradient(90deg,#7c3aed,#E91E8C); }
-  .skin-type { font-size:10px; color:#374151; margin-top:4px; }
+  /* ── CTA impression ── */
+  .print-cta{background:linear-gradient(135deg,#7c3aed,#a78bfa);border-radius:12px;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:20px}
+  .print-cta-text{color:#f3f0ff;font-weight:700;font-size:14px}
+  .print-cta-sub{color:rgba(255,255,255,.65);font-size:10px;margin-top:2px}
+  .print-btn{background:#fff;color:#7c3aed;font-weight:800;font-size:13px;padding:10px 20px;border:none;border-radius:8px;cursor:pointer;white-space:nowrap}
 
-  .section-title { font-size:11px; font-weight:800; color:#7c3aed; letter-spacing:.8px; text-transform:uppercase; padding-bottom:5px; border-bottom:1px solid #e8e3ff; margin-bottom:10px; margin-top:20px; }
+  /* ── Profil ── */
+  .profile-card{background:#f8f7ff;border:1px solid #e8e3ff;border-radius:12px;padding:16px;display:flex;gap:16px;align-items:flex-start;margin-bottom:0}
+  .profile-photo{width:80px;height:80px;border-radius:10px;border:2px solid #7c3aed;object-fit:cover;flex-shrink:0}
+  .profile-photo-placeholder{width:80px;height:80px;border-radius:10px;border:2px solid #7c3aed;background:#f3e8ff;display:flex;align-items:center;justify-content:center;font-size:36px;flex-shrink:0}
+  .profile-name{font-size:20px;font-weight:900;color:#0d0a0e;margin-bottom:1px}
+  .profile-condition{font-size:10px;color:#6b7280;margin-bottom:8px}
+  .score-row{display:flex;align-items:baseline;gap:4px;margin-bottom:4px}
+  .score-val{font-size:38px;font-weight:900;color:#7c3aed;line-height:1}
+  .score-lbl{font-size:11px;color:#6b7280}
+  .progress-track{height:6px;background:#e5e7eb;border-radius:3px;overflow:hidden;margin:4px 0 6px}
+  .progress-fill{height:6px;border-radius:3px;background:linear-gradient(90deg,#7c3aed,#E91E8C)}
+  .badges{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+  .badge{font-size:8px;font-weight:700;padding:2px 7px;border-radius:4px}
 
-  .zones-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
-  .zone-card { padding:8px; border-radius:8px; border:1px solid; }
-  .zone-dot { width:8px; height:8px; border-radius:50%; margin-bottom:5px; }
-  .zone-name { font-size:9px; font-weight:700; color:#374151; margin-bottom:2px; }
-  .zone-status { font-size:8px; color:#6b7280; }
+  /* ── Sections ── */
+  .section{margin-top:18px}
+  .section-title{font-size:11px;font-weight:800;color:#7c3aed;letter-spacing:.7px;text-transform:uppercase;padding-bottom:5px;border-bottom:2px solid #e8e3ff;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+  .section-icon{font-size:14px}
 
-  .details-box { background:#f3f4f6; border:1px solid #d1d5db; border-radius:8px; padding:12px; font-size:10px; line-height:1.7; color:#374151; }
+  /* ── Zones ── */
+  .zones-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+  .zone-card{padding:8px;border-radius:8px;border:1px solid}
+  .zone-dot{width:9px;height:9px;border-radius:50%;margin-bottom:4px}
+  .zone-name{font-size:9px;font-weight:700;color:#374151;margin-bottom:2px}
+  .zone-level{font-size:8px;color:#6b7280}
 
-  .product-card { background:#fdf2f8; border:1px solid #fbcfe8; border-radius:12px; padding:14px; display:flex; gap:14px; align-items:flex-start; margin-top:8px; }
-  .product-placeholder { width:64px; height:64px; border-radius:10px; background:#f3e8ff; border:1px solid #ddd6fe; display:flex; align-items:center; justify-content:center; font-size:28px; flex-shrink:0; }
-  .product-badge { display:inline-block; background:#d1fae5; color:#059669; font-size:8px; font-weight:700; padding:2px 8px; border-radius:4px; margin-bottom:6px; }
-  .product-benefit { font-size:14px; font-weight:800; color:#0d0a0e; margin-bottom:4px; }
-  .product-price { font-size:18px; font-weight:900; color:#E91E8C; margin-bottom:6px; }
-  .product-usage { font-size:9px; color:#6b7280; line-height:1.5; }
-  .product-wa { display:inline-block; background:#25D366; color:#fff; font-size:9px; font-weight:700; padding:4px 10px; border-radius:6px; margin-top:8px; }
+  /* ── Evaluation ── */
+  .eval-box{background:#f3f4f6;border:1px solid #d1d5db;border-radius:8px;padding:12px;font-size:10.5px;line-height:1.8;color:#374151}
 
-  .footer { background:#0d0a0e; padding:14px 28px; display:flex; align-items:center; gap:14px; margin-top:28px; page-break-inside:avoid; }
-  .footer-text { flex:1; }
-  .footer-disclaimer { font-size:8px; color:#a78bfa; line-height:1.5; margin-bottom:3px; }
-  .footer-url { font-size:10px; font-weight:800; color:#7c3aed; }
-  .footer-brand { font-size:13px; font-weight:900; color:#7c3aed; white-space:nowrap; }
+  /* ── Toxiques ── */
+  .toxic-table{width:100%;border-collapse:collapse;margin-top:4px}
+  .toxic-table th{background:#0d0a0e;color:#f3f0ff;font-size:9px;padding:7px 10px;text-align:left;font-weight:700}
+  .toxic-table td{font-size:9.5px;padding:7px 10px;border-bottom:1px solid #f3f4f6;vertical-align:top}
+  .toxic-table tr:nth-child(even) td{background:#fafafa}
+  .toxic-name{font-weight:700;color:#1f2937;margin-bottom:2px}
+  .toxic-why{color:#6b7280;font-size:9px;line-height:1.4}
+  .toxic-level{display:inline-block;font-size:8px;font-weight:800;padding:2px 7px;border-radius:4px;white-space:nowrap}
 
-  .cta-btn { display:block; text-align:center; background:#7c3aed; color:#fff; padding:12px; border-radius:10px; font-weight:800; font-size:14px; text-decoration:none; margin:20px 0 8px; cursor:pointer; border:none; width:100%; }
-  .cta-sub { text-align:center; font-size:10px; color:#9ca3af; margin-bottom:20px; }
+  /* ── Hygiène ── */
+  .hygiene-list{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .hygiene-item{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:9px 11px;font-size:9.5px;color:#166534;line-height:1.5}
+
+  /* ── Ordonnance ── */
+  .ordonnance-header{background:linear-gradient(135deg,rgba(124,58,237,.08),rgba(233,30,140,.04));border:1px solid rgba(124,58,237,.2);border-radius:10px;padding:10px 14px;margin-bottom:10px;display:flex;align-items:center;gap:10px}
+  .ordonnance-icon{font-size:20px}
+  .ordonnance-label{font-size:10px;font-weight:700;color:#7c3aed}
+  .ordonnance-sub{font-size:9px;color:#9ca3af;margin-top:1px}
+  .product-card{background:#fdf2f8;border:1.5px solid #fbcfe8;border-radius:12px;padding:14px;display:flex;gap:14px;align-items:flex-start}
+  .product-img-box{width:64px;height:64px;border-radius:10px;background:#f3e8ff;border:1px solid #ddd6fe;display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0}
+  .product-badge{display:inline-block;background:#d1fae5;color:#059669;font-size:8px;font-weight:700;padding:2px 7px;border-radius:4px;margin-bottom:5px}
+  .product-name{font-size:15px;font-weight:800;color:#0d0a0e;margin-bottom:3px}
+  .product-price{font-size:20px;font-weight:900;color:#E91E8C;margin-bottom:5px}
+  .product-usage{font-size:9px;color:#6b7280;line-height:1.6}
+  .product-wa{display:inline-flex;align-items:center;gap:5px;background:#25D366;color:#fff;font-size:9px;font-weight:700;padding:5px 12px;border-radius:6px;margin-top:8px;text-decoration:none}
+
+  /* ── Protocole ── */
+  .protocol-block{margin-bottom:14px}
+  .protocol-label{display:flex;align-items:center;gap:6px;font-size:10.5px;font-weight:700;padding:7px 10px;border-radius:6px;margin-bottom:8px}
+  .protocol-steps{display:flex;flex-direction:column;gap:6px}
+  .step-row{display:flex;gap:10px;align-items:flex-start}
+  .step-num{min-width:22px;height:22px;border-radius:50%;background:#7c3aed;color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+  .step-content{flex:1}
+  .step-name{font-size:11px;font-weight:700;color:#1f2937;line-height:1.4}
+  .step-product{font-size:10px;color:#7c3aed;margin-top:1px}
+  .step-why{font-size:9px;color:#9ca3af;font-style:italic;margin-top:1px}
+
+  /* ── Validité ── */
+  .validity-box{margin-top:16px;background:#fffbeb;border:1px solid #fef3c7;border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px}
+  .validity-icon{font-size:18px}
+  .validity-text{font-size:9.5px;color:#92400e;line-height:1.5}
+
+  /* ── Footer ── */
+  .footer{background:#0d0a0e;padding:14px 28px;display:flex;align-items:center;gap:14px;margin-top:20px}
+  .footer-text{flex:1}
+  .footer-disclaimer{font-size:8px;color:#a78bfa;line-height:1.5;margin-bottom:3px}
+  .footer-url{font-size:10px;font-weight:800;color:#7c3aed}
+  .footer-brand{font-size:14px;font-weight:900;color:#7c3aed;white-space:nowrap;text-align:right}
+  .footer-ref{font-size:8px;color:#4b5563;text-align:right;margin-top:2px}
 </style>
 </head>
 <body>
 
+<!-- ══ HEADER ══ -->
 <div class="header">
-  <div class="brand">✦ GlowScan</div>
-  <div class="title">Rapport de Pré-Analyse Cutanée</div>
-  <div class="subtitle">Généré par un outil de pré-analyse cutanée IA — Spécialisé Peaux Africaines</div>
-  <div class="meta">Date : ${date} &nbsp;|&nbsp; Réf : ${reportNumber}</div>
+  <div class="header-left">
+    <div class="brand">✦ GlowScan</div>
+    <div class="report-title">Rapport de Consultation Cutanée</div>
+    <div class="report-sub">Pré-analyse dermatologique par IA — Spécialisé Peaux Africaines<br>Ce document est votre ordonnance personnalisée GlowScan.</div>
+    <div class="report-meta">Date : <b>${date}</b> &nbsp;|&nbsp; Réf. : <b>${reportNumber}</b> &nbsp;|&nbsp; Validité : <b>3 mois</b></div>
+  </div>
+  <div class="stamp">
+    <div class="stamp-top">Consultation</div>
+    <div class="stamp-price">5 000</div>
+    <div class="stamp-currency">FCFA</div>
+    <div class="stamp-label">Analyse Premium</div>
+  </div>
 </div>
 
 <div class="body">
 
-  <!-- Bouton impression (masqué à l'impression) -->
-  <div class="no-print" style="text-align:center;padding:16px 0 4px">
-    <button class="cta-btn" onclick="window.print()">📄 Sauvegarder / Imprimer</button>
-    <p class="cta-sub">Appuie sur "Enregistrer en PDF" dans le menu d'impression</p>
+<!-- CTA impression -->
+<div class="print-cta no-print">
+  <div>
+    <div class="print-cta-text">📄 Votre rapport est prêt</div>
+    <div class="print-cta-sub">Appuie sur le bouton → Enregistrer en PDF dans le menu d'impression</div>
   </div>
+  <button class="print-btn" onclick="window.print()">⬇ Télécharger en PDF</button>
+</div>
 
-  <!-- Profil -->
+<!-- ══ 1. PROFIL CUTANÉ ══ -->
+<div class="section">
+  <div class="section-title"><span class="section-icon">🧬</span> Votre Profil Cutané</div>
   <div class="profile-card">
     ${imageUrl
-      ? `<img src="${imageUrl}" class="profile-photo" alt="Photo" />`
-      : `<div class="profile-photo-placeholder">👤</div>`
-    }
+      ? `<img src="${imageUrl}" class="profile-photo" alt="Photo analyse" />`
+      : `<div class="profile-photo-placeholder">👤</div>`}
     <div style="flex:1">
       <div class="profile-name">${userFirstName || "Utilisatrice GlowScan"}</div>
       <div class="profile-condition">${result.condition}</div>
-      <div>
-        <span class="score">${score}</span>
-        <span class="score-label">/100 &nbsp;Glow Score</span>
+      <div class="score-row">
+        <span class="score-val">${score}</span>
+        <span class="score-lbl">/100 &nbsp;Glow Score</span>
       </div>
-      <div class="progress-track">
-        <div class="progress-fill" style="width:${score}%"></div>
+      <div class="progress-track"><div class="progress-fill" style="width:${score}%"></div></div>
+      <div class="badges">
+        <span class="badge" style="background:#ede9fe;color:#7c3aed">Peau : ${result.skinType || "—"}</span>
+        <span class="badge" style="background:#fce7f3;color:#9d174d">Sévérité : ${result.severity || "Modérée"}</span>
+        <span class="badge" style="background:#ecfdf5;color:#065f46">Peaux africaines ✓</span>
       </div>
-      <div class="skin-type">Type de peau : ${result.skinType || "Non déterminé"} &nbsp;|&nbsp; Sévérité : ${result.severity || "—"}</div>
     </div>
   </div>
-
-  <!-- Zones -->
-  ${zones.length > 0 ? `
-    <div class="section-title">Diagnostic Zone par Zone</div>
-    <div class="zones-grid">
-      ${zones.slice(0, 8).map((z: any) => `
-        <div class="zone-card" style="border-color:${z.status === "red" ? "#fecdd3" : z.status === "yellow" ? "#fef3c7" : "#d1fae5"};background:${z.status === "red" ? "#fff1f2" : z.status === "yellow" ? "#fffbeb" : "#f0fdf4"}">
-          <div class="zone-dot" style="background:${zoneStatusColor(z.status)}"></div>
-          <div class="zone-name">${z.name || ""}</div>
-          <div class="zone-status">${zoneStatusLabel(z.status)}</div>
-          ${z.note ? `<div class="zone-status" style="font-style:italic;margin-top:2px">${z.note.slice(0, 40)}</div>` : ""}
-        </div>
-      `).join("")}
-    </div>
-  ` : ""}
-
-  <!-- Évaluation clinique -->
-  ${result.details ? `
-    <div class="section-title">Évaluation Clinique</div>
-    <div class="details-box">${result.details}</div>
-  ` : ""}
-
-  <!-- Soin recommandé -->
-  ${_bestProduct ? `
-    <div class="section-title">Soin Recommandé</div>
-    <div class="product-card">
-      <div class="product-placeholder">✦</div>
-      <div>
-        <div class="product-badge">Validé pour peaux africaines</div>
-        <div class="product-benefit">${_benefit}</div>
-        <div class="product-price">${_bestProduct.price?.toLocaleString("fr-FR")} FCFA</div>
-        <div class="product-usage">${(_bestProduct.usagePoints || []).slice(0, 3).map((p: string) => `• ${p}`).join("<br>")}</div>
-        <div class="product-wa">Commander via WhatsApp</div>
-      </div>
-    </div>
-  ` : ""}
-
-  <!-- Protocole -->
-  ${(morning.length > 0 || evening.length > 0) ? `
-    <div class="section-title">Protocole Personnalisé</div>
-    ${renderSteps(morning, "☀ Rituel du Matin — protection & régulation", "#f59e0b")}
-    ${renderSteps(evening, "🌙 Rituel du Soir — réparation intense", "#7c3aed")}
-  ` : ""}
-
 </div>
 
+<!-- ══ 2. DIAGNOSTIC ZONE PAR ZONE ══ -->
+${zones.length > 0 ? `
+<div class="section">
+  <div class="section-title"><span class="section-icon">📍</span> Diagnostic Zone par Zone</div>
+  <div class="zones-grid">
+    ${zones.slice(0, 8).map((z: any) => `
+      <div class="zone-card" style="border-color:${z.status === "red" ? "#fecdd3" : z.status === "yellow" ? "#fef3c7" : "#d1fae5"};background:${z.status === "red" ? "#fff1f2" : z.status === "yellow" ? "#fffbeb" : "#f0fdf4"}">
+        <div class="zone-dot" style="background:${z.status === "red" ? "#E91E8C" : z.status === "yellow" ? "#f59e0b" : "#10b981"}"></div>
+        <div class="zone-name">${z.name || ""}</div>
+        <div class="zone-level">${z.status === "red" ? "⚠ Attention" : z.status === "yellow" ? "◐ À surveiller" : "✓ Saine"}</div>
+        ${z.note ? `<div class="zone-level" style="font-style:italic;margin-top:2px">${z.note.slice(0,38)}</div>` : ""}
+      </div>
+    `).join("")}
+  </div>
+</div>
+` : ""}
+
+<!-- ══ 3. COMPRÉHENSION APPROFONDIE ══ -->
+${result.details ? `
+<div class="section">
+  <div class="section-title"><span class="section-icon">🔬</span> Compréhension Approfondie de Votre Peau</div>
+  <div class="eval-box">${result.details}</div>
+</div>
+` : ""}
+
+<!-- ══ 4. INGRÉDIENTS TOXIQUES À BANNIR ══ -->
+<div class="section">
+  <div class="section-title"><span class="section-icon">🚫</span> Ingrédients Toxiques à Bannir Absolument</div>
+  <table class="toxic-table">
+    <thead>
+      <tr>
+        <th style="width:30%">Ingrédient</th>
+        <th style="width:12%">Niveau de risque</th>
+        <th>Pourquoi l'éviter</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${toxics.map(t => `
+        <tr>
+          <td>
+            <div class="toxic-name">${t.name}</div>
+          </td>
+          <td>
+            <span class="toxic-level" style="background:${levelBg(t.level)};color:${levelColor(t.level)}">${t.level}</span>
+          </td>
+          <td>
+            <div class="toxic-why">${t.why}</div>
+          </td>
+        </tr>
+      `).join("")}
+    </tbody>
+  </table>
+  <p style="font-size:8.5px;color:#9ca3af;margin-top:8px;font-style:italic">
+    ⚠ Vérifiez la liste INCI (ingrédients) de vos produits actuels. Ces substances sont présentes dans de nombreuses crèmes vendues en Afrique sans contrôle.
+  </p>
+</div>
+
+<!-- ══ 5. CONSEILS D'HYGIÈNE ══ -->
+<div class="section">
+  <div class="section-title"><span class="section-icon">💡</span> Conseils d'Hygiène Personnalisés</div>
+  <div class="hygiene-list">
+    ${hygiene.map(h => `<div class="hygiene-item">${h}</div>`).join("")}
+  </div>
+</div>
+
+<!-- ══ 6. ORDONNANCE PERSONNALISÉE ══ -->
+${_bestProduct ? `
+<div class="section">
+  <div class="section-title"><span class="section-icon">📋</span> Ordonnance Personnalisée</div>
+  <div class="ordonnance-header">
+    <div class="ordonnance-icon">🏥</div>
+    <div>
+      <div class="ordonnance-label">Soin prescrit par GlowScan IA — adapté à votre peau</div>
+      <div class="ordonnance-sub">Sélectionné parmi les marques locales de confiance · Résultats visibles en 3–4 semaines</div>
+    </div>
+  </div>
+  <div class="product-card">
+    <div class="product-img-box">✦</div>
+    <div style="flex:1">
+      <div class="product-badge">✓ Validé pour peaux africaines</div>
+      <div class="product-name">${_benefit}</div>
+      <div class="product-price">${_bestProduct.price?.toLocaleString("fr-FR")} FCFA</div>
+      <div class="product-usage">${(_bestProduct.usagePoints || []).slice(0, 3).map((p: string) => `• ${p}`).join("<br>")}</div>
+      <a class="product-wa" href="https://wa.me/${_bestProduct.whatsapp?.replace("+","") || "237674377959"}">
+        📱 Commander via WhatsApp
+      </a>
+    </div>
+  </div>
+</div>
+` : ""}
+
+<!-- ══ 7. PROTOCOLE MATIN / SOIR ══ -->
+${morning.length > 0 || evening.length > 0 ? `
+<div class="section page-break">
+  <div class="section-title"><span class="section-icon">🌿</span> Protocole d'Application Personnalisé</div>
+
+  ${morning.length > 0 ? `
+  <div class="protocol-block">
+    <div class="protocol-label" style="background:#fffbeb;color:#92400e">☀ Rituel du Matin — Protection &amp; Régulation</div>
+    <div class="protocol-steps">
+      ${morning.map((s: any, i: number) => {
+        const step = typeof s === "object" ? s : { step: String(s) };
+        return `<div class="step-row">
+          <div class="step-num">${i+1}</div>
+          <div class="step-content">
+            <div class="step-name">${step.step || ""}</div>
+            ${step.product ? `<div class="step-product">${step.product}</div>` : ""}
+            ${step.why ? `<div class="step-why">${step.why}</div>` : ""}
+          </div>
+        </div>`;
+      }).join("")}
+    </div>
+  </div>
+  ` : ""}
+
+  ${evening.length > 0 ? `
+  <div class="protocol-block">
+    <div class="protocol-label" style="background:#ede9fe;color:#5b21b6">🌙 Rituel du Soir — Réparation Intense</div>
+    <div class="protocol-steps">
+      ${evening.map((s: any, i: number) => {
+        const step = typeof s === "object" ? s : { step: String(s) };
+        return `<div class="step-row">
+          <div class="step-num" style="background:#a78bfa">${i+1}</div>
+          <div class="step-content">
+            <div class="step-name">${step.step || ""}</div>
+            ${step.product ? `<div class="step-product">${step.product}</div>` : ""}
+            ${step.why ? `<div class="step-why">${step.why}</div>` : ""}
+          </div>
+        </div>`;
+      }).join("")}
+    </div>
+  </div>
+  ` : ""}
+</div>
+` : ""}
+
+<!-- Validité -->
+<div class="validity-box">
+  <span class="validity-icon">📅</span>
+  <div class="validity-text">
+    <b>Ce rapport est valable 3 mois</b> à compter du ${date}.<br>
+    Après cette période, refaites une analyse pour suivre l'évolution de votre peau.<br>
+    Réf. consultation : <b>${reportNumber}</b>
+  </div>
+</div>
+
+</div><!-- /body -->
+
+<!-- ══ FOOTER ══ -->
 <div class="footer">
   <div class="footer-text">
-    <div class="footer-disclaimer">Ce rapport est un outil de pré-analyse cutanée généré par IA. Il ne remplace pas une consultation médicale professionnelle.</div>
-    <div class="footer-disclaimer">Refaites votre analyse ou partagez avec vos proches — glow-scan.com</div>
+    <div class="footer-disclaimer">Ce rapport est un outil de pré-analyse cutanée généré par intelligence artificielle GlowScan.</div>
+    <div class="footer-disclaimer">Il ne remplace pas une consultation médicale. Consultez un dermatologue pour tout problème persistant.</div>
     <div class="footer-url">glow-scan.com</div>
   </div>
-  <div class="footer-brand">✦ GlowScan</div>
+  <div>
+    <div class="footer-brand">✦ GlowScan</div>
+    <div class="footer-ref">${reportNumber}</div>
+  </div>
 </div>
 
 </body>
