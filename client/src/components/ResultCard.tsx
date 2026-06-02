@@ -901,50 +901,98 @@ export function ResultCard({ result, scanId, savedScanId, area, imageUrl, userFi
     result.condition.split("").reduce((h, c) => ((h << 5) - h + c.charCodeAt(0)) | 0, 0)
   ).toString(36).slice(0, 5).toUpperCase()}`;
 
-  // ── Ingrédients toxiques selon le diagnostic ──────────────────────────────
+  // ── Ingrédients toxiques — enrichis par antécédents et allergies ─────────
   const getToxicIngredients = () => {
     const c = (result.condition + " " + (result.skinType || "")).toLowerCase();
+    const allergyText = (patientIntake?.allergies || "").toLowerCase();
+    const prevProducts = (patientIntake?.previousProducts || "").toLowerCase();
+
     const base = [
       { name: "Alcool dénat. (Alcohol Denat.)", why: "Détruit le film hydrolipidique, fragilise la barrière cutanée", level: "Élevé" },
       { name: "Sodium Lauryl Sulfate (SLS)", why: "Détergent ultra-agressif — décape la peau et aggrave les rougeurs", level: "Élevé" },
-      { name: "Fragrance / Parfum synthétique", why: "Principale cause d'allergie cutanée et d'irritations chroniques", level: "Moyen" },
+      {
+        name: "Fragrance / Parfum synthétique",
+        why: /parfum|fragrance|fragances/.test(allergyText)
+          ? "⚠ ALLERGIE DÉCLARÉE — Risque de réaction cutanée sévère sur votre peau"
+          : "Principale cause d'allergie cutanée et d'irritations chroniques",
+        level: /parfum|fragrance/.test(allergyText) ? "CRITIQUE" : "Moyen",
+      },
       { name: "Parabènes (Methylparaben, Propylparaben)", why: "Perturbateurs endocriniens suspectés — pénètrent dans la peau", level: "Moyen" },
     ];
+
     const specific: { name: string; why: string; level: string }[] = [];
-    if (/tache|hyperpigment|pih|mélasma/.test(c)) {
+
+    // Basé sur les antécédents produits utilisés
+    if (/éclaircissant|éclaircissante|blanchissant|dépigment|dépigmentant|white|lightening/.test(prevProducts)) {
       specific.push(
-        { name: "Mercure (Mercury / Hg)", why: "Présent dans certaines crèmes africaines — TOXIQUE, neurotoxique, interdit", level: "CRITIQUE" },
-        { name: "Hydroquinone >2%", why: "Rebond pigmentaire sur peaux noires, risque de bleu-grisâtre (ochronose)", level: "Élevé" },
-        { name: "Corticoïdes sans prescription", why: "Amincissement cutané, rebond des taches à l'arrêt", level: "Élevé" },
-        { name: "Huile minérale (Mineral Oil)", why: "Obstrue les pores, emprisonne les pigments oxydés", level: "Moyen" },
+        { name: "Mercure (Mercury / Hg)", why: "Détecté dans certaines crèmes éclaircissantes que vous avez utilisées — TOXIQUE, neurotoxique, interdit au Cameroun", level: "CRITIQUE" },
+        { name: "Hydroquinone >2%", why: "Présent dans les crèmes éclaircissantes — rebond pigmentaire sévère sur peaux noires à l'arrêt", level: "CRITIQUE" },
       );
+    }
+    if (/cortisone|corticoïde|betamethasone|clobetasol/.test(prevProducts)) {
+      specific.push(
+        { name: "Corticoïdes topiques (Betamethasone, Clobetasol)", why: "Produits détectés dans vos antécédents — amincissement cutané irréversible, rebond à l'arrêt", level: "CRITIQUE" },
+      );
+    }
+
+    // Basé sur les allergies déclarées
+    if (/lanoline|lanolin/.test(allergyText)) {
+      specific.push({ name: "Lanoline (Lanolin)", why: "ALLERGIE DÉCLARÉE — Présente dans de nombreuses crèmes hydratantes", level: "CRITIQUE" });
+    }
+    if (/nickel/.test(allergyText)) {
+      specific.push({ name: "Sulfate de nickel", why: "ALLERGIE DÉCLARÉE — Peut être présent dans certains actifs cosmétiques", level: "CRITIQUE" });
+    }
+    if (/propylene|propylène/.test(allergyText)) {
+      specific.push({ name: "Propylene Glycol", why: "ALLERGIE DÉCLARÉE — Solvant très répandu dans les crèmes et lotions", level: "CRITIQUE" });
+    }
+
+    // Basé sur le diagnostic
+    if (/tache|hyperpigment|pih|mélasma/.test(c)) {
+      if (!specific.some(s => s.name.includes("Mercure")))
+        specific.push({ name: "Mercure (Mercury / Hg)", why: "Présent dans certaines crèmes africaines — TOXIQUE, neurotoxique, interdit", level: "CRITIQUE" });
+      if (!specific.some(s => s.name.includes("Hydroquinone")))
+        specific.push({ name: "Hydroquinone >2%", why: "Rebond pigmentaire sur peaux noires, risque d'ochronose (taches bleu-grisâtre permanentes)", level: "Élevé" });
+      if (!specific.some(s => s.name.includes("Corticoïdes")))
+        specific.push({ name: "Corticoïdes sans prescription", why: "Amincissement cutané, rebond immédiat des taches à l'arrêt", level: "Élevé" });
+      specific.push({ name: "Huile minérale (Mineral Oil)", why: "Obstrue les pores, emprisonne les pigments oxydés et ralentit le renouvellement cellulaire", level: "Moyen" });
     }
     if (/acn[eé]|bouton|comédon|imperfection/.test(c)) {
       specific.push(
-        { name: "Huile de coco (visage)", why: "Score comédogène 4/5 — bouche les pores et aggrave l'acné", level: "Élevé" },
-        { name: "Beurre de cacao (visage)", why: "Très comédogène sur le visage — réservé au corps uniquement", level: "Élevé" },
-        { name: "Dimethicone / Silicones", why: "Forment un film occlusif qui emprisonne le sébum et les bactéries", level: "Moyen" },
+        { name: "Huile de coco (visage)", why: "Score comédogène 4/5 — bouche les pores et aggrave directement l'acné", level: "Élevé" },
+        { name: "Beurre de cacao (visage)", why: "Très comédogène sur le visage — réservé strictement au corps", level: "Élevé" },
+        { name: "Dimethicone / Silicones", why: "Créent un film occlusif qui emprisonne sébum et bactéries sous la peau", level: "Moyen" },
         { name: "Isopropyl Myristate", why: "Pénétrant comédogène — présent dans de nombreuses crèmes bon marché", level: "Moyen" },
       );
     }
     if (/sèche|déshydrat|tiraillement/.test(c)) {
       specific.push(
-        { name: "Alcool isopropylique / éthylique", why: "Assèche intensément — contreproductif sur peau déjà déshydratée", level: "Élevé" },
-        { name: "Menthol / Camphre", why: "Sensation fraîche trompeuse — irritants cutanés à éviter", level: "Moyen" },
+        { name: "Alcool isopropylique / éthylique", why: "Assèche intensément — totalement contre-productif sur peau déjà déshydratée", level: "Élevé" },
+        { name: "Menthol / Camphre", why: "Sensation fraîche trompeuse — irritants cutanés qui aggravent la sécheresse", level: "Moyen" },
       );
     }
     if (/sensib|réactiv|rougeur/.test(c)) {
       specific.push(
-        { name: "Rétinol (sans prescription)", why: "Trop puissant pour peaux réactives — inflammations et desquamations", level: "Élevé" },
-        { name: "AHA/BHA en concentration élevée", why: "Exfoliants agressifs qui sur-irritent les peaux déjà réactives", level: "Moyen" },
+        { name: "Rétinol (sans prescription)", why: "Trop puissant pour peaux réactives — provoque inflammations et desquamations", level: "Élevé" },
+        { name: "AHA/BHA en concentration élevée", why: "Exfoliants chimiques agressifs — sur-irritent les peaux déjà réactives", level: "Moyen" },
       );
     }
-    return [...specific, ...base];
+
+    // Dédupliquer par nom
+    const seen = new Set<string>();
+    const all = [...specific, ...base].filter(t => {
+      if (seen.has(t.name)) return false;
+      seen.add(t.name);
+      return true;
+    });
+    return all;
   };
 
-  // ── Conseils d'hygiène personnalisés ──────────────────────────────────────
+  // ── Conseils d'hygiène enrichis par antécédents ────────────────────────────
   const getHygieneAdvice = () => {
     const c = (result.condition + " " + (result.skinType || "")).toLowerCase();
+    const prevProducts = (patientIntake?.previousProducts || "").toLowerCase();
+    const allergies = (patientIntake?.allergies || "").toLowerCase();
+
     const base = [
       "🚿 Nettoyer le visage matin et soir avec de l'eau tiède (jamais chaude — dilate les pores)",
       "☀️ Protection solaire SPF 50+ tous les matins — indispensable sous le soleil équatorial",
@@ -953,6 +1001,20 @@ export function ResultCard({ result, scanId, savedScanId, area, imageUrl, userFi
       "🙌 Ne jamais toucher ou percer les boutons — cicatrices et taches durables sur peaux noires",
     ];
     const specific: string[] = [];
+
+    // Avertissements basés sur les antécédents
+    if (/éclaircissant|éclaircissante|blanchissant/.test(prevProducts)) {
+      specific.push("🚨 ARRÊT IMMÉDIAT des crèmes éclaircissantes actuelles — elles contiennent probablement du mercure ou de l'hydroquinone qui aggravent votre condition");
+    }
+    if (/cortisone|corticoïde/.test(prevProducts)) {
+      specific.push("⚠️ Sevrage progressif des corticoïdes — un arrêt brutal provoque un rebond violent, consultez un dermatologue pour un plan de sevrage");
+    }
+
+    // Avertissements basés sur les allergies
+    if (allergies && allergies !== "aucune" && allergies.trim()) {
+      specific.push(`⚠️ Allergie déclarée (${patientIntake?.allergies}) — vérifiez systématiquement la liste INCI de chaque produit avant application`);
+    }
+
     if (/tache|hyperpigment/.test(c)) {
       specific.push(
         "🕶️ Porter un chapeau ou rester à l'ombre entre 11h et 15h — les UV aggravent activement les taches",
@@ -973,7 +1035,7 @@ export function ResultCard({ result, scanId, savedScanId, area, imageUrl, userFi
         "🧴 Appliquer la crème visage sur peau encore légèrement humide — absorption optimale",
       );
     }
-    return [...specific, ...base].slice(0, 6);
+    return [...specific, ...base].slice(0, 7);
   };
 
   // ── Téléchargement PDF via print window (zéro dépendance, 100% mobile) ──
@@ -988,6 +1050,9 @@ export function ResultCard({ result, scanId, savedScanId, area, imageUrl, userFi
       const evening: any[] = (result as any).protocol?.evening || [];
       const toxics = getToxicIngredients();
       const hygiene = getHygieneAdvice();
+      const pdfBestProduct = _bestProduct;
+      const pdfBenefit = _benefit;
+      const pdfIsLocal = pdfBestProduct?.whatsapp ? LOCAL_WHATSAPP.has(pdfBestProduct.whatsapp) : false;
       const date = new Date().toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
 
       const zoneStatusColor = (s: string) =>
@@ -1184,9 +1249,44 @@ ${(patientIntake?.fullName || patientIntake?.phone || patientIntake?.age) ? `
 </div>
 ` : ""}
 
+<!-- ══ CARTE D'IDENTITÉ PATIENT ══ -->
+<div style="margin:16px 20px 0;border-radius:14px;overflow:hidden;border:2px solid #7c3aed">
+  <div style="background:#0d0a0e;padding:8px 14px;display:flex;justify-content:space-between;align-items:center">
+    <div style="display:flex;align-items:center;gap:8px">
+      <span style="font-size:16px;font-weight:900;color:#7c3aed">✦ GlowScan</span>
+      <span style="font-size:8px;font-weight:700;color:#a78bfa;background:rgba(124,58,237,.2);padding:2px 7px;border-radius:3px">Carte Analyse</span>
+    </div>
+    <span style="font-size:8px;color:#6b7280">Réf. ${reportNumber}</span>
+  </div>
+  <div style="background:#f8f7ff;padding:14px;display:flex;gap:14px;align-items:center">
+    ${imageUrl ? `
+    <div style="position:relative;width:72px;height:72px;border-radius:10px;border:2px solid #7c3aed;overflow:hidden;flex-shrink:0">
+      <img src="${imageUrl}" alt="Photo" style="width:100%;height:100%;object-fit:cover" />
+      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none">
+        <span style="font-size:7px;font-weight:800;color:rgba(255,255,255,0.15);transform:rotate(-30deg)">GlowScan</span>
+      </div>
+    </div>` : `
+    <div style="width:72px;height:72px;border-radius:10px;border:2px solid #7c3aed;background:#f3e8ff;display:flex;align-items:center;justify-content:center;font-size:32px;flex-shrink:0">👤</div>`}
+    <div style="flex:1">
+      <div style="font-size:18px;font-weight:900;color:#0d0a0e;margin-bottom:4px">${userFirstName || "Patient GlowScan"}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:4px">
+        ${patientIntake?.age ? `<span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:4px;background:rgba(124,58,237,.1);color:#7c3aed">${patientIntake.age}</span>` : ""}
+        ${patientIntake?.duration ? `<span style="font-size:8px;padding:2px 6px;border-radius:4px;background:#f3f4f6;color:#6b7280">Depuis : ${patientIntake.duration}</span>` : ""}
+        ${patientIntake?.allergies && patientIntake.allergies.toLowerCase() !== "aucune" ? `<span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:4px;background:rgba(233,30,140,.08);color:#E91E8C">⚠ Allergie : ${patientIntake.allergies}</span>` : ""}
+      </div>
+      ${patientIntake?.previousProducts && patientIntake.previousProducts.toLowerCase() !== "aucun" ? `<div style="font-size:9px;color:#9ca3af">Produits utilisés : ${patientIntake.previousProducts.slice(0,70)}${patientIntake.previousProducts.length>70?"…":""}</div>` : ""}
+    </div>
+    <div style="text-align:center;background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.3);border-radius:10px;padding:8px 10px;flex-shrink:0">
+      <div style="font-size:28px;font-weight:900;color:#7c3aed;line-height:1">${score}</div>
+      <div style="font-size:8px;color:#6b7280">/100</div>
+      <div style="font-size:7px;color:#a78bfa;font-weight:700;margin-top:2px">GLOW</div>
+    </div>
+  </div>
+</div>
+
 <!-- ══ 1. PROFIL CUTANÉ ══ -->
 <div class="section">
-  <div class="section-title"><span class="section-icon">🧬</span> Votre Profil Cutané</div>
+  <div class="section-title"><span class="section-icon">🧬</span> Compréhension Approfondie de Votre Peau</div>
   <div class="profile-card">
     ${imageUrl
       ? `<img src="${imageUrl}" class="profile-photo" alt="Photo analyse" />`
@@ -1341,6 +1441,82 @@ ${morning.length > 0 || evening.length > 0 ? `
     </div>
   </div>
   ` : ""}
+</div>
+` : ""}
+
+<!-- ══ 🚫 INGRÉDIENTS TOXIQUES À BANNIR ══ -->
+<div class="section">
+  <div class="section-title"><span class="section-icon">🚫</span> Ingrédients Toxiques à Bannir Absolument</div>
+  ${patientIntake?.allergies && patientIntake.allergies.toLowerCase() !== "aucune"
+    ? `<div style="background:#fef2f2;border:1px solid #fecdd3;border-radius:8px;padding:8px 12px;margin-bottom:8px;font-size:9px;color:#b91c1c;font-weight:700">
+      ⚠ Allergie déclarée : ${patientIntake.allergies} — ingrédients marqués CRITIQUE en priorité
+    </div>` : ""}
+  <table style="width:100%;border-collapse:collapse">
+    <thead>
+      <tr style="background:#0d0a0e">
+        <th style="padding:6px 8px;text-align:left;font-size:8px;color:#f3f0ff;font-weight:700;width:32%">Ingrédient</th>
+        <th style="padding:6px 8px;text-align:left;font-size:8px;color:#f3f0ff;font-weight:700;width:13%">Risque</th>
+        <th style="padding:6px 8px;text-align:left;font-size:8px;color:#f3f0ff;font-weight:700">Pourquoi l'éviter</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${toxics.map((t, i) => `
+      <tr style="background:${i%2===0?"#fafafa":"#fff"}">
+        <td style="padding:6px 8px;font-size:9px;font-weight:700;color:#1f2937;border-bottom:1px solid #f3f4f6">${t.name}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid #f3f4f6">
+          <span style="font-size:8px;font-weight:800;padding:2px 6px;border-radius:3px;
+            background:${t.level==="CRITIQUE"?"#fef2f2":t.level==="Élevé"?"#fdf2f8":"#fffbeb"};
+            color:${t.level==="CRITIQUE"?"#dc2626":t.level==="Élevé"?"#E91E8C":"#f59e0b"}">
+            ${t.level}
+          </span>
+        </td>
+        <td style="padding:6px 8px;font-size:9px;color:#6b7280;line-height:1.4;border-bottom:1px solid #f3f4f6">${t.why}</td>
+      </tr>`).join("")}
+    </tbody>
+  </table>
+  <p style="font-size:8px;color:#9ca3af;margin-top:6px;font-style:italic">
+    Vérifiez la liste INCI de vos produits actuels — ces substances sont présentes dans de nombreuses crèmes vendues sans contrôle en Afrique.
+  </p>
+</div>
+
+<!-- ══ 💡 CONSEILS D'HYGIÈNE PERSONNALISÉS ══ -->
+<div class="section">
+  <div class="section-title"><span class="section-icon">💡</span> Conseils d'Hygiène Personnalisés</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+    ${hygiene.map(h => `
+    <div style="padding:8px 10px;border-radius:8px;font-size:9.5px;line-height:1.5;
+      background:${h.startsWith("🚨")||h.startsWith("⚠️")?"rgba(220,38,38,.06)":"rgba(16,185,129,.06)"};
+      border:1px solid ${h.startsWith("🚨")||h.startsWith("⚠️")?"rgba(220,38,38,.2)":"rgba(16,185,129,.2)"};
+      color:${h.startsWith("🚨")||h.startsWith("⚠️")?"#b91c1c":"#166534"}">
+      ${h}
+    </div>`).join("")}
+  </div>
+</div>
+
+<!-- ══ 🛍️ ORDONNANCE PERSONNALISÉE — VOTRE COLIS ══ -->
+${pdfBestProduct ? `
+<div class="section">
+  <div class="section-title"><span class="section-icon">🛍️</span> Ordonnance Personnalisée — Votre Colis GlowScan</div>
+  <div style="background:linear-gradient(135deg,rgba(124,58,237,.06),rgba(233,30,140,.03));border:1.5px solid rgba(124,58,237,.25);border-radius:12px;padding:14px">
+    <div style="font-size:8px;font-weight:700;color:#a78bfa;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">
+      ${pdfIsLocal ? `Marque locale · ${getProductBrand(pdfBestProduct)}` : "Dermocosmétique certifié"}
+    </div>
+    <div style="font-size:14px;font-weight:800;color:#0d0a0e;margin-bottom:4px">${pdfBenefit}</div>
+    <div style="font-size:16px;font-weight:900;color:#E91E8C;margin-bottom:8px">${pdfBestProduct.price?.toLocaleString("fr-FR")} FCFA</div>
+    ${(pdfBestProduct.usagePoints||[]).slice(0,3).map((p: string) => `
+    <div style="display:flex;gap:6px;margin-bottom:4px;font-size:9px;color:#374151">
+      <span style="color:#7c3aed;font-weight:700">✓</span>${p}
+    </div>`).join("")}
+    <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(124,58,237,.15)">
+      <div style="font-size:9px;color:#6b7280;margin-bottom:4px">
+        Ce produit a été sélectionné selon votre diagnostic, vos antécédents et votre type de peau.
+        ${patientIntake?.allergies && patientIntake.allergies.toLowerCase() !== "aucune" ? `Il ne contient pas les ingrédients auxquels vous êtes allergique(e).` : ""}
+      </div>
+      <div style="display:inline-flex;align-items:center;gap:5px;background:#25D366;color:#fff;font-size:9px;font-weight:700;padding:5px 12px;border-radius:6px">
+        📱 Commander via WhatsApp — Livraison à Douala
+      </div>
+    </div>
+  </div>
 </div>
 ` : ""}
 
@@ -1773,6 +1949,96 @@ ${morning.length > 0 || evening.length > 0 ? `
         transition={{ duration: 0.35 }}
         style={{ display: "flex", flexDirection: "column", gap: "16px" }}
       >
+        {/* ═══ BLOC 0 — Carte d'identité patient ═══ */}
+        {(imageUrl || userFirstName || patientIntake?.age) && (
+          <div style={{
+            borderRadius: "20px", overflow: "hidden",
+            border: "1px solid rgba(167,139,250,0.25)",
+            background: "linear-gradient(135deg, rgba(124,58,237,0.08), rgba(233,30,140,0.04))",
+          }}>
+            {/* Bandeau header */}
+            <div style={{
+              background: "#0d0a0e", padding: "10px 16px",
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <span style={{ fontSize: "12px", fontWeight: 800, color: "#7c3aed" }}>✦ GlowScan</span>
+                <span style={{ fontSize: "9px", padding: "1px 7px", borderRadius: "4px", background: "rgba(124,58,237,0.2)", color: "#a78bfa", fontWeight: 700 }}>
+                  Carte Analyse
+                </span>
+              </div>
+              <span style={{ fontSize: "8px", color: "rgba(255,255,255,0.3)", fontWeight: 600 }}>
+                {new Date().toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
+              </span>
+            </div>
+            {/* Contenu carte */}
+            <div style={{ padding: "14px 16px", display: "flex", gap: "14px", alignItems: "center" }}>
+              {/* Photo ID */}
+              <div style={{
+                width: "72px", height: "72px", borderRadius: "12px", flexShrink: 0,
+                border: "2px solid #7c3aed", overflow: "hidden",
+                background: "rgba(124,58,237,0.1)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                position: "relative",
+              }}>
+                {imageUrl
+                  ? <img src={imageUrl} alt="Photo analyse" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  : <span style={{ fontSize: "28px" }}>👤</span>
+                }
+                {/* Watermark */}
+                <div style={{
+                  position: "absolute", inset: 0, display: "flex",
+                  alignItems: "center", justifyContent: "center", pointerEvents: "none",
+                }}>
+                  <span style={{ fontSize: "7px", fontWeight: 800, color: "rgba(255,255,255,0.15)", transform: "rotate(-30deg)", userSelect: "none" }}>
+                    GlowScan
+                  </span>
+                </div>
+              </div>
+              {/* Infos */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                {userFirstName && (
+                  <p style={{ fontSize: "16px", fontWeight: 800, color: DS.textPrimary, marginBottom: "3px" }}>
+                    {userFirstName}
+                  </p>
+                )}
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginBottom: "5px" }}>
+                  {patientIntake?.age && (
+                    <span style={{ fontSize: "9px", fontWeight: 700, padding: "2px 7px", borderRadius: "4px", background: "rgba(124,58,237,0.1)", color: DS.violetLight }}>
+                      {patientIntake.age}
+                    </span>
+                  )}
+                  {patientIntake?.duration && (
+                    <span style={{ fontSize: "9px", fontWeight: 700, padding: "2px 7px", borderRadius: "4px", background: "rgba(255,255,255,0.06)", color: DS.textMuted }}>
+                      Problème depuis : {patientIntake.duration}
+                    </span>
+                  )}
+                  {patientIntake?.allergies && patientIntake.allergies.toLowerCase() !== "aucune" && (
+                    <span style={{ fontSize: "9px", fontWeight: 700, padding: "2px 7px", borderRadius: "4px", background: "rgba(233,30,140,0.1)", color: "#f9a8d4" }}>
+                      ⚠ Allergie : {patientIntake.allergies}
+                    </span>
+                  )}
+                </div>
+                {patientIntake?.previousProducts && patientIntake.previousProducts.toLowerCase() !== "aucun" && (
+                  <p style={{ fontSize: "9px", color: DS.textMuted, lineHeight: 1.4 }}>
+                    Produits utilisés : {patientIntake.previousProducts.slice(0, 60)}{patientIntake.previousProducts.length > 60 ? "…" : ""}
+                  </p>
+                )}
+              </div>
+              {/* Score compact */}
+              <div style={{
+                textAlign: "center", padding: "8px 10px", borderRadius: "10px",
+                background: "rgba(124,58,237,0.12)", border: "1px solid rgba(124,58,237,0.25)",
+                flexShrink: 0,
+              }}>
+                <p style={{ fontSize: "24px", fontWeight: 900, color: "#7c3aed", lineHeight: 1 }}>{result.score}</p>
+                <p style={{ fontSize: "8px", color: DS.textMuted, fontWeight: 700 }}>/100</p>
+                <p style={{ fontSize: "7px", color: "#a78bfa", fontWeight: 700, marginTop: "2px" }}>GLOW</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ═══ BLOC 1 — Diagnostic principal ═══ */}
         <div
           data-testid="block-diagnostic"
@@ -1873,20 +2139,20 @@ ${morning.length > 0 || evening.length > 0 ? `
 
           return (
             <div data-testid="block-conversion-tunnel" style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <div style={{
-                  width: "28px", height: "28px", borderRadius: "8px",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  background: "rgba(233,30,140,0.12)", border: "1px solid rgba(233,30,140,0.25)",
-                }}>
-                  <Sparkles style={{ width: "13px", height: "13px", color: "#f9a8d4" }} />
+              {/* Header ordonnance */}
+              <div style={{ background: "rgba(233,30,140,0.06)", border: "1px solid rgba(233,30,140,0.2)", borderRadius: "14px", padding: "12px 14px", marginBottom: "2px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
+                  <span style={{ fontSize: "16px" }}>🛍️</span>
+                  <div>
+                    <p style={{ fontSize: "13px", fontWeight: 800, color: DS.textPrimary }}>Ton ordonnance personnalisée GlowScan</p>
+                    <p style={{ fontSize: "9px", color: "rgba(249,168,212,0.8)", fontWeight: 600 }}>
+                      {isLocal ? `Marque locale · ${getProductBrand(bestProduct)}` : "Dermocosmétique certifié"} · Résultats en 3–4 semaines
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p style={{ fontSize: "13px", fontWeight: 800, color: DS.textPrimary }}>Le soin recommandé pour toi</p>
-                  <p style={{ fontSize: "10px", color: DS.textMuted }}>
-                    Sélectionné par l'IA · {isLocal ? "Marque locale" : "Dermocosmétique"} · Résultats en 3–4 sem.
-                  </p>
-                </div>
+                <p style={{ fontSize: "10px", color: DS.textBody, lineHeight: 1.5 }}>
+                  Ce produit a été sélectionné par l'IA en fonction de ton diagnostic, tes antécédents et ton type de peau. Si tu décides de commander, ton colis sera préparé et livré directement chez toi à Douala.
+                </p>
               </div>
 
               <ProductRecommendationCard
@@ -2422,6 +2688,77 @@ ${morning.length > 0 || evening.length > 0 ? `
             </div>
           </div>
         )}
+
+        {/* ═══ BLOC 7bis — 🚫 Ingrédients toxiques à bannir ═══ */}
+        {(() => {
+          const toxics = getToxicIngredients();
+          const levelColor = (l: string) => l === "CRITIQUE" ? "#dc2626" : l === "Élevé" ? "#E91E8C" : "#f59e0b";
+          const levelBg = (l: string) => l === "CRITIQUE" ? "rgba(220,38,38,0.08)" : l === "Élevé" ? "rgba(233,30,140,0.08)" : "rgba(245,158,11,0.08)";
+          const levelBorder = (l: string) => l === "CRITIQUE" ? "rgba(220,38,38,0.25)" : l === "Élevé" ? "rgba(233,30,140,0.2)" : "rgba(245,158,11,0.2)";
+          return (
+            <div data-testid="block-toxics" style={{ ...DS.subtleCard, padding: "20px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "14px" }}>
+                <div style={{ width: "28px", height: "28px", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(220,38,38,0.1)", border: "1px solid rgba(220,38,38,0.2)" }}>
+                  <span style={{ fontSize: "14px" }}>🚫</span>
+                </div>
+                <div>
+                  <p style={{ fontSize: "13px", fontWeight: 800, color: DS.textPrimary }}>Ingrédients à bannir absolument</p>
+                  <p style={{ fontSize: "10px", color: DS.textMuted }}>
+                    {patientIntake?.allergies && patientIntake.allergies.toLowerCase() !== "aucune"
+                      ? `Adaptés à votre profil · Allergie déclarée : ${patientIntake.allergies}`
+                      : "Adaptés à votre diagnostic cutané"}
+                  </p>
+                </div>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                {toxics.map((t, i) => (
+                  <div key={i} style={{ display: "flex", gap: "10px", alignItems: "flex-start", padding: "8px 10px", borderRadius: "10px", background: levelBg(t.level), border: `1px solid ${levelBorder(t.level)}` }}>
+                    <span style={{ fontSize: "9px", fontWeight: 800, padding: "2px 6px", borderRadius: "4px", background: levelBg(t.level), color: levelColor(t.level), border: `1px solid ${levelBorder(t.level)}`, whiteSpace: "nowrap", flexShrink: 0, marginTop: "1px" }}>
+                      {t.level}
+                    </span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: "11px", fontWeight: 700, color: DS.textPrimary, marginBottom: "1px" }}>{t.name}</p>
+                      <p style={{ fontSize: "10px", color: DS.textBody, lineHeight: 1.4 }}>{t.why}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p style={{ fontSize: "9px", color: DS.textMuted, marginTop: "10px", fontStyle: "italic" }}>
+                Vérifie la liste INCI (ingrédients) de tes produits actuels — ces substances sont présentes dans de nombreuses crèmes vendues sans contrôle en Afrique.
+              </p>
+            </div>
+          );
+        })()}
+
+        {/* ═══ BLOC 7ter — 💡 Conseils d'hygiène personnalisés ═══ */}
+        {(() => {
+          const hygiene = getHygieneAdvice();
+          return (
+            <div data-testid="block-hygiene" style={{ ...DS.subtleCard, padding: "20px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
+                <div style={{ width: "28px", height: "28px", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.25)" }}>
+                  <span style={{ fontSize: "14px" }}>💡</span>
+                </div>
+                <div>
+                  <p style={{ fontSize: "13px", fontWeight: 800, color: DS.textPrimary }}>Conseils d'hygiène personnalisés</p>
+                  <p style={{ fontSize: "10px", color: DS.textMuted }}>Adaptés à votre mode de vie et votre condition</p>
+                </div>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "6px" }}>
+                {hygiene.map((h, i) => (
+                  <div key={i} style={{
+                    padding: "8px 12px", borderRadius: "10px", fontSize: "11px", color: "#166534", lineHeight: 1.55,
+                    background: h.startsWith("🚨") || h.startsWith("⚠️") ? "rgba(220,38,38,0.07)" : "rgba(16,185,129,0.07)",
+                    border: `1px solid ${h.startsWith("🚨") || h.startsWith("⚠️") ? "rgba(220,38,38,0.2)" : "rgba(16,185,129,0.2)"}`,
+                    color: h.startsWith("🚨") || h.startsWith("⚠️") ? "#b91c1c" : "#166534",
+                  }}>
+                    {h}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* ═══ BLOC 7b — Double pack cheveux (Ebony Hair + Hair Bloom) ═══ */}
         {currentArea === "cheveux" && hairPacks.length > 0 && (
