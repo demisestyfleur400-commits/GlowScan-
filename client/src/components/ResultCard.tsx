@@ -67,6 +67,87 @@ import { useSubscription } from "@/hooks/use-subscription";
 
 const productImages = centralProductImages;
 
+// ─── Priorité marques locales ────────────────────────────────────────
+const LOCAL_WHATSAPP = new Set([
+  "+237658651775", // Andrea Skincare
+  "+237688978963", // Hair Bloom
+  "+237655728663", // Ebony Hair
+]);
+
+// ─── Image du produit — priorité: productImages.ts > catalog.image > null ──
+function getProductImage(product: typeof catalog[0]): string | undefined {
+  return productImages[product.id] || (product as any).image || undefined;
+}
+
+// ─── Placeholder visuel quand pas d'image ────────────────────────────
+function ProductImagePlaceholder({ area }: { area: "visage" | "corps" | "cheveux" }) {
+  const emoji = area === "cheveux" ? "💆" : area === "corps" ? "🧴" : "✨";
+  return (
+    <div style={{
+      width: "100%", height: "100%",
+      display: "flex", flexDirection: "column",
+      alignItems: "center", justifyContent: "center",
+      gap: "4px",
+      background: "linear-gradient(135deg, rgba(124,58,237,0.12), rgba(233,30,140,0.06))",
+    }}>
+      <span style={{ fontSize: "28px" }}>{emoji}</span>
+      <span style={{ fontSize: "7px", fontWeight: 800, letterSpacing: "0.1em", color: "rgba(167,139,250,0.5)" }}>
+        GlowScan
+      </span>
+    </div>
+  );
+}
+
+// ─── Meilleur produit unique adapté au diagnostic ────────────────────
+function findBestSingleProduct(
+  condition: string,
+  skinType: string | undefined,
+  area: "visage" | "corps" | "cheveux"
+): typeof catalog[0] | null {
+  const searchText = `${condition} ${skinType || ""}`.toLowerCase();
+
+  const pool = catalog.filter(p => {
+    if (p.id.startsWith("kit-")) return false;
+    if (area === "cheveux") return p.category === "cheveux";
+    if (area === "corps") return p.category === "corps";
+    return p.category === "visage";
+  });
+
+  const scored = pool.map(p => {
+    let score = 0;
+
+    // Score par mots-clés des targets
+    for (const t of p.targets) {
+      if (searchText.includes(t.toLowerCase())) score += 3;
+    }
+
+    // Score par mots du nom/description du produit qui matchent le diagnostic
+    const blob = `${p.name} ${p.description}`.toLowerCase();
+    const diagWords = searchText.split(/\s+/).filter(w => w.length > 3);
+    for (const w of diagWords) {
+      if (blob.includes(w)) score += 1;
+    }
+
+    // BOOST ×3 pour marques locales (Andrea, Hair Bloom, Ebony Hair)
+    if (p.whatsapp && LOCAL_WHATSAPP.has(p.whatsapp)) score *= 3;
+
+    // Bonus si le produit a une image (évite les placeholders)
+    if (getProductImage(p)) score += 2;
+
+    return { product: p, score };
+  });
+
+  // Trier par score décroissant
+  scored.sort((a, b) => b.score - a.score);
+
+  // Retourner le meilleur — s'il a un score > 0, sinon premier du pool local
+  if (scored[0]?.score > 0) return scored[0].product;
+
+  // Fallback : premier produit local avec un numéro WhatsApp
+  const localFallback = pool.find(p => p.whatsapp && LOCAL_WHATSAPP.has(p.whatsapp));
+  return localFallback || pool[0] || null;
+}
+
 // ─── Preuve sociale (déterministe) pour produits locaux ─────────────
 const SOCIAL_PROOF: Record<string, number> = {
   "creme-visage": 31, "serum-jeunesse": 27, "gel-contour-yeux": 19,
@@ -322,26 +403,26 @@ function ProductRecommendationCard({
           width: "80px", height: "80px", borderRadius: "14px",
           flexShrink: 0, overflow: "hidden", position: "relative",
           border: "1px solid rgba(124,58,237,0.45)",
-          background: "rgba(124,58,237,0.08)",
-          display: "flex", alignItems: "center", justifyContent: "center",
         }}>
           {photo
             ? <img src={photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-            : <Sparkles style={{ width: "24px", height: "24px", color: "rgba(167,139,250,0.35)" }} />
+            : <ProductImagePlaceholder area={zone as any} />
           }
           {/* Watermark GlowScan */}
-          <div style={{
-            position: "absolute", inset: 0, display: "flex",
-            alignItems: "center", justifyContent: "center", pointerEvents: "none",
-          }}>
-            <span style={{
-              fontSize: "8px", fontWeight: 800, letterSpacing: "0.12em",
-              color: "rgba(255,255,255,0.15)", transform: "rotate(-30deg)",
-              userSelect: "none",
+          {photo && (
+            <div style={{
+              position: "absolute", inset: 0, display: "flex",
+              alignItems: "center", justifyContent: "center", pointerEvents: "none",
             }}>
-              GlowScan
-            </span>
-          </div>
+              <span style={{
+                fontSize: "8px", fontWeight: 800, letterSpacing: "0.12em",
+                color: "rgba(255,255,255,0.15)", transform: "rotate(-30deg)",
+                userSelect: "none",
+              }}>
+                GlowScan
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Texte */}
@@ -1605,15 +1686,35 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
           </div>
         )}
 
-        {/* ═══ BLOC 7 — Ordonnance produits (max 3 cartes) ═══ */}
-        {routineProducts.length > 0 && (() => {
+        {/* ═══ BLOC 7 — 1 seul produit recommandé ═══ */}
+        {(() => {
+          const bestProduct = findBestSingleProduct(result.condition, result.skinType, currentArea);
+          if (!bestProduct) return null;
+
           const zoneLabel = getAffectedZoneLabel(result.zones || []);
-          const top3 = routineProducts.slice(0, 3);
+          const roleKey = (() => {
+            const n = bestProduct.name.toLowerCase();
+            if (/savon|soap|gel|shampoo|shampoing|nettoyant|purif|gommage|mousse/.test(n)) return "nettoyant" as const;
+            if (/sérum|serum|huile|lotion|tonic|tonique|potion|bha|spray|essence/.test(n)) return "serum" as const;
+            return "creme" as const;
+          })();
+
+          const benefit = getBenefitLabel(roleKey, result.condition, currentArea);
+          const copy = getDiagnosisCopy(result.condition, zoneLabel);
+          const img = getProductImage(bestProduct);
+          const social = getSocialProof(bestProduct.id);
+          const isLocal = bestProduct.whatsapp ? LOCAL_WHATSAPP.has(bestProduct.whatsapp) : false;
+
+          // Construction du message WhatsApp
+          const waNumber = bestProduct.whatsapp?.replace("+", "") || "237674377959";
+          const waMsg = encodeURIComponent(
+            `Bonjour GlowScan 👋\n\nMon analyse a révélé : *${result.condition}*\n\nJe veux commander :\n• ${benefit}\n  Prix : ${bestProduct.price?.toLocaleString("fr-FR")} FCFA\n\nLivraison à Douala SVP 🙏`
+          );
 
           return (
-            <div data-testid="block-conversion-tunnel" style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+            <div data-testid="block-conversion-tunnel" style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
 
-              {/* Header ordonnance */}
+              {/* Header */}
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                 <div style={{
                   width: "28px", height: "28px", borderRadius: "8px",
@@ -1623,79 +1724,60 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
                   <Sparkles style={{ width: "13px", height: "13px", color: "#f9a8d4" }} />
                 </div>
                 <div>
-                  <p style={{ fontSize: "13px", fontWeight: 800, color: DS.textPrimary }}>Ton ordonnance GlowScan</p>
-                  <p style={{ fontSize: "10px", color: DS.textMuted }}>Calibrée pour ton profil · Résultats en 3–4 semaines</p>
+                  <p style={{ fontSize: "13px", fontWeight: 800, color: DS.textPrimary }}>
+                    Le soin recommandé pour toi
+                  </p>
+                  <p style={{ fontSize: "10px", color: DS.textMuted }}>
+                    Sélectionné par l'IA · {isLocal ? "Marque locale" : "Dermocosmétique"} · Résultats en 3–4 sem.
+                  </p>
                 </div>
               </div>
 
-              {/* 3 cartes produits */}
-              {top3.map(({ product, why }, idx) => {
-                const roleKey = (() => {
-                  const n = product.name.toLowerCase();
-                  if (/savon|soap|gel de douche|gel douche|gommage|shampoo|shampoing|nettoyant|purif/.test(n)) return "nettoyant" as const;
-                  if (/sérum|serum|huile|oil|lotion|tonic|tonique|potion|bha|spray/.test(n)) return "serum" as const;
-                  return "creme" as const;
-                })();
-                const benefit = getBenefitLabel(roleKey, result.condition, currentArea);
-                const copy = getDiagnosisCopy(result.condition, zoneLabel);
-                const img = productImages[product.id] || product.image;
-                const social = getSocialProof(product.id);
+              {/* La carte produit unique */}
+              <ProductRecommendationCard
+                photo={img}
+                benefit={benefit}
+                zone={zoneLabel}
+                diagnosis={copy}
+                price={bestProduct.price || 0}
+                delay={0}
+                onOrder={() => {
+                  // Lien WhatsApp direct — pas de modal, 1 seul clic
+                  window.open(`https://wa.me/${waNumber}?text=${waMsg}`, "_blank", "noopener,noreferrer");
+                }}
+              />
 
-                return (
-                  <ProductRecommendationCard
-                    key={product.id}
-                    photo={img}
-                    benefit={benefit}
-                    zone={zoneLabel}
-                    diagnosis={copy}
-                    price={product.price || 0}
-                    delay={idx * 0.15}
-                    onOrder={() => {
-                      setOrderModalItems([{
-                        productId: product.id,
-                        productName: product.name,
-                        brand: getProductBrand(product),
-                        price: product.price,
-                        sourceRef: product.sourceRef,
-                      }]);
-                      setOrderModalTitle(benefit);
-                      setShowOrderModal(true);
-                    }}
-                  />
-                );
-              })}
+              {/* Preuve sociale */}
+              <p style={{ fontSize: "10px", textAlign: "center", color: DS.textMuted }}>
+                ⭐ <strong style={{ color: DS.textBody }}>{social.count} femmes de {social.city}</strong> ont commandé ce soin ce mois
+              </p>
 
-              {/* Badge réservation 24h */}
+              {/* Badge réservation */}
               <div style={{
-                padding: "12px 16px",
-                borderRadius: "14px",
-                display: "flex",
-                alignItems: "center",
-                gap: "10px",
-                background: "rgba(124,58,237,0.08)",
-                border: "1px solid rgba(124,58,237,0.2)",
+                padding: "10px 14px", borderRadius: "12px",
+                display: "flex", alignItems: "center", gap: "8px",
+                background: "rgba(124,58,237,0.08)", border: "1px solid rgba(124,58,237,0.18)",
               }}>
-                <span style={{ fontSize: "16px", flexShrink: 0 }}>🔒</span>
-                <p style={{ fontSize: "12px", fontWeight: 700, color: DS.violetLight, lineHeight: 1.4 }}>
-                  Ces produits sont réservés 24h pour toi
-                  <span style={{ display: "block", fontSize: "10px", fontWeight: 500, color: DS.textMuted, marginTop: "2px" }}>
+                <span style={{ fontSize: "14px", flexShrink: 0 }}>🔒</span>
+                <p style={{ fontSize: "11px", fontWeight: 700, color: DS.violetLight }}>
+                  Ce soin est réservé 24h pour toi
+                  <span style={{ display: "block", fontSize: "10px", fontWeight: 500, color: DS.textMuted, marginTop: "1px" }}>
                     Commande maintenant pour garantir la disponibilité
                   </span>
                 </p>
               </div>
 
-              {/* Action secondaire — partager ordonnance */}
+              {/* Lien partager ordonnance */}
               <button
                 onClick={() => setShowRoutineCard(true)}
                 style={{
-                  width: "100%", padding: "8px",
-                  fontSize: "11px", fontWeight: 700,
-                  textAlign: "center", textDecoration: "underline",
-                  background: "transparent", border: "none",
-                  cursor: "pointer", color: DS.textMuted,
+                  width: "100%", padding: "6px",
+                  fontSize: "11px", fontWeight: 700, textAlign: "center",
+                  textDecoration: "underline", background: "transparent",
+                  border: "none", cursor: "pointer", color: DS.textMuted,
                 }}
               >
-                Enregistrer ou partager mon ordonnance
+                Partager mon ordonnance
               </button>
             </div>
           );
