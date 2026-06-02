@@ -17,6 +17,7 @@ import {
   useValidateScan,
   useDeletePatient,
   useProAccount,
+  useUpdatePatientStatus,
 } from "@/hooks/use-pro";
 import { ProLayout, ProCard, ProInput, StatusBadge } from "@/components/ProLayout";
 import { useToast } from "@/hooks/use-toast";
@@ -40,6 +41,7 @@ export default function ProPatient() {
   const { data: accData } = useProAccount();
   const validate = useValidateScan();
   const del = useDeletePatient();
+  const updateStatus = useUpdatePatientStatus();
   const { toast } = useToast();
   const [validatingId, setValidatingId] = useState<number | null>(null);
   const [validateNote, setValidateNote] = useState("");
@@ -70,7 +72,140 @@ export default function ProPatient() {
     window.open(`https://wa.me/${phone}?text=${msg}`, "_blank");
   };
 
-  const exportPdf = () => window.open(`/api/pro/patients/${p.id}/pdf`, "_blank");
+  const exportPdf = () => {
+    const date = new Date().toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+    const refNum = `GS-PRO-${new Date().getFullYear()}-${p.id.toString().padStart(5,"0")}`;
+    const lastResult = (lastScan?.recommendations as any) || {};
+    const morning: any[] = (lastResult as any)?.protocol?.morning || (lastScan as any)?.protocol?.morning || [];
+    const evening: any[] = (lastResult as any)?.protocol?.evening || (lastScan as any)?.protocol?.evening || [];
+    const allScans = scans || [];
+
+    const renderStep = (s: any, i: number) => {
+      const st = typeof s === "object" ? s : { step: String(s) };
+      return `<div style="display:flex;gap:8px;margin-bottom:6px;align-items:flex-start">
+        <div style="min-width:20px;height:20px;border-radius:50%;background:#7c3aed;color:#fff;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">${i+1}</div>
+        <div><div style="font-size:11px;font-weight:700;color:#1f2937">${st.step||""}</div>${st.product?`<div style="font-size:10px;color:#7c3aed">${st.product}</div>`:""}</div>
+      </div>`;
+    };
+
+    const statusLabel = (s: string) => ({
+      priority:"Priorité haute", monitoring:"En suivi", stable:"Stable",
+      resolved:"Résolu", red:"Attention", yellow:"Suivi", green:"Stable"
+    }[s] || s);
+
+    const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
+<title>GlowScan Pro — Dossier ${p.firstName} ${p.lastName}</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif;color:#1f2937;background:#fff;font-size:12px}
+@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}.no-print{display:none!important}@page{margin:0}}
+.header{background:#0d0a0e;padding:18px 24px;display:flex;justify-content:space-between}
+.brand{font-size:20px;font-weight:900;color:#7c3aed}.pro-badge{font-size:9px;font-weight:700;color:#a78bfa;background:rgba(124,58,237,.2);padding:2px 8px;border-radius:4px;margin-top:3px;display:inline-block}
+.h-title{font-size:13px;font-weight:700;color:#f3f0ff;margin:4px 0 2px}.h-sub{font-size:8px;color:#a78bfa;margin-bottom:8px}.h-meta{font-size:8px;color:#6b7280}
+.stamp{border:2px solid #7c3aed;border-radius:8px;padding:8px 12px;text-align:center;min-width:90px}
+.stamp-t{font-size:8px;font-weight:700;color:#a78bfa;text-transform:uppercase}.stamp-v{font-size:16px;font-weight:900;color:#7c3aed}
+.body{padding:16px 24px}.section{margin-top:14px}
+.sec-title{font-size:10px;font-weight:800;color:#7c3aed;letter-spacing:.7px;text-transform:uppercase;padding-bottom:4px;border-bottom:2px solid #e8e3ff;margin-bottom:8px}
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;background:#f8f7ff;border:1px solid #e8e3ff;border-radius:8px;padding:12px}
+.lbl{font-size:8px;color:#7c3aed;font-weight:700;text-transform:uppercase;letter-spacing:.05em}.val{font-size:12px;font-weight:700;color:#0d0a0e}
+.scan-row{display:grid;grid-template-columns:90px 60px 1fr auto;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;border:1px solid #e8e3ff;margin-bottom:4px}
+.scan-date{font-size:9px;color:#6b7280}.scan-score{font-size:18px;font-weight:900;color:#7c3aed;text-align:center}
+.scan-cond{font-size:10px;font-weight:700;color:#1f2937}.scan-sev{font-size:8px;padding:1px 6px;border-radius:4px}
+.evol-box{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px;display:flex;align-items:center;gap:12px}
+.clin-box{background:#f3f4f6;border:1px solid #d1d5db;border-radius:8px;padding:10px;font-size:10px;line-height:1.7;color:#374151}
+.protocol-lbl{font-size:9px;font-weight:700;padding:5px 8px;border-radius:5px;margin-bottom:6px}
+.footer{background:#0d0a0e;padding:12px 24px;display:flex;align-items:center;gap:12px;margin-top:16px}
+.f-text{flex:1;font-size:7px;color:#a78bfa;line-height:1.5}.f-brand{font-size:13px;font-weight:900;color:#7c3aed}
+.cta-btn{display:block;text-align:center;background:#7c3aed;color:#fff;padding:10px;border-radius:8px;font-weight:800;font-size:13px;border:none;cursor:pointer;width:100%;margin:12px 0 4px}
+.validity{background:#fffbeb;border:1px solid #fef3c7;border-radius:8px;padding:8px 12px;font-size:9px;color:#92400e;margin-top:12px}
+</style></head><body>
+<div class="header">
+  <div>
+    <div class="brand">✦ GlowScan</div>
+    <div class="pro-badge">PRO — Dossier Patient</div>
+    <div class="h-title">Dossier de Consultation — ${p.firstName} ${p.lastName}</div>
+    <div class="h-sub">Cabinet ${dermato?.cabinetName || "GlowScan Pro"} · ${dermato?.fullName || "Dermatologue"}</div>
+    <div class="h-meta">Généré le : <b style="color:#a78bfa">${date}</b> &nbsp;|&nbsp; Réf : <b style="color:#a78bfa">${refNum}</b></div>
+  </div>
+  <div class="stamp"><div class="stamp-t">Dossier</div><div class="stamp-v">Pro</div><div class="stamp-t">GlowScan</div></div>
+</div>
+<div class="body">
+  <div class="no-print" style="text-align:center;padding:12px 0 4px">
+    <button class="cta-btn" onclick="window.print()">⬇ Télécharger en PDF</button>
+    <p style="font-size:10px;color:#9ca3af">Enregistrer en PDF dans le menu d'impression</p>
+  </div>
+
+  <div class="section">
+    <div class="sec-title">👤 Informations Patient</div>
+    <div class="info-grid">
+      <div><div class="lbl">Nom complet</div><div class="val">${p.firstName} ${p.lastName}</div></div>
+      <div><div class="lbl">Téléphone</div><div class="val">${p.whatsappNumber || "—"}</div></div>
+      <div><div class="lbl">Âge</div><div class="val">${p.age ? p.age + " ans" : "—"}</div></div>
+      <div><div class="lbl">Sexe</div><div class="val">${p.sex === "F" ? "Femme" : p.sex === "M" ? "Homme" : "—"}</div></div>
+      <div><div class="lbl">Statut actuel</div><div class="val">${statusLabel(p.status || "")}</div></div>
+      <div><div class="lbl">Consultations</div><div class="val">${allScans.length} analyse(s)</div></div>
+    </div>
+  </div>
+
+  ${allScans.length >= 2 ? `
+  <div class="section">
+    <div class="sec-title">📈 Évolution Glow Score</div>
+    <div class="evol-box">
+      <div style="text-align:center"><div style="font-size:9px;color:#6b7280">${new Date(allScans[allScans.length-1].createdAt!).toLocaleDateString("fr-FR")}</div><div style="font-size:28px;font-weight:900;color:#7c3aed">${allScans[allScans.length-1].score}</div><div style="font-size:8px;color:#6b7280">J0</div></div>
+      <div style="flex:1;text-align:center;font-size:22px;color:#9ca3af">→</div>
+      <div style="text-align:center"><div style="font-size:9px;color:#6b7280">${new Date(allScans[0].createdAt!).toLocaleDateString("fr-FR")}</div><div style="font-size:28px;font-weight:900;color:${(allScans[0].score||0)>=(allScans[allScans.length-1].score||0)?"#10b981":"#f59e0b"}">${allScans[0].score}</div><div style="font-size:8px;color:#6b7280">JN</div></div>
+      <div style="text-align:center;padding:0 12px"><div style="font-size:9px;color:#6b7280">Évolution</div><div style="font-size:22px;font-weight:900;color:${((allScans[0].score||0)-(allScans[allScans.length-1].score||0))>=0?"#10b981":"#f59e0b"}">${((allScans[0].score||0)-(allScans[allScans.length-1].score||0))>=0?"+":""}${(allScans[0].score||0)-(allScans[allScans.length-1].score||0)} pts</div></div>
+    </div>
+  </div>` : ""}
+
+  <div class="section">
+    <div class="sec-title">📋 Historique des Analyses</div>
+    ${allScans.map((s, i) => `
+    <div class="scan-row" style="${i===0?"background:rgba(124,58,237,.04);border-color:rgba(124,58,237,.3)":""}">
+      <div class="scan-date">${new Date(s.createdAt!).toLocaleDateString("fr-FR", {day:"numeric",month:"short",year:"numeric"})}</div>
+      <div class="scan-score">${s.score}<span style="font-size:9px;color:#9ca3af">/100</span></div>
+      <div><div class="scan-cond">${s.condition||"—"}</div></div>
+      <div><span class="scan-sev" style="background:${s.severity==="Sévère"?"rgba(239,68,68,.1)":s.severity==="Modérée"?"rgba(251,191,36,.1)":"rgba(16,185,129,.1)"};color:${s.severity==="Sévère"?"#ef4444":s.severity==="Modérée"?"#f59e0b":"#10b981"}">${s.severity||"—"}</span></div>
+    </div>`).join("")}
+  </div>
+
+  ${lastScan ? `
+  <div class="section">
+    <div class="sec-title">🔬 Dernier Diagnostic Complet (${new Date(lastScan.createdAt!).toLocaleDateString("fr-FR")})</div>
+    <div style="display:flex;gap:12px;margin-bottom:10px">
+      <div style="flex:1;background:#f8f7ff;border:1px solid #e8e3ff;border-radius:8px;padding:10px">
+        <div class="lbl">Condition</div>
+        <div style="font-size:14px;font-weight:800;color:#0d0a0e;margin-top:2px">${lastScan.condition||"—"}</div>
+        <div style="font-size:10px;color:#6b7280;margin-top:2px">${lastScan.skinType||""}</div>
+      </div>
+      <div style="background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.3);border-radius:8px;padding:10px;text-align:center;min-width:80px">
+        <div class="lbl">Score</div>
+        <div style="font-size:32px;font-weight:900;color:#7c3aed;line-height:1">${lastScan.score}</div>
+        <div style="font-size:9px;color:#6b7280">/100</div>
+      </div>
+    </div>
+    ${lastScan.details ? `<div class="clin-box">${lastScan.details}</div>` : ""}
+  </div>` : ""}
+
+  ${(morning.length > 0 || evening.length > 0) ? `
+  <div class="section">
+    <div class="sec-title">🌿 Protocole de Traitement</div>
+    ${morning.length > 0 ? `<div class="protocol-lbl" style="background:#fffbeb;color:#92400e">☀ Matin</div>${morning.map(renderStep).join("")}` : ""}
+    ${evening.length > 0 ? `<div class="protocol-lbl" style="background:#ede9fe;color:#5b21b6;margin-top:8px">🌙 Soir</div>${evening.map(renderStep).join("")}` : ""}
+  </div>` : ""}
+
+  <div class="validity">📅 <b>Dossier mis à jour le ${date}</b> · Réf : ${refNum} · Cabinet ${dermato?.cabinetName || "GlowScan Pro"}</div>
+</div>
+<div class="footer">
+  <div class="f-text">Ce dossier est généré par GlowScan Pro. Il ne remplace pas un examen physique ni une prescription médicale.<br>Conservez ce document dans le dossier médical de votre patient.</div>
+  <div class="f-brand">✦ GlowScan Pro</div>
+</div></body></html>`;
+    const win = window.open("", "_blank");
+    if (win) { win.document.write(html); win.document.close(); win.focus(); }
+    else {
+      const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+      const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.target = "_blank"; a.click(); URL.revokeObjectURL(url);
+    }
+  };
 
   const handleValidate = async (scanId: number, isVerified: boolean) => {
     try {
@@ -132,8 +267,28 @@ export default function ProPatient() {
               {p.sex || ""}
               {p.whatsappNumber ? ` · ${p.whatsappNumber}` : ""}
             </p>
-            <div className="mt-2">
-              <StatusBadge status={p.status} />
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {([
+                { v: "priority", label: "Priorité haute", color: "#ef4444", bg: "rgba(239,68,68,0.1)", border: "rgba(239,68,68,0.3)" },
+                { v: "monitoring", label: "En suivi", color: NAVY, bg: "rgba(124,58,237,0.1)", border: "rgba(124,58,237,0.3)" },
+                { v: "stable", label: "Stable", color: GREEN, bg: "rgba(16,185,129,0.1)", border: "rgba(16,185,129,0.3)" },
+                { v: "resolved", label: "Résolu", color: DS.muted, bg: "rgba(255,255,255,0.04)", border: DS.border },
+              ] as { v: string; label: string; color: string; bg: string; border: string }[]).map(opt => {
+                const on = p.status === opt.v;
+                return (
+                  <button
+                    key={opt.v}
+                    onClick={() => updateStatus.mutateAsync({ id: p.id, status: opt.v as any })}
+                    className="text-[10px] font-extrabold px-2.5 py-1 rounded-full transition-all active:scale-95"
+                    style={on
+                      ? { background: opt.bg, border: `1.5px solid ${opt.border}`, color: opt.color }
+                      : { background: "rgba(255,255,255,0.03)", border: `1px solid ${DS.border}`, color: DS.muted }
+                    }
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>

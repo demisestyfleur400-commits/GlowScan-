@@ -306,6 +306,7 @@ export function registerProRoutes(app: Express) {
       sex: z.string().nullable().optional(),
       whatsappNumber: z.string().nullable().optional(),
       photoUrl: z.string().nullable().optional(),
+      status: z.enum(["priority", "monitoring", "stable", "resolved"]).optional(),
     });
     const data = schema.parse(req.body);
     const [updated] = await db.update(patients).set(data).where(eq(patients.id, id)).returning();

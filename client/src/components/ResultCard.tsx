@@ -796,9 +796,10 @@ interface ResultCardProps {
   imageUrl?: string | null;
   userFirstName?: string | null;
   patientIntake?: PatientIntakeProp | null;
+  isPro?: boolean;
 }
 
-export function ResultCard({ result, scanId, savedScanId, area, imageUrl, userFirstName, patientIntake }: ResultCardProps) {
+export function ResultCard({ result, scanId, savedScanId, area, imageUrl, userFirstName, patientIntake, isPro = false }: ResultCardProps) {
   const { toast } = useToast();
   const { user } = useAuth();
   const { isPremium } = useSubscription();
@@ -1853,8 +1854,8 @@ ${morning.length > 0 || evening.length > 0 ? `
           </div>
         </div>
 
-        {/* ═══ BLOC 7 — 1 seul produit recommandé (juste après le diagnostic) ═══ */}
-        {(() => {
+        {/* ═══ BLOC 7 — 1 seul produit recommandé (masqué en mode Pro) ═══ */}
+        {!isPro && (() => {
           const bestProduct = _bestProduct;
           if (!bestProduct) return null;
 
@@ -2487,8 +2488,8 @@ ${morning.length > 0 || evening.length > 0 ? `
           </div>
         )}
 
-        {/* ── Bouton export PDF ── */}
-        <button
+        {/* ── Bouton export PDF (grand public uniquement) ── */}
+        {!isPro && <button
           onClick={handleDownloadPDF}
           disabled={pdfGenerating}
           data-testid="button-download-pdf"
@@ -2525,7 +2526,7 @@ ${morning.length > 0 || evening.length > 0 ? `
               Partageable avec votre dermatologue
             </span>
           )}
-        </button>
+        </button>}
 
         {/* Footer avertissement */}
         <div

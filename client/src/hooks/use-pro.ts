@@ -121,6 +121,20 @@ export function useGenerateQuestionnaire() {
   });
 }
 
+export function useUpdatePatientStatus() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, status }: { id: number; status: "priority" | "monitoring" | "stable" | "resolved" }) => {
+      const res = await apiRequest("PATCH", `/api/pro/patients/${id}`, { status });
+      return res.json();
+    },
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ["/api/pro/patients"] });
+      qc.invalidateQueries({ queryKey: ["/api/pro/patients", vars.id] });
+    },
+  });
+}
+
 export function useDeletePatient() {
   const qc = useQueryClient();
   return useMutation({

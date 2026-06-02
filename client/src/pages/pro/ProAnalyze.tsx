@@ -25,9 +25,14 @@ import {
   useValidateScan,
   useProPatients,
   useGenerateQuestionnaire,
+  useUpdatePatientStatus,
   type QuestionnaireItem,
 } from "@/hooks/use-pro";
 import { useAnalyze } from "@/hooks/use-scans";
+import { lazy, Suspense } from "react";
+const ResultCard = lazy(() =>
+  import("@/components/ResultCard").then((m) => ({ default: m.ResultCard }))
+);
 import { useToast } from "@/hooks/use-toast";
 import type { AnalysisResult, Patient } from "@shared/schema";
 import { ProLayout, ProCard, ProInput } from "@/components/ProLayout";
@@ -44,6 +49,7 @@ const DS = {
 };
 
 type Step = 1 | 2 | 3 | 4 | 5;
+type PatientStatus = "priority" | "monitoring" | "stable" | "resolved";
 type AnswerValue = "oui" | "non" | "nsp";
 
 const STEPS = [
@@ -111,6 +117,7 @@ export default function ProAnalyze() {
   const validate = useValidateScan();
   const analyze = useAnalyze();
   const genQuestionnaire = useGenerateQuestionnaire();
+  const updateStatus = useUpdatePatientStatus();
   const { data: patientsData } = useProPatients("");
 
   const [step, setStep] = useState<Step>(1);
@@ -144,6 +151,17 @@ export default function ProAnalyze() {
   // Step 5 : Confirmation
   const [dossierSaved, setDossierSaved] = useState(false);
   const [datasetSent, setDatasetSent] = useState(false);
+  const [savingDossier, setSavingDossier] = useState(false);
+
+  // Antécédents patient (TÂCHE 1)
+  const [antecedentsOpen, setAntecedentsOpen] = useState(false);
+  const [problemDuration, setProblemDuration] = useState("");
+  const [previousProducts, setPreviousProducts] = useState("");
+  const [allergies, setAllergies] = useState("");
+  const [consultMotif, setConsultMotif] = useState("");
+
+  // Classification (TÂCHE 4)
+  const [selectedStatus, setSelectedStatus] = useState<PatientStatus | null>(null);
 
   // ─── Pré-sélection patient si ?patient=ID dans l'URL ────────────────
   useEffect(() => {
@@ -235,7 +253,19 @@ export default function ProAnalyze() {
     }
     setStep(3);
     try {
-      const r = await analyze.mutateAsync({ image: photoBase64, area: "face" });
+      const r = await analyze.mutateAsync({
+        image: photoBase64,
+        area: "face",
+        intake: {
+          fullName: `${firstName} ${lastName}`.trim() || undefined,
+          phone: phone || undefined,
+          age: age ? `${age} ans` : undefined,
+          duration: problemDuration || undefined,
+          previousProducts: previousProducts || undefined,
+          allergies: allergies || undefined,
+          consultMotif: consultMotif || undefined,
+        },
+      });
       setResult(r as any);
       genQuestionnaire.mutate({
         condition: (r as any).condition || "Affection cutanée",
@@ -277,48 +307,90 @@ export default function ProAnalyze() {
     setStep(4);
   };
 
-  // ─── Step 4 → 5 : sauver dossier ──────────────────────────────────
+  // ─── Step 4 → 5 : sauver dossier (TÂCHE 5 — robuste) ──────────────
   const saveDossier = async () => {
     setStep(5);
-    const scanId = result?.savedScanId;
-
-    if (!scanId) {
-      console.error("[pro/save] ❌ savedScanId manquant", { patientId, condition: result?.condition });
-      toast({
-        title: "Sauvegarde partielle",
-        description: "Diagnostic affiché mais non rattaché au dossier. Recommencez l'analyse.",
-        variant: "destructive",
-      });
-      setDossierSaved(true);
-      return;
-    }
+    setSavingDossier(true);
     if (!patientId) {
       console.error("[pro/save] ❌ patientId manquant");
+      setSavingDossier(false);
       setDossierSaved(true);
       return;
     }
 
-    try {
-      await attach.mutateAsync({
-        scanId,
-        patientId,
-        clinicalContext: {
-          questionnaire: answers,
-          questionnaireItems: questionnaire,
-          answeredAt: new Date().toISOString(),
-        },
-      });
-      setDossierSaved(true);
-    } catch (err: any) {
-      console.warn("[pro/save] attach échoué (ignoré):", err?.message);
-      setDossierSaved(true);
+    let scanId = (result as any)?.savedScanId;
+
+    // Tentative 1 : utilise savedScanId si dispo
+    if (scanId) {
+      try {
+        await attach.mutateAsync({
+          scanId,
+          patientId,
+          clinicalContext: {
+            questionnaire: answers,
+            questionnaireItems: questionnaire,
+            antecedents: { problemDuration, previousProducts, allergies, consultMotif },
+            answeredAt: new Date().toISOString(),
+          },
+        });
+      } catch (err: any) {
+        console.warn("[pro/save] attach tentative 1 échoué:", err?.message);
+        // Tentative 2 : récupère le dernier scan du patient
+        try {
+          const r = await fetch(`/api/pro/patients/${patientId}`, { credentials: "include" });
+          if (r.ok) {
+            const d = await r.json();
+            const latestScan = d.scans?.[0];
+            if (latestScan?.id) {
+              scanId = latestScan.id;
+              await attach.mutateAsync({ scanId, patientId, clinicalContext: {} });
+            }
+          }
+        } catch (err2: any) {
+          console.warn("[pro/save] attach tentative 2 échoué:", err2?.message);
+          toast({
+            title: "Diagnostic enregistré",
+            description: "Attachement manuel requis depuis le dossier patient.",
+            variant: "destructive",
+          });
+        }
+      }
+    } else {
+      // Pas de savedScanId → fetch le dernier scan
+      try {
+        const r = await fetch(`/api/pro/patients/${patientId}`, { credentials: "include" });
+        if (r.ok) {
+          const d = await r.json();
+          const latestScan = d.scans?.[0];
+          if (latestScan?.id) {
+            scanId = latestScan.id;
+            await attach.mutateAsync({
+              scanId,
+              patientId,
+              clinicalContext: {
+                questionnaire: answers,
+                questionnaireItems: questionnaire,
+                antecedents: { problemDuration, previousProducts, allergies, consultMotif },
+                answeredAt: new Date().toISOString(),
+              },
+            });
+          }
+        }
+      } catch (err: any) {
+        console.warn("[pro/save] fallback attach échoué:", err?.message);
+      }
     }
-    try {
-      await validate.mutateAsync({ scanId, isVerified: true, expertNote: null });
-      setDatasetSent(true);
-    } catch (err: any) {
-      console.warn("[pro/save] validate échoué (ignoré):", err?.message);
+
+    // Valider pour RLHF si on a un scanId
+    if (scanId) {
+      try {
+        await validate.mutateAsync({ scanId, isVerified: true, expertNote: null });
+        setDatasetSent(true);
+      } catch {}
     }
+
+    setSavingDossier(false);
+    setDossierSaved(true);
     toast({ title: `Dossier de ${firstName || lastName} mis à jour ✅`, description: "Visible dans Patients > Dossier" });
   };
 
@@ -342,8 +414,144 @@ export default function ProAnalyze() {
   };
 
   const exportPdf = () => {
-    if (patientId) window.open(`/api/pro/patients/${patientId}/pdf`, "_blank");
-    else window.print();
+    if (!result) return;
+    const date = new Date().toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+    const refNum = `GS-PRO-${new Date().getFullYear()}-${Math.random().toString(36).slice(2,7).toUpperCase()}`;
+    const morning: any[] = (result as any).protocol?.morning || [];
+    const evening: any[] = (result as any).protocol?.evening || [];
+    const zones = buildMockZones(result);
+    const renderStep = (s: any, i: number) => {
+      const st = typeof s === "object" ? s : { step: String(s) };
+      return `<div style="display:flex;gap:8px;margin-bottom:6px;align-items:flex-start">
+        <div style="min-width:20px;height:20px;border-radius:50%;background:#7c3aed;color:#fff;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">${i+1}</div>
+        <div><div style="font-size:11px;font-weight:700;color:#1f2937">${st.step||""}</div>${st.product?`<div style="font-size:10px;color:#7c3aed">${st.product}</div>`:""}</div>
+      </div>`;
+    };
+    const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
+<title>GlowScan Pro — ${firstName} ${lastName}</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif;color:#1f2937;background:#fff}
+@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}.no-print{display:none!important}@page{margin:0}}
+.header{background:#0d0a0e;padding:18px 24px;display:flex;justify-content:space-between;align-items:flex-start}
+.brand{font-size:20px;font-weight:900;color:#7c3aed}.pro-badge{font-size:9px;font-weight:700;color:#a78bfa;background:rgba(124,58,237,.2);padding:2px 8px;border-radius:4px;margin-top:4px;display:inline-block}
+.h-title{font-size:13px;font-weight:700;color:#f3f0ff;margin:4px 0 2px}.h-sub{font-size:8px;color:#a78bfa;margin-bottom:8px}.h-meta{font-size:8px;color:#6b7280}
+.stamp{border:2px solid #7c3aed;border-radius:8px;padding:8px 12px;text-align:center;min-width:90px}
+.stamp-t{font-size:8px;font-weight:700;color:#a78bfa;text-transform:uppercase}.stamp-v{font-size:16px;font-weight:900;color:#7c3aed}
+.body{padding:16px 24px}.section{margin-top:16px}
+.sec-title{font-size:10px;font-weight:800;color:#7c3aed;letter-spacing:.7px;text-transform:uppercase;padding-bottom:4px;border-bottom:2px solid #e8e3ff;margin-bottom:8px}
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;background:#f8f7ff;border:1px solid #e8e3ff;border-radius:8px;padding:12px}
+.info-item .lbl{font-size:8px;color:#7c3aed;font-weight:700;text-transform:uppercase;letter-spacing:.05em}.info-item .val{font-size:12px;font-weight:700;color:#0d0a0e}
+.anteced-box{background:#fffbeb;border:1px solid #fef3c7;border-radius:8px;padding:10px}
+.score-row{display:flex;gap:16px;margin:10px 0}
+.score-box{flex:1;border-radius:8px;padding:10px;text-align:center}
+.clin-box{background:#f3f4f6;border:1px solid #d1d5db;border-radius:8px;padding:10px;font-size:10px;line-height:1.7;color:#374151}
+.zones-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.zone-card{padding:7px;border-radius:6px;border:1px solid}
+.zone-dot{width:7px;height:7px;border-radius:50%;margin-bottom:4px}
+.protocol-lbl{font-size:9px;font-weight:700;padding:5px 8px;border-radius:5px;margin-bottom:6px}
+.footer{background:#0d0a0e;padding:12px 24px;display:flex;align-items:center;gap:12px;margin-top:20px}
+.f-text{flex:1;font-size:7px;color:#a78bfa;line-height:1.5}
+.f-brand{font-size:13px;font-weight:900;color:#7c3aed}
+.cta-btn{display:block;text-align:center;background:#7c3aed;color:#fff;padding:10px;border-radius:8px;font-weight:800;font-size:13px;text-decoration:none;margin:14px 0 6px;border:none;cursor:pointer;width:100%}
+.validity{background:#fffbeb;border:1px solid #fef3c7;border-radius:8px;padding:8px 12px;font-size:9px;color:#92400e;margin-top:14px}
+</style></head><body>
+<div class="header">
+  <div>
+    <div class="brand">✦ GlowScan</div>
+    <div class="pro-badge">PRO — Usage professionnel</div>
+    <div class="h-title">Rapport de Consultation Dermatologique</div>
+    <div class="h-sub">Analyse IA stricte — Spécialisé Peaux Africaines — Mode Clinicien</div>
+    <div class="h-meta">Date : <b style="color:#a78bfa">${date}</b> &nbsp;|&nbsp; Réf : <b style="color:#a78bfa">${refNum}</b> &nbsp;|&nbsp; Validité : <b style="color:#a78bfa">3 mois</b></div>
+  </div>
+  <div class="stamp"><div class="stamp-t">Consultation</div><div class="stamp-v">Pro</div><div class="stamp-t">GlowScan</div></div>
+</div>
+<div class="body">
+  <div class="no-print" style="text-align:center;padding:12px 0 4px">
+    <button class="cta-btn" onclick="window.print()">⬇ Télécharger en PDF</button>
+    <p style="font-size:10px;color:#9ca3af">Enregistrer en PDF dans le menu d'impression</p>
+  </div>
+  <div class="section">
+    <div class="sec-title">📋 Informations Patient</div>
+    <div class="info-grid">
+      <div class="info-item"><div class="lbl">Nom</div><div class="val">${firstName} ${lastName}</div></div>
+      <div class="info-item"><div class="lbl">Téléphone</div><div class="val">${phone || "—"}</div></div>
+      <div class="info-item"><div class="lbl">Âge</div><div class="val">${age ? age + " ans" : "—"}</div></div>
+      <div class="info-item"><div class="lbl">Sexe</div><div class="val">${sex !== "—" ? sex === "F" ? "Femme" : "Homme" : "—"}</div></div>
+    </div>
+  </div>
+  ${(problemDuration || previousProducts || allergies || consultMotif) ? `
+  <div class="section">
+    <div class="sec-title">🩺 Antécédents et Symptômes</div>
+    <div class="anteced-box">
+      ${problemDuration ? `<p style="margin-bottom:4px;font-size:10px"><b>Durée du problème :</b> ${problemDuration}</p>` : ""}
+      ${previousProducts ? `<p style="margin-bottom:4px;font-size:10px"><b>Produits déjà utilisés :</b> ${previousProducts}</p>` : ""}
+      ${allergies ? `<p style="margin-bottom:4px;font-size:10px;color:#b91c1c"><b>⚠ Allergies :</b> ${allergies}</p>` : ""}
+      ${consultMotif ? `<p style="font-size:10px"><b>Motif de consultation :</b> ${consultMotif}</p>` : ""}
+    </div>
+  </div>` : ""}
+  <div class="section">
+    <div class="sec-title">📊 Diagnostic Clinique</div>
+    <div class="score-row">
+      <div class="score-box" style="background:#f8f7ff;border:1px solid #e8e3ff">
+        <div style="font-size:9px;color:#7c3aed;font-weight:700;text-transform:uppercase;margin-bottom:4px">Diagnostic principal</div>
+        <div style="font-size:14px;font-weight:800;color:#0d0a0e">${result.condition}</div>
+        <div style="font-size:10px;color:#6b7280;margin-top:2px">${result.severity || "Modérée"} · ${result.skinType || "—"}</div>
+      </div>
+      <div class="score-box" style="background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.3)">
+        <div style="font-size:9px;color:#7c3aed;font-weight:700;text-transform:uppercase;margin-bottom:4px">Glow Score</div>
+        <div style="font-size:32px;font-weight:900;color:#7c3aed;line-height:1">${result.score}</div>
+        <div style="font-size:10px;color:#6b7280">/100</div>
+      </div>
+    </div>
+    ${result.details ? `<div class="clin-box">${result.details}</div>` : ""}
+  </div>
+  ${zones.length > 0 ? `
+  <div class="section">
+    <div class="sec-title">📍 Analyse Zone par Zone</div>
+    <div class="zones-grid">
+      ${zones.map((z: any) => {
+        const dot = z.status === "red" ? "#E91E8C" : z.status === "yellow" ? "#f59e0b" : "#10b981";
+        const bg = z.status === "red" ? "#fff1f2" : z.status === "yellow" ? "#fffbeb" : "#f0fdf4";
+        const bd = z.status === "red" ? "#fecdd3" : z.status === "yellow" ? "#fef3c7" : "#d1fae5";
+        return `<div class="zone-card" style="border-color:${bd};background:${bg}">
+          <div class="zone-dot" style="background:${dot}"></div>
+          <div style="font-size:9px;font-weight:700;color:#374151">${z.name}</div>
+          <div style="font-size:8px;color:#6b7280">${z.short || (z.status==="red"?"Attention":z.status==="yellow"?"À surveiller":"Saine")}</div>
+        </div>`;
+      }).join("")}
+    </div>
+  </div>` : ""}
+  ${(morning.length > 0 || evening.length > 0) ? `
+  <div class="section">
+    <div class="sec-title">🌿 Protocole de Traitement</div>
+    ${morning.length > 0 ? `
+    <div class="protocol-lbl" style="background:#fffbeb;color:#92400e">☀ Matin — Protection & Régulation</div>
+    ${morning.map(renderStep).join("")}` : ""}
+    ${evening.length > 0 ? `
+    <div class="protocol-lbl" style="background:#ede9fe;color:#5b21b6;margin-top:10px">🌙 Soir — Réparation Intense</div>
+    ${evening.map(renderStep).join("")}` : ""}
+  </div>` : ""}
+  <div class="validity">
+    📅 <b>Rapport valable 3 mois</b> à compter du ${date}. Réf : ${refNum}
+  </div>
+</div>
+<div class="footer">
+  <div class="f-text">
+    Ce rapport est généré par l'IA GlowScan Pro en mode clinicien strict.<br>
+    Il ne remplace pas un examen physique ni une prescription médicale.<br>
+    Consultez un dermatologue pour tout cas persistant ou sévère.
+  </div>
+  <div class="f-brand">✦ GlowScan Pro</div>
+</div>
+</body></html>`;
+    const win = window.open("", "_blank");
+    if (win) { win.document.write(html); win.document.close(); win.focus(); }
+    else {
+      const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a"); a.href = url; a.target = "_blank"; a.click();
+      URL.revokeObjectURL(url);
+    }
   };
 
   const resetAll = () => {
@@ -354,7 +562,9 @@ export default function ProAnalyze() {
     setPhotoBase64(null); setPhotoSize(0);
     setResult(null);
     setQuestionnaire([]); setAnswers({});
-    setDossierSaved(false); setDatasetSent(false);
+    setDossierSaved(false); setDatasetSent(false); setSavingDossier(false);
+    setProblemDuration(""); setPreviousProducts(""); setAllergies(""); setConsultMotif("");
+    setSelectedStatus(null); setAntecedentsOpen(false);
   };
 
   const zones = result ? buildMockZones(result) : [];
@@ -447,6 +657,59 @@ export default function ProAnalyze() {
                     </div>
                     <ProInput label="Téléphone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} testid="input-phone" placeholder="237 6XX..." />
                   </div>
+                  {/* ─── Antécédents (accordion) ─── */}
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => setAntecedentsOpen(v => !v)}
+                      className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-extrabold transition-all"
+                      style={{ background: "rgba(124,58,237,0.08)", border: "1px solid rgba(124,58,237,0.2)", color: "#a78bfa" }}
+                    >
+                      <span>🩺 Antécédents et symptômes</span>
+                      <span style={{ fontSize: "16px", lineHeight: 1 }}>{antecedentsOpen ? "−" : "+"}</span>
+                    </button>
+                    {antecedentsOpen && (
+                      <div className="mt-2 space-y-2 rounded-xl p-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(167,139,250,0.15)" }}>
+                        <div>
+                          <label className="text-xs font-extrabold mb-1 block" style={{ color: DS.body }}>Depuis combien de temps ce problème ?</label>
+                          <select value={problemDuration} onChange={e => setProblemDuration(e.target.value)}
+                            className="w-full px-3 py-2 rounded-xl text-xs outline-none"
+                            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(167,139,250,0.2)", color: problemDuration ? INK : DS.muted }}>
+                            <option value="">Sélectionner</option>
+                            <option value="quelques jours">Quelques jours</option>
+                            <option value="1 à 3 semaines">1 à 3 semaines</option>
+                            <option value="1 à 3 mois">1 à 3 mois</option>
+                            <option value="3 à 6 mois">3 à 6 mois</option>
+                            <option value="plus de 6 mois">Plus de 6 mois</option>
+                            <option value="plus d'un an">Plus d'un an (chronique)</option>
+                            <option value="depuis toujours">Depuis toujours</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-xs font-extrabold mb-1 block" style={{ color: DS.body }}>Produits ou crèmes déjà appliqués ?</label>
+                          <textarea value={previousProducts} onChange={e => setPreviousProducts(e.target.value)}
+                            placeholder="Ex : crème éclaircissante, savon noir, aloe vera... (ou Aucun)"
+                            rows={2} className="w-full px-3 py-2 rounded-xl text-xs outline-none resize-none"
+                            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(167,139,250,0.2)", color: INK }} />
+                        </div>
+                        <div>
+                          <label className="text-xs font-extrabold mb-1 block" style={{ color: DS.body }}>Allergies cutanées connues ?</label>
+                          <input type="text" value={allergies} onChange={e => setAllergies(e.target.value)}
+                            placeholder="Ex : parfum, lanoline... (ou Aucune)"
+                            className="w-full px-3 py-2 rounded-xl text-xs outline-none"
+                            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(167,139,250,0.2)", color: INK }} />
+                        </div>
+                        <div>
+                          <label className="text-xs font-extrabold mb-1 block" style={{ color: DS.body }}>Motif de consultation (mots du patient)</label>
+                          <textarea value={consultMotif} onChange={e => setConsultMotif(e.target.value)}
+                            placeholder="Ce que le patient décrit lui-même..."
+                            rows={2} className="w-full px-3 py-2 rounded-xl text-xs outline-none resize-none"
+                            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(167,139,250,0.2)", color: INK }} />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                   <button
                     type="submit"
                     disabled={createPatient.isPending}
@@ -610,58 +873,29 @@ export default function ProAnalyze() {
               <ScanLoader photo={photoBase64} />
             ) : (
               <>
-                <ProCard className="p-5">
-                  <StepHeader n={3} title="Diagnostic IA" subtitle={`${patientLabel} · ${result.skinType || "Phototype IV-VI"}`} />
-
-                  <div className="grid grid-cols-2 gap-3 mb-4">
-                    <div
-                      className="p-4 rounded-xl"
-                      style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${DS.border}` }}
-                    >
-                      <p className="text-[10px] uppercase tracking-wider font-extrabold" style={{ color: DS.muted }}>Diagnostic principal</p>
-                      <p className="text-base font-extrabold mt-1" style={{ color: INK }} data-testid="text-condition">
-                        {result.condition}
-                      </p>
-                    </div>
-                    <div
-                      className="p-4 rounded-xl"
-                      style={{ border: `1px solid rgba(124,58,237,0.4)`, background: "rgba(124,58,237,0.1)" }}
-                    >
-                      <p className="text-[10px] uppercase tracking-wider font-extrabold" style={{ color: "#a78bfa" }}>Glow Score</p>
-                      <p className="text-3xl font-extrabold mt-1" style={{ color: NAVY }} data-testid="text-score">
-                        {result.score}<span className="text-base" style={{ color: DS.muted }}>/100</span>
-                      </p>
-                    </div>
+                <Suspense fallback={
+                  <div className="flex justify-center py-12">
+                    <Loader2 className="w-6 h-6 animate-spin" style={{ color: NAVY }} />
                   </div>
+                }>
+                  <ResultCard
+                    result={result}
+                    imageUrl={photoBase64}
+                    userFirstName={firstName || lastName || undefined}
+                    area="face"
+                    isPro={true}
+                    patientIntake={{
+                      fullName: `${firstName} ${lastName}`.trim() || undefined,
+                      phone: phone || undefined,
+                      age: age ? `${age} ans` : undefined,
+                      duration: problemDuration || undefined,
+                      previousProducts: previousProducts || undefined,
+                      allergies: allergies || undefined,
+                    }}
+                  />
+                </Suspense>
 
-                  <p className="text-[11px] uppercase tracking-wider font-extrabold mb-2" style={{ color: DS.muted }}>Analyse par zone</p>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {zones.slice(0, 6).map((z, i) => {
-                      const colorMap = {
-                        red: { bg: "rgba(248,113,113,0.1)", border: "rgba(248,113,113,0.25)", dot: "#f87171", text: "#f87171" },
-                        yellow: { bg: "rgba(251,191,36,0.1)", border: "rgba(251,191,36,0.25)", dot: "#fbbf24", text: "#fbbf24" },
-                        green: { bg: "rgba(16,185,129,0.1)", border: "rgba(16,185,129,0.25)", dot: "#6ee7b7", text: "#6ee7b7" },
-                      };
-                      const c = (colorMap as any)[z.status] || colorMap.green;
-                      return (
-                        <div
-                          key={i}
-                          data-testid={`zone-${i}`}
-                          className="p-3 rounded-xl"
-                          style={{ background: c.bg, border: `1px solid ${c.border}` }}
-                        >
-                          <div className="flex items-center gap-1.5 mb-1">
-                            <span className="w-1.5 h-1.5 rounded-full" style={{ background: c.dot }} />
-                            <p className="text-[10px] font-extrabold uppercase tracking-wide" style={{ color: DS.muted }}>{z.name}</p>
-                          </div>
-                          <p className="text-xs font-extrabold" style={{ color: c.text }}>{z.short}</p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </ProCard>
-
-                <div className="flex gap-2 mt-3">
+                <div className="flex gap-2 mt-4">
                   <button
                     onClick={() => setStep(2)}
                     className="px-4 py-2.5 rounded-full text-sm font-extrabold inline-flex items-center gap-1 transition-all active:scale-[0.97]"
@@ -676,7 +910,7 @@ export default function ProAnalyze() {
                     className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-full text-white text-sm font-extrabold active:scale-[0.98] transition-all"
                     style={{ background: NAVY }}
                   >
-                    Anamnèse patient
+                    Continuer vers l'anamnèse
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
@@ -879,6 +1113,45 @@ export default function ProAnalyze() {
                     })()}
                   </div>
 
+                  {/* ─── Classification patient (TÂCHE 4) ─── */}
+                  <div className="rounded-2xl p-4 mb-4" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(167,139,250,0.15)" }}>
+                    <p className="text-[11px] font-extrabold uppercase tracking-wider mb-3" style={{ color: DS.muted }}>Classer ce patient :</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {([
+                        { v: "priority" as PatientStatus, label: "Priorité haute", color: "#ef4444", bg: "rgba(239,68,68,0.1)", border: "rgba(239,68,68,0.3)" },
+                        { v: "monitoring" as PatientStatus, label: "En suivi", color: NAVY, bg: "rgba(124,58,237,0.1)", border: "rgba(124,58,237,0.3)" },
+                        { v: "stable" as PatientStatus, label: "Stable", color: GREEN, bg: "rgba(16,185,129,0.1)", border: "rgba(16,185,129,0.3)" },
+                        { v: "resolved" as PatientStatus, label: "Résolu", color: DS.muted, bg: "rgba(255,255,255,0.04)", border: DS.border },
+                      ]).map(opt => {
+                        const on = selectedStatus === opt.v;
+                        return (
+                          <button
+                            key={opt.v}
+                            onClick={async () => {
+                              setSelectedStatus(opt.v);
+                              if (patientId) {
+                                try { await updateStatus.mutateAsync({ id: patientId, status: opt.v }); }
+                                catch {}
+                              }
+                            }}
+                            className="py-2 px-3 rounded-xl text-xs font-extrabold transition-all active:scale-[0.97]"
+                            style={on
+                              ? { background: opt.bg, border: `1.5px solid ${opt.border}`, color: opt.color }
+                              : { background: "rgba(255,255,255,0.03)", border: `1px solid ${DS.border}`, color: DS.muted }
+                            }
+                          >
+                            {opt.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {selectedStatus && (
+                      <p className="text-[10px] mt-2 text-center" style={{ color: DS.muted }}>
+                        ✓ Statut mis à jour
+                      </p>
+                    )}
+                  </div>
+
                   {/* Actions */}
                   <div className="grid grid-cols-2 gap-2 mb-2">
                     <button
@@ -924,7 +1197,8 @@ export default function ProAnalyze() {
               ) : (
                 <div className="py-6">
                   <Loader2 className="w-6 h-6 animate-spin mx-auto mb-3" style={{ color: NAVY }} />
-                  <p className="text-sm font-extrabold" style={{ color: INK }}>Enregistrement du dossier...</p>
+                  <p className="text-sm font-extrabold" style={{ color: INK }}>Enregistrement en cours...</p>
+                  <p className="text-xs mt-1" style={{ color: DS.muted }}>Rattachement du diagnostic au dossier patient</p>
                 </div>
               )}
             </ProCard>

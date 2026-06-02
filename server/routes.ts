@@ -9,7 +9,7 @@ import { api } from "@shared/routes";
 import { z } from "zod";
 import OpenAI from "openai";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { GLOWSCAN_SYSTEM_PROMPT } from "./prompt";
+import { GLOWSCAN_SYSTEM_PROMPT, GLOWSCAN_PRO_SYSTEM_PROMPT } from "./prompt";
 import webpush from "web-push";
 import { db } from "./db";
 import { referrals, loyaltyPoints, subscriptions, scans, leads, premiumRequests, wellnessLogs } from "@shared/schema";
@@ -318,6 +318,9 @@ export async function registerRoutes(
       } | undefined;
 
       // Construction du contexte patient pour enrichir le prompt IA
+      // ── Détection compte Pro → prompt strict ──────────────────────────
+      const isProRequest = !!(req as any).proAccount;
+
       const patientContext = intake ? `
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 DOSSIER PATIENT — INFORMATIONS CLINIQUES
@@ -488,7 +491,7 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
         if (USE_GEMINI && gemini) {
           const m = gemini.getGenerativeModel({
             model: AI_MODEL,
-            systemInstruction: GLOWSCAN_SYSTEM_PROMPT,
+            systemInstruction: isProRequest ? GLOWSCAN_PRO_SYSTEM_PROMPT : GLOWSCAN_SYSTEM_PROMPT,
           });
           const gemResult = await Promise.race([
             m.generateContent({
@@ -509,7 +512,7 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
           const r = await openai.chat.completions.create({
             model: AI_MODEL,
             messages: [
-              { role: "system", content: GLOWSCAN_SYSTEM_PROMPT },
+              { role: "system", content: isProRequest ? GLOWSCAN_PRO_SYSTEM_PROMPT : GLOWSCAN_SYSTEM_PROMPT },
               {
                 role: "user",
                 content: [
