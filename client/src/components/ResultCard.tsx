@@ -889,15 +889,225 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
     result.condition.split("").reduce((h, c) => ((h << 5) - h + c.charCodeAt(0)) | 0, 0)
   ).toString(36).slice(0, 5).toUpperCase()}`;
 
-  // ── Téléchargement PDF via jsPDF (100% browser-compatible) ──
-  const handleDownloadPDF = async () => {
+  // ── Téléchargement PDF via print window (zéro dépendance, 100% mobile) ──
+  const handleDownloadPDF = () => {
     if (pdfGenerating) return;
     setPdfGenerating(true);
+
     try {
-      const [{ jsPDF }, QRCodeLib] = await Promise.all([
-        import("jspdf"),
-        import("qrcode"),
-      ]);
+      const score = Math.max(0, Math.min(100, result.score || 0));
+      const zones = result.zones || [];
+      const morning: any[] = (result as any).protocol?.morning || [];
+      const evening: any[] = (result as any).protocol?.evening || [];
+      const date = new Date().toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+
+      const zoneStatusColor = (s: string) =>
+        s === "red" ? "#E91E8C" : s === "yellow" ? "#f59e0b" : "#10b981";
+      const zoneStatusLabel = (s: string) =>
+        s === "red" ? "Attention requise" : s === "yellow" ? "À surveiller" : "Zone saine";
+
+      const renderSteps = (steps: any[], label: string, color: string) => {
+        if (!steps.length) return "";
+        return `
+          <div class="section" style="margin-top:18px">
+            <div class="protocol-label" style="color:${color};background:${color}18;padding:6px 10px;border-radius:6px;font-size:11px;font-weight:700;margin-bottom:10px">
+              ${label}
+            </div>
+            ${steps.map((s: any, i: number) => {
+              const step = typeof s === "object" ? s : { step: String(s) };
+              return `<div style="display:flex;gap:10px;margin-bottom:8px;align-items:flex-start">
+                <div style="min-width:22px;height:22px;border-radius:50%;background:#7c3aed;color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">${i+1}</div>
+                <div>
+                  <div style="font-size:12px;font-weight:700;color:#1f2937">${step.step || ""}</div>
+                  ${step.product ? `<div style="font-size:11px;color:#7c3aed;margin-top:2px">${step.product}</div>` : ""}
+                  ${step.why ? `<div style="font-size:10px;color:#9ca3af;font-style:italic;margin-top:1px">${step.why}</div>` : ""}
+                </div>
+              </div>`;
+            }).join("")}
+          </div>`;
+      };
+
+      const html = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GlowScan — Rapport ${reportNumber}</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: Arial, sans-serif; background:#fff; color:#1f2937; }
+  @media print {
+    body { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    .no-print { display:none; }
+    @page { margin: 0; }
+  }
+
+  .header { background:#0d0a0e; padding:24px 28px; }
+  .brand { font-size:22px; font-weight:900; color:#7c3aed; margin-bottom:4px; }
+  .title { font-size:16px; font-weight:700; color:#f3f0ff; margin-bottom:3px; }
+  .subtitle { font-size:9px; color:#a78bfa; margin-bottom:10px; line-height:1.4; }
+  .meta { font-size:9px; color:#6b7280; }
+
+  .body { padding:20px 28px; }
+
+  .profile-card { background:#f8f7ff; border:1px solid #e8e3ff; border-radius:12px; padding:16px; display:flex; gap:16px; align-items:flex-start; margin-bottom:20px; }
+  .profile-photo { width:80px; height:80px; border-radius:10px; border:2px solid #7c3aed; object-fit:cover; flex-shrink:0; }
+  .profile-photo-placeholder { width:80px; height:80px; border-radius:10px; border:2px solid #7c3aed; background:#f3e8ff; display:flex; align-items:center; justify-content:center; font-size:32px; flex-shrink:0; }
+  .profile-name { font-size:18px; font-weight:800; color:#0d0a0e; margin-bottom:2px; }
+  .profile-condition { font-size:10px; color:#6b7280; margin-bottom:8px; }
+  .score { font-size:36px; font-weight:900; color:#7c3aed; line-height:1; }
+  .score-label { font-size:11px; color:#6b7280; margin-left:4px; vertical-align:middle; }
+  .progress-track { height:6px; background:#e5e7eb; border-radius:3px; margin:8px 0; overflow:hidden; }
+  .progress-fill { height:6px; border-radius:3px; background:linear-gradient(90deg,#7c3aed,#E91E8C); }
+  .skin-type { font-size:10px; color:#374151; margin-top:4px; }
+
+  .section-title { font-size:11px; font-weight:800; color:#7c3aed; letter-spacing:.8px; text-transform:uppercase; padding-bottom:5px; border-bottom:1px solid #e8e3ff; margin-bottom:10px; margin-top:20px; }
+
+  .zones-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+  .zone-card { padding:8px; border-radius:8px; border:1px solid; }
+  .zone-dot { width:8px; height:8px; border-radius:50%; margin-bottom:5px; }
+  .zone-name { font-size:9px; font-weight:700; color:#374151; margin-bottom:2px; }
+  .zone-status { font-size:8px; color:#6b7280; }
+
+  .details-box { background:#f3f4f6; border:1px solid #d1d5db; border-radius:8px; padding:12px; font-size:10px; line-height:1.7; color:#374151; }
+
+  .product-card { background:#fdf2f8; border:1px solid #fbcfe8; border-radius:12px; padding:14px; display:flex; gap:14px; align-items:flex-start; margin-top:8px; }
+  .product-placeholder { width:64px; height:64px; border-radius:10px; background:#f3e8ff; border:1px solid #ddd6fe; display:flex; align-items:center; justify-content:center; font-size:28px; flex-shrink:0; }
+  .product-badge { display:inline-block; background:#d1fae5; color:#059669; font-size:8px; font-weight:700; padding:2px 8px; border-radius:4px; margin-bottom:6px; }
+  .product-benefit { font-size:14px; font-weight:800; color:#0d0a0e; margin-bottom:4px; }
+  .product-price { font-size:18px; font-weight:900; color:#E91E8C; margin-bottom:6px; }
+  .product-usage { font-size:9px; color:#6b7280; line-height:1.5; }
+  .product-wa { display:inline-block; background:#25D366; color:#fff; font-size:9px; font-weight:700; padding:4px 10px; border-radius:6px; margin-top:8px; }
+
+  .footer { background:#0d0a0e; padding:14px 28px; display:flex; align-items:center; gap:14px; margin-top:28px; page-break-inside:avoid; }
+  .footer-text { flex:1; }
+  .footer-disclaimer { font-size:8px; color:#a78bfa; line-height:1.5; margin-bottom:3px; }
+  .footer-url { font-size:10px; font-weight:800; color:#7c3aed; }
+  .footer-brand { font-size:13px; font-weight:900; color:#7c3aed; white-space:nowrap; }
+
+  .cta-btn { display:block; text-align:center; background:#7c3aed; color:#fff; padding:12px; border-radius:10px; font-weight:800; font-size:14px; text-decoration:none; margin:20px 0 8px; cursor:pointer; border:none; width:100%; }
+  .cta-sub { text-align:center; font-size:10px; color:#9ca3af; margin-bottom:20px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="brand">✦ GlowScan</div>
+  <div class="title">Rapport de Pré-Analyse Cutanée</div>
+  <div class="subtitle">Généré par un outil de pré-analyse cutanée IA — Spécialisé Peaux Africaines</div>
+  <div class="meta">Date : ${date} &nbsp;|&nbsp; Réf : ${reportNumber}</div>
+</div>
+
+<div class="body">
+
+  <!-- Bouton impression (masqué à l'impression) -->
+  <div class="no-print" style="text-align:center;padding:16px 0 4px">
+    <button class="cta-btn" onclick="window.print()">📄 Sauvegarder / Imprimer</button>
+    <p class="cta-sub">Appuie sur "Enregistrer en PDF" dans le menu d'impression</p>
+  </div>
+
+  <!-- Profil -->
+  <div class="profile-card">
+    ${imageUrl
+      ? `<img src="${imageUrl}" class="profile-photo" alt="Photo" />`
+      : `<div class="profile-photo-placeholder">👤</div>`
+    }
+    <div style="flex:1">
+      <div class="profile-name">${userFirstName || "Utilisatrice GlowScan"}</div>
+      <div class="profile-condition">${result.condition}</div>
+      <div>
+        <span class="score">${score}</span>
+        <span class="score-label">/100 &nbsp;Glow Score</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" style="width:${score}%"></div>
+      </div>
+      <div class="skin-type">Type de peau : ${result.skinType || "Non déterminé"} &nbsp;|&nbsp; Sévérité : ${result.severity || "—"}</div>
+    </div>
+  </div>
+
+  <!-- Zones -->
+  ${zones.length > 0 ? `
+    <div class="section-title">Diagnostic Zone par Zone</div>
+    <div class="zones-grid">
+      ${zones.slice(0, 8).map((z: any) => `
+        <div class="zone-card" style="border-color:${z.status === "red" ? "#fecdd3" : z.status === "yellow" ? "#fef3c7" : "#d1fae5"};background:${z.status === "red" ? "#fff1f2" : z.status === "yellow" ? "#fffbeb" : "#f0fdf4"}">
+          <div class="zone-dot" style="background:${zoneStatusColor(z.status)}"></div>
+          <div class="zone-name">${z.name || ""}</div>
+          <div class="zone-status">${zoneStatusLabel(z.status)}</div>
+          ${z.note ? `<div class="zone-status" style="font-style:italic;margin-top:2px">${z.note.slice(0, 40)}</div>` : ""}
+        </div>
+      `).join("")}
+    </div>
+  ` : ""}
+
+  <!-- Évaluation clinique -->
+  ${result.details ? `
+    <div class="section-title">Évaluation Clinique</div>
+    <div class="details-box">${result.details}</div>
+  ` : ""}
+
+  <!-- Soin recommandé -->
+  ${_bestProduct ? `
+    <div class="section-title">Soin Recommandé</div>
+    <div class="product-card">
+      <div class="product-placeholder">✦</div>
+      <div>
+        <div class="product-badge">Validé pour peaux africaines</div>
+        <div class="product-benefit">${_benefit}</div>
+        <div class="product-price">${_bestProduct.price?.toLocaleString("fr-FR")} FCFA</div>
+        <div class="product-usage">${(_bestProduct.usagePoints || []).slice(0, 3).map((p: string) => `• ${p}`).join("<br>")}</div>
+        <div class="product-wa">Commander via WhatsApp</div>
+      </div>
+    </div>
+  ` : ""}
+
+  <!-- Protocole -->
+  ${(morning.length > 0 || evening.length > 0) ? `
+    <div class="section-title">Protocole Personnalisé</div>
+    ${renderSteps(morning, "☀ Rituel du Matin — protection & régulation", "#f59e0b")}
+    ${renderSteps(evening, "🌙 Rituel du Soir — réparation intense", "#7c3aed")}
+  ` : ""}
+
+</div>
+
+<div class="footer">
+  <div class="footer-text">
+    <div class="footer-disclaimer">Ce rapport est un outil de pré-analyse cutanée généré par IA. Il ne remplace pas une consultation médicale professionnelle.</div>
+    <div class="footer-disclaimer">Refaites votre analyse ou partagez avec vos proches — glow-scan.com</div>
+    <div class="footer-url">glow-scan.com</div>
+  </div>
+  <div class="footer-brand">✦ GlowScan</div>
+</div>
+
+</body>
+</html>`;
+
+      const win = window.open("", "_blank");
+      if (!win) {
+        // Si le popup est bloqué, fallback : ouvre dans le même onglet
+        const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.target = "_blank";
+        a.click();
+        URL.revokeObjectURL(url);
+      } else {
+        win.document.write(html);
+        win.document.close();
+        win.focus();
+      }
+
+    } catch (err) {
+      console.error("PDF generation failed:", err);
+      toast({ title: "Erreur rapport", description: "Impossible de générer le rapport.", variant: "destructive" });
+    } finally {
+      setPdfGenerating(false);
+    }
+  };
+
+  // ─────────────────────────────────────────────────────────────────────────
 
       const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
       const W = 210, M = 18;
@@ -1096,15 +1306,6 @@ export function ResultCard({ result, scanId, area, imageUrl, userFirstName }: Re
         txt(`${p}/${totalPages}`, W - M, footerY + 22, 7, "#6b7280");
       }
 
-      doc.save(`GlowScan-Rapport-${reportNumber}.pdf`);
-
-    } catch (err) {
-      console.error("PDF generation failed:", err);
-      toast({ title: "Erreur PDF", description: "Impossible de generer le rapport. Reessaie.", variant: "destructive" });
-    } finally {
-      setPdfGenerating(false);
-    }
-  };
 
   const getProductRole = (p: typeof catalog[0]): "nettoyant" | "serum" | "creme" => {
     const n = p.name.toLowerCase();
