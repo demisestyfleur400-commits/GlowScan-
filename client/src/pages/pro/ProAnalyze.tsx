@@ -549,55 +549,130 @@ export default function ProAnalyze() {
 <title>GlowScan Pro — ${firstName} ${lastName}</title>
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
-  body{font-family:"Arial",sans-serif;background:#fff;color:#1a1505;font-size:11px;line-height:1.4}
-  a{text-decoration:none}
-</style></head><body>
+  body{font-family:Arial,sans-serif;background:#fff;color:#1a1505;font-size:10.5px;line-height:1.5}
+  table{border-collapse:collapse;width:100%}
+  td{vertical-align:top}
+  p{margin-bottom:6px}
+  strong{font-weight:700}
+</style>
+</head><body>
 
-<!-- HEADER DARK -->
-<div style="background:${DARK_HEADER};padding:18px 32px 22px;text-align:center;border-bottom:3px solid ${GOLD}">
-  <div style="font-size:9px;color:#9ca3af;letter-spacing:.5px;margin-bottom:8px">Réf : ${refNum} &nbsp;|&nbsp; Date : ${date}</div>
-  <div style="font-size:30px;font-weight:900;color:#ffffff;letter-spacing:2px">✦ GlowScan Professional ✦</div>
-  <div style="font-size:12px;color:${GOLD_LIGHT};font-style:italic;margin-top:6px">Analyse Cutanée Personnalisée — Rapport Officiel</div>
-  <div style="height:1px;background:${GOLD};margin:14px auto 0;width:60%;opacity:.5"></div>
-</div>
+<!-- ══ PAGE 1 ══ -->
 
-<!-- BODY -->
-<div style="padding:20px 32px 32px">
-
-  ${sectionBox("Informations Patient &amp; Antécédents",
-    `<table style="width:100%;border-collapse:collapse">${patientRows}</table>`
-  )}
-
-  ${sectionBox("Diagnostic Clinique Visuel — Analyse Détaillée", diagContent)}
-
-  ${sectionBox("Protocole de Rejet — Ingrédients Toxiques pour Votre Peau", toxicContent)}
-
-  ${sectionBox("Routine du Matin — Équilibre &amp; Matité", morningContent)}
-
-  ${sectionBox("Routine du Soir — Traitement Ciblé &amp; Régénération", eveningContent)}
-
-  ${(protocol.weekly) ? sectionBox("Soin Hebdomadaire Booster",
-    `<div style="font-size:10px;color:#4b3f1a;line-height:1.7">✦ ${protocol.weekly}</div>`
-  ) : ""}
-
-  ${(redFlags.length > 0) ? sectionBox("Signaux d'Alarme Cliniques",
-    redFlags.map((f:string)=>`<div style="font-size:10px;color:#b91c1c;margin-bottom:4px">▶ ${f}</div>`).join("")
-  ) : ""}
-
-  ${logistics ? sectionBox("Logistique &amp; Expédition — Votre Commande",
-    `<table style="width:100%;border-collapse:collapse">${logisticsRows}</table>`
-  ) : ""}
-
-</div>
-
-<!-- FOOTER -->
-<div style="background:${DARK_HEADER};padding:14px 32px;text-align:center;border-top:1px solid ${GOLD};margin-top:8px">
-  <div style="font-size:8px;color:#9ca3af;line-height:1.8">
-    Ce rapport est généré automatiquement par l'infrastructure GlowScan Professional. Il ne remplace pas un avis dermatologique qualifié.<br>
-    Réf : ${refNum} &nbsp;|&nbsp; GlowScan © ${new Date().getFullYear()} &nbsp;|&nbsp; Tous droits réservés.
+<!-- HEADER -->
+<div style="background:${DARK_HEADER};padding:16px 32px 20px;text-align:center;border-bottom:3px solid ${GOLD}">
+  <div style="font-size:8.5px;color:#9ca3af;letter-spacing:.6px;margin-bottom:10px">
+    Réf : <strong style="color:${GOLD_LIGHT}">${refNum}</strong> &nbsp;|&nbsp; Date : <strong style="color:${GOLD_LIGHT}">${date}</strong>
   </div>
+  <div style="font-size:28px;font-weight:900;color:#fff;letter-spacing:3px">✦ GlowScan Professional ✦</div>
+  <div style="font-size:11px;color:${GOLD_LIGHT};font-style:italic;margin-top:5px">Analyse Cutanée Personnalisée — Rapport Officiel</div>
+  <div style="height:1px;background:linear-gradient(to right,transparent,${GOLD},transparent);margin:12px auto 0;width:70%"></div>
 </div>
 
+<div style="padding:22px 32px 0">
+
+  <!-- SECTION : PATIENT -->
+  ${sectionBox("Informations Patient &amp; Antécédents", `
+    <table>
+      ${patientRows}
+    </table>
+  `)}
+
+  <!-- SECTION : DIAGNOSTIC -->
+  ${sectionBox("Diagnostic Clinique Visuel — Analyse Détaillée", `
+    <p style="font-size:10.5px;color:#2d2108;line-height:1.7;margin-bottom:12px">
+      Analyse au pixel par l'infrastructure GlowScan :
+      <strong>${r.skinType || r.condition || "—"}</strong>.
+    </p>
+    ${clinicalSummary ? `<p style="font-size:10.5px;color:#374151;line-height:1.8;margin-bottom:14px">${clinicalSummary}</p>` : ""}
+
+    ${zonesAnalysis.length > 0 ? `
+    <table style="border:1px solid #e5dfc8;margin-bottom:14px">
+      ${zonesAnalysis.map(renderZone).join("")}
+    </table>` : ""}
+
+    <div style="display:flex;gap:18px;align-items:flex-start;margin-top:6px">
+      <div style="border:2px solid ${GOLD};border-radius:5px;padding:14px 18px;min-width:105px;background:${BEIGE_BG};text-align:center;flex-shrink:0">
+        <div style="font-size:7.5px;font-weight:700;color:${GOLD};text-transform:uppercase;letter-spacing:.6px">GLOW SCORE</div>
+        <div style="font-size:42px;font-weight:900;color:${GOLD};line-height:1">${r.score || "—"}</div>
+        <div style="font-size:7.5px;color:#6b5c2a;margin-top:2px">/100 — ${r.severity || "Évaluation clinique"}</div>
+      </div>
+      <div style="flex:1;font-size:10px;color:#374151;line-height:1.8">
+        ${prognostic || r.clinicalSummary || ""}
+      </div>
+    </div>
+  `)}
+
+  <!-- SECTION : REJET -->
+  ${sectionBox("Protocole de Rejet — Ingrédients Toxiques pour Votre Peau", `
+    <p style="font-size:10px;color:#4b3f1a;margin-bottom:10px;line-height:1.7">
+      Vérifiez impérativement les étiquettes de vos produits actuels et bannissez :
+    </p>
+    ${toxicIngredients.length > 0
+      ? `<table style="border:1px solid #f5c6c6">${toxicIngredients.map(renderToxic).join("")}</table>`
+      : `<p style="font-size:10px;color:#6b5c2a">Aucun ingrédient toxique critique identifié. Maintenir la vigilance sur les formules comédogènes.</p>`
+    }
+  `)}
+
+</div>
+
+<!-- ══ PAGE 2 ══ -->
+<div style="page-break-before:always;padding:22px 32px 0">
+
+  <!-- SECTION : MATIN -->
+  ${sectionBox("Routine du Matin — Équilibre &amp; Matité", `
+    ${morning.length > 0 ? morning.map(renderStep).join("") : `<p style="font-size:10px;color:#4b3f1a">Protocole matin non disponible.</p>`}
+  `)}
+
+  <!-- SECTION : SOIR -->
+  ${sectionBox("Routine du Soir — Traitement Ciblé &amp; Régénération", `
+    ${evening.length > 0 ? evening.map(renderStep).join("") : `<p style="font-size:10px;color:#4b3f1a">Protocole soir non disponible.</p>`}
+  `)}
+
+  ${protocol.weekly ? sectionBox("Soin Booster Hebdomadaire", `
+    <div style="display:flex;gap:10px;margin-bottom:4px">
+      <span style="color:${GOLD};font-size:13px;flex-shrink:0">✦</span>
+      <div style="font-size:10.5px;color:#4b3f1a;line-height:1.7">${protocol.weekly}</div>
+    </div>
+  `) : ""}
+
+  ${redFlags.length > 0 ? sectionBox("Signaux d'Alarme Cliniques — Surveillance Obligatoire", `
+    ${redFlags.map((f:string) => `
+      <div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:7px">
+        <span style="color:#b91c1c;font-weight:700;flex-shrink:0;font-size:11px">▶</span>
+        <span style="font-size:10.5px;color:#b91c1c;line-height:1.6">${f}</span>
+      </div>`).join("")}
+  `) : ""}
+
+  ${(r.differentialDiagnosis && r.differentialDiagnosis.length > 0) ? sectionBox("Diagnostics Différentiels Écartés", `
+    ${r.differentialDiagnosis.map((d:string) => `<div style="font-size:10px;color:#4b3f1a;margin-bottom:4px">• ${d}</div>`).join("")}
+  `) : ""}
+
+  ${(r.contraindications && r.contraindications.length > 0) ? sectionBox("Contre-indications Formelles", `
+    ${r.contraindications.map((c:string) => `
+      <div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:6px">
+        <span style="color:#b91c1c;font-weight:700;flex-shrink:0">✗</span>
+        <span style="font-size:10px;color:#b91c1c;line-height:1.6">${c}</span>
+      </div>`).join("")}
+  `) : ""}
+
+  ${logistics ? sectionBox("Logistique &amp; Expédition — Votre Commande", `
+    <table>
+      ${infoRow("Zone de livraison", patientRegion || "Cameroun")}
+      ${infoRow("Partenaires d'expédition", "Finexs / General Express (agences de voyage partenaires)")}
+      ${infoRow("Conditionnement", "Produits scellés + guide d'utilisation physique inclus")}
+      ${infoRow("Délai estimé", "3-5 jours ouvrés — à confirmer selon stock partenaires locaux")}
+      ${infoRow("Commander", "glowscan.cm — livraison nationale sécurisée")}
+    </table>
+  `) : ""}
+
+  <div style="margin-top:20px;padding:10px 14px;background:${BEIGE_BG};border:1px solid ${BEIGE_HEADER};border-radius:4px;font-size:8.5px;color:#6b5c2a;line-height:1.8;text-align:center">
+    Ce rapport est généré automatiquement par l'infrastructure GlowScan Professional.<br>
+    Il ne remplace pas un avis dermatologique qualifié. Pour tout cas persistant ou sévère, une consultation physique est recommandée.<br>
+    <strong>Réf : ${refNum}</strong> &nbsp;|&nbsp; GlowScan © ${new Date().getFullYear()} &nbsp;|&nbsp; Tous droits réservés.
+  </div>
+
+</div>
 </body></html>`;
     const element = document.createElement("div");
     element.innerHTML = html;

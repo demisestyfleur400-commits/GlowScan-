@@ -524,7 +524,7 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
               ]}],
               generationConfig: {
                 responseMimeType: "application/json",
-                maxOutputTokens: 2400,
+                maxOutputTokens: 4500,
                 temperature: 0.2,
               },
             }),
@@ -544,10 +544,10 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
                 ],
               },
             ],
-            max_tokens: 2400,
+            max_tokens: 4500,
             temperature: 0.2,
             response_format: { type: "json_object" },
-          }, { timeout: 45000, maxRetries: 0 });
+          }, { timeout: 60000, maxRetries: 0 });
           c = r.choices[0]?.message?.content || "";
           console.log(`[analyze] finish: ${r.choices[0]?.finish_reason}`);
         } else {
