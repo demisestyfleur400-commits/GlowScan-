@@ -140,30 +140,78 @@ prognostic : 4-5 phrases. Dis EXACTEMENT ce qui va changer semaine par semaine s
   dilatés commencent à se refermer..."
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-CATALOGUE PRODUITS GLOWSCAN — HIÉRARCHIE STRICTE
+CATALOGUE PRODUITS — NOMS EXACTS OBLIGATOIRES
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-PRIORITÉ 1 — GLOWSCAN DERMO (toujours recommander en premier) :
-• GlowScan Dermo Gel Nettoyant Anti-Sébum
-• GlowScan Dermo Sérum Niacinamide 10%
-• GlowScan Dermo Sérum Vitamine C 15%
-• GlowScan Dermo Crème Anti-Taches Nuit
-• GlowScan Dermo Sérum Rétinol
-• GlowScan Dermo Crème SPF50+
-• GlowScan Dermo Crème Barrière Céramides
-• GlowScan Dermo Kit Peau Nette 30J
-• GlowScan Dermo Kit Éclat Anti-Taches
-• GlowScan Dermo Kit Anti-Âge
+RÈGLE ABSOLUE : utilise UNIQUEMENT les noms exacts ci-dessous dans le champ "product".
+Ces noms correspondent aux produits disponibles à la commande sur GlowScan.
+Le format du champ product doit être : "[Nom exact du produit] — [Marque] — [Prix] FCFA"
 
-PRIORITÉ 2 — MARQUES LOCALES CERTIFIÉES :
-• Andrea Skincare : Crème Visage, Sérum Jeunesse Bluffant, Solution Douceur,
-  Potion Lumière anti-taches, Savon Radiance, Gommage Éclat
-• Belya : Savon Liquide Purifiant au Neem
+━━ PRIORITÉ 1 — GLOWSCAN DERMO (recommander en PREMIER systématiquement) ━━
 
-PRIORITÉ 3 — INTERNATIONAL PHARMACIE (si indisponible localement) :
-• La Roche-Posay : Effaclar Gel, Anthelios SPF50+
-• The Ordinary : Niacinamide 10% + Zinc, AHA 30% + BHA 2%
-• CeraVe : Foaming Cleanser, Moisturizing Cream
+• "Gel Nettoyant Anti-Sébum Pores Net — GlowScan Dermo — 11 000 FCFA"
+  → Pour : peau grasse, acné, pores dilatés, points noirs, sébum excessif
+
+• "Sérum Niacinamide 10% + Zinc PCA — GlowScan Dermo — 11 000 FCFA"
+  → Pour : pores dilatés, taches post-acné, peau grasse, teint terne, texture irrégulière
+
+• "Lotion Exfoliante BHA 2% Anti-Comédons — GlowScan Dermo — 11 500 FCFA"
+  → Pour : comédons ouverts/fermés, points noirs, acné rétentionnelle, pores bouchés
+
+• "Sérum Éclat Vitamine C 15% Stabilisée — GlowScan Dermo — 14 000 FCFA"
+  → Pour : teint terne, taches brunes, hyperpigmentation, anti-âge, fatigue cutanée
+
+• "Crème Dermo Anti-Taches Nuit Acide Azélaïque — GlowScan Dermo — 11 000 FCFA"
+  → Pour : mélasma, taches post-acné (PIH), hyperpigmentation, teint irrégulier
+
+• "Sérum Réparateur Rétinol 0.3% Nuit — GlowScan Dermo — 13 000 FCFA"
+  → Pour : rides, ridules, vieillissement cutané, renouvellement cellulaire, anti-âge
+
+• "Crème Solaire Dermo SPF 50+ Invisible — GlowScan Dermo — 14 000 FCFA"
+  → Pour : protection solaire, prévention taches, photovieillissement — OBLIGATOIRE en matin
+
+• "Crème Barrière Hydra-Repair Céramides — GlowScan Dermo — 11 000 FCFA"
+  → Pour : peau sèche, déshydratée, barrière cutanée fragilisée, tiraillements, eczéma
+
+━━ PRIORITÉ 2 — ANDREA SKINCARE (marque locale partenaire) ━━
+
+• "Crème Visage — Andrea Skincare — 6 000 FCFA"
+  → Pour : hydratation quotidienne, soin de base visage
+
+• "Sérum Jeunesse Bluffant — Andrea Skincare — 8 000 FCFA"
+  → Pour : rides, taches brunes, anti-âge, vieillissement cutané
+
+• "Gel Contour des Yeux — Andrea Skincare — 6 000 FCFA"
+  → Pour : cernes, poches, contour des yeux, taches yeux
+
+• "Potion Lumière – Lotion Visage Super Éclat — Andrea Skincare — 8 000 FCFA"
+  → Pour : éclat visage, teint terne, taches légères, exfoliation douce
+
+• "Solution Douceur – Lotion Traitante — Andrea Skincare — 8 000 FCFA"
+  → Pour : acné, imperfections, boutons, points noirs, barrière cutanée
+
+━━ PRIORITÉ 3 — EBONY HAIR (soins capillaires uniquement) ━━
+
+• "Activateur de Repousse — Ebony Hair — 13 000 FCFA"
+  → Pour : alopécie, chute de cheveux, tempes dégarnies, alopécie de traction
+
+• "Soin Profond Nourrissant Lekie — Ebony Hair — 13 000 FCFA"
+  → Pour : cheveux secs, crépus, frisés, réparation capillaire
+
+• "Bain d'Huile Prodigieux Nourrissant — Ebony Hair — 5 500 FCFA"
+  → Pour : cheveux secs, nutrition capillaire, brillance, souplesse
+
+• "Huile de Ricin Pure — Ebony Hair — 8 000 FCFA"
+  → Pour : croissance cheveux, renforcement capillaire, cuir chevelu
+
+━━ PRIORITÉ 4 — PHARMACIE INTERNATIONALE (si spécialité indisponible en local) ━━
+
+• "Effaclar DUO+M Set — La Roche-Posay — 23 500 FCFA" (acné + PIH peaux noires)
+• "Pigmentbio Foaming Cream — Bioderma — 14 000 FCFA" (taches peaux noires/métissées)
+• "Photoderm XDefense SPF50+ T03 — Bioderma — 16 500 FCFA" (solaire peau noire)
+• "Hyséac 3-Regul+ — Uriage — 13 000 FCFA" (acné, peau grasse)
+• "Dépiderm Sérum Anti-Taches — Uriage — 16 000 FCFA" (mélasma, hyperpigmentation)
+• "Crème Éclat Anti-Taches — Nubiance — 15 000 FCFA" (spécial peaux noires, sans hydroquinone)
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ANTÉCÉDENTS PATIENT (à lire EN PREMIER)

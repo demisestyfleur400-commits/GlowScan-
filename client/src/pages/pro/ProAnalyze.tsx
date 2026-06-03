@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import html2pdf from "html2pdf.js";
+import { catalog, formatPrice, getProductBrand } from "@shared/catalog";
 import { Link, useLocation } from "wouter";
 import {
   ArrowRight,
@@ -545,6 +546,40 @@ export default function ProAnalyze() {
         ].join("")
       : "";
 
+    // ── Extraction des produits commandables depuis le protocole ──
+    interface OrderLine { name: string; brand: string; price: number; whatsapp: string }
+    const orderLines: OrderLine[] = [];
+    const seen = new Set<string>();
+    const allSteps = [...morning, ...evening];
+    for (const step of allSteps) {
+      if (!step?.product) continue;
+      const productText = (step.product as string).toLowerCase();
+      const match = catalog.find(p => {
+        const n = p.name.toLowerCase();
+        return productText.includes(n) || n.split(" ").slice(0, 3).every((w: string) => productText.includes(w));
+      });
+      if (match && !seen.has(match.id)) {
+        seen.add(match.id);
+        orderLines.push({
+          name: match.name,
+          brand: match.brand || getProductBrand(match),
+          price: match.price || 0,
+          whatsapp: match.whatsapp || "+237674377959",
+        });
+      }
+    }
+    const totalEstime = orderLines.reduce((s, l) => s + l.price, 0);
+
+    const renderOrderLine = (l: OrderLine, i: number) =>
+      `<tr style="border-bottom:1px solid #e5dfc8;background:${i % 2 === 0 ? "#fff" : BEIGE_BG}">
+        <td style="padding:7px 12px;font-size:10px;font-weight:700;color:#1a1505">${l.name}</td>
+        <td style="padding:7px 12px;font-size:9px;color:${GOLD};font-weight:700">${l.brand}</td>
+        <td style="padding:7px 12px;font-size:10px;font-weight:800;color:#1a1505;text-align:right;white-space:nowrap">${l.price ? l.price.toLocaleString("fr-FR") + " FCFA" : "Sur devis"}</td>
+        <td style="padding:7px 10px;font-size:8.5px;color:#1e40af;text-align:center">
+          <a href="https://wa.me/${l.whatsapp.replace(/\D/g, "")}" style="color:#1e40af;text-decoration:none">📲 Commander</a>
+        </td>
+      </tr>`;
+
     const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
 <title>GlowScan Pro — ${firstName} ${lastName}</title>
 <style>
@@ -665,6 +700,38 @@ export default function ProAnalyze() {
       ${infoRow("Commander", "glowscan.cm — livraison nationale sécurisée")}
     </table>
   `) : ""}
+
+  <!-- BON DE COMMANDE -->
+  ${sectionBox("Bon de Commande — Produits Prescrits à Commander", `
+    <p style="font-size:10px;color:#4b3f1a;margin-bottom:10px;line-height:1.7">
+      Voici les produits prescrits dans ce protocole. Commandez directement via WhatsApp GlowScan pour une livraison sécurisée avec guide d'utilisation inclus.
+    </p>
+    ${orderLines.length > 0 ? `
+    <table style="border:1px solid ${BEIGE_HEADER};border-radius:4px;overflow:hidden">
+      <thead>
+        <tr style="background:${BEIGE_HEADER}">
+          <th style="padding:7px 12px;text-align:left;font-size:9px;font-weight:800;color:#1a1505;text-transform:uppercase;letter-spacing:.5px">Produit</th>
+          <th style="padding:7px 12px;text-align:left;font-size:9px;font-weight:800;color:#1a1505;text-transform:uppercase;letter-spacing:.5px">Marque</th>
+          <th style="padding:7px 12px;text-align:right;font-size:9px;font-weight:800;color:#1a1505;text-transform:uppercase;letter-spacing:.5px">Prix</th>
+          <th style="padding:7px 10px;text-align:center;font-size:9px;font-weight:800;color:#1a1505;text-transform:uppercase;letter-spacing:.5px">Commander</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${orderLines.map(renderOrderLine).join("")}
+        <tr style="background:${DARK_HEADER}">
+          <td colspan="2" style="padding:9px 12px;font-size:10px;font-weight:900;color:#fff;text-transform:uppercase;letter-spacing:.5px">TOTAL ESTIMÉ PROTOCOLE COMPLET</td>
+          <td style="padding:9px 12px;font-size:13px;font-weight:900;color:${GOLD_LIGHT};text-align:right;white-space:nowrap">${totalEstime > 0 ? totalEstime.toLocaleString("fr-FR") + " FCFA" : "Sur devis"}</td>
+          <td style="padding:9px 10px;text-align:center">
+            <a href="https://wa.me/237674377959" style="font-size:9px;color:${GOLD_LIGHT};font-weight:700;text-decoration:none">📲 GlowScan Pro</a>
+          </td>
+        </tr>
+      </tbody>
+    </table>` : `<p style="font-size:10px;color:#4b3f1a">Commander via WhatsApp : <strong>+237 674 377 959</strong> (GlowScan Dermo)</p>`}
+    <div style="margin-top:10px;padding:8px 12px;background:${BEIGE_BG};border-radius:4px;font-size:9px;color:#4b3f1a;line-height:1.7">
+      ✦ <strong>Livraison nationale sécurisée</strong> — Douala &amp; Yaoundé : 24-48h &nbsp;|&nbsp; Autres régions : 3-5 jours via Finexs / General Express<br>
+      ✦ Chaque commande inclut un <strong>guide d'utilisation physique personnalisé</strong> et un suivi WhatsApp par votre dermatologue
+    </div>
+  `)}
 
   <div style="margin-top:20px;padding:10px 14px;background:${BEIGE_BG};border:1px solid ${BEIGE_HEADER};border-radius:4px;font-size:8.5px;color:#6b5c2a;line-height:1.8;text-align:center">
     Ce rapport est généré automatiquement par l'infrastructure GlowScan Professional.<br>
