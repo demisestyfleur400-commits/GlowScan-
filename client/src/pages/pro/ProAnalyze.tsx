@@ -576,7 +576,7 @@ export default function ProAnalyze() {
         <td style="padding:7px 12px;font-size:9px;color:${GOLD};font-weight:700">${l.brand}</td>
         <td style="padding:7px 12px;font-size:10px;font-weight:800;color:#1a1505;text-align:right;white-space:nowrap">${l.price ? l.price.toLocaleString("fr-FR") + " FCFA" : "Sur devis"}</td>
         <td style="padding:7px 10px;font-size:8.5px;color:#1e40af;text-align:center">
-          <a href="https://wa.me/${l.whatsapp.replace(/\D/g, "")}" style="color:#1e40af;text-decoration:none">📲 Commander</a>
+          <a href="https://wa.me/237674377959" style="color:#1e40af;text-decoration:none">📲 Commander</a>
         </td>
       </tr>`;
 

@@ -1396,7 +1396,7 @@ ${_bestProduct ? `
       <div class="product-name">${_benefit}</div>
       <div class="product-price">${_bestProduct.price?.toLocaleString("fr-FR")} FCFA</div>
       <div class="product-usage">${(_bestProduct.usagePoints || []).slice(0, 3).map((p: string) => `• ${p}`).join("<br>")}</div>
-      <a class="product-wa" href="https://wa.me/${_bestProduct.whatsapp?.replace("+","") || "237674377959"}">
+      <a class="product-wa" href="https://wa.me/237674377959">
         📱 Commander via WhatsApp
       </a>
     </div>
@@ -1954,7 +1954,7 @@ ${pdfBestProduct ? `
           const social = getSocialProof(bestProduct.id);
           const isLocal = bestProduct.whatsapp ? LOCAL_WHATSAPP.has(bestProduct.whatsapp) : false;
 
-          const waNumber = bestProduct.whatsapp?.replace("+", "") || "237674377959";
+          const waNumber = "237674377959"; // toutes les commandes → numéro unique GlowScan
           const waMsg = encodeURIComponent(
             `Bonjour GlowScan 👋\n\nMon analyse a révélé : *${result.condition}*\n\nJe veux commander :\n• ${benefit}\n  Prix : ${bestProduct.price?.toLocaleString("fr-FR")} FCFA\n\nLivraison à Douala SVP 🙏`
           );
@@ -2621,7 +2621,7 @@ ${pdfBestProduct ? `
                       Total : {pack.total.toLocaleString("fr-FR")} FCFA
                     </p>
                     <a
-                      href={`https://wa.me/${pack.waKey.replace("+", "")}?text=${pack.waMsg}`}
+                      href={`https://wa.me/237674377959?text=${pack.waMsg}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{
