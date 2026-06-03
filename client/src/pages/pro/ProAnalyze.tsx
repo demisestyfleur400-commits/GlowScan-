@@ -437,114 +437,168 @@ export default function ProAnalyze() {
     const prognostic: string = r.prognostic || "";
     const redFlags: string[] = r.redFlags || [];
     const confidence: string = r.confidence || "";
+    const GOLD = "#b8960c";
+    const GOLD_LIGHT = "#c9a94a";
+    const BEIGE_BG = "#f5efe0";
+    const BEIGE_HEADER = "#c8b882";
+    const DARK_HEADER = "#120f1e";
+
+    const stepNums = ["①","②","③","④","⑤"];
+
     const renderZone = (z: any, i: number) => {
-      const statusColor = z.status === "Sévèrement affecté" ? "#b91c1c" : z.status === "Modérément affecté" ? "#d97706" : z.status === "Légèrement affecté" ? "#7c3aed" : "#059669";
-      const statusBg = z.status === "Sévèrement affecté" ? "#fff1f2" : z.status === "Modérément affecté" ? "#fffbeb" : z.status === "Légèrement affecté" ? "#f5f3ff" : "#f0fdf4";
-      return `<div style="border-left:3px solid ${statusColor};padding:10px 12px;margin-bottom:10px;background:${statusBg};border-radius:0 6px 6px 0"><div style="font-size:11px;font-weight:800;color:#1f2937;margin-bottom:3px">${i+1}. ${z.zone||""} — <span style="color:${statusColor}">${z.status||""}</span></div>${z.findings?`<div style="font-size:10px;color:#374151;line-height:1.7;margin-bottom:4px">${z.findings}</div>`:""}<${z.risk?`<div style="font-size:9px;color:#b91c1c;font-weight:700;margin-top:4px">⚠ Risque : ${z.risk}</div>`:""}</div>`;
+      const statusColor = z.status === "Sévèrement affecté" ? "#b91c1c"
+        : z.status === "Modérément affecté" ? "#d97706"
+        : z.status === "Légèrement affecté" ? "#7c3aed" : "#059669";
+      return `<tr style="border-bottom:1px solid #e5dfc8">
+        <td style="padding:8px 12px;width:38%;font-weight:700;color:#2d2108;vertical-align:top;font-size:10px">${i+1}. ${z.zone||""}</td>
+        <td style="padding:8px 12px;font-size:10px;color:#374151;line-height:1.7;vertical-align:top">
+          ${z.findings||""}
+          ${z.risk?`<div style="margin-top:4px;font-size:9px;color:${statusColor};font-weight:700">▶ Risque : ${z.risk}</div>`:""}
+        </td>
+      </tr>`;
     };
-    const renderProtocolStep = (s: any, i: number) => {
+
+    const renderStep = (s: any, i: number) => {
       if (!s) return "";
-      return `<div style="display:flex;gap:10px;margin-bottom:10px;align-items:flex-start"><div style="min-width:22px;height:22px;border-radius:50%;background:#7c3aed;color:#fff;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">${i+1}</div><div style="flex:1"><div style="font-size:10px;font-weight:800;color:#1f2937;text-transform:uppercase;letter-spacing:.4px">${s.step||""}</div>${s.product?`<div style="font-size:10px;color:#7c3aed;font-weight:700;margin-top:2px">→ ${s.product}${s.concentration?` <span style="font-size:9px;color:#6b7280">(${s.concentration})</span>`:""}</div>`:""}<${s.frequency?`<div style="font-size:9px;color:#6b7280;margin-top:1px">📅 ${s.frequency}</div>`:""}<${s.mechanism?`<div style="font-size:9px;color:#374151;margin-top:3px;line-height:1.5;font-style:italic">${s.mechanism}</div>`:""}</div></div>`;
+      const num = stepNums[i] || `${i+1}.`;
+      const stepLabel = (s.step||"").toUpperCase();
+      const freq = s.frequency ? ` — ${s.frequency}` : "";
+      return `<div style="margin-bottom:14px">
+        <div style="font-size:11px;font-weight:800;color:#2d2108;margin-bottom:3px">
+          <span style="color:${GOLD};font-size:13px;margin-right:4px">${num}</span> ${stepLabel}<span style="font-weight:400;color:#6b5c2a">${freq}</span>
+        </div>
+        ${s.product ? `<div style="font-size:10px;color:${GOLD_LIGHT};font-style:italic;margin-bottom:2px;margin-left:20px">✦ ${s.product}${s.concentration?` (${s.concentration})`:""}</div>` : ""}
+        ${s.mechanism ? `<div style="font-size:10px;color:#4b3f1a;line-height:1.6;margin-left:20px">${s.mechanism}</div>` : ""}
+      </div>`;
     };
+
     const renderToxic = (t: any) => {
       if (!t) return "";
-      const name = typeof t === "string" ? t : t.ingredient || "";
-      const reason = typeof t === "object" ? t.reason || "" : "";
-      return `<div style="margin-bottom:8px;padding:8px 10px;background:#fff1f2;border-left:3px solid #b91c1c;border-radius:0 6px 6px 0"><div style="font-size:10px;font-weight:800;color:#b91c1c">✕ ${name}</div>${reason?`<div style="font-size:9px;color:#374151;margin-top:2px;line-height:1.5">${reason}</div>`:""}</div>`;
+      const name = typeof t === "string" ? t : (t.ingredient||"");
+      const reason = typeof t === "object" ? (t.reason||"") : "";
+      return `<tr style="border-bottom:1px solid #e5dfc8">
+        <td style="padding:8px 12px;width:32%;font-weight:700;color:#b91c1c;vertical-align:top;font-size:10px">✗ ${name}</td>
+        <td style="padding:8px 12px;font-size:10px;color:#374151;line-height:1.6;vertical-align:top">${reason}</td>
+      </tr>`;
     };
-    const morning2 = morning;
+
+    const sectionBox = (title: string, content: string) =>
+      `<div style="margin-top:20px;border:1px solid ${BEIGE_HEADER};border-radius:4px;overflow:hidden">
+        <div style="background:${BEIGE_HEADER};padding:9px 16px">
+          <span style="font-size:10px;font-weight:900;color:#1a1505;letter-spacing:.6px;text-transform:uppercase">■ ${title}</span>
+        </div>
+        <div style="background:#fff;padding:14px 16px">${content}</div>
+      </div>`;
+
+    const infoRow = (label: string, value: string) =>
+      `<tr style="border-bottom:1px solid #ede5cc">
+        <td style="padding:7px 12px;width:36%;font-weight:700;color:${GOLD};font-size:10px">${label}</td>
+        <td style="padding:7px 12px;font-size:10px;color:#2d2108">${value}</td>
+      </tr>`;
+
+    const patientRows = [
+      infoRow("Nom", `${firstName} ${lastName}`),
+      infoRow("Âge", age ? `${age} ans` : "—"),
+      infoRow("Zone Géographique", patientRegion || "—"),
+      infoRow("Profil analysé", `${zonesAnalysis.length || "3"} zones distinctes — ${zonesAnalysis.map((z:any)=>z.zone).join(", ") || "Front, Joues, Nez/Zone T"}`),
+      antecedentsIntegration ? infoRow("Antécédents", antecedentsIntegration) : "",
+      problemDuration ? infoRow("Durée du problème", problemDuration) : "",
+      previousProducts ? infoRow("Produits utilisés", previousProducts) : "",
+      allergies ? infoRow("Allergies", `⚠ ${allergies}`) : "",
+      consultMotif ? infoRow("Motif", consultMotif) : "",
+    ].filter(Boolean).join("");
+
+    const diagContent = `
+      <p style="font-size:10px;color:#2d2108;margin-bottom:14px;line-height:1.7">
+        Analyse au pixel par l'infrastructure GlowScan : <strong>${r.skinType||r.condition||"—"}</strong>.
+        ${clinicalSummary ? "<br>" + clinicalSummary : ""}
+      </p>
+      ${zonesAnalysis.length > 0 ? `<table style="width:100%;border-collapse:collapse;border:1px solid #e5dfc8;border-radius:4px;overflow:hidden">${zonesAnalysis.map(renderZone).join("")}</table>` : ""}
+      <div style="display:flex;gap:16px;margin-top:14px;align-items:center">
+        <div style="border:2px solid ${GOLD};border-radius:6px;padding:12px 20px;min-width:110px;background:${BEIGE_BG}">
+          <div style="font-size:8px;font-weight:700;color:${GOLD};text-transform:uppercase;text-align:center;letter-spacing:.5px">GLOW SCORE</div>
+          <div style="font-size:40px;font-weight:900;color:${GOLD};text-align:center;line-height:1.1">${r.score||"—"}</div>
+          <div style="font-size:8px;color:#6b5c2a;text-align:center">/100 — ${r.severity||"Peau analysée"}</div>
+        </div>
+        <div style="flex:1;font-size:10px;color:#374151;line-height:1.7">${r.clinicalSummary||r.details||prognostic||""}</div>
+      </div>`;
+
+    const toxicContent = toxicIngredients.length > 0
+      ? `<p style="font-size:10px;color:#4b3f1a;margin-bottom:10px">Vérifiez impérativement les étiquettes de vos produits actuels et bannissez :</p>
+         <table style="width:100%;border-collapse:collapse;border:1px solid #e5dfc8">${toxicIngredients.map(renderToxic).join("")}</table>`
+      : `<p style="font-size:10px;color:#4b3f1a">Aucun ingrédient toxique identifié pour cette peau.</p>`;
+
+    const morningContent = morning.length > 0
+      ? morning.map(renderStep).join("")
+      : `<p style="font-size:10px;color:#4b3f1a">Protocole matin non disponible.</p>`;
+
+    const eveningContent = evening.length > 0
+      ? evening.map(renderStep).join("")
+      : `<p style="font-size:10px;color:#4b3f1a">Protocole soir non disponible.</p>`;
+
+    const logisticsRows = logistics
+      ? [
+          infoRow("Zone de livraison", patientRegion || "Cameroun"),
+          infoRow("Partenaires", "Finexs / General Express (agences de voyage partenaires)"),
+          infoRow("Conditionnement", "Produits scellés + guide d'utilisation physique inclus"),
+          infoRow("Délai estimé", "À confirmer selon disponibilité stock partenaires locaux"),
+        ].join("")
+      : "";
+
     const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
 <title>GlowScan Pro — ${firstName} ${lastName}</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif;color:#1f2937;background:#fff;font-size:11px}
-.header{background:#0d0a0e;padding:20px 28px;display:flex;justify-content:space-between;align-items:flex-start}
-.brand{font-size:22px;font-weight:900;color:#7c3aed}.pro-badge{font-size:9px;font-weight:700;color:#a78bfa;background:rgba(124,58,237,.2);padding:2px 8px;border-radius:4px;margin-top:4px;display:inline-block}
-.h-title{font-size:14px;font-weight:700;color:#f3f0ff;margin:6px 0 3px}.h-sub{font-size:8px;color:#a78bfa;margin-bottom:6px}.h-meta{font-size:9px;color:#9ca3af}
-.stamp{border:2px solid #7c3aed;border-radius:8px;padding:10px 14px;text-align:center;min-width:90px}
-.stamp-t{font-size:8px;font-weight:700;color:#a78bfa;text-transform:uppercase}.stamp-v{font-size:18px;font-weight:900;color:#7c3aed}
-.body{padding:20px 28px}.section{margin-top:18px}
-.sec-title{font-size:10px;font-weight:800;color:#7c3aed;letter-spacing:.7px;text-transform:uppercase;padding-bottom:5px;border-bottom:2px solid #e8e3ff;margin-bottom:10px}
-.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;background:#f8f7ff;border:1px solid #e8e3ff;border-radius:8px;padding:14px}
-.lbl{font-size:8px;color:#7c3aed;font-weight:700;text-transform:uppercase;letter-spacing:.05em}.val{font-size:12px;font-weight:700;color:#0d0a0e;margin-top:1px}
-.anteced-box{background:#fffbeb;border:1px solid #fef3c7;border-radius:8px;padding:12px;font-size:10px;line-height:1.7}
-.score-row{display:flex;gap:14px;margin:10px 0}
-.score-box{flex:1;border-radius:8px;padding:12px;text-align:center}
-.clin-box{background:#f3f4f6;border:1px solid #d1d5db;border-radius:8px;padding:12px;font-size:10px;line-height:1.8;color:#374151;margin-top:8px}
-.protocol-lbl{font-size:9px;font-weight:800;padding:6px 10px;border-radius:5px;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px}
-.footer{background:#0d0a0e;padding:14px 28px;display:flex;align-items:center;gap:14px;margin-top:24px}
-.f-text{flex:1;font-size:7.5px;color:#a78bfa;line-height:1.6}.f-brand{font-size:14px;font-weight:900;color:#7c3aed}
-.validity{background:#fffbeb;border:1px solid #fef3c7;border-radius:8px;padding:10px 14px;font-size:9px;color:#92400e;margin-top:16px}
-.flag-box{background:#fff1f2;border:1px solid #fecdd3;border-radius:8px;padding:10px;margin-top:6px;font-size:10px;color:#b91c1c;line-height:1.7}
-.prognosis-box{background:#f0fdf4;border:1px solid #d1fae5;border-radius:8px;padding:10px;margin-top:6px;font-size:10px;color:#065f46;line-height:1.7}
-.logistics-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px;font-size:10px;color:#1e40af;line-height:1.8}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:"Arial",sans-serif;background:#fff;color:#1a1505;font-size:11px;line-height:1.4}
+  a{text-decoration:none}
 </style></head><body>
-<div class="header">
-  <div>
-    <div class="brand">✦ GlowScan</div>
-    <div class="pro-badge">PRO — Mode Clinicien</div>
-    <div class="h-title">Rapport de Consultation Dermatologique</div>
-    <div class="h-sub">Analyse IA clinique stricte — Spécialisé Peaux Africaines</div>
-    <div class="h-meta">Réf : <b style="color:#a78bfa">${refNum}</b> &nbsp;|&nbsp; Date : <b style="color:#a78bfa">${date}</b>${confidence ? ` &nbsp;|&nbsp; Confiance IA : <b style="color:#a78bfa">${confidence}</b>` : ""}</div>
-  </div>
-  <div class="stamp"><div class="stamp-t">Consultation</div><div class="stamp-v">Pro</div><div class="stamp-t">GlowScan</div></div>
+
+<!-- HEADER DARK -->
+<div style="background:${DARK_HEADER};padding:18px 32px 22px;text-align:center;border-bottom:3px solid ${GOLD}">
+  <div style="font-size:9px;color:#9ca3af;letter-spacing:.5px;margin-bottom:8px">Réf : ${refNum} &nbsp;|&nbsp; Date : ${date}</div>
+  <div style="font-size:30px;font-weight:900;color:#ffffff;letter-spacing:2px">✦ GlowScan Professional ✦</div>
+  <div style="font-size:12px;color:${GOLD_LIGHT};font-style:italic;margin-top:6px">Analyse Cutanée Personnalisée — Rapport Officiel</div>
+  <div style="height:1px;background:${GOLD};margin:14px auto 0;width:60%;opacity:.5"></div>
 </div>
-<div class="body">
-  <div class="section">
-    <div class="sec-title">👤 Informations Patient &amp; Antécédents</div>
-    <div class="info-grid">
-      <div><div class="lbl">Nom</div><div class="val">${firstName} ${lastName}</div></div>
-      <div><div class="lbl">Téléphone</div><div class="val">${phone || "—"}</div></div>
-      <div><div class="lbl">Âge</div><div class="val">${age ? age + " ans" : "—"}</div></div>
-      <div><div class="lbl">Zone géographique</div><div class="val">${patientRegion || "—"}</div></div>
-    </div>
-    ${(problemDuration || previousProducts || allergies || consultMotif || antecedentsIntegration) ? `
-    <div class="anteced-box" style="margin-top:8px">
-      ${problemDuration ? `<p><b>Durée du problème :</b> ${problemDuration}</p>` : ""}
-      ${previousProducts ? `<p><b>Produits déjà utilisés :</b> ${previousProducts}</p>` : ""}
-      ${allergies ? `<p style="color:#b91c1c"><b>⚠ Allergies :</b> ${allergies}</p>` : ""}
-      ${consultMotif ? `<p><b>Motif de consultation :</b> ${consultMotif}</p>` : ""}
-      ${antecedentsIntegration ? `<p style="margin-top:6px;color:#374151"><b>Analyse des antécédents :</b> ${antecedentsIntegration}</p>` : ""}
-    </div>` : ""}
-  </div>
-  <div class="section">
-    <div class="sec-title">🧬 Diagnostic Clinique Visuel &amp; Analyse de la Peau</div>
-    <div class="score-row">
-      <div class="score-box" style="background:#f8f7ff;border:1px solid #e8e3ff">
-        <div style="font-size:9px;color:#7c3aed;font-weight:700;text-transform:uppercase;margin-bottom:4px">Diagnostic principal</div>
-        <div style="font-size:13px;font-weight:800;color:#0d0a0e">${r.condition || "—"}</div>
-        ${r.conditionSecondaire ? `<div style="font-size:9px;color:#6b7280;margin-top:2px">+ ${r.conditionSecondaire}</div>` : ""}
-        <div style="font-size:10px;color:#6b7280;margin-top:4px">${r.severity || "—"} · ${r.skinType || "—"}</div>
-      </div>
-      <div class="score-box" style="background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.3)">
-        <div style="font-size:9px;color:#7c3aed;font-weight:700;text-transform:uppercase;margin-bottom:4px">Glow Score</div>
-        <div style="font-size:34px;font-weight:900;color:#7c3aed;line-height:1">${r.score || "—"}</div>
-        <div style="font-size:10px;color:#6b7280">/100</div>
-      </div>
-    </div>
-    ${clinicalSummary ? `<div class="clin-box">${clinicalSummary}</div>` : ""}
-    ${zonesAnalysis.length > 0 ? `<div style="margin-top:12px">${zonesAnalysis.map(renderZone).join("")}</div>` : ""}
-  </div>
-  ${toxicIngredients.length > 0 ? `
-  <div class="section">
-    <div class="sec-title">🚫 Protocole de Rejet — Ingrédients Toxiques pour Cette Peau</div>
-    ${toxicIngredients.map(renderToxic).join("")}
-  </div>` : ""}
-  ${(morning2.length > 0 || evening.length > 0) ? `
-  <div class="section">
-    <div class="sec-title">🛍️ Ordonnance Conseil &amp; Routine Produits</div>
-    ${morning2.length > 0 ? `<div class="protocol-lbl" style="background:#fffbeb;color:#92400e">🌞 Routine du Matin — Équilibre &amp; Matité</div>${morning2.map(renderProtocolStep).join("")}` : ""}
-    ${evening.length > 0 ? `<div class="protocol-lbl" style="background:#ede9fe;color:#5b21b6;margin-top:12px">🌙 Routine du Soir — Traitement Ciblé &amp; Régénération</div>${evening.map(renderProtocolStep).join("")}` : ""}
-    ${protocol.weekly ? `<div style="margin-top:10px;padding:8px 10px;background:#f0fdf4;border-radius:6px;font-size:10px;color:#065f46"><b>📅 Soin hebdomadaire :</b> ${protocol.weekly}</div>` : ""}
-  </div>` : ""}
-  ${logistics ? `<div class="section"><div class="sec-title">📦 Logistique &amp; Expédition</div><div class="logistics-box">${logistics}</div></div>` : ""}
-  ${prognostic ? `<div class="section"><div class="sec-title">📈 Pronostic à 6 Semaines</div><div class="prognosis-box">${prognostic}</div></div>` : ""}
-  ${redFlags.length > 0 ? `<div class="section"><div class="sec-title">🔴 Signaux d'Alarme Cliniques</div><div class="flag-box">${redFlags.map((f: string) => "• " + f).join("<br>")}</div></div>` : ""}
-  <div class="validity">📅 <b>Rapport généré le ${date}</b> · Réf : ${refNum}</div>
+
+<!-- BODY -->
+<div style="padding:20px 32px 32px">
+
+  ${sectionBox("Informations Patient &amp; Antécédents",
+    `<table style="width:100%;border-collapse:collapse">${patientRows}</table>`
+  )}
+
+  ${sectionBox("Diagnostic Clinique Visuel — Analyse Détaillée", diagContent)}
+
+  ${sectionBox("Protocole de Rejet — Ingrédients Toxiques pour Votre Peau", toxicContent)}
+
+  ${sectionBox("Routine du Matin — Équilibre &amp; Matité", morningContent)}
+
+  ${sectionBox("Routine du Soir — Traitement Ciblé &amp; Régénération", eveningContent)}
+
+  ${(protocol.weekly) ? sectionBox("Soin Hebdomadaire Booster",
+    `<div style="font-size:10px;color:#4b3f1a;line-height:1.7">✦ ${protocol.weekly}</div>`
+  ) : ""}
+
+  ${(redFlags.length > 0) ? sectionBox("Signaux d'Alarme Cliniques",
+    redFlags.map((f:string)=>`<div style="font-size:10px;color:#b91c1c;margin-bottom:4px">▶ ${f}</div>`).join("")
+  ) : ""}
+
+  ${logistics ? sectionBox("Logistique &amp; Expédition — Votre Commande",
+    `<table style="width:100%;border-collapse:collapse">${logisticsRows}</table>`
+  ) : ""}
+
 </div>
-<div class="footer">
-  <div class="f-text">Ce rapport est un outil d'aide au diagnostic à l'usage exclusif du professionnel de santé.<br>Il ne remplace pas l'examen clinique complet ni une prescription médicale.<br>Conservez ce document dans le dossier médical de votre patient.</div>
-  <div class="f-brand">✦ GlowScan Pro</div>
-</div></body></html>`;
+
+<!-- FOOTER -->
+<div style="background:${DARK_HEADER};padding:14px 32px;text-align:center;border-top:1px solid ${GOLD};margin-top:8px">
+  <div style="font-size:8px;color:#9ca3af;line-height:1.8">
+    Ce rapport est généré automatiquement par l'infrastructure GlowScan Professional. Il ne remplace pas un avis dermatologique qualifié.<br>
+    Réf : ${refNum} &nbsp;|&nbsp; GlowScan © ${new Date().getFullYear()} &nbsp;|&nbsp; Tous droits réservés.
+  </div>
+</div>
+
+</body></html>`;
     const element = document.createElement("div");
     element.innerHTML = html;
     html2pdf()
