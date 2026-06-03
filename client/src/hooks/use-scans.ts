@@ -9,6 +9,7 @@ import type { InsertScan } from "@shared/schema";
 export interface AnalyzeRequest {
   image: string; // base64
   area: 'face' | 'body' | 'hair';
+  intake?: Record<string, string | undefined>;
 }
 
 export function useAnalyze() {

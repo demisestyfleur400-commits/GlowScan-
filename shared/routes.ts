@@ -61,32 +61,34 @@ export const api = {
       }),
       responses: {
         200: z.object({
+          // Champs communs B2C + Pro
           condition: z.string(),
           severity: z.string(),
           score: z.number(),
           skinType: z.string(),
-          details: z.string(),
-          motivation: z.string(),
+          // Champs B2C (optionnels — absents en mode Pro)
+          details: z.string().optional(),
+          motivation: z.string().optional(),
           stats: z.object({
             lesions: z.string(),
             zones: z.string(),
             pores: z.string(),
             marks: z.string(),
-          }),
+          }).optional(),
           balance: z.object({
-            inflammation: z.number(),
-            sebum: z.number(),
-            pores: z.number(),
-            sensitivity: z.number(),
-            scars: z.number(),
-          }),
+            inflammation: z.number().optional(),
+            sebum: z.number().optional(),
+            pores: z.number().optional(),
+            sensitivity: z.number().optional(),
+            scars: z.number().optional(),
+          }).optional(),
           recommendations: z.object({
             products: z.array(z.string()),
             morning: z.array(z.string()),
             evening: z.array(z.string()),
             weekly: z.string(),
-          }),
-          // Champs additionnels propagés par le serveur (optionnels pour compat)
+          }).optional(),
+          // Champs propagés par le serveur
           savedScanId: z.number().optional(),
           reference: z.string().optional(),
           imageUrl: z.string().optional(),
