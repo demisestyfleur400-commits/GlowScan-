@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import html2pdf from "html2pdf.js";
 import { Link, useLocation } from "wouter";
 import {
   ArrowRight,
@@ -417,144 +418,145 @@ export default function ProAnalyze() {
   };
 
   const exportPdf = () => {
-    if (!result) return;
+    const r = result as any;
+    if (!r) return;
+    if (!r.condition || r.condition === "Examen clinique en cours") {
+      alert("Attendez la fin de l'analyse IA avant de télécharger.");
+      return;
+    }
     const date = new Date().toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
     const refNum = `GS-PRO-${new Date().getFullYear()}-${Math.random().toString(36).slice(2,7).toUpperCase()}`;
-    const morning: any[] = (result as any).protocol?.morning || [];
-    const evening: any[] = (result as any).protocol?.evening || [];
-    const zones = buildMockZones(result);
-    const renderStep = (s: any, i: number) => {
-      const st = typeof s === "object" ? s : { step: String(s) };
-      return `<div style="display:flex;gap:8px;margin-bottom:6px;align-items:flex-start">
-        <div style="min-width:20px;height:20px;border-radius:50%;background:#7c3aed;color:#fff;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">${i+1}</div>
-        <div><div style="font-size:11px;font-weight:700;color:#1f2937">${st.step||""}</div>${st.product?`<div style="font-size:10px;color:#7c3aed">${st.product}</div>`:""}</div>
-      </div>`;
+    const clinicalSummary: string = r.clinicalSummary || r.details || "";
+    const zonesAnalysis: any[] = r.zonesAnalysis || [];
+    const toxicIngredients: any[] = r.toxicIngredients || [];
+    const protocol = r.clinicalProtocol || {};
+    const morning: any[] = protocol.morning || r.protocol?.morning || [];
+    const evening: any[] = protocol.evening || r.protocol?.evening || [];
+    const logistics: string = r.logistics || "";
+    const antecedentsIntegration: string = r.antecedentsIntegration || "";
+    const prognostic: string = r.prognostic || "";
+    const redFlags: string[] = r.redFlags || [];
+    const confidence: string = r.confidence || "";
+    const renderZone = (z: any, i: number) => {
+      const statusColor = z.status === "Sévèrement affecté" ? "#b91c1c" : z.status === "Modérément affecté" ? "#d97706" : z.status === "Légèrement affecté" ? "#7c3aed" : "#059669";
+      const statusBg = z.status === "Sévèrement affecté" ? "#fff1f2" : z.status === "Modérément affecté" ? "#fffbeb" : z.status === "Légèrement affecté" ? "#f5f3ff" : "#f0fdf4";
+      return `<div style="border-left:3px solid ${statusColor};padding:10px 12px;margin-bottom:10px;background:${statusBg};border-radius:0 6px 6px 0"><div style="font-size:11px;font-weight:800;color:#1f2937;margin-bottom:3px">${i+1}. ${z.zone||""} — <span style="color:${statusColor}">${z.status||""}</span></div>${z.findings?`<div style="font-size:10px;color:#374151;line-height:1.7;margin-bottom:4px">${z.findings}</div>`:""}<${z.risk?`<div style="font-size:9px;color:#b91c1c;font-weight:700;margin-top:4px">⚠ Risque : ${z.risk}</div>`:""}</div>`;
     };
+    const renderProtocolStep = (s: any, i: number) => {
+      if (!s) return "";
+      return `<div style="display:flex;gap:10px;margin-bottom:10px;align-items:flex-start"><div style="min-width:22px;height:22px;border-radius:50%;background:#7c3aed;color:#fff;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">${i+1}</div><div style="flex:1"><div style="font-size:10px;font-weight:800;color:#1f2937;text-transform:uppercase;letter-spacing:.4px">${s.step||""}</div>${s.product?`<div style="font-size:10px;color:#7c3aed;font-weight:700;margin-top:2px">→ ${s.product}${s.concentration?` <span style="font-size:9px;color:#6b7280">(${s.concentration})</span>`:""}</div>`:""}<${s.frequency?`<div style="font-size:9px;color:#6b7280;margin-top:1px">📅 ${s.frequency}</div>`:""}<${s.mechanism?`<div style="font-size:9px;color:#374151;margin-top:3px;line-height:1.5;font-style:italic">${s.mechanism}</div>`:""}</div></div>`;
+    };
+    const renderToxic = (t: any) => {
+      if (!t) return "";
+      const name = typeof t === "string" ? t : t.ingredient || "";
+      const reason = typeof t === "object" ? t.reason || "" : "";
+      return `<div style="margin-bottom:8px;padding:8px 10px;background:#fff1f2;border-left:3px solid #b91c1c;border-radius:0 6px 6px 0"><div style="font-size:10px;font-weight:800;color:#b91c1c">✕ ${name}</div>${reason?`<div style="font-size:9px;color:#374151;margin-top:2px;line-height:1.5">${reason}</div>`:""}</div>`;
+    };
+    const morning2 = morning;
     const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
 <title>GlowScan Pro — ${firstName} ${lastName}</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif;color:#1f2937;background:#fff}
-@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}.no-print{display:none!important}@page{margin:0}}
-.header{background:#0d0a0e;padding:18px 24px;display:flex;justify-content:space-between;align-items:flex-start}
-.brand{font-size:20px;font-weight:900;color:#7c3aed}.pro-badge{font-size:9px;font-weight:700;color:#a78bfa;background:rgba(124,58,237,.2);padding:2px 8px;border-radius:4px;margin-top:4px;display:inline-block}
-.h-title{font-size:13px;font-weight:700;color:#f3f0ff;margin:4px 0 2px}.h-sub{font-size:8px;color:#a78bfa;margin-bottom:8px}.h-meta{font-size:8px;color:#6b7280}
-.stamp{border:2px solid #7c3aed;border-radius:8px;padding:8px 12px;text-align:center;min-width:90px}
-.stamp-t{font-size:8px;font-weight:700;color:#a78bfa;text-transform:uppercase}.stamp-v{font-size:16px;font-weight:900;color:#7c3aed}
-.body{padding:16px 24px}.section{margin-top:16px}
-.sec-title{font-size:10px;font-weight:800;color:#7c3aed;letter-spacing:.7px;text-transform:uppercase;padding-bottom:4px;border-bottom:2px solid #e8e3ff;margin-bottom:8px}
-.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;background:#f8f7ff;border:1px solid #e8e3ff;border-radius:8px;padding:12px}
-.info-item .lbl{font-size:8px;color:#7c3aed;font-weight:700;text-transform:uppercase;letter-spacing:.05em}.info-item .val{font-size:12px;font-weight:700;color:#0d0a0e}
-.anteced-box{background:#fffbeb;border:1px solid #fef3c7;border-radius:8px;padding:10px}
-.score-row{display:flex;gap:16px;margin:10px 0}
-.score-box{flex:1;border-radius:8px;padding:10px;text-align:center}
-.clin-box{background:#f3f4f6;border:1px solid #d1d5db;border-radius:8px;padding:10px;font-size:10px;line-height:1.7;color:#374151}
-.zones-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
-.zone-card{padding:7px;border-radius:6px;border:1px solid}
-.zone-dot{width:7px;height:7px;border-radius:50%;margin-bottom:4px}
-.protocol-lbl{font-size:9px;font-weight:700;padding:5px 8px;border-radius:5px;margin-bottom:6px}
-.footer{background:#0d0a0e;padding:12px 24px;display:flex;align-items:center;gap:12px;margin-top:20px}
-.f-text{flex:1;font-size:7px;color:#a78bfa;line-height:1.5}
-.f-brand{font-size:13px;font-weight:900;color:#7c3aed}
-.cta-btn{display:block;text-align:center;background:#7c3aed;color:#fff;padding:10px;border-radius:8px;font-weight:800;font-size:13px;text-decoration:none;margin:14px 0 6px;border:none;cursor:pointer;width:100%}
-.validity{background:#fffbeb;border:1px solid #fef3c7;border-radius:8px;padding:8px 12px;font-size:9px;color:#92400e;margin-top:14px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif;color:#1f2937;background:#fff;font-size:11px}
+.header{background:#0d0a0e;padding:20px 28px;display:flex;justify-content:space-between;align-items:flex-start}
+.brand{font-size:22px;font-weight:900;color:#7c3aed}.pro-badge{font-size:9px;font-weight:700;color:#a78bfa;background:rgba(124,58,237,.2);padding:2px 8px;border-radius:4px;margin-top:4px;display:inline-block}
+.h-title{font-size:14px;font-weight:700;color:#f3f0ff;margin:6px 0 3px}.h-sub{font-size:8px;color:#a78bfa;margin-bottom:6px}.h-meta{font-size:9px;color:#9ca3af}
+.stamp{border:2px solid #7c3aed;border-radius:8px;padding:10px 14px;text-align:center;min-width:90px}
+.stamp-t{font-size:8px;font-weight:700;color:#a78bfa;text-transform:uppercase}.stamp-v{font-size:18px;font-weight:900;color:#7c3aed}
+.body{padding:20px 28px}.section{margin-top:18px}
+.sec-title{font-size:10px;font-weight:800;color:#7c3aed;letter-spacing:.7px;text-transform:uppercase;padding-bottom:5px;border-bottom:2px solid #e8e3ff;margin-bottom:10px}
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;background:#f8f7ff;border:1px solid #e8e3ff;border-radius:8px;padding:14px}
+.lbl{font-size:8px;color:#7c3aed;font-weight:700;text-transform:uppercase;letter-spacing:.05em}.val{font-size:12px;font-weight:700;color:#0d0a0e;margin-top:1px}
+.anteced-box{background:#fffbeb;border:1px solid #fef3c7;border-radius:8px;padding:12px;font-size:10px;line-height:1.7}
+.score-row{display:flex;gap:14px;margin:10px 0}
+.score-box{flex:1;border-radius:8px;padding:12px;text-align:center}
+.clin-box{background:#f3f4f6;border:1px solid #d1d5db;border-radius:8px;padding:12px;font-size:10px;line-height:1.8;color:#374151;margin-top:8px}
+.protocol-lbl{font-size:9px;font-weight:800;padding:6px 10px;border-radius:5px;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px}
+.footer{background:#0d0a0e;padding:14px 28px;display:flex;align-items:center;gap:14px;margin-top:24px}
+.f-text{flex:1;font-size:7.5px;color:#a78bfa;line-height:1.6}.f-brand{font-size:14px;font-weight:900;color:#7c3aed}
+.validity{background:#fffbeb;border:1px solid #fef3c7;border-radius:8px;padding:10px 14px;font-size:9px;color:#92400e;margin-top:16px}
+.flag-box{background:#fff1f2;border:1px solid #fecdd3;border-radius:8px;padding:10px;margin-top:6px;font-size:10px;color:#b91c1c;line-height:1.7}
+.prognosis-box{background:#f0fdf4;border:1px solid #d1fae5;border-radius:8px;padding:10px;margin-top:6px;font-size:10px;color:#065f46;line-height:1.7}
+.logistics-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px;font-size:10px;color:#1e40af;line-height:1.8}
 </style></head><body>
 <div class="header">
   <div>
     <div class="brand">✦ GlowScan</div>
-    <div class="pro-badge">PRO — Usage professionnel</div>
+    <div class="pro-badge">PRO — Mode Clinicien</div>
     <div class="h-title">Rapport de Consultation Dermatologique</div>
-    <div class="h-sub">Analyse IA stricte — Spécialisé Peaux Africaines — Mode Clinicien</div>
-    <div class="h-meta">Date : <b style="color:#a78bfa">${date}</b> &nbsp;|&nbsp; Réf : <b style="color:#a78bfa">${refNum}</b> &nbsp;|&nbsp; Validité : <b style="color:#a78bfa">3 mois</b></div>
+    <div class="h-sub">Analyse IA clinique stricte — Spécialisé Peaux Africaines</div>
+    <div class="h-meta">Réf : <b style="color:#a78bfa">${refNum}</b> &nbsp;|&nbsp; Date : <b style="color:#a78bfa">${date}</b>${confidence ? ` &nbsp;|&nbsp; Confiance IA : <b style="color:#a78bfa">${confidence}</b>` : ""}</div>
   </div>
   <div class="stamp"><div class="stamp-t">Consultation</div><div class="stamp-v">Pro</div><div class="stamp-t">GlowScan</div></div>
 </div>
 <div class="body">
-  <div class="no-print" style="text-align:center;padding:12px 0 4px">
-    <button class="cta-btn" onclick="window.print()">⬇ Télécharger en PDF</button>
-    <p style="font-size:10px;color:#9ca3af">Enregistrer en PDF dans le menu d'impression</p>
-  </div>
   <div class="section">
-    <div class="sec-title">📋 Informations Patient</div>
+    <div class="sec-title">👤 Informations Patient &amp; Antécédents</div>
     <div class="info-grid">
-      <div class="info-item"><div class="lbl">Nom</div><div class="val">${firstName} ${lastName}</div></div>
-      <div class="info-item"><div class="lbl">Téléphone</div><div class="val">${phone || "—"}</div></div>
-      <div class="info-item"><div class="lbl">Âge</div><div class="val">${age ? age + " ans" : "—"}</div></div>
-      <div class="info-item"><div class="lbl">Sexe</div><div class="val">${sex !== "—" ? sex === "F" ? "Femme" : "Homme" : "—"}</div></div>
+      <div><div class="lbl">Nom</div><div class="val">${firstName} ${lastName}</div></div>
+      <div><div class="lbl">Téléphone</div><div class="val">${phone || "—"}</div></div>
+      <div><div class="lbl">Âge</div><div class="val">${age ? age + " ans" : "—"}</div></div>
+      <div><div class="lbl">Zone géographique</div><div class="val">${patientRegion || "—"}</div></div>
     </div>
+    ${(problemDuration || previousProducts || allergies || consultMotif || antecedentsIntegration) ? `
+    <div class="anteced-box" style="margin-top:8px">
+      ${problemDuration ? `<p><b>Durée du problème :</b> ${problemDuration}</p>` : ""}
+      ${previousProducts ? `<p><b>Produits déjà utilisés :</b> ${previousProducts}</p>` : ""}
+      ${allergies ? `<p style="color:#b91c1c"><b>⚠ Allergies :</b> ${allergies}</p>` : ""}
+      ${consultMotif ? `<p><b>Motif de consultation :</b> ${consultMotif}</p>` : ""}
+      ${antecedentsIntegration ? `<p style="margin-top:6px;color:#374151"><b>Analyse des antécédents :</b> ${antecedentsIntegration}</p>` : ""}
+    </div>` : ""}
   </div>
-  ${(problemDuration || previousProducts || allergies || consultMotif) ? `
   <div class="section">
-    <div class="sec-title">🩺 Antécédents et Symptômes</div>
-    <div class="anteced-box">
-      ${problemDuration ? `<p style="margin-bottom:4px;font-size:10px"><b>Durée du problème :</b> ${problemDuration}</p>` : ""}
-      ${previousProducts ? `<p style="margin-bottom:4px;font-size:10px"><b>Produits déjà utilisés :</b> ${previousProducts}</p>` : ""}
-      ${allergies ? `<p style="margin-bottom:4px;font-size:10px;color:#b91c1c"><b>⚠ Allergies :</b> ${allergies}</p>` : ""}
-      ${consultMotif ? `<p style="font-size:10px"><b>Motif de consultation :</b> ${consultMotif}</p>` : ""}
-    </div>
-  </div>` : ""}
-  <div class="section">
-    <div class="sec-title">📊 Diagnostic Clinique</div>
+    <div class="sec-title">🧬 Diagnostic Clinique Visuel &amp; Analyse de la Peau</div>
     <div class="score-row">
       <div class="score-box" style="background:#f8f7ff;border:1px solid #e8e3ff">
         <div style="font-size:9px;color:#7c3aed;font-weight:700;text-transform:uppercase;margin-bottom:4px">Diagnostic principal</div>
-        <div style="font-size:14px;font-weight:800;color:#0d0a0e">${result.condition}</div>
-        <div style="font-size:10px;color:#6b7280;margin-top:2px">${result.severity || "Modérée"} · ${result.skinType || "—"}</div>
+        <div style="font-size:13px;font-weight:800;color:#0d0a0e">${r.condition || "—"}</div>
+        ${r.conditionSecondaire ? `<div style="font-size:9px;color:#6b7280;margin-top:2px">+ ${r.conditionSecondaire}</div>` : ""}
+        <div style="font-size:10px;color:#6b7280;margin-top:4px">${r.severity || "—"} · ${r.skinType || "—"}</div>
       </div>
       <div class="score-box" style="background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.3)">
         <div style="font-size:9px;color:#7c3aed;font-weight:700;text-transform:uppercase;margin-bottom:4px">Glow Score</div>
-        <div style="font-size:32px;font-weight:900;color:#7c3aed;line-height:1">${result.score}</div>
+        <div style="font-size:34px;font-weight:900;color:#7c3aed;line-height:1">${r.score || "—"}</div>
         <div style="font-size:10px;color:#6b7280">/100</div>
       </div>
     </div>
-    ${result.details ? `<div class="clin-box">${result.details}</div>` : ""}
+    ${clinicalSummary ? `<div class="clin-box">${clinicalSummary}</div>` : ""}
+    ${zonesAnalysis.length > 0 ? `<div style="margin-top:12px">${zonesAnalysis.map(renderZone).join("")}</div>` : ""}
   </div>
-  ${zones.length > 0 ? `
+  ${toxicIngredients.length > 0 ? `
   <div class="section">
-    <div class="sec-title">📍 Analyse Zone par Zone</div>
-    <div class="zones-grid">
-      ${zones.map((z: any) => {
-        const dot = z.status === "red" ? "#E91E8C" : z.status === "yellow" ? "#f59e0b" : "#10b981";
-        const bg = z.status === "red" ? "#fff1f2" : z.status === "yellow" ? "#fffbeb" : "#f0fdf4";
-        const bd = z.status === "red" ? "#fecdd3" : z.status === "yellow" ? "#fef3c7" : "#d1fae5";
-        return `<div class="zone-card" style="border-color:${bd};background:${bg}">
-          <div class="zone-dot" style="background:${dot}"></div>
-          <div style="font-size:9px;font-weight:700;color:#374151">${z.name}</div>
-          <div style="font-size:8px;color:#6b7280">${z.short || (z.status==="red"?"Attention":z.status==="yellow"?"À surveiller":"Saine")}</div>
-        </div>`;
-      }).join("")}
-    </div>
+    <div class="sec-title">🚫 Protocole de Rejet — Ingrédients Toxiques pour Cette Peau</div>
+    ${toxicIngredients.map(renderToxic).join("")}
   </div>` : ""}
-  ${(morning.length > 0 || evening.length > 0) ? `
+  ${(morning2.length > 0 || evening.length > 0) ? `
   <div class="section">
-    <div class="sec-title">🌿 Protocole de Traitement</div>
-    ${morning.length > 0 ? `
-    <div class="protocol-lbl" style="background:#fffbeb;color:#92400e">☀ Matin — Protection & Régulation</div>
-    ${morning.map(renderStep).join("")}` : ""}
-    ${evening.length > 0 ? `
-    <div class="protocol-lbl" style="background:#ede9fe;color:#5b21b6;margin-top:10px">🌙 Soir — Réparation Intense</div>
-    ${evening.map(renderStep).join("")}` : ""}
+    <div class="sec-title">🛍️ Ordonnance Conseil &amp; Routine Produits</div>
+    ${morning2.length > 0 ? `<div class="protocol-lbl" style="background:#fffbeb;color:#92400e">🌞 Routine du Matin — Équilibre &amp; Matité</div>${morning2.map(renderProtocolStep).join("")}` : ""}
+    ${evening.length > 0 ? `<div class="protocol-lbl" style="background:#ede9fe;color:#5b21b6;margin-top:12px">🌙 Routine du Soir — Traitement Ciblé &amp; Régénération</div>${evening.map(renderProtocolStep).join("")}` : ""}
+    ${protocol.weekly ? `<div style="margin-top:10px;padding:8px 10px;background:#f0fdf4;border-radius:6px;font-size:10px;color:#065f46"><b>📅 Soin hebdomadaire :</b> ${protocol.weekly}</div>` : ""}
   </div>` : ""}
-  <div class="validity">
-    📅 <b>Rapport valable 3 mois</b> à compter du ${date}. Réf : ${refNum}
-  </div>
+  ${logistics ? `<div class="section"><div class="sec-title">📦 Logistique &amp; Expédition</div><div class="logistics-box">${logistics}</div></div>` : ""}
+  ${prognostic ? `<div class="section"><div class="sec-title">📈 Pronostic à 6 Semaines</div><div class="prognosis-box">${prognostic}</div></div>` : ""}
+  ${redFlags.length > 0 ? `<div class="section"><div class="sec-title">🔴 Signaux d'Alarme Cliniques</div><div class="flag-box">${redFlags.map((f: string) => "• " + f).join("<br>")}</div></div>` : ""}
+  <div class="validity">📅 <b>Rapport généré le ${date}</b> · Réf : ${refNum}</div>
 </div>
 <div class="footer">
-  <div class="f-text">
-    Ce rapport est généré par l'IA GlowScan Pro en mode clinicien strict.<br>
-    Il ne remplace pas un examen physique ni une prescription médicale.<br>
-    Consultez un dermatologue pour tout cas persistant ou sévère.
-  </div>
+  <div class="f-text">Ce rapport est un outil d'aide au diagnostic à l'usage exclusif du professionnel de santé.<br>Il ne remplace pas l'examen clinique complet ni une prescription médicale.<br>Conservez ce document dans le dossier médical de votre patient.</div>
   <div class="f-brand">✦ GlowScan Pro</div>
-</div>
-</body></html>`;
-    const win = window.open("", "_blank");
-    if (win) { win.document.write(html); win.document.close(); win.focus(); }
-    else {
-      const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a"); a.href = url; a.target = "_blank"; a.click();
-      URL.revokeObjectURL(url);
-    }
+</div></body></html>`;
+    const element = document.createElement("div");
+    element.innerHTML = html;
+    html2pdf()
+      .set({
+        margin: 0,
+        filename: `GlowScan-Pro-${firstName}-${lastName}-${refNum}.pdf`,
+        image: { type: "jpeg", quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+      })
+      .from(element)
+      .save();
   };
 
   const resetAll = () => {
