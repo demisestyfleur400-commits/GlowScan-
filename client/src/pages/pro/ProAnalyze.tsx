@@ -156,6 +156,7 @@ export default function ProAnalyze() {
   // Antécédents patient (TÂCHE 1)
   const [antecedentsOpen, setAntecedentsOpen] = useState(false);
   const [problemDuration, setProblemDuration] = useState("");
+  const [patientRegion, setPatientRegion] = useState("");
   const [previousProducts, setPreviousProducts] = useState("");
   const [allergies, setAllergies] = useState("");
   const [consultMotif, setConsultMotif] = useState("");
@@ -264,6 +265,8 @@ export default function ProAnalyze() {
           previousProducts: previousProducts || undefined,
           allergies: allergies || undefined,
           consultMotif: consultMotif || undefined,
+          region: patientRegion || undefined,
+          motif: consultMotif || undefined,
         },
       });
       setResult(r as any);
@@ -686,6 +689,23 @@ export default function ProAnalyze() {
                           </select>
                         </div>
                         <div>
+                          <label className="text-xs font-extrabold mb-1 block" style={{ color: DS.body }}>Région / Ville du patient</label>
+                          <select value={patientRegion} onChange={e => setPatientRegion(e.target.value)}
+                            className="w-full px-3 py-2 rounded-xl text-xs outline-none"
+                            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(167,139,250,0.2)", color: patientRegion ? INK : DS.muted }}>
+                            <option value="">Sélectionner</option>
+                            <option value="Douala">Douala</option>
+                            <option value="Yaoundé">Yaoundé</option>
+                            <option value="Bafoussam">Bafoussam</option>
+                            <option value="Ouest Cameroun">Ouest Cameroun</option>
+                            <option value="Nord-Ouest">Nord-Ouest</option>
+                            <option value="Adamaoua">Adamaoua</option>
+                            <option value="Est">Est</option>
+                            <option value="Littoral (hors Douala)">Littoral (hors Douala)</option>
+                            <option value="Autre pays">Autre pays</option>
+                          </select>
+                        </div>
+                        <div>
                           <label className="text-xs font-extrabold mb-1 block" style={{ color: DS.body }}>Produits ou crèmes déjà appliqués ?</label>
                           <textarea value={previousProducts} onChange={e => setPreviousProducts(e.target.value)}
                             placeholder="Ex : crème éclaircissante, savon noir, aloe vera... (ou Aucun)"
@@ -891,6 +911,8 @@ export default function ProAnalyze() {
                       duration: problemDuration || undefined,
                       previousProducts: previousProducts || undefined,
                       allergies: allergies || undefined,
+                      region: patientRegion || undefined,
+                      motif: consultMotif || undefined,
                     }}
                   />
                 </Suspense>

@@ -315,13 +315,28 @@ export async function registerRoutes(
         duration?: string;
         previousProducts?: string;
         allergies?: string;
+        region?: string;
+        motif?: string;
+        chiefComplaint?: string;
       } | undefined;
 
       // Construction du contexte patient pour enrichir le prompt IA
       // ── Détection compte Pro → prompt strict ──────────────────────────
       const isProRequest = !!(req as any).proAccount;
 
-      const patientContext = intake ? `
+      // Pour le mode Pro, les antécédents sont injectés dans le system prompt via {PATIENT_INTAKE}
+      // Pour le mode B2C, ils sont injectés dans le message utilisateur
+      const patientIntakeData = intake ? JSON.stringify({
+        age: intake.age,
+        duration: intake.duration,
+        previousProducts: intake.previousProducts,
+        allergies: intake.allergies,
+        chiefComplaint: intake.chiefComplaint || intake.motif,
+        region: intake.region,
+        motif: intake.motif,
+      }, null, 2) : "Aucun antécédent fourni.";
+
+      const patientContext = (!isProRequest && intake) ? `
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 DOSSIER PATIENT — INFORMATIONS CLINIQUES
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -337,6 +352,11 @@ ${intake.previousProducts?.trim() ? `- Elle a DÉJÀ essayé ces produits : "${i
 ${intake.allergies?.trim() ? `- ALLERGIES CONNUES : "${intake.allergies}". NE JAMAIS recommander des produits ou ingrédients pouvant déclencher ces allergies.` : ""}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ` : "";
+
+      // Système Pro : injecter les antécédents dans le system prompt AVANT l'analyse photo
+      const activeSystemPrompt = isProRequest
+        ? GLOWSCAN_PRO_SYSTEM_PROMPT.replace("{PATIENT_INTAKE}", patientIntakeData)
+        : GLOWSCAN_SYSTEM_PROMPT;
 
       const prompt = `${patientContext}Analyse la photo de ${areaLabel} (zone : ${area}).
 
@@ -486,12 +506,15 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
       const dataUrl = `data:${mimeForOpenAI};base64,${rawBase64ForOpenAI}`;
       const callAI = async (extraInstruction = ""): Promise<string> => {
         const t0 = Date.now();
-        const userText = prompt + fewShotBlock + extraInstruction + "\n\nIMPORTANT : Réponds UNIQUEMENT avec le JSON demandé, sans texte avant ni après.";
+        const baseUserText = isProRequest
+          ? "Lis d'abord les antécédents patient dans le system prompt, puis analyse cette photo à leur lumière. Retourne le JSON clinique complet."
+          : prompt + patientContext;
+        const userText = baseUserText + fewShotBlock + extraInstruction + "\n\nIMPORTANT : Réponds UNIQUEMENT avec le JSON demandé, sans texte avant ni après.";
         let c = "";
         if (USE_GEMINI && gemini) {
           const m = gemini.getGenerativeModel({
             model: AI_MODEL,
-            systemInstruction: isProRequest ? GLOWSCAN_PRO_SYSTEM_PROMPT : GLOWSCAN_SYSTEM_PROMPT,
+            systemInstruction: activeSystemPrompt,
           });
           const gemResult = await Promise.race([
             m.generateContent({
@@ -512,7 +535,7 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
           const r = await openai.chat.completions.create({
             model: AI_MODEL,
             messages: [
-              { role: "system", content: isProRequest ? GLOWSCAN_PRO_SYSTEM_PROMPT : GLOWSCAN_SYSTEM_PROMPT },
+              { role: "system", content: activeSystemPrompt },
               {
                 role: "user",
                 content: [

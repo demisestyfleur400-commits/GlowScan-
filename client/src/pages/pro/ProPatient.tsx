@@ -1,4 +1,5 @@
 import { useState } from "react";
+import html2pdf from "html2pdf.js";
 import { Link, useRoute, useLocation } from "wouter";
 import { motion } from "framer-motion";
 import {
@@ -199,12 +200,18 @@ export default function ProPatient() {
   <div class="f-text">Ce dossier est généré par GlowScan Pro. Il ne remplace pas un examen physique ni une prescription médicale.<br>Conservez ce document dans le dossier médical de votre patient.</div>
   <div class="f-brand">✦ GlowScan Pro</div>
 </div></body></html>`;
-    const win = window.open("", "_blank");
-    if (win) { win.document.write(html); win.document.close(); win.focus(); }
-    else {
-      const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-      const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.target = "_blank"; a.click(); URL.revokeObjectURL(url);
-    }
+    const element = document.createElement("div");
+    element.innerHTML = html;
+    html2pdf()
+      .set({
+        margin: 0,
+        filename: `GlowScan-Pro-${p.firstName}-${p.lastName}-${refNum}.pdf`,
+        image: { type: "jpeg", quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+      })
+      .from(element)
+      .save();
   };
 
   const handleValidate = async (scanId: number, isVerified: boolean) => {
