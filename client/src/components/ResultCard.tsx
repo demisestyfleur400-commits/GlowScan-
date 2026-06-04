@@ -47,6 +47,188 @@ function buildWhyText(
   return "Renforce la barrière cutanée détectée comme fragilisée et protège des agressions environnementales locales.";
 }
 
+// ─────────────────────────────────────────────────────────
+// ANNUAIRE DERMATOLOGUES PARTENAIRES GLOWSCAN
+// Ajouter de nouveaux dermatologues ici → ils apparaissent
+// automatiquement en carousel dans toutes les analyses.
+// ─────────────────────────────────────────────────────────
+interface Dermatologist {
+  id: string;
+  name: string;
+  title: string;
+  location: string;
+  mode: string;
+  whatsapp: string; // sans le "+"
+  available: boolean;
+}
+
+const DERMATOLOGISTS: Dermatologist[] = [
+  {
+    id: "legonou-christelle",
+    name: "Dr LEGONOU Christelle",
+    title: "Dermatologue - Vénérologue",
+    location: "Cotonou, Bénin",
+    mode: "Consultation en ligne",
+    whatsapp: "22901590866877",
+    available: true,
+  },
+  // ← Ajouter d'autres dermatologues ici
+];
+
+function DermatologistSection({
+  score,
+  condition,
+}: {
+  score: number;
+  condition: string;
+}) {
+  const [currentIdx, setCurrentIdx] = React.useState(0);
+  const docs = DERMATOLOGISTS.filter(d => d.available);
+  if (docs.length === 0) return null;
+
+  const doc = docs[currentIdx];
+  const waMsg = encodeURIComponent(
+    `Bonjour Dr ${doc.name.replace("Dr ", "")}, j'ai fait mon analyse GlowScan (score : ${score}/100 - ${condition}) et je souhaite une consultation en ligne.`
+  );
+  const waUrl = `https://wa.me/${doc.whatsapp}?text=${waMsg}`;
+
+  return (
+    <div style={{ marginTop: "4px" }}>
+      {/* Titre section */}
+      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" }}>
+        <span style={{ fontSize: "15px" }}>💬</span>
+        <p style={{ fontSize: "12px", fontWeight: 700, color: "rgba(200,185,255,0.9)" }}>
+          Consulter un dermatologue expert
+        </p>
+      </div>
+
+      {/* Carte dermatologue */}
+      <div
+        style={{
+          background: "rgba(167,139,250,0.06)",
+          border: "1px solid rgba(167,139,250,0.2)",
+          borderRadius: "20px",
+          padding: "16px 18px",
+          position: "relative",
+          overflow: "hidden",
+        }}
+      >
+        {/* Badge disponibilité */}
+        <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "12px" }}>
+          <span
+            style={{
+              width: "7px",
+              height: "7px",
+              borderRadius: "50%",
+              background: "#22c55e",
+              display: "inline-block",
+              flexShrink: 0,
+              boxShadow: "0 0 0 0 rgba(34,197,94,0.4)",
+              animation: "glowscan-pulse 1.8s ease-in-out infinite",
+            }}
+          />
+          <span
+            style={{
+              fontSize: "10px",
+              fontWeight: 700,
+              color: "#22c55e",
+              letterSpacing: ".3px",
+              textTransform: "uppercase",
+            }}
+          >
+            Consultation en ligne disponible
+          </span>
+        </div>
+
+        {/* Identité */}
+        <div style={{ display: "flex", alignItems: "flex-start", gap: "12px", marginBottom: "14px" }}>
+          <div
+            style={{
+              width: "44px",
+              height: "44px",
+              borderRadius: "12px",
+              background: "linear-gradient(135deg,rgba(167,139,250,0.25),rgba(124,58,237,0.15))",
+              border: "1px solid rgba(167,139,250,0.3)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "22px",
+              flexShrink: 0,
+            }}
+          >
+            👩‍⚕️
+          </div>
+          <div>
+            <p style={{ fontSize: "13px", fontWeight: 800, color: "#f3f0ff", marginBottom: "2px" }}>
+              {doc.name}
+            </p>
+            <p style={{ fontSize: "11px", color: "rgba(200,185,255,0.75)", marginBottom: "4px" }}>
+              {doc.title}
+            </p>
+            <p style={{ fontSize: "10px", color: "rgba(200,185,255,0.5)", display: "flex", alignItems: "center", gap: "4px" }}>
+              <span>📍</span> {doc.location} · {doc.mode}
+            </p>
+          </div>
+        </div>
+
+        {/* Bouton WhatsApp */}
+        <a
+          href={waUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "8px",
+            width: "100%",
+            padding: "12px 0",
+            background: "linear-gradient(135deg,#25d366,#128c7e)",
+            borderRadius: "12px",
+            color: "#fff",
+            fontSize: "13px",
+            fontWeight: 800,
+            textDecoration: "none",
+          }}
+        >
+          <MessageCircle size={15} strokeWidth={2} />
+          Prendre rendez-vous sur WhatsApp
+        </a>
+
+        {/* Navigation carousel si plusieurs dermatologues */}
+        {docs.length > 1 && (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", marginTop: "12px" }}>
+            <button
+              onClick={() => setCurrentIdx(i => (i - 1 + docs.length) % docs.length)}
+              style={{ background: "rgba(167,139,250,0.12)", border: "none", borderRadius: "50%", width: 28, height: 28, cursor: "pointer", color: "#a78bfa", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center" }}
+            >‹</button>
+            {docs.map((_, i) => (
+              <span
+                key={i}
+                onClick={() => setCurrentIdx(i)}
+                style={{ width: 6, height: 6, borderRadius: "50%", background: i === currentIdx ? "#a78bfa" : "rgba(167,139,250,0.3)", cursor: "pointer", display: "inline-block" }}
+              />
+            ))}
+            <button
+              onClick={() => setCurrentIdx(i => (i + 1) % docs.length)}
+              style={{ background: "rgba(167,139,250,0.12)", border: "none", borderRadius: "50%", width: 28, height: 28, cursor: "pointer", color: "#a78bfa", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center" }}
+            >›</button>
+          </div>
+        )}
+      </div>
+
+      {/* CSS animation dot */}
+      <style>{`
+        @keyframes glowscan-pulse {
+          0%   { box-shadow: 0 0 0 0 rgba(34,197,94,0.4); }
+          70%  { box-shadow: 0 0 0 6px rgba(34,197,94,0); }
+          100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
+        }
+      `}</style>
+    </div>
+  );
+}
+
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import {
@@ -2706,6 +2888,12 @@ ${pdfBestProduct ? `
           <span>Analyse indicative générée par GlowScan AI.</span>
         </div>
       </motion.div>
+
+      {/* Bloc dermatologue partenaire */}
+      <DermatologistSection
+        score={result.score || 0}
+        condition={result.condition || ""}
+      />
 
       {/* Disclaimer médical */}
       <div
