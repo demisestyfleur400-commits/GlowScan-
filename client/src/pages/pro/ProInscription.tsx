@@ -61,7 +61,7 @@ export default function ProInscription() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Erreur lors de l'inscription");
-      toast({ title: `Bienvenue Dr ${fullName}`, description: "Votre essai gratuit de 14 jours commence maintenant." });
+      toast({ title: `Bienvenue Dr ${fullName}`, description: "Votre 14 jours d'essai gratuit commence maintenant." });
       await qc.invalidateQueries({ queryKey: ["/api/pro/account"] });
       await qc.invalidateQueries({ queryKey: ["/api/auth/user"] });
       setLocation("/pro/dashboard");
@@ -165,7 +165,7 @@ export default function ProInscription() {
               Créer mon compte Pro
             </h1>
             <p style={{ fontSize: 14, color: DS.textBody, margin: 0 }}>
-              14 jours d'essai gratuit · sans carte bancaire
+              14 jours d'essai gratuit · sans carte bancaire · 30 000 FCFA/mois ensuite
             </p>
           </div>
 

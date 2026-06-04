@@ -281,7 +281,7 @@ export default function ProDashboard() {
                 }}
               >
                 <p style={{ fontSize: 12, color: DS.warningText, margin: 0 }}>
-                  Continuez après l'essai pour <strong>20 000 FCFA / mois</strong>. Mobile Money, résiliable à tout moment.
+                  Continuez après l'essai pour <strong>30 000 FCFA / mois</strong>. Mobile Money, résiliable à tout moment.
                 </p>
               </div>
               <Link
