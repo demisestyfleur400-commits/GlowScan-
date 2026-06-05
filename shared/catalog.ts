@@ -38,143 +38,158 @@ export function getProductBrand(product: Product): string {
 export const catalog: Product[] = [
 
   // ═══════════════════════════════════════════
-  // ANDREA SKINCARE — Visage (partenaire local)
+  // ANDREA — Visage
+  // Prix fournisseur + 2 000 FCFA de marge
+  // Commandes → GlowScan +237674377959
   // ═══════════════════════════════════════════
 
   {
     id: "creme-visage",
-    name: "Crème Visage",
+    name: "Crème Visage Hydratante",
+    brand: "Andrea",
     description: "Crème de soin visage hydratante et nourrissante. Protège et sublime votre peau au quotidien.",
     category: "visage",
-    price: 6000,
+    price: 5000,
     targets: ["hydratation visage", "soin quotidien", "peau sèche", "protection cutanée"],
     usagePoints: ["Hydrate et protège le visage au quotidien", "Nourrit et sublime la peau"],
-    whatsapp: "+237658651775"
+    whatsapp: "+237674377959",
   },
   {
     id: "serum-jeunesse",
     name: "Sérum Jeunesse Bluffant",
+    brand: "Andrea",
     description: "Anti-taches – Anti-rides – Hydratant. Sérum puissant multi-correcteur pour le visage. 30ml.",
     category: "visage",
-    price: 8000,
+    price: 10000,
     targets: ["rides", "taches brunes", "vieillissement cutané", "anti-âge"],
     usagePoints: ["Sérum éclat régénérant visage", "Réduit les taches et les rides"],
-    whatsapp: "+237658651775"
+    whatsapp: "+237674377959",
   },
   {
     id: "gel-contour-yeux",
-    name: "Gel Contour des Yeux",
+    name: "Sérum Contour des Yeux",
+    brand: "Andrea",
     description: "Décongestionne – Hydrate – Éclaircit. Contre les taches et les poches. 30ml.",
     category: "visage",
-    price: 6000,
+    price: 7000,
     targets: ["cernes", "poches", "contour des yeux", "taches yeux"],
     usagePoints: ["Décongestionne et éclaircit le contour des yeux", "Réduit les cernes et les poches"],
-    whatsapp: "+237658651775"
+    whatsapp: "+237674377959",
   },
   {
     id: "potion-lumiere",
     name: "Potion Lumière – Lotion Visage Super Éclat",
+    brand: "Andrea",
     description: "Réduit considérablement les taches du visage et unifie le teint. 100ml.",
     category: "visage",
     price: 8000,
     targets: ["éclat visage", "teint terne", "exfoliation douce", "taches visage"],
     usagePoints: ["Réduit les taches du visage", "Unifie le teint et apporte de l'éclat"],
-    whatsapp: "+237658651775"
+    whatsapp: "+237674377959",
   },
   {
     id: "solution-douceur",
     name: "Solution Douceur – Lotion Traitante",
+    brand: "Andrea",
     description: "Lotion réparatrice, renforce la barrière naturelle de la peau. 100ml.",
     category: "visage",
     price: 8000,
     targets: ["acné", "imperfections", "boutons", "points noirs", "barrière cutanée"],
     usagePoints: ["Lotion réparatrice et traitante", "Renforce la barrière naturelle de la peau"],
-    whatsapp: "+237658651775"
+    whatsapp: "+237674377959",
   },
 
   // ═══════════════════════════════════════════
-  // ANDREA SKINCARE — Corps
+  // ANDREA — Corps
   // ═══════════════════════════════════════════
 
   {
     id: "cocon-lumineux",
-    name: "Cocon Lumineux – Crème Super Éclat",
+    name: "Cocon Lumineux – Crème Corps Éclat",
+    brand: "Andrea",
     description: "Unifie – Illumine – Hydrate. Crème corporelle super éclat. 300ml.",
     category: "corps",
-    price: 13000,
+    price: 17000,
     targets: ["peaux ternes", "discolorations", "hyperpigmentation", "teint irrégulier"],
     usagePoints: ["Crème super éclat pour le corps", "Unifie, illumine et hydrate la peau"],
-    whatsapp: "+237658651775"
+    whatsapp: "+237674377959",
   },
   {
     id: "tresor-cacao",
     name: "Trésor de Cacao – Crème Hydratation Intense",
+    brand: "Andrea",
     description: "Nourrit intensément – Répare – Protège. Crème ultra-nourrissante à base de beurres de cacao. 300ml.",
     category: "corps",
-    price: 11000,
+    price: 10000,
     targets: ["peau sèche", "peau déshydratée", "réparation cutanée"],
     usagePoints: ["Hydratation intense au beurre de cacao", "Nourrit et répare en profondeur"],
-    whatsapp: "+237658651775"
+    whatsapp: "+237674377959",
   },
   {
     id: "gel-douche-eclat",
     name: "Gel de Douche Éclat",
+    brand: "Andrea",
     description: "Nettoie – Unifie – Hydrate. Gel douche éclat pour le corps. 250ml.",
     category: "corps",
-    price: 6000,
+    price: 7000,
     targets: ["nettoyage doux", "éclat du corps", "teint terne"],
     usagePoints: ["Nettoie en douceur et illumine la peau", "Respecte la barrière cutanée"],
-    whatsapp: "+237658651775"
+    whatsapp: "+237674377959",
   },
   {
     id: "gommage-eclat",
     name: "Gommage Éclat Pur",
+    brand: "Andrea",
     description: "Gommage exfoliant doux. Illumine la peau et la débarrasse des peaux mortes. 250ml.",
     category: "corps",
-    price: 8000,
+    price: 7000,
     targets: ["exfoliation", "grain de peau irrégulier", "peau rugueuse", "peaux mortes"],
     usagePoints: ["Exfolie en douceur et illumine le teint", "Élimine les peaux mortes efficacement"],
-    whatsapp: "+237658651775"
+    whatsapp: "+237674377959",
   },
   {
     id: "savon-corps",
     name: "Radiance Soap – Savon Éclat",
+    brand: "Andrea",
     description: "Savon nettoyant éclat. Nettoie, nourrit et illumine la peau. 100g.",
     category: "corps",
     price: 5000,
     targets: ["peau sèche", "hyperpigmentation", "nettoyage corps"],
     usagePoints: ["Nettoie et nourrit la peau en douceur", "Apporte éclat et luminosité"],
-    whatsapp: "+237658651775"
+    whatsapp: "+237674377959",
   },
   {
     id: "serum-mains-pieds",
     name: "Sérum Main et Pieds",
+    brand: "Andrea",
     description: "Élimine en douceur les taches sur le tendon d'Achilles, le coude, les articulations. 100ml.",
     category: "corps",
-    price: 8000,
+    price: 12000,
     targets: ["zones sombres", "coudes noirs", "genoux noirs", "mains sèches", "taches"],
     usagePoints: ["Élimine les taches sur mains, pieds et coudes", "Éclaircit les zones sombres du corps"],
-    whatsapp: "+237658651775"
+    whatsapp: "+237674377959",
   },
   {
     id: "huile-eclat",
     name: "Huile Éclat",
+    brand: "Andrea",
     description: "Huile corporelle éclat pour une peau lumineuse et nourrie. 100ml.",
     category: "corps",
-    price: 6000,
+    price: 7000,
     targets: ["éclat", "hydratation", "peau lumineuse", "nutrition"],
     usagePoints: ["Apporte éclat et luminosité à la peau", "Nourrit et hydrate intensément"],
-    whatsapp: "+237658651775"
+    whatsapp: "+237674377959",
   },
   {
     id: "huile-essentielle",
     name: "L'Huile Essentielle Super Éclat",
+    brand: "Andrea",
     description: "Apporte un éclat particulier à votre peau. Huile essentielle super éclat. 100ml.",
     category: "corps",
-    price: 8000,
+    price: 12000,
     targets: ["éclat intense", "peau lumineuse", "soin corporel", "brillance"],
     usagePoints: ["Apporte un éclat particulier à la peau", "Soin super éclat quotidien"],
-    whatsapp: "+237658651775"
+    whatsapp: "+237674377959",
   },
 
   // ═══════════════════════════════════════════
