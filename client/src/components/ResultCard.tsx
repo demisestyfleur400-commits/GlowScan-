@@ -279,12 +279,67 @@ function ProductImagePlaceholder({ area }: { area: "visage" | "corps" | "cheveux
   );
 }
 
+// ─── Matcher un nom de produit IA → entrée catalogue ─────────────────
+function matchAIProductToCatalog(
+  productName: string,
+  area: "visage" | "corps" | "cheveux",
+  isPro: boolean
+): typeof catalog[0] | null {
+  if (!productName) return null;
+  const INTL_BRANDS_SET = new Set(["Bioderma","Uriage","La Roche-Posay","The Ordinary","CeraVe","Nubiance","Topicrem"]);
+  const text = productName.toLowerCase();
+  const pool = catalog.filter(p => {
+    if (p.id.startsWith("kit-")) return false;
+    if (!isPro && p.brand && INTL_BRANDS_SET.has(p.brand)) return false;
+    if (area === "cheveux") return p.category === "cheveux";
+    if (area === "corps") return p.category === "corps" || p.category === "visage";
+    return p.category === "visage";
+  });
+  // Matching exact d'abord, puis partiel sur les 3 premiers mots
+  return pool.find(p => {
+    const n = p.name.toLowerCase();
+    if (text.includes(n) || n === text) return true;
+    // Match sur les 3 premiers mots significatifs du nom catalogue
+    const words = n.split(/[\s–\-()]+/).filter(w => w.length > 3).slice(0, 3);
+    return words.length >= 2 && words.every(w => text.includes(w));
+  }) || null;
+}
+
+// ─── Extraire les produits de l'ordonnance IA et les matcher sur le catalogue ──
+function getProductsFromAIProtocol(
+  result: any,
+  area: "visage" | "corps" | "cheveux",
+  isPro: boolean
+): typeof catalog {
+  const morning: any[] = result.morningProtocol || result.protocol?.morning || [];
+  const evening: any[] = result.eveningProtocol || result.protocol?.evening || [];
+  const allSteps = [...morning, ...evening];
+  const matched: typeof catalog = [];
+  const seenIds = new Set<string>();
+  for (const step of allSteps) {
+    const productName = typeof step === "string" ? step : (step?.product || step?.name || "");
+    if (!productName) continue;
+    const catalogProduct = matchAIProductToCatalog(productName, area, isPro);
+    if (catalogProduct && !seenIds.has(catalogProduct.id)) {
+      seenIds.add(catalogProduct.id);
+      matched.push(catalogProduct);
+    }
+  }
+  return matched;
+}
+
 // ─── Meilleur produit unique adapté au diagnostic ────────────────────
+// Priorité 1 : premier produit de l'ordonnance IA matchée sur le catalogue
+// Priorité 2 : fallback scoring si l'IA n'a pas prescrit de produit matchable
 function findBestSingleProduct(
   condition: string,
   skinType: string | undefined,
-  area: "visage" | "corps" | "cheveux"
+  area: "visage" | "corps" | "cheveux",
+  aiProducts?: typeof catalog
 ): typeof catalog[0] | null {
+  // Priorité : produit prescrit par l'IA
+  if (aiProducts && aiProducts.length > 0) return aiProducts[0];
+
   const searchText = `${condition} ${skinType || ""}`.toLowerCase();
 
   const pool = catalog.filter(p => {
@@ -296,32 +351,16 @@ function findBestSingleProduct(
 
   const scored = pool.map(p => {
     let score = 0;
-
-    // Score par mots-clés des targets
-    for (const t of p.targets) {
-      if (searchText.includes(t.toLowerCase())) score += 3;
-    }
-
-    // Score par mots du nom/description du produit qui matchent le diagnostic
+    for (const t of p.targets) if (searchText.includes(t.toLowerCase())) score += 3;
     const blob = `${p.name} ${p.description}`.toLowerCase();
     const diagWords = searchText.split(/\s+/).filter(w => w.length > 3);
-    for (const w of diagWords) {
-      if (blob.includes(w)) score += 1;
-    }
-
-    // BOOST ×3 pour marques locales partenaires (Andrea Skincare, Ebony Hair)
+    for (const w of diagWords) if (blob.includes(w)) score += 1;
     if (p.whatsapp && LOCAL_WHATSAPP.has(p.whatsapp)) score *= 3;
-
-    // Bonus si le produit a une image (évite les placeholders)
     if (getProductImage(p)) score += 2;
-
     return { product: p, score };
   });
 
-  // Trier par score décroissant
   scored.sort((a, b) => b.score - a.score);
-
-  // Retourner le meilleur — s'il a un score > 0, sinon premier du pool local
   if (scored[0]?.score > 0) return scored[0].product;
 
   // Fallback : premier produit local avec un numéro WhatsApp
@@ -1067,8 +1106,11 @@ export function ResultCard({ result, scanId, savedScanId, area, imageUrl, userFi
   const currentArea = detectArea();
   const conditionHook = getConditionHook(result.condition, currentArea as "visage" | "corps" | "cheveux");
 
+  // ── Produits de l'ordonnance IA (priorité sur le scoring catalogue) ──
+  const _aiProducts = getProductsFromAIProtocol(result, currentArea as "visage" | "corps" | "cheveux", isPro || false);
+
   // ── Meilleur produit (hissé au niveau composant pour le partager avec le PDF) ──
-  const _bestProduct = findBestSingleProduct(result.condition, result.skinType, currentArea as "visage" | "corps" | "cheveux");
+  const _bestProduct = findBestSingleProduct(result.condition, result.skinType, currentArea as "visage" | "corps" | "cheveux", _aiProducts);
   const _bestRoleKey = _bestProduct ? (() => {
     const n = _bestProduct.name.toLowerCase();
     if (/savon|soap|gel|shampoo|shampoing|nettoyant|purif|gommage|mousse/.test(n)) return "nettoyant" as const;
@@ -1868,7 +1910,15 @@ ${pdfBestProduct ? `
     });
   };
 
-  const routineProducts = findRoutineProducts();
+  // Priorité : produits de l'ordonnance IA. Fallback : scoring catalogue.
+  const routineProducts = _aiProducts.length >= 2
+    ? _aiProducts.slice(0, 3).map((product, i) => ({
+        product,
+        role: ["Nettoyant", "Sérum / Traitement", "Crème hydratante"][i] || "Soin",
+        index: i + 1,
+        why: buildWhyText(product, result.condition, result.skinType, currentArea as "visage" | "corps" | "cheveux"),
+      }))
+    : findRoutineProducts();
   const bestKit = findBestKit();
 
   // ── Pack cheveux Ebony Hair (seul partenaire capillaire officiel) ──────────────
