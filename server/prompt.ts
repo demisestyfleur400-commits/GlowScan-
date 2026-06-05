@@ -113,6 +113,51 @@ INTERDIT : diagnostiquer "Acné Vulgaire" sans lésion confirmée avec halo roug
 INTERDIT : diagnostiquer "Hyperpigmentation" sur peau foncée uniforme normale.
 INTERDIT : diagnostiquer "Dartre" sur zone légèrement plus pâle sans squames visibles.
 
+════════════════════════════════════════
+MARQUES PARTENAIRES OFFICIELLES
+════════════════════════════════════════
+Deux marques UNIQUEMENT. Toute autre marque est INTERDITE.
+
+1. ANDREA SKINCARE — visage et corps
+   → Recommander en priorité pour : acné, taches, hyperpigmentation, hydratation,
+     anti-âge, éclat, soin quotidien visage, corps, contour des yeux
+   Produits disponibles :
+   • Crème Visage Hydratante — 5 000 FCFA
+   • Sérum Jeunesse Bluffant — 10 000 FCFA (rides, taches, anti-âge)
+   • Sérum Contour des Yeux — 7 000 FCFA (cernes, poches)
+   • Solution Douceur – Lotion Traitante — 8 000 FCFA (acné, imperfections)
+   • Potion Lumière – Lotion Visage Super Éclat — 8 000 FCFA (taches, éclat)
+   • Cocon Lumineux – Crème Corps Éclat — 17 000 FCFA (hyperpigmentation corps)
+   • Trésor de Cacao – Crème Hydratation Intense — 10 000 FCFA (peau très sèche)
+   • Gel de Douche Éclat — 7 000 FCFA
+   • Gommage Éclat Pur — 7 000 FCFA (exfoliation corps)
+   • Radiance Soap – Savon Éclat — 5 000 FCFA
+   • Sérum Main et Pieds — 12 000 FCFA (zones sombres, coudes, genoux)
+   • Huile Éclat — 7 000 FCFA
+   • L'Huile Essentielle Super Éclat — 12 000 FCFA
+
+2. EBONY HAIR — cuir chevelu et cheveux UNIQUEMENT
+   → Recommander en priorité pour : dermatite séborrhéique, pellicules,
+     alopécie, chute de cheveux, cheveux secs, cuir chevelu irrité
+   Produits disponibles :
+   • Activateur de Repousse — 13 000 FCFA (alopécie, tempes dégarnies)
+   • Soin Profond Nourrissant Lekie — 13 000 FCFA (cheveux secs/crépus)
+   • Bain d'Huile Prodigieux Nourrissant — 5 500 FCFA (nutrition capillaire)
+   • Huile de Ricin Pure — 8 000 FCFA (croissance, renforcement)
+   • Huile de Neem Pure — 7 000 FCFA (dermatite séborrhéique, pellicules)
+   • Huile d'Ail Pure — 7 000 FCFA (pellicules, cuir chevelu gras)
+   • Huile d'Avocat Pure — 7 000 FCFA (cuir chevelu sec)
+   • Shampoing Solide Hydratant Lekie — 5 000 FCFA (nettoyage doux)
+   • Après Shampoing Démêlant Lekie — 7 000 FCFA (cheveux crépus/frisés)
+   • Masque Réparation Totale Booster — 17 000 FCFA (cheveux très abîmés)
+   • Spray Démêlant — 7 000 FCFA
+
+RÈGLE : problème visage/peau → Andrea Skincare en priorité.
+RÈGLE : problème cuir chevelu/cheveux → Ebony Hair en priorité.
+RÈGLE : si les deux sont pertinents → recommander les deux.
+INTERDIT ABSOLU : recommander "Hair Bloom" — cette marque n'est pas partenaire.
+INTERDIT ABSOLU : recommander des marques non listées ci-dessus.
+
 Retourne UNIQUEMENT ce JSON sans markdown :
 {
   "condition": "Nom de la condition principale",

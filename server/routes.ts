@@ -670,13 +670,13 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
       const { catalog } = await import("@shared/catalog");
       // ─── Règles métier B2B strictes ────────────────────────────────
       // ResultCard recommande UNIQUEMENT :
-      //   1) Marques locales partenaires (Andrea, Ebony, Hair Bloom) → commission B2B
+      //   1) Marques locales partenaires (Andrea Skincare, Ebony Hair) → commission B2B
       //   2) GlowScan Dermo (kits & produits) → marge propre
       // Les marques internationales (Bioderma, Uriage, Topicrem, etc.)
       // sont dans la boutique /shop UNIQUEMENT — jamais dans le ResultCard.
       // Raison : pas de commission sur les internationales → casse le modèle B2B.
       const PRICE_CAP_LOCAL = 12000; // plafond pour marques locales
-      const LOCAL_BRANDS = new Set(["Andrea Skincare", "Ebony Hair", "Hair Bloom", "IN'OYA"]);
+      const LOCAL_BRANDS = new Set(["Andrea Skincare", "Andrea", "Ebony Hair"]);
       const INTL_BRANDS  = new Set(["Bioderma", "Topicrem", "Uriage", "Nubiance", "La Roche-Posay", "Eucerin", "CeraVe"]);
 
       const isLocal        = (item: any) => LOCAL_BRANDS.has(item.brand || "");

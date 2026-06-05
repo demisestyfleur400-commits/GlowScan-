@@ -252,7 +252,6 @@ const productImages = centralProductImages;
 // ─── Priorité marques locales ────────────────────────────────────────
 const LOCAL_WHATSAPP = new Set([
   "+237658651775", // Andrea Skincare
-  "+237688978963", // Hair Bloom
   "+237655728663", // Ebony Hair
 ]);
 
@@ -310,7 +309,7 @@ function findBestSingleProduct(
       if (blob.includes(w)) score += 1;
     }
 
-    // BOOST ×3 pour marques locales (Andrea, Hair Bloom, Ebony Hair)
+    // BOOST ×3 pour marques locales partenaires (Andrea Skincare, Ebony Hair)
     if (p.whatsapp && LOCAL_WHATSAPP.has(p.whatsapp)) score *= 3;
 
     // Bonus si le produit a une image (évite les placeholders)
@@ -1864,11 +1863,10 @@ ${pdfBestProduct ? `
   const routineProducts = findRoutineProducts();
   const bestKit = findBestKit();
 
-  // ── Deux packs cheveux : un Ebony Hair, un Hair Bloom ──────────────
+  // ── Pack cheveux Ebony Hair (seul partenaire capillaire officiel) ──────────────
   const findHairPacks = () => {
     if (currentArea !== "cheveux") return [];
     const EBONY_WA   = "+237655728663";
-    const HAIRBLOOM_WA = "+237688978963";
     const buildPack = (waKey: string, brandName: string) => {
       const pool = catalog.filter(p => p.category === "cheveux" && p.whatsapp === waKey && !p.id.startsWith("kit-"));
       if (pool.length === 0) return null;
@@ -1893,8 +1891,7 @@ ${pdfBestProduct ? `
       return { brand: brandName, products: picked, total, waKey, waMsg };
     };
     return [
-      buildPack(EBONY_WA,    "Ebony Hair"),
-      buildPack(HAIRBLOOM_WA, "Hair Bloom"),
+      buildPack(EBONY_WA, "Ebony Hair"),
     ].filter(Boolean) as NonNullable<ReturnType<typeof buildPack>>[];
   };
   const hairPacks = findHairPacks();
@@ -2764,7 +2761,7 @@ ${pdfBestProduct ? `
           );
         })()}
 
-        {/* ═══ BLOC 7b — Double pack cheveux (Ebony Hair + Hair Bloom) ═══ */}
+        {/* ═══ BLOC 7b — Pack cheveux Ebony Hair ═══ */}
         {currentArea === "cheveux" && hairPacks.length > 0 && (
           <div style={{ marginTop: "8px" }}>
             <p style={{ fontSize: "11px", fontWeight: 700, color: DS.textMuted, textTransform: "uppercase", letterSpacing: "0.15em", marginBottom: "12px" }}>
