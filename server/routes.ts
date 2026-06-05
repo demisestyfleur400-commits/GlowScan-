@@ -14,7 +14,7 @@ import webpush from "web-push";
 import { db } from "./db";
 import { referrals, loyaltyPoints, subscriptions, scans, leads, premiumRequests, wellnessLogs } from "@shared/schema";
 import { users } from "@shared/models/auth";
-import { eq, and, sql, gte, count, lte, desc, avg } from "drizzle-orm";
+import { eq, and, sql, gte, count, lte, desc, avg, inArray } from "drizzle-orm";
 import { whatsappClicks, orders, pageVisits } from "@shared/schema";
 
 // ── Sélection automatique du provider IA ────────────────────────────────
@@ -1972,11 +1972,11 @@ Réponds en 2-4 phrases max, sois direct et utile.`;
       // ── 3. Subs + scans en parallèle ─────────────────────────────────
       const [allSubs, allScans] = await Promise.all([
         db.select().from(subscriptions)
-          .where(sql`${subscriptions.userId} = ANY(${userIds})`)
+          .where(inArray(subscriptions.userId, userIds))
           .orderBy(desc(subscriptions.expiresAt)),
         db.select({ userId: scans.userId, createdAt: scans.createdAt })
           .from(scans)
-          .where(sql`${scans.userId} = ANY(${userIds})`)
+          .where(inArray(scans.userId, userIds.map(id => id as string)))
           .orderBy(desc(scans.createdAt)),
       ]);
 
