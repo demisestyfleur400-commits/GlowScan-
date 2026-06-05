@@ -61,10 +61,10 @@ export default function ProInscription() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Erreur lors de l'inscription");
-      toast({ title: `Bienvenue Dr ${fullName}`, description: "Votre 14 jours d'essai gratuit commence maintenant." });
+      toast({ title: `Bienvenue Dr ${fullName} 👋`, description: "14 jours d'essai gratuit — découvrons GlowScan DERM ensemble." });
       await qc.invalidateQueries({ queryKey: ["/api/pro/account"] });
       await qc.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      setLocation("/pro/dashboard");
+      setLocation("/pro/onboarding"); // → flow 3 étapes
     } catch (err: any) {
       toast({ title: "Erreur", description: err.message, variant: "destructive" });
     } finally {
