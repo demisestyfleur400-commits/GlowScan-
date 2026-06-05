@@ -94,7 +94,8 @@ export default function Admin() {
   const [partnerMsg, setPartnerMsg] = useState("");
   const [retentionData, setRetentionData] = useState<any>(null);
   const [retentionLoading, setRetentionLoading] = useState(false);
-  const [retentionSegment, setRetentionSegment] = useState<string>("expiring_soon");
+  const [retentionSegment, setRetentionSegment] = useState<string>("all");
+  const [retentionError, setRetentionError] = useState<string>("");
 
   const savedKey = sessionStorage.getItem("glowscan_admin_key");
 
@@ -106,10 +107,24 @@ export default function Admin() {
 
   const fetchRetention = async (key: string) => {
     setRetentionLoading(true);
+    setRetentionError("");
     try {
       const res = await fetch("/api/admin/retention", { headers: { "x-admin-key": key } });
-      if (res.ok) setRetentionData(await res.json());
-    } catch {} finally { setRetentionLoading(false); }
+      const body = await res.json();
+      if (res.ok) {
+        setRetentionData(body);
+        // Auto-sélectionner le segment le plus peuplé si "all" est vide
+        const segs = body.segments ?? {};
+        const best = Object.entries(segs).sort((a: any, b: any) => b[1] - a[1])[0];
+        if (best && (best[1] as number) > 0) setRetentionSegment("all");
+      } else {
+        setRetentionError(`Erreur ${res.status} : ${body?.message ?? "inconnue"}`);
+      }
+    } catch (e: any) {
+      setRetentionError(`Erreur réseau : ${e.message}`);
+    } finally {
+      setRetentionLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -791,6 +806,7 @@ export default function Admin() {
             segment={retentionSegment}
             setSegment={setRetentionSegment}
             onRefresh={() => fetchRetention(adminKey)}
+            error={retentionError}
           />
         )}
 
@@ -1234,8 +1250,8 @@ const SEGMENT_CONFIG: Record<string, { label: string; color: string; bg: string;
 // Ordre d'affichage des segments dans les stats cards
 const SEGMENT_ORDER = ["expiring_soon", "recently_expired", "churned", "active", "pending", "dormant_7d", "dormant_30d", "new"] as const;
 
-function RetentionTab({ data, loading, segment, setSegment, onRefresh }: {
-  data: any; loading: boolean;
+function RetentionTab({ data, loading, segment, setSegment, onRefresh, error }: {
+  data: any; loading: boolean; error?: string;
   segment: string;
   setSegment: (s: string) => void;
   onRefresh: () => void;
@@ -1327,10 +1343,19 @@ function RetentionTab({ data, loading, segment, setSegment, onRefresh }: {
       </div>
 
       {loading && <p className="text-center text-sm py-8" style={{ color: DS.muted }}>Chargement…</p>}
-      {!loading && filtered.length === 0 && (
+      {!loading && error && (
+        <div className="text-center py-8 rounded-2xl" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.3)" }}>
+          <p className="text-sm font-bold" style={{ color: "#f87171" }}>⚠️ {error}</p>
+          <p className="text-xs mt-1" style={{ color: DS.muted }}>Vérifie la clé admin et les logs serveur.</p>
+        </div>
+      )}
+      {!loading && !error && filtered.length === 0 && (
         <div className="text-center py-12 rounded-2xl" style={{ background: DS.surface, border: `1px solid ${DS.border}` }}>
           <Users className="w-10 h-10 mx-auto mb-2" style={{ color: DS.muted }} />
-          <p className="text-sm" style={{ color: DS.muted }}>Aucun contact dans ce segment.</p>
+          <p className="text-sm" style={{ color: DS.muted }}>
+            {data ? "Aucun contact dans ce segment." : "Chargement des données…"}
+          </p>
+          {data?.debug && <p className="text-xs mt-1" style={{ color: DS.muted }}>Comptes en DB : {data.debug.total_users} · Contactables : {data.total}</p>}
         </div>
       )}
 
