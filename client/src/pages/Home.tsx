@@ -1080,7 +1080,7 @@ export default function Home() {
                     className="text-[11px] font-medium truncate mt-0.5"
                     style={{ color: DS.textBody }}
                   >
-                    Gérez votre patientèle via le tableau GlowScan Pro
+                    Gérez votre patientèle via le tableau GlowScan DERM
                   </p>
                 </div>
                 <ChevronRight className="w-4 h-4 flex-shrink-0" style={{ color: DS.textMuted }} strokeWidth={1.5} />

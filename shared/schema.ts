@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, jsonb, decimal, varchar } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -391,6 +391,49 @@ export interface PredictiveRisk {
   risk: string;
   delay: string;
 }
+
+// ═══════════════════════════════════════════════════════════════════
+// TRAINING DATA — Dataset peaux africaines (actif stratégique GlowScan)
+// Alimenté automatiquement après chaque analyse Pro + override
+// ═══════════════════════════════════════════════════════════════════
+export const trainingData = pgTable("training_data", {
+  id: text("id").primaryKey().default("gen_random_uuid()"),
+  scanId: integer("scan_id").references(() => scans.id),
+
+  // Empreinte image (jamais la photo en clair)
+  imageHash: varchar("image_hash", { length: 64 }),
+  imageEncrypted: text("image_encrypted"),
+
+  // Diagnostic IA brut
+  aiDiagnosis: jsonb("ai_diagnosis").notNull(),
+  aiModelVersion: varchar("ai_model_version", { length: 50 }),
+  aiConfidence: decimal("ai_confidence", { precision: 3, scale: 2 }),
+
+  // Vérité terrain (override ou validation auto)
+  groundTruth: jsonb("ground_truth").notNull(),
+  validationType: varchar("validation_type", { length: 20 }), // 'auto' | 'partial' | 'full'
+  validatedBy: varchar("validated_by", { length: 100 }),      // 'ai_only' | 'doctor_[id]'
+  validatedAt: timestamp("validated_at"),
+  overrideReason: text("override_reason"),
+
+  // Métadonnées peaux africaines
+  skinPhototype: varchar("skin_phototype", { length: 10 }),    // 'IV' | 'V' | 'VI' | 'unknown'
+  country: varchar("country", { length: 50 }),
+  ageRange: varchar("age_range", { length: 20 }),              // ex: '21-30'
+
+  // Poids d'entraînement : 1=auto 2=partiel 3=manuel
+  trainingWeight: integer("training_weight").default(1),
+
+  // Sécurité & export
+  isAnonymized: boolean("is_anonymized").default(true),
+  exportedToDataset: boolean("exported_to_dataset").default(false),
+  exportedAt: timestamp("exported_at"),
+  gdprConsent: boolean("gdpr_consent").default(true),
+
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type TrainingDataInsert = typeof trainingData.$inferInsert;
 
 export interface FaceZone {
   name: string;

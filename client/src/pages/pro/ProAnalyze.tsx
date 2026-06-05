@@ -415,7 +415,7 @@ export default function ProAnalyze() {
         `• Diagnostic : ${result?.condition || "—"}\n` +
         `• Glow Score : ${result?.score || 0}/100\n` +
         `• Produits recommandés : ${products}\n\n` +
-        `— Cabinet GlowScan Pro`
+        `— Cabinet GlowScan DERM`
     );
     const cleaned = phone.replace(/\D/g, "");
     window.open(`https://wa.me/${cleaned}?text=${msg}`, "_blank");
@@ -534,7 +534,7 @@ export default function ProAnalyze() {
     };
 
     const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
-<title>GlowScan Pro — ${firstName} ${lastName}</title>
+<title>GlowScan DERM — ${firstName} ${lastName}</title>
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
   body{font-family:Arial,Helvetica,sans-serif;background:#fff;color:#1a1a1a;font-size:10.5px;line-height:1.5}
@@ -550,7 +550,7 @@ export default function ProAnalyze() {
 <!-- HEADER CLINIQUE -->
 <div style="background:${TEAL};padding:16px 28px;display:flex;justify-content:space-between;align-items:center">
   <div>
-    <div style="font-size:19px;font-weight:900;color:#fff;letter-spacing:1px">✦ GlowScan Pro</div>
+    <div style="font-size:19px;font-weight:900;color:#fff;letter-spacing:1px">✦ GlowScan DERM</div>
     <div style="font-size:8.5px;color:rgba(255,255,255,0.7);margin-top:2px">RAPPORT DE CONSULTATION DERMATOLOGIQUE</div>
   </div>
   <div style="text-align:right">
@@ -613,7 +613,7 @@ export default function ProAnalyze() {
 <div style="page-break-before:always;padding:18px 28px 0">
 
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #e5e7eb">
-    <span style="font-size:10px;font-weight:700;color:${TEAL}">✦ GlowScan Pro · Suite du rapport</span>
+    <span style="font-size:10px;font-weight:700;color:${TEAL}">✦ GlowScan DERM · Suite du rapport</span>
     <span style="font-size:8.5px;color:#9ca3af">${firstName} ${lastName} · Réf ${refNum}</span>
   </div>
 
@@ -687,7 +687,7 @@ export default function ProAnalyze() {
   <div style="border:1px solid #e5e7eb;border-radius:4px;padding:12px 16px;background:#f9fafb;margin-top:10px">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
       <div>
-        <div style="font-size:10px;font-weight:800;color:${TEAL}">✦ GlowScan Pro · Analyse IA Dermatologique</div>
+        <div style="font-size:10px;font-weight:800;color:${TEAL}">✦ GlowScan DERM · Analyse IA Dermatologique</div>
         <div style="font-size:8.5px;color:#6b7280;margin-top:2px">Spécialisé Peaux Africaines · Cameroun</div>
       </div>
       <div style="text-align:right">
@@ -695,8 +695,28 @@ export default function ProAnalyze() {
         <div style="font-size:8.5px;color:#9ca3af">Réf : ${refNum}</div>
       </div>
     </div>
+    <!-- BLOC SIGNATURE PRATICIEN -->
+    <div style="margin-top:18px;border:1px solid #e5e7eb;border-radius:6px;padding:16px 20px;background:#f9fafb">
+      <div style="font-size:9px;font-weight:800;color:${TEAL};text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px">Signature du praticien</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+        <div>
+          <div style="font-size:8.5px;color:#6b7280;margin-bottom:4px">Signature :</div>
+          <div style="height:40px;border-bottom:1px solid #d1d5db;margin-bottom:6px"></div>
+          <div style="font-size:9px;font-weight:700;color:#374151">Dr. ${firstName !== "" ? lastName + " " + firstName : (r as any).dermatologue || "..."}</div>
+          <div style="font-size:8.5px;color:#6b7280">Dermatologue · GlowScan DERM</div>
+        </div>
+        <div>
+          <div style="font-size:8.5px;color:#6b7280;margin-bottom:4px">Cachet du cabinet :</div>
+          <div style="height:40px;border:1px dashed #d1d5db;border-radius:4px;display:flex;align-items:center;justify-content:center;margin-bottom:6px">
+            <span style="font-size:8px;color:#d1d5db">Tampon ici</span>
+          </div>
+          <div style="font-size:8.5px;color:#6b7280">Date : ${date}</div>
+        </div>
+      </div>
+    </div>
+
     <div style="margin-top:8px;padding-top:8px;border-top:1px solid #e5e7eb;font-size:8px;color:#9ca3af;line-height:1.7">
-      Ce rapport est un outil d'aide au diagnostic à l'usage exclusif du professionnel de santé. Il ne remplace pas l'examen clinique complet ni une prescription médicale. GlowScan © ${new Date().getFullYear()} — Tous droits réservés.
+      Ce rapport est un outil d'aide au diagnostic à l'usage exclusif du professionnel de santé. Il ne remplace pas l'examen clinique complet ni une prescription médicale. GlowScan DERM © ${new Date().getFullYear()} — Tous droits réservés.
     </div>
   </div>
 

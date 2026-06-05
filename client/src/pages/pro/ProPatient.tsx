@@ -67,7 +67,7 @@ export default function ProPatient() {
         `voici votre diagnostic : ${lastScan.condition || "—"}.\n` +
         (products ? `Produits recommandés : ${products}.\n` : "") +
         `Prochaine étape : ${lastScan.motivation || "rescannez dans 4 semaines pour mesurer votre progression."}\n\n` +
-        `— ${dermato?.fullName || "Votre dermato"}\nvia GlowScan Pro`
+        `— ${dermato?.fullName || "Votre dermato"}\nvia GlowScan DERM`
     );
     const phone = p.whatsappNumber.replace(/\D/g, "");
     window.open(`https://wa.me/${phone}?text=${msg}`, "_blank");
@@ -95,7 +95,7 @@ export default function ProPatient() {
     }[s] || s);
 
     const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
-<title>GlowScan Pro — Dossier ${p.firstName} ${p.lastName}</title>
+<title>GlowScan DERM — Dossier ${p.firstName} ${p.lastName}</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif;color:#1f2937;background:#fff;font-size:12px}
 @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}.no-print{display:none!important}@page{margin:0}}
@@ -124,7 +124,7 @@ export default function ProPatient() {
     <div class="brand">✦ GlowScan</div>
     <div class="pro-badge">PRO — Dossier Patient</div>
     <div class="h-title">Dossier de Consultation — ${p.firstName} ${p.lastName}</div>
-    <div class="h-sub">Cabinet ${dermato?.cabinetName || "GlowScan Pro"} · ${dermato?.fullName || "Dermatologue"}</div>
+    <div class="h-sub">Cabinet ${dermato?.cabinetName || "GlowScan DERM"} · ${dermato?.fullName || "Dermatologue"}</div>
     <div class="h-meta">Généré le : <b style="color:#a78bfa">${date}</b> &nbsp;|&nbsp; Réf : <b style="color:#a78bfa">${refNum}</b></div>
   </div>
   <div class="stamp"><div class="stamp-t">Dossier</div><div class="stamp-v">Pro</div><div class="stamp-t">GlowScan</div></div>
@@ -194,11 +194,11 @@ export default function ProPatient() {
     ${evening.length > 0 ? `<div class="protocol-lbl" style="background:#ede9fe;color:#5b21b6;margin-top:8px">🌙 Soir</div>${evening.map(renderStep).join("")}` : ""}
   </div>` : ""}
 
-  <div class="validity">📅 <b>Dossier mis à jour le ${date}</b> · Réf : ${refNum} · Cabinet ${dermato?.cabinetName || "GlowScan Pro"}</div>
+  <div class="validity">📅 <b>Dossier mis à jour le ${date}</b> · Réf : ${refNum} · Cabinet ${dermato?.cabinetName || "GlowScan DERM"}</div>
 </div>
 <div class="footer">
-  <div class="f-text">Ce dossier est généré par GlowScan Pro. Il ne remplace pas un examen physique ni une prescription médicale.<br>Conservez ce document dans le dossier médical de votre patient.</div>
-  <div class="f-brand">✦ GlowScan Pro</div>
+  <div class="f-text">Ce dossier est généré par GlowScan DERM. Il ne remplace pas un examen physique ni une prescription médicale.<br>Conservez ce document dans le dossier médical de votre patient.</div>
+  <div class="f-brand">✦ GlowScan DERM</div>
 </div></body></html>`;
     const element = document.createElement("div");
     element.innerHTML = html;

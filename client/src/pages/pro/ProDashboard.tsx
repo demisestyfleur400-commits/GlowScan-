@@ -77,14 +77,19 @@ export default function ProDashboard() {
   const isTrial = acc.subscriptionStatus === "trial";
 
   const recentPatients = patients.slice(0, 4);
+  // Compatibilité ancien système (red/yellow/green) + nouveau (priority/monitoring/stable/resolved)
   const statusCounts = patients.reduce(
     (acc, p) => {
-      const s = (p.status || "green") as "red" | "yellow" | "green";
-      acc[s] = (acc[s] || 0) + 1;
+      const s = p.status || "stable";
+      // Mapper ancien → nouveau
+      const mapped = s === "red" ? "priority" : s === "yellow" ? "monitoring" : s === "green" ? "stable" : s;
+      acc[mapped] = (acc[mapped] || 0) + 1;
       return acc;
     },
-    { red: 0, yellow: 0, green: 0 } as Record<string, number>
+    { priority: 0, monitoring: 0, stable: 0, resolved: 0 } as Record<string, number>
   );
+
+  const today = new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
 
   const closeTour = async () => {
     setTourOpen(false);
@@ -93,19 +98,43 @@ export default function ProDashboard() {
 
   return (
     <ProLayout>
-      {/* Welcome header */}
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: 20 }}>
-        <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: DS.textMuted, marginBottom: 4 }}>
-          Tableau de bord
-        </p>
-        <h2 style={{ fontSize: 24, fontWeight: 800, color: DS.textPrimary, margin: "0 0 6px" }}>
-          Bonjour, Dr {acc.fullName.split(" ").slice(-1)[0] || acc.fullName}
-        </h2>
-        <p style={{ fontSize: 14, color: DS.textBody, margin: 0 }}>
-          {patientCount > 0
-            ? `Vous suivez ${patientCount} patient${patientCount > 1 ? "s" : ""} sur GlowScan Pro.`
-            : "Votre cabinet GlowScan Pro est prêt. Commencez par analyser un patient."}
-        </p>
+      {/* ══ WELCOME WIDGET ══ */}
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: 16 }}>
+        <div style={{
+          background: "linear-gradient(135deg, rgba(124,58,237,0.10), rgba(124,58,237,0.04))",
+          border: `1px solid ${DS.cardVioletBorder}`,
+          borderRadius: 24, padding: "20px 22px",
+        }}>
+          <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".8px", textTransform: "uppercase", color: DS.textMuted, marginBottom: 4 }}>
+            {today}
+          </p>
+          <h2 style={{ fontSize: 22, fontWeight: 900, color: DS.textPrimary, margin: "0 0 14px" }}>
+            Bonjour, Dr {acc.fullName.split(" ")[0]} 👋
+          </h2>
+
+          {/* Stats rapides */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 16 }}>
+            {[
+              { label: "Patients total", value: patientCount, color: DS.violetMid },
+              { label: "Priorité haute", value: statusCounts.priority, color: "#f87171" },
+              { label: "En suivi", value: statusCounts.monitoring, color: "#fbbf24" },
+            ].map((s, i) => (
+              <div key={i} style={{ background: "rgba(255,255,255,0.04)", borderRadius: 12, padding: "10px 12px" }}>
+                <p style={{ fontSize: 22, fontWeight: 900, color: s.color, margin: 0 }}>{s.value}</p>
+                <p style={{ fontSize: 10, color: DS.textMuted, margin: "2px 0 0", fontWeight: 600 }}>{s.label}</p>
+              </div>
+            ))}
+          </div>
+
+          <Link href="/pro/analyse?nouveau=1"
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 6,
+              background: DS.violet, color: "#fff", borderRadius: 9999,
+              padding: "10px 20px", fontSize: 13, fontWeight: 800, textDecoration: "none",
+            }}>
+            <ScanLine size={14} /> + Nouveau patient
+          </Link>
+        </div>
       </motion.div>
 
       {/* Primary CTA */}
@@ -156,8 +185,8 @@ export default function ProDashboard() {
       >
         <KpiCard to="/pro/patients" icon={<Users style={{ width: 16, height: 16, color: DS.violetMid }} />} value={patientCount} label="Patients" testid="kpi-patients" />
         <KpiCard to="/pro/statistiques" icon={<BarChart3 style={{ width: 16, height: 16, color: DS.successText }} />} value="—" label="Voir stats" testid="kpi-stats" />
-        <KpiCard to="/pro/patients" icon={<Activity style={{ width: 16, height: 16, color: "#f9a8d4" }} />} value={statusCounts.red} label="Cas urgents" testid="kpi-urgent" />
-        <KpiCard to="/pro/patients" icon={<TrendingUp style={{ width: 16, height: 16, color: DS.successText }} />} value={statusCounts.green} label="En progrès" testid="kpi-progress" />
+        <KpiCard to="/pro/patients" icon={<Activity style={{ width: 16, height: 16, color: "#f87171" }} />} value={statusCounts.priority} label="Priorité haute" testid="kpi-urgent" />
+        <KpiCard to="/pro/patients" icon={<TrendingUp style={{ width: 16, height: 16, color: DS.successText }} />} value={statusCounts.stable} label="Stables" testid="kpi-progress" />
       </motion.div>
 
       {/* 2-col grid */}

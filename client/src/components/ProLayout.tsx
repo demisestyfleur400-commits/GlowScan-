@@ -54,7 +54,7 @@ export function ProLayout({ children, title, back, hideBottomNav, rightAction }:
                 <Stethoscope className="w-4 h-4" style={{ color: "#a78bfa" }} />
               </div>
               <div className="leading-tight">
-                <p className="text-sm font-extrabold" style={{ color: "#f3f0ff" }}>GlowScan Pro</p>
+                <p className="text-sm font-extrabold" style={{ color: "#f3f0ff" }}>GlowScan DERM</p>
                 <p className="text-[9px] uppercase tracking-widest font-bold" style={{ color: "#a78bfa" }}>Clinical Engine</p>
               </div>
             </Link>

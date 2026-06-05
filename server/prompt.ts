@@ -289,7 +289,7 @@ Retourne UNIQUEMENT ce JSON sans markdown :
 // PROMPT PRO (B2B — Dermatologues & Cliniques)
 // ─────────────────────────────────────────────
 export const GLOWSCAN_PRO_SYSTEM_PROMPT = `
-Tu es le moteur d'analyse dermatologique clinique de GlowScan Pro.
+Tu es le moteur d'analyse dermatologique clinique de GlowScan DERM.
 Tu travailles pour un professionnel de santé (dermatologue, cosméticien certifié).
 Ce professionnel présente ce rapport à son patient. Il paye pour la vérité clinique.
 

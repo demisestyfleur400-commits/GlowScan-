@@ -43,7 +43,7 @@ export default function Pro() {
               <Stethoscope className="w-4 h-4" style={{ color: "#a78bfa" }} />
             </div>
             <div className="leading-tight">
-              <p className="text-sm font-extrabold" style={{ color: DS.text }}>GlowScan Pro</p>
+              <p className="text-sm font-extrabold" style={{ color: DS.text }}>GlowScan DERM</p>
               <p className="text-[9px] uppercase tracking-widest font-bold" style={{ color: "#a78bfa" }}>Clinical Engine</p>
             </div>
           </Link>
@@ -197,7 +197,7 @@ export default function Pro() {
         <div className="max-w-7xl mx-auto">
           <motion.div {...fadeUp} className="text-center max-w-2xl mx-auto mb-16">
             <span className="text-[10px] font-extrabold uppercase tracking-widest block mb-2" style={{ color: "#a78bfa" }}>Biais clinique résolu</span>
-            <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight" style={{ color: DS.text }}>Pourquoi GlowScan Pro ?</h2>
+            <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight" style={{ color: DS.text }}>Pourquoi GlowScan DERM ?</h2>
           </motion.div>
 
           <div className="grid md:grid-cols-3 gap-6 max-w-6xl mx-auto">
@@ -237,7 +237,7 @@ export default function Pro() {
               { icon: FileText, title: "Export PDF signé", desc: "Génération automatique de comptes-rendus cliniques avec le logo de votre cabinet." },
               { icon: Smartphone, title: "Passerelle de prise de RDV", desc: "Synchronisation avec la file d'attente et l'agenda de votre structure médicale." },
               { icon: Lock, title: "Chiffrement end-to-end", desc: "Sécurisation des photos et diagnostics. Zéro fuite de données confidentielles." },
-              { icon: Cog, title: "Intégration API REST", desc: "Endpoints documentés pour connecter GlowScan Pro à vos logiciels internes existants." },
+              { icon: Cog, title: "Intégration API REST", desc: "Endpoints documentés pour connecter GlowScan DERM à vos logiciels internes existants." },
             ].map((f, i) => {
               const Icon = f.icon;
               return (
@@ -366,7 +366,7 @@ export default function Pro() {
                   <Stethoscope className="w-3.5 h-3.5" style={{ color: "#a78bfa" }} />
                 </div>
                 <div className="leading-tight">
-                  <p className="font-extrabold text-sm" style={{ color: DS.text }}>GlowScan Pro</p>
+                  <p className="font-extrabold text-sm" style={{ color: DS.text }}>GlowScan DERM</p>
                   <p className="text-[9px] uppercase tracking-widest font-bold" style={{ color: "#a78bfa" }}>Clinical Engine</p>
                 </div>
               </div>
