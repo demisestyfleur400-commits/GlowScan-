@@ -1206,44 +1206,64 @@ function FeaturedTab({ featuredItems, featuredLoading, featuredMsg, featuredCatS
 // DatasetTab, DatasetCard, DatasetStatCard → importés depuis @/components/admin/DatasetReview
 
 // ── RetentionTab ──────────────────────────────────────────────────────────────
+const PREMIUM_MSG = (name: string) =>
+`Bonjour ${name} 🙏🏾
+
+Votre peau vous parle tous les jours.
+Avec GlowScan Premium — vous la comprenez enfin.
+
+🤖 *GlowScan AI*
+Posez n'importe quelle question sur votre peau — le chatbot vous répond en fonction de VOTRE diagnostic personnel. Pas des réponses génériques. Les vôtres.
+
+📸 *Scan Produit*
+Prenez en photo n'importe quelle crème ou sérum avant de l'acheter. GlowScan analyse les ingrédients et vous dit si c'est compatible avec votre peau. Fini les mauvaises surprises.
+
+⏰ *Routine Personnalisée*
+Ajoutez vos produits et GlowScan vous envoie une notification à l'heure exacte de votre matin et soir. Plus d'oubli. Plus d'excuse.
+
+Tout ça pour *2 000 FCFA/mois*.
+Moins cher qu'un savon. Plus efficace qu'une consultation.
+
+👉 Activer mon premium : glow-scan.com
+
+✦ GlowScan`;
+
 const SEGMENT_CONFIG: Record<string, { label: string; color: string; bg: string; border: string; msg: (name: string) => string }> = {
-  // ─ Premium (utilisateurs qui ont déjà payé ou essayé de payer) ─
   expiring_soon: {
     label: "🔥 Expire < 7j", color: "#f43f5e", bg: "rgba(244,63,94,0.1)", border: "rgba(244,63,94,0.3)",
-    msg: (name) => `Salut ${name} ! 💜\n\nTon suivi dermatologique GlowScan expire bientôt. Pour continuer à prendre soin de ta peau, renouvelle pour 2 000 FCFA.\n\n💛 MTN MoMo : 674377959\n🟠 Orange Money : 690501392\n\nEnvoie ton reçu ici, je t'active dans la foulée 🙏`,
+    msg: PREMIUM_MSG,
   },
   recently_expired: {
     label: "😴 Expiré < 30j", color: "#fb923c", bg: "rgba(251,146,60,0.1)", border: "rgba(251,146,60,0.3)",
-    msg: (name) => `Salut ${name} ! 💜\n\nTon accès GlowScan Premium a expiré. Ta peau mérite un suivi régulier — reviens quand tu veux, je suis là.\n\n💛 MTN MoMo : 674377959\n🟠 Orange Money : 690501392\n\n2 000 FCFA/mois. Envoie ton reçu et je t'active 🙏`,
+    msg: PREMIUM_MSG,
   },
   churned: {
     label: "💤 Churné > 30j", color: "#a78bfa", bg: "rgba(167,139,250,0.1)", border: "rgba(167,139,250,0.3)",
-    msg: (name) => `Salut ${name} ! 💜\n\nNotre IA dermatologique s'est vraiment améliorée depuis ta dernière visite — corrections de vrais dermatologues sur peaux africaines 🩺\n\nSi tu veux reprendre le suivi de ta peau : 2 000 FCFA/mois.\n💛 674377959 (MTN) | 🟠 690501392 (Orange)`,
+    msg: PREMIUM_MSG,
   },
   active: {
     label: "💎 Premium actif", color: "#6ee7b7", bg: "rgba(16,185,129,0.1)", border: "rgba(16,185,129,0.3)",
-    msg: (name) => `Salut ${name} ! 💜\n\nPense à analyser ta peau régulièrement — une photo suffit, l'IA fait le reste 🔬\n\nDes questions sur ton diagnostic ou ta routine ? Je suis là.`,
+    msg: PREMIUM_MSG,
   },
   pending: {
     label: "🕐 Jamais confirmé", color: "#fbbf24", bg: "rgba(251,191,36,0.1)", border: "rgba(251,191,36,0.3)",
-    msg: (name) => `Salut ${name} ! 👋\n\nTu avais demandé un accès Premium GlowScan — on n'a pas reçu ton paiement.\n\nSi tu es encore intéressé(e) : 2 000 FCFA via\n💛 674377959 (MTN) | 🟠 690501392 (Orange)`,
+    msg: PREMIUM_MSG,
   },
-  // ─ Utilisateurs gratuits inactifs (ne savent pas que le premium existe) ─
   dormant_7d: {
     label: "💤 Inactif 7j+", color: "#60a5fa", bg: "rgba(96,165,250,0.1)", border: "rgba(96,165,250,0.3)",
-    msg: (name) => `Salut ${name} ! 🔬\n\nGlowScan peut analyser ta peau gratuitement — diagnostic IA spécialisé peaux africaines en 30 secondes.\n\nDartre, acné, hyperpigmentation, Glow Score... tout est inclus sans payer.\n\n→ glow-scan.com 💜`,
+    msg: PREMIUM_MSG,
   },
   dormant_30d: {
     label: "😶 Inactif 30j+", color: "#818cf8", bg: "rgba(129,140,248,0.1)", border: "rgba(129,140,248,0.3)",
-    msg: (name) => `Salut ${name} ! 💜\n\nGlowScan est toujours là pour prendre soin de ta peau.\n\nDiagnostic gratuit, spécialisé peaux africaines — 30 secondes et une photo suffisent 🔬\n\n→ glow-scan.com`,
+    msg: PREMIUM_MSG,
   },
   new: {
     label: "🆕 Nouveau", color: "#34d399", bg: "rgba(52,211,153,0.1)", border: "rgba(52,211,153,0.3)",
-    msg: (name) => `Salut ${name} ! 💜\n\nBienvenue sur GlowScan ! Ta première analyse est gratuite — une photo et l'IA s'occupe du reste 🔬\n\n→ glow-scan.com/analyze`,
+    msg: PREMIUM_MSG,
   },
   all: {
     label: "Tous", color: "#7c3aed", bg: "rgba(124,58,237,0.1)", border: "rgba(124,58,237,0.3)",
-    msg: (name) => `Salut ${name} ! 👋`,
+    msg: PREMIUM_MSG,
   },
 };
 
