@@ -434,38 +434,7 @@ Le format du champ product doit être : "[Nom exact du produit] — [Marque] —
 • "Crème Barrière Hydra-Repair Céramides — GlowScan Dermo — 11 000 FCFA"
   → Pour : peau sèche, déshydratée, barrière cutanée fragilisée, tiraillements, eczéma
 
-━━ PRIORITÉ 2 — ANDREA SKINCARE (marque locale partenaire) ━━
-
-• "Crème Visage — Andrea Skincare — 6 000 FCFA"
-  → Pour : hydratation quotidienne, soin de base visage
-
-• "Sérum Jeunesse Bluffant — Andrea Skincare — 8 000 FCFA"
-  → Pour : rides, taches brunes, anti-âge, vieillissement cutané
-
-• "Gel Contour des Yeux — Andrea Skincare — 6 000 FCFA"
-  → Pour : cernes, poches, contour des yeux, taches yeux
-
-• "Potion Lumière – Lotion Visage Super Éclat — Andrea Skincare — 8 000 FCFA"
-  → Pour : éclat visage, teint terne, taches légères, exfoliation douce
-
-• "Solution Douceur – Lotion Traitante — Andrea Skincare — 8 000 FCFA"
-  → Pour : acné, imperfections, boutons, points noirs, barrière cutanée
-
-━━ PRIORITÉ 3 — EBONY HAIR (soins capillaires uniquement) ━━
-
-• "Activateur de Repousse — Ebony Hair — 13 000 FCFA"
-  → Pour : alopécie, chute de cheveux, tempes dégarnies, alopécie de traction
-
-• "Soin Profond Nourrissant Lekie — Ebony Hair — 13 000 FCFA"
-  → Pour : cheveux secs, crépus, frisés, réparation capillaire
-
-• "Bain d'Huile Prodigieux Nourrissant — Ebony Hair — 5 500 FCFA"
-  → Pour : cheveux secs, nutrition capillaire, brillance, souplesse
-
-• "Huile de Ricin Pure — Ebony Hair — 8 000 FCFA"
-  → Pour : croissance cheveux, renforcement capillaire, cuir chevelu
-
-━━ PRIORITÉ 4 — PHARMACIE INTERNATIONALE (si spécialité indisponible en local) ━━
+━━ PRIORITÉ 2 — PHARMACIE DERMATOLOGIQUE (si GlowScan Dermo non disponible) ━━
 
 • "Effaclar DUO+M Set — La Roche-Posay — 23 500 FCFA" (acné + PIH peaux noires)
 • "Pigmentbio Foaming Cream — Bioderma — 14 000 FCFA" (taches peaux noires/métissées)
@@ -473,6 +442,18 @@ Le format du champ product doit être : "[Nom exact du produit] — [Marque] —
 • "Hyséac 3-Regul+ — Uriage — 13 000 FCFA" (acné, peau grasse)
 • "Dépiderm Sérum Anti-Taches — Uriage — 16 000 FCFA" (mélasma, hyperpigmentation)
 • "Crème Éclat Anti-Taches — Nubiance — 15 000 FCFA" (spécial peaux noires, sans hydroquinone)
+• "Niacinamide 10% + Zinc — The Ordinary — 6 500 FCFA" (pores, sébum, PIH)
+• "AHA 30% + BHA 2% Peeling Solution — The Ordinary — 9 000 FCFA" (texture, taches)
+• "Moisturizing Cream — CeraVe — 8 500 FCFA" (barrière cutanée, céramides)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+RÈGLES PRODUITS MODE PRO — CIRCUIT FERMÉ
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+INTERDIT en mode Pro : Andrea Skincare, Ebony Hair
+Ces marques sont réservées au mode GlowScan Basic (B2C).
+En mode Pro : GlowScan Dermo en priorité 1, marques pharmacie en priorité 2.
+Recommander GlowScan Dermo SAUF si une spécialité clinique précise
+n'existe pas dans la gamme (ex: corticoïde doux, antibiotique topique).
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ANTÉCÉDENTS PATIENT (à lire EN PREMIER)
