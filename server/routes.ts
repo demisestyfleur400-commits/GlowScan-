@@ -2019,12 +2019,14 @@ Réponds en 2-4 phrases max, sois direct et utile.`;
           contactType = "email";
         }
 
-        // Ignorer si aucun moyen de contact
-        if (!phone && !displayEmail) return null;
+        // Inclure si : téléphone OU email OU au moins 1 scan (comportement observable)
+        const hasScan = (scanCountByUser.get(u.id) ?? 0) > 0;
+        const hasContact = !!(phone || displayEmail);
+        if (!hasContact && !hasScan) return null;
 
         // Nom affiché
         const rawName = [u.firstName, u.lastName].filter(Boolean).join(" ");
-        const name = rawName || phone || displayEmail?.split("@")[0] || "client";
+        const name = rawName || phone || displayEmail?.split("@")[0] || `User-${u.id.slice(0, 6)}`;
 
         // Segment — ordre de priorité : sub active > sub expirée > jamais payé + inactif
         const hasSub = !!sub;
@@ -2065,7 +2067,8 @@ Réponds en 2-4 phrases max, sois direct et utile.`;
       const segments: Record<string, number> = {};
       for (const c of contacts) segments[c.segment] = (segments[c.segment] ?? 0) + 1;
 
-      res.json({ segments, total: contacts.length, contacts });
+      console.log(`[retention] total_users=${allUsersRows.length} contactable=${contacts.length} segments=${JSON.stringify(segments)}`);
+      res.json({ segments, total: contacts.length, contacts, debug: { total_users: allUsersRows.length } });
     } catch (err) {
       console.error("[admin/retention] error:", err);
       res.status(500).json({ message: "Erreur serveur" });
