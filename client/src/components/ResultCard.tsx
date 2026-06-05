@@ -1789,9 +1789,17 @@ ${pdfBestProduct ? `
     const consultationText = (result as any).consultationData?.observations_visuelles || "";
     const searchText = ((result.condition || "") + " " + (result.details || "") + " " + consultationText).toLowerCase();
 
+    // Marques pharmacie réservées au mode Pro uniquement
+    const INTL_PHARMA_BRANDS = new Set([
+      "Bioderma", "Uriage", "La Roche-Posay", "The Ordinary",
+      "CeraVe", "Nubiance", "Topicrem",
+    ]);
+
     // Exclure les kits des recommandations 3-produits (ils ont leur propre section)
+    // En mode Basic (non-Pro) : exclure les marques pharmacie internationales
     const areaProducts = catalog.filter(p => {
       if (p.id.startsWith("kit-")) return false;
+      if (!isPro && p.brand && INTL_PHARMA_BRANDS.has(p.brand)) return false;
       if (currentArea === "cheveux") return p.category === "cheveux";
       if (currentArea === "corps") return p.category === "corps" || p.category === "visage";
       return p.category === "visage";
