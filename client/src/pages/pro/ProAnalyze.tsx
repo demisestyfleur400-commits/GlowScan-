@@ -295,17 +295,12 @@ export default function ProAnalyze() {
       });
     } catch (err: any) {
       console.warn("[pro] analyse IA indisponible", err?.message);
-      setResult({
-        condition: "Examen clinique en cours",
-        score: 70,
-        severity: "Modérée",
-        skinType: "Phototype IV-VI",
-        details: "L'analyse IA est temporairement indisponible. Vous pouvez compléter manuellement.",
-        motivation: "Examen clinique direct par le dermatologue.",
-        zoneAnalysis: [],
-        zones: [],
-        recommendations: { products: [], morning: [], evening: [], weekly: "" },
-      } as any);
+      toast({
+        title: "Erreur de connexion — réessayez",
+        description: "Le service IA est momentanément indisponible. Reprends la photo et relance l'analyse.",
+        variant: "destructive",
+      });
+      setStep(2); // retour à la prise de photo
     }
   };
 

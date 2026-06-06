@@ -966,26 +966,10 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
         try { req.session.anonymousScanUsed = true; req.session.save(() => {}); } catch {}
       }
 
-      return res.json({
-        condition: "Analyse en cours de traitement",
-        severity: "Modérée",
-        score: 65,
-        skinType: "Phototype IV-VI",
-        details: "Notre service d'analyse rencontre un ralentissement temporaire. Votre photo a bien été reçue. Pour un diagnostic précis, relance l'analyse dans quelques minutes — ton historique est sauvegardé.",
-        motivation: "Ton engagement pour ta peau est déjà un premier pas. GlowScan est là pour t'accompagner.",
-        stats: { lesions: "—", zones: "—", pores: "—", marks: "—" },
-        zoneAnalysis: [],
-        zones: [],
-        recommendations: {
-          products: [],
-          morning: ["Nettoie délicatement le matin avec un nettoyant doux", "Hydrate avec une crème non comédogène", "Protège avec un SPF 30+"],
-          evening: ["Double nettoyage en soirée", "Sérum hydratant ou traitement ciblé", "Crème de nuit nourrissante"],
-          weekly: "Gommage doux 1× par semaine pour éliminer les cellules mortes",
-        },
-        savedScanId,
-        isAnonymous,
-        reference: null,
-        _fallback: true,
+      // Retourner une vraie erreur — pas de fausse analyse
+      return res.status(503).json({
+        code: "AI_UNAVAILABLE",
+        message: "Erreur de connexion — réessayez",
       });
     }
   });

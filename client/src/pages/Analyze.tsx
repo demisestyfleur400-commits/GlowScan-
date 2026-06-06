@@ -245,7 +245,6 @@ export default function Analyze() {
           return;
         }
         if (analyzeRes.status === 422 && errBody.code === "AI_REFUSED") {
-          // L'IA a refusé d'analyser la photo (qualité insuffisante)
           setIsAnalyzing(false);
           toast({
             title: "Photo difficile à analyser",
@@ -255,8 +254,25 @@ export default function Analyze() {
           setStep("upload");
           return;
         }
-        // Erreur inattendue — on throw pour le catch
-        throw new Error(errBody.message || "Analyse temporairement indisponible");
+        if (analyzeRes.status === 503 && errBody.code === "AI_UNAVAILABLE") {
+          setIsAnalyzing(false);
+          toast({
+            title: "Erreur de connexion — réessayez",
+            description: "Le service IA est momentanément indisponible. Reprends une photo et relance l'analyse.",
+            variant: "destructive",
+          });
+          setStep("upload");
+          return;
+        }
+        // Erreur inattendue → retour photo
+        setIsAnalyzing(false);
+        toast({
+          title: "Erreur de connexion — réessayez",
+          description: errBody.message || "Une erreur s'est produite. Reprends une photo et réessaie.",
+          variant: "destructive",
+        });
+        setStep("upload");
+        return;
       }
 
       const data = await analyzeRes.json() as AnalysisResult & { savedScanId?: number; isAnonymous?: boolean; _fallback?: boolean };
@@ -265,13 +281,7 @@ export default function Analyze() {
       setStep("result");
       clearQuestionnaireDraft();
 
-      // Si le serveur a renvoyé un résultat de fallback, on l'indique discrètement
-      if ((data as any)._fallback) {
-        toast({
-          title: "Analyse partielle",
-          description: "Le service IA était lent — relance l'analyse pour un diagnostic complet.",
-        });
-      }
+      // _fallback supprimé — le serveur renvoie désormais une erreur 503 claire
 
       // Meta Pixel — analyse complétée
       try {
