@@ -2128,10 +2128,34 @@ ${pdfBestProduct ? `
 
           <h1
             data-testid="text-condition"
-            style={{ fontSize: "20px", fontWeight: 800, color: DS.textPrimary, lineHeight: 1.3, marginBottom: "20px" }}
+            style={{ fontSize: "20px", fontWeight: 800, color: DS.textPrimary, lineHeight: 1.3, marginBottom: (result as any).conditionSecondaire ? "8px" : "20px" }}
           >
             {result.condition}
           </h1>
+
+          {/* ── Condition secondaire ── */}
+          {(result as any).conditionSecondaire && (result as any).conditionSecondaire !== "none" && (
+            <p style={{ fontSize: "12px", color: DS.textBody, marginBottom: "16px", display: "flex", alignItems: "center", gap: "6px" }}>
+              <span style={{ fontSize: "10px", fontWeight: 700, padding: "2px 8px", borderRadius: "6px", background: "rgba(167,139,250,0.1)", border: "1px solid rgba(167,139,250,0.2)", color: DS.violetLight }}>
+                Secondaire
+              </span>
+              {(result as any).conditionSecondaire}
+            </p>
+          )}
+
+          {/* ── Red Flags ── */}
+          {(result as any).redFlags && (result as any).redFlags.length > 0 && (
+            <div style={{ marginBottom: "16px", padding: "12px 14px", borderRadius: "12px", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)" }}>
+              <p style={{ fontSize: "10px", fontWeight: 700, color: "#fca5a5", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "8px", display: "flex", alignItems: "center", gap: "6px" }}>
+                <AlertTriangle style={{ width: "12px", height: "12px" }} /> Signaux à surveiller
+              </p>
+              <ul style={{ margin: 0, padding: "0 0 0 14px", display: "flex", flexDirection: "column", gap: "4px" }}>
+                {((result as any).redFlags as string[]).map((flag, i) => (
+                  <li key={i} style={{ fontSize: "11px", color: "#fca5a5", lineHeight: 1.5 }}>{flag}</li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           <GlowGauge
             score={result.score}
@@ -2491,6 +2515,44 @@ ${pdfBestProduct ? `
           </div>
         )}
 
+        {/* ═══ BLOC 5b — Zones B2C avec conseils (nouveau format) ═══ */}
+        {!isPro && (result as any).zonesB2C && (result as any).zonesB2C.length > 0 && (
+          <div
+            data-testid="block-zones-b2c"
+            style={{ ...DS.subtleCard, padding: "20px" }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "14px" }}>
+              <MapPin style={{ width: "16px", height: "16px", color: DS.violetMid }} />
+              <h2 style={{ fontSize: "15px", fontWeight: 800, color: DS.textPrimary }}>Analyse Zone par Zone</h2>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              {((result as any).zonesB2C as Array<{ zone: string; status: string; findings: string; advice: string }>).map((z, i) => {
+                const isAffected = z.status.toLowerCase().includes("affect") || z.status.toLowerCase().includes("trè");
+                const dotColor = z.status.toLowerCase().includes("très") ? "#f87171"
+                  : z.status.toLowerCase().includes("modér") ? "#f59e0b"
+                  : z.status.toLowerCase().includes("légèr") ? "#fbbf24"
+                  : "#6ee7b7";
+                return (
+                  <div key={i} style={{ padding: "12px", borderRadius: "12px", background: isAffected ? "rgba(233,30,140,0.04)" : "rgba(255,255,255,0.03)", border: `1px solid ${isAffected ? "rgba(233,30,140,0.2)" : "rgba(255,255,255,0.06)"}` }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
+                      <span style={{ width: "8px", height: "8px", borderRadius: "9999px", background: dotColor, flexShrink: 0 }} />
+                      <span style={{ fontSize: "12px", fontWeight: 800, color: DS.textPrimary }}>{z.zone}</span>
+                      <span style={{ fontSize: "10px", color: DS.textMuted, marginLeft: "auto" }}>{z.status}</span>
+                    </div>
+                    {z.findings && <p style={{ fontSize: "11px", color: DS.textBody, lineHeight: 1.5, marginBottom: "4px" }}>{z.findings}</p>}
+                    {z.advice && (
+                      <p style={{ fontSize: "11px", color: DS.violetLight, lineHeight: 1.5, display: "flex", gap: "4px" }}>
+                        <CheckCircle2 style={{ width: "12px", height: "12px", flexShrink: 0, marginTop: "1px" }} />
+                        {z.advice}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* ═══ BLOC 6 — Protocole de soin ═══ */}
         {(protocolMorning.length > 0 || protocolEvening.length > 0 || weekly) && (
           <div
@@ -2582,6 +2644,12 @@ ${pdfBestProduct ? `
                             <p style={{ fontSize: "12px", fontWeight: 700, color: DS.textPrimary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                               {matchedItem ? matchedItem.product.name : (stepData.product || stepData.step)}
                             </p>
+                            {/* Brand + price from new B2C format */}
+                            {(s?.brand || s?.price) && !matchedItem && (
+                              <p style={{ fontSize: "10px", color: DS.violetLight, fontWeight: 600, marginTop: "2px" }}>
+                                {s.brand && <span>{s.brand}</span>}{s.brand && s.price && <span> · </span>}{s.price && <span>{s.price}</span>}
+                              </p>
+                            )}
                             {stepData.why && (
                               <p style={{ fontSize: "10px", lineHeight: 1.4, marginTop: "2px", fontWeight: 500, color: DS.textMuted }}>{stepData.why}</p>
                             )}
@@ -2676,6 +2744,12 @@ ${pdfBestProduct ? `
                             <p style={{ fontSize: "12px", fontWeight: 700, color: DS.textPrimary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                               {matchedItem ? matchedItem.product.name : (stepData.product || stepData.step)}
                             </p>
+                            {/* Brand + price from new B2C format */}
+                            {(s?.brand || s?.price) && !matchedItem && (
+                              <p style={{ fontSize: "10px", color: DS.violetLight, fontWeight: 600, marginTop: "2px" }}>
+                                {s.brand && <span>{s.brand}</span>}{s.brand && s.price && <span> · </span>}{s.price && <span>{s.price}</span>}
+                              </p>
+                            )}
                             {stepData.why && (
                               <p style={{ fontSize: "10px", lineHeight: 1.4, marginTop: "2px", fontWeight: 500, color: DS.textMuted }}>{stepData.why}</p>
                             )}
@@ -2745,6 +2819,21 @@ ${pdfBestProduct ? `
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {/* ═══ BLOC 7bis-a — Quand consulter un dermatologue ═══ */}
+        {!isPro && (result as any).whenToSeeDermatologist && (
+          <div
+            data-testid="block-when-to-see-derm"
+            style={{ padding: "14px 16px", borderRadius: "14px", background: "rgba(124,58,237,0.07)", border: "1px solid rgba(124,58,237,0.2)" }}
+          >
+            <p style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.1em", color: DS.violetLight, textTransform: "uppercase", marginBottom: "6px", display: "flex", alignItems: "center", gap: "6px" }}>
+              <Eye style={{ width: "12px", height: "12px" }} /> Quand consulter un dermatologue ?
+            </p>
+            <p style={{ fontSize: "12px", color: DS.textBody, lineHeight: 1.6 }}>
+              {(result as any).whenToSeeDermatologist}
+            </p>
           </div>
         )}
 

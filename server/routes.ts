@@ -12,7 +12,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { GLOWSCAN_SYSTEM_PROMPT, GLOWSCAN_PRO_SYSTEM_PROMPT } from "./prompt";
 import webpush from "web-push";
 import { db } from "./db";
-import { referrals, loyaltyPoints, subscriptions, scans, leads, premiumRequests, wellnessLogs } from "@shared/schema";
+import { referrals, loyaltyPoints, subscriptions, scans, leads, premiumRequests, wellnessLogs, trainingData } from "@shared/schema";
 import { users } from "@shared/models/auth";
 import { eq, and, sql, gte, count, lte, desc, avg, inArray } from "drizzle-orm";
 import { whatsappClicks, orders, pageVisits } from "@shared/schema";
@@ -922,6 +922,58 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
         : `GS-${year}-ANON`;
 
       res.json({ ...finalResult, savedScanId, isAnonymous, reference });
+
+      // ── Write training_data (non-blocking, fire & forget) ─────────────────
+      // Every scan is a potential dataset record for African skin AI improvement.
+      // Failures are logged but NEVER block the user response.
+      setImmediate(async () => {
+        try {
+          const r = finalResult as any;
+          const isProMode = !!(isProRequest); // B2B = pro mode with patient intake
+          await db.insert(trainingData).values({
+            scanId: savedScanId,
+            mode: isProMode ? "B2B" : "B2C",
+            source: "user_upload",
+            promptVersion: isProMode ? "b2b-v2" : "b2c-v3",
+            aiModelVersion: AI_MODEL,
+            aiDiagnosis: finalResult,
+            imageQuality: r.photo_quality || null,
+            primaryCondition: r.condition || null,
+            secondaryCondition: r.conditionSecondaire || null,
+            score: r.score || null,
+            severity: r.severity || null,
+            confidence: r.confidence || null,
+            skinState: null,
+            skinPhototype: null,
+            balance: r.balance || null,
+            redFlags: r.redFlags || null,
+            details: r.details || null,
+            motivation: r.motivation || null,
+            zonesB2C: r.zonesB2C || null,
+            recommendations: Array.isArray(r.recommendations) ? r.recommendations : null,
+            morningProtocol: r.morningProtocol || null,
+            eveningProtocol: r.eveningProtocol || null,
+            weeklyProtocol: r.weeklyProtocol || null,
+            whenToSeeDermatologist: r.whenToSeeDermatologist || null,
+            b2cOutput: isProMode ? null : finalResult,
+            // B2B fields
+            clinicalSummary: r.clinicalSummary || null,
+            zonesAnalysis: r.zonesAnalysis || null,
+            clinicalProtocol: r.clinicalProtocol || null,
+            b2bOutput: isProMode ? finalResult : null,
+            // Validation defaults
+            dermValidationStatus: "pending",
+            validatedBy: "ai_only",
+            finalStatus: "pending",
+            trainingWeight: 1,
+            isAnonymized: !userId,
+            gdprConsent: true,
+          });
+          console.log(`[training] ✅ Dataset record créé pour scan #${savedScanId} (${isProMode ? "B2B" : "B2C"})`);
+        } catch (trainErr) {
+          console.error("[training] ⚠️ Échec insert training_data (non-bloquant):", trainErr instanceof Error ? trainErr.message : String(trainErr));
+        }
+      });
 
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : String(error);
@@ -3264,6 +3316,130 @@ Réponds UNIQUEMENT avec ce JSON strict (rien d'autre) :
     });
   }
 });
+
+  // ══════════════════════════════════════════════════════════════════════
+  // PATCH /api/training/:id/validate — Validation dermatologue d'un record
+  // Body: { status, confirmed?, correctedPrimaryCondition?, correctedSeverity?, notes?, validatedBy }
+  // ══════════════════════════════════════════════════════════════════════
+  app.patch("/api/training/:id/validate", async (req: any, res) => {
+    try {
+      // Auth requise — dermatologue connecté ou admin
+      const userId = req.session?.userId || req.user?.id || (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Authentification requise" });
+      }
+
+      const id = req.params.id;
+      const {
+        status,           // DermValidationStatus: 'validated'|'corrected'|'rejected'|'needs_review'
+        confirmed,        // boolean — dermato confirme le diagnostic IA
+        correctedPrimaryCondition,
+        correctedSeverity,
+        notes,
+        groundTruth,      // objet annoté complet (optionnel)
+      } = req.body as {
+        status: string;
+        confirmed?: boolean;
+        correctedPrimaryCondition?: string;
+        correctedSeverity?: string;
+        notes?: string;
+        groundTruth?: Record<string, unknown>;
+      };
+
+      if (!status || !["validated", "corrected", "rejected", "needs_review"].includes(status)) {
+        return res.status(400).json({ message: "status invalide — valeurs: validated|corrected|rejected|needs_review" });
+      }
+
+      // Calcul du training weight selon le statut
+      const WEIGHT_MAP: Record<string, number> = {
+        pending: 1,
+        validated: 2,
+        corrected: 3,
+        rejected: 0,
+        needs_review: 1,
+      };
+
+      const updatePayload: Record<string, unknown> = {
+        dermValidationStatus: status,
+        validatedBy: `doctor_${userId}`,
+        validatedAt: new Date(),
+        finalStatus: status === "rejected" ? "rejected" : status === "needs_review" ? "needs_review" : "validated",
+        trainingWeight: WEIGHT_MAP[status] ?? 1,
+        dermatologistLabel: {
+          status,
+          confirmed: confirmed ?? null,
+          correctedPrimaryCondition: correctedPrimaryCondition ?? null,
+          correctedSeverity: correctedSeverity ?? null,
+          notes: notes ?? null,
+        },
+      };
+
+      if (groundTruth) {
+        updatePayload.groundTruth = groundTruth;
+      }
+      if (correctedPrimaryCondition) {
+        updatePayload.primaryCondition = correctedPrimaryCondition;
+      }
+      if (correctedSeverity) {
+        updatePayload.severity = correctedSeverity;
+      }
+
+      const updated = await db
+        .update(trainingData)
+        .set(updatePayload as any)
+        .where(eq(trainingData.id, id))
+        .returning({ id: trainingData.id, dermValidationStatus: trainingData.dermValidationStatus, trainingWeight: trainingData.trainingWeight });
+
+      if (!updated.length) {
+        return res.status(404).json({ message: "Record training_data introuvable" });
+      }
+
+      console.log(`[training] ✅ Validation dermato: record ${id} → ${status} (poids=${WEIGHT_MAP[status]})`);
+      return res.json({ success: true, record: updated[0] });
+    } catch (err) {
+      console.error("[training] ❌ Erreur validation:", err);
+      return res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // GET /api/training — liste les records (admin / dermato)
+  app.get("/api/training", async (req: any, res) => {
+    try {
+      const userId = req.session?.userId || req.user?.id || (req.user as any)?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "Authentification requise" });
+
+      const status = (req.query.status as string) || undefined;
+      const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
+      const offset = parseInt(req.query.offset as string) || 0;
+
+      let query = db.select({
+        id: trainingData.id,
+        scanId: trainingData.scanId,
+        mode: trainingData.mode,
+        primaryCondition: trainingData.primaryCondition,
+        severity: trainingData.severity,
+        score: trainingData.score,
+        confidence: trainingData.confidence,
+        imageQuality: trainingData.imageQuality,
+        dermValidationStatus: trainingData.dermValidationStatus,
+        trainingWeight: trainingData.trainingWeight,
+        finalStatus: trainingData.finalStatus,
+        createdAt: trainingData.createdAt,
+      }).from(trainingData);
+
+      if (status) {
+        // @ts-ignore
+        query = query.where(eq(trainingData.dermValidationStatus, status));
+      }
+
+      // @ts-ignore
+      const records = await query.orderBy(desc(trainingData.createdAt)).limit(limit).offset(offset);
+      return res.json({ records, total: records.length });
+    } catch (err) {
+      console.error("[training] ❌ Erreur liste:", err);
+      return res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
 
   return httpServer;
 }

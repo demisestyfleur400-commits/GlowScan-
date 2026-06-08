@@ -475,7 +475,7 @@ export const trainingData = pgTable("training_data", {
   recommendationClasses: jsonb("recommendation_classes"),       // RecommendationClass[]
 
   // ── Diagnostic IA brut ───────────────────────────────────────────
-  aiDiagnosis: jsonb("ai_diagnosis").notNull(),                 // JSON brut retourné par le modèle
+  aiDiagnosis: jsonb("ai_diagnosis"),                           // JSON brut retourné par le modèle
   aiModelVersion: varchar("ai_model_version", { length: 50 }),
   aiConfidence: decimal("ai_confidence", { precision: 3, scale: 2 }),
 
@@ -492,7 +492,7 @@ export const trainingData = pgTable("training_data", {
   b2bOutput: jsonb("b2b_output"),                               // sortie B2B complète archivée
 
   // ── Vérité terrain ───────────────────────────────────────────────
-  groundTruth: jsonb("ground_truth").notNull(),                 // GlowScanAnnotation validée
+  groundTruth: jsonb("ground_truth"),                           // GlowScanAnnotation validée (null = pas encore validée)
   annotation: jsonb("annotation"),                              // GlowScanAnnotation complète structurée
   clinicalAnnotation: jsonb("clinical_annotation"),             // ClinicalAnnotation (B2B)
 
@@ -570,6 +570,17 @@ export interface AnalysisResult {
     evening: string[];
     weekly: string;
   };
+  // === Nouveaux champs B2C v3 ===
+  conditionSecondaire?: string | null;
+  photo_quality?: "insufficient" | "acceptable" | "good";
+  confidence?: "low" | "medium" | "high";
+  redFlags?: string[];
+  whenToSeeDermatologist?: string;
+  medicalDisclaimer?: string;
+  zonesB2C?: Array<{ zone: string; status: string; findings: string; advice: string }>;
+  morningProtocol?: Array<{ step: string; product: string; brand?: string; price?: string; why?: string }>;
+  eveningProtocol?: Array<{ step: string; product: string; brand?: string; price?: string; why?: string }>;
+  weeklyProtocol?: string;
   // === Nouveaux champs rapport médical ===
   metrics?: {
     hydratation: number; // 0-100
