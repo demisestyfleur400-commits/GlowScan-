@@ -445,6 +445,15 @@ export const trainingData = pgTable("training_data", {
   drynessLevel: varchar("dryness_level", { length: 15 }),       // 'low'|'moderate'|'high'
   pigmentationLevel: varchar("pigmentation_level", { length: 15 }), // 'none'|'mild'|'moderate'|'high'
 
+  // ── Signes visibles libres (GlowScanBase) ────────────────────────
+  visibleSigns: jsonb("visible_signs"),                         // string[] — observations libres
+
+  // ── Balance métriques (B2C GlowScore) ───────────────────────────
+  balance: jsonb("balance"),                                    // BalanceMetrics { hydration, sebum, sensitivity, uniformity, elasticity, radiance }
+
+  // ── Alertes cliniques ────────────────────────────────────────────
+  redFlags: jsonb("red_flags"),                                 // string[]
+
   // ── Label 15 — Facteurs visibles ─────────────────────────────────
   visibleFactors: jsonb("visible_factors"),                     // VisibleFactor[]
 

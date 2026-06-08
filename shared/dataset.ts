@@ -185,39 +185,73 @@ export type DermValidationStatus =
   | "rejected"
   | "needs_review";
 
-// ── 19. Annotation clinique complète ─────────────────────────────
+// ── Balance cutanée (métriques B2C) ──────────────────────────────
+// Valeurs 0-100 — issues du rapport B2C GlowScore
+export type BalanceMetrics = {
+  hydration: number;    // 0-100 — niveau d'hydratation estimé
+  sebum: number;        // 0-100 — production sébacée
+  sensitivity: number;  // 0-100 — sensibilité/réactivité cutanée
+  uniformity: number;   // 0-100 — uniformité du teint
+  elasticity: number;   // 0-100 — élasticité / fermeté
+  radiance: number;     // 0-100 — éclat
+};
+
+// ── 19. Annotation clinique complète (fusion 22 labels + GlowScanBase) ──
 export type GlowScanAnnotation = {
+  // Image
   imageQuality: ImageQuality;
   imageArtifacts: ImageArtifact[];
-  fitzpatrick: Fitzpatrick;
+
+  // Peau
+  fitzpatrick: Fitzpatrick;            // aligné sur GlowScanBase
   skinState: SkinState;
   bodyArea: BodyArea;
+
+  // Diagnostic
   primaryCondition: PrimaryCondition;
   secondaryCondition: SecondaryCondition;
   lesionTypes: LesionType[];
+  visibleSigns: string[];              // ← ajouté depuis GlowScanBase — observations libres
   inflammationLevel: InflammationLevel;
   severity: Severity;
   confidence: Confidence;
+
+  // Pièges visuels
   visualPitfalls: VisualPitfall[];
+
+  // Niveaux cutanés
   sebumLevel: SebumLevel;
   drynessLevel: DrynessLevel;
   pigmentationLevel: PigmentationLevel;
   skinBarrierStatus: SkinBarrierStatus;
+
+  // Balance métriques (B2C)
+  balance?: BalanceMetrics;            // ← ajouté depuis GlowScanBase
+
+  // Facteurs & différentiels
   visibleFactors: VisibleFactor[];
   differentialDiagnosis: DifferentialDiagnosis[];
   recommendationClasses: RecommendationClass[];
+
+  // Alertes
+  redFlags: string[];                  // ← ajouté depuis GlowScanBase
+
+  // Validation
   dermatologistValidation: DermValidationStatus;
+  medicalDisclaimer?: string;          // ← ajouté depuis GlowScanBase
 };
 
 // ── Bloc d'observations cliniques (format B2B) ───────────────────
 export type ClinicalAnnotation = {
   observations: string[];
   visibleLesions: string[];
+  visibleSigns: string[];              // ← ajouté — cohérence avec GlowScanBase
   inflammationLevel: InflammationLevel;
   oilinessLevel: SebumLevel;
   drynessLevel: DrynessLevel;
   pigmentationLevel: PigmentationLevel;
   skinBarrierStatus: SkinBarrierStatus;
+  redFlags: string[];                  // ← ajouté — signaux d'alarme clinique
   confidenceReason: string;
 };
 
@@ -229,43 +263,62 @@ export type DermatologistLabel = {
   notes?: string;
 };
 
-// ── Enregistrement dataset complet (fusion GlowScanDatasetRecord + labels) ──
-export type GlowScanDatasetRecord = {
+// ── Type de base commun B2C + B2B (GlowScanBase fusionné) ────────
+export type GlowScanBase = {
   // Identité
   recordId: string;
   mode: "B2C" | "B2B";
-  source: "user_upload" | "dermatologist_review" | "clinical_partner";
-  imageId: string;
   promptVersion: string;
   modelVersion: string;
   createdAt: string;
-
-  // Patient
-  patientAgeRange?: string;
-  patientSex?: "female" | "male" | "other" | "unknown";
+  imageId: string;
 
   // Image
   imageQuality: ImageQuality;
   imageArtifacts: ImageArtifact[];
 
   // Peau
-  skinTone: Fitzpatrick;
+  fitzpatrick: Fitzpatrick;
   skinState: SkinState;
   bodyArea: BodyArea;
 
-  // Diagnostic IA brut
-  primaryCondition: PrimaryCondition;
-  secondaryCondition?: SecondaryCondition | null;
-  lesionTypes: LesionType[];
+  // Diagnostic
+  primaryCondition: PrimaryCondition | string;  // string pour flexibilité B2B libre
+  secondaryCondition: SecondaryCondition | string | null;
+  lesionTypes: LesionType[] | string[];
   severity: Severity;
   confidence: Confidence;
-  inflammationLevel: InflammationLevel;
+  visibleSigns: string[];             // observations libres visibles
+
+  // Pièges visuels
+  visualPitfalls: VisualPitfall[];
+
+  // Niveaux cutanés
   sebumLevel: SebumLevel;
   drynessLevel: DrynessLevel;
   pigmentationLevel: PigmentationLevel;
   skinBarrierStatus: SkinBarrierStatus;
+
+  // Balance métriques (surtout B2C)
+  balance: BalanceMetrics;
+
+  // Alertes
+  redFlags: string[];
+  medicalDisclaimer: string;
+};
+
+// ── Enregistrement dataset complet (GlowScanBase + 22 labels + pipeline) ──
+export type GlowScanDatasetRecord = GlowScanBase & {
+  // Source
+  source: "user_upload" | "dermatologist_review" | "clinical_partner";
+
+  // Patient
+  patientAgeRange?: string;
+  patientSex?: "female" | "male" | "other" | "unknown";
+
+  // Labels supplémentaires (22 labels)
+  inflammationLevel: InflammationLevel;
   visibleFactors: VisibleFactor[];
-  visualPitfalls: VisualPitfall[];
   differentialDiagnosis: DifferentialDiagnosis[];
   recommendationClasses: RecommendationClass[];
 
@@ -276,7 +329,7 @@ export type GlowScanDatasetRecord = {
   // Pipeline
   finalStatus: "pending" | "validated" | "rejected" | "needs_review";
 
-  // Annotation structurée complète
+  // Annotations structurées complètes
   annotation?: GlowScanAnnotation;
   clinicalAnnotation?: ClinicalAnnotation;
 };
