@@ -454,6 +454,17 @@ export const trainingData = pgTable("training_data", {
   // ── Alertes cliniques ────────────────────────────────────────────
   redFlags: jsonb("red_flags"),                                 // string[]
 
+  // ── Champs B2C (GlowScanB2C) ─────────────────────────────────────
+  details: text("details"),                                     // résumé court visible — B2C
+  motivation: text("motivation"),                               // phrase encourageante — B2C
+  zonesB2C: jsonb("zones_b2c"),                                 // ZoneAnalysisB2C[]
+  recommendations: jsonb("recommendations"),                    // B2CRecommendation[]
+  morningProtocol: jsonb("morning_protocol"),                   // B2CProduct[]
+  eveningProtocol: jsonb("evening_protocol"),                   // B2CProduct[]
+  weeklyProtocol: text("weekly_protocol"),                      // soin hebdomadaire
+  whenToSeeDermatologist: text("when_to_see_dermatologist"),    // seuil de consultation
+  b2cOutput: jsonb("b2c_output"),                               // sortie B2C complète archivée
+
   // ── Label 15 — Facteurs visibles ─────────────────────────────────
   visibleFactors: jsonb("visible_factors"),                     // VisibleFactor[]
 

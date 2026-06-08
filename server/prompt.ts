@@ -250,38 +250,68 @@ INTERDIT ABSOLU : recommander des marques non listées ci-dessus.
 
 Retourne UNIQUEMENT ce JSON sans markdown :
 {
-  "condition": "Nom de la condition principale",
+  "condition": "Nom principal observé — libellé simple et humain",
+  "conditionSecondaire": "Condition secondaire visible ou null",
   "severity": "Légère | Modérée | Sévère",
-  "score": 55-85,
-  "skinType": "Type de peau précis",
-  "details": "Évaluation de la barrière cutanée — 2-3 phrases",
-  "motivation": "Citation conseil personnalisée et encourageante",
-  "zones": ["Zone affectée 1", "Zone affectée 2"],
-  "balance": {
-    "hydration": 0-100,
-    "sebum": 0-100,
-    "sensitivity": 0-100,
-    "uniformity": 0-100,
-    "elasticity": 0-100,
-    "radiance": 0-100
-  },
-  "consultationData": {
-    "observations_visuelles": "Ce que l'IA voit précisément",
-    "type_peau": "Type complet",
-    "impact_facteurs": {
-      "age": "Impact de l'âge sur cette peau",
-      "inflammation": "Niveau d'inflammation visible",
-      "hydratation": "État hydrique",
-      "rides": "État des rides"
+  "score": 0,
+  "photo_quality": "bonne | acceptable | insuffisante",
+  "confidence": "Faible | Moyenne | Élevée",
+  "skinType": "Type de peau · Fitzpatrick V",
+  "details": "Résumé court de ce qui est visible — 2-3 phrases simples",
+  "motivation": "Phrase rassurante et encourageante — courte et humaine",
+  "zones": [
+    {
+      "zone": "Zone T | Joues | Front | Menton | Nez | Cou",
+      "status": "Saine | Légèrement affectée | Modérément affectée | Très affectée",
+      "findings": "Ce qui est visible sur cette zone — langage simple",
+      "advice": "Conseil adapté et actionnable pour cette zone"
     }
+  ],
+  "balance": {
+    "hydration": 0,
+    "sebum": 0,
+    "sensitivity": 0,
+    "uniformity": 0,
+    "elasticity": 0,
+    "radiance": 0
   },
+  "recommendations": [
+    {
+      "step": "Matin | Soir | Hebdomadaire",
+      "product": "Nom exact du produit",
+      "brand": "Andrea Skincare | Ebony Hair",
+      "price": "X 000 FCFA",
+      "why": "Pourquoi ce produit correspond à ce besoin"
+    }
+  ],
   "morningProtocol": [
-    { "step": "Nettoyage", "product": "Nom produit local", "why": "Raison courte" }
+    {
+      "step": "Nettoyage",
+      "product": "Nom exact du produit",
+      "brand": "Andrea Skincare | Ebony Hair",
+      "price": "X 000 FCFA",
+      "why": "Raison courte et claire"
+    }
   ],
   "eveningProtocol": [
-    { "step": "Traitement", "product": "Nom produit local", "why": "Raison courte" }
+    {
+      "step": "Traitement",
+      "product": "Nom exact du produit",
+      "brand": "Andrea Skincare | Ebony Hair",
+      "price": "X 000 FCFA",
+      "why": "Raison courte et claire"
+    }
   ],
-  "weeklyProtocol": "Soin hebdomadaire recommandé"
+  "weeklyProtocol": "Soin hebdomadaire recommandé ou null",
+  "redFlags": [
+    "Douleur importante",
+    "Extension rapide des lésions",
+    "Saignement",
+    "Pus visible",
+    "Fièvre associée"
+  ],
+  "whenToSeeDermatologist": "Consulter un dermatologue si les symptômes persistent plus de 4 semaines ou s'aggravent malgré la routine.",
+  "medicalDisclaimer": "Ce rapport est un outil d'aide à l'analyse. Il ne remplace pas l'avis d'un professionnel de santé."
 }
 `;
 

@@ -63,6 +63,17 @@ ALTER TABLE training_data
 -- ── Alertes ──────────────────────────────────────────────────────
   ADD COLUMN IF NOT EXISTS red_flags JSONB,                     -- string[]
 
+-- ── Champs B2C (GlowScanB2C) ──────────────────────────────────────
+  ADD COLUMN IF NOT EXISTS details TEXT,                              -- résumé court visible
+  ADD COLUMN IF NOT EXISTS motivation TEXT,                           -- phrase encourageante
+  ADD COLUMN IF NOT EXISTS zones_b2c JSONB,                          -- ZoneAnalysisB2C[]
+  ADD COLUMN IF NOT EXISTS recommendations JSONB,                    -- B2CRecommendation[]
+  ADD COLUMN IF NOT EXISTS morning_protocol JSONB,                   -- B2CProduct[]
+  ADD COLUMN IF NOT EXISTS evening_protocol JSONB,                   -- B2CProduct[]
+  ADD COLUMN IF NOT EXISTS weekly_protocol TEXT,                      -- soin hebdomadaire
+  ADD COLUMN IF NOT EXISTS when_to_see_dermatologist TEXT,            -- seuil consultation
+  ADD COLUMN IF NOT EXISTS b2c_output JSONB,                         -- sortie B2C complète archivée
+
 -- ── Facteurs & différentiels ─────────────────────────────────────
   ADD COLUMN IF NOT EXISTS visible_factors JSONB,               -- VisibleFactor[]
   ADD COLUMN IF NOT EXISTS differential_diagnosis JSONB,        -- DifferentialDiagnosis[]

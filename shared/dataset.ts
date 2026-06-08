@@ -281,10 +281,59 @@ export type ClinicalAnnotation = {
 };
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// SECTION 2b — TYPES B2C (zones, produits, protocole simplifié)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// Zone B2C — langage simple, conseil orienté utilisateur
+export type ZoneB2C = "Zone T" | "Joues" | "Front" | "Menton" | "Nez" | "Cou";
+
+export type ZoneStatusB2C =
+  | "Saine"
+  | "Légèrement affectée"
+  | "Modérément affectée"
+  | "Très affectée";
+
+export type ZoneAnalysisB2C = {
+  zone: ZoneB2C;
+  status: ZoneStatusB2C;
+  findings: string;   // ce qui est visible — langage simple
+  advice: string;     // conseil adapté à cette zone — actionnable
+};
+
+// Produit B2C — avec marque et prix (Andrea Skincare / Ebony Hair en priorité)
+export type B2CProduct = {
+  step: string;       // ex: "Nettoyage", "Traitement", "Hydratation"
+  product: string;    // nom exact du produit
+  brand: string;      // ex: "Andrea Skincare" | "Ebony Hair"
+  price: string;      // ex: "8 000 FCFA"
+  why: string;        // pourquoi ce produit est adapté — court, humain
+};
+
+// Recommandation B2C (même structure, step typé)
+export type B2CRecommendation = {
+  step: "Matin" | "Soir" | "Hebdomadaire";
+  product: string;
+  brand: string;
+  price: string;
+  why: string;
+};
+
+// ── Noyau de sortie partagé B2C + B2B (GlowScanBaseOutput) ───────
+export type GlowScanBaseOutput = {
+  photo_quality: ImageQuality;              // "insufficient" | "acceptable" | "good"
+  confidence: Confidence;                   // "low" | "medium" | "high"
+  skinType: string;                         // ex: "Peau Mixte · Fitzpatrick V"
+  score: number;                            // GlowScore 0-100
+  balance: BalanceMetrics;
+  redFlags: string[];
+  medicalDisclaimer: string;
+};
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // SECTION 3 — TYPES D'ENREGISTREMENT (GlowScanBase, B2C, B2B, Dataset)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-// ── Base commune B2C + B2B ────────────────────────────────────────
+// ── Base commune B2C + B2B (dataset + pipeline) ──────────────────
 export type GlowScanBase = {
   // Identité
   recordId: string;
@@ -311,6 +360,10 @@ export type GlowScanBase = {
   confidence: Confidence;
   visibleSigns: string[];
 
+  // Score & qualité photo (remontés depuis B2B/B2C)
+  score: number;
+  photo_quality: ImageQuality;
+
   // Pièges visuels — crucial pour peaux africaines
   visualPitfalls: VisualPitfall[];
 
@@ -320,12 +373,33 @@ export type GlowScanBase = {
   pigmentationLevel: PigmentationLevel;
   skinBarrierStatus: SkinBarrierStatus;
 
-  // Balance métriques (surtout B2C)
+  // Balance métriques
   balance: BalanceMetrics;
 
   // Alertes
   redFlags: string[];
   medicalDisclaimer: string;
+};
+
+// ── Sortie B2C complète (GlowScan Basic) ─────────────────────────
+export type GlowScanB2C = GlowScanBase & {
+  // Diagnostic simple (langage utilisateur)
+  condition: string;                        // libellé humain ex: "Peau grasse"
+  conditionSecondaire: string | null;
+  details: string;                          // résumé court de ce qui est visible
+  motivation: string;                       // phrase rassurante et encourageante
+
+  // Zones (langage simple + conseil)
+  zones: ZoneAnalysisB2C[];
+
+  // Produits — Andrea Skincare + Ebony Hair en priorité
+  recommendations: B2CRecommendation[];
+  morningProtocol: B2CProduct[];
+  eveningProtocol: B2CProduct[];
+  weeklyProtocol: string;                   // soin hebdomadaire ou ""
+
+  // Seuil de consultation
+  whenToSeeDermatologist: string;
 };
 
 // ── Sortie B2B complète (GlowScan DERM) ──────────────────────────
