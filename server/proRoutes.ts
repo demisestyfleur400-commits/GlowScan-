@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { db } from "./db";
-import { proAccounts, patients, scans, premiumRequests, users, insertProAccountSchema, insertPatientSchema } from "@shared/schema";
+import { proAccounts, patients, scans, premiumRequests, users, insertProAccountSchema, insertPatientSchema, pageVisits } from "@shared/schema";
 import { eq, and, desc, sql, count, gte, isNotNull } from "drizzle-orm";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
@@ -164,6 +164,13 @@ export function registerProRoutes(app: Express) {
           return res.status(500).json({ message: "Erreur connexion" });
         }
         console.log(`[pro] ✅ Nouveau dermato Pro #${acc.id} — ${data.fullName} (${emailLower})`);
+        // ── Tracking inscription DERM (non-bloquant) ──
+        db.insert(pageVisits).values({
+          page: "pro_register",
+          sessionId: req.session?.id || null,
+          country: null,
+          city: null,
+        }).catch(() => {});
         res.json({ success: true, account: acc });
       });
     } catch (err: any) {
@@ -191,6 +198,13 @@ export function registerProRoutes(app: Express) {
       req.session.userId = user.id;
       req.session.save((err: any) => {
         if (err) return res.status(500).json({ message: "Erreur session" });
+        // ── Tracking connexion DERM (non-bloquant) ──
+        db.insert(pageVisits).values({
+          page: "pro_login",
+          sessionId: req.session?.id || null,
+          country: null,
+          city: null,
+        }).catch(() => {});
         res.json({ success: true, account: acc });
       });
     } catch (err) {

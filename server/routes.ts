@@ -2492,6 +2492,26 @@ Réponds en 2-4 phrases max, sois direct et utile.`;
         .orderBy(desc(count()))
         .limit(10);
 
+      // ── DERM EVENTS (clics dermato + login/register pro) ─────
+      const dermClicksResult = await db.select({ count: count() }).from(whatsappClicks)
+        .where(eq(whatsappClicks.brand, "dermatologist"));
+      const totalDermClicks = Number(dermClicksResult[0]?.count ?? 0);
+
+      const dermClicksByDoctorRaw = await db
+        .select({ productName: whatsappClicks.productName, count: count() })
+        .from(whatsappClicks)
+        .where(eq(whatsappClicks.brand, "dermatologist"))
+        .groupBy(whatsappClicks.productName)
+        .orderBy(desc(count()));
+
+      const proRegisterResult = await db.select({ count: count() }).from(pageVisits)
+        .where(eq(pageVisits.page, "pro_register"));
+      const totalProRegister = Number(proRegisterResult[0]?.count ?? 0);
+
+      const proLoginResult = await db.select({ count: count() }).from(pageVisits)
+        .where(eq(pageVisits.page, "pro_login"));
+      const totalProLogin = Number(proLoginResult[0]?.count ?? 0);
+
       // ── ORDERS ────────────────────────────────────────────────
       const totalOrdersResult = await db.select({ count: count() }).from(orders);
       const totalOrders = Number(totalOrdersResult[0]?.count ?? 0);
@@ -2540,6 +2560,12 @@ Réponds en 2-4 phrases max, sois direct et utile.`;
           thisPeriod: waThisPeriod,
           byBrand: waByBrandRaw,
           byProduct: waByProductRaw,
+        },
+        derm: {
+          whatsappClicks: totalDermClicks,
+          clicksByDoctor: dermClicksByDoctorRaw,
+          proRegistrations: totalProRegister,
+          proLogins: totalProLogin,
         },
         orders: {
           total: totalOrders,

@@ -207,6 +207,19 @@ function DermatologistSection({
             href={waUrl}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={() => {
+              // ── Tracking clic dermato (fire & forget) ──
+              fetch("/api/analytics/whatsapp-click", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  productId: `dermato_${doc.id}`,
+                  productName: doc.name,
+                  brand: "dermatologist",
+                  whatsappNumber: doc.whatsapp,
+                }),
+              }).catch(() => {});
+            }}
             style={{
               display: "flex", alignItems: "center", justifyContent: "center",
               gap: "8px", width: "100%", padding: "12px 0",
