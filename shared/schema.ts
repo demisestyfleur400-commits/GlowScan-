@@ -395,36 +395,92 @@ export interface PredictiveRisk {
 // ═══════════════════════════════════════════════════════════════════
 // TRAINING DATA — Dataset peaux africaines (actif stratégique GlowScan)
 // Alimenté automatiquement après chaque analyse Pro + override
+// 22 labels cliniques — Fitzpatrick IV-VI
 // ═══════════════════════════════════════════════════════════════════
 export const trainingData = pgTable("training_data", {
   id: text("id").primaryKey().default("gen_random_uuid()"),
   scanId: integer("scan_id").references(() => scans.id),
 
-  // Empreinte image (jamais la photo en clair)
+  // ── Source & mode ───────────────────────────────────────────────
+  mode: varchar("mode", { length: 10 }),                        // 'B2C' | 'B2B'
+  source: varchar("source", { length: 30 }),                    // 'user_upload' | 'dermatologist_review' | 'clinical_partner'
+  promptVersion: varchar("prompt_version", { length: 30 }),     // ex: 'b2c-v3' | 'b2b-v2'
+
+  // ── Empreinte image (jamais la photo en clair) ──────────────────
   imageHash: varchar("image_hash", { length: 64 }),
   imageEncrypted: text("image_encrypted"),
 
-  // Diagnostic IA brut
-  aiDiagnosis: jsonb("ai_diagnosis").notNull(),
+  // ── Label 1 — Qualité image ─────────────────────────────────────
+  imageQuality: varchar("image_quality", { length: 20 }),       // 'insufficient' | 'acceptable' | 'good'
+  imageArtifacts: jsonb("image_artifacts"),                     // ImageArtifact[]
+
+  // ── Label 2 — Phototype / peau ──────────────────────────────────
+  skinPhototype: varchar("skin_phototype", { length: 10 }),     // 'IV' | 'V' | 'VI' | 'unknown'
+  skinState: varchar("skin_state", { length: 30 }),             // 'oily' | 'dry' | 'combination' | ...
+
+  // ── Label 3 — Zone anatomique ───────────────────────────────────
+  bodyArea: varchar("body_area", { length: 30 }),               // 'face' | 'zone_t' | 'forehead' | ...
+
+  // ── Patient ─────────────────────────────────────────────────────
+  patientSex: varchar("patient_sex", { length: 10 }),           // 'female' | 'male' | 'other' | 'unknown'
+  ageRange: varchar("age_range", { length: 20 }),               // ex: '21-30'
+  country: varchar("country", { length: 50 }),
+
+  // ── Labels 4-6 — Lésions & conditions ──────────────────────────
+  lesionTypes: jsonb("lesion_types"),                           // LesionType[]
+  primaryCondition: varchar("primary_condition", { length: 60 }),
+  secondaryCondition: varchar("secondary_condition", { length: 60 }),
+
+  // ── Labels 7-9 — Niveaux cliniques ──────────────────────────────
+  inflammationLevel: varchar("inflammation_level", { length: 15 }), // 'none'|'low'|'moderate'|'high'
+  severity: varchar("severity", { length: 15 }),                // 'mild'|'moderate'|'severe'|'critical'
+  confidence: varchar("confidence", { length: 10 }),            // 'low'|'medium'|'high'
+
+  // ── Label 10 — Pièges visuels ────────────────────────────────────
+  visualPitfalls: jsonb("visual_pitfalls"),                     // VisualPitfall[]
+
+  // ── Labels 11-14 — État cutané ───────────────────────────────────
+  skinBarrierStatus: varchar("skin_barrier_status", { length: 25 }), // 'intact'|'mildly_compromised'|'compromised'
+  sebumLevel: varchar("sebum_level", { length: 15 }),           // 'low'|'moderate'|'high'
+  drynessLevel: varchar("dryness_level", { length: 15 }),       // 'low'|'moderate'|'high'
+  pigmentationLevel: varchar("pigmentation_level", { length: 15 }), // 'none'|'mild'|'moderate'|'high'
+
+  // ── Label 15 — Facteurs visibles ─────────────────────────────────
+  visibleFactors: jsonb("visible_factors"),                     // VisibleFactor[]
+
+  // ── Label 16 — Diagnostics différentiels ─────────────────────────
+  differentialDiagnosis: jsonb("differential_diagnosis"),       // DifferentialDiagnosis[]
+
+  // ── Label 17 — Classes de recommandations ────────────────────────
+  recommendationClasses: jsonb("recommendation_classes"),       // RecommendationClass[]
+
+  // ── Diagnostic IA brut ───────────────────────────────────────────
+  aiDiagnosis: jsonb("ai_diagnosis").notNull(),                 // JSON brut retourné par le modèle
   aiModelVersion: varchar("ai_model_version", { length: 50 }),
   aiConfidence: decimal("ai_confidence", { precision: 3, scale: 2 }),
 
-  // Vérité terrain (override ou validation auto)
-  groundTruth: jsonb("ground_truth").notNull(),
-  validationType: varchar("validation_type", { length: 20 }), // 'auto' | 'partial' | 'full'
-  validatedBy: varchar("validated_by", { length: 100 }),      // 'ai_only' | 'doctor_[id]'
+  // ── Vérité terrain ───────────────────────────────────────────────
+  groundTruth: jsonb("ground_truth").notNull(),                 // GlowScanAnnotation validée
+  annotation: jsonb("annotation"),                              // GlowScanAnnotation complète structurée
+  clinicalAnnotation: jsonb("clinical_annotation"),             // ClinicalAnnotation (B2B)
+
+  // ── Label 18 — Validation dermatologue ──────────────────────────
+  dermValidationStatus: varchar("derm_validation_status", { length: 20 }).default("pending"),
+  // 'pending'|'validated'|'corrected'|'rejected'|'needs_review'
+  dermatologistLabel: jsonb("dermatologist_label"),             // DermatologistLabel
+  validatedBy: varchar("validated_by", { length: 100 }),       // 'ai_only' | 'doctor_[id]'
   validatedAt: timestamp("validated_at"),
   overrideReason: text("override_reason"),
 
-  // Métadonnées peaux africaines
-  skinPhototype: varchar("skin_phototype", { length: 10 }),    // 'IV' | 'V' | 'VI' | 'unknown'
-  country: varchar("country", { length: 50 }),
-  ageRange: varchar("age_range", { length: 20 }),              // ex: '21-30'
+  // ── Pipeline & statut final ──────────────────────────────────────
+  finalStatus: varchar("final_status", { length: 20 }).default("pending"),
+  // 'pending'|'validated'|'rejected'|'needs_review'
 
-  // Poids d'entraînement : 1=auto 2=partiel 3=manuel
+  // ── Poids d'entraînement (label 22) ─────────────────────────────
+  // 0=rejeté 1=auto 2=validé dermato 3=corrigé dermato
   trainingWeight: integer("training_weight").default(1),
 
-  // Sécurité & export
+  // ── Sécurité & export ────────────────────────────────────────────
   isAnonymized: boolean("is_anonymized").default(true),
   exportedToDataset: boolean("exported_to_dataset").default(false),
   exportedAt: timestamp("exported_at"),
@@ -433,6 +489,7 @@ export const trainingData = pgTable("training_data", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export type TrainingData = typeof trainingData.$inferSelect;
 export type TrainingDataInsert = typeof trainingData.$inferInsert;
 
 export interface FaceZone {
