@@ -157,11 +157,11 @@ export default function DermLanding() {
                 Essayer gratuitement 14 jours <ArrowRight size={16} />
               </motion.button>
             </Link>
-            <a href="https://wa.me/237674377959?text=Bonjour%2C+je+voudrais+une+d%C3%A9mo+de+GlowScan+DERM" target="_blank" rel="noopener noreferrer">
-              <button style={{ background: "transparent", color: DS.muted, border: `1px solid ${DS.border}`, borderRadius: 9999, padding: "14px 28px", fontSize: 15, fontWeight: 700, cursor: "pointer" }}>
-                Voir une démo
+            <Link href="/derm/demo">
+              <button style={{ background: "transparent", color: DS.muted, border: `1px solid ${DS.border}`, borderRadius: 9999, padding: "14px 28px", fontSize: 15, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}>
+                ▶ Voir la démo interactive
               </button>
-            </a>
+            </Link>
           </div>
         </motion.div>
       </section>

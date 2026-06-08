@@ -37,6 +37,7 @@ const DermOnboarding = lazy(() => import("@/pages/pro/DermOnboarding"));
 const Privacy = lazy(() => import("@/pages/Privacy"));
 const DermatoPortal = lazy(() => import("@/pages/DermatoPortal"));
 const DermLanding = lazy(() => import("@/pages/DermLanding"));
+const DermDemo = lazy(() => import("@/pages/DermDemo"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 
 function RefRedirect() {
@@ -80,6 +81,7 @@ function Router() {
       <Route path="/confidentialite" component={Privacy} />
       <Route path="/dermato" component={DermatoPortal} />
       <Route path="/derm" component={DermLanding} />
+      <Route path="/derm/demo" component={DermDemo} />
       <Route path="/derm/register" component={ProInscription} />
       <Route path="/challenge/:token" component={Challenge} />
       <Route path="/ref/:code" component={RefRedirect} />
