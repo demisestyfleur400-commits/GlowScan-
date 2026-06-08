@@ -68,6 +68,18 @@ ALTER TABLE training_data
   ADD COLUMN IF NOT EXISTS differential_diagnosis JSONB,        -- DifferentialDiagnosis[]
   ADD COLUMN IF NOT EXISTS recommendation_classes JSONB,        -- RecommendationClass[]
 
+-- ── Champs B2B (GlowScanB2B) ─────────────────────────────────────
+  ADD COLUMN IF NOT EXISTS score INTEGER,                             -- GlowScore 0-100
+  ADD COLUMN IF NOT EXISTS clinical_summary TEXT,                     -- 4-5 phrases cliniques
+  ADD COLUMN IF NOT EXISTS zones_analysis JSONB,                      -- ZoneAnalysisItem[]
+  ADD COLUMN IF NOT EXISTS antecedents_integration TEXT,              -- lien antécédents → diagnostic
+  ADD COLUMN IF NOT EXISTS toxic_ingredients JSONB,                   -- ToxicIngredient[]
+  ADD COLUMN IF NOT EXISTS clinical_protocol JSONB,                   -- ClinicalProtocol complet
+  ADD COLUMN IF NOT EXISTS logistics TEXT,                            -- null si Douala/Yaoundé
+  ADD COLUMN IF NOT EXISTS prognostic TEXT,                           -- évolution semaine par semaine
+  ADD COLUMN IF NOT EXISTS contraindications JSONB,                   -- string[]
+  ADD COLUMN IF NOT EXISTS b2b_output JSONB,                          -- sortie B2B complète archivée
+
 -- ── Vérité terrain & annotations ────────────────────────────────
   ADD COLUMN IF NOT EXISTS ground_truth JSONB,
   ADD COLUMN IF NOT EXISTS annotation JSONB,                    -- GlowScanAnnotation complète

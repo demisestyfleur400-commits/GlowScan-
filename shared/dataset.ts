@@ -1,7 +1,12 @@
 // ═══════════════════════════════════════════════════════════════════
-// GLOWSCAN DATASET — 22 Labels cliniques
-// Système d'apprentissage vivant — peaux africaines Fitzpatrick IV-VI
+// GLOWSCAN DATASET — Système d'annotation clinique complet
+// 22 labels + GlowScanBase + GlowScanB2B + pipeline
+// Peaux africaines Fitzpatrick IV-VI
 // ═══════════════════════════════════════════════════════════════════
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// SECTION 1 — TYPES ATOMIQUES (22 labels)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 // ── 1. Qualité image ──────────────────────────────────────────────
 export type ImageQuality = "insufficient" | "acceptable" | "good";
@@ -43,6 +48,23 @@ export type BodyArea =
   | "body"
   | "hands"
   | "other";
+
+// Zone B2B (noms FR — tels que retournés par le prompt DERM)
+export type ZoneB2B =
+  | "Zone T"
+  | "Joues"
+  | "Front"
+  | "Périorbital"
+  | "Tempes"
+  | "Cou"
+  | "Nez"
+  | "Menton";
+
+export type ZoneStatus =
+  | "Sain"
+  | "Légèrement affecté"
+  | "Modérément affecté"
+  | "Sévèrement affecté";
 
 // ── 4. Types de lésions ───────────────────────────────────────────
 export type LesionType =
@@ -185,85 +207,84 @@ export type DermValidationStatus =
   | "rejected"
   | "needs_review";
 
-// ── Balance cutanée (métriques B2C) ──────────────────────────────
-// Valeurs 0-100 — issues du rapport B2C GlowScore
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// SECTION 2 — TYPES COMPOSÉS (structures cliniques)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// ── Balance cutanée (métriques B2C GlowScore) ────────────────────
 export type BalanceMetrics = {
-  hydration: number;    // 0-100 — niveau d'hydratation estimé
-  sebum: number;        // 0-100 — production sébacée
-  sensitivity: number;  // 0-100 — sensibilité/réactivité cutanée
-  uniformity: number;   // 0-100 — uniformité du teint
-  elasticity: number;   // 0-100 — élasticité / fermeté
-  radiance: number;     // 0-100 — éclat
+  hydration: number;    // 0-100
+  sebum: number;        // 0-100
+  sensitivity: number;  // 0-100
+  uniformity: number;   // 0-100
+  elasticity: number;   // 0-100
+  radiance: number;     // 0-100
 };
 
-// ── 19. Annotation clinique complète (fusion 22 labels + GlowScanBase) ──
-export type GlowScanAnnotation = {
-  // Image
-  imageQuality: ImageQuality;
-  imageArtifacts: ImageArtifact[];
-
-  // Peau
-  fitzpatrick: Fitzpatrick;            // aligné sur GlowScanBase
-  skinState: SkinState;
-  bodyArea: BodyArea;
-
-  // Diagnostic
-  primaryCondition: PrimaryCondition;
-  secondaryCondition: SecondaryCondition;
-  lesionTypes: LesionType[];
-  visibleSigns: string[];              // ← ajouté depuis GlowScanBase — observations libres
-  inflammationLevel: InflammationLevel;
-  severity: Severity;
-  confidence: Confidence;
-
-  // Pièges visuels
-  visualPitfalls: VisualPitfall[];
-
-  // Niveaux cutanés
-  sebumLevel: SebumLevel;
-  drynessLevel: DrynessLevel;
-  pigmentationLevel: PigmentationLevel;
-  skinBarrierStatus: SkinBarrierStatus;
-
-  // Balance métriques (B2C)
-  balance?: BalanceMetrics;            // ← ajouté depuis GlowScanBase
-
-  // Facteurs & différentiels
-  visibleFactors: VisibleFactor[];
-  differentialDiagnosis: DifferentialDiagnosis[];
-  recommendationClasses: RecommendationClass[];
-
-  // Alertes
-  redFlags: string[];                  // ← ajouté depuis GlowScanBase
-
-  // Validation
-  dermatologistValidation: DermValidationStatus;
-  medicalDisclaimer?: string;          // ← ajouté depuis GlowScanBase
+// ── Analyse par zone (B2B) ────────────────────────────────────────
+export type ZoneAnalysisItem = {
+  zone: ZoneB2B;
+  status: ZoneStatus;
+  findings: string;        // description clinique avec termes médicaux
+  risk: string;            // risque concret avec délai chiffré
+  evaluable: boolean;      // false si la zone n'est pas visible sur la photo
 };
 
-// ── Bloc d'observations cliniques (format B2B) ───────────────────
-export type ClinicalAnnotation = {
-  observations: string[];
-  visibleLesions: string[];
-  visibleSigns: string[];              // ← ajouté — cohérence avec GlowScanBase
-  inflammationLevel: InflammationLevel;
-  oilinessLevel: SebumLevel;
-  drynessLevel: DrynessLevel;
-  pigmentationLevel: PigmentationLevel;
-  skinBarrierStatus: SkinBarrierStatus;
-  redFlags: string[];                  // ← ajouté — signaux d'alarme clinique
-  confidenceReason: string;
+// ── Ingrédient toxique ────────────────────────────────────────────
+export type ToxicIngredient = {
+  ingredient: string;   // nom chimique (nom commun)
+  reason: string;       // mécanisme de toxicité pour CETTE peau
 };
 
-// ── Label dermatologue (override / validation) ───────────────────
-export type DermatologistLabel = {
-  confirmed: boolean;
+// ── Étape du protocole clinique ───────────────────────────────────
+export type ClinicalProtocolStep = {
+  step: string;                    // ex: "Nettoyage", "Sérum actif", "Protection solaire"
+  product: string;                 // nom exact du produit — marque — prix
+  concentration: string | null;    // ex: "10%" ou null
+  frequency: string;               // ex: "Matin et soir" | "Lundi, Mercredi, Vendredi soir"
+  mechanism: string;               // mécanisme d'action sur cette peau
+};
+
+// ── Protocole clinique complet (B2B) ─────────────────────────────
+export type ClinicalProtocol = {
+  morning: ClinicalProtocolStep[];
+  evening: ClinicalProtocolStep[];
+  weekly: string | null;           // soin hebdomadaire ou null
+  durationWeeks: number;           // durée totale du protocole
+  followUpWeeks: number;           // délai de consultation de suivi
+  referralNeeded: boolean;         // orientation dermatologue nécessaire
+  referralReason: string | null;   // raison de l'orientation si referralNeeded
+};
+
+// ── Validation dermatologue (objet unifié) ───────────────────────
+// Fusionne DermatologistLabel + DermValidationStatus en un seul objet
+export type DermValidation = {
+  status: DermValidationStatus;
+  confirmed?: boolean;
   correctedPrimaryCondition?: string;
   correctedSeverity?: string;
   notes?: string;
 };
 
-// ── Type de base commun B2C + B2B (GlowScanBase fusionné) ────────
+// ── Bloc d'observations cliniques (B2B ClinicalAnnotation) ───────
+export type ClinicalAnnotation = {
+  observations: string[];
+  visibleLesions: string[];
+  visibleSigns: string[];
+  inflammationLevel: InflammationLevel;
+  oilinessLevel: SebumLevel;
+  drynessLevel: DrynessLevel;
+  pigmentationLevel: PigmentationLevel;
+  skinBarrierStatus: SkinBarrierStatus;
+  redFlags: string[];
+  confidenceReason: string;
+};
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// SECTION 3 — TYPES D'ENREGISTREMENT (GlowScanBase, B2C, B2B, Dataset)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// ── Base commune B2C + B2B ────────────────────────────────────────
 export type GlowScanBase = {
   // Identité
   recordId: string;
@@ -283,14 +304,14 @@ export type GlowScanBase = {
   bodyArea: BodyArea;
 
   // Diagnostic
-  primaryCondition: PrimaryCondition | string;  // string pour flexibilité B2B libre
+  primaryCondition: PrimaryCondition | string;
   secondaryCondition: SecondaryCondition | string | null;
   lesionTypes: LesionType[] | string[];
   severity: Severity;
   confidence: Confidence;
-  visibleSigns: string[];             // observations libres visibles
+  visibleSigns: string[];
 
-  // Pièges visuels
+  // Pièges visuels — crucial pour peaux africaines
   visualPitfalls: VisualPitfall[];
 
   // Niveaux cutanés
@@ -307,7 +328,78 @@ export type GlowScanBase = {
   medicalDisclaimer: string;
 };
 
-// ── Enregistrement dataset complet (GlowScanBase + 22 labels + pipeline) ──
+// ── Sortie B2B complète (GlowScan DERM) ──────────────────────────
+export type GlowScanB2B = GlowScanBase & {
+  // Diagnostic clinique
+  condition: string;                    // terminologie médicale libre (FR)
+  conditionSecondaire: string | null;
+  score: number;                        // GlowScore 0-100
+
+  // Rapport clinique structuré
+  clinicalSummary: string;             // 4-5 phrases cliniques
+  zonesAnalysis: ZoneAnalysisItem[];   // analyse zone par zone
+  antecedentsIntegration: string;      // lien antécédents → diagnostic
+  toxicIngredients: ToxicIngredient[]; // ingrédients à éviter pour cette peau
+  differentialDiagnosis: string[];     // diagnostics différentiels
+
+  // Protocole
+  clinicalProtocol: ClinicalProtocol;
+
+  // Logistique & pronostic
+  logistics: string | null;            // null si Douala/Yaoundé
+  prognostic: string;                  // évolution semaine par semaine
+  contraindications: string[];         // actifs formellement contre-indiqués
+
+  // Validation dermatologue (optionnelle — remplie après review)
+  dermatologistValidation?: DermValidation;
+};
+
+// ── Annotation structurée complète (dataset) ─────────────────────
+export type GlowScanAnnotation = {
+  // Image
+  imageQuality: ImageQuality;
+  imageArtifacts: ImageArtifact[];
+
+  // Peau
+  fitzpatrick: Fitzpatrick;
+  skinState: SkinState;
+  bodyArea: BodyArea;
+
+  // Diagnostic
+  primaryCondition: PrimaryCondition;
+  secondaryCondition: SecondaryCondition;
+  lesionTypes: LesionType[];
+  visibleSigns: string[];
+  inflammationLevel: InflammationLevel;
+  severity: Severity;
+  confidence: Confidence;
+
+  // Pièges visuels
+  visualPitfalls: VisualPitfall[];
+
+  // Niveaux cutanés
+  sebumLevel: SebumLevel;
+  drynessLevel: DrynessLevel;
+  pigmentationLevel: PigmentationLevel;
+  skinBarrierStatus: SkinBarrierStatus;
+
+  // Balance métriques (B2C)
+  balance?: BalanceMetrics;
+
+  // Facteurs & différentiels
+  visibleFactors: VisibleFactor[];
+  differentialDiagnosis: DifferentialDiagnosis[];
+  recommendationClasses: RecommendationClass[];
+
+  // Alertes
+  redFlags: string[];
+
+  // Validation
+  dermatologistValidation: DermValidation;
+  medicalDisclaimer?: string;
+};
+
+// ── Enregistrement dataset final (tous modes fusionnés) ──────────
 export type GlowScanDatasetRecord = GlowScanBase & {
   // Source
   source: "user_upload" | "dermatologist_review" | "clinical_partner";
@@ -319,22 +411,50 @@ export type GlowScanDatasetRecord = GlowScanBase & {
   // Labels supplémentaires (22 labels)
   inflammationLevel: InflammationLevel;
   visibleFactors: VisibleFactor[];
-  differentialDiagnosis: DifferentialDiagnosis[];
-  recommendationClasses: RecommendationClass[];
+  differentialDiagnosis: DifferentialDiagnosis[] | string[];
+  recommendationClasses: RecommendationClass[] | string[];
 
-  // Validation dermatologue
-  dermatologistLabel?: DermatologistLabel;
-  dermatologistValidation: DermValidationStatus;
+  // Validation dermatologue (objet unifié — fusion label + statut)
+  dermatologistValidation: DermValidation;
 
   // Pipeline
   finalStatus: "pending" | "validated" | "rejected" | "needs_review";
 
-  // Annotations structurées complètes
+  // Annotations structurées
   annotation?: GlowScanAnnotation;
   clinicalAnnotation?: ClinicalAnnotation;
+
+  // Sortie B2B complète (stockée si mode === "B2B")
+  b2bOutput?: Pick<GlowScanB2B,
+    | "condition"
+    | "conditionSecondaire"
+    | "score"
+    | "clinicalSummary"
+    | "zonesAnalysis"
+    | "antecedentsIntegration"
+    | "toxicIngredients"
+    | "clinicalProtocol"
+    | "prognostic"
+    | "contraindications"
+    | "logistics"
+  >;
 };
 
-// ── 20. Priorités d'entraînement (ordre recommandé) ──────────────
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// SECTION 4 — PIPELINE & CONSTANTES
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// ── Étapes du pipeline dataset ────────────────────────────────────
+// 1. Upload image
+// 2. Évaluation qualité → imageQuality + imageArtifacts
+// 3. Analyse IA → sortie B2C ou B2B
+// 4. Enregistrement brut → aiDiagnosis
+// 5. Validation dermatologue → dermatologistValidation
+// 6. Correction éventuelle → groundTruth + trainingWeight++
+// 7. Enrichissement dataset → exportedToDataset = true
+// 8. Ré-entraînement futur
+
+// ── 20. Priorités d'entraînement ─────────────────────────────────
 export const TRAINING_PRIORITIES: PrimaryCondition[] = [
   "oily_skin",
   "combination_skin",
@@ -360,8 +480,8 @@ export const AFRICAN_SKIN_PRIORITY_LABELS = [
   "imageArtifacts",
 ] as const;
 
-// ── 22. Poids d'entraînement par source ──────────────────────────
-// 1 = auto (IA seule), 2 = partiel (dermato a confirmé), 3 = complet (dermato a corrigé)
+// ── 22. Poids d'entraînement par statut de validation ────────────
+// 0=rejeté 1=auto(IA seule) 2=validé dermato 3=corrigé dermato
 export const TRAINING_WEIGHT_MAP: Record<DermValidationStatus, number> = {
   pending: 1,
   validated: 2,

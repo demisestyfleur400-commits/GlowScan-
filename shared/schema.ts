@@ -468,6 +468,18 @@ export const trainingData = pgTable("training_data", {
   aiModelVersion: varchar("ai_model_version", { length: 50 }),
   aiConfidence: decimal("ai_confidence", { precision: 3, scale: 2 }),
 
+  // ── Champs B2B (GlowScanB2B) ────────────────────────────────────
+  score: integer("score"),                                      // GlowScore 0-100
+  clinicalSummary: text("clinical_summary"),                    // 4-5 phrases cliniques
+  zonesAnalysis: jsonb("zones_analysis"),                       // ZoneAnalysisItem[]
+  antecedentsIntegration: text("antecedents_integration"),      // lien antécédents → diagnostic
+  toxicIngredients: jsonb("toxic_ingredients"),                  // ToxicIngredient[]
+  clinicalProtocol: jsonb("clinical_protocol"),                  // ClinicalProtocol complet
+  logistics: text("logistics"),                                  // null si Douala/Yaoundé
+  prognostic: text("prognostic"),                               // évolution semaine par semaine
+  contraindications: jsonb("contraindications"),                 // string[]
+  b2bOutput: jsonb("b2b_output"),                               // sortie B2B complète archivée
+
   // ── Vérité terrain ───────────────────────────────────────────────
   groundTruth: jsonb("ground_truth").notNull(),                 // GlowScanAnnotation validée
   annotation: jsonb("annotation"),                              // GlowScanAnnotation complète structurée
