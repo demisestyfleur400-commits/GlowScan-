@@ -2,7 +2,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Navbar } from "@/components/Navbar";
 import { catalog, type Product, formatPrice, getProductBrand } from "@shared/catalog";
 import { Sparkles, X, Check, MessageCircle, Star, ChevronLeft, ShieldCheck, Truck } from "lucide-react";
-import { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useScans } from "@/hooks/use-scans";
 import { trackPageVisit } from "@/lib/analytics";
@@ -530,6 +530,233 @@ function ProductDetailModal({
 }
 
 // ─────────────────────────────────────────────────────────────────────
+//  Tag color mapping
+// ─────────────────────────────────────────────────────────────────────
+function getTagStyle(tag: string): React.CSSProperties {
+  const t = tag.toLowerCase();
+  if (/acn[eé]|bouton|imperfection/.test(t))
+    return { background: "#fef2f2", color: "#ef4444", border: "1px solid #fecaca" };
+  if (/tache|hyperpigment|pih|mélasma|éclaircis/.test(t))
+    return { background: "#fefce8", color: "#ca8a04", border: "1px solid #fde68a" };
+  if (/hydrat|déshydrat|sèche|dry/.test(t))
+    return { background: "#eff6ff", color: "#3b82f6", border: "1px solid #bfdbfe" };
+  if (/cheveux|cuir|capillaire/.test(t))
+    return { background: "#f0fdf4", color: "#16a34a", border: "1px solid #bbf7d0" };
+  if (/corps|gommage|savon/.test(t))
+    return { background: "#fdf4ff", color: "#9333ea", border: "1px solid #e9d5ff" };
+  if (/solaire|spf|uv/.test(t))
+    return { background: "#fff7ed", color: "#ea580c", border: "1px solid #fed7aa" };
+  return { background: "#f3f4f6", color: "#6b7280", border: "1px solid #e5e7eb" };
+}
+
+// ─────────────────────────────────────────────────────────────────────
+//  Skeleton card
+// ─────────────────────────────────────────────────────────────────────
+function SkeletonCard() {
+  return (
+    <div style={{
+      background: "#fff", borderRadius: 16, padding: "14px 16px",
+      display: "flex", gap: 14, alignItems: "flex-start",
+      boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
+    }}>
+      <div style={{
+        width: 120, height: 120, borderRadius: 12, flexShrink: 0,
+        background: "linear-gradient(90deg,#f0f0f0 25%,#e8e8e8 50%,#f0f0f0 75%)",
+        backgroundSize: "200% 100%",
+        animation: "shimmer 1.5s infinite",
+      }} />
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
+        <div style={{ height: 10, width: "40%", borderRadius: 6, background: "linear-gradient(90deg,#f0f0f0 25%,#e8e8e8 50%,#f0f0f0 75%)", backgroundSize: "200% 100%", animation: "shimmer 1.5s infinite" }} />
+        <div style={{ height: 14, width: "85%", borderRadius: 6, background: "linear-gradient(90deg,#f0f0f0 25%,#e8e8e8 50%,#f0f0f0 75%)", backgroundSize: "200% 100%", animation: "shimmer 1.5s infinite" }} />
+        <div style={{ height: 14, width: "60%", borderRadius: 6, background: "linear-gradient(90deg,#f0f0f0 25%,#e8e8e8 50%,#f0f0f0 75%)", backgroundSize: "200% 100%", animation: "shimmer 1.5s infinite" }} />
+        <div style={{ height: 18, width: "35%", borderRadius: 6, marginTop: 4, background: "linear-gradient(90deg,#f0f0f0 25%,#e8e8e8 50%,#f0f0f0 75%)", backgroundSize: "200% 100%", animation: "shimmer 1.5s infinite" }} />
+        <div style={{ height: 38, borderRadius: 10, marginTop: 4, background: "linear-gradient(90deg,#f0f0f0 25%,#e8e8e8 50%,#f0f0f0 75%)", backgroundSize: "200% 100%", animation: "shimmer 1.5s infinite" }} />
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────
+//  Product Card — design référence (horizontal, fond blanc)
+// ─────────────────────────────────────────────────────────────────────
+function ProductCard({
+  product,
+  profile,
+  onOrder,
+  index,
+}: {
+  product: Product;
+  profile: UserProfile;
+  onOrder: (p: Product) => void;
+  index: number;
+}) {
+  const [imgLoaded, setImgLoaded] = useState(false);
+  const [imgError, setImgError] = useState(false);
+  const img = productImages[product.id] || product.image;
+  const brand = getProductBrand(product);
+  const recommended = isRecommendedForUser(product, profile);
+  const tags = product.targets.slice(0, 2).map(t =>
+    t.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")
+  );
+
+  const waNumber = (product.whatsapp || "+237674377959").replace("+", "");
+  const waMsg = encodeURIComponent(
+    `Bonjour 👋, je souhaite commander :\n• ${product.name}\nPrix : ${product.price?.toLocaleString("fr-FR")} FCFA\n\nMerci 🙏`
+  );
+  const waUrl = `https://wa.me/${waNumber}?text=${waMsg}`;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ delay: Math.min(index * 0.04, 0.2), duration: 0.3 }}
+      style={{
+        background: "#fff",
+        borderRadius: 16,
+        padding: "14px 16px",
+        display: "flex",
+        gap: 14,
+        alignItems: "flex-start",
+        boxShadow: recommended
+          ? "0 2px 16px rgba(124,58,237,0.12)"
+          : "0 2px 12px rgba(0,0,0,0.06)",
+        border: recommended ? "1.5px solid rgba(124,58,237,0.2)" : "1px solid #f0f0f0",
+        position: "relative",
+      }}
+    >
+      {/* Badge recommandé */}
+      {recommended && (
+        <div style={{
+          position: "absolute", top: -1, left: 16,
+          background: "#7c3aed", color: "#fff",
+          fontSize: 9, fontWeight: 800, letterSpacing: ".04em",
+          padding: "3px 8px", borderRadius: "0 0 8px 8px",
+          display: "flex", alignItems: "center", gap: 3,
+        }}>
+          <Star style={{ width: 8, height: 8, fill: "currentColor" }} />
+          Recommandé
+        </div>
+      )}
+
+      {/* Image 120×120 */}
+      <div style={{
+        width: 120, height: 120, borderRadius: 12, flexShrink: 0,
+        overflow: "hidden", background: "#f7f7f7",
+        position: "relative",
+      }}>
+        {/* Skeleton pendant chargement */}
+        {!imgLoaded && !imgError && img && (
+          <div style={{
+            position: "absolute", inset: 0,
+            background: "linear-gradient(90deg,#f0f0f0 25%,#e8e8e8 50%,#f0f0f0 75%)",
+            backgroundSize: "200% 100%",
+            animation: "shimmer 1.5s infinite",
+          }} />
+        )}
+        {img && !imgError ? (
+          <img
+            src={img}
+            alt={product.name}
+            loading="lazy"
+            width={120}
+            height={120}
+            onLoad={() => setImgLoaded(true)}
+            onError={() => setImgError(true)}
+            style={{
+              width: "100%", height: "100%",
+              objectFit: "cover",
+              opacity: imgLoaded ? 1 : 0,
+              transition: "opacity 0.3s ease",
+            }}
+          />
+        ) : (
+          <div style={{
+            width: "100%", height: "100%",
+            display: "flex", alignItems: "center",
+            justifyContent: "center", fontSize: 36,
+          }}>
+            {product.category === "cheveux" ? "💆" : product.category === "corps" ? "🧴" : "✨"}
+          </div>
+        )}
+      </div>
+
+      {/* Contenu */}
+      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>
+        {/* Marque */}
+        <span style={{
+          fontSize: 10, fontWeight: 700, color: "#9ca3af",
+          letterSpacing: ".08em", textTransform: "uppercase",
+        }}>
+          {brand}
+        </span>
+
+        {/* Nom produit */}
+        <p style={{
+          fontSize: 14, fontWeight: 800, color: "#111827",
+          lineHeight: 1.3,
+          display: "-webkit-box",
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: "vertical",
+          overflow: "hidden",
+        }}>
+          {product.name}
+        </p>
+
+        {/* Tags */}
+        {tags.length > 0 && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+            {tags.map((tag, i) => (
+              <span key={i} style={{
+                fontSize: 10, fontWeight: 600,
+                padding: "3px 8px", borderRadius: 9999,
+                ...getTagStyle(tag),
+              }}>
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Prix */}
+        <p style={{ fontSize: 16, fontWeight: 900, color: "#111827", marginTop: 2 }}>
+          {product.price ? `${product.price.toLocaleString("fr-FR")} FCFA` : "Sur demande"}
+        </p>
+
+        {/* Bouton Commander */}
+        <a
+          href={waUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={() => {
+            fetch("/api/analytics/whatsapp-click", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                productId: product.id,
+                productName: product.name,
+                brand: brand,
+                whatsappNumber: product.whatsapp || "+237674377959",
+              }),
+            }).catch(() => {});
+          }}
+          style={{
+            display: "flex", alignItems: "center", justifyContent: "center",
+            gap: 6, padding: "10px 0", borderRadius: 10,
+            background: "#25d366", color: "#fff",
+            fontSize: 13, fontWeight: 800,
+            textDecoration: "none", marginTop: 2,
+          }}
+        >
+          <MessageCircle style={{ width: 14, height: 14 }} />
+          Commander
+        </a>
+      </div>
+    </motion.div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────
 //  PAGE PRINCIPALE : BOUTIQUE
 // ─────────────────────────────────────────────────────────────────────
 export default function Shop() {
@@ -627,83 +854,51 @@ export default function Shop() {
 
   return (
     <div
-      className="min-h-screen pb-24"
-      style={{ background: "#0d0a0e", fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif' }}
+      className="min-h-screen pb-28"
+      style={{ background: "#f5f5f7", fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif' }}
     >
-      {/* Ambient glow orb */}
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div
-          style={{
-            position: "absolute",
-            top: "-80px",
-            left: "50%",
-            transform: "translateX(-50%)",
-            width: 400,
-            height: 400,
-            background: "radial-gradient(circle, rgba(124,58,237,0.15), transparent)",
-            borderRadius: "9999px",
-          }}
-        />
-      </div>
-
       <Navbar />
 
       {/* Header */}
-      <header
-        className="px-5 pt-6 pb-5 relative"
-        style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}
-      >
-        <span
-          className="text-[10px] font-700 tracking-widest uppercase"
-          style={{ color: "#a78bfa" }}
-        >
-          Pharmacie IA · GlowScan
-        </span>
-        <h1 className="text-2xl font-800 mt-1 tracking-tight" style={{ color: "#f3f0ff" }}>
-          {hasProfile
-            ? `Soins pour peau ${profile.skinType || ""}`.trim()
-            : "Prescriptions cosmétiques"}
-        </h1>
-        <p className="text-xs font-500 mt-1.5 leading-normal" style={{ color: "rgba(200,185,255,0.65)" }}>
-          {hasProfile
-            ? "Actifs et soins triés selon tes scans cliniques récents."
-            : "Effectue un scan facial pour recevoir tes recommandations sur-mesure."}
-        </p>
+      <header className="px-4 pt-5 pb-4 bg-white" style={{ borderBottom: "1px solid #f0f0f0" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 2 }}>
+          <h1 style={{ fontSize: 20, fontWeight: 900, color: "#111827" }}>
+            Produits recommandés
+          </h1>
+          <button
+            onClick={() => setProblemFilter("tous")}
+            style={{ fontSize: 13, fontWeight: 700, color: "#ca8a04", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 3 }}
+          >
+            Voir tout <ChevronLeft style={{ width: 14, height: 14, transform: "rotate(180deg)" }} />
+          </button>
+        </div>
+        {hasProfile && (
+          <p style={{ fontSize: 12, color: "#9ca3af" }}>
+            Sélection basée sur ton analyse · {profile.skinType || profile.condition || ""}
+          </p>
+        )}
       </header>
 
       {/* Filter tabs */}
       <div
-        className="sticky top-0 z-20"
-        style={{
-          background: "rgba(13,10,14,0.95)",
-          borderBottom: "1px solid rgba(255,255,255,0.06)",
-          backdropFilter: "blur(20px)",
-        }}
+        className="sticky top-0 z-20 bg-white"
+        style={{ borderBottom: "1px solid #f0f0f0" }}
       >
-        <div className="flex gap-2 overflow-x-auto px-4 py-3.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex gap-2 overflow-x-auto px-4 py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {PROBLEMS.map((p) => {
             const isActive = problemFilter === p.key;
             return (
               <button
                 key={p.key}
                 onClick={() => setProblemFilter(p.key)}
-                className="flex items-center gap-2 px-4 h-9 text-xs font-700 transition-all active:scale-[0.97] flex-shrink-0"
+                className="flex items-center gap-1.5 px-3.5 h-8 text-xs font-700 transition-all active:scale-[0.97] flex-shrink-0"
                 style={
                   isActive
-                    ? {
-                        background: "#7c3aed",
-                        borderRadius: "9999px",
-                        color: "#fff",
-                      }
-                    : {
-                        background: "rgba(255,255,255,0.08)",
-                        border: "1px solid rgba(255,255,255,0.15)",
-                        borderRadius: "9999px",
-                        color: "rgba(200,185,255,0.65)",
-                      }
+                    ? { background: "#111827", borderRadius: 9999, color: "#fff" }
+                    : { background: "#f3f4f6", border: "1px solid #e5e7eb", borderRadius: 9999, color: "#6b7280" }
                 }
               >
-                <span>{p.emoji}</span>
+                <span style={{ fontSize: 11 }}>{p.emoji}</span>
                 <span>{p.label}</span>
               </button>
             );
@@ -711,112 +906,34 @@ export default function Shop() {
         </div>
       </div>
 
-      {/* Product grid */}
-      <main className="px-4 py-6 relative z-10">
+      {/* Product list */}
+      <main className="px-4 py-4">
+
+        {/* CSS shimmer animation */}
+        <style>{`
+          @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+          }
+        `}</style>
+
         {filtered.length === 0 ? (
-          <div
-            className="text-center py-20 p-6"
-            style={{
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.07)",
-              borderRadius: "24px",
-            }}
-          >
-            <Sparkles className="w-8 h-8 mx-auto mb-3" style={{ color: "rgba(167,139,250,0.4)" }} />
-            <p className="text-xs font-700" style={{ color: "#f3f0ff" }}>Aucune formule trouvée</p>
-            <p className="text-xs font-500 mt-1" style={{ color: "rgba(255,255,255,0.35)" }}>
-              Sélectionne un autre filtre.
-            </p>
+          <div style={{ textAlign: "center", padding: "48px 24px", background: "#fff", borderRadius: 16 }}>
+            <Sparkles style={{ width: 32, height: 32, margin: "0 auto 12px", color: "#d1d5db" }} />
+            <p style={{ fontSize: 14, fontWeight: 700, color: "#374151" }}>Aucun produit trouvé</p>
+            <p style={{ fontSize: 12, color: "#9ca3af", marginTop: 4 }}>Sélectionne un autre filtre.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3.5">
-            {filtered.map((product, i) => {
-              const img = productImages[product.id] || product.image;
-              const recommended = isRecommendedForUser(product, profile);
-              return (
-                <motion.button
-                  key={product.id}
-                  initial={{ opacity: 0, y: 12 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: Math.min(i * 0.03, 0.25), duration: 0.35 }}
-                  onClick={() => setSelectedProduct(product)}
-                  className="overflow-hidden text-left active:scale-[0.98] transition-all flex flex-col group relative"
-                  style={{
-                    background: recommended
-                      ? "rgba(167,139,250,0.06)"
-                      : "rgba(255,255,255,0.04)",
-                    border: recommended
-                      ? "1px solid rgba(167,139,250,0.18)"
-                      : "1px solid rgba(255,255,255,0.07)",
-                    borderRadius: "24px",
-                  }}
-                >
-                  {/* Image area */}
-                  <div
-                    className="relative aspect-square flex items-center justify-center overflow-hidden"
-                    style={{
-                      background: "rgba(255,255,255,0.04)",
-                      borderBottom: "1px solid rgba(255,255,255,0.06)",
-                    }}
-                  >
-                    {img ? (
-                      <img
-                        src={img}
-                        alt={product.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                      />
-                    ) : (
-                      <Sparkles className="w-6 h-6" style={{ color: "rgba(167,139,250,0.3)" }} />
-                    )}
-
-                    {/* Recommended badge — pink only for this urgency/highlight signal */}
-                    {recommended && (
-                      <div className="absolute top-2 left-2 right-2 z-10">
-                        <div
-                          className="w-full flex items-center justify-center gap-1 py-1 text-[9px] font-700 uppercase tracking-wider"
-                          style={{
-                            background: "rgba(233,30,140,0.85)",
-                            color: "#fff",
-                            borderRadius: "9999px",
-                          }}
-                        >
-                          <Star className="w-2.5 h-2.5 fill-current shrink-0" />
-                          Recommandé par l'IA
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Card body */}
-                  <div className="p-3.5 flex-1 flex flex-col">
-                    <span
-                      className="text-[9px] font-700 uppercase tracking-wider mb-1 truncate"
-                      style={{ color: "rgba(255,255,255,0.35)" }}
-                    >
-                      {getProductBrand(product)}
-                    </span>
-                    <h3
-                      className="text-xs font-700 leading-snug line-clamp-2 mb-2 min-h-[32px] tracking-tight"
-                      style={{ color: "#f3f0ff" }}
-                    >
-                      {product.name}
-                    </h3>
-                    <div className="text-xs font-700 mt-auto pt-1 flex justify-between items-center">
-                      <span style={{ color: "#f3f0ff" }}>
-                        {product.price ? formatPrice(product.price) : "Sur demande"}
-                      </span>
-                      <span
-                        className="text-[9px] font-700 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity"
-                        style={{ color: "#a78bfa" }}
-                      >
-                        Voir
-                      </span>
-                    </div>
-                  </div>
-                </motion.button>
-              );
-            })}
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {filtered.map((product, i) => (
+              <ProductCard
+                key={product.id}
+                product={product}
+                profile={profile}
+                onOrder={openOrderForProduct}
+                index={i}
+              />
+            ))}
           </div>
         )}
       </main>
