@@ -33,7 +33,7 @@ function cacheKey(condition: string, area: string) {
 }
 
 const OWNER_WHATSAPP = "237674377959";
-const PRO_PRICE_FCFA = 20000;
+const PRO_PRICE_FCFA = 30000;
 const TRIAL_DAYS = 14;
 
 // ─────────────────────────────────────────────
@@ -80,7 +80,7 @@ function requireActivePro(req: any, res: any, next: any) {
     if (!(req as any).proActive) {
       return res.status(402).json({
         code: "PRO_SUBSCRIPTION_REQUIRED",
-        message: "Ton essai gratuit est terminé. Abonne-toi pour continuer (20 000 FCFA / mois).",
+        message: "Ton essai gratuit est terminé. Abonne-toi pour continuer (30 000 FCFA / mois).",
       });
     }
     next();
@@ -608,7 +608,7 @@ ${patientScans.length === 0 ? '<p class="meta">Aucune analyse enregistrée.</p>'
         phone,
         amount: PRO_PRICE_FCFA,
         status: "pending",
-        note: "GlowScan Pro — Abonnement dermato 20k FCFA/mois",
+        note: "GlowScan Pro — Abonnement dermato 30k FCFA/mois",
       }).returning();
 
       const msg = encodeURIComponent(
