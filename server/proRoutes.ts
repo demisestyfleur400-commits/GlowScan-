@@ -28,6 +28,16 @@ const proOpenai = !PRO_USE_GEMINI ? new OpenAI({
 
 // Cache mémoire des questionnaires par condition normalisée (24h)
 const questionnaireCache = new Map<string, { items: any[]; expiresAt: number }>();
+
+// ── Stockage temporaire PDFs (24h, identifié par UUID) ─────────────────────
+const tempPdfs = new Map<string, { data: Buffer; expiresAt: number; filename: string }>();
+// Nettoyage automatique toutes les heures
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of tempPdfs) {
+    if (v.expiresAt < now) tempPdfs.delete(k);
+  }
+}, 60 * 60 * 1000);
 function cacheKey(condition: string, area: string) {
   return `${(condition || "").toLowerCase().trim().slice(0, 80)}|${(area || "face").toLowerCase()}`;
 }
@@ -739,5 +749,52 @@ Règles :
       console.error("[pro/questionnaire/generate] error:", err);
       res.status(500).json({ message: "Erreur génération questionnaire" });
     }
+  });
+
+  // ───────────────────────────────────────────────────────────────────────
+  // POST /api/pro/pdf-upload
+  // Reçoit un PDF en base64, le stocke en mémoire 24h, retourne une URL publique.
+  // Body : { pdfBase64: string, filename?: string }
+  // ───────────────────────────────────────────────────────────────────────
+  app.post("/api/pro/pdf-upload", requirePro, async (req: any, res) => {
+    try {
+      const { pdfBase64, filename } = req.body as { pdfBase64?: string; filename?: string };
+      if (!pdfBase64) return res.status(400).json({ message: "pdfBase64 requis" });
+
+      // Décoder le base64 (supporte "data:application/pdf;base64,..." ou base64 brut)
+      const raw = pdfBase64.replace(/^data:[^;]+;base64,/, "");
+      const buffer = Buffer.from(raw, "base64");
+      if (buffer.length > 10 * 1024 * 1024) {
+        return res.status(413).json({ message: "PDF trop volumineux (max 10 Mo)" });
+      }
+
+      const id = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
+      tempPdfs.set(id, {
+        data: buffer,
+        expiresAt: Date.now() + 24 * 60 * 60 * 1000,
+        filename: (filename || "rapport-glowscan.pdf").replace(/[^a-zA-Z0-9._-]/g, "_"),
+      });
+
+      res.json({ url: `/api/pro/pdf-temp/${id}` });
+    } catch (err) {
+      console.error("[pro/pdf-upload] error:", err);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // ───────────────────────────────────────────────────────────────────────
+  // GET /api/pro/pdf-temp/:id  — route publique (UUID = secret)
+  // Sert le PDF stocké en mémoire. Expire après 24h.
+  // ───────────────────────────────────────────────────────────────────────
+  app.get("/api/pro/pdf-temp/:id", (req: any, res) => {
+    const entry = tempPdfs.get(req.params.id);
+    if (!entry || entry.expiresAt < Date.now()) {
+      tempPdfs.delete(req.params.id);
+      return res.status(404).json({ message: "PDF non trouvé ou expiré" });
+    }
+    res.set("Content-Type", "application/pdf");
+    res.set("Content-Disposition", `inline; filename="${entry.filename}"`);
+    res.set("Cache-Control", "no-store");
+    res.send(entry.data);
   });
 }

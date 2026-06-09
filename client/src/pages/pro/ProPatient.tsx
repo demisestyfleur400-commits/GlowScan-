@@ -21,6 +21,7 @@ import {
   useUpdatePatientStatus,
 } from "@/hooks/use-pro";
 import { ProLayout, ProCard, ProInput, StatusBadge } from "@/components/ProLayout";
+import PDFViewerModal from "@/components/PDFViewerModal";
 import { useToast } from "@/hooks/use-toast";
 import { LoadingScreen } from "./ProDashboard";
 
@@ -44,6 +45,8 @@ export default function ProPatient() {
   const del = useDeletePatient();
   const updateStatus = useUpdatePatientStatus();
   const { toast } = useToast();
+  const [showPdfViewer, setShowPdfViewer] = useState(false);
+  const [pdfHtml, setPdfHtml] = useState("");
   const [validatingId, setValidatingId] = useState<number | null>(null);
   const [validateNote, setValidateNote] = useState("");
   const [validateCorrection, setValidateCorrection] = useState("");
@@ -73,7 +76,7 @@ export default function ProPatient() {
     window.open(`https://wa.me/${phone}?text=${msg}`, "_blank");
   };
 
-  const exportPdf = () => {
+  const exportPdf = (returnHtml = false): string | undefined => {
     const date = new Date().toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
     const refNum = `GS-PRO-${new Date().getFullYear()}-${p.id.toString().padStart(5,"0")}`;
     const lastResult = (lastScan?.recommendations as any) || {};
@@ -175,7 +178,7 @@ export default function ProPatient() {
     <div style="display:flex;gap:12px;margin-bottom:10px">
       <div style="flex:1;background:#f8f7ff;border:1px solid #e8e3ff;border-radius:8px;padding:10px">
         <div class="lbl">Condition</div>
-        <div style="font-size:14px;font-weight:800;color:#0d0a0e;margin-top:2px">${lastScan.condition||"—"}</div>
+        <div style="font-size:14px;font-weight:800;color:#0d0a0e;margin-top:2px"><span data-edit="diagnostic">${lastScan.condition||"—"}</span></div>
         <div style="font-size:10px;color:#6b7280;margin-top:2px">${lastScan.skinType||""}</div>
       </div>
       <div style="background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.3);border-radius:8px;padding:10px;text-align:center;min-width:80px">
@@ -184,7 +187,7 @@ export default function ProPatient() {
         <div style="font-size:9px;color:#6b7280">/100</div>
       </div>
     </div>
-    ${lastScan.details ? `<div class="clin-box">${lastScan.details}</div>` : ""}
+    ${lastScan.details ? `<div class="clin-box"><span data-edit="observations">${lastScan.details}</span></div>` : `<span data-edit="observations" style="display:none"></span>`}
   </div>` : ""}
 
   ${(morning.length > 0 || evening.length > 0) ? `
@@ -200,6 +203,8 @@ export default function ProPatient() {
   <div class="f-text">Ce dossier est généré par GlowScan DERM. Il ne remplace pas un examen physique ni une prescription médicale.<br>Conservez ce document dans le dossier médical de votre patient.</div>
   <div class="f-brand">✦ GlowScan DERM</div>
 </div></body></html>`;
+    if (returnHtml) return html;
+
     const element = document.createElement("div");
     element.innerHTML = html;
     html2pdf()
@@ -212,6 +217,13 @@ export default function ProPatient() {
       })
       .from(element)
       .save();
+  };
+
+  const openPdfViewer = () => {
+    const html = exportPdf(true);
+    if (!html) return;
+    setPdfHtml(html);
+    setShowPdfViewer(true);
   };
 
   const handleValidate = async (scanId: number, isVerified: boolean) => {
@@ -320,13 +332,13 @@ export default function ProPatient() {
             WhatsApp
           </button>
           <button
-            onClick={exportPdf}
+            onClick={openPdfViewer}
             data-testid="button-pdf"
             className="flex items-center justify-center gap-1.5 py-2.5 rounded-full text-xs font-extrabold transition-all active:scale-[0.97]"
             style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)", color: DS.body }}
           >
             <FileText className="w-3.5 h-3.5" />
-            Export PDF
+            Voir rapport
           </button>
         </div>
       </ProCard>
@@ -632,6 +644,16 @@ export default function ProPatient() {
           ))}
         </div>
       )}
+      {/* ── PDF Viewer Modal ── */}
+      <PDFViewerModal
+        isOpen={showPdfViewer}
+        onClose={() => setShowPdfViewer(false)}
+        htmlContent={pdfHtml}
+        filename={`GlowScan_${p.firstName}_${new Date().toISOString().slice(0,10)}.pdf`}
+        patientFirstName={p.firstName}
+        patientPhone={p.whatsappNumber || undefined}
+        dermatologue={dermato?.fullName || undefined}
+      />
     </ProLayout>
   );
 }

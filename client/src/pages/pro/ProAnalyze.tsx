@@ -38,6 +38,7 @@ const ResultCard = lazy(() =>
 import { useToast } from "@/hooks/use-toast";
 import type { AnalysisResult, Patient } from "@shared/schema";
 import { ProLayout, ProCard, ProInput } from "@/components/ProLayout";
+import PDFViewerModal from "@/components/PDFViewerModal";
 
 const NAVY = "#7c3aed";
 const INK = "#f3f0ff";
@@ -154,6 +155,10 @@ export default function ProAnalyze() {
   const [dossierSaved, setDossierSaved] = useState(false);
   const [datasetSent, setDatasetSent] = useState(false);
   const [savingDossier, setSavingDossier] = useState(false);
+
+  // PDF Viewer
+  const [showPdfViewer, setShowPdfViewer] = useState(false);
+  const [pdfHtml, setPdfHtml] = useState("");
 
   // Antécédents patient (TÂCHE 1)
   const [antecedentsOpen, setAntecedentsOpen] = useState(false);
@@ -426,12 +431,12 @@ export default function ProAnalyze() {
     window.open(`https://wa.me/${cleaned}?text=${msg}`, "_blank");
   };
 
-  const exportPdf = () => {
+  const exportPdf = (returnHtml = false): string | undefined => {
     const r = result as any;
-    if (!r) return;
-    if (!r.condition || r.condition === "Examen clinique en cours") {
+    if (!r) return returnHtml ? "" : undefined;
+    if (!returnHtml && (!r.condition || r.condition === "Examen clinique en cours")) {
       alert("Attendez la fin de l'analyse IA avant de télécharger.");
-      return;
+      return undefined;
     }
     const date = new Date().toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
     const refNum = `GS-PRO-${new Date().getFullYear()}-${Math.random().toString(36).slice(2,7).toUpperCase()}`;
@@ -595,7 +600,7 @@ export default function ProAnalyze() {
     <p style="font-size:10.5px;color:#1a1a1a;line-height:1.8;margin-bottom:14px">
       L'analyse des clichés par l'imagerie GlowScan révèle une
       <strong>${r.skinType || effectiveCondition}</strong>.${overrideBadge}
-      ${effectiveSummary ? " " + effectiveSummary : ""}
+      <span data-edit="observations">${effectiveSummary}</span>
     </p>
     ${zonesAnalysis.length > 0 ? zonesAnalysis.map(zoneRow).join("") : ""}
     <div style="display:flex;gap:16px;align-items:flex-start;margin-top:12px">
@@ -606,8 +611,8 @@ export default function ProAnalyze() {
         ${effectiveScore ? "<div style='font-size:9px;color:#059669;font-weight:700;margin-top:4px'>Potentiel : +" + (100 - Number(effectiveScore)) + " pts</div>" : ""}
       </div>
       <div style="flex:1;font-size:10px;color:#374151;line-height:1.8">
-        <strong style="color:#1a1a1a">${effectiveCondition}</strong>${r.conditionSecondaire ? " + " + r.conditionSecondaire : ""}<br>
-        <span style="color:#6b7280">${effectiveSeverity} · ${r.skinType || "—"}</span>
+        <strong style="color:#1a1a1a"><span data-edit="diagnostic">${effectiveCondition}</span></strong>${r.conditionSecondaire ? " + " + r.conditionSecondaire : ""}<br>
+        <span style="color:#6b7280"><span data-edit="severite">${effectiveSeverity}</span> · ${r.skinType || "—"}</span>
         ${overrideType === "none" && confidence ? "<br><span style='color:#9ca3af;font-style:italic'>Confiance IA : " + confidence + "</span>" : ""}
         ${overrideReason ? "<br><span style='color:#92400e;font-size:9px;font-style:italic'>Note : " + overrideReason + "</span>" : ""}
         ${prognostic ? "<div style='margin-top:6px'>" + prognostic + "</div>" : ""}
@@ -696,7 +701,7 @@ export default function ProAnalyze() {
       <span style="font-size:10.5px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:.5px">📝 Notes du Praticien</span>
     </div>
     <div style="background:#faf5ff;padding:14px 16px">
-      <p style="font-size:10.5px;color:#4c1d95;line-height:1.8;font-style:italic">${practitionerNotes.replace(/\n/g, "<br>")}</p>
+      <p style="font-size:10.5px;color:#4c1d95;line-height:1.8;font-style:italic"><span data-edit="notes">${practitionerNotes.replace(/\n/g, "<br>")}</span></p>
     </div>
   </div>` : ""}
 
@@ -739,6 +744,8 @@ export default function ProAnalyze() {
 
 </div>
 </body></html>`;
+    if (returnHtml) return html;
+
     const element = document.createElement("div");
     element.innerHTML = html;
     html2pdf()
@@ -751,6 +758,18 @@ export default function ProAnalyze() {
       })
       .from(element)
       .save();
+  };
+
+  const openPdfViewer = () => {
+    const r = result as any;
+    if (!r?.condition || r.condition === "Examen clinique en cours") {
+      toast({ title: "Analyse non terminée", description: "Attendez la fin de l'analyse IA.", variant: "destructive" });
+      return;
+    }
+    const html = exportPdf(true);
+    if (!html) return;
+    setPdfHtml(html);
+    setShowPdfViewer(true);
   };
 
   const resetAll = () => {
@@ -1536,35 +1555,29 @@ export default function ProAnalyze() {
                   </div>
 
                   {/* Actions */}
-                  <div className="grid grid-cols-2 gap-2 mb-2">
+                  {/* ── Bouton principal PDF ── */}
+                  <button
+                    onClick={openPdfViewer}
+                    data-testid="button-pdf"
+                    className="w-full inline-flex items-center justify-center gap-2 py-3.5 rounded-full text-white font-extrabold active:scale-[0.98] transition-all mb-3"
+                    style={{ background: NAVY, fontSize: 14 }}
+                  >
+                    <FileText className="w-4 h-4" />
+                    Voir le rapport clinique
+                  </button>
+                  <p className="text-[11px] text-center mb-4" style={{ color: DS.muted }}>
+                    Résultats de la consultation · Dr {lastName || "..."} — Modifier · Envoyer · Télécharger
+                  </p>
+
+                  <div className="grid grid-cols-2 gap-2">
                     <button
                       onClick={() => patientId && setLocation(`/pro/patient/${patientId}`)}
                       data-testid="button-view-dossier"
-                      className="inline-flex items-center justify-center gap-1.5 py-3 rounded-full text-white text-sm font-extrabold active:scale-[0.97] transition-all"
-                      style={{ background: NAVY }}
-                    >
-                      <FileText className="w-4 h-4" />
-                      Voir le dossier
-                    </button>
-                    <button
-                      onClick={handleWhatsApp}
-                      data-testid="button-whatsapp"
-                      className="inline-flex items-center justify-center gap-1.5 py-3 rounded-full text-white text-sm font-extrabold active:scale-[0.97] transition-all"
-                      style={{ background: "linear-gradient(135deg, #25d366 0%, #128c7e 100%)" }}
-                    >
-                      <MessageCircle className="w-4 h-4" />
-                      Envoyer diagnostic
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      onClick={exportPdf}
-                      data-testid="button-pdf"
                       className="inline-flex items-center justify-center gap-1.5 py-2.5 rounded-full text-xs font-extrabold active:scale-[0.97] transition-all"
                       style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)", color: DS.body }}
                     >
                       <FileText className="w-3.5 h-3.5" />
-                      Exporter PDF
+                      Voir le dossier
                     </button>
                     <button
                       onClick={resetAll}
@@ -1595,6 +1608,17 @@ export default function ProAnalyze() {
           body { background: white !important; }
         }
       `}</style>
+
+      {/* ── PDF Viewer Modal ── */}
+      <PDFViewerModal
+        isOpen={showPdfViewer}
+        onClose={() => setShowPdfViewer(false)}
+        htmlContent={pdfHtml}
+        filename={`GlowScan_${firstName || lastName}_${new Date().toISOString().slice(0,10)}.pdf`}
+        patientFirstName={firstName || lastName || "Patient"}
+        patientPhone={phone || undefined}
+        dermatologue={`Dr. ${lastName} ${firstName}`.trim()}
+      />
     </ProLayout>
   );
 }
