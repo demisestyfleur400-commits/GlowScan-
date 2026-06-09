@@ -23,7 +23,25 @@ interface Stats {
   validationRate: number;
   topConditions: { condition: string; count: number }[];
   weekly: { week: string; gold: number; pending: number; total: number }[];
+  categoryBreakdown?: { category: string; gold: number; total: number }[];
+  phototypeBreakdown?: { phototype: string; count: number }[];
+  avgAnnotationScore?: number;
 }
+
+// Catégories ICD-10 GlowScan AI
+const CATEGORIES: Record<string, { label: string; emoji: string; color: string; target: number }> = {
+  acne:              { label: "Acné",                     emoji: "🔴", color: "#ef4444", target: 1500 },
+  hyperpigmentation: { label: "Hyperpigmentation",        emoji: "🟤", color: "#92400e", target: 2000 },
+  black_skin_specific:{ label: "Spéc. peaux noires",     emoji: "⚫", color: "#a78bfa", target: 2500 },
+  eczema:            { label: "Eczéma / Dermatite",       emoji: "🟡", color: "#d97706", target: 800  },
+  infections:        { label: "Infections cutanées",      emoji: "🟠", color: "#ea580c", target: 600  },
+  xerosis:           { label: "Xérose / Sécheresse",      emoji: "💧", color: "#0284c7", target: 400  },
+  photoaging:        { label: "Photoaging",               emoji: "☀️", color: "#7c3aed", target: 300  },
+  loss_texture:      { label: "Texture / Pores",          emoji: "🌀", color: "#059669", target: 500  },
+  other:             { label: "Autre",                    emoji: "⚪", color: "#6b7280", target: 400  },
+};
+
+const DATASET_TARGET = 10000;
 
 // ── Hook stats ─────────────────────────────────────────────────────────────
 function useDatasetStats() {
@@ -165,7 +183,7 @@ export default function ProDataset() {
               { icon: "→", label: "" },
               { icon: "🤖", label: "IA" },
               { icon: "→", label: "" },
-              { icon: "💾", label: "training_data" },
+              { icon: "🧬", label: "Taxonomie" },
               { icon: "→", label: "" },
               { icon: "🏆", label: "Gold (DERM)" },
               { icon: "→", label: "" },
@@ -253,6 +271,119 @@ export default function ProDataset() {
                 {stats.topConditions.map((c) => (
                   <ConditionBar key={c.condition} condition={c.condition} count={c.count} max={maxCond} />
                 ))}
+              </ProCard>
+            )}
+
+            {/* ── Objectif 10 000 cas par catégorie ── */}
+            <ProCard className="p-4">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 12 }}>
+                <p style={{ fontSize: 11, fontWeight: 800, color: DS.muted, textTransform: "uppercase", letterSpacing: "0.05em", margin: 0 }}>
+                  🎯 Objectif 10 000 — par catégorie
+                </p>
+                <span style={{ fontSize: 11, fontWeight: 900, color: "#fbbf24" }}>
+                  {stats.gold.toLocaleString("fr-FR")} / {DATASET_TARGET.toLocaleString("fr-FR")}
+                </span>
+              </div>
+
+              {/* Barre globale */}
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ height: 10, background: "rgba(255,255,255,0.06)", borderRadius: 999, overflow: "hidden" }}>
+                  <div style={{
+                    height: "100%",
+                    width: `${Math.min((stats.gold / DATASET_TARGET) * 100, 100)}%`,
+                    background: "linear-gradient(90deg, #7c3aed, #fbbf24)",
+                    borderRadius: 999,
+                    transition: "width 1s ease",
+                  }} />
+                </div>
+                <p style={{ fontSize: 10, color: DS.muted, marginTop: 4, textAlign: "right" }}>
+                  {Math.round((stats.gold / DATASET_TARGET) * 100)}% vers l'objectif GlowScan AI v1
+                </p>
+              </div>
+
+              {/* Par catégorie */}
+              {Object.entries(CATEGORIES).map(([key, cat]) => {
+                const row = stats.categoryBreakdown?.find(c => c.category === key);
+                const goldCount = row?.gold || 0;
+                const pct = Math.min(Math.round((goldCount / cat.target) * 100), 100);
+                return (
+                  <div key={key} style={{ marginBottom: 10 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
+                      <span style={{ fontSize: 11, color: INK, fontWeight: 600 }}>
+                        {cat.emoji} {cat.label}
+                      </span>
+                      <span style={{ fontSize: 10, color: cat.color, fontWeight: 800 }}>
+                        {goldCount.toLocaleString("fr-FR")} / {cat.target.toLocaleString("fr-FR")}
+                      </span>
+                    </div>
+                    <div style={{ height: 5, background: "rgba(255,255,255,0.05)", borderRadius: 999 }}>
+                      <div style={{ height: "100%", width: `${pct}%`, background: cat.color, borderRadius: 999, transition: "width 0.8s ease" }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </ProCard>
+
+            {/* ── Distribution phototype IV / V / VI ── */}
+            {(stats.phototypeBreakdown?.length || 0) > 0 && (
+              <ProCard className="p-4">
+                <p style={{ fontSize: 11, fontWeight: 800, color: DS.muted, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 14 }}>
+                  🎨 Phototypes Fitzpatrick (gold)
+                </p>
+                <div style={{ display: "flex", gap: 10 }}>
+                  {[
+                    { id: "IV", bg: "#c8956c", label: "IV — Brun clair" },
+                    { id: "V",  bg: "#8b5e3c", label: "V — Peau noire" },
+                    { id: "VI", bg: "#3b1f0e", label: "VI — Ébène" },
+                  ].map(pt => {
+                    const row = stats.phototypeBreakdown?.find(p => p.phototype === pt.id);
+                    const cnt = row?.count || 0;
+                    const total = stats.phototypeBreakdown?.reduce((a, b) => a + b.count, 0) || 1;
+                    const pct = Math.round((cnt / total) * 100);
+                    return (
+                      <div key={pt.id} style={{ flex: 1, textAlign: "center", background: "rgba(255,255,255,0.03)", border: `1px solid rgba(255,255,255,0.07)`, borderRadius: 14, padding: "12px 8px" }}>
+                        <div style={{ width: 36, height: 36, borderRadius: "50%", background: pt.bg, margin: "0 auto 8px", border: "2px solid rgba(255,255,255,0.15)" }} />
+                        <p style={{ fontSize: 14, fontWeight: 900, color: INK, margin: 0 }}>{cnt.toLocaleString("fr-FR")}</p>
+                        <p style={{ fontSize: 9, color: DS.muted, margin: "2px 0 0", fontWeight: 700 }}>{pt.label}</p>
+                        <p style={{ fontSize: 11, color: "#fbbf24", margin: "3px 0 0", fontWeight: 800 }}>{pct}%</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </ProCard>
+            )}
+
+            {/* ── Score qualité annotation ── */}
+            {(stats.avgAnnotationScore ?? 0) > 0 && (
+              <ProCard className="p-4">
+                <p style={{ fontSize: 11, fontWeight: 800, color: DS.muted, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 12 }}>
+                  📊 Qualité des annotations
+                </p>
+                <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                  <div style={{ position: "relative", width: 80, height: 80, flexShrink: 0 }}>
+                    <svg viewBox="0 0 36 36" style={{ transform: "rotate(-90deg)", width: 80, height: 80 }}>
+                      <circle cx="18" cy="18" r="15.9" fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="3.8" />
+                      <circle
+                        cx="18" cy="18" r="15.9" fill="none"
+                        stroke={stats.avgAnnotationScore! >= 80 ? "#10b981" : stats.avgAnnotationScore! >= 60 ? "#fbbf24" : "#ef4444"}
+                        strokeWidth="3.8"
+                        strokeDasharray={`${stats.avgAnnotationScore} ${100 - stats.avgAnnotationScore!}`}
+                        strokeLinecap="round"
+                        style={{ transition: "stroke-dasharray 1s ease" }}
+                      />
+                    </svg>
+                    <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <p style={{ fontSize: 16, fontWeight: 900, color: INK, margin: 0 }}>{stats.avgAnnotationScore}</p>
+                    </div>
+                  </div>
+                  <div>
+                    <p style={{ fontSize: 14, fontWeight: 800, color: INK, margin: "0 0 4px" }}>Score moyen / 100</p>
+                    <p style={{ fontSize: 12, color: DS.body, margin: 0, lineHeight: 1.6 }}>
+                      Score calculé sur : phototype, condition, sévérité, zones, lésions, risques PIH/chéloïde.
+                      <br />Un score ≥80 → poids 5× dans l'entraînement.
+                    </p>
+                  </div>
+                </div>
               </ProCard>
             )}
 

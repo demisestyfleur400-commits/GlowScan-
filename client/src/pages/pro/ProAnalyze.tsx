@@ -112,6 +112,191 @@ function buildMockZones(result: AnalysisResult) {
   ];
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// QuickAnnotate — Widget 30s d'enrichissement dermatologique
+// Les dermatologues croient compléter leur dossier clinique.
+// En réalité : ils construisent GlowScan AI dataset — 10 000 cas classés.
+// ─────────────────────────────────────────────────────────────────────────────
+const PHOTOTYPES = [
+  { id: "IV",  label: "IV",  bg: "#c8956c", title: "Phototype IV — Peau brun clair / métissée" },
+  { id: "V",   label: "V",   bg: "#8b5e3c", title: "Phototype V — Peau noire / brun foncé" },
+  { id: "VI",  label: "VI",  bg: "#3b1f0e", title: "Phototype VI — Peau très foncée / ébène" },
+] as const;
+
+const LESION_OPTS = [
+  { id: "macule",    label: "Macule" },
+  { id: "papule",    label: "Papule" },
+  { id: "pustule",   label: "Pustule" },
+  { id: "nodule",    label: "Nodule" },
+  { id: "comedon",   label: "Comédon" },
+  { id: "plaque",    label: "Plaque" },
+  { id: "squame",    label: "Squame" },
+  { id: "cicatrice", label: "Cicatrice/PIH" },
+  { id: "keloide",   label: "Chéloïde" },
+];
+
+const ZONE_OPTS = [
+  { id: "front",   label: "Front" },
+  { id: "joue_d",  label: "Joue D" },
+  { id: "joue_g",  label: "Joue G" },
+  { id: "nez",     label: "Nez/Zone T" },
+  { id: "menton",  label: "Menton" },
+  { id: "cou",     label: "Cou" },
+  { id: "dos",     label: "Dos" },
+  { id: "poitrine",label: "Décolleté" },
+];
+
+function QuickAnnotate({ scanId, condition }: { scanId?: number; condition?: string }) {
+  const [phototype, setPhototype] = useState<string>("");
+  const [lesions, setLesions] = useState<string[]>([]);
+  const [zones, setZones] = useState<string[]>([]);
+  const [pihRisk, setPihRisk] = useState<string>("");
+  const [keloidRisk, setKeloidRisk] = useState<string>("");
+  const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [score, setScore] = useState<number | null>(null);
+
+  const toggleArr = (arr: string[], val: string) =>
+    arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val];
+
+  const handleSubmit = async () => {
+    if (!scanId || !phototype) return;
+    setSubmitting(true);
+    try {
+      const r = await fetch(`/api/training/annotate/${scanId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ phototype, lesionTypes: lesions, zonesAffected: zones, pihRisk, keloidRisk }),
+      });
+      const data = await r.json();
+      setScore(data.annotationScore ?? null);
+      setSubmitted(true);
+    } catch {}
+    setSubmitting(false);
+  };
+
+  if (!scanId) return null;
+
+  if (submitted) {
+    return (
+      <div className="rounded-2xl p-3 mb-3 text-center" style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)" }}>
+        <p className="text-xs font-extrabold" style={{ color: "#10b981" }}>✅ Données cliniques enregistrées</p>
+        {score !== null && <p className="text-[10px] mt-0.5" style={{ color: "#6b7280" }}>Score annotation : {score}/100</p>}
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-2xl p-4 mb-3 text-left" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
+      <p className="text-[11px] font-extrabold mb-3" style={{ color: "#c4b5fd" }}>
+        🧬 Données cliniques complémentaires
+      </p>
+
+      {/* Phototype */}
+      <p className="text-[10px] font-bold mb-1.5" style={{ color: "#9ca3af" }}>Phototype Fitzpatrick</p>
+      <div className="flex gap-2 mb-3">
+        {PHOTOTYPES.map(p => (
+          <button
+            key={p.id}
+            title={p.title}
+            onClick={() => setPhototype(p.id)}
+            className="flex-1 py-2 rounded-xl text-xs font-extrabold transition-all"
+            style={{
+              background: phototype === p.id ? p.bg : "rgba(255,255,255,0.06)",
+              color: phototype === p.id ? "#fff" : "#9ca3af",
+              border: phototype === p.id ? `2px solid ${p.bg}` : "1px solid rgba(255,255,255,0.1)",
+            }}
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Lésions */}
+      <p className="text-[10px] font-bold mb-1.5" style={{ color: "#9ca3af" }}>Types de lésions</p>
+      <div className="flex flex-wrap gap-1.5 mb-3">
+        {LESION_OPTS.map(l => (
+          <button
+            key={l.id}
+            onClick={() => setLesions(prev => toggleArr(prev, l.id))}
+            className="px-2.5 py-1 rounded-full text-[10px] font-bold transition-all"
+            style={{
+              background: lesions.includes(l.id) ? "rgba(139,92,246,0.3)" : "rgba(255,255,255,0.05)",
+              color: lesions.includes(l.id) ? "#c4b5fd" : "#6b7280",
+              border: lesions.includes(l.id) ? "1px solid #7c3aed" : "1px solid rgba(255,255,255,0.08)",
+            }}
+          >{l.label}</button>
+        ))}
+      </div>
+
+      {/* Zones */}
+      <p className="text-[10px] font-bold mb-1.5" style={{ color: "#9ca3af" }}>Zones affectées</p>
+      <div className="flex flex-wrap gap-1.5 mb-3">
+        {ZONE_OPTS.map(z => (
+          <button
+            key={z.id}
+            onClick={() => setZones(prev => toggleArr(prev, z.id))}
+            className="px-2.5 py-1 rounded-full text-[10px] font-bold transition-all"
+            style={{
+              background: zones.includes(z.id) ? "rgba(59,130,246,0.3)" : "rgba(255,255,255,0.05)",
+              color: zones.includes(z.id) ? "#93c5fd" : "#6b7280",
+              border: zones.includes(z.id) ? "1px solid #3b82f6" : "1px solid rgba(255,255,255,0.08)",
+            }}
+          >{z.label}</button>
+        ))}
+      </div>
+
+      {/* Risques */}
+      <div className="grid grid-cols-2 gap-2 mb-3">
+        <div>
+          <p className="text-[10px] font-bold mb-1" style={{ color: "#9ca3af" }}>Risque PIH</p>
+          <div className="flex gap-1">
+            {["low","medium","high"].map(r => (
+              <button key={r} onClick={() => setPihRisk(r)}
+                className="flex-1 py-1 rounded-lg text-[9px] font-bold transition-all"
+                style={{
+                  background: pihRisk === r ? (r === "high" ? "rgba(239,68,68,0.3)" : r === "medium" ? "rgba(245,158,11,0.3)" : "rgba(16,185,129,0.2)") : "rgba(255,255,255,0.04)",
+                  color: pihRisk === r ? (r === "high" ? "#f87171" : r === "medium" ? "#fcd34d" : "#6ee7b7") : "#6b7280",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                }}
+              >{r === "low" ? "Faible" : r === "medium" ? "Moyen" : "Élevé"}</button>
+            ))}
+          </div>
+        </div>
+        <div>
+          <p className="text-[10px] font-bold mb-1" style={{ color: "#9ca3af" }}>Risque chéloïde</p>
+          <div className="flex gap-1">
+            {["low","medium","high"].map(r => (
+              <button key={r} onClick={() => setKeloidRisk(r)}
+                className="flex-1 py-1 rounded-lg text-[9px] font-bold transition-all"
+                style={{
+                  background: keloidRisk === r ? (r === "high" ? "rgba(239,68,68,0.3)" : r === "medium" ? "rgba(245,158,11,0.3)" : "rgba(16,185,129,0.2)") : "rgba(255,255,255,0.04)",
+                  color: keloidRisk === r ? (r === "high" ? "#f87171" : r === "medium" ? "#fcd34d" : "#6ee7b7") : "#6b7280",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                }}
+              >{r === "low" ? "Faible" : r === "medium" ? "Moyen" : "Élevé"}</button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <button
+        onClick={handleSubmit}
+        disabled={!phototype || submitting}
+        className="w-full py-2 rounded-xl text-xs font-extrabold transition-all"
+        style={{
+          background: phototype ? "linear-gradient(135deg,#7c3aed,#4f46e5)" : "rgba(255,255,255,0.05)",
+          color: phototype ? "#fff" : "#4b5563",
+          opacity: submitting ? 0.7 : 1,
+        }}
+      >
+        {submitting ? "Enregistrement..." : "Valider les données cliniques"}
+      </button>
+    </div>
+  );
+}
+
 export default function ProAnalyze() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
@@ -1569,7 +1754,13 @@ export default function ProAnalyze() {
                     Résultats de la consultation · Dr {lastName || "..."} — Modifier · Envoyer · Télécharger
                   </p>
 
-                  <div className="grid grid-cols-2 gap-2">
+                  {/* ── QuickAnnotate — GlowScan AI Dataset Builder ─────── */}
+                  <QuickAnnotate
+                    scanId={(result as any)?.savedScanId}
+                    condition={(result as any)?.condition}
+                  />
+
+                  <div className="grid grid-cols-2 gap-2 mt-3">
                     <button
                       onClick={() => patientId && setLocation(`/pro/patient/${patientId}`)}
                       data-testid="button-view-dossier"

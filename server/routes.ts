@@ -10,6 +10,7 @@ import { z } from "zod";
 import OpenAI from "openai";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { GLOWSCAN_SYSTEM_PROMPT, GLOWSCAN_PRO_SYSTEM_PROMPT } from "./prompt";
+import { classifyCondition, extractPhototype, calcAnnotationScore } from "./taxonomy";
 import webpush from "web-push";
 import { db } from "./db";
 import { referrals, loyaltyPoints, subscriptions, scans, leads, premiumRequests, wellnessLogs, trainingData, type TrainingData } from "@shared/schema";
@@ -948,6 +949,34 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
           // Le dermatologue est présent → son contexte clinique valide la donnée.
           const isGold = isProMode;
 
+          // ── Taxonomie GlowScan AI — classification automatique ─────────
+          const allText = [
+            r.condition, r.conditionSecondaire, r.details, r.clinicalSummary
+          ].filter(Boolean).join(" ");
+          const taxonomy = classifyCondition(r.condition || "");
+          const phototype = extractPhototype(allText);
+          const annotationScore = calcAnnotationScore({
+            primaryCondition: r.condition,
+            secondaryCondition: r.conditionSecondaire,
+            severity: r.severity,
+            skinPhototype: r.skinPhototype || phototype,
+            clinicalSummary: r.clinicalSummary,
+            zonesAnalysis: r.zonesAnalysis,
+            clinicalProtocol: r.clinicalProtocol,
+            imageQuality: r.photo_quality,
+            confidence: r.confidence,
+            redFlags: r.redFlags,
+            mode: isProMode ? "B2B" : "B2C",
+          });
+          const enrichedAnnotation = {
+            conditionCategory: taxonomy.category,
+            icd10: taxonomy.icd10,
+            classificationConfidence: taxonomy.confidence,
+            phototype,
+            annotationScore,
+            autoClassifiedAt: new Date().toISOString(),
+          };
+
           await db.insert(trainingData).values({
             scanId: savedScanId,
             mode: isProMode ? "B2B" : "B2C",
@@ -986,6 +1015,7 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
             trainingWeight: isGold ? 3 : 1,
             isAnonymized: !userId,
             gdprConsent: true,
+            annotation: enrichedAnnotation,
           });
           console.log(`[training] ✅ Dataset record créé scan #${savedScanId} (${isProMode ? "B2B 🏆 GOLD" : "B2C"})`);
         } catch (trainErr) {
@@ -3538,6 +3568,37 @@ Réponds UNIQUEMENT avec ce JSON strict (rien d'autre) :
         if (row.mode === "B2C") totalB2C += Number(row.cnt);
       }
 
+      // Répartition par catégorie ICD-10 (depuis annotation JSONB)
+      const categoryStats = await db.execute(sql`
+        SELECT
+          annotation->>'conditionCategory' AS category,
+          COUNT(*) FILTER (WHERE derm_validation_status = 'validated') AS gold,
+          COUNT(*) AS total
+        FROM training_data
+        WHERE annotation IS NOT NULL
+        GROUP BY annotation->>'conditionCategory'
+        ORDER BY gold DESC
+      `);
+
+      // Répartition phototype IV / V / VI
+      const phototypeStats = await db.execute(sql`
+        SELECT
+          annotation->>'phototype' AS phototype,
+          COUNT(*) AS cnt
+        FROM training_data
+        WHERE derm_validation_status = 'validated'
+          AND annotation->>'phototype' IS NOT NULL
+        GROUP BY annotation->>'phototype'
+      `);
+
+      // Score moyen annotation (gold)
+      const avgScore = await db.execute(sql`
+        SELECT AVG((annotation->>'annotationScore')::numeric) AS avg_score
+        FROM training_data
+        WHERE derm_validation_status = 'validated'
+          AND annotation->>'annotationScore' IS NOT NULL
+      `);
+
       res.json({
         total: totalAll,
         gold: totalGold,
@@ -3554,6 +3615,16 @@ Réponds UNIQUEMENT avec ce JSON strict (rien d'autre) :
           pending: Number(w.pending),
           total: Number(w.total),
         })),
+        categoryBreakdown: (categoryStats.rows || categoryStats as any[]).map((r: any) => ({
+          category: r.category || "other",
+          gold: Number(r.gold || 0),
+          total: Number(r.total || 0),
+        })),
+        phototypeBreakdown: (phototypeStats.rows || phototypeStats as any[]).map((r: any) => ({
+          phototype: r.phototype,
+          count: Number(r.cnt),
+        })),
+        avgAnnotationScore: Math.round(Number((avgScore.rows || avgScore as any[])[0]?.avg_score || 0)),
       });
     } catch (err) {
       console.error("[training/stats] error:", err);
@@ -3688,6 +3759,78 @@ Réponds UNIQUEMENT avec ce JSON strict (rien d'autre) :
     } catch (err) {
       console.error("[training/export] error:", err);
       if (!res.headersSent) res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // POST /api/training/annotate/:scanId — Enrichissement dermato manuel
+  // Les dermatologues remplissent le QuickAnnotate widget (30s) dans ProAnalyze
+  // en pensant que c'est une formalité clinique — ils construisent GlowScan AI.
+  // Body: { phototype, lesionTypes[], zonesAffected[], pihRisk, keloidRisk, notes? }
+  // ───────────────────────────────────────────────────────────────────────────
+  app.post("/api/training/annotate/:scanId", async (req: any, res) => {
+    try {
+      const userId = req.session?.userId || req.user?.id;
+      if (!userId) return res.status(401).json({ message: "Authentification requise" });
+
+      const scanId = parseInt(req.params.scanId, 10);
+      if (isNaN(scanId)) return res.status(400).json({ message: "scanId invalide" });
+
+      const { phototype, lesionTypes, zonesAffected, pihRisk, keloidRisk, notes } = req.body;
+
+      // Récupérer le record existant
+      const existing = await db.select().from(trainingData).where(eq(trainingData.scanId, scanId)).limit(1);
+      if (existing.length === 0) return res.status(404).json({ message: "Record non trouvé" });
+
+      const rec = existing[0];
+      const prevAnnotation = (rec.annotation as any) || {};
+
+      // Fusionner l'enrichissement dermato avec l'annotation existante
+      const mergedAnnotation = {
+        ...prevAnnotation,
+        // Champs enrichis par le dermato
+        phototype: phototype || prevAnnotation.phototype,
+        lesionTypes: lesionTypes || prevAnnotation.lesionTypes,
+        zonesAffected: zonesAffected || prevAnnotation.zonesAffected,
+        pihRisk: pihRisk || prevAnnotation.pihRisk,
+        keloidRisk: keloidRisk || prevAnnotation.keloidRisk,
+        dermatoNotes: notes || prevAnnotation.dermatoNotes,
+        dermatoAnnotatedAt: new Date().toISOString(),
+        dermatoAnnotatedBy: userId,
+        // Recalcul du score avec l'enrichissement
+        annotationScore: calcAnnotationScore({
+          primaryCondition: rec.primaryCondition,
+          secondaryCondition: rec.secondaryCondition,
+          severity: rec.severity,
+          skinPhototype: phototype || rec.skinPhototype,
+          clinicalSummary: rec.clinicalSummary,
+          zonesAnalysis: rec.zonesAnalysis,
+          clinicalProtocol: rec.clinicalProtocol,
+          imageQuality: rec.imageQuality,
+          confidence: rec.confidence,
+          redFlags: rec.redFlags,
+          mode: rec.mode,
+          lesionTypes: lesionTypes,
+          zonesAffected: zonesAffected,
+          pihRisk: pihRisk,
+          keloidRisk: keloidRisk,
+        }),
+      };
+
+      await db.update(trainingData)
+        .set({
+          annotation: mergedAnnotation,
+          skinPhototype: phototype || rec.skinPhototype,
+          // Upgrade trainingWeight si annotation complète
+          trainingWeight: mergedAnnotation.annotationScore >= 80 ? 5 : mergedAnnotation.annotationScore >= 60 ? 3 : rec.trainingWeight,
+        })
+        .where(eq(trainingData.scanId, scanId));
+
+      console.log(`[training] 🧬 QuickAnnotate scan #${scanId} — score ${mergedAnnotation.annotationScore}/100 — phototype ${phototype}`);
+      res.json({ success: true, annotationScore: mergedAnnotation.annotationScore });
+    } catch (err) {
+      console.error("[training/annotate] error:", err);
+      res.status(500).json({ message: "Erreur serveur" });
     }
   });
 
