@@ -28,8 +28,9 @@ export default class ErrorBoundary extends Component<Props, State> {
   }
 
   handleReload = () => {
+    // Retenter la même page, pas l'accueil
     this.setState({ hasError: false, error: undefined, errorInfo: undefined, showDetails: false });
-    window.location.href = "/";
+    window.location.reload();
   };
 
   render() {
