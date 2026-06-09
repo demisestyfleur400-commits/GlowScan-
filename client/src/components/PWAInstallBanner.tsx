@@ -1,147 +1,216 @@
-import { motion, AnimatePresence } from "framer-motion";
-import { X, Download, Share, PlusSquare, Zap, HardDrive } from "lucide-react";
 import { usePWAInstall } from "@/hooks/use-pwa-install";
 
-export default function PWAInstallBanner() {
-  const { showBanner, install, dismiss, isIos } = usePWAInstall();
+// ── Icônes inline SVG (0 dépendance, 0 layout shift) ─────────────────
+const ShareIcon = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+    <polyline points="16 6 12 2 8 6"/>
+    <line x1="12" y1="2" x2="12" y2="15"/>
+  </svg>
+);
 
-  if (!showBanner) return null;
+const ListIcon = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
+    <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+  </svg>
+);
+
+const PlusIcon = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+    <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+  </svg>
+);
+
+const XIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+  </svg>
+);
+
+// ─────────────────────────────────────────────────────────────────────
+// Modale iOS — instructions d'installation Safari
+// ─────────────────────────────────────────────────────────────────────
+function IOSModal({ onClose }: { onClose: () => void }) {
+  const steps = [
+    {
+      icon: <ShareIcon />,
+      color: "#3b82f6",
+      label: "Appuyez sur le bouton Partager",
+      sub: "En bas de Safari, dans la barre d'outils",
+    },
+    {
+      icon: <ListIcon />,
+      color: "#7c3aed",
+      label: "Appuyez sur « Sur l'écran d'accueil »",
+      sub: "Faites défiler les options vers le bas",
+    },
+    {
+      icon: <PlusIcon />,
+      color: "#16a34a",
+      label: "Appuyez sur « Ajouter »",
+      sub: "L'icône GlowScan apparaît comme une vraie app",
+    },
+  ];
 
   return (
-    <AnimatePresence>
-      <motion.div
-        initial={{ y: 100, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        exit={{ y: 100, opacity: 0 }}
-        transition={{ type: "spring", stiffness: 260, damping: 24 }}
-        className="fixed bottom-4 left-4 right-4 z-[250] max-w-sm mx-auto"
-        data-testid="pwa-install-banner"
+    /* Backdrop */
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed", inset: 0, zIndex: 9999,
+        background: "rgba(0,0,0,0.55)",
+        display: "flex", alignItems: "flex-end",
+        justifyContent: "center",
+        padding: "0 0 24px",
+        fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
+      }}
+    >
+      {/* Card */}
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: "#fff", borderRadius: 20,
+          padding: 24, width: "100%", maxWidth: 400,
+          margin: "0 16px",
+          boxShadow: "0 -4px 40px rgba(0,0,0,0.2)",
+        }}
       >
-        <div
-          className="rounded-2xl overflow-hidden relative"
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <img
+              src="/logo-glowscan.jpeg"
+              alt="GlowScan"
+              width={36} height={36}
+              style={{ borderRadius: 8, objectFit: "cover" }}
+            />
+            <div>
+              <p style={{ fontSize: 15, fontWeight: 800, color: "#111827", margin: 0 }}>
+                Ajouter GlowScan
+              </p>
+              <p style={{ fontSize: 11, color: "#9ca3af", margin: 0 }}>à votre écran d'accueil</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              background: "#f3f4f6", border: "none", borderRadius: "50%",
+              width: 30, height: 30, cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              color: "#6b7280",
+            }}
+          >
+            <XIcon />
+          </button>
+        </div>
+
+        {/* Étapes */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {steps.map((s, i) => (
+            <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
+              {/* Numéro + icône */}
+              <div style={{
+                width: 44, height: 44, borderRadius: 12, flexShrink: 0,
+                background: s.color + "15",
+                border: `1px solid ${s.color}30`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                color: s.color,
+              }}>
+                {s.icon}
+              </div>
+              <div>
+                <p style={{ fontSize: 13, fontWeight: 700, color: "#111827", margin: "0 0 2px" }}>
+                  {i + 1}. {s.label}
+                </p>
+                <p style={{ fontSize: 11, color: "#9ca3af", margin: 0 }}>{s.sub}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* CTA */}
+        <button
+          onClick={onClose}
           style={{
-            background: "#13101f",
-            border: "1px solid rgba(167,139,250,0.2)",
+            width: "100%", padding: "13px 0", marginTop: 24,
+            background: "#7c3aed", border: "none", borderRadius: 12,
+            color: "#fff", fontSize: 14, fontWeight: 800, cursor: "pointer",
+          }}
+        >
+          J'ai compris
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Bannière principale — fixe en haut, 52px
+// ─────────────────────────────────────────────────────────────────────
+export default function PWAInstallBanner() {
+  const { showBanner, showIOSModal, install, dismiss, closeIOSModal } = usePWAInstall();
+
+  return (
+    <>
+      {/* Bannière top */}
+      {showBanner && (
+        <div
+          style={{
+            position: "fixed", top: 0, left: 0, right: 0, zIndex: 9000,
+            height: 52, background: "#1a1a1a",
+            display: "flex", alignItems: "center",
+            padding: "0 16px", gap: 10,
             fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
           }}
         >
-          {/* Glow */}
-          <div
-            className="pointer-events-none absolute -top-8 -right-8 w-32 h-32"
-            style={{ background: "radial-gradient(circle, rgba(124,58,237,0.15) 0%, transparent 70%)" }}
+          {/* Icône */}
+          <img
+            src="/logo-glowscan.jpeg"
+            alt="GlowScan"
+            width={24} height={24}
+            style={{ borderRadius: 6, objectFit: "cover", flexShrink: 0 }}
           />
 
-          {/* Badge recommandé */}
-          <div
-            className="absolute top-0 right-12 text-[8px] font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-bl-xl"
-            style={{ background: "rgba(167,139,250,0.15)", border: "0 0 1px 1px", borderColor: "rgba(167,139,250,0.3)", color: "#c4b5fd" }}
+          {/* Texte */}
+          <span style={{
+            flex: 1, fontSize: 13, fontWeight: 600, color: "#fff",
+            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+          }}>
+            Installer GlowScan sur votre écran
+          </span>
+
+          {/* Bouton Installer */}
+          <button
+            onClick={install}
+            style={{
+              flexShrink: 0,
+              background: "#7c3aed", border: "none", borderRadius: 8,
+              color: "#fff", fontSize: 12, fontWeight: 700,
+              padding: "6px 14px", cursor: "pointer",
+            }}
           >
-            Recommandé
-          </div>
+            Installer
+          </button>
 
-          {/* En-tête */}
-          <div className="px-4 pt-5 pb-3 flex items-center gap-3">
-            <div
-              className="w-11 h-11 rounded-xl overflow-hidden flex-shrink-0 bg-white p-0.5"
-              style={{ border: "1px solid rgba(255,255,255,0.12)" }}
-            >
-              <img src="/logo-glowscan.jpeg" alt="GlowScan" className="w-full h-full object-contain rounded-lg" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-extrabold" style={{ color: "#f3f0ff" }}>Application GlowScan</p>
-              <p className="text-[11px] font-bold mt-0.5 flex items-center gap-1" style={{ color: "#a78bfa" }}>
-                <Zap className="w-3 h-3" /> Accès instantané & économie de data
-              </p>
-            </div>
-            <button
-              onClick={dismiss}
-              data-testid="button-pwa-dismiss"
-              className="p-1.5 rounded-lg transition-opacity hover:opacity-80 flex-shrink-0"
-              style={{ color: "rgba(255,255,255,0.35)" }}
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-
-          {isIos ? (
-            <div className="px-4 pb-4">
-              <div
-                className="rounded-xl p-3.5 space-y-3"
-                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}
-              >
-                <p className="text-[9px] font-extrabold uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.35)" }}>
-                  Configuration Safari requise :
-                </p>
-
-                {[
-                  {
-                    n: 1, color: "#a78bfa",
-                    title: <span className="flex items-center gap-1.5">Appuie sur Partager <Share className="w-3.5 h-3.5 inline" style={{ color: "#60a5fa" }} /></span>,
-                    sub: "Situé dans la barre d'outils en bas de Safari.",
-                  },
-                  {
-                    n: 2, color: "#a78bfa",
-                    title: <span className="flex items-center gap-1.5">Sélectionne <span style={{ color: "#c4b5fd" }}>« Sur l'écran d'accueil »</span> <PlusSquare className="w-3.5 h-3.5 inline" style={{ color: "rgba(255,255,255,0.5)" }} /></span>,
-                    sub: "Fais défiler les options vers le bas.",
-                  },
-                  {
-                    n: 3, color: "#c4b5fd",
-                    title: "Clique sur « Ajouter » en haut à droite",
-                    sub: "L'icône GlowScan apparaîtra comme une vraie appli.",
-                  },
-                ].map(({ n, color, title, sub }) => (
-                  <div key={n} className="flex items-center gap-3">
-                    <div
-                      className="w-6 h-6 rounded-lg flex items-center justify-center text-xs font-extrabold flex-shrink-0"
-                      style={{ background: color + "15", border: `1px solid ${color}40`, color }}
-                    >
-                      {n}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-bold" style={{ color: "#f3f0ff" }}>{title}</p>
-                      <p className="text-[10px]" style={{ color: "rgba(200,185,255,0.65)" }}>{sub}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <button
-                onClick={dismiss}
-                className="w-full mt-3 py-3 rounded-full text-xs font-extrabold text-white active:scale-[0.98] transition-transform"
-                style={{ background: "#7c3aed" }}
-              >
-                Prêt, je le fais !
-              </button>
-            </div>
-          ) : (
-            <div className="px-4 pb-4">
-              <div className="flex items-center justify-between text-[10px] font-bold mb-3 px-1" style={{ color: "rgba(255,255,255,0.35)" }}>
-                <span className="flex items-center gap-1"><Zap className="w-3 h-3" style={{ color: "#fbbf24" }} /> Chargement 3× plus rapide</span>
-                <span className="flex items-center gap-1"><HardDrive className="w-3 h-3" style={{ color: "#6ee7b7" }} /> Seulement 1.5 Mo</span>
-              </div>
-
-              <div className="flex gap-2.5">
-                <button
-                  onClick={dismiss}
-                  className="flex-1 py-3 rounded-full text-xs font-bold active:scale-95 transition-all"
-                  style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.5)" }}
-                >
-                  Plus tard
-                </button>
-                <button
-                  onClick={install}
-                  data-testid="button-pwa-install"
-                  className="flex-1 py-3 rounded-full text-xs font-extrabold text-white flex items-center justify-center gap-1.5 active:scale-[0.98] transition-transform"
-                  style={{ background: "#7c3aed" }}
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  Installer l'app
-                </button>
-              </div>
-            </div>
-          )}
+          {/* Bouton fermer */}
+          <button
+            onClick={dismiss}
+            style={{
+              flexShrink: 0, background: "none", border: "none",
+              color: "rgba(255,255,255,0.45)", cursor: "pointer",
+              padding: "4px", display: "flex", alignItems: "center",
+              lineHeight: 1,
+            }}
+            aria-label="Fermer"
+          >
+            <XIcon />
+          </button>
         </div>
-      </motion.div>
-    </AnimatePresence>
+      )}
+
+      {/* Modale iOS */}
+      {showIOSModal && <IOSModal onClose={closeIOSModal} />}
+    </>
   );
 }
