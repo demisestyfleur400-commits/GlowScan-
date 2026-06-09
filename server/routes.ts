@@ -12,7 +12,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { GLOWSCAN_SYSTEM_PROMPT, GLOWSCAN_PRO_SYSTEM_PROMPT } from "./prompt";
 import webpush from "web-push";
 import { db } from "./db";
-import { referrals, loyaltyPoints, subscriptions, scans, leads, premiumRequests, wellnessLogs, trainingData } from "@shared/schema";
+import { referrals, loyaltyPoints, subscriptions, scans, leads, premiumRequests, wellnessLogs, trainingData, type TrainingData } from "@shared/schema";
 import { users } from "@shared/models/auth";
 import { eq, and, sql, gte, count, lte, desc, avg, inArray } from "drizzle-orm";
 import { whatsappClicks, orders, pageVisits } from "@shared/schema";
@@ -930,6 +930,24 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
         try {
           const r = finalResult as any;
           const isProMode = !!(isProRequest); // B2B = pro mode with patient intake
+
+          // ── Déduplication : skip si ce scan est déjà dans le dataset ───
+          if (savedScanId) {
+            const existing = await db
+              .select({ id: trainingData.id })
+              .from(trainingData)
+              .where(eq(trainingData.scanId, savedScanId))
+              .limit(1);
+            if (existing.length > 0) {
+              console.log(`[training] ⚡ Skip doublon scan #${savedScanId}`);
+              return;
+            }
+          }
+
+          // ── Chaque scan GlowScan DERM (B2B) est automatiquement gold ───
+          // Le dermatologue est présent → son contexte clinique valide la donnée.
+          const isGold = isProMode;
+
           await db.insert(trainingData).values({
             scanId: savedScanId,
             mode: isProMode ? "B2B" : "B2C",
@@ -956,20 +974,20 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
             weeklyProtocol: r.weeklyProtocol || null,
             whenToSeeDermatologist: r.whenToSeeDermatologist || null,
             b2cOutput: isProMode ? null : finalResult,
-            // B2B fields
             clinicalSummary: r.clinicalSummary || null,
             zonesAnalysis: r.zonesAnalysis || null,
             clinicalProtocol: r.clinicalProtocol || null,
             b2bOutput: isProMode ? finalResult : null,
-            // Validation defaults
-            dermValidationStatus: "pending",
-            validatedBy: "ai_only",
-            finalStatus: "pending",
-            trainingWeight: 1,
+            // ── Gold automatique pour scans DERM ───
+            dermValidationStatus: isGold ? "validated" : "pending",
+            validatedBy: isGold ? "derm_gold" : "ai_only",
+            validatedAt: isGold ? new Date() : null,
+            finalStatus: isGold ? "validated" : "pending",
+            trainingWeight: isGold ? 3 : 1,
             isAnonymized: !userId,
             gdprConsent: true,
           });
-          console.log(`[training] ✅ Dataset record créé pour scan #${savedScanId} (${isProMode ? "B2B" : "B2C"})`);
+          console.log(`[training] ✅ Dataset record créé scan #${savedScanId} (${isProMode ? "B2B 🏆 GOLD" : "B2C"})`);
         } catch (trainErr) {
           console.error("[training] ⚠️ Échec insert training_data (non-bloquant):", trainErr instanceof Error ? trainErr.message : String(trainErr));
         }
@@ -3464,6 +3482,212 @@ Réponds UNIQUEMENT avec ce JSON strict (rien d'autre) :
     } catch (err) {
       console.error("[training] ❌ Erreur liste:", err);
       return res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // GET /api/training/stats — statistiques du dataset pour le dashboard
+  // ───────────────────────────────────────────────────────────────────────────
+  app.get("/api/training/stats", async (req: any, res) => {
+    try {
+      const userId = req.session?.userId || req.user?.id;
+      if (!userId) return res.status(401).json({ message: "Authentification requise" });
+
+      // Totaux par statut
+      const totals = await db
+        .select({
+          status: trainingData.dermValidationStatus,
+          mode: trainingData.mode,
+          cnt: count(),
+        })
+        .from(trainingData)
+        .groupBy(trainingData.dermValidationStatus, trainingData.mode);
+
+      // Top 15 conditions (gold uniquement)
+      const topConditions = await db
+        .select({
+          condition: trainingData.primaryCondition,
+          cnt: count(),
+        })
+        .from(trainingData)
+        .where(eq(trainingData.dermValidationStatus, "validated"))
+        .groupBy(trainingData.primaryCondition)
+        .orderBy(desc(count()))
+        .limit(15);
+
+      // Évolution hebdomadaire (8 dernières semaines)
+      const weekly = await db.execute(sql`
+        SELECT
+          DATE_TRUNC('week', created_at) AS week,
+          COUNT(*) FILTER (WHERE derm_validation_status = 'validated') AS gold,
+          COUNT(*) FILTER (WHERE derm_validation_status = 'pending') AS pending,
+          COUNT(*) AS total
+        FROM training_data
+        WHERE created_at >= NOW() - INTERVAL '8 weeks'
+        GROUP BY DATE_TRUNC('week', created_at)
+        ORDER BY week DESC
+      `);
+
+      // Synthèse
+      let totalAll = 0, totalGold = 0, totalPending = 0, totalB2B = 0, totalB2C = 0;
+      for (const row of totals) {
+        totalAll += Number(row.cnt);
+        if (row.status === "validated") totalGold += Number(row.cnt);
+        if (row.status === "pending") totalPending += Number(row.cnt);
+        if (row.mode === "B2B") totalB2B += Number(row.cnt);
+        if (row.mode === "B2C") totalB2C += Number(row.cnt);
+      }
+
+      res.json({
+        total: totalAll,
+        gold: totalGold,
+        pending: totalPending,
+        b2b: totalB2B,
+        b2c: totalB2C,
+        validationRate: totalAll > 0 ? Math.round((totalGold / totalAll) * 100) : 0,
+        topConditions: topConditions
+          .filter((c) => c.condition)
+          .map((c) => ({ condition: c.condition!, count: Number(c.cnt) })),
+        weekly: (weekly.rows || weekly as any[]).map((w: any) => ({
+          week: w.week,
+          gold: Number(w.gold),
+          pending: Number(w.pending),
+          total: Number(w.total),
+        })),
+      });
+    } catch (err) {
+      console.error("[training/stats] error:", err);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // GET /api/training/export  — export JSONL du dataset gold
+  // Query: ?format=jsonl (défaut) | ?format=openai  |  ?status=validated (défaut) | all
+  // Déclenche un téléchargement de fichier directement.
+  // ───────────────────────────────────────────────────────────────────────────
+  app.get("/api/training/export", async (req: any, res) => {
+    try {
+      const userId = req.session?.userId || req.user?.id;
+      if (!userId) return res.status(401).json({ message: "Authentification requise" });
+
+      const format = (req.query.format as string) || "jsonl";
+      const statusFilter = (req.query.status as string) || "validated";
+
+      // Récupérer tous les records (sans limite — c'est un export)
+      let query = db.select().from(trainingData).orderBy(desc(trainingData.createdAt)) as any;
+      if (statusFilter !== "all") {
+        query = query.where(eq(trainingData.dermValidationStatus, statusFilter));
+      }
+      const records: TrainingData[] = await query;
+
+      const date = new Date().toISOString().slice(0, 10);
+      const filename = `glowscan-dataset-${statusFilter}-${date}.jsonl`;
+
+      res.setHeader("Content-Type", "application/x-ndjson");
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      res.setHeader("Cache-Control", "no-store");
+
+      // Marquer les records exportés (en background, non-bloquant)
+      const ids = records.map((r) => r.id).filter(Boolean);
+
+      if (format === "openai") {
+        // Format OpenAI fine-tuning (chat completions)
+        const SYSTEM = "Tu es un dermatologue expert spécialisé dans les peaux à fort phototype (Fitzpatrick IV-VI), exerçant en Afrique centrale. Tu analyses des photos de peau et fournis un diagnostic clinique structuré.";
+        for (const rec of records) {
+          const userContent = [
+            rec.primaryCondition ? `Condition détectée : ${rec.primaryCondition}` : "",
+            rec.severity ? `Sévérité : ${rec.severity}` : "",
+            rec.mode ? `Mode : ${rec.mode}` : "",
+            rec.imageQuality ? `Qualité image : ${rec.imageQuality}` : "",
+          ].filter(Boolean).join("\n");
+
+          const assistantContent = JSON.stringify(rec.b2bOutput || rec.b2cOutput || rec.aiDiagnosis || { condition: rec.primaryCondition, severity: rec.severity, score: rec.score });
+
+          const line = JSON.stringify({
+            messages: [
+              { role: "system", content: SYSTEM },
+              { role: "user", content: userContent || "Analyse cette image de peau." },
+              { role: "assistant", content: assistantContent },
+            ],
+            metadata: {
+              id: rec.id,
+              mode: rec.mode,
+              validation: rec.dermValidationStatus,
+              weight: rec.trainingWeight,
+              created_at: rec.createdAt,
+            },
+          });
+          res.write(line + "\n");
+        }
+      } else {
+        // Format JSONL standard (un objet par ligne)
+        for (const rec of records) {
+          const line = JSON.stringify({
+            id: rec.id,
+            scan_id: rec.scanId,
+            mode: rec.mode,
+            source: rec.source,
+            prompt_version: rec.promptVersion,
+            ai_model: rec.aiModelVersion,
+            // Clinique
+            image_quality: rec.imageQuality,
+            skin_phototype: rec.skinPhototype,
+            primary_condition: rec.primaryCondition,
+            secondary_condition: rec.secondaryCondition,
+            severity: rec.severity,
+            score: rec.score,
+            confidence: rec.confidence,
+            skin_state: rec.skinState,
+            inflammation_level: rec.inflammationLevel,
+            pigmentation_level: rec.pigmentationLevel,
+            // Zones
+            zones_analysis: rec.zonesAnalysis,
+            zones_b2c: rec.zonesB2C,
+            // Protocoles
+            clinical_protocol: rec.clinicalProtocol,
+            morning_protocol: rec.morningProtocol,
+            evening_protocol: rec.eveningProtocol,
+            // Alertes
+            red_flags: rec.redFlags,
+            // Sorties IA
+            ai_diagnosis: rec.aiDiagnosis,
+            b2b_output: rec.b2bOutput,
+            b2c_output: rec.b2cOutput,
+            clinical_summary: rec.clinicalSummary,
+            // Vérité terrain
+            ground_truth: rec.groundTruth,
+            annotation: rec.annotation,
+            dermatologist_label: rec.dermatologistLabel,
+            // Validation
+            derm_validation_status: rec.dermValidationStatus,
+            validated_by: rec.validatedBy,
+            validated_at: rec.validatedAt,
+            training_weight: rec.trainingWeight,
+            final_status: rec.finalStatus,
+            // Meta
+            is_anonymized: rec.isAnonymized,
+            created_at: rec.createdAt,
+          });
+          res.write(line + "\n");
+        }
+      }
+
+      res.end();
+
+      // Marquer comme exportés en background
+      if (ids.length > 0) {
+        setImmediate(async () => {
+          try {
+            await db.update(trainingData)
+              .set({ exportedToDataset: true, exportedAt: new Date() })
+              .where(inArray(trainingData.id as any, ids));
+          } catch {}
+        });
+      }
+    } catch (err) {
+      console.error("[training/export] error:", err);
+      if (!res.headersSent) res.status(500).json({ message: "Erreur serveur" });
     }
   });
 
