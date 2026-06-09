@@ -1,11 +1,26 @@
 import type { Express } from "express";
 import { authStorage } from "./storage";
-import { isAuthenticated } from "./replitAuth"; // Conserve l'import, notre nouveau middleware épuré
+import { isAuthenticated } from "./replitAuth";
 import bcrypt from "bcryptjs";
 import { db } from "../../db";
 import { storage } from "../../storage";
 import { users } from "@shared/models/auth";
-import { eq } from "drizzle-orm";
+import { eq, or } from "drizzle-orm";
+
+// ── Reset tokens en mémoire (expire 15 min) ─────────────────────────────────
+// Map<code6digits, { userId, phone, expiresAt }>
+const resetTokens = new Map<string, { userId: string; phone: string; expiresAt: number }>();
+// Nettoyage toutes les heures
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of resetTokens) {
+    if (v.expiresAt < now) resetTokens.delete(k);
+  }
+}, 60 * 60 * 1000);
+
+function generateCode(): string {
+  return String(Math.floor(100000 + Math.random() * 900000)); // 6 chiffres
+}
 
 export function registerAuthRoutes(app: Express): void {
 
@@ -131,6 +146,94 @@ export function registerAuthRoutes(app: Express): void {
     }
   });
 
+  // ── POST /api/auth/forgot-password ─────────────────────────────────────────
+  // Body: { contact } — email ou numéro de téléphone
+  // Retourne: { maskedPhone, code (dev only) }
+  // En prod: le frontend ouvre wa.me/[phone]?text=Code: XXXXXX
+  app.post("/api/auth/forgot-password", async (req: any, res) => {
+    try {
+      const { contact } = req.body;
+      if (!contact?.trim()) {
+        return res.status(400).json({ message: "Email ou numéro requis" });
+      }
+
+      const trimmed = contact.trim();
+      const isPhone = !trimmed.includes("@");
+
+      // Construire l'email stocké en base
+      const emailInDb = isPhone
+        ? `tel-${trimmed.replace(/\D/g, "")}@phone.glowscan.cm`
+        : trimmed.toLowerCase();
+
+      const [user] = await db.select().from(users).where(eq(users.email, emailInDb));
+
+      if (!user) {
+        // Ne pas révéler si le compte existe — message générique
+        return res.json({ sent: true, maskedContact: isPhone ? maskPhone(trimmed) : maskEmail(trimmed) });
+      }
+
+      // Générer code 6 chiffres, valide 15 min
+      const code = generateCode();
+      const phone = isPhone ? trimmed.replace(/\D/g, "") : null;
+      resetTokens.set(code, {
+        userId: user.id,
+        phone: phone || "",
+        expiresAt: Date.now() + 15 * 60 * 1000,
+      });
+
+      console.log(`[forgot-pwd] Code généré pour userId=${user.id} — code=${code} (dev log)`);
+
+      const maskedContact = isPhone ? maskPhone(trimmed) : maskEmail(emailInDb);
+      res.json({
+        sent: true,
+        maskedContact,
+        // On retourne le phone original pour construire le lien wa.me côté client
+        phone: phone ? `+${phone}` : null,
+        // En développement on expose le code ; en prod on le retire (il est dans le wa.me)
+        code: process.env.NODE_ENV !== "production" ? code : undefined,
+        // On retourne le code ici car c'est LE client qui construit le message WhatsApp
+        // (pas de WhatsApp Business API → l'utilisateur s'envoie le message lui-même)
+        resetCode: code, // le frontend l'intègre dans le message wa.me
+      });
+    } catch (err) {
+      console.error("[forgot-pwd] error:", err);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // ── POST /api/auth/reset-password ───────────────────────────────────────────
+  // Body: { code, newPassword }
+  app.post("/api/auth/reset-password", async (req: any, res) => {
+    try {
+      const { code, newPassword } = req.body;
+      if (!code || !newPassword) {
+        return res.status(400).json({ message: "Code et nouveau mot de passe requis" });
+      }
+      if (newPassword.length < 6) {
+        return res.status(400).json({ message: "Mot de passe : 6 caractères minimum" });
+      }
+
+      const entry = resetTokens.get(String(code).trim());
+      if (!entry) {
+        return res.status(400).json({ message: "Code invalide ou expiré. Demande un nouveau code." });
+      }
+      if (entry.expiresAt < Date.now()) {
+        resetTokens.delete(code);
+        return res.status(400).json({ message: "Code expiré (15 min). Demande un nouveau code." });
+      }
+
+      const passwordHash = await bcrypt.hash(newPassword, 10);
+      await db.update(users).set({ passwordHash }).where(eq(users.id, entry.userId));
+      resetTokens.delete(code); // usage unique
+
+      console.log(`[reset-pwd] ✅ Mot de passe réinitialisé pour userId=${entry.userId}`);
+      res.json({ success: true });
+    } catch (err) {
+      console.error("[reset-pwd] error:", err);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
   // ── POST /api/auth/logout ── Déconnexion
   app.post("/api/auth/logout", (req: any, res) => {
     req.session.destroy((err: any) => {
@@ -141,4 +244,17 @@ export function registerAuthRoutes(app: Express): void {
       res.json({ success: true });
     });
   });
+}
+
+// ── Helpers masquage ───────────────────────────────────────────────────────
+function maskPhone(phone: string): string {
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length < 4) return "••••••";
+  return digits.slice(0, 3) + "•".repeat(digits.length - 5) + digits.slice(-2);
+}
+
+function maskEmail(email: string): string {
+  const [local, domain] = email.split("@");
+  if (!domain || local.length < 3) return "••••@••••";
+  return local[0] + "•".repeat(Math.max(1, local.length - 2)) + local.slice(-1) + "@" + domain;
 }
