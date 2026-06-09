@@ -28,8 +28,13 @@ export default function AuthPage() {
     e.preventDefault();
     setLoading(true);
     try {
+      const trimmed = loginEmail.trim();
+      const isPhone = !trimmed.includes("@");
+      const emailToSend = isPhone
+        ? `tel-${trimmed.replace(/\D/g, "")}@phone.glowscan.cm`
+        : trimmed.toLowerCase();
       await apiRequest("POST", "/api/auth/login", {
-        email: loginEmail.toLowerCase().trim(),
+        email: emailToSend,
         password: loginPwd,
       });
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
@@ -261,9 +266,9 @@ export default function AuthPage() {
           </div>
 
           <Field
-            icon={<Mail className="w-4 h-4" />}
-            type="email"
-            placeholder="Adresse e-mail"
+            icon={loginEmail.includes("@") ? <Mail className="w-4 h-4" /> : <Phone className="w-4 h-4" />}
+            type="text"
+            placeholder="Email ou numéro (+237...)"
             value={loginEmail}
             onChange={setLoginEmail}
             testId="input-login-email"
