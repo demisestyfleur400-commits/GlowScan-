@@ -3522,6 +3522,7 @@ Réponds UNIQUEMENT avec ce JSON strict (rien d'autre) :
     try {
       const userId = req.session?.userId || req.user?.id;
       if (!userId) return res.status(401).json({ message: "Authentification requise" });
+      if (!(req.session as any)?.isAdmin) return res.status(403).json({ message: "Accès réservé" });
 
       // Totaux par statut
       const totals = await db
@@ -3641,6 +3642,7 @@ Réponds UNIQUEMENT avec ce JSON strict (rien d'autre) :
     try {
       const userId = req.session?.userId || req.user?.id;
       if (!userId) return res.status(401).json({ message: "Authentification requise" });
+      if (!(req.session as any)?.isAdmin) return res.status(403).json({ message: "Accès réservé" });
 
       const format = (req.query.format as string) || "jsonl";
       const statusFilter = (req.query.status as string) || "validated";

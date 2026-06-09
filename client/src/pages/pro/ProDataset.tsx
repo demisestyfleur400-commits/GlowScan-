@@ -3,8 +3,9 @@
  * Statistiques, top conditions, évolution, export JSONL / OpenAI
  */
 import { useState, useEffect } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { ProLayout, ProCard } from "@/components/ProLayout";
+import { useProAccount } from "@/hooks/use-pro";
 
 const NAVY = "#7c3aed";
 const INK  = "#f3f0ff";
@@ -118,7 +119,18 @@ function ConditionBar({ condition, count, max }: { condition: string; count: num
 
 // ── Page principale ────────────────────────────────────────────────────────
 export default function ProDataset() {
+  const [, setLocation] = useLocation();
+  const { data: accData, isLoading: accLoading } = useProAccount();
   const { stats, loading, error } = useDatasetStats();
+
+  // Redirection si pas admin
+  useEffect(() => {
+    if (!accLoading && accData && !accData.isAdmin) {
+      setLocation("/pro/dashboard");
+    }
+  }, [accData, accLoading]);
+
+  if (accLoading || (!accData?.isAdmin && !accLoading)) return null;
   const [exporting, setExporting] = useState(false);
   const [exportFormat, setExportFormat] = useState<"jsonl" | "openai">("jsonl");
   const [exportStatus, setExportStatus] = useState<"validated" | "all">("validated");

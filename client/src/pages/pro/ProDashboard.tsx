@@ -186,7 +186,9 @@ export default function ProDashboard() {
         <KpiCard to="/pro/patients" icon={<Users style={{ width: 16, height: 16, color: DS.violetMid }} />} value={patientCount} label="Patients" testid="kpi-patients" />
         <KpiCard to="/pro/statistiques" icon={<BarChart3 style={{ width: 16, height: 16, color: DS.successText }} />} value="—" label="Statistiques" testid="kpi-stats" />
         <KpiCard to="/pro/patients" icon={<Activity style={{ width: 16, height: 16, color: "#f87171" }} />} value={statusCounts.priority} label="Priorité haute" testid="kpi-urgent" />
-        <KpiCard to="/pro/dataset" icon={<span style={{ fontSize: 14 }}>🧬</span>} value="—" label="Dataset IA" testid="kpi-dataset" />
+        {accData?.isAdmin && (
+          <KpiCard to="/pro/dataset" icon={<span style={{ fontSize: 14 }}>🧬</span>} value="—" label="Dataset IA" testid="kpi-dataset" />
+        )}
       </motion.div>
 
       {/* 2-col grid */}

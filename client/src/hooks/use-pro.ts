@@ -6,6 +6,7 @@ export interface ProAccountResponse {
   account: ProAccount | null;
   active?: boolean;
   daysLeftTrial?: number | null;
+  isAdmin?: boolean;
 }
 
 export function useProAccount() {

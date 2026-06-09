@@ -235,7 +235,8 @@ export function registerProRoutes(app: Express) {
     const daysLeft = acc.subscriptionStatus === "trial"
       ? Math.max(0, Math.ceil((acc.trialEndsAt.getTime() - Date.now()) / (24 * 60 * 60 * 1000)))
       : null;
-    res.json({ account: acc, active, daysLeftTrial: daysLeft });
+    const isAdmin = (req.session as any)?.isAdmin === true;
+    res.json({ account: acc, active, daysLeftTrial: daysLeft, isAdmin });
   });
 
   // ───────────────────────────────────────────
