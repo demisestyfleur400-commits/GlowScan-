@@ -220,8 +220,8 @@ export function registerAuthRoutes(app: Express): void {
           sent: true,
           maskedContact,
           viaSms: smsSent,
-          // Dev mode: retourner le code pour tests locaux
-          code: process.env.NODE_ENV !== "production" ? code : undefined,
+          // Dev/fallback: retourner le code si Twilio n'est pas utilisé
+          code: !smsSent ? code : undefined,
         });
       } else {
         // SMS échoué et pas d'email fallback

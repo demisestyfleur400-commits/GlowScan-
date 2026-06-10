@@ -29,6 +29,7 @@ export default function AuthPage() {
   const [forgotResult, setForgotResult] = useState<{
     maskedContact: string;
     viaSms: boolean;
+    code?: string;
   } | null>(null);
 
   // Reset fields
@@ -355,30 +356,65 @@ export default function AuthPage() {
                 </p>
               </form>
             ) : (
-              /* SMS envoyé → aller directement à reset */
+              /* Code généré (mode dev) ou SMS en attente Twilio */
               <div className="space-y-5">
-                <div className="text-center">
-                  <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
-                    style={{ background: "rgba(37,211,102,0.1)", border: "1px solid rgba(37,211,102,0.2)" }}>
-                    <CheckCircle2 className="w-8 h-8" style={{ color: "#25d366" }} />
-                  </div>
-                  <h2 className="text-xl font-bold" style={{ color: "#f3f0ff" }}>SMS envoyé ✅</h2>
-                  <p className="text-xs mt-2" style={{ color: "rgba(200,185,255,0.7)" }}>
-                    Un code a été envoyé à <strong>{forgotResult.maskedContact}</strong>
-                  </p>
-                  <p className="text-[11px] mt-1" style={{ color: "rgba(200,185,255,0.5)" }}>
-                    Valide 15 minutes
-                  </p>
-                </div>
-                <button onClick={goToReset}
-                  className="w-full py-4 text-sm font-extrabold"
-                  style={{ background: "#7c3aed", borderRadius: "14px", color: "#fff" }}>
-                  Entrer mon code →
-                </button>
+                {forgotResult.viaSms ? (
+                  /* SMS envoyé via Twilio (production) */
+                  <>
+                    <div className="text-center">
+                      <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
+                        style={{ background: "rgba(37,211,102,0.1)", border: "1px solid rgba(37,211,102,0.2)" }}>
+                        <CheckCircle2 className="w-8 h-8" style={{ color: "#25d366" }} />
+                      </div>
+                      <h2 className="text-xl font-bold" style={{ color: "#f3f0ff" }}>SMS envoyé ✅</h2>
+                      <p className="text-xs mt-2" style={{ color: "rgba(200,185,255,0.7)" }}>
+                        Un code a été envoyé à <strong>{forgotResult.maskedContact}</strong>
+                      </p>
+                      <p className="text-[11px] mt-1" style={{ color: "rgba(200,185,255,0.5)" }}>
+                        Valide 15 minutes
+                      </p>
+                    </div>
+                    <button onClick={goToReset}
+                      className="w-full py-4 text-sm font-extrabold"
+                      style={{ background: "#7c3aed", borderRadius: "14px", color: "#fff" }}>
+                      Entrer mon code →
+                    </button>
+                  </>
+                ) : (
+                  /* Mode dev/fallback : code affiché à l'écran */
+                  <>
+                    <div className="text-center">
+                      <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
+                        style={{ background: "rgba(124,58,237,0.1)", border: "1px solid rgba(124,58,237,0.2)" }}>
+                        <KeyRound className="w-8 h-8" style={{ color: "#a78bfa" }} />
+                      </div>
+                      <h2 className="text-xl font-bold" style={{ color: "#f3f0ff" }}>Ton code de réinitialisation</h2>
+                      <p className="text-xs mt-2" style={{ color: "rgba(200,185,255,0.7)" }}>
+                        Compte : <strong>{forgotResult.maskedContact}</strong>
+                      </p>
+                    </div>
+                    <div className="rounded-2xl p-6 text-center"
+                      style={{ background: "rgba(124,58,237,0.08)", border: "1px solid rgba(124,58,237,0.25)" }}>
+                      <p className="text-sm font-medium mb-3" style={{ color: "rgba(200,185,255,0.6)" }}>Note ce code</p>
+                      <p className="text-4xl font-black tracking-widest" style={{ color: "#f3f0ff", fontFamily: "monospace" }}>
+                        {forgotResult.code || "XXXXXX"}
+                      </p>
+                      <p className="text-[11px] mt-4" style={{ color: "rgba(200,185,255,0.5)" }}>⏰ Valide 15 minutes</p>
+                    </div>
+                    <button onClick={() => {
+                      if (forgotResult.code) setResetCode(forgotResult.code);
+                      goToReset();
+                    }}
+                      className="w-full py-4 text-sm font-extrabold"
+                      style={{ background: "#7c3aed", borderRadius: "14px", color: "#fff" }}>
+                      J'ai noté le code → Continuer →
+                    </button>
+                  </>
+                )}
                 <button onClick={() => { setForgotResult(null); setForgotContact(""); }}
                   className="w-full py-2 text-xs font-bold"
                   style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "12px", color: "rgba(200,185,255,0.7)" }}>
-                  Pas reçu? Renvoyer le SMS
+                  Pas reçu? Renvoyer le code
                 </button>
               </div>
             )}
