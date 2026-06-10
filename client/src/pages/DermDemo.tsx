@@ -697,7 +697,7 @@ export default function DermDemo() {
           {/* Dot indicators */}
           <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
             {STEPS.map((_, i) => (
-              <button key={i} onClick={() => setStep(i)} style={{ width: i === step ? 20 : 6, height: 6, borderRadius: 3, background: i === step ? DS.violet : i < step ? DS.green : "rgba(255,255,255,0.15)", border: "none", cursor: "pointer", transition: "all 0.2s", padding: 0 }} />
+              <button key={i} onClick={() => setStep(i)} style={{ width: i === step ? 20 : 6, height: 6, borderRadius: 3, background: i === step ? DS.violet : i < step ? DS.green : "rgba(255,255,255,0.15)", border: "none", cursor: "pointer", transition: "all 0.2s", padding: 0 }}></button>
             ))}
           </div>
         </div>
