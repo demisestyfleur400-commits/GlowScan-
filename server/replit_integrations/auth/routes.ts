@@ -6,6 +6,12 @@ import { db } from "../../db";
 import { storage } from "../../storage";
 import { users } from "@shared/models/auth";
 import { eq, or } from "drizzle-orm";
+import twilio from "twilio";
+
+// ── Twilio SMS Client ──────────────────────────────────────────────────────
+const twilioClient = process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN
+  ? twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN)
+  : null;
 
 // ── Reset tokens en mémoire (expire 15 min) ─────────────────────────────────
 // Map<code6digits, { userId, phone, expiresAt }>
@@ -20,6 +26,26 @@ setInterval(() => {
 
 function generateCode(): string {
   return String(Math.floor(100000 + Math.random() * 900000)); // 6 chiffres
+}
+
+async function sendSmsCode(phone: string, code: string): Promise<boolean> {
+  if (!twilioClient || !process.env.TWILIO_PHONE_NUMBER) {
+    console.warn("[SMS] ⚠️ Twilio non configuré");
+    return false;
+  }
+  try {
+    const message = `🔐 Réinitialisation GlowScan\n\nTon code : ${code}\n\nValide 15 minutes.`;
+    await twilioClient.messages.create({
+      body: message,
+      from: process.env.TWILIO_PHONE_NUMBER,
+      to: phone.startsWith("+") ? phone : `+${phone}`,
+    });
+    console.log(`[SMS] ✅ Code envoyé à ${phone}`);
+    return true;
+  } catch (err) {
+    console.error(`[SMS] ❌ Erreur Twilio:`, err);
+    return false;
+  }
 }
 
 export function registerAuthRoutes(app: Express): void {
@@ -148,8 +174,7 @@ export function registerAuthRoutes(app: Express): void {
 
   // ── POST /api/auth/forgot-password ─────────────────────────────────────────
   // Body: { contact } — email ou numéro de téléphone
-  // Retourne: { maskedPhone, code (dev only) }
-  // En prod: le frontend ouvre wa.me/[phone]?text=Code: XXXXXX
+  // Envoie automatiquement un SMS via Twilio
   app.post("/api/auth/forgot-password", async (req: any, res) => {
     try {
       const { contact } = req.body;
@@ -169,32 +194,39 @@ export function registerAuthRoutes(app: Express): void {
 
       if (!user) {
         // Ne pas révéler si le compte existe — message générique
-        return res.json({ sent: true, maskedContact: isPhone ? maskPhone(trimmed) : maskEmail(trimmed) });
+        return res.json({ sent: true, maskedContact: isPhone ? maskPhone(trimmed) : maskEmail(trimmed), viaSms: false });
       }
 
       // Générer code 6 chiffres, valide 15 min
       const code = generateCode();
       const phone = isPhone ? trimmed.replace(/\D/g, "") : null;
-      resetTokens.set(code, {
-        userId: user.id,
-        phone: phone || "",
-        expiresAt: Date.now() + 15 * 60 * 1000,
-      });
 
-      console.log(`[forgot-pwd] Code généré pour userId=${user.id} — code=${code} (dev log)`);
+      // Essayer d'envoyer le SMS
+      let smsSent = false;
+      if (phone) {
+        smsSent = await sendSmsCode(`+${phone}`, code);
+      }
 
-      const maskedContact = isPhone ? maskPhone(trimmed) : maskEmail(emailInDb);
-      res.json({
-        sent: true,
-        maskedContact,
-        // On retourne le phone original pour construire le lien wa.me côté client
-        phone: phone ? `+${phone}` : null,
-        // En développement on expose le code ; en prod on le retire (il est dans le wa.me)
-        code: process.env.NODE_ENV !== "production" ? code : undefined,
-        // On retourne le code ici car c'est LE client qui construit le message WhatsApp
-        // (pas de WhatsApp Business API → l'utilisateur s'envoie le message lui-même)
-        resetCode: code, // le frontend l'intègre dans le message wa.me
-      });
+      if (smsSent || !phone) {
+        // Si SMS envoyé OU pas de téléphone, stocker le token pour réinitialisation
+        resetTokens.set(code, {
+          userId: user.id,
+          phone: phone || "",
+          expiresAt: Date.now() + 15 * 60 * 1000,
+        });
+
+        const maskedContact = isPhone ? maskPhone(trimmed) : maskEmail(emailInDb);
+        res.json({
+          sent: true,
+          maskedContact,
+          viaSms: smsSent,
+          // Dev mode: retourner le code pour tests locaux
+          code: process.env.NODE_ENV !== "production" ? code : undefined,
+        });
+      } else {
+        // SMS échoué et pas d'email fallback
+        res.status(500).json({ message: "Impossible d'envoyer le SMS. Réessaie plus tard." });
+      }
     } catch (err) {
       console.error("[forgot-pwd] error:", err);
       res.status(500).json({ message: "Erreur serveur" });

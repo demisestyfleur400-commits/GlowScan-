@@ -28,8 +28,7 @@ export default function AuthPage() {
   const [forgotContact, setForgotContact] = useState("");
   const [forgotResult, setForgotResult] = useState<{
     maskedContact: string;
-    phone: string | null;
-    resetCode: string;
+    viaSms: boolean;
   } | null>(null);
 
   // Reset fields
@@ -141,25 +140,7 @@ export default function AuthPage() {
     }
   }
 
-  function openWhatsApp() {
-    if (!forgotResult) return;
-    const phone = forgotResult.phone?.replace(/\D/g, "") || "";
-    const code = forgotResult.resetCode;
-    const msg = encodeURIComponent(
-      `🔐 Réinitialisation GlowScan\n\nTon code : *${code}*\n\nSaisis ce code dans l'application pour créer un nouveau mot de passe.\n\n⏰ Valide 15 minutes.`
-    );
-    // Ouvre WhatsApp vers leur propre numéro (Saved Messages)
-    const url = phone
-      ? `https://wa.me/${phone}?text=${msg}`
-      : `https://wa.me/?text=${msg}`;
-    window.open(url, "_blank");
-    // Aller directement à l'étape reset
-    setResetCode(code);
-    setMode("reset");
-  }
-
-  function goToResetManually() {
-    if (forgotResult?.resetCode) setResetCode(forgotResult.resetCode);
+  function goToReset() {
     setMode("reset");
   }
 
@@ -342,19 +323,19 @@ export default function AuthPage() {
           <motion.div key="forgot" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.3 }}
             className="flex-1 flex flex-col justify-center relative z-10 space-y-4 max-w-sm mx-auto w-full"
           >
-            <div className="text-center mb-2">
-              <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
-                style={{ background: "rgba(37,211,102,0.1)", border: "1px solid rgba(37,211,102,0.2)" }}>
-                <MessageCircle className="w-7 h-7" style={{ color: "#25d366" }} />
-              </div>
-              <h1 className="text-2xl font-bold" style={{ color: "#f3f0ff" }}>Mot de passe oublié</h1>
-              <p className="text-xs font-medium mt-1" style={{ color: "rgba(200,185,255,0.55)" }}>
-                On t'envoie un code de récupération via WhatsApp
-              </p>
-            </div>
-
             {!forgotResult ? (
               <form onSubmit={handleForgot} className="space-y-4">
+                <div className="text-center mb-2">
+                  <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
+                    style={{ background: "rgba(37,211,102,0.1)", border: "1px solid rgba(37,211,102,0.2)" }}>
+                    <MessageCircle className="w-7 h-7" style={{ color: "#25d366" }} />
+                  </div>
+                  <h1 className="text-2xl font-bold" style={{ color: "#f3f0ff" }}>Mot de passe oublié</h1>
+                  <p className="text-xs font-medium mt-1" style={{ color: "rgba(200,185,255,0.55)" }}>
+                    On t'envoie un code par SMS
+                  </p>
+                </div>
+
                 <Field
                   icon={forgotContact.includes("@") ? <Mail className="w-4 h-4" /> : <Phone className="w-4 h-4" />}
                   type="text"
@@ -367,50 +348,37 @@ export default function AuthPage() {
                 <button type="submit" disabled={loading || !forgotContact.trim()}
                   className="w-full py-4 text-sm font-extrabold transition-all active:scale-[0.98] disabled:opacity-40"
                   style={{ background: "linear-gradient(135deg, #25d366, #128c7e)", borderRadius: "14px", color: "#fff" }}>
-                  {loading ? "Envoi en cours..." : "Recevoir mon code →"}
+                  {loading ? "Envoi en cours..." : "Recevoir mon code par SMS →"}
                 </button>
                 <p className="text-center text-xs" style={{ color: "rgba(200,185,255,0.5)" }}>
                   <button type="button" onClick={goLogin} style={{ color: "#a78bfa" }}>← Retour à la connexion</button>
                 </p>
               </form>
             ) : (
-              /* Code généré — étape WhatsApp */
-              <div className="space-y-4">
-                <div className="rounded-2xl p-4 text-center"
-                  style={{ background: "rgba(37,211,102,0.06)", border: "1px solid rgba(37,211,102,0.2)" }}>
-                  <p className="text-xs font-bold mb-1" style={{ color: "#25d366" }}>Code généré ✅</p>
-                  <p className="text-[11px]" style={{ color: "rgba(200,185,255,0.7)" }}>
-                    Compte trouvé pour <strong>{forgotResult.maskedContact}</strong>
+              /* SMS envoyé → aller directement à reset */
+              <div className="space-y-5">
+                <div className="text-center">
+                  <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
+                    style={{ background: "rgba(37,211,102,0.1)", border: "1px solid rgba(37,211,102,0.2)" }}>
+                    <CheckCircle2 className="w-8 h-8" style={{ color: "#25d366" }} />
+                  </div>
+                  <h2 className="text-xl font-bold" style={{ color: "#f3f0ff" }}>SMS envoyé ✅</h2>
+                  <p className="text-xs mt-2" style={{ color: "rgba(200,185,255,0.7)" }}>
+                    Un code a été envoyé à <strong>{forgotResult.maskedContact}</strong>
+                  </p>
+                  <p className="text-[11px] mt-1" style={{ color: "rgba(200,185,255,0.5)" }}>
+                    Valide 15 minutes
                   </p>
                 </div>
-
-                {forgotResult.phone ? (
-                  <>
-                    <button onClick={openWhatsApp}
-                      className="w-full py-4 text-sm font-extrabold transition-all active:scale-[0.98] flex items-center justify-center gap-2"
-                      style={{ background: "linear-gradient(135deg, #25d366, #128c7e)", borderRadius: "14px", color: "#fff" }}>
-                      <MessageCircle className="w-5 h-5" />
-                      Envoyer le code sur WhatsApp
-                    </button>
-                    <p className="text-center text-[11px]" style={{ color: "rgba(200,185,255,0.5)" }}>
-                      Ouvre WhatsApp → tu verras le code → reviens ici
-                    </p>
-                  </>
-                ) : (
-                  <div className="rounded-2xl p-4 text-center"
-                    style={{ background: "rgba(124,58,237,0.08)", border: "1px solid rgba(124,58,237,0.2)" }}>
-                    <p className="text-xs font-bold mb-1" style={{ color: "#c4b5fd" }}>Code de récupération</p>
-                    <p className="text-3xl font-black tracking-widest my-2" style={{ color: "#f3f0ff" }}>
-                      {forgotResult.resetCode}
-                    </p>
-                    <p className="text-[10px]" style={{ color: "rgba(200,185,255,0.5)" }}>Note ce code · Valide 15 minutes</p>
-                  </div>
-                )}
-
-                <button onClick={goToResetManually}
-                  className="w-full py-3 text-sm font-bold transition-all"
-                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "14px", color: "rgba(200,185,255,0.8)" }}>
-                  J'ai mon code → Créer un nouveau mot de passe
+                <button onClick={goToReset}
+                  className="w-full py-4 text-sm font-extrabold"
+                  style={{ background: "#7c3aed", borderRadius: "14px", color: "#fff" }}>
+                  Entrer mon code →
+                </button>
+                <button onClick={() => { setForgotResult(null); setForgotContact(""); }}
+                  className="w-full py-2 text-xs font-bold"
+                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "12px", color: "rgba(200,185,255,0.7)" }}>
+                  Pas reçu? Renvoyer le SMS
                 </button>
               </div>
             )}
