@@ -1559,7 +1559,7 @@ ${(patientIntake?.fullName || patientIntake?.phone || patientIntake?.age) ? `
         ${patientIntake?.allergies && patientIntake.allergies.toLowerCase() !== "aucune" ? `<span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:4px;background:rgba(233,30,140,.08);color:#E91E8C">⚠ Allergie : ${patientIntake.allergies}</span>` : ""}
       </div>
       <div style="padding:5px 8px;border-radius:7px;background:rgba(233,30,140,.07);border:1px solid rgba(233,30,140,.18);margin-bottom:4px">
-        <div style="font-size:7px;font-weight:700;color:rgba(233,30,140,.7);text-transform:uppercase;letter-spacing:.06em;margin-bottom:1px">Diagnostic clinique</div>
+        <div style="font-size:7px;font-weight:700;color:rgba(233,30,140,.7);text-transform:uppercase;letter-spacing:.06em;margin-bottom:1px">Analyse indicative</div>
         <div style="font-size:12px;font-weight:800;color:#0d0a0e">${result.condition}</div>
         <div style="font-size:8px;color:#6b7280;margin-top:1px">${result.severity || ""} · ${(result.skinType || "").split("(")[0].trim()}</div>
       </div>
@@ -1824,8 +1824,7 @@ ${pdfBestProduct ? `
 <!-- ══ FOOTER ══ -->
 <div class="footer">
   <div class="footer-text">
-    <div class="footer-disclaimer">Ce rapport est un outil de pré-analyse cutanée généré par intelligence artificielle GlowScan.</div>
-    <div class="footer-disclaimer">Il ne remplace pas une consultation médicale. Consultez un dermatologue pour tout problème persistant.</div>
+    <div class="footer-disclaimer"><strong>⚠️ Disclaimer légal :</strong> Cette analyse est fournie à titre indicatif uniquement et ne constitue pas un avis médical. Elle est générée par intelligence artificielle GlowScan pour évaluer votre type de peau et suggérer des routines de soins. Consultez un dermatologue qualifié pour tout problème de peau persistant ou pour un diagnostic médical.</div>
     <div class="footer-url">glow-scan.com</div>
   </div>
   <div>
@@ -2117,13 +2116,13 @@ ${pdfBestProduct ? `
                     </span>
                   )}
                 </div>
-                {/* ── Diagnostic clinique — la pathologie africaine identifiée ── */}
+                {/* ── Analyse indicative — la pathologie africaine identifiée ── */}
                 <div style={{
                   padding: "6px 10px", borderRadius: "8px", marginBottom: "5px",
                   background: "rgba(233,30,140,0.08)", border: "1px solid rgba(233,30,140,0.2)",
                 }}>
                   <p style={{ fontSize: "8px", fontWeight: 700, color: "rgba(249,168,212,0.7)", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: "2px" }}>
-                    Diagnostic clinique
+                    Analyse indicative
                   </p>
                   <p style={{ fontSize: "12px", fontWeight: 800, color: DS.textPrimary, lineHeight: 1.3 }}>
                     {result.condition}

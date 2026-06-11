@@ -210,7 +210,7 @@ function StepDiagnostic() {
         </p>
         <div style={{ background: DS.surface, border: `1px solid ${DS.border}`, borderRadius: 16, padding: 16 }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: DS.violetMid, marginBottom: 10 }}>📋 Rapport IA inclut :</div>
-          {["Résumé clinique structuré", "Protocole de traitement matin/soir", "Posologie détaillée des actifs", "Interactions produits signalées", "Suivi recommandé (J15, J30, J90)"].map((item, i) => (
+          {["Résumé structuré", "Routine suggérée matin/soir", "Recommandations produits", "Interactions signalées", "Suivi recommandé (J15, J30, J90)"].map((item, i) => (
             <div key={i} style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 6 }}>
               <CheckCircle2 size={13} color={DS.violet} />
               <span style={{ fontSize: 12, color: DS.muted }}>{item}</span>
@@ -279,7 +279,7 @@ function StepClinicalOverride() {
           {[
             { level: "Niveau 1", desc: "Confirmer · IA correcte, vous validez", color: DS.green },
             { level: "Niveau 2", desc: "Ajuster · Corriger la sévérité ou la condition", color: DS.amber },
-            { level: "Niveau 3", desc: "Remplacer · Diagnostic clinique libre complet", color: DS.violet },
+            { level: "Niveau 3", desc: "Remplacer · Analyse indicative complète", color: DS.violet },
           ].map((item, i) => (
             <div key={i} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
               <div style={{ background: `rgba(${i === 0 ? "16,185,129" : i === 1 ? "245,158,11" : "124,58,237"},0.15)`, border: `1px solid ${item.color}`, borderRadius: 8, padding: "3px 8px", flexShrink: 0 }}>

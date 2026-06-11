@@ -923,7 +923,7 @@ export default function ProAnalyze() {
     </div>
 
     <div style="margin-top:8px;padding-top:8px;border-top:1px solid #e5e7eb;font-size:8px;color:#9ca3af;line-height:1.7">
-      Ce rapport est un outil d'aide au diagnostic à l'usage exclusif du professionnel de santé. Il ne remplace pas l'examen clinique complet ni une prescription médicale. GlowScan DERM © ${new Date().getFullYear()} — Tous droits réservés.
+      ⚠️ Disclaimer légal : Cette analyse est fournie à titre indicatif uniquement et ne constitue pas un avis médical. Elle est un outil d'aide à l'examen clinique pour le professionnel de santé qualifié. Elle ne remplace pas l'examen clinique complet, l'évaluation cutanée directe, ni une prescription médicale. Responsabilité médicale : le praticien reste seul responsable du diagnostic et du traitement. GlowScan DERM © ${new Date().getFullYear()} — Tous droits réservés.
     </div>
   </div>
 

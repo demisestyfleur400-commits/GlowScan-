@@ -200,7 +200,7 @@ export default function ProPatient() {
   <div class="validity">📅 <b>Dossier mis à jour le ${date}</b> · Réf : ${refNum} · Cabinet ${dermato?.cabinetName || "GlowScan DERM"}</div>
 </div>
 <div class="footer">
-  <div class="f-text">Ce dossier est généré par GlowScan DERM. Il ne remplace pas un examen physique ni une prescription médicale.<br>Conservez ce document dans le dossier médical de votre patient.</div>
+  <div class="f-text">⚠️ Disclaimer légal : Cette analyse est fournie à titre indicatif uniquement et ne constitue pas un avis médical. Elle est générée par GlowScan DERM comme outil d'aide clinique. Il ne remplace pas un examen physique complet, une évaluation directe cutanée, ni une prescription médicale. Vous assumez l'entière responsabilité clinique et médicale du diagnostic et du traitement.<br>Conservez ce document dans le dossier médical de votre patient.</div>
   <div class="f-brand">✦ GlowScan DERM</div>
 </div></body></html>`;
     if (returnHtml) return html;

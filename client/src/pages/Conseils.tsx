@@ -136,7 +136,7 @@ export default function Conseils() {
 
       <main className="px-4 pt-6 space-y-7">
 
-        {/* Ordonnance personnalisée IA */}
+        {/* Routine suggérée IA */}
         <motion.section
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
