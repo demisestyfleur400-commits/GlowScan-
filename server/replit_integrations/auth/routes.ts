@@ -193,8 +193,14 @@ export function registerAuthRoutes(app: Express): void {
       const [user] = await db.select().from(users).where(eq(users.email, emailInDb));
 
       if (!user) {
-        // Ne pas révéler si le compte existe — message générique
-        return res.json({ sent: true, maskedContact: isPhone ? maskPhone(trimmed) : maskEmail(trimmed), viaSms: false });
+        // Ne pas révéler si le compte existe — générer un code fake quand même
+        const fakeCode = generateCode();
+        return res.json({
+          sent: true,
+          maskedContact: isPhone ? maskPhone(trimmed) : maskEmail(trimmed),
+          viaSms: false,
+          code: fakeCode, // Code fake pour la sécurité (user inexistant)
+        });
       }
 
       // Générer code 6 chiffres, valide 15 min
