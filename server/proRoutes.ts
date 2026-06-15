@@ -6,6 +6,7 @@ import { z } from "zod";
 import bcrypt from "bcryptjs";
 import OpenAI from "openai";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import QRCode from "qrcode";
 
 // Même logique provider que routes.ts : Groq > Gemini > OpenAI
 const _proGroqKey   = process.env.GROQ_API_KEY || "";
@@ -797,5 +798,94 @@ Règles :
     res.set("Content-Disposition", `inline; filename="${entry.filename}"`);
     res.set("Cache-Control", "no-store");
     res.send(entry.data);
+  });
+
+  // Generate QR code for scan results (patient portal)
+  app.get("/api/pro/scans/:id/qrcode", async (req: any, res) => {
+    try {
+      const scanId = parseInt(req.params.id);
+      const patientId = req.query.patientId || "scan";
+
+      // QR code content: link to patient results portal
+      const qrUrl = `https://glow-scan.com/patient/${patientId}/results/${scanId}`;
+
+      // Generate QR code as SVG
+      const svgString = await QRCode.toString(qrUrl, {
+        type: "image/svg+xml",
+        width: 200,
+        margin: 2,
+        color: {
+          dark: "#7c3aed",
+          light: "#f9f7ff",
+        },
+      });
+
+      res.set("Content-Type", "image/svg+xml");
+      res.send(svgString);
+    } catch (err) {
+      console.error("❌ QR code generation failed:", err);
+      res.status(500).json({ message: "Failed to generate QR code" });
+    }
+  });
+
+  // Clinical Override: save doctor's correction to AI diagnosis
+  app.post("/api/pro/scans/:id/override", requireActivePro, async (req: any, res) => {
+    try {
+      const scanId = parseInt(req.params.id);
+      const { overrideMode, condition, score, explanation } = req.body;
+
+      const [scan] = await db
+        .select()
+        .from(scans)
+        .where(eq(scans.id, scanId));
+
+      if (!scan) {
+        return res.status(404).json({ message: "Scan non trouvé" });
+      }
+
+      // Verify ownership
+      const isOwn =
+        (scan.userId && scan.userId === req.session.userId) ||
+        (!scan.userId && scan.sessionId === req.session.id);
+      if (!isOwn) {
+        return res.status(403).json({ message: "Ce scan ne vous appartient pas" });
+      }
+
+      // Update scan with override
+      if (overrideMode !== "none") {
+        await db
+          .update(scans)
+          .set({
+            expertCorrectedCondition: condition,
+            expertNote: explanation,
+            expertReviewer: req.session.userEmail || "Unknown",
+            expertReviewedAt: new Date(),
+            // Update score if override
+            score: score || scan.score,
+          })
+          .where(eq(scans.id, scanId));
+
+        // Emit WebSocket event
+        const { emitToPatient, emitToScan } = await import("./ws");
+        if (scan.patientId) {
+          emitToPatient(scan.patientId, "scan:override-applied", {
+            scanId,
+            condition,
+            score,
+            explanation,
+          });
+        }
+        emitToScan(scanId, "scan:override-applied", { condition, score });
+      }
+
+      res.json({
+        success: true,
+        message: "Override sauvegardé",
+        scanId,
+      });
+    } catch (err) {
+      console.error("❌ Override save failed:", err);
+      res.status(500).json({ message: "Erreur lors de la sauvegarde" });
+    }
   });
 }

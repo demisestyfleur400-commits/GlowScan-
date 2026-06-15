@@ -146,3 +146,28 @@ export function useDeletePatient() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["/api/pro/patients"] }),
   });
 }
+
+export function useClinicalOverride() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ scanId, overrideMode, condition, score, explanation }: {
+      scanId: number;
+      overrideMode: "none" | "partial" | "full";
+      condition?: string;
+      score?: number;
+      explanation: string;
+    }) => {
+      const res = await apiRequest("POST", `/api/pro/scans/${scanId}/override`, {
+        overrideMode,
+        condition,
+        score,
+        explanation,
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/pro/patients"] });
+      qc.invalidateQueries({ queryKey: ["/api/pro/stats"] });
+    },
+  });
+}

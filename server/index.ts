@@ -3,10 +3,14 @@ import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import { startCronJobs } from "./cron";
+import { setupWebSocket } from "./ws";
 import path from "path";
 
 const app = express();
 const httpServer = createServer(app);
+
+// Setup WebSocket server
+setupWebSocket(httpServer);
 
 declare module "http" {
   interface IncomingMessage {

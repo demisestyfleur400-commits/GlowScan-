@@ -31,6 +31,10 @@ import {
   type QuestionnaireItem,
 } from "@/hooks/use-pro";
 import { useAnalyze } from "@/hooks/use-scans";
+import { useRealtimeScans } from "@/hooks/use-realtime";
+import { useQrCode } from "@/hooks/use-qrcode";
+import { useClinicalOverride } from "@/hooks/use-pro";
+import { ClinicalOverride, type ClinicalOverrideData } from "@/components/ClinicalOverride";
 import { lazy, Suspense } from "react";
 const ResultCard = lazy(() =>
   import("@/components/ResultCard").then((m) => ({ default: m.ResultCard }))
@@ -39,6 +43,7 @@ import { useToast } from "@/hooks/use-toast";
 import type { AnalysisResult, Patient } from "@shared/schema";
 import { ProLayout, ProCard, ProInput } from "@/components/ProLayout";
 import PDFViewerModal from "@/components/PDFViewerModal";
+import { PremiumPdfTemplate } from "@/templates/PremiumPdfTemplate";
 
 const NAVY = "#7c3aed";
 const INK = "#f3f0ff";
@@ -307,6 +312,17 @@ export default function ProAnalyze() {
   const genQuestionnaire = useGenerateQuestionnaire();
   const updateStatus = useUpdatePatientStatus();
   const { data: patientsData } = useProPatients("");
+
+  // Real-time sync: subscribe to scans updates
+  useRealtimeScans(patientId || undefined);
+
+  // QR code for PDF
+  const { qrSvg } = useQrCode(result?.savedScanId, patientId || undefined);
+
+  // Clinical override
+  const clinicalOverride = useClinicalOverride();
+  const [override, setOverride] = useState<ClinicalOverrideData | null>(null);
+  const [referenceNumber, setReferenceNumber] = useState("");
 
   const [step, setStep] = useState<Step>(1);
 
@@ -616,39 +632,21 @@ export default function ProAnalyze() {
     window.open(`https://wa.me/${cleaned}?text=${msg}`, "_blank");
   };
 
-  const exportPdf = (returnHtml = false): string | undefined => {
+  // ── Extract PDF data helper ──
+  const extractPdfData = () => {
     const r = result as any;
-    if (!r) return returnHtml ? "" : undefined;
-    if (!returnHtml && (!r.condition || r.condition === "Examen clinique en cours")) {
-      alert("Attendez la fin de l'analyse IA avant de télécharger.");
-      return undefined;
-    }
+    if (!r) return null;
+
     const date = new Date().toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
     const refNum = `GS-PRO-${new Date().getFullYear()}-${Math.random().toString(36).slice(2,7).toUpperCase()}`;
-    const clinicalSummary: string = r.clinicalSummary || r.details || "";
-    const zonesAnalysis: any[] = r.zonesAnalysis || [];
-    const toxicIngredients: any[] = r.toxicIngredients || [];
     const protocol = r.clinicalProtocol || {};
     const morning: any[] = protocol.morning || r.protocol?.morning || [];
     const evening: any[] = protocol.evening || r.protocol?.evening || [];
-    const logistics: string = r.logistics || "";
-    const antecedentsIntegration: string = r.antecedentsIntegration || "";
-    const prognostic: string = r.prognostic || "";
-    const redFlags: string[] = r.redFlags || [];
-    const confidence: string = r.confidence || "";
 
-    // Appliquer Clinical Override si présent
     const effectiveCondition = overrideType !== "none" && overrideCondition ? overrideCondition : r.condition || "—";
     const effectiveSeverity = overrideType !== "none" ? overrideSeverity : r.severity || "—";
     const effectiveScore = overrideType !== "none" ? overrideScore : r.score || "—";
-    const effectiveSummary = overrideType !== "none" && overrideSummary ? overrideSummary : r.clinicalSummary || r.details || "";
-    const overrideBadge = overrideType === "partial"
-      ? `<span style="display:inline-block;background:#7c3aed;color:#fff;font-size:8px;font-weight:700;padding:2px 8px;border-radius:4px;margin-left:6px">✓ Révisé par Dr. ${firstName || lastName || "..."}</span>`
-      : overrideType === "full"
-      ? `<span style="display:inline-block;background:#1a3a3a;color:#fff;font-size:8px;font-weight:700;padding:2px 8px;border-radius:4px;margin-left:6px">📝 Diagnostic établi par Dr. ${firstName || lastName || "..."}</span>`
-      : "";
 
-    // ── Extraction produits commandables ──
     interface OrderLine { name: string; brand: string; price: number }
     const orderLines: OrderLine[] = [];
     const seenIds = new Set<string>();
@@ -664,79 +662,76 @@ export default function ProAnalyze() {
         orderLines.push({ name: match.name, brand: match.brand || getProductBrand(match), price: match.price || 0 });
       }
     }
-    const totalEstime = orderLines.reduce((s, l) => s + l.price, 0);
 
-    // ── Design clinique (référence screenshot) ──
+    return {
+      date,
+      refNum,
+      result: r,
+      effectiveCondition,
+      effectiveSeverity,
+      effectiveScore,
+      morning,
+      evening,
+      orderLines,
+      totalEstime: orderLines.reduce((s, l) => s + l.price, 0),
+    };
+  };
+
+  // ── Generate classic PDF HTML (existing template) ──
+  const generateClassicPdfHtml = (): string | undefined => {
+    const data = extractPdfData();
+    if (!data) return undefined;
+
+    const { date, refNum, result: r, effectiveCondition, effectiveSeverity, effectiveScore, morning, evening, orderLines, totalEstime } = data;
+    const clinicalSummary: string = r.clinicalSummary || r.details || "";
+    const zonesAnalysis: any[] = r.zonesAnalysis || [];
+    const toxicIngredients: any[] = r.toxicIngredients || [];
+    const logistics: string = r.logistics || "";
+    const antecedentsIntegration: string = r.antecedentsIntegration || "";
+    const prognostic: string = r.prognostic || "";
+    const redFlags: string[] = r.redFlags || [];
+    const confidence: string = r.confidence || "";
+
+    const overrideBadge = overrideType === "partial"
+      ? `<span style="display:inline-block;background:#7c3aed;color:#fff;font-size:8px;font-weight:700;padding:2px 8px;border-radius:4px;margin-left:6px">✓ Révisé par Dr. ${firstName || lastName || "..."}</span>`
+      : overrideType === "full"
+      ? `<span style="display:inline-block;background:#1a3a3a;color:#fff;font-size:8px;font-weight:700;padding:2px 8px;border-radius:4px;margin-left:6px">📝 Diagnostic établi par Dr. ${firstName || lastName || "..."}</span>`
+      : "";
+
     const TEAL = "#1a3a3a";
     const GOLD_BADGE = "#f59e0b";
-    const GREY_BADGE = "#6b7280";
 
     const sectionHeader = (title: string) =>
-      `<div style="background:${TEAL};padding:9px 16px;border-radius:4px 4px 0 0">
-        <span style="font-size:10.5px;font-weight:800;color:#fff;letter-spacing:.5px;text-transform:uppercase">${title}</span>
-      </div>`;
+      `<div style="background:${TEAL};padding:9px 16px;border-radius:4px 4px 0 0"><span style="font-size:10.5px;font-weight:800;color:#fff;letter-spacing:.5px;text-transform:uppercase">${title}</span></div>`;
 
     const sectionWrap = (title: string, content: string) =>
-      `<div style="margin-bottom:18px;border:1px solid #d1d5db;border-radius:4px;overflow:hidden">
-        ${sectionHeader(title)}
-        <div style="background:#fff;padding:14px 16px">${content}</div>
-      </div>`;
+      `<div style="margin-bottom:18px;border:1px solid #d1d5db;border-radius:4px;overflow:hidden">${sectionHeader(title)}<div style="background:#fff;padding:14px 16px">${content}</div></div>`;
 
     const infoRowClin = (label: string, value: string) =>
-      `<div style="display:flex;gap:0;margin-bottom:6px">
-        <div style="width:200px;font-size:10px;font-weight:700;color:#374151;flex-shrink:0">${label}</div>
-        <div style="font-size:10px;color:#1a1a1a;flex:1">${value}</div>
-      </div>`;
+      `<div style="display:flex;gap:0;margin-bottom:6px"><div style="width:200px;font-size:10px;font-weight:700;color:#374151;flex-shrink:0">${label}</div><div style="font-size:10px;color:#1a1a1a;flex:1">${value}</div></div>`;
 
     const zoneRow = (z: any, i: number) => {
-      const statusColor = z.status === "Sévèrement affecté" ? "#dc2626"
-        : z.status === "Modérément affecté" ? "#d97706"
-        : z.status === "Légèrement affecté" ? "#2563eb" : "#059669";
-      return `<div style="margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid #e5e7eb">
-        <div style="font-size:10.5px;font-weight:800;color:#1a1a1a;margin-bottom:4px">
-          <span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;background:${TEAL};color:#fff;font-size:9px;font-weight:800;border-radius:50%;margin-right:6px">${i+1}</span>
-          ${z.zone || ""} — <span style="color:${statusColor}">${z.status || ""}</span>
-        </div>
-        ${z.findings ? `<div style="font-size:10px;color:#374151;line-height:1.8;margin-left:26px">${z.findings}</div>` : ""}
-        ${z.risk ? `<div style="font-size:9.5px;color:#dc2626;font-weight:700;margin-top:5px;margin-left:26px;padding:5px 8px;background:#fef2f2;border-left:3px solid #dc2626;border-radius:0 4px 4px 0">⚠ Risque : ${z.risk}</div>` : ""}
-      </div>`;
+      const statusColor = z.status === "Sévèrement affecté" ? "#dc2626" : z.status === "Modérément affecté" ? "#d97706" : z.status === "Légèrement affecté" ? "#2563eb" : "#059669";
+      return `<div style="margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid #e5e7eb"><div style="font-size:10.5px;font-weight:800;color:#1a1a1a;margin-bottom:4px"><span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;background:${TEAL};color:#fff;font-size:9px;font-weight:800;border-radius:50%;margin-right:6px">${i+1}</span>${z.zone || ""} — <span style="color:${statusColor}">${z.status || ""}</span></div>${z.findings ? `<div style="font-size:10px;color:#374151;line-height:1.8;margin-left:26px">${z.findings}</div>` : ""}${z.risk ? `<div style="font-size:9.5px;color:#dc2626;font-weight:700;margin-top:5px;margin-left:26px;padding:5px 8px;background:#fef2f2;border-left:3px solid #dc2626;border-radius:0 4px 4px 0">⚠ Risque : ${z.risk}</div>` : ""}</div>`;
     };
 
     const toxicRow = (t: any) => {
       const name = typeof t === "string" ? t : (t.ingredient || "");
       const reason = typeof t === "object" ? (t.reason || "") : "";
-      // Rouge vif avec croix blanche — exactement comme la capture
-      return `<div style="display:flex;align-items:flex-start;gap:0;margin-bottom:6px;border:1px solid #fca5a5;border-radius:3px;overflow:hidden">
-        <div style="background:#dc2626;color:#fff;font-size:13px;font-weight:900;padding:8px 11px;flex-shrink:0;display:flex;align-items:center;justify-content:center">✗</div>
-        <div style="padding:8px 12px;background:#fef2f2;flex:1">
-          <div style="font-size:10px;font-weight:700;color:#7f1d1d">${name}</div>
-          ${reason ? `<div style="font-size:9.5px;color:#991b1b;margin-top:2px;line-height:1.6">${reason}</div>` : ""}
-        </div>
-      </div>`;
+      return `<div style="display:flex;align-items:flex-start;gap:0;margin-bottom:6px;border:1px solid #fca5a5;border-radius:3px;overflow:hidden"><div style="background:#dc2626;color:#fff;font-size:13px;font-weight:900;padding:8px 11px;flex-shrink:0;display:flex;align-items:center;justify-content:center">✗</div><div style="padding:8px 12px;background:#fef2f2;flex:1"><div style="font-size:10px;font-weight:700;color:#7f1d1d">${name}</div>${reason ? `<div style="font-size:9.5px;color:#991b1b;margin-top:2px;line-height:1.6">${reason}</div>` : ""}</div></div>`;
     };
 
     const getBadge = (s: any, i: number): string => {
       const freq = (s.frequency || "").toLowerCase();
-      if (freq.includes("quotidien") || freq.includes("matin") || freq.includes("soir"))
-        return `<div style="background:#6b7280;color:#fff;font-size:8px;font-weight:700;padding:3px 8px;border-radius:3px;text-align:center;line-height:1.4">Usage<br>quotidien</div>`;
-      if (i === 0)
-        return `<div style="background:${TEAL};color:#fff;font-size:8px;font-weight:700;padding:3px 8px;border-radius:3px;text-align:center;line-height:1.4">Obligatoire</div>`;
+      if (freq.includes("quotidien") || freq.includes("matin") || freq.includes("soir")) return `<div style="background:#6b7280;color:#fff;font-size:8px;font-weight:700;padding:3px 8px;border-radius:3px;text-align:center;line-height:1.4">Usage<br>quotidien</div>`;
+      if (i === 0) return `<div style="background:${TEAL};color:#fff;font-size:8px;font-weight:700;padding:3px 8px;border-radius:3px;text-align:center;line-height:1.4">Obligatoire</div>`;
       return `<div style="background:${GOLD_BADGE};color:#fff;font-size:8px;font-weight:700;padding:3px 8px;border-radius:3px;text-align:center;line-height:1.4">Prioritaire</div>`;
     };
 
     const stepRow = (s: any, i: number, globalIdx: number) => {
       if (!s) return "";
       const numStr = String(globalIdx + 1).padStart(2, "0");
-      // Layout identique au screenshot : numéro teal | contenu | badge à droite
-      return `<div style="display:flex;gap:0;margin-bottom:10px;border:1px solid #e5e7eb;border-radius:4px;overflow:hidden;align-items:stretch">
-        <div style="background:${TEAL};color:#fff;font-size:13px;font-weight:900;padding:12px 14px;flex-shrink:0;display:flex;align-items:center;justify-content:center;min-width:42px">${numStr}</div>
-        <div style="padding:10px 14px;flex:1">
-          <div style="font-size:10.5px;font-weight:800;color:#1a1a1a;text-transform:uppercase;letter-spacing:.3px">${s.step || ""}</div>
-          ${s.product ? `<div style="font-size:9.5px;color:#374151;font-style:italic;margin-top:2px">Usage : ${s.product}${s.concentration ? ` — ${s.concentration}` : ""}${s.frequency ? ` — ${s.frequency}` : ""}</div>` : ""}
-          ${s.mechanism ? `<div style="font-size:9.5px;color:#4b5563;line-height:1.7;margin-top:5px">${s.mechanism}</div>` : ""}
-        </div>
-        <div style="padding:10px 12px;display:flex;align-items:flex-start;flex-shrink:0">${getBadge(s, i)}</div>
-      </div>`;
+      return `<div style="display:flex;gap:0;margin-bottom:10px;border:1px solid #e5e7eb;border-radius:4px;overflow:hidden;align-items:stretch"><div style="background:${TEAL};color:#fff;font-size:13px;font-weight:900;padding:12px 14px;flex-shrink:0;display:flex;align-items:center;justify-content:center;min-width:42px">${numStr}</div><div style="padding:10px 14px;flex:1"><div style="font-size:10.5px;font-weight:800;color:#1a1a1a;text-transform:uppercase;letter-spacing:.3px">${s.step || ""}</div>${s.product ? `<div style="font-size:9.5px;color:#374151;font-style:italic;margin-top:2px">Usage : ${s.product}${s.concentration ? ` — ${s.concentration}` : ""}${s.frequency ? ` — ${s.frequency}` : ""}</div>` : ""}${s.mechanism ? `<div style="font-size:9.5px;color:#4b5563;line-height:1.7;margin-top:5px">${s.mechanism}</div>` : ""}</div><div style="padding:10px 12px;display:flex;align-items:flex-start;flex-shrink:0">${getBadge(s, i)}</div></div>`;
     };
 
     const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
@@ -929,14 +924,41 @@ export default function ProAnalyze() {
 
 </div>
 </body></html>`;
+    return html;
+  };
+
+  // ── Generate premium PDF HTML (with QR code) ──
+  const generatePremiumPdfHtml = (): string | undefined => {
+    const data = extractPdfData();
+    if (!data) return undefined;
+    // For MVP, use classic template - will be enhanced to use PremiumPdfTemplate with QR code
+    return generateClassicPdfHtml();
+  };
+
+  // ── Main PDF export function ──
+  const exportPdf = (returnHtml = false): string | undefined => {
+    const r = result as any;
+    if (!r) return returnHtml ? "" : undefined;
+    if (!returnHtml && (!r.condition || r.condition === "Examen clinique en cours")) {
+      alert("Attendez la fin de l'analyse IA avant de télécharger.");
+      return undefined;
+    }
+
+    // Choose template: use premium if we have override data (future: if QR code is available)
+    const html = overrideType !== "none" ? generatePremiumPdfHtml() : generateClassicPdfHtml();
+    if (!html) return undefined;
     if (returnHtml) return html;
+
+    // Generate PDF
+    const data = extractPdfData();
+    if (!data) return undefined;
 
     const element = document.createElement("div");
     element.innerHTML = html;
     html2pdf()
       .set({
         margin: 0,
-        filename: `GlowScan-Pro-${firstName}-${lastName}-${refNum}.pdf`,
+        filename: `GlowScan-Pro-${data.result.firstName || firstName}-${data.result.lastName || lastName}-${data.refNum}.pdf`,
         image: { type: "jpeg", quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true },
         jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
