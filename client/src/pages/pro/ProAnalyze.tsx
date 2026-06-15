@@ -928,15 +928,44 @@ export default function ProAnalyze() {
   };
 
   // ── Generate premium PDF HTML (with QR code) ──
-  const generatePremiumPdfHtml = (): string | undefined => {
+  const generatePremiumPdfHtml = (qrCodeSvg?: string): string | undefined => {
     const data = extractPdfData();
     if (!data) return undefined;
-    // For MVP, use classic template - will be enhanced to use PremiumPdfTemplate with QR code
-    return generateClassicPdfHtml();
+
+    // Use premium template with QR code if available
+    const patientObj: Patient = {
+      id: patientId || 0,
+      firstName,
+      lastName,
+      age: age ? parseInt(age) : undefined,
+      sex: (sex as any) || "—",
+      whatsappNumber: phone || null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    const override = overrideType !== "none" ? {
+      condition: overrideCondition || data.result.condition,
+      score: overrideScore || data.result.score || 50,
+      explanation: overrideReason || overrideSummary || "Correction clinique",
+    } : undefined;
+
+    const html = PremiumPdfTemplate({
+      patient: patientObj,
+      analysis: data.result,
+      doctorName: `${firstName} ${lastName}`.trim() || "Dermatologue",
+      cabinetName: "GlowScan Pro",
+      patientPhoto: photoBase64 || undefined,
+      override,
+      referenceNumber: data.refNum,
+      qrCodeSvg,
+    });
+
+    return html;
   };
 
   // ── Main PDF export function ──
-  const exportPdf = (returnHtml = false): string | undefined => {
+  const exportPdf = (returnHtml = false, qrCodeSvg?: string): string | undefined => {
     const r = result as any;
     if (!r) return returnHtml ? "" : undefined;
     if (!returnHtml && (!r.condition || r.condition === "Examen clinique en cours")) {
@@ -944,8 +973,8 @@ export default function ProAnalyze() {
       return undefined;
     }
 
-    // Choose template: use premium if we have override data (future: if QR code is available)
-    const html = overrideType !== "none" ? generatePremiumPdfHtml() : generateClassicPdfHtml();
+    // Choose template: use premium if QR code available, otherwise use classic
+    const html = qrCodeSvg ? generatePremiumPdfHtml(qrCodeSvg) : generateClassicPdfHtml();
     if (!html) return undefined;
     if (returnHtml) return html;
 
@@ -973,7 +1002,7 @@ export default function ProAnalyze() {
       toast({ title: "Analyse non terminée", description: "Attendez la fin de l'analyse IA.", variant: "destructive" });
       return;
     }
-    const html = exportPdf(true);
+    const html = exportPdf(true, qrSvg || undefined);
     if (!html) return;
     setPdfHtml(html);
     setShowPdfViewer(true);
