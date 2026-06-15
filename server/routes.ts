@@ -529,10 +529,12 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
                 temperature: 0.2,
               },
             }),
-            new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Timeout")), 45000)),
+            new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Timeout")), 120000)), // 2min timeout pour Gemini
           ]);
           c = gemResult.response.text() || "";
         } else if (openai) {
+          // Timeout adapté au provider : Llama/Groq est 3-5x plus lent que GPT-4
+          const apiTimeout = USE_GROQ ? 180000 : 60000; // 3min pour Groq, 1min pour OpenAI
           const r = await openai.chat.completions.create({
             model: AI_MODEL,
             messages: [
@@ -548,7 +550,7 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
             max_tokens: 4500,
             temperature: 0.2,
             response_format: { type: "json_object" },
-          }, { timeout: 60000, maxRetries: 0 });
+          }, { timeout: apiTimeout, maxRetries: 0 });
           c = r.choices[0]?.message?.content || "";
           console.log(`[analyze] finish: ${r.choices[0]?.finish_reason}`);
         } else {
