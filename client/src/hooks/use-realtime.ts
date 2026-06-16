@@ -43,6 +43,9 @@ export function useRealtimeScans(patientId?: number) {
           queryClient.invalidateQueries({ queryKey: [`/api/pro/patients/${patientId}`] });
         } else if (message.event === "scan:override-applied") {
           queryClient.invalidateQueries({ queryKey: [`/api/pro/patients/${patientId}`] });
+        } else if (message.event === "patient:pending-added") {
+          // Nouveau dossier arrive dans la queue : incrémenter le badge
+          queryClient.invalidateQueries({ queryKey: ["/api/pro/pending-patients"] });
         }
       } catch (err) {
         console.error("Failed to parse WebSocket message:", err);

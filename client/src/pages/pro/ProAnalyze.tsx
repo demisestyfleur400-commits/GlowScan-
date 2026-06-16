@@ -26,6 +26,7 @@ import {
   useAttachScanToPatient,
   useValidateScan,
   useProPatients,
+  useProAccount,
   useGenerateQuestionnaire,
   useUpdatePatientStatus,
   type QuestionnaireItem,
@@ -312,6 +313,11 @@ export default function ProAnalyze() {
   const genQuestionnaire = useGenerateQuestionnaire();
   const updateStatus = useUpdatePatientStatus();
   const { data: patientsData } = useProPatients("");
+  const { data: accountData } = useProAccount();
+
+  // 🔑 Détecter le rôle de l'utilisateur : doctor ou secretary
+  const userRole = accountData?.user?.role;
+  const isDoctor = userRole === "doctor";
 
   // Real-time sync: subscribe to scans updates
   useRealtimeScans(patientId || undefined);
@@ -1324,16 +1330,28 @@ export default function ProAnalyze() {
                 <ArrowLeft className="w-3.5 h-3.5" />
                 Retour
               </button>
-              <button
-                onClick={launchAnalysis}
-                disabled={!photoBase64}
-                data-testid="button-launch-analysis"
-                className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-full text-white text-sm font-extrabold disabled:opacity-50 active:scale-[0.98] transition-all"
-                style={{ background: NAVY }}
-              >
-                Lancer l'analyse IA
-                <Activity className="w-4 h-4" />
-              </button>
+              {isDoctor ? (
+                <button
+                  onClick={launchAnalysis}
+                  disabled={!photoBase64}
+                  data-testid="button-launch-analysis"
+                  className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-full text-white text-sm font-extrabold disabled:opacity-50 active:scale-[0.98] transition-all"
+                  style={{ background: NAVY }}
+                >
+                  Lancer l'analyse IA
+                  <Activity className="w-4 h-4" />
+                </button>
+              ) : (
+                <button
+                  disabled
+                  className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-full text-white text-sm font-extrabold opacity-40"
+                  title="Seules les dermatologues peuvent lancer une analyse"
+                  style={{ background: NAVY }}
+                >
+                  Analyse réservée au médecin
+                  <Activity className="w-4 h-4" />
+                </button>
+              )}
             </div>
           </ProCard>
         )}

@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
-import { Search, Plus, ChevronRight, ScanLine, Users } from "lucide-react";
-import { useProPatients } from "@/hooks/use-pro";
+import { Search, Plus, ChevronRight, ScanLine, Users, Clock } from "lucide-react";
+import { useProPatients, useProPendingPatients, useProAccount } from "@/hooks/use-pro";
+import { useRealtimeScans } from "@/hooks/use-realtime";
 import { ProLayout, ProCard, StatusBadge } from "@/components/ProLayout";
+import PendingPatientsList from "@/components/PendingPatientsList";
 
 const NAVY = "#7c3aed";
 const INK = "#f3f0ff";
@@ -26,12 +28,27 @@ const STATUS_LABELS: Record<string, { label: string; color: string; bg: string; 
 export default function ProPatients() {
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [viewTab, setViewTab] = useState<"all" | "pending">("all");
   const { data, isLoading } = useProPatients(q);
-  const allPatients = data?.patients || [];
+  const { data: pendingData, isLoading: isPendingLoading } = useProPendingPatients();
+  const { data: accountData } = useProAccount();
 
-  const patients = statusFilter === "all"
-    ? allPatients
-    : allPatients.filter(p => p.status === statusFilter);
+  // Real-time update for pending patients count
+  useRealtimeScans(undefined);
+
+  // 🔑 Détecter le rôle de l'utilisateur
+  const userRole = accountData?.user?.role;
+  const isDoctor = userRole === "doctor";
+
+  const allPatients = data?.patients || [];
+  const pendingPatients = pendingData?.patients || [];
+  const pendingCount = pendingData?.count || 0;
+
+  const displayPatients = viewTab === "pending"
+    ? pendingPatients
+    : statusFilter === "all"
+      ? allPatients
+      : allPatients.filter(p => p.status === statusFilter);
 
   return (
     <ProLayout
@@ -49,73 +66,115 @@ export default function ProPatients() {
         </Link>
       }
     >
-      {/* Search */}
-      <ProCard className="p-2 mb-3">
-        <div className="flex items-center gap-2 px-2.5 py-1">
-          <Search className="w-4 h-4 flex-shrink-0" style={{ color: "rgba(255,255,255,0.35)" }} />
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Rechercher un patient par nom…"
-            data-testid="input-search"
-            className="flex-1 bg-transparent text-sm outline-none py-1.5"
-            style={{ color: INK }}
-          />
+      {/* Onglets : En attente vs Tous (masqué pour secrétaires) */}
+      {isDoctor && (
+        <div className="flex gap-2 mb-3">
+          <button
+            onClick={() => { setViewTab("pending"); setStatusFilter("all"); }}
+            className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-extrabold transition-all active:scale-95 flex items-center gap-2 ${
+              viewTab === "pending"
+                ? "bg-violet-600 text-white"
+                : "bg-rgba(255,255,255,0.04) border border-rgba(255,255,255,0.1) text-muted-foreground hover:border-violet-300"
+            }`}
+            style={viewTab === "pending"
+              ? { background: NAVY }
+              : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" }
+            }
+          >
+            <Clock size={14} />
+            En attente
+            {pendingCount > 0 && (
+              <span className="ml-1 px-1.5 py-0.5 bg-red-500 text-white text-[10px] font-extrabold rounded-full">
+                {pendingCount}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => { setViewTab("all"); setStatusFilter("all"); }}
+            className="flex-shrink-0 px-4 py-2 rounded-full text-xs font-extrabold transition-all active:scale-95"
+            style={viewTab === "all"
+              ? { background: NAVY, color: "#fff" }
+              : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(200,185,255,0.65)" }
+            }
+          >
+            Tous les patients
+          </button>
         </div>
-      </ProCard>
-
-      {/* Filtres par statut */}
-      <div className="flex gap-2 overflow-x-auto pb-2 mb-3" style={{ scrollbarWidth: "none" }}>
-        {STATUS_FILTERS.map(f => {
-          const on = statusFilter === f.v;
-          return (
-            <button
-              key={f.v}
-              onClick={() => setStatusFilter(f.v)}
-              className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-extrabold transition-all active:scale-95"
-              style={on
-                ? { background: f.v === "all" ? NAVY : `${(f as any).color}22`, border: `1.5px solid ${f.v === "all" ? NAVY : (f as any).color}`, color: f.v === "all" ? "#fff" : (f as any).color }
-                : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(200,185,255,0.65)" }
-              }
-            >
-              {f.label}
-              {f.v !== "all" && (
-                <span className="ml-1" style={{ opacity: 0.7 }}>
-                  ({allPatients.filter(p => p.status === f.v).length})
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Liste */}
-      {isLoading && (
-        <p className="text-center text-sm py-12" style={{ color: "rgba(200,185,255,0.65)" }}>Chargement…</p>
       )}
 
-      {!isLoading && patients.length === 0 && (
-        <ProCard className="p-10 text-center">
-          <Users className="w-10 h-10 mx-auto mb-3" style={{ color: "rgba(255,255,255,0.35)" }} />
-          <p className="mb-4 text-sm font-medium" style={{ color: "rgba(200,185,255,0.65)" }}>
-            {q ? "Aucun patient trouvé" : "Aucun patient encore enregistré"}
-          </p>
-          <Link
-            href="/derm/analyse?nouveau=1"
-            data-testid="link-add-first"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-white font-extrabold text-sm active:scale-95 transition-all"
-            style={{ background: NAVY }}
-          >
-            <ScanLine className="w-4 h-4" />
-            Analyser un nouveau patient
-          </Link>
+      {/* Search (hidden when on pending tab) */}
+      {viewTab === "all" && (
+        <ProCard className="p-2 mb-3">
+          <div className="flex items-center gap-2 px-2.5 py-1">
+            <Search className="w-4 h-4 flex-shrink-0" style={{ color: "rgba(255,255,255,0.35)" }} />
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Rechercher un patient par nom…"
+              data-testid="input-search"
+              className="flex-1 bg-transparent text-sm outline-none py-1.5"
+              style={{ color: INK }}
+            />
+          </div>
         </ProCard>
       )}
 
-      {patients.length > 0 && (
+      {/* Filtres par statut (only when on "all" tab) */}
+      {viewTab === "all" && (
+        <div className="flex gap-2 overflow-x-auto pb-2 mb-3" style={{ scrollbarWidth: "none" }}>
+          {STATUS_FILTERS.map(f => {
+            const on = statusFilter === f.v;
+            return (
+              <button
+                key={f.v}
+                onClick={() => setStatusFilter(f.v)}
+                className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-extrabold transition-all active:scale-95"
+                style={on
+                  ? { background: f.v === "all" ? NAVY : `${(f as any).color}22`, border: `1.5px solid ${f.v === "all" ? NAVY : (f as any).color}`, color: f.v === "all" ? "#fff" : (f as any).color }
+                  : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(200,185,255,0.65)" }
+                }
+              >
+                {f.label}
+                {f.v !== "all" && (
+                  <span className="ml-1" style={{ opacity: 0.7 }}>
+                    ({allPatients.filter(p => p.status === f.v).length})
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Liste */}
+      {(viewTab === "all" ? isLoading : isPendingLoading) && (
+        <p className="text-center text-sm py-12" style={{ color: "rgba(200,185,255,0.65)" }}>Chargement…</p>
+      )}
+
+      {!(viewTab === "all" ? isLoading : isPendingLoading) && displayPatients.length === 0 && (
+        <ProCard className="p-10 text-center">
+          <Users className="w-10 h-10 mx-auto mb-3" style={{ color: "rgba(255,255,255,0.35)" }} />
+          <p className="mb-4 text-sm font-medium" style={{ color: "rgba(200,185,255,0.65)" }}>
+            {viewTab === "pending" ? "✅ Aucun dossier en attente" : (q ? "Aucun patient trouvé" : "Aucun patient encore enregistré")}
+          </p>
+          {viewTab === "all" && (
+            <Link
+              href="/derm/analyse?nouveau=1"
+              data-testid="link-add-first"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-white font-extrabold text-sm active:scale-95 transition-all"
+              style={{ background: NAVY }}
+            >
+              <ScanLine className="w-4 h-4" />
+              Analyser un nouveau patient
+            </Link>
+          )}
+        </ProCard>
+      )}
+
+      {displayPatients.length > 0 && (
         <ProCard className="overflow-hidden">
           <div style={{ borderColor: "rgba(255,255,255,0.07)" }}>
-            {patients.map((p, i) => (
+            {displayPatients.map((p, i) => (
               <motion.div
                 key={p.id}
                 initial={{ opacity: 0, y: 6 }}

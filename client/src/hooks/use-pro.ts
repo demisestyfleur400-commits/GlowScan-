@@ -7,6 +7,13 @@ export interface ProAccountResponse {
   active?: boolean;
   daysLeftTrial?: number | null;
   isAdmin?: boolean;
+  user?: {
+    id: string;
+    email?: string;
+    role?: "doctor" | "secretary";
+    firstName?: string;
+    lastName?: string;
+  } | null;
 }
 
 export function useProAccount() {
@@ -25,6 +32,18 @@ export function useProPatients(q: string = "") {
       if (!res.ok) throw new Error("Erreur chargement patients");
       return res.json();
     },
+  });
+}
+
+export function useProPendingPatients() {
+  return useQuery<{ patients: Patient[]; count: number }>({
+    queryKey: ["/api/pro/pending-patients"],
+    queryFn: async () => {
+      const res = await fetch("/api/pro/pending-patients", { credentials: "include" });
+      if (!res.ok) throw new Error("Erreur chargement patients en attente");
+      return res.json();
+    },
+    refetchInterval: 5000, // Refetch toutes les 5s pour réactivité
   });
 }
 
@@ -48,6 +67,20 @@ export function useCreatePatient() {
       return res.json();
     },
     onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/pro/patients"] });
+    },
+  });
+}
+
+export function useSubmitPatientForReview() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (patientId: number) => {
+      const res = await apiRequest("POST", `/api/pro/patients/${patientId}/submit-for-review`, {});
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/pro/pending-patients"] });
       qc.invalidateQueries({ queryKey: ["/api/pro/patients"] });
     },
   });

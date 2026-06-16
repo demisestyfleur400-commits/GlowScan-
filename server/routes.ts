@@ -17,6 +17,7 @@ import { referrals, loyaltyPoints, subscriptions, scans, leads, premiumRequests,
 import { users } from "@shared/models/auth";
 import { eq, and, sql, gte, count, lte, desc, avg, inArray } from "drizzle-orm";
 import { whatsappClicks, orders, pageVisits } from "@shared/schema";
+import { emitToUser } from "./ws";
 
 // ── Sélection automatique du provider IA ────────────────────────────────
 // Priorité : GROQ_API_KEY (free, global, vision) → GEMINI_API_KEY → OPENAI_API_KEY
@@ -278,6 +279,19 @@ export async function registerRoutes(
       // === Auth check : 1 analyse anonyme autorisée, ensuite compte requis ===
       const userId = req.session?.userId || req.user?.id || (req.user as any)?.claims?.sub;
       const isAnonymous = !isAuth(req);
+
+      // 🔑 SÉCURITÉ CRITIQUE : seuls les doctors (dermatologues) peuvent lancer l'analyse
+      // Les secrétaires voient l'erreur 403 si elles essaient d'appeler cet endpoint
+      if (userId && !isAnonymous) {
+        const [user] = await db.select().from(users).where(eq(users.id, userId));
+        if (user && user.role === "secretary") {
+          console.warn(`[security] ⚠️ Tentative non-autorisée par secretary ${user.email} sur POST /api/analyze`);
+          return res.status(403).json({
+            message: "Seules les dermatologues peuvent lancer une analyse",
+            code: "DOCTOR_ONLY",
+          });
+        }
+      }
 
       if (isAnonymous) {
         // Déjà utilisé son analyse anonyme → invitation à créer un compte

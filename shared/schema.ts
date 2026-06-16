@@ -374,16 +374,31 @@ export const patients = pgTable("patients", {
   whatsappNumber: text("whatsapp_number"),              // ex: "237677000000"
   photoUrl: text("photo_url"),                          // photo profil
   status: text("status").default("green"),              // red | yellow | green (calculé auto par IA)
+  intakePending: boolean("intake_pending").default(true), // true = en attente d'analyse, false = analysé
   lastScanAt: timestamp("last_scan_at"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Secrétaires d'un dermatologue (rôle distinct avec permissions limitées)
+export const secretaryAccounts = pgTable("secretary_accounts", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => users.id).unique(),
+  proAccountId: integer("pro_account_id").notNull().references(() => proAccounts.id, { onDelete: "cascade" }),
+  fullName: text("full_name").notNull(),
+  email: text("email").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  createdBy: text("created_by").notNull(), // userId of the dermatologist who created this secretary account
+});
+
 export const insertProAccountSchema = createInsertSchema(proAccounts).omit({ id: true, createdAt: true });
 export const insertPatientSchema = createInsertSchema(patients).omit({ id: true, createdAt: true, lastScanAt: true, status: true });
+export const insertSecretaryAccountSchema = createInsertSchema(secretaryAccounts).omit({ id: true, createdAt: true });
 export type ProAccount = typeof proAccounts.$inferSelect;
 export type InsertProAccount = z.infer<typeof insertProAccountSchema>;
 export type Patient = typeof patients.$inferSelect;
 export type InsertPatient = z.infer<typeof insertPatientSchema>;
+export type SecretaryAccount = typeof secretaryAccounts.$inferSelect;
+export type InsertSecretaryAccount = z.infer<typeof insertSecretaryAccountSchema>;
 
 // Custom types for analysis response
 export interface PredictiveRisk {

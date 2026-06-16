@@ -22,6 +22,7 @@ export const users = pgTable("users", {
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
   passwordHash: varchar("password_hash"),
+  role: varchar("role").default("doctor"), // "doctor" | "secretary"
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

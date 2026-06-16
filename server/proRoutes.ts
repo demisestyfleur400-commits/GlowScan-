@@ -1,12 +1,13 @@
 import type { Express } from "express";
 import { db } from "./db";
-import { proAccounts, patients, scans, premiumRequests, users, insertProAccountSchema, insertPatientSchema, pageVisits } from "@shared/schema";
+import { proAccounts, patients, scans, premiumRequests, users, secretaryAccounts, insertProAccountSchema, insertPatientSchema, insertSecretaryAccountSchema, pageVisits } from "@shared/schema";
 import { eq, and, desc, sql, count, gte, isNotNull } from "drizzle-orm";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import OpenAI from "openai";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import QRCode from "qrcode";
+import { emitToPatient, emitToUser } from "./ws";
 
 // Même logique provider que routes.ts : Groq > Gemini > OpenAI
 const _proGroqKey   = process.env.GROQ_API_KEY || "";
@@ -95,6 +96,43 @@ function requireActivePro(req: any, res: any, next: any) {
       });
     }
     next();
+  });
+}
+
+// Middleware — exige un utilisateur authentifié avec role "doctor"
+// 🔑 SÉCURITÉ CRITIQUE : empêche les secrétaires d'appeler /api/analyze
+function requireDoctor(req: any, res: any, next: any) {
+  const userId = req.session?.userId;
+  if (!userId) return res.status(401).json({ message: "Authentification requise" });
+
+  getProAccountForUser(userId).then((acc: any) => {
+    // Récupérer l'utilisateur pour vérifier le rôle
+    return db.select().from(users).where(eq(users.id, userId)).then(([u]) => {
+      if (!u) return res.status(401).json({ message: "Utilisateur non trouvé" });
+
+      // ✅ Vérifier que l'utilisateur est docteur
+      if (u.role !== "doctor") {
+        console.warn(`[security] ⚠️ Tentative non-autorisée par ${u.role} (${u.email}) sur /api/analyze`);
+        return res.status(403).json({
+          message: "Seules les dermatologues peuvent analyser",
+          code: "DOCTOR_ONLY",
+        });
+      }
+
+      // ✅ Vérifier qu'il a un compte Pro actif
+      if (!acc || !isProActive(acc)) {
+        return res.status(402).json({
+          message: "Compte Pro requis pour analyser",
+          code: "PRO_SUBSCRIPTION_REQUIRED",
+        });
+      }
+
+      (req as any).proAccount = acc;
+      next();
+    });
+  }).catch(err => {
+    console.error("[requireDoctor] error:", err);
+    res.status(500).json({ message: "Erreur serveur" });
   });
 }
 
@@ -230,14 +268,31 @@ export function registerProRoutes(app: Express) {
   app.get("/api/pro/account", async (req: any, res) => {
     const userId = req.session?.userId;
     if (!userId) return res.status(401).json({ message: "Connexion requise" });
+
+    // Récupérer les infos de l'utilisateur (incluant son rôle)
+    const [user] = await db.select().from(users).where(eq(users.id, userId));
+
     const acc = await getProAccountForUser(userId);
-    if (!acc) return res.json({ account: null });
+    if (!acc) {
+      return res.json({
+        account: null,
+        user: user ? { id: user.id, email: user.email, role: user.role, firstName: user.firstName, lastName: user.lastName } : null,
+      });
+    }
+
     const active = isProActive(acc);
     const daysLeft = acc.subscriptionStatus === "trial"
       ? Math.max(0, Math.ceil((acc.trialEndsAt.getTime() - Date.now()) / (24 * 60 * 60 * 1000)))
       : null;
     const isAdmin = (req.session as any)?.isAdmin === true;
-    res.json({ account: acc, active, daysLeftTrial: daysLeft, isAdmin });
+
+    res.json({
+      account: acc,
+      active,
+      daysLeftTrial: daysLeft,
+      isAdmin,
+      user: user ? { id: user.id, email: user.email, role: user.role, firstName: user.firstName, lastName: user.lastName } : null,
+    });
   });
 
   // ───────────────────────────────────────────
@@ -283,6 +338,27 @@ export function registerProRoutes(app: Express) {
   });
 
   // ───────────────────────────────────────────
+  // GET /api/pro/pending-patients — patients en attente d'analyse
+  // ───────────────────────────────────────────
+  app.get("/api/pro/pending-patients", requireActivePro, async (req: any, res) => {
+    try {
+      const list = await db.select().from(patients)
+        .where(and(
+          eq(patients.dermatologistId, req.proAccount.id),
+          eq(patients.intakePending, true)
+        ))
+        .orderBy(desc(patients.createdAt));
+      res.json({
+        patients: list,
+        count: list.length
+      });
+    } catch (err) {
+      console.error("[pro/pending-patients] error:", err);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // ───────────────────────────────────────────
   // POST /api/pro/patients — créer patient
   // ───────────────────────────────────────────
   app.post("/api/pro/patients", requireActivePro, async (req: any, res) => {
@@ -299,6 +375,36 @@ export function registerProRoutes(app: Express) {
     } catch (err: any) {
       if (err?.issues) return res.status(400).json({ message: "Données invalides", issues: err.issues });
       console.error("[pro/patients create] error:", err);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // ───────────────────────────────────────────
+  // POST /api/pro/patients/:id/submit-for-review — secrétaire valide le dossier
+  // ───────────────────────────────────────────
+  app.post("/api/pro/patients/:id/submit-for-review", requireActivePro, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const [existing] = await db.select().from(patients)
+        .where(and(eq(patients.id, id), eq(patients.dermatologistId, req.proAccount.id)));
+      if (!existing) return res.status(404).json({ message: "Patient introuvable" });
+
+      // Marquer le patient comme en attente d'analyse
+      await db.update(patients).set({
+        intakePending: true,
+      }).where(eq(patients.id, id));
+
+      // 🔴 Notification WebSocket : le nouveau dossier arrive dans la queue du médecin
+      emitToPatient(id, "patient:pending-added", {
+        patientId: id,
+        firstName: existing.firstName,
+        lastName: existing.lastName,
+        createdAt: new Date().toISOString(),
+      });
+
+      res.json({ success: true, message: "Dossier envoyé pour analyse" });
+    } catch (err) {
+      console.error("[pro/patients/submit-for-review] error:", err);
       res.status(500).json({ message: "Erreur serveur" });
     }
   });
@@ -403,12 +509,25 @@ export function registerProRoutes(app: Express) {
         await recomputePatientStatus(previousPatientId);
       }
 
-      // Mettre à jour statut + lastScanAt patient
+      // Mettre à jour statut + lastScanAt patient + marquer comme analysé
       const newStatus = statusFromScore(scan.score || 50);
       await db.update(patients).set({
         status: newStatus,
         lastScanAt: new Date(),
+        intakePending: false, // ✅ Analyse complétée, patient sort de "en attente"
       }).where(eq(patients.id, data.patientId));
+
+      // 🔴 Émission WebSocket : notifier tous les clients connectés au patient
+      // Le dermato voit IMMÉDIATEMENT le nouveau scan sans refresh
+      emitToPatient(data.patientId, "scan:photo-captured", {
+        scanId: scanId,
+        patientId: data.patientId,
+        status: newStatus,
+        condition: scan.condition,
+        score: scan.score,
+        imageUrl: scan.imageUrl,
+        attachedAt: new Date().toISOString(),
+      });
 
       res.json({ success: true, status: newStatus });
     } catch (err: any) {
@@ -886,6 +1005,158 @@ Règles :
     } catch (err) {
       console.error("❌ Override save failed:", err);
       res.status(500).json({ message: "Erreur lors de la sauvegarde" });
+    }
+  });
+
+  // ───────────────────────────────────────────
+  // POST /api/secretary/login — Connexion secrétaire
+  // ───────────────────────────────────────────
+  app.post("/api/secretary/login", async (req: any, res) => {
+    try {
+      const schema = z.object({
+        email: z.string().email(),
+        password: z.string().min(6),
+      });
+      const data = schema.parse(req.body);
+      const emailLower = data.email.toLowerCase().trim();
+
+      // Chercher le compte secrétaire
+      const [secretary] = await db.select().from(secretaryAccounts)
+        .where(eq(secretaryAccounts.email, emailLower));
+      if (!secretary) {
+        return res.status(401).json({ message: "Email ou mot de passe incorrect" });
+      }
+
+      // Vérifier le mot de passe
+      const [user] = await db.select().from(users)
+        .where(eq(users.id, secretary.userId));
+      if (!user || !user.passwordHash || !(await bcrypt.compare(data.password, user.passwordHash))) {
+        return res.status(401).json({ message: "Email ou mot de passe incorrect" });
+      }
+
+      // Vérifier que l'utilisateur est bien marqué comme secretary
+      if (user.role !== "secretary") {
+        return res.status(403).json({ message: "Compte non autorisé" });
+      }
+
+      // Login session
+      req.session.userId = user.id;
+      req.session.save((err: any) => {
+        if (err) {
+          console.error("[secretary/login] session save:", err);
+          return res.status(500).json({ message: "Erreur connexion" });
+        }
+        console.log(`[secretary] ✅ Login secrétaire ${secretary.fullName} (${emailLower})`);
+        res.json({
+          success: true,
+          user: {
+            id: user.id,
+            email: user.email,
+            firstName: user.firstName,
+            role: user.role,
+            secretaryName: secretary.fullName,
+          },
+        });
+      });
+    } catch (err: any) {
+      if (err?.issues) return res.status(400).json({ message: "Données invalides" });
+      console.error("[secretary/login] error:", err);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // ───────────────────────────────────────────
+  // POST /api/pro/secretaries — Créer un accès secrétaire
+  // ───────────────────────────────────────────
+  app.post("/api/pro/secretaries", requireActivePro, async (req: any, res) => {
+    try {
+      const schema = z.object({
+        email: z.string().email(),
+        fullName: z.string().min(1),
+        password: z.string().min(6),
+      });
+      const data = schema.parse(req.body);
+
+      // Vérifier l'email n'existe pas déjà
+      const existingUser = await db.select().from(users).where(eq(users.email, data.email));
+      if (existingUser.length > 0) {
+        return res.status(400).json({ message: "Cet email existe déjà" });
+      }
+
+      // Créer l'utilisateur secrétaire avec role="secretary"
+      const hashedPassword = await bcrypt.hash(data.password, 10);
+      const [newUser] = await db.insert(users).values({
+        email: data.email.toLowerCase().trim(),
+        firstName: data.fullName.split(" ")[0] || "Secrétaire",
+        lastName: data.fullName.split(" ").slice(1).join(" ") || "",
+        passwordHash: hashedPassword,
+        role: "secretary", // 🔑 Marquer comme secrétaire
+      }).returning();
+
+      // Créer le compte secrétaire lié au dermatologue
+      const [secretary] = await db.insert(secretaryAccounts).values({
+        userId: newUser.id,
+        proAccountId: req.proAccount.id,
+        fullName: data.fullName,
+        email: data.email.toLowerCase().trim(),
+        createdBy: req.session.userId,
+      }).returning();
+
+      console.log(`[secretary] ✅ Secrétaire créée: ${data.fullName} (${data.email})`);
+      res.json({
+        success: true,
+        message: "Secrétaire créée avec succès",
+        secretary: {
+          ...secretary,
+          plainPassword: data.password, // ⚠️ Retourner en plaintext pour que le médecin la partage
+        },
+      });
+    } catch (err: any) {
+      console.error("❌ Secretary creation failed:", err);
+      res.status(500).json({ message: err.message || "Erreur lors de la création" });
+    }
+  });
+
+  // ───────────────────────────────────────────
+  // GET /api/pro/secretaries — Lister les secrétaires du dermatologue
+  // ───────────────────────────────────────────
+  app.get("/api/pro/secretaries", requireActivePro, async (req: any, res) => {
+    try {
+      const secretaries = await db.select().from(secretaryAccounts)
+        .where(eq(secretaryAccounts.proAccountId, req.proAccount.id));
+
+      res.json({
+        secretaries,
+      });
+    } catch (err) {
+      console.error("❌ Secretaries fetch failed:", err);
+      res.status(500).json({ message: "Erreur lors du chargement" });
+    }
+  });
+
+  // ───────────────────────────────────────────
+  // DELETE /api/pro/secretaries/:id — Supprimer une secrétaire
+  // ───────────────────────────────────────────
+  app.delete("/api/pro/secretaries/:id", requireActivePro, async (req: any, res) => {
+    try {
+      const secretaryId = parseInt(req.params.id);
+
+      // Vérifier que la secrétaire appartient au dermatologue
+      const [secretary] = await db.select().from(secretaryAccounts)
+        .where(and(eq(secretaryAccounts.id, secretaryId), eq(secretaryAccounts.proAccountId, req.proAccount.id)));
+
+      if (!secretary) {
+        return res.status(404).json({ message: "Secrétaire introuvable" });
+      }
+
+      // Supprimer le compte secrétaire et l'utilisateur associé
+      await db.delete(secretaryAccounts).where(eq(secretaryAccounts.id, secretaryId));
+      await db.delete(users).where(eq(users.id, secretary.userId));
+
+      res.json({ success: true, message: "Secrétaire supprimée" });
+    } catch (err) {
+      console.error("❌ Secretary deletion failed:", err);
+      res.status(500).json({ message: "Erreur lors de la suppression" });
     }
   });
 }
