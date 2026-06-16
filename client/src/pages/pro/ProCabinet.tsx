@@ -129,6 +129,17 @@ export default function ProCabinet() {
 
   const paymentNumber = method === "mtn_momo" ? MTN_NUMBER : ORANGE_NUMBER;
 
+  // 🔑 SÉCURITÉ : Les secrétaires n'ont pas accès aux paramètres cabinet
+  if (accData?.user?.role === "secretary") {
+    return (
+      <ProLayout title="Mon cabinet" back="/derm/patients">
+        <div style={{ textAlign: "center", padding: "40px 24px", color: "rgba(200,185,255,0.65)" }}>
+          <p>Les secrétaires n'ont pas accès aux paramètres cabinet.</p>
+        </div>
+      </ProLayout>
+    );
+  }
+
   return (
     <ProLayout title="Mon cabinet" back="/derm/dashboard">
       <div className="space-y-4 max-w-3xl mx-auto">

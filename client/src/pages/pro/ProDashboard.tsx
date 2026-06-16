@@ -71,6 +71,46 @@ export default function ProDashboard() {
     return <LoadingScreen />;
   }
 
+  // 🔑 SÉCURITÉ : Les secrétaires n'ont pas accès au tableau de bord
+  if (accData?.user?.role === "secretary") {
+    return (
+      <div style={{
+        minHeight: "100vh",
+        background: DS.bg,
+        color: DS.textPrimary,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexDirection: "column",
+        gap: 24,
+        padding: "24px",
+        fontFamily: DS.font,
+      }}>
+        <div style={{ textAlign: "center", maxWidth: 400 }}>
+          <h1 style={{ fontSize: 24, fontWeight: 800, marginBottom: 12 }}>Accès refusé</h1>
+          <p style={{ color: DS.textBody, marginBottom: 24, lineHeight: 1.6 }}>
+            Les secrétaires ont accès à la création de patients et la prise de photos.
+            Le tableau de bord est réservé aux médecins.
+          </p>
+          <button
+            onClick={() => setLocation("/derm/patients")}
+            style={{
+              padding: "12px 24px",
+              background: DS.violet,
+              color: "#fff",
+              border: "none",
+              borderRadius: 9999,
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            Aller aux patients
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const acc = accData.account;
   const patients = patientsData?.patients || [];
   const patientCount = patients.length;

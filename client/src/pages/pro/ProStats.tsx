@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { Users, BarChart3, TrendingUp, Calendar, ShoppingBag } from "lucide-react";
-import { useProStats } from "@/hooks/use-pro";
+import { useProStats, useProAccount } from "@/hooks/use-pro";
 import { ProLayout, ProCard } from "@/components/ProLayout";
 import { LoadingScreen } from "./ProDashboard";
 
@@ -11,7 +11,20 @@ const GREEN = "#10b981";
 
 export default function ProStats() {
   const { data, isLoading } = useProStats();
+  const { data: accData } = useProAccount();
+
   if (isLoading || !data) return <LoadingScreen />;
+
+  // 🔑 SÉCURITÉ : Les secrétaires n'ont pas accès aux statistiques
+  if (accData?.user?.role === "secretary") {
+    return (
+      <ProLayout title="Statistiques" back="/derm/patients">
+        <div style={{ textAlign: "center", padding: "40px 24px", color: "rgba(200,185,255,0.65)" }}>
+          <p>Les secrétaires n'ont pas accès aux statistiques cabinet.</p>
+        </div>
+      </ProLayout>
+    );
+  }
 
   return (
     <ProLayout title="Statistiques" back="/derm/dashboard">
