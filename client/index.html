@@ -35,7 +35,7 @@
     <meta name="twitter:description" content="Diagnostic peau IA, Glow Score et routine personnalisée pour peaux africaines." />
     <meta name="twitter:image" content="https://glow-scan.com/logo-glowscan-square.jpeg" />
 
-    <!-- JSON-LD structured data -->
+    <!-- JSON-LD: WebApplication -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -43,10 +43,84 @@
       "name": "GlowScan",
       "url": "https://glow-scan.com/",
       "applicationCategory": "HealthApplication",
-      "operatingSystem": "Web",
-      "description": "Analyse dermatologique par IA, Glow Score et routine skincare personnalisée pour peaux africaines.",
+      "operatingSystem": "Web, iOS, Android",
+      "description": "Analyse dermatologique par IA en 30 secondes. Glow Score, diagnostic peau et cheveux, routine skincare personnalisée pour peaux africaines.",
       "inLanguage": "fr",
-      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "XAF" }
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "XAF" },
+      "featureList": ["Diagnostic peau IA", "Glow Score", "Routine skincare personnalisée", "Recommandations produits", "Suivi d'évolution"],
+      "audience": { "@type": "Audience", "audienceType": "Personnes avec peau africaine ou afro-descendante" }
+    }
+    </script>
+
+    <!-- JSON-LD: Organization -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "GlowScan",
+      "url": "https://glow-scan.com",
+      "logo": "https://glow-scan.com/logo-glowscan-square.jpeg",
+      "description": "Startup technologique camerounaise spécialisée en diagnostic dermatologique par IA pour peaux africaines.",
+      "foundingLocation": {
+        "@type": "Place",
+        "addressLocality": "Douala",
+        "addressCountry": "CM"
+      },
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "contactType": "customer support",
+        "availableLanguage": ["French"]
+      }
+    }
+    </script>
+
+    <!-- JSON-LD: FAQPage -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Comment fonctionne l'analyse de peau GlowScan ?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "GlowScan utilise l'intelligence artificielle pour analyser votre peau en 30 secondes via votre smartphone. Prenez une photo de votre visage et l'IA génère un diagnostic complet : type de peau, problèmes détectés, Glow Score et routine personnalisée."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "GlowScan est-il adapté aux peaux africaines ?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Oui. GlowScan a été spécialement conçu pour les peaux africaines et afro-descendantes. Notre IA est entraînée sur des données spécifiques aux carnations sombres pour des diagnostics précis et des recommandations adaptées."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Qu'est-ce que le Glow Score ?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Le Glow Score est un indice exclusif GlowScan qui mesure la santé globale de votre peau sur une échelle de 0 à 100. Il prend en compte l'hydratation, l'éclat, la régularité du teint et l'absence de problèmes cutanés."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "GlowScan est-il gratuit ?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Oui, GlowScan propose une analyse de peau gratuite. Des fonctionnalités avancées comme le suivi d'évolution et les conseils personnalisés approfondis sont disponibles en version premium."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "GlowScan est-il disponible au Cameroun ?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Oui, GlowScan est disponible partout en Afrique francophone, en particulier au Cameroun. L'application est accessible depuis tout smartphone avec connexion internet."
+          }
+        }
+      ]
     }
     </script>
 

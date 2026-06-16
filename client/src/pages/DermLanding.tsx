@@ -4,6 +4,7 @@ import {
   Clock, FileText, Users, CheckCircle2, MessageCircle, ArrowRight,
   Sparkles, Brain, Shield, TrendingUp, Star,
 } from "lucide-react";
+import { useSEO } from "@/hooks/useSEO";
 
 const DS = {
   bg: "#0d0a0e",
@@ -125,6 +126,12 @@ function Nav() {
 }
 
 export default function DermLanding() {
+  useSEO({
+    title: "GlowScan Derm — Outil IA pour Dermatologues et Professionnels de Santé",
+    description: "Plateforme IA de diagnostic dermatologique pour professionnels. Analysez les patients, suivez les dossiers et accédez à un dataset de peaux africaines certifié.",
+    canonical: "https://glow-scan.com/derm",
+  });
+
   return (
     <div style={{ background: DS.bg, minHeight: "100vh", color: DS.text, fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif" }}>
       <Nav />

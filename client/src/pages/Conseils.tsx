@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { useLocation } from "wouter";
 import { ArrowLeft, Sparkles, ChevronRight, ScanLine, Wand2, ShieldAlert, Loader2 } from "lucide-react";
 import { useEffect } from "react";
+import { useSEO } from "@/hooks/useSEO";
 import { useQuery } from "@tanstack/react-query";
 import { trackPageVisit } from "@/lib/analytics";
 import { useAuth } from "@/hooks/use-auth";
@@ -89,6 +90,13 @@ const DS = {
 export default function Conseils() {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
+
+  useSEO({
+    title: "Conseils Skincare Personnalisés par IA | GlowScan",
+    description: "Recevez des conseils skincare personnalisés basés sur votre diagnostic peau. Astuces beauté et routines adaptées à votre type de peau africaine.",
+    canonical: "https://glow-scan.com/conseils",
+    noIndex: !user, // Pas indexé si non connecté (contenu perso)
+  });
   const firstName = (user?.firstName || user?.email || "").split(/[\s@]/)[0] || "Client";
 
   useEffect(() => { trackPageVisit("/conseils"); }, []);

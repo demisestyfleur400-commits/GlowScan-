@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { useAuth } from "@/hooks/use-auth";
+import { useSEO } from "@/hooks/useSEO";
 import { trackPageVisit } from "@/lib/analytics";
 import { fetchWithRetry } from "@/lib/imageUtils";
 import { triggerPWAInstallPrompt } from "@/hooks/use-pwa-install";
@@ -62,6 +63,12 @@ interface ConsultationData {
 
 export default function Analyze() {
   const { user } = useAuth();
+
+  useSEO({
+    title: "Analyser ma peau gratuitement — Diagnostic IA | GlowScan",
+    description: "Faites votre diagnostic peau IA gratuit en 30 secondes. Obtenez votre Glow Score, découvrez votre type de peau et votre routine skincare sur mesure.",
+    canonical: "https://glow-scan.com/analyze",
+  });
   const { toast } = useToast();
   const { isPremium } = useSubscription();
   const urlParams = new URLSearchParams(window.location.search);

@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { ScanFace, Sparkles, ShieldCheck, Star, ArrowRight, Zap } from "lucide-react";
+import { useSEO } from "@/hooks/useSEO";
 
 const STATS = [
   { value: "100%", label: "Gratuit pour toi" },
@@ -39,6 +40,12 @@ const FEATURES = [
 export default function Landing() {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
+
+  useSEO({
+    title: "GlowScan — Analyse de peau IA pour peaux africaines | Glow Score",
+    description: "Analysez votre peau en 30 secondes avec l'IA. Diagnostic dermatologique, Glow Score et routine skincare personnalisée pour peaux africaines. Gratuit.",
+    canonical: "https://glow-scan.com/",
+  });
   const go = () => setLocation(user ? "/" : "/auth");
 
   return (

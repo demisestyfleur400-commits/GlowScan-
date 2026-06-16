@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
+import { useSEO } from "@/hooks/useSEO";
 import { motion, AnimatePresence } from "framer-motion";
 import { Eye, EyeOff, Mail, Lock, User, ArrowLeft, Phone, ShieldAlert, Sparkles, MessageCircle, KeyRound, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -8,6 +9,12 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 type Mode = "register" | "login" | "forgot" | "reset";
 
 export default function AuthPage() {
+  useSEO({
+    title: "Connexion & Inscription | GlowScan",
+    description: "Créez votre compte GlowScan gratuitement pour accéder à votre historique de scans, votre routine personnalisée et vos conseils beauté.",
+    canonical: "https://glow-scan.com/auth",
+    noIndex: true, // Pages auth pas indexées
+  });
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [mode, setMode] = useState<Mode>("register");

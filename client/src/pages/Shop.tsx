@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Navbar } from "@/components/Navbar";
+import { useSEO } from "@/hooks/useSEO";
 import { catalog, type Product, formatPrice, getProductBrand } from "@shared/catalog";
 import { Sparkles, X, Check, MessageCircle, Star, ChevronLeft, ShieldCheck, Truck } from "lucide-react";
 import React, { useState, useEffect, useMemo } from "react";
@@ -762,6 +763,12 @@ function ProductCard({
 export default function Shop() {
   const { user } = useAuth();
   const { data: scans } = useScans();
+
+  useSEO({
+    title: "Boutique Skincare — Produits adaptés à votre peau | GlowScan",
+    description: "Découvrez des produits skincare sélectionnés et recommandés par l'IA selon votre diagnostic peau. Crèmes, sérums et soins pour peaux africaines.",
+    canonical: "https://glow-scan.com/shop",
+  });
   const [problemFilter, setProblemFilter] = useState<ProblemKey>("tous");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [showOrderModal, setShowOrderModal] = useState(false);

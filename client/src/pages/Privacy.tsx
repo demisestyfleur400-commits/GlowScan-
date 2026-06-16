@@ -1,6 +1,7 @@
 import { Link } from "wouter";
 import { Navbar } from "@/components/Navbar";
 import { ArrowLeft, ShieldCheck, FileText, Globe, Trash2, Download, Mail, Lock } from "lucide-react";
+import { useSEO } from "@/hooks/useSEO";
 
 const DS = {
   base: "#0d0a0e",
@@ -12,6 +13,12 @@ const DS = {
 };
 
 export default function Privacy() {
+  useSEO({
+    title: "Politique de Confidentialité | GlowScan",
+    description: "Politique de confidentialité de GlowScan. Vos données dermatologiques sont protégées et ne sont jamais vendues. Conformité RGPD.",
+    canonical: "https://glow-scan.com/confidentialite",
+  });
+
   return (
     <div className="min-h-screen pb-24" style={{ background: DS.base, fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif' }}>
       <Navbar />

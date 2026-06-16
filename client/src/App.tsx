@@ -5,6 +5,17 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useEffect, lazy, Suspense } from "react";
 import { useAutoTheme } from "@/hooks/use-auto-theme";
+import * as Sentry from "@sentry/react";
+
+// 🔴 SENTRY INITIALIZATION — Error monitoring & alerting
+if (process.env.NODE_ENV === "production") {
+  Sentry.init({
+    dsn: import.meta.env.VITE_SENTRY_DSN || "",
+    environment: "production",
+    tracesSampleRate: 0.1, // 10% of transactions sampled
+    release: "glowscan-1.0.0",
+  });
+}
 
 import ReconnectBanner from "@/components/ReconnectBanner";
 import ErrorBoundary from "@/components/ErrorBoundary";
