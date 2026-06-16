@@ -98,7 +98,7 @@ const AlertDialogDescription = React.forwardRef<
 AlertDialogDescription.displayName =
   AlertDialogPrimitive.Description.displayName
 
-// Bouton d'action principale destructif ou affirmatif pur style GlowScan Pro
+// Bouton d'action principale destructif ou affirmatif pur style GlowScan DERM
 const AlertDialogAction = React.forwardRef<
   React.ElementRef<typeof AlertDialogPrimitive.Action>,
   React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Action>

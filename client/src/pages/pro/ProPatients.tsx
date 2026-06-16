@@ -36,10 +36,10 @@ export default function ProPatients() {
   return (
     <ProLayout
       title="Mes patients"
-      back="/pro/dashboard"
+      back="/derm/dashboard"
       rightAction={
         <Link
-          href="/pro/analyse?nouveau=1"
+          href="/derm/analyse?nouveau=1"
           data-testid="button-new-patient"
           className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-extrabold text-white transition-all active:scale-95"
           style={{ background: NAVY }}
@@ -101,7 +101,7 @@ export default function ProPatients() {
             {q ? "Aucun patient trouvé" : "Aucun patient encore enregistré"}
           </p>
           <Link
-            href="/pro/analyse?nouveau=1"
+            href="/derm/analyse?nouveau=1"
             data-testid="link-add-first"
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-white font-extrabold text-sm active:scale-95 transition-all"
             style={{ background: NAVY }}

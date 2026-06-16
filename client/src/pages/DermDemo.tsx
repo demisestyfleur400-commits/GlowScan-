@@ -548,7 +548,7 @@ function StepCTA() {
           ))}
         </div>
         <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
-          <Link href="/pro/inscription">
+          <Link href="/derm/inscription">
             <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
               style={{ background: DS.violet, color: "#fff", border: "none", borderRadius: 9999, padding: "14px 32px", fontSize: 15, fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}>
               <Sparkles size={16} /> Démarrer l'essai gratuit <ArrowRight size={16} />
@@ -622,7 +622,7 @@ export default function DermDemo() {
               <span style={{ fontSize: 10, fontWeight: 700, color: DS.violetMid }}>DÉMO INTERACTIVE</span>
             </div>
           </div>
-          <Link href="/pro/inscription">
+          <Link href="/derm/inscription">
             <button style={{ background: DS.violet, color: "#fff", border: "none", borderRadius: 9999, padding: "8px 16px", fontSize: 13, fontWeight: 800, cursor: "pointer" }}>
               Essai gratuit
             </button>
@@ -686,7 +686,7 @@ export default function DermDemo() {
                 Suivant <ArrowRight size={14} />
               </button>
             ) : (
-              <Link href="/pro/inscription">
+              <Link href="/derm/inscription">
                 <button style={{ background: DS.violet, border: "none", borderRadius: 10, padding: "8px 16px", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 800 }}>
                   <Sparkles size={14} /> Démarrer <ArrowRight size={14} />
                 </button>

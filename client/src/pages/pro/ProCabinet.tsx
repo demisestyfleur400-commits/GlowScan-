@@ -130,7 +130,7 @@ export default function ProCabinet() {
   const paymentNumber = method === "mtn_momo" ? MTN_NUMBER : ORANGE_NUMBER;
 
   return (
-    <ProLayout title="Mon cabinet" back="/pro/dashboard">
+    <ProLayout title="Mon cabinet" back="/derm/dashboard">
       <div className="space-y-4 max-w-3xl mx-auto">
         {/* Profil dermato */}
         <ProCard className="p-5">

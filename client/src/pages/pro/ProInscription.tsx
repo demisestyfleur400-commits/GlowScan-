@@ -64,7 +64,7 @@ export default function ProInscription() {
       toast({ title: `Bienvenue Dr ${fullName} 👋`, description: "14 jours d'essai gratuit — découvrons GlowScan DERM ensemble." });
       await qc.invalidateQueries({ queryKey: ["/api/pro/account"] });
       await qc.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      setLocation("/pro/onboarding"); // → flow 3 étapes
+      setLocation("/derm/onboarding"); // → flow 3 étapes
     } catch (err: any) {
       toast({ title: "Erreur", description: err.message, variant: "destructive" });
     } finally {
@@ -102,7 +102,7 @@ export default function ProInscription() {
           }}
         >
           <Link
-            href="/pro"
+            href="/derm"
             data-testid="link-back"
             style={{
               padding: 8,
@@ -280,7 +280,7 @@ export default function ProInscription() {
             <p style={{ textAlign: "center", fontSize: 13, color: DS.textMuted, marginTop: 14 }}>
               Déjà inscrit ?{" "}
               <Link
-                href="/pro/connexion"
+                href="/derm/connexion"
                 data-testid="link-login"
                 style={{ color: DS.violetMid, fontWeight: 700, textDecoration: "none" }}
               >

@@ -69,17 +69,26 @@ function Router() {
       <Route path="/conseils" component={Conseils} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/premium" component={Premium} />
-      <Route path="/pro" component={Pro} />
-      <Route path="/pro/inscription" component={ProInscription} />
-      <Route path="/pro/onboarding" component={DermOnboarding} />
-      <Route path="/pro/connexion" component={ProConnexion} />
-      <Route path="/pro/dashboard" component={ProDashboard} />
-      <Route path="/pro/patients" component={ProPatients} />
-      <Route path="/pro/patient/:id" component={ProPatient} />
-      <Route path="/pro/analyse" component={ProAnalyze} />
-      <Route path="/pro/statistiques" component={ProStats} />
-      <Route path="/pro/cabinet" component={ProCabinet} />
-      <Route path="/pro/dataset" component={ProDataset} />
+      {/* GlowScan DERM routes (formerly /pro) */}
+      <Route path="/derm" component={Pro} />
+      <Route path="/derm/inscription" component={ProInscription} />
+      <Route path="/derm/onboarding" component={DermOnboarding} />
+      <Route path="/derm/connexion" component={ProConnexion} />
+      <Route path="/derm/dashboard" component={ProDashboard} />
+      <Route path="/derm/patients" component={ProPatients} />
+      <Route path="/derm/patient/:id" component={ProPatient} />
+      <Route path="/derm/analyse" component={ProAnalyze} />
+      <Route path="/derm/statistiques" component={ProStats} />
+      <Route path="/derm/cabinet" component={ProCabinet} />
+      <Route path="/derm/dataset" component={ProDataset} />
+
+      {/* Redirects from old /pro paths to new /derm paths */}
+      <Route path="/pro" component={() => { window.location.href = "/derm"; return null; }} />
+      <Route path="/pro/*" component={() => {
+        const newPath = window.location.pathname.replace("/pro", "/derm");
+        window.location.href = newPath;
+        return null;
+      }} />
       <Route path="/confidentialite" component={Privacy} />
       <Route path="/dermato" component={DermatoPortal} />
       <Route path="/derm" component={DermLanding} />

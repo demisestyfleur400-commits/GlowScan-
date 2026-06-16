@@ -126,7 +126,7 @@ export default function ProDataset() {
   // Redirection si pas admin
   useEffect(() => {
     if (!accLoading && accData && !accData.isAdmin) {
-      setLocation("/pro/dashboard");
+      setLocation("/derm/dashboard");
     }
   }, [accData, accLoading]);
 
@@ -163,7 +163,7 @@ export default function ProDataset() {
   const maxCond = stats?.topConditions?.[0]?.count || 1;
 
   return (
-    <ProLayout title="Dataset GlowScan" back="/pro/dashboard">
+    <ProLayout title="Dataset GlowScan" back="/derm/dashboard">
       <div className="max-w-2xl mx-auto space-y-5 pb-10">
 
         {/* ── Header pipeline ── */}
@@ -550,7 +550,7 @@ export default function ProDataset() {
 
         {/* Lien retour */}
         <div style={{ textAlign: "center" }}>
-          <Link href="/pro/dashboard" style={{ fontSize: 12, color: DS.muted, textDecoration: "underline" }}>
+          <Link href="/derm/dashboard" style={{ fontSize: 12, color: DS.muted, textDecoration: "underline" }}>
             ← Retour au dashboard
           </Link>
         </div>

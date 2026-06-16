@@ -9,7 +9,7 @@ import { api } from "@shared/routes";
 import { z } from "zod";
 import OpenAI from "openai";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { GLOWSCAN_SYSTEM_PROMPT, GLOWSCAN_PRO_SYSTEM_PROMPT } from "./prompt";
+import { GLOWSCAN_SYSTEM_PROMPT, GLOWSCAN_DERM_SYSTEM_PROMPT } from "./prompt";
 import { classifyCondition, extractPhototype, calcAnnotationScore } from "./taxonomy";
 import webpush from "web-push";
 import { db } from "./db";
@@ -356,7 +356,7 @@ ${intake.allergies?.trim() ? `- ALLERGIES CONNUES : "${intake.allergies}". NE JA
 
       // Système Pro : injecter les antécédents dans le system prompt AVANT l'analyse photo
       const activeSystemPrompt = isProRequest
-        ? GLOWSCAN_PRO_SYSTEM_PROMPT.replace("{PATIENT_INTAKE}", patientIntakeData)
+        ? GLOWSCAN_DERM_SYSTEM_PROMPT.replace("{PATIENT_INTAKE}", patientIntakeData)
         : GLOWSCAN_SYSTEM_PROMPT;
 
       const prompt = `${patientContext}Analyse la photo de ${areaLabel} (zone : ${area}).

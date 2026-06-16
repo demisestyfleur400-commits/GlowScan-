@@ -128,7 +128,7 @@ export default function DermOnboarding() {
   // ── Étape 3 → terminer ──────────────────────────────────────────
   const finish = async () => {
     await updateAcc.mutateAsync({ onboardingDone: true } as any);
-    setLocation("/pro/dashboard");
+    setLocation("/derm/dashboard");
   };
 
   return (

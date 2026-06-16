@@ -316,7 +316,7 @@ export function PremiumPdfTemplate({
     ${qrCodeSvg ? `<div class="qr-code">${qrCodeSvg}</div>` : ""}
 
     <div class="footer">
-      GlowScan Pro — Analyse Dermatologique Augmentée par IA
+      GlowScan DERM — Analyse Dermatologique Augmentée par IA
     </div>
   </div>
 
@@ -384,7 +384,7 @@ export function PremiumPdfTemplate({
     </div>
 
     <div class="footer">
-      Ce rapport a été généré par GlowScan Pro — Plateforme de Diagnostic Dermatologique Certifiée
+      Ce rapport a été généré par GlowScan DERM — Plateforme de Diagnostic Dermatologique Certifiée
     </div>
   </div>
 </body>

@@ -36,7 +36,7 @@ const DS = {
 };
 
 export default function ProPatient() {
-  const [, params] = useRoute("/pro/patient/:id");
+  const [, params] = useRoute("/derm/patient/:id");
   const [, setLocation] = useLocation();
   const id = params ? parseInt(params.id) : null;
   const { data, isLoading } = usePatientDossier(id);
@@ -241,7 +241,7 @@ export default function ProPatient() {
   const handleDelete = async () => {
     if (!confirm(`Supprimer le dossier de ${p.firstName} ${p.lastName} ?`)) return;
     await del.mutateAsync(p.id);
-    setLocation("/pro/patients");
+    setLocation("/derm/patients");
   };
 
   const daysSinceLast = lastScan?.createdAt
@@ -253,7 +253,7 @@ export default function ProPatient() {
   return (
     <ProLayout
       title="Dossier patient"
-      back="/pro/patients"
+      back="/derm/patients"
       rightAction={
         <button
           onClick={handleDelete}

@@ -538,7 +538,7 @@ export default function Home() {
     const params = new URLSearchParams(window.location.search);
     if (params.get("as") === "user") return;
     if (proData?.account) {
-      setLocation("/pro/dashboard");
+      setLocation("/derm/dashboard");
     }
   }, [user, proData, setLocation]);
 
@@ -1043,7 +1043,7 @@ export default function Home() {
         <FadeUp delay={0.28}>
           <section data-testid="section-pro-cta">
             <button
-              onClick={() => setLocation("/pro")}
+              onClick={() => setLocation("/derm")}
               data-testid="button-pro-cta"
               className="w-full text-left p-4 active:scale-[0.99] transition-all"
               style={{

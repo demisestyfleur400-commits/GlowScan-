@@ -58,7 +58,7 @@ const pricingTiers = [
       "Commission 2 000 FCFA / consultation",
     ],
     cta: "Devenir partenaire",
-    href: "/pro/inscription",
+    href: "/derm/inscription",
     highlight: false,
   },
   {
@@ -75,7 +75,7 @@ const pricingTiers = [
       "14 jours d'essai gratuit",
     ],
     cta: "Essayer 14 jours gratuit",
-    href: "/pro/inscription",
+    href: "/derm/inscription",
     highlight: true,
   },
   {
@@ -110,10 +110,10 @@ function Nav() {
     }}>
       <span style={{ fontSize: 18, fontWeight: 900, color: DS.violet }}>✦ GlowScan DERM</span>
       <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-        <Link href="/pro/connexion">
+        <Link href="/derm/connexion">
           <span style={{ fontSize: 13, color: DS.muted, cursor: "pointer", fontWeight: 600 }}>Connexion</span>
         </Link>
-        <Link href="/pro/inscription">
+        <Link href="/derm/inscription">
           <span style={{
             fontSize: 13, fontWeight: 800, color: "#fff", cursor: "pointer",
             background: DS.violet, padding: "8px 16px", borderRadius: 9999,
@@ -149,7 +149,7 @@ export default function DermLanding() {
           </p>
 
           <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
-            <Link href="/pro/inscription">
+            <Link href="/derm/inscription">
               <motion.button
                 whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
                 style={{ background: DS.violet, color: "#fff", border: "none", borderRadius: 9999, padding: "14px 28px", fontSize: 15, fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}
@@ -256,7 +256,7 @@ export default function DermLanding() {
           <p style={{ color: DS.muted, fontSize: 15, marginBottom: 28 }}>
             Rejoignez le réseau GlowScan DERM.
           </p>
-          <Link href="/pro/inscription">
+          <Link href="/derm/inscription">
             <motion.button
               whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
               style={{ background: DS.violet, color: "#fff", border: "none", borderRadius: 9999, padding: "14px 32px", fontSize: 15, fontWeight: 800, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 8 }}

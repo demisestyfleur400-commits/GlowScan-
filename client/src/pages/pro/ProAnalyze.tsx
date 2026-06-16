@@ -954,7 +954,7 @@ export default function ProAnalyze() {
       patient: patientObj,
       analysis: data.result,
       doctorName: `${firstName} ${lastName}`.trim() || "Dermatologue",
-      cabinetName: "GlowScan Pro",
+      cabinetName: "GlowScan DERM",
       patientPhoto: photoBase64 || undefined,
       override,
       referenceNumber: data.refNum,
@@ -1027,7 +1027,7 @@ export default function ProAnalyze() {
   const patientLabel = `${firstName} ${lastName}`.trim() || "—";
 
   return (
-    <ProLayout title="Analyser un patient" back="/pro/dashboard">
+    <ProLayout title="Analyser un patient" back="/derm/dashboard">
       <div className="max-w-3xl mx-auto print:max-w-full">
         <ProgressBar current={step} />
 

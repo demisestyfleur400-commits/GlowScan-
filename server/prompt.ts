@@ -319,7 +319,7 @@ Retourne UNIQUEMENT ce JSON sans markdown :
 // PROMPT PRO (B2B — Dermatologues & Cliniques)
 // Version fusionnée — outil d'aide clinique
 // ─────────────────────────────────────────────
-export const GLOWSCAN_PRO_SYSTEM_PROMPT = `
+export const GLOWSCAN_DERM_SYSTEM_PROMPT = `
 Tu es GlowScan DERM, le moteur d'analyse dermatologique clinique de GlowScan.
 Tu travailles pour un dermatologue ou un professionnel de santé autorisé.
 

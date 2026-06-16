@@ -5,11 +5,11 @@ import { useAuth } from "@/hooks/use-auth";
 import { useProAccount } from "@/hooks/use-pro";
 
 const NAV_ITEMS = [
-  { href: "/pro/dashboard", icon: Home, label: "Tableau de bord" },
-  { href: "/pro/patients", icon: Users, label: "Patientèle" },
-  { href: "/pro/analyse", icon: ScanLine, label: "Analyse", primary: true },
-  { href: "/pro/statistiques", icon: BarChart3, label: "Performances" },
-  { href: "/pro/cabinet", icon: Settings, label: "Cabinet" },
+  { href: "/derm/dashboard", icon: Home, label: "Tableau de bord" },
+  { href: "/derm/patients", icon: Users, label: "Patientèle" },
+  { href: "/derm/analyse", icon: ScanLine, label: "Analyse", primary: true },
+  { href: "/derm/statistiques", icon: BarChart3, label: "Performances" },
+  { href: "/derm/cabinet", icon: Settings, label: "Cabinet" },
 ];
 
 const SURFACE = { background: "#13101f", border: "1px solid rgba(255,255,255,0.07)" };
@@ -46,7 +46,7 @@ export function ProLayout({ children, title, back, hideBottomNav, rightAction }:
             className="flex items-center h-16 flex-shrink-0 px-5"
             style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}
           >
-            <Link href="/pro/dashboard" className="flex items-center gap-3">
+            <Link href="/derm/dashboard" className="flex items-center gap-3">
               <div
                 className="w-8 h-8 rounded-xl flex items-center justify-center"
                 style={{ background: "rgba(124,58,237,0.15)", border: "1px solid rgba(124,58,237,0.3)" }}
@@ -64,7 +64,7 @@ export function ProLayout({ children, title, back, hideBottomNav, rightAction }:
           <div className="flex-1 flex flex-col overflow-y-auto px-3 py-4 space-y-1">
             {NAV_ITEMS.map((item) => {
               const Icon = item.icon;
-              const isActive = location === item.href || (item.href === "/pro/analyse" && location.startsWith("/pro/analyse"));
+              const isActive = location === item.href || (item.href === "/derm/analyse" && location.startsWith("/derm/analyse"));
               return (
                 <Link
                   key={item.href}
@@ -143,7 +143,7 @@ export function ProLayout({ children, title, back, hideBottomNav, rightAction }:
               {rightAction}
               {isTrial && accData && (
                 <Link
-                  href="/pro/cabinet"
+                  href="/derm/cabinet"
                   data-testid="badge-trial"
                   className="inline-flex md:hidden items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-extrabold uppercase tracking-wider"
                   style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)", color: "#fbbf24" }}
@@ -171,7 +171,7 @@ export function ProLayout({ children, title, back, hideBottomNav, rightAction }:
           <div className="max-w-md mx-auto grid grid-cols-5 h-16 px-1">
             {NAV_ITEMS.map((item) => {
               const Icon = item.icon;
-              const active = location === item.href || (item.href === "/pro/analyse" && location.startsWith("/pro/analyse"));
+              const active = location === item.href || (item.href === "/derm/analyse" && location.startsWith("/derm/analyse"));
 
               if (item.primary) {
                 return (

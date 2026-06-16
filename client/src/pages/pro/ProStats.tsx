@@ -14,7 +14,7 @@ export default function ProStats() {
   if (isLoading || !data) return <LoadingScreen />;
 
   return (
-    <ProLayout title="Statistiques" back="/pro/dashboard">
+    <ProLayout title="Statistiques" back="/derm/dashboard">
       <div className="space-y-4">
         {/* KPIs */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">

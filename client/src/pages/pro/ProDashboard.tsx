@@ -64,7 +64,7 @@ export default function ProDashboard() {
   }, [accData?.account?.onboardingDone]);
 
   useEffect(() => {
-    if (!isLoading && !accData?.account) setLocation("/pro");
+    if (!isLoading && !accData?.account) setLocation("/derm");
   }, [isLoading, accData]);
 
   if (isLoading || !accData?.account) {
@@ -126,7 +126,7 @@ export default function ProDashboard() {
             ))}
           </div>
 
-          <Link href="/pro/analyse?nouveau=1"
+          <Link href="/derm/analyse?nouveau=1"
             style={{
               display: "inline-flex", alignItems: "center", gap: 6,
               background: DS.violet, color: "#fff", borderRadius: 9999,
@@ -140,7 +140,7 @@ export default function ProDashboard() {
       {/* Primary CTA */}
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
         <Link
-          href="/pro/analyse"
+          href="/derm/analyse"
           data-testid="button-analyze-patient"
           style={{
             display: "block",
@@ -183,11 +183,11 @@ export default function ProDashboard() {
         transition={{ delay: 0.1 }}
         style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12, marginTop: 16 }}
       >
-        <KpiCard to="/pro/patients" icon={<Users style={{ width: 16, height: 16, color: DS.violetMid }} />} value={patientCount} label="Patients" testid="kpi-patients" />
-        <KpiCard to="/pro/statistiques" icon={<BarChart3 style={{ width: 16, height: 16, color: DS.successText }} />} value="—" label="Statistiques" testid="kpi-stats" />
-        <KpiCard to="/pro/patients" icon={<Activity style={{ width: 16, height: 16, color: "#f87171" }} />} value={statusCounts.priority} label="Priorité haute" testid="kpi-urgent" />
+        <KpiCard to="/derm/patients" icon={<Users style={{ width: 16, height: 16, color: DS.violetMid }} />} value={patientCount} label="Patients" testid="kpi-patients" />
+        <KpiCard to="/derm/statistiques" icon={<BarChart3 style={{ width: 16, height: 16, color: DS.successText }} />} value="—" label="Statistiques" testid="kpi-stats" />
+        <KpiCard to="/derm/patients" icon={<Activity style={{ width: 16, height: 16, color: "#f87171" }} />} value={statusCounts.priority} label="Priorité haute" testid="kpi-urgent" />
         {accData?.isAdmin && (
-          <KpiCard to="/pro/dataset" icon={<span style={{ fontSize: 14 }}>🧬</span>} value="—" label="Dataset IA" testid="kpi-dataset" />
+          <KpiCard to="/derm/dataset" icon={<span style={{ fontSize: 14 }}>🧬</span>} value="—" label="Dataset IA" testid="kpi-dataset" />
         )}
       </motion.div>
 
@@ -204,7 +204,7 @@ export default function ProDashboard() {
                 <h3 style={{ fontSize: 15, fontWeight: 800, color: DS.textPrimary, margin: 0 }}>Derniers patients</h3>
               </div>
               <Link
-                href="/pro/patients"
+                href="/derm/patients"
                 data-testid="link-all-patients"
                 style={{ fontSize: 12, fontWeight: 700, color: DS.violetMid, textDecoration: "none" }}
               >
@@ -217,7 +217,7 @@ export default function ProDashboard() {
                 <Users style={{ width: 32, height: 32, color: DS.textMuted, margin: "0 auto 10px", display: "block" }} />
                 <p style={{ fontSize: 13, color: DS.textBody, marginBottom: 14 }}>Aucun patient encore enregistré</p>
                 <Link
-                  href="/pro/analyse?nouveau=1"
+                  href="/derm/analyse?nouveau=1"
                   data-testid="link-add-first"
                   style={{
                     display: "inline-flex",
@@ -316,7 +316,7 @@ export default function ProDashboard() {
                 </p>
               </div>
               <Link
-                href="/pro/cabinet"
+                href="/derm/cabinet"
                 data-testid="link-subscribe"
                 style={{
                   display: "flex",
@@ -347,7 +347,7 @@ export default function ProDashboard() {
               <p style={{ fontSize: 22, fontWeight: 800, color: DS.textPrimary, margin: "0 0 4px" }}>Plan Pro</p>
               <p style={{ fontSize: 12, color: DS.textBody, marginBottom: 16 }}>Toutes les fonctionnalités cliniques activées</p>
               <Link
-                href="/pro/cabinet"
+                href="/derm/cabinet"
                 data-testid="link-cabinet"
                 style={{
                   display: "flex",

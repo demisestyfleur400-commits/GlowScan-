@@ -42,7 +42,7 @@ export default function ProConnexion() {
       if (!res.ok) throw new Error(data.message || "Erreur");
       await qc.invalidateQueries({ queryKey: ["/api/pro/account"] });
       await qc.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      setLocation("/pro/dashboard");
+      setLocation("/derm/dashboard");
     } catch (err: any) {
       toast({ title: "Connexion échouée", description: err.message, variant: "destructive" });
     } finally {
@@ -80,7 +80,7 @@ export default function ProConnexion() {
           }}
         >
           <Link
-            href="/pro"
+            href="/derm"
             data-testid="link-back"
             style={{
               padding: 8,
@@ -288,7 +288,7 @@ export default function ProConnexion() {
             >
               Pas encore de compte ?{" "}
               <Link
-                href="/pro/inscription"
+                href="/derm/inscription"
                 data-testid="link-register"
                 style={{ color: DS.violetMid, fontWeight: 700, textDecoration: "none" }}
               >

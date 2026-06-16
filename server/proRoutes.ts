@@ -584,7 +584,7 @@ ${patientScans.map(s => `
 `).join("")}
 ${patientScans.length === 0 ? '<p class="meta">Aucune analyse enregistrée.</p>' : ""}
 <div class="footer">
-  Document généré par GlowScan Pro — ${dermato.fullName}<br>
+  Document généré par GlowScan DERM — ${dermato.fullName}<br>
   Confidentiel · Document médical
 </div>
 <script>setTimeout(() => window.print(), 600);</script>
@@ -620,7 +620,7 @@ ${patientScans.length === 0 ? '<p class="meta">Aucune analyse enregistrée.</p>'
         phone,
         amount: PRO_PRICE_FCFA,
         status: "pending",
-        note: "GlowScan Pro — Abonnement dermato 30k FCFA/mois",
+        note: "GlowScan DERM — Abonnement dermato 30k FCFA/mois",
       }).returning();
 
       const msg = encodeURIComponent(

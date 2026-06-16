@@ -35,7 +35,7 @@ export default function Pro() {
         style={{ borderBottom: "1px solid rgba(255,255,255,0.05)", background: "rgba(13,10,14,0.5)", backdropFilter: "blur(12px)" }}
       >
         <div className="max-w-7xl mx-auto px-6 lg:px-8 h-20 flex items-center justify-between">
-          <Link href="/pro" className="flex items-center gap-2.5" data-testid="link-pro-home">
+          <Link href="/derm" className="flex items-center gap-2.5" data-testid="link-pro-home">
             <div
               className="w-9 h-9 rounded-xl flex items-center justify-center"
               style={{ background: "rgba(124,58,237,0.12)", border: "1px solid rgba(167,139,250,0.25)" }}
@@ -55,11 +55,11 @@ export default function Pro() {
           </nav>
 
           <div className="flex items-center gap-4">
-            <Link href="/pro/connexion" className="hidden sm:inline-flex text-xs font-bold transition-colors hover:text-white" style={{ color: DS.body }} data-testid="link-login-top">
+            <Link href="/derm/connexion" className="hidden sm:inline-flex text-xs font-bold transition-colors hover:text-white" style={{ color: DS.body }} data-testid="link-login-top">
               Portail
             </Link>
             <Link
-              href="/pro/inscription"
+              href="/derm/inscription"
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-xs font-extrabold text-white transition-all active:scale-95"
               style={{ background: "#7c3aed" }}
               data-testid="link-trial-top"
@@ -167,7 +167,7 @@ export default function Pro() {
           {/* CTAs */}
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
             <Link
-              href="/pro/inscription"
+              href="/derm/inscription"
               className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full font-extrabold text-xs text-white transition-all active:scale-[0.98]"
               style={{ background: "#7c3aed" }}
               data-testid="button-trial-hero"
@@ -324,7 +324,7 @@ export default function Pro() {
                     </a>
                   ) : (
                     <Link
-                      href="/pro/inscription"
+                      href="/derm/inscription"
                       className="block w-full text-center py-3.5 rounded-full font-extrabold text-xs transition-all active:scale-[0.98]"
                       style={p.highlight ? { background: "#7c3aed", color: "#fff" } : { background: "rgba(255,255,255,0.06)", border: `1px solid ${DS.border}`, color: DS.body }}
                       data-testid={`button-pricing-${p.name.toLowerCase()}`}

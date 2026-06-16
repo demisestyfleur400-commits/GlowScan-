@@ -30,7 +30,7 @@ export const scans = pgTable("scans", {
   expertCorrectedCondition: text("expert_corrected_condition"),
   expertReviewedAt: timestamp("expert_reviewed_at"),
   expertReviewer: text("expert_reviewer"),
-  // === GlowScan Pro — patient & contexte clinique ===
+  // === GlowScan DERM — patient & contexte clinique ===
   patientId: integer("patient_id"),                  // FK -> patients.id (nullable, set quand scan d'un patient Pro)
   clinicalContext: jsonb("clinical_context"),         // questionnaire dermato (réponses pré-remplies par IA + corrigées)
   dermatoNote: text("dermato_note"),                  // note libre du dermato sur ce scan
