@@ -110,7 +110,7 @@ export default function ProConnexion() {
               <Stethoscope style={{ width: 16, height: 16, color: DS.violetMid }} />
             </div>
             <span style={{ fontSize: 14, fontWeight: 700, color: DS.textPrimary }}>
-              GlowScan <span style={{ color: DS.violetMid }}>Pro</span>
+              GlowScan <span style={{ color: DS.violetMid }}>DERM</span>
             </span>
           </div>
         </div>
@@ -156,7 +156,7 @@ export default function ProConnexion() {
                 margin: "0 0 6px",
               }}
             >
-              Connexion Pro
+              Connexion DERM
             </h1>
             <p style={{ fontSize: 14, color: DS.textBody, margin: 0 }}>
               Accédez à votre cabinet GlowScan
@@ -292,7 +292,7 @@ export default function ProConnexion() {
                 data-testid="link-register"
                 style={{ color: DS.violetMid, fontWeight: 700, textDecoration: "none" }}
               >
-                Créer mon compte Pro
+                Créer mon compte DERM
               </Link>
             </p>
           </form>
