@@ -131,7 +131,7 @@ export default function ProInscription() {
               <Stethoscope style={{ width: 16, height: 16, color: DS.violetMid }} />
             </div>
             <span style={{ fontSize: 14, fontWeight: 700, color: DS.textPrimary }}>
-              GlowScan <span style={{ color: DS.violetMid }}>Pro</span>
+              GlowScan <span style={{ color: DS.violetMid }}>DERM</span>
             </span>
           </div>
         </div>
@@ -162,7 +162,7 @@ export default function ProInscription() {
               <Stethoscope style={{ width: 22, height: 22, color: DS.violetMid }} />
             </div>
             <h1 style={{ fontSize: 24, fontWeight: 800, color: DS.textPrimary, margin: "0 0 6px" }}>
-              Créer mon compte Pro
+              Créer mon compte DERM
             </h1>
             <p style={{ fontSize: 14, color: DS.textBody, margin: 0 }}>
               14 jours d'essai gratuit · sans carte bancaire · 30 000 FCFA/mois ensuite

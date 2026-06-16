@@ -188,6 +188,7 @@ export function registerProRoutes(app: Express) {
           email: emailLower,
           firstName: data.fullName,
           passwordHash,
+          role: "doctor", // 🔑 Explicite : les dermatologues ont le rôle "doctor"
         }).returning();
         userId = u.id;
       }
