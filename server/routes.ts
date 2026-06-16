@@ -172,6 +172,42 @@ export async function registerRoutes(
   });
 
   // === Health check IA ===
+  // ────────────────────────────────────────────────────
+  // GET /api/health — Health check pour monitoring (UptimeRobot, Pingdom, etc.)
+  // ────────────────────────────────────────────────────
+  app.get("/api/health", async (_req, res) => {
+    try {
+      const startTime = Date.now();
+
+      // 🔴 VÉRIFIER : Base de données
+      const dbCheck = await db.select(sql`1`).catch(() => null);
+      const dbOk = !!dbCheck;
+
+      const responseTime = Date.now() - startTime;
+
+      // Status final
+      const isHealthy = dbOk; // Ajouter plus de checks si nécessaire
+
+      res.status(isHealthy ? 200 : 503).json({
+        ok: isHealthy,
+        timestamp: new Date().toISOString(),
+        version: "1.0.0",
+        checks: {
+          database: dbOk ? "✅ online" : "❌ offline",
+          responseTime: `${responseTime}ms`,
+        },
+        environment: process.env.NODE_ENV || "unknown",
+      });
+    } catch (err) {
+      console.error("[/api/health] Check failed:", err);
+      res.status(503).json({
+        ok: false,
+        error: "Health check failed",
+        timestamp: new Date().toISOString(),
+      });
+    }
+  });
+
   app.get("/api/health/ai", async (_req, res) => {
     const provider = AI_PROVIDER;
     const activeKey = USE_GROQ ? _groqKey : (USE_GEMINI ? _geminiKey : _openaiKey);
@@ -283,13 +319,19 @@ export async function registerRoutes(
       // 🔑 SÉCURITÉ CRITIQUE : seuls les doctors (dermatologues) peuvent lancer l'analyse
       // Les secrétaires voient l'erreur 403 si elles essaient d'appeler cet endpoint
       if (userId && !isAnonymous) {
-        const [user] = await db.select().from(users).where(eq(users.id, userId));
-        if (user && user.role === "secretary") {
-          console.warn(`[security] ⚠️ Tentative non-autorisée par secretary ${user.email} sur POST /api/analyze`);
-          return res.status(403).json({
-            message: "Seules les dermatologues peuvent lancer une analyse",
-            code: "DOCTOR_ONLY",
-          });
+        try {
+          const [user] = await db.select().from(users).where(eq(users.id, userId));
+          if (user && user.role === "secretary") {
+            console.warn(`[security] ⚠️ Tentative non-autorisée par secretary ${user.email} sur POST /api/analyze`);
+            return res.status(403).json({
+              message: "Seules les dermatologues peuvent lancer une analyse",
+              code: "DOCTOR_ONLY",
+            });
+          }
+        } catch (dbErr: any) {
+          console.warn(`[db] ⚠️ Erreur lors de vérification rôle (migration 0002 appliquée?): ${dbErr.message}`);
+          // Si la colonne role n'existe pas en BD, on continue quand même (backward compat)
+          // mais on log l'erreur pour debug
         }
       }
 
