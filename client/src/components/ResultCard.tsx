@@ -66,6 +66,17 @@ interface Dermatologist {
 
 const DERMATOLOGISTS: Dermatologist[] = [
   {
+    id: "chiago-tietche-sonia",
+    name: "Dr Chiago Tietche Sonia",
+    title: "Dermatologue",
+    location: "Cameroun",
+    flag: "🇨🇲",
+    mode: "Consultation en ligne",
+    whatsapp: "237657057863",
+    available: true,
+    avatar: "👩‍⚕️",
+  },
+  {
     id: "legonou-christelle",
     name: "Dr LEGONOU Christelle",
     title: "Dermatologue - Vénérologue",
