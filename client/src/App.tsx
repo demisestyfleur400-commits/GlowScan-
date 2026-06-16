@@ -70,7 +70,7 @@ function Router() {
       <Route path="/auth" component={AuthPage} />
       <Route path="/premium" component={Premium} />
       {/* GlowScan DERM routes (formerly /pro) */}
-      <Route path="/derm" component={Pro} />
+      <Route path="/derm" component={DermLanding} />
       <Route path="/derm/inscription" component={ProInscription} />
       <Route path="/derm/onboarding" component={DermOnboarding} />
       <Route path="/derm/connexion" component={ProConnexion} />
@@ -91,7 +91,6 @@ function Router() {
       }} />
       <Route path="/confidentialite" component={Privacy} />
       <Route path="/dermato" component={DermatoPortal} />
-      <Route path="/derm" component={DermLanding} />
       <Route path="/derm/demo" component={DermDemo} />
       <Route path="/derm/register" component={ProInscription} />
       <Route path="/challenge/:token" component={Challenge} />
