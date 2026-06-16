@@ -148,6 +148,22 @@
   }
 }
 
+/* GlowScan Dark Theme Select Fixes */
+select {
+  background-color: #1a1625;
+  color: #f3f0ff;
+  border: 1px solid rgba(167,139,250,0.2);
+}
+
+select option {
+  background-color: #1a1625;
+  color: #f3f0ff;
+}
+
+select option:hover {
+  background-color: rgba(167,139,250,0.3);
+}
+
 @keyframes animateIn {
   from {
     opacity: 0;
