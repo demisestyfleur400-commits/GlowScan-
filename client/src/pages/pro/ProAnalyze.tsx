@@ -315,24 +315,11 @@ export default function ProAnalyze() {
   const { data: patientsData } = useProPatients("");
   const { data: accountData } = useProAccount();
 
-  // 🔑 Détecter le rôle de l'utilisateur : doctor ou secretary
-  const userRole = accountData?.user?.role;
-  const isDoctor = userRole === "doctor";
-
-  // Real-time sync: subscribe to scans updates
-  useRealtimeScans(patientId || undefined);
-
-  // QR code for PDF
-  const { qrSvg } = useQrCode(result?.savedScanId, patientId || undefined);
-
-  // Clinical override
-  const clinicalOverride = useClinicalOverride();
-  const [override, setOverride] = useState<ClinicalOverrideData | null>(null);
-  const [referenceNumber, setReferenceNumber] = useState("");
-
-  const [step, setStep] = useState<Step>(1);
+  // ⚠️ IMPORTANT: TOUS les useState DOIVENT être déclarés AVANT les hooks qui les utilisent
+  // Sinon : temporal dead zone error dans les hooks
 
   // Step 1 : choix patient
+  const [step, setStep] = useState<Step>(1);
   const [patientMode, setPatientMode] = useState<"choice" | "new" | "existing">("choice");
   const [patientId, setPatientId] = useState<number | null>(null);
   const [patient, setPatient] = useState<Patient | null>(null);
@@ -388,8 +375,26 @@ export default function ProAnalyze() {
   const [overrideSummary, setOverrideSummary] = useState("");
   const [overrideReason, setOverrideReason] = useState("");
 
+  // Clinical override state
+  const [override, setOverride] = useState<ClinicalOverrideData | null>(null);
+  const [referenceNumber, setReferenceNumber] = useState("");
+
   // Classification (TÂCHE 4)
   const [selectedStatus, setSelectedStatus] = useState<PatientStatus | null>(null);
+
+  // 🔑 Détecter le rôle de l'utilisateur : doctor ou secretary
+  const userRole = accountData?.user?.role;
+  const isDoctor = userRole === "doctor";
+
+  // ✅ NOW safe to use: useRealtimeScans(patientId), useQrCode(result), etc.
+  // Real-time sync: subscribe to scans updates
+  useRealtimeScans(patientId || undefined);
+
+  // QR code for PDF
+  const { qrSvg } = useQrCode(result?.savedScanId, patientId || undefined);
+
+  // Clinical override
+  const clinicalOverride = useClinicalOverride();
 
   // ─── Pré-sélection patient si ?patient=ID dans l'URL ────────────────
   useEffect(() => {
