@@ -39,6 +39,8 @@ if (!_groqKey && !_geminiKey && !_openaiKey) {
   console.error("⚠️  IA : aucune clé trouvée (GROQ_API_KEY, GEMINI_API_KEY ou OPENAI_API_KEY manquante)");
 } else {
   console.log(`✅  IA provider : ${AI_PROVIDER} — modèle ${AI_MODEL}`);
+  console.log(`   USE_GROQ=${USE_GROQ}, USE_GEMINI=${USE_GEMINI}`);
+  if (USE_GROQ) console.log(`   GROQ_MODEL=${GROQ_MODEL}`);
 }
 
 // Gemini native SDK (uniquement si pas de clé Groq)

@@ -23,9 +23,11 @@ const PRO_AI_MODEL   = PRO_USE_GROQ ? PRO_GROQ_MODEL
 // Gemini native SDK (uniquement sans clé Groq)
 const proGemini = PRO_USE_GEMINI ? new GoogleGenerativeAI(_proGeminiKey) : null;
 // OpenAI SDK — Groq (prioritaire, gratuit, global) ou OpenAI standard
+// ⚠️ CRITICAL: Groq needs 180s timeout (complex antecedents + image), OpenAI needs 60s
 const proOpenai = !PRO_USE_GEMINI ? new OpenAI({
   apiKey:  PRO_USE_GROQ ? _proGroqKey : (_proOpenaiKey || "sk-missing"),
   baseURL: PRO_USE_GROQ ? "https://api.groq.com/openai/v1" : (_proOpenaiBase || undefined),
+  timeout: PRO_USE_GROQ ? 180000 : 60000, // 3min for Groq, 1min for OpenAI
 }) : null;
 
 // Cache mémoire des questionnaires par condition normalisée (24h)
