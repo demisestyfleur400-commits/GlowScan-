@@ -105,13 +105,25 @@ export const api = {
           })).optional(),
 
           // Protocoles enrichis avec brand + price
-          recommendations: z.array(z.object({
-            step: z.string(),
-            product: z.string(),
-            brand: z.string().optional(),
-            price: z.string().optional(),
-            why: z.string().optional(),
-          })).optional(),
+          // ⚠️ Le backend renvoie recommendations comme OBJET { products, morning, evening, weekly }
+          // (voir routes.ts ~865). On accepte les DEUX formes pour tolérance :
+          //  - objet legacy (forme réelle actuelle du backend)
+          //  - array enrichi (forme historique/future)
+          recommendations: z.union([
+            z.array(z.object({
+              step: z.string(),
+              product: z.string(),
+              brand: z.string().optional(),
+              price: z.string().optional(),
+              why: z.string().optional(),
+            })),
+            z.object({
+              products: z.array(z.any()).optional(),
+              morning: z.array(z.string()).optional(),
+              evening: z.array(z.string()).optional(),
+              weekly: z.string().optional(),
+            }).passthrough(),
+          ]).optional(),
           morningProtocol: z.array(z.object({
             step: z.string(),
             product: z.string(),
