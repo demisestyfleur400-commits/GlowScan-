@@ -676,7 +676,9 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
           ]);
           c = gemResult.response.text() || "";
         } else if (openai) {
-          // Timeout is now set at client initialization above
+          // Timeout = client init (180s Groq / 60s OpenAI).
+          // maxRetries: 0 → un seul essai, on échoue vite (comportement B2C
+          // d'origine). Sans ça le SDK retente 2× en silence et ralentit tout.
           const r = await openai.chat.completions.create({
             model: AI_MODEL,
             messages: [
@@ -692,7 +694,7 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
             max_tokens: 4500,
             temperature: 0.2,
             response_format: { type: "json_object" },
-          });
+          }, { maxRetries: 0 });
           c = r.choices[0]?.message?.content || "";
           console.log(`[analyze] finish: ${r.choices[0]?.finish_reason}`);
         } else {
