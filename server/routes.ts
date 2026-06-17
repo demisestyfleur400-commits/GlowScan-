@@ -44,9 +44,11 @@ if (!_groqKey && !_geminiKey && !_openaiKey) {
 // Gemini native SDK (uniquement si pas de clé Groq)
 const gemini = USE_GEMINI ? new GoogleGenerativeAI(_geminiKey) : null;
 // OpenAI SDK compatible — Groq (prioritaire) ou OpenAI standard
+// ⚠️ CRITICAL: Groq needs 180s timeout, OpenAI needs 60s
 const openai = !USE_GEMINI ? new OpenAI({
   apiKey:  USE_GROQ ? _groqKey : (_openaiKey || "sk-missing"),
   baseURL: USE_GROQ ? "https://api.groq.com/openai/v1" : (_openaiBase || undefined),
+  timeout: USE_GROQ ? 180000 : 60000, // 3min for Groq, 1min for OpenAI
 }) : null;
 
 /**
@@ -589,8 +591,7 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
           ]);
           c = gemResult.response.text() || "";
         } else if (openai) {
-          // Timeout adapté au provider : Llama/Groq est 3-5x plus lent que GPT-4
-          const apiTimeout = USE_GROQ ? 180000 : 60000; // 3min pour Groq, 1min pour OpenAI
+          // Timeout is now set at client initialization above
           const r = await openai.chat.completions.create({
             model: AI_MODEL,
             messages: [
@@ -606,7 +607,7 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
             max_tokens: 4500,
             temperature: 0.2,
             response_format: { type: "json_object" },
-          }, { timeout: apiTimeout, maxRetries: 0 });
+          });
           c = r.choices[0]?.message?.content || "";
           console.log(`[analyze] finish: ${r.choices[0]?.finish_reason}`);
         } else {
