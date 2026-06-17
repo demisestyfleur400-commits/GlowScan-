@@ -180,7 +180,7 @@ export default function ProPatients() {
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.02 }}
-                style={{ borderBottom: i < patients.length - 1 ? "1px solid rgba(255,255,255,0.07)" : "none" }}
+                style={{ borderBottom: i < displayPatients.length - 1 ? "1px solid rgba(255,255,255,0.07)" : "none" }}
               >
                 <Link
                   href={`/pro/patient/${p.id}`}
