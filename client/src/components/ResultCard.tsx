@@ -2979,8 +2979,9 @@ ${pdfBestProduct ? `
           );
         })()}
 
-        {/* ═══ BLOC 7b — Pack cheveux Ebony Hair ═══ */}
-        {currentArea === "cheveux" && hairPacks.length > 0 && (
+        {/* ═══ BLOC 7b — Pack cheveux Ebony Hair (B2C uniquement) ═══ */}
+        {/* Vente grand public + marque Ebony Hair interdite en mode DERM/pro */}
+        {!isPro && currentArea === "cheveux" && hairPacks.length > 0 && (
           <div style={{ marginTop: "8px" }}>
             <p style={{ fontSize: "11px", fontWeight: 700, color: DS.textMuted, textTransform: "uppercase", letterSpacing: "0.15em", marginBottom: "12px" }}>
               🌿 Choisis ton pack capillaire
@@ -3104,31 +3105,37 @@ ${pdfBestProduct ? `
         </div>
       </motion.div>
 
-      {/* Bloc dermatologue partenaire */}
-      <DermatologistSection
-        score={result.score || 0}
-        condition={result.condition || ""}
-      />
+      {/* Bloc dermatologue partenaire (B2C uniquement) */}
+      {/* Absurde en mode DERM : l'utilisateur EST le dermatologue, on ne
+          l'oriente pas vers un confrère partenaire. */}
+      {!isPro && (
+        <DermatologistSection
+          score={result.score || 0}
+          condition={result.condition || ""}
+        />
+      )}
 
-      {/* Disclaimer médical */}
-      <div
-        data-testid="disclaimer-medical"
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: "8px",
-          padding: "12px 16px",
-          borderRadius: "16px",
-          background: "rgba(255,255,255,0.03)",
-          border: "1px solid rgba(255,255,255,0.06)",
-        }}
-      >
-        <span style={{ fontSize: "16px", flexShrink: 0 }}>⚕️</span>
-        <p style={{ fontSize: "11px", fontWeight: 500, lineHeight: 1.6, textAlign: "center", color: DS.textMuted }}>
-          Notre diagnostic ne remplace pas un dermatologue. Consultez un professionnel de santé pour tout problème persistant.
-        </p>
-      </div>
+      {/* Disclaimer médical (B2C — orienté patient, masqué en mode DERM/pro) */}
+      {!isPro && (
+        <div
+          data-testid="disclaimer-medical"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "8px",
+            padding: "12px 16px",
+            borderRadius: "16px",
+            background: "rgba(255,255,255,0.03)",
+            border: "1px solid rgba(255,255,255,0.06)",
+          }}
+        >
+          <span style={{ fontSize: "16px", flexShrink: 0 }}>⚕️</span>
+          <p style={{ fontSize: "11px", fontWeight: 500, lineHeight: 1.6, textAlign: "center", color: DS.textMuted }}>
+            Notre diagnostic ne remplace pas un dermatologue. Consultez un professionnel de santé pour tout problème persistant.
+          </p>
+        </div>
+      )}
 
       {/* Modals */}
       <OrderModal
