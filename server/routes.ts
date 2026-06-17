@@ -13,7 +13,7 @@ import { GLOWSCAN_SYSTEM_PROMPT, GLOWSCAN_DERM_SYSTEM_PROMPT } from "./prompt";
 import { classifyCondition, extractPhototype, calcAnnotationScore } from "./taxonomy";
 import webpush from "web-push";
 import { db } from "./db";
-import { referrals, loyaltyPoints, subscriptions, scans, leads, premiumRequests, wellnessLogs, trainingData, type TrainingData } from "@shared/schema";
+import { referrals, loyaltyPoints, subscriptions, scans, leads, premiumRequests, wellnessLogs, trainingData, proAccounts, type TrainingData } from "@shared/schema";
 import { users } from "@shared/models/auth";
 import { eq, and, sql, gte, count, lte, desc, avg, inArray } from "drizzle-orm";
 import { whatsappClicks, orders, pageVisits } from "@shared/schema";
@@ -68,6 +68,75 @@ function getUID(req: any): string | null {
 /** Vérifie qu'un utilisateur est connecté (auth custom OU Replit OIDC) */
 function isAuth(req: any): boolean {
   return !!(req.session?.userId || req.user?.id || (req.user as any)?.claims?.sub);
+}
+
+/**
+ * Construit la réponse clinique DERM (B2B) à partir de la sortie brute de l'IA.
+ * Architecture de sortie SÉPARÉE du B2C : ne produit que les champs cliniques
+ * définis par GLOWSCAN_DERM_SYSTEM_PROMPT (clinicalProtocol, zonesAnalysis, etc.).
+ * Tolérant aux champs manquants — clamp/sanitize sans jamais throw.
+ */
+function buildDermResult(a: any) {
+  const str = (x: any, max = 4000) => (typeof x === "string" ? x.slice(0, max) : undefined);
+  const arrStr = (x: any) =>
+    Array.isArray(x) ? x.filter((s: any) => typeof s === "string").map((s: string) => s.slice(0, 400)) : [];
+  const clampScore = (n: any) => {
+    const v = Number(n);
+    return Number.isFinite(v) ? Math.max(0, Math.min(100, Math.round(v))) : 65;
+  };
+  const num = (n: any) => (Number.isFinite(Number(n)) ? Number(n) : undefined);
+  const step = (s: any) => ({
+    step: str(s?.step, 80) || "",
+    product: str(s?.product, 160),
+    concentration: s?.concentration === null ? null : str(s?.concentration, 40),
+    frequency: str(s?.frequency, 120),
+    mechanism: str(s?.mechanism, 600),
+  });
+  const cp = a?.clinicalProtocol && typeof a.clinicalProtocol === "object" ? a.clinicalProtocol : {};
+
+  return {
+    condition: str(a?.condition, 200) || "Analyse clinique",
+    conditionSecondaire: a?.conditionSecondaire === null ? null : str(a?.conditionSecondaire, 200),
+    severity: str(a?.severity, 40) || "Modérée",
+    score: clampScore(a?.score),
+    confidence: str(a?.confidence, 200),
+    skinType: str(a?.skinType, 200),
+    photo_quality: str(a?.photo_quality, 40),
+    clinicalSummary: str(a?.clinicalSummary, 3000),
+    zonesAnalysis: Array.isArray(a?.zonesAnalysis)
+      ? a.zonesAnalysis.slice(0, 10).map((z: any) => ({
+          zone: str(z?.zone, 60) || "Zone",
+          status: str(z?.status, 60),
+          findings: str(z?.findings, 1200),
+          risk: str(z?.risk, 1200),
+          evaluable: typeof z?.evaluable === "boolean" ? z.evaluable : true,
+        }))
+      : [],
+    antecedentsIntegration: str(a?.antecedentsIntegration, 2000),
+    toxicIngredients: Array.isArray(a?.toxicIngredients)
+      ? a.toxicIngredients.slice(0, 8).map((t: any) => ({
+          ingredient: str(t?.ingredient, 160) || "",
+          reason: str(t?.reason, 800),
+        }))
+      : [],
+    differentialDiagnosis: arrStr(a?.differentialDiagnosis),
+    clinicalProtocol: {
+      morning: Array.isArray(cp.morning) ? cp.morning.slice(0, 6).map(step) : [],
+      evening: Array.isArray(cp.evening) ? cp.evening.slice(0, 6).map(step) : [],
+      weekly: cp.weekly === null ? null : str(cp.weekly, 400),
+      durationWeeks: num(cp.durationWeeks),
+      followUpWeeks: num(cp.followUpWeeks),
+      referralNeeded: typeof cp.referralNeeded === "boolean" ? cp.referralNeeded : false,
+      referralReason: cp.referralReason === null ? null : str(cp.referralReason, 400),
+    },
+    logistics: a?.logistics === null ? null : str(a?.logistics, 800),
+    prognostic: str(a?.prognostic, 2000),
+    redFlags: arrStr(a?.redFlags),
+    contraindications: arrStr(a?.contraindications),
+    medicalDisclaimer:
+      str(a?.medicalDisclaimer, 600) ||
+      "Ce rapport est un outil d'aide au diagnostic à l'usage exclusif du professionnel de santé. Il ne remplace pas l'examen clinique complet.",
+  };
 }
 
 // Stockage temporaire d'images pour contourner la limitation base64 du proxy
@@ -382,8 +451,22 @@ export async function registerRoutes(
       } | undefined;
 
       // Construction du contexte patient pour enrichir le prompt IA
-      // ── Détection compte Pro → prompt strict ──────────────────────────
-      const isProRequest = !!(req as any).proAccount;
+      // ── Détection mode DERM (B2B) ──────────────────────────────────────
+      // /api/analyze est partagé B2C/DERM. Le mode DERM (architecture de sortie
+      // séparée) est activé UNIQUEMENT si :
+      //   1) le frontend envoie mode === "derm"
+      //   2) ET l'utilisateur connecté possède un compte pro
+      // Sinon → chemin B2C strictement inchangé (aucune requête DB ajoutée).
+      const reqMode = (req.body as any)?.mode;
+      let isProRequest = false;
+      if (reqMode === "derm" && userId && !isAnonymous) {
+        try {
+          const [pa] = await db.select().from(proAccounts).where(eq(proAccounts.userId, userId));
+          isProRequest = !!pa;
+        } catch (e) {
+          console.warn("[analyze] vérif compte pro échouée (mode derm):", (e as any)?.message);
+        }
+      }
 
       // Pour le mode Pro, les antécédents sont injectés dans le system prompt via {PATIENT_INTAKE}
       // Pour le mode B2C, ils sont injectés dans le message utilisateur
@@ -727,6 +810,38 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
       // Vérifier que la réponse contient les champs essentiels
       if (!analysisResult.condition && !analysisResult.score) {
         throw new Error("Réponse IA incomplète — l'image ne semble pas être une photo de peau ou cheveux");
+      }
+
+      // ══════════════════════════════════════════════════════════════════
+      // CHEMIN DERM (B2B) — sortie clinique SÉPARÉE et indépendante du B2C
+      // Le prompt DERM (GLOWSCAN_DERM_SYSTEM_PROMPT) a déjà servi à l'appel IA
+      // via activeSystemPrompt. On construit ici la réponse clinique dédiée et
+      // on retourne immédiatement — le pipeline B2C ci-dessous n'est PAS exécuté.
+      // ══════════════════════════════════════════════════════════════════
+      if (isProRequest) {
+        const dermResult = buildDermResult(analysisResult);
+        const uploadedDermImage = await uploadScanImageToStorage(image);
+        let dermScanId: number | null = null;
+        try {
+          const savedScan = await storage.createScan({
+            userId: userId || undefined,
+            sessionId: userId ? undefined : (req.session?.id || undefined),
+            imageUrl: uploadedDermImage || "",
+            area,
+            condition: dermResult.condition,
+            analysis: dermResult.clinicalSummary || "",
+            recommendations: { _fullResult: dermResult },
+            score: dermResult.score,
+            motivation: dermResult.clinicalSummary || "",
+          });
+          dermScanId = savedScan.id;
+          console.log(`[analyze][derm] ✅ Scan #${dermScanId} sauvegardé (mode DERM)`);
+        } catch (e) {
+          console.error("[analyze][derm] ❌ échec sauvegarde scan:", e instanceof Error ? e.message : String(e));
+        }
+        const yr = new Date().getFullYear();
+        const ref = dermScanId ? `GS-${yr}-${String(dermScanId).padStart(4, "0")}` : `GS-${yr}-PRO`;
+        return res.json({ ...dermResult, savedScanId: dermScanId, reference: ref, isAnonymous: false });
       }
 
       const { catalog } = await import("@shared/catalog");

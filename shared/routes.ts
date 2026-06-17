@@ -105,25 +105,13 @@ export const api = {
           })).optional(),
 
           // Protocoles enrichis avec brand + price
-          // ⚠️ Le backend renvoie recommendations comme OBJET { products, morning, evening, weekly }
-          // (voir routes.ts ~865). On accepte les DEUX formes pour tolérance :
-          //  - objet legacy (forme réelle actuelle du backend)
-          //  - array enrichi (forme historique/future)
-          recommendations: z.union([
-            z.array(z.object({
-              step: z.string(),
-              product: z.string(),
-              brand: z.string().optional(),
-              price: z.string().optional(),
-              why: z.string().optional(),
-            })),
-            z.object({
-              products: z.array(z.any()).optional(),
-              morning: z.array(z.string()).optional(),
-              evening: z.array(z.string()).optional(),
-              weekly: z.string().optional(),
-            }).passthrough(),
-          ]).optional(),
+          recommendations: z.array(z.object({
+            step: z.string(),
+            product: z.string(),
+            brand: z.string().optional(),
+            price: z.string().optional(),
+            why: z.string().optional(),
+          })).optional(),
           morningProtocol: z.array(z.object({
             step: z.string(),
             product: z.string(),
@@ -164,6 +152,74 @@ export const api = {
     }
   },
 };
+
+// ============================================
+// SCHÉMA DERM (B2B) — ARCHITECTURE DE SORTIE SÉPARÉE DU B2C
+// ============================================
+// Contrat clinique renvoyé par /api/analyze lorsque mode === "derm" + compte pro.
+// Volontairement indépendant du schéma B2C ci-dessus (modèles de sortie distincts).
+// Tolérant : seuls condition/score sont requis, le reste optionnel + passthrough,
+// pour absorber les variations de réponse de l'IA sans casser la consultation.
+const dermProtocolStep = z.object({
+  step: z.string(),
+  product: z.string().optional(),
+  concentration: z.string().nullable().optional(),
+  frequency: z.string().optional(),
+  mechanism: z.string().optional(),
+}).passthrough();
+
+export const dermAnalysisResponseSchema = z.object({
+  condition: z.string(),
+  conditionSecondaire: z.string().nullable().optional(),
+  severity: z.string().optional(),
+  score: z.number(),
+  confidence: z.string().optional(),
+  skinType: z.string().optional(),
+  photo_quality: z.string().optional(),
+
+  clinicalSummary: z.string().optional(),
+
+  zonesAnalysis: z.array(z.object({
+    zone: z.string(),
+    status: z.string().optional(),
+    findings: z.string().optional(),
+    risk: z.string().optional(),
+    evaluable: z.boolean().optional(),
+  }).passthrough()).optional(),
+
+  antecedentsIntegration: z.string().optional(),
+
+  toxicIngredients: z.array(z.object({
+    ingredient: z.string(),
+    reason: z.string().optional(),
+  }).passthrough()).optional(),
+
+  differentialDiagnosis: z.array(z.string()).optional(),
+
+  clinicalProtocol: z.object({
+    morning: z.array(dermProtocolStep).optional(),
+    evening: z.array(dermProtocolStep).optional(),
+    weekly: z.string().nullable().optional(),
+    durationWeeks: z.number().optional(),
+    followUpWeeks: z.number().optional(),
+    referralNeeded: z.boolean().optional(),
+    referralReason: z.string().nullable().optional(),
+  }).passthrough().optional(),
+
+  logistics: z.string().nullable().optional(),
+  prognostic: z.string().optional(),
+  redFlags: z.array(z.string()).optional(),
+  contraindications: z.array(z.string()).optional(),
+  medicalDisclaimer: z.string().optional(),
+
+  // Champs propagés par le serveur
+  savedScanId: z.number().optional(),
+  reference: z.string().optional(),
+  imageUrl: z.string().optional(),
+  isAnonymous: z.boolean().optional(),
+}).passthrough();
+
+export type DermAnalysisResponse = z.infer<typeof dermAnalysisResponseSchema>;
 
 // ============================================
 // HELPER FUNCTIONS

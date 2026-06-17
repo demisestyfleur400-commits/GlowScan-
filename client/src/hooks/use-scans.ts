@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, type AnalyzeResponse } from "@shared/routes";
+import { api, dermAnalysisResponseSchema, type DermAnalysisResponse } from "@shared/routes";
 import type { InsertScan } from "@shared/schema";
 
 // ============================================
@@ -12,9 +12,15 @@ export interface AnalyzeRequest {
   intake?: Record<string, string | undefined>;
 }
 
+/**
+ * Hook d'analyse DERM (B2B) — utilisé UNIQUEMENT par les pages pro
+ * (ProAnalyze, DermOnboarding). Envoie mode:"derm" pour activer le pipeline
+ * clinique côté serveur et valide la réponse avec le schéma DERM séparé.
+ * Architecture de sortie indépendante du B2C.
+ */
 export function useAnalyze() {
   return useMutation({
-    mutationFn: async (data: AnalyzeRequest): Promise<AnalyzeResponse> => {
+    mutationFn: async (data: AnalyzeRequest): Promise<DermAnalysisResponse> => {
       // RAPIDITÉ AVANT TOUT : 2 tentatives max (≈ 25-30s plafond),
       // puis on throw → l'appelant Pro bascule sur canevas dermato éditable.
       // Ne jamais faire poireauter le dermato — il préfère écrire lui-même
@@ -25,7 +31,7 @@ export function useAnalyze() {
           const res = await fetch(api.scans.analyze.path, {
             method: api.scans.analyze.method,
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data),
+            body: JSON.stringify({ ...data, mode: "derm" }),
             credentials: "include",
           });
 
@@ -39,7 +45,7 @@ export function useAnalyze() {
             throw new Error(body?.message || "Analyse échouée. Réessaie.");
           }
 
-          return api.scans.analyze.responses[200].parse(await res.json());
+          return dermAnalysisResponseSchema.parse(await res.json());
         } catch (err) {
           lastErr = err;
           if (attempt < 2) {
