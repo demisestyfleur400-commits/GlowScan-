@@ -303,6 +303,20 @@ function QuickAnnotate({ scanId, condition }: { scanId?: number; condition?: str
   );
 }
 
+/**
+ * Extrait la liste (dédupliquée) des produits du protocole clinique DERM.
+ * En mode DERM, les produits vivent dans clinicalProtocol.morning/evening[].product
+ * (et non plus dans recommendations.products comme en B2C).
+ */
+function getProtocolProducts(r: any): string[] {
+  const cp = r?.clinicalProtocol || {};
+  const steps = [...(cp.morning || []), ...(cp.evening || [])];
+  const names = steps
+    .map((s: any) => (typeof s?.product === "string" ? s.product.trim() : ""))
+    .filter(Boolean);
+  return Array.from(new Set(names));
+}
+
 export default function ProAnalyze() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
@@ -630,7 +644,7 @@ export default function ProAnalyze() {
       toast({ title: "Pas de téléphone", description: "Patient sans WhatsApp", variant: "destructive" });
       return;
     }
-    const products = result?.recommendations?.products?.slice(0, 3).join(", ") || "—";
+    const products = getProtocolProducts(result).map(p => p.split(" — ")[0]).slice(0, 3).join(", ") || "—";
     const msg = encodeURIComponent(
       `Bonjour ${firstName} ${lastName},\n\n` +
         `Voici votre rapport GlowScan :\n` +
@@ -1723,10 +1737,10 @@ export default function ProAnalyze() {
                       <CheckCircle2 className="w-3 h-3" style={{ color: "#6ee7b7" }} />
                       Photo archivée · {new Date().toLocaleString("fr-FR")}
                     </div>
-                    {result?.recommendations?.products && result.recommendations.products.length > 0 && (
+                    {getProtocolProducts(result).length > 0 && (
                       <div className="flex items-center gap-2 text-[11px] mt-1" style={{ color: DS.muted }}>
                         <CheckCircle2 className="w-3 h-3" style={{ color: "#6ee7b7" }} />
-                        {result.recommendations.products.length} produit(s) recommandé(s)
+                        {getProtocolProducts(result).length} produit(s) recommandé(s)
                       </div>
                     )}
 
