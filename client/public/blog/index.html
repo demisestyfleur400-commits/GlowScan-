@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Blog Skincare — Conseils peau africaine, routines & IA | GlowScan</title>
+  <meta name="description" content="Découvrez nos guides et conseils skincare pour peaux africaines : routines, traitements naturels, acné, hyperpigmentation et innovations IA. Tous les articles GlowScan." />
+  <meta name="robots" content="index, follow, max-image-preview:large" />
+  <link rel="canonical" href="https://glow-scan.com/blog/" />
+  <meta property="og:title" content="Blog Skincare GlowScan — Conseils pour peaux africaines" />
+  <meta property="og:description" content="Guides et conseils skincare pour peaux africaines : routines, acné, hyperpigmentation, IA et beauté naturelle." />
+  <meta property="og:image" content="https://glow-scan.com/logo-glowscan-square.jpeg" />
+  <meta property="og:url" content="https://glow-scan.com/blog/" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="GlowScan" />
+  <link rel="icon" type="image/jpeg" href="/logo-glowscan-square.jpeg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Blog",
+    "name": "Blog GlowScan",
+    "url": "https://glow-scan.com/blog/",
+    "description": "Conseils skincare pour peaux africaines : routines, traitements, acné, hyperpigmentation et intelligence artificielle.",
+    "inLanguage": "fr",
+    "publisher": {
+      "@type": "Organization",
+      "name": "GlowScan",
+      "logo": { "@type": "ImageObject", "url": "https://glow-scan.com/logo-glowscan-square.jpeg" }
+    }
+  }
+  </script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0d0a0e; --surface: #13101f; --border: rgba(255,255,255,0.07);
+      --teal: #0d9488; --teal-light: #14b8a6;
+      --text: #f3f0ff; --body: rgba(200,185,255,0.75); --muted: rgba(200,185,255,0.45);
+    }
+    body { background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; line-height: 1.6; }
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(13,10,14,0.92); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px; display: flex; align-items: center; justify-content: space-between; height: 60px;
+    }
+    .nav-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+    .nav-logo img { width: 32px; height: 32px; border-radius: 8px; }
+    .nav-logo span { font-weight: 700; font-size: 18px; color: var(--text); }
+    .nav-cta {
+      background: var(--teal); color: white; border-radius: 20px;
+      padding: 8px 18px; font-size: 14px; font-weight: 600; text-decoration: none;
+    }
+    .container { max-width: 900px; margin: 0 auto; padding: 0 20px; }
+
+    /* HERO */
+    .blog-hero { padding: 56px 0 40px; border-bottom: 1px solid var(--border); margin-bottom: 48px; }
+    .blog-hero h1 { font-size: clamp(28px,4vw,42px); font-weight: 800; margin-bottom: 12px; }
+    .blog-hero p { color: var(--body); font-size: 18px; max-width: 600px; }
+
+    /* GRID */
+    .articles-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 24px; margin-bottom: 64px; }
+    .article-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      text-decoration: none;
+      display: block;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+    .article-card:hover { border-color: rgba(13,148,136,0.4); transform: translateY(-2px); }
+    .card-tag {
+      display: inline-block;
+      background: rgba(13,148,136,0.12);
+      color: var(--teal-light);
+      border-radius: 20px;
+      padding: 3px 12px;
+      font-size: 11px; font-weight: 600; letter-spacing: 0.5px;
+      text-transform: uppercase; margin-bottom: 14px;
+    }
+    .card-title { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 10px; line-height: 1.3; }
+    .card-excerpt { font-size: 14px; color: var(--body); line-height: 1.6; margin-bottom: 16px; }
+    .card-meta { font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; }
+    .card-status {
+      background: rgba(99,102,241,0.12);
+      color: rgba(165,180,252,0.8);
+      border-radius: 20px;
+      padding: 3px 10px;
+      font-size: 11px;
+    }
+
+    /* CTA */
+    .bottom-cta {
+      background: linear-gradient(135deg, rgba(13,148,136,0.12), rgba(99,102,241,0.08));
+      border: 1px solid rgba(13,148,136,0.25);
+      border-radius: 16px;
+      padding: 40px; text-align: center; margin-bottom: 64px;
+    }
+    .bottom-cta h2 { font-size: 24px; font-weight: 700; margin-bottom: 10px; }
+    .bottom-cta p { color: var(--body); margin-bottom: 20px; }
+    .cta-btn {
+      display: inline-block; background: var(--teal); color: white;
+      text-decoration: none; padding: 14px 32px; border-radius: 30px;
+      font-weight: 700; font-size: 16px;
+    }
+    footer {
+      border-top: 1px solid var(--border); padding: 32px 24px;
+      text-align: center; color: var(--muted); font-size: 13px;
+    }
+    footer a { color: var(--teal-light); text-decoration: none; }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <a href="/" class="nav-logo">
+      <img src="/logo-glowscan-square.jpeg" alt="GlowScan" />
+      <span>GlowScan</span>
+    </a>
+    <a href="/analyze" class="nav-cta">Analyser ma peau →</a>
+  </nav>
+
+  <div class="container">
+    <header class="blog-hero">
+      <h1>Blog Skincare GlowScan</h1>
+      <p>Conseils, routines et guides dédiés aux peaux africaines. Basés sur la science, écrits pour vous.</p>
+    </header>
+
+    <div class="articles-grid">
+
+      <!-- Article 1 — PUBLIÉ -->
+      <a href="/blog/acne-peau-noire-traitement.html" class="article-card">
+        <div class="card-tag">Acné · Skincare</div>
+        <div class="card-title">Acné sur peau noire : causes, traitements et routine efficace</div>
+        <div class="card-excerpt">L'acné sur peau africaine laisse des marques durables. Découvrez les causes, les bons ingrédients et une routine complète pour en venir à bout.</div>
+        <div class="card-meta">
+          <span>17 juin 2026 · 8 min</span>
+          <span style="color: var(--teal-light); font-weight: 600;">Lire →</span>
+        </div>
+      </a>
+
+      <!-- Articles à venir -->
+      <div class="article-card" style="opacity:0.5; cursor:default;">
+        <div class="card-tag">Analyse peau</div>
+        <div class="card-title">Comment analyser sa peau africaine en 2026 : le guide complet</div>
+        <div class="card-excerpt">Types de peau, problèmes courants, méthodes d'analyse et rôle de l'intelligence artificielle dans le diagnostic moderne.</div>
+        <div class="card-meta">
+          <span>Prochainement</span>
+          <span class="card-status">À venir</span>
+        </div>
+      </div>
+
+      <div class="article-card" style="opacity:0.5; cursor:default;">
+        <div class="card-tag">Routine</div>
+        <div class="card-title">Routine skincare matin et soir pour peau grasse africaine</div>
+        <div class="card-excerpt">La routine complète, étape par étape, pour contrôler le sébum et avoir une peau nette toute la journée.</div>
+        <div class="card-meta">
+          <span>Prochainement</span>
+          <span class="card-status">À venir</span>
+        </div>
+      </div>
+
+      <div class="article-card" style="opacity:0.5; cursor:default;">
+        <div class="card-tag">Taches · HPI</div>
+        <div class="card-title">Hyperpigmentation : comment effacer les taches sur peau africaine</div>
+        <div class="card-excerpt">Comprendre l'hyperpigmentation post-inflammatoire et les solutions les plus efficaces pour peaux foncées.</div>
+        <div class="card-meta">
+          <span>Prochainement</span>
+          <span class="card-status">À venir</span>
+        </div>
+      </div>
+
+      <div class="article-card" style="opacity:0.5; cursor:default;">
+        <div class="card-tag">SPF</div>
+        <div class="card-title">SPF et peau noire : pourquoi la crème solaire est indispensable</div>
+        <div class="card-excerpt">Le mythe "les peaux noires n'ont pas besoin de SPF" est faux et dangereux. Voici pourquoi et quel SPF choisir.</div>
+        <div class="card-meta">
+          <span>Prochainement</span>
+          <span class="card-status">À venir</span>
+        </div>
+      </div>
+
+      <div class="article-card" style="opacity:0.5; cursor:default;">
+        <div class="card-tag">IA · Skincare</div>
+        <div class="card-title">L'IA révolutionne les soins de peau en Afrique</div>
+        <div class="card-excerpt">Comment l'intelligence artificielle comme GlowScan change l'accès aux soins dermatologiques pour les peaux africaines.</div>
+        <div class="card-meta">
+          <span>Prochainement</span>
+          <span class="card-status">À venir</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- CTA -->
+    <div class="bottom-cta">
+      <h2>Diagnostic personnalisé en 30 secondes</h2>
+      <p>Ne lisez plus des conseils généraux. Obtenez votre routine unique basée sur l'analyse IA de votre peau.</p>
+      <a href="/analyze" class="cta-btn">Analyser ma peau gratuitement</a>
+    </div>
+  </div>
+
+  <footer>
+    <p>© 2026 GlowScan · <a href="/confidentialite">Confidentialité</a> · <a href="/">Retour à l'app</a></p>
+    <p style="margin-top:8px;">Diagnostic dermatologique IA pour peaux africaines — Douala, Cameroun</p>
+  </footer>
+
+</body>
+</html>
