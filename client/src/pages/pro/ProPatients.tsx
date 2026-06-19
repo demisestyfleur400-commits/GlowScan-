@@ -52,7 +52,7 @@ export default function ProPatients() {
 
   return (
     <ProLayout
-      title="Mes patients"
+      title="Patientèle"
       back="/derm/dashboard"
       rightAction={
         <Link
@@ -62,7 +62,7 @@ export default function ProPatients() {
           style={{ background: NAVY }}
         >
           <Plus className="w-3.5 h-3.5" />
-          Nouveau
+          Nouveau patient
         </Link>
       }
     >

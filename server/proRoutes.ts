@@ -629,11 +629,18 @@ export function registerProRoutes(app: Express) {
         topConditions,
         topProducts,
         monthly: monthlyArr,
-        statusBreakdown: {
-          red: allPatients.filter(p => p.status === "red").length,
-          yellow: allPatients.filter(p => p.status === "yellow").length,
-          green: allPatients.filter(p => p.status === "green").length,
-        },
+        // Schéma de statut unifié : priority/monitoring/stable/resolved.
+        // On mappe l'ancien schéma (red/yellow/green) pour rétro-compat.
+        statusBreakdown: (() => {
+          const norm = (s: string | null | undefined) =>
+            s === "red" ? "priority" : s === "yellow" ? "monitoring" : s === "green" ? "stable" : (s || "stable");
+          const counts = { priority: 0, monitoring: 0, stable: 0, resolved: 0 } as Record<string, number>;
+          for (const p of allPatients) {
+            const m = norm(p.status);
+            if (m in counts) counts[m] += 1;
+          }
+          return counts;
+        })(),
       });
     } catch (err) {
       console.error("[pro/stats] error:", err);

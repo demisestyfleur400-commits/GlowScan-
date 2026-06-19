@@ -1947,15 +1947,21 @@ function StepHeader({ n, title, subtitle }: { n: number; title: string; subtitle
 
 function ScanLoader({ photo }: { photo: string | null }) {
   const [phase, setPhase] = useState(0);
+  const [progress, setProgress] = useState(0);
   const phases = [
     "Préparation de l'image…",
-    "Détection des zones cutanées…",
-    "Analyse des lésions et pigmentation…",
-    "Génération du diagnostic clinique…",
+    "Analyse des zones cutanées…",
+    "Calibration Fitzpatrick IV–VI…",
+    "Détection des lésions et de la pigmentation…",
+    "Intégration des antécédents patient…",
+    "Génération du rapport clinique…",
   ];
   useEffect(() => {
-    const t = setInterval(() => setPhase((p) => (p + 1) % phases.length), 1800);
-    return () => clearInterval(t);
+    const t = setInterval(() => setPhase((p) => (p + 1) % phases.length), 2200);
+    // Progression "asymptotique" : monte vite puis ralentit vers ~92% sans jamais
+    // atteindre 100% tant que l'IA n'a pas répondu (honnête, pas de fausse fin).
+    const pr = setInterval(() => setProgress((v) => v + (92 - v) * 0.06), 400);
+    return () => { clearInterval(t); clearInterval(pr); };
   }, []);
 
   return (
@@ -1996,7 +2002,16 @@ function ScanLoader({ photo }: { photo: string | null }) {
           <ScanLine className="w-3.5 h-3.5 animate-pulse" style={{ color: NAVY }} />
           <span className="text-xs font-extrabold" style={{ color: "#a78bfa" }}>{phases[phase]}</span>
         </div>
-        <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.35)" }}>Détection automatique zone par zone</p>
+
+        {/* Barre de progression */}
+        <div className="w-full max-w-xs mx-auto h-1.5 rounded-full overflow-hidden mb-2" style={{ background: "rgba(255,255,255,0.06)" }}>
+          <div
+            className="h-full rounded-full"
+            style={{ width: `${Math.min(92, Math.round(progress))}%`, background: "linear-gradient(90deg, #7c3aed, #a78bfa)", transition: "width 0.4s ease-out" }}
+          />
+        </div>
+
+        <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.35)" }}>Analyse Llama 4 · peut prendre jusqu'à 1 minute</p>
       </div>
 
       <style>{`

@@ -18,16 +18,16 @@ export default function ProStats() {
   // 🔑 SÉCURITÉ : Les secrétaires n'ont pas accès aux statistiques
   if (accData?.user?.role === "secretary") {
     return (
-      <ProLayout title="Statistiques" back="/derm/patients">
+      <ProLayout title="Performances" back="/derm/patients">
         <div style={{ textAlign: "center", padding: "40px 24px", color: "rgba(200,185,255,0.65)" }}>
-          <p>Les secrétaires n'ont pas accès aux statistiques cabinet.</p>
+          <p>Les secrétaires n'ont pas accès aux performances du cabinet.</p>
         </div>
       </ProLayout>
     );
   }
 
   return (
-    <ProLayout title="Statistiques" back="/derm/dashboard">
+    <ProLayout title="Performances" back="/derm/dashboard">
       <div className="space-y-4">
         {/* KPIs */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -42,15 +42,18 @@ export default function ProStats() {
               <Calendar className="w-4 h-4" style={{ color: "#a78bfa" }} />
             </div>
             <p className="text-[11px] font-extrabold uppercase tracking-widest mb-2" style={{ color: "rgba(200,185,255,0.65)" }}>Statut patients</p>
-            <div className="flex items-center gap-3 text-xs font-extrabold">
-              <span className="flex items-center gap-1" style={{ color: "#f9a8d4" }}>
-                <span className="w-1.5 h-1.5 rounded-full" style={{ background: "#f43f5e" }} />{data.statusBreakdown.red}
+            <div className="flex items-center gap-2.5 text-xs font-extrabold flex-wrap">
+              <span className="flex items-center gap-1" style={{ color: "#f9a8d4" }} title="Priorité">
+                <span className="w-1.5 h-1.5 rounded-full" style={{ background: "#f43f5e" }} />{data.statusBreakdown.priority}
               </span>
-              <span className="flex items-center gap-1" style={{ color: "#fbbf24" }}>
-                <span className="w-1.5 h-1.5 rounded-full" style={{ background: "#fbbf24" }} />{data.statusBreakdown.yellow}
+              <span className="flex items-center gap-1" style={{ color: "#fbbf24" }} title="En suivi">
+                <span className="w-1.5 h-1.5 rounded-full" style={{ background: "#fbbf24" }} />{data.statusBreakdown.monitoring}
               </span>
-              <span className="flex items-center gap-1" style={{ color: "#6ee7b7" }}>
-                <span className="w-1.5 h-1.5 rounded-full" style={{ background: "#10b981" }} />{data.statusBreakdown.green}
+              <span className="flex items-center gap-1" style={{ color: "#6ee7b7" }} title="Stable">
+                <span className="w-1.5 h-1.5 rounded-full" style={{ background: "#10b981" }} />{data.statusBreakdown.stable}
+              </span>
+              <span className="flex items-center gap-1" style={{ color: "rgba(200,185,255,0.6)" }} title="Résolu">
+                <span className="w-1.5 h-1.5 rounded-full" style={{ background: "#6b7280" }} />{data.statusBreakdown.resolved}
               </span>
             </div>
           </ProCard>

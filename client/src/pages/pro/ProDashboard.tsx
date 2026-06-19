@@ -45,7 +45,7 @@ const DS = {
 const TOUR_STEPS = [
   { title: "Bienvenue sur votre tableau de bord", body: "Retrouvez ici votre vue d'ensemble et le bouton principal pour analyser un patient." },
   { title: "Mes patients", body: "Tous vos patients sont accessibles depuis l'onglet Patients, avec recherche et statuts cliniques." },
-  { title: "Analyser un patient", body: "Le bouton central lance une analyse en 4 étapes : photo → questionnaire → dossier auto → validation." },
+  { title: "Analyser un patient", body: "Le bouton central lance une analyse en 5 étapes : patient → photo → diagnostic IA → anamnèse → dossier." },
   { title: "Dossier automatique", body: "L'IA enregistre photo, diagnostic, métriques et produits recommandés sans saisie manuelle." },
   { title: "Statistiques cabinet", body: "Suivez votre activité : top conditions, top produits, évolution des Glow Scores." },
   { title: "Mon cabinet", body: "Gérez votre profil, votre liste patients et exportez vos données quand vous voulez." },
@@ -181,7 +181,7 @@ export default function ProDashboard() {
       {/* Primary CTA */}
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
         <Link
-          href="/derm/analyse"
+          href="/derm/analyse?nouveau=1"
           data-testid="button-analyze-patient"
           style={{
             display: "block",
@@ -210,7 +210,7 @@ export default function ProDashboard() {
             </div>
             <div style={{ flex: 1 }}>
               <p style={{ fontWeight: 800, fontSize: 15, color: DS.textPrimary, margin: "0 0 3px" }}>Analyser un patient</p>
-              <p style={{ fontSize: 12, color: DS.textBody, margin: 0 }}>Photo → IA → questionnaire → dossier en 4 étapes</p>
+              <p style={{ fontSize: 12, color: DS.textBody, margin: 0 }}>Patient → photo → IA → questionnaire → dossier en 5 étapes</p>
             </div>
             <ArrowRight style={{ width: 18, height: 18, color: DS.violetMid, flexShrink: 0 }} />
           </div>

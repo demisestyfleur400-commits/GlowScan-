@@ -168,7 +168,7 @@ export function useProStats() {
     topConditions: { name: string; count: number }[];
     topProducts: { name: string; count: number }[];
     monthly: { month: string; count: number }[];
-    statusBreakdown: { red: number; yellow: number; green: number };
+    statusBreakdown: { priority: number; monitoring: number; stable: number; resolved: number };
   }>({
     queryKey: ["/api/pro/stats"],
     staleTime: 30 * 1000,
