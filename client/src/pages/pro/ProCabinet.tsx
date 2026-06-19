@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { Settings, Download, Crown, CheckCircle2, Loader2, Phone, Clock } from "lucide-react";
-import { useProAccount, useProPatients, useUpdateProAccount } from "@/hooks/use-pro";
+import { Settings, Download, Crown, CheckCircle2, Loader2, Phone, Clock, UserPlus, Users, Copy, Trash2 } from "lucide-react";
+import { useProAccount, useProPatients, useUpdateProAccount, useSecretaries, useCreateSecretary, useDeleteSecretary } from "@/hooks/use-pro";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { ProLayout, ProCard, ProInput, LogoutButton  } from "@/components/ProLayout";
@@ -34,6 +34,55 @@ export default function ProCabinet() {
   const [cabinetName, setCabinetName] = useState("");
   const [phone, setPhone] = useState("");
   const [city, setCity] = useState("");
+
+  // ── Équipe / secrétaires ──
+  const { data: secretariesData } = useSecretaries();
+  const createSecretary = useCreateSecretary();
+  const deleteSecretary = useDeleteSecretary();
+  const [showSecretaryForm, setShowSecretaryForm] = useState(false);
+  const [secFullName, setSecFullName] = useState("");
+  const [secEmail, setSecEmail] = useState("");
+  const [createdSecretary, setCreatedSecretary] = useState<{ email: string; password: string } | null>(null);
+
+  const secretaries = secretariesData?.secretaries || [];
+
+  // Génère un mot de passe lisible (8 car. : 4 lettres + 4 chiffres)
+  const genPassword = () => {
+    const letters = "abcdefghijkmnpqrstuvwxyz";
+    const digits = "23456789";
+    let p = "";
+    for (let i = 0; i < 4; i++) p += letters[Math.floor(Math.random() * letters.length)];
+    for (let i = 0; i < 4; i++) p += digits[Math.floor(Math.random() * digits.length)];
+    return p;
+  };
+
+  const handleCreateSecretary = async () => {
+    if (!secFullName.trim() || !secEmail.trim()) {
+      toast({ title: "Champs requis", description: "Nom et email obligatoires.", variant: "destructive" });
+      return;
+    }
+    const password = genPassword();
+    try {
+      const res = await createSecretary.mutateAsync({ fullName: secFullName.trim(), email: secEmail.trim(), password });
+      setCreatedSecretary({ email: secEmail.trim(), password: res.secretary?.plainPassword || password });
+      setSecFullName("");
+      setSecEmail("");
+      setShowSecretaryForm(false);
+      toast({ title: "Secrétaire créée ✅", description: "Communiquez-lui ses identifiants ci-dessous." });
+    } catch (err: any) {
+      toast({ title: "Erreur", description: err.message || "Création impossible", variant: "destructive" });
+    }
+  };
+
+  const handleDeleteSecretary = async (id: number, name: string) => {
+    if (!window.confirm(`Supprimer l'accès de ${name} ? Cette secrétaire ne pourra plus se connecter.`)) return;
+    try {
+      await deleteSecretary.mutateAsync(id);
+      toast({ title: "Accès supprimé", description: `${name} ne peut plus se connecter.` });
+    } catch (err: any) {
+      toast({ title: "Erreur", description: err.message || "Suppression impossible", variant: "destructive" });
+    }
+  };
 
   const [showSubscribe, setShowSubscribe] = useState(false);
   const [method, setMethod] = useState<"mtn_momo" | "orange_money">("mtn_momo");
@@ -241,6 +290,105 @@ export default function ProCabinet() {
           )}
         </ProCard>
 
+        {/* Mon équipe — secrétaires */}
+        <ProCard className="p-5">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4" style={{ color: NAVY }} />
+              <h2 className="font-extrabold text-base" style={{ color: INK }}>Mon équipe ({secretaries.length})</h2>
+            </div>
+            {!showSecretaryForm && (
+              <button
+                onClick={() => { setShowSecretaryForm(true); setCreatedSecretary(null); }}
+                data-testid="button-add-secretary"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-extrabold transition-all active:scale-95"
+                style={{ background: NAVY, color: "#fff" }}
+              >
+                <UserPlus className="w-3 h-3" />
+                Ajouter une secrétaire
+              </button>
+            )}
+          </div>
+
+          <p className="text-xs mb-4" style={{ color: DS.muted }}>
+            Une secrétaire peut créer des patients, prendre des photos et remplir les antécédents.
+            Elle ne peut pas lancer d'analyse ni voir le tableau de bord, les statistiques ou le cabinet.
+          </p>
+
+          {/* Identifiants générés (après création) */}
+          {createdSecretary && (
+            <div className="rounded-xl p-3 mb-4" style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.25)" }}>
+              <p className="text-xs font-extrabold mb-2" style={{ color: "#6ee7b7" }}>
+                ✅ Identifiants à transmettre à votre secrétaire
+              </p>
+              <div className="space-y-1.5">
+                <IdLine label="Email" value={createdSecretary.email} onCopy={() => { navigator.clipboard.writeText(createdSecretary.email); toast({ title: "Email copié" }); }} />
+                <IdLine label="Mot de passe" value={createdSecretary.password} onCopy={() => { navigator.clipboard.writeText(createdSecretary.password); toast({ title: "Mot de passe copié" }); }} />
+              </div>
+              <p className="text-[10px] mt-2" style={{ color: DS.muted }}>
+                Notez ce mot de passe maintenant — il ne sera plus affiché. Connexion secrétaire : page de connexion habituelle.
+              </p>
+            </div>
+          )}
+
+          {/* Formulaire ajout */}
+          {showSecretaryForm && (
+            <div className="rounded-xl p-4 mb-4 space-y-3" style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${DS.border}` }}>
+              <ProInput label="Nom complet" value={secFullName} onChange={(e) => setSecFullName(e.target.value)} placeholder="Marie Mbarga" testid="input-secretary-name" />
+              <ProInput label="Email" type="email" value={secEmail} onChange={(e) => setSecEmail(e.target.value)} placeholder="secretaire@cabinet.com" testid="input-secretary-email" />
+              <p className="text-[11px]" style={{ color: DS.muted }}>🔑 Un mot de passe sécurisé sera généré automatiquement et affiché après création.</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleCreateSecretary}
+                  disabled={createSecretary.isPending}
+                  data-testid="button-confirm-secretary"
+                  className="flex-1 py-2.5 rounded-full text-white text-sm font-extrabold disabled:opacity-50"
+                  style={{ background: NAVY }}
+                >
+                  {createSecretary.isPending ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Créer l'accès"}
+                </button>
+                <button
+                  onClick={() => { setShowSecretaryForm(false); setSecFullName(""); setSecEmail(""); }}
+                  className="px-4 py-2.5 rounded-full text-sm font-extrabold"
+                  style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", color: DS.body }}
+                >
+                  Annuler
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Liste secrétaires */}
+          {secretaries.length === 0 ? (
+            <p className="text-xs text-center py-2" style={{ color: DS.muted }}>Aucune secrétaire pour le moment</p>
+          ) : (
+            <div className="space-y-1">
+              {secretaries.map((s) => (
+                <div
+                  key={s.id}
+                  data-testid={`secretary-row-${s.id}`}
+                  className="flex items-center justify-between py-2.5 px-1"
+                  style={{ borderBottom: `1px solid ${DS.border}` }}
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-extrabold truncate" style={{ color: INK }}>{s.fullName}</p>
+                    <p className="text-[11px] truncate" style={{ color: DS.muted }}>{s.email}</p>
+                  </div>
+                  <button
+                    onClick={() => handleDeleteSecretary(s.id, s.fullName)}
+                    data-testid={`button-delete-secretary-${s.id}`}
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[11px] font-extrabold transition-all active:scale-95 flex-shrink-0"
+                    style={{ background: "rgba(233,30,140,0.08)", border: "1px solid rgba(233,30,140,0.2)", color: "#f9a8d4" }}
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    Supprimer
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </ProCard>
+
         {/* Liste patients */}
         <ProCard className="p-5">
           <div className="flex items-center justify-between mb-3">
@@ -265,7 +413,7 @@ export default function ProCabinet() {
               {patients.map((p, i) => (
                 <Link
                   key={p.id}
-                  href={`/pro/patient/${p.id}`}
+                  href={`/derm/patient/${p.id}`}
                   data-testid={`link-cabinet-patient-${p.id}`}
                   className="flex items-center justify-between py-2.5 px-1 rounded-lg transition-colors"
                   style={{ borderBottom: i < patients.length - 1 ? `1px solid ${DS.border}` : "none" }}
@@ -419,6 +567,24 @@ export default function ProCabinet() {
         )}
       </AnimatePresence>
     </ProLayout>
+  );
+}
+
+function IdLine({ label, value, onCopy }: { label: string; value: string; onCopy: () => void }) {
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <div className="min-w-0">
+        <span className="text-[10px] uppercase tracking-wider font-extrabold" style={{ color: "rgba(255,255,255,0.35)" }}>{label} : </span>
+        <span className="text-sm font-extrabold" style={{ color: "#f3f0ff" }}>{value}</span>
+      </div>
+      <button
+        onClick={onCopy}
+        className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-extrabold flex-shrink-0"
+        style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", color: "rgba(200,185,255,0.65)" }}
+      >
+        <Copy className="w-3 h-3" /> Copier
+      </button>
+    </div>
   );
 }
 

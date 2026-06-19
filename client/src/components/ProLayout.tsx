@@ -30,6 +30,16 @@ export function ProLayout({ children, title, back, hideBottomNav, rightAction }:
   const acc = accData?.account;
   const isTrial = acc?.subscriptionStatus === "trial";
 
+  // 🔑 Navigation filtrée par rôle : une secrétaire ne voit QUE ses deux accès
+  // autorisés (créer un patient + sa liste de patients). Le médecin voit tout.
+  const isSecretary = accData?.user?.role === "secretary";
+  const navItems = isSecretary
+    ? [
+        { href: "/derm/analyse", icon: ScanLine, label: "Nouveau patient", primary: true },
+        { href: "/derm/patients", icon: Users, label: "Mes patients" },
+      ]
+    : NAV_ITEMS;
+
   return (
     <div
       className="min-h-screen flex flex-col md:flex-row antialiased"
@@ -62,7 +72,7 @@ export function ProLayout({ children, title, back, hideBottomNav, rightAction }:
 
           {/* Nav links */}
           <div className="flex-1 flex flex-col overflow-y-auto px-3 py-4 space-y-1">
-            {NAV_ITEMS.map((item) => {
+            {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = location === item.href || (item.href === "/derm/analyse" && location.startsWith("/derm/analyse"));
               return (
@@ -168,8 +178,8 @@ export function ProLayout({ children, title, back, hideBottomNav, rightAction }:
           className="md:hidden fixed bottom-0 left-0 right-0 z-40"
           style={{ background: "rgba(19,16,31,0.95)", backdropFilter: "blur(12px)", borderTop: "1px solid rgba(255,255,255,0.07)" }}
         >
-          <div className="max-w-md mx-auto grid grid-cols-5 h-16 px-1">
-            {NAV_ITEMS.map((item) => {
+          <div className="max-w-md mx-auto grid h-16 px-1" style={{ gridTemplateColumns: `repeat(${navItems.length}, 1fr)` }}>
+            {navItems.map((item) => {
               const Icon = item.icon;
               const active = location === item.href || (item.href === "/derm/analyse" && location.startsWith("/derm/analyse"));
 

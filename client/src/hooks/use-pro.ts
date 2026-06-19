@@ -72,6 +72,52 @@ export function useCreatePatient() {
   });
 }
 
+// ── Secrétaires (gestion d'équipe — médecin uniquement) ──────────────────
+export interface Secretary {
+  id: number;
+  fullName: string;
+  email: string;
+  userId: string;
+  createdAt?: string;
+}
+
+export function useSecretaries() {
+  return useQuery<{ secretaries: Secretary[] }>({
+    queryKey: ["/api/pro/secretaries"],
+    queryFn: async () => {
+      const res = await fetch("/api/pro/secretaries", { credentials: "include" });
+      if (!res.ok) throw new Error("Erreur chargement secrétaires");
+      return res.json();
+    },
+  });
+}
+
+export function useCreateSecretary() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { fullName: string; email: string; password: string }) => {
+      const res = await apiRequest("POST", "/api/pro/secretaries", data);
+      return res.json() as Promise<{ success: boolean; secretary: Secretary & { plainPassword: string } }>;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/pro/secretaries"] });
+    },
+  });
+}
+
+export function useDeleteSecretary() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("DELETE", `/api/pro/secretaries/${id}`, {});
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/pro/secretaries"] });
+    },
+  });
+}
+
 export function useSubmitPatientForReview() {
   const qc = useQueryClient();
   return useMutation({

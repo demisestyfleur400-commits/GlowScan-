@@ -1850,7 +1850,7 @@ export default function ProAnalyze() {
 
                   <div className="grid grid-cols-2 gap-2 mt-3">
                     <button
-                      onClick={() => patientId && setLocation(`/pro/patient/${patientId}`)}
+                      onClick={() => patientId && setLocation(`/derm/patient/${patientId}`)}
                       data-testid="button-view-dossier"
                       className="inline-flex items-center justify-center gap-1.5 py-2.5 rounded-full text-xs font-extrabold active:scale-[0.97] transition-all"
                       style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)", color: DS.body }}

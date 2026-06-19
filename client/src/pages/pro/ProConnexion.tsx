@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
-import { ArrowLeft, ArrowRight, Loader2, LogIn, Stethoscope } from "lucide-react";
+import { ArrowLeft, ArrowRight, Loader2, LogIn, Stethoscope, Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -26,6 +26,7 @@ export default function ProConnexion() {
   const qc = useQueryClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -209,7 +210,7 @@ export default function ProConnexion() {
               />
             </div>
 
-            <div style={{ marginBottom: 24 }}>
+            <div style={{ marginBottom: 8 }}>
               <label
                 style={{
                   display: "block",
@@ -222,27 +223,48 @@ export default function ProConnexion() {
               >
                 Mot de passe
               </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                data-testid="input-password"
-                style={{
-                  width: "100%",
-                  padding: "11px 14px",
-                  borderRadius: 12,
-                  background: DS.bg,
-                  border: `1px solid ${DS.inputBorder}`,
-                  color: DS.textPrimary,
-                  fontSize: 14,
-                  outline: "none",
-                  boxSizing: "border-box",
-                  fontFamily: DS.font,
-                }}
-                onFocus={(e) => (e.target.style.borderColor = DS.violetMid)}
-                onBlur={(e) => (e.target.style.borderColor = DS.inputBorder)}
-              />
+              <div style={{ position: "relative" }}>
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  data-testid="input-password"
+                  style={{
+                    width: "100%",
+                    padding: "11px 42px 11px 14px",
+                    borderRadius: 12,
+                    background: DS.bg,
+                    border: `1px solid ${DS.inputBorder}`,
+                    color: DS.textPrimary,
+                    fontSize: 14,
+                    outline: "none",
+                    boxSizing: "border-box",
+                    fontFamily: DS.font,
+                  }}
+                  onFocus={(e) => (e.target.style.borderColor = DS.violetMid)}
+                  onBlur={(e) => (e.target.style.borderColor = DS.inputBorder)}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                  data-testid="button-toggle-password"
+                  style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: DS.textMuted, display: "flex", alignItems: "center", padding: 4 }}
+                >
+                  {showPassword ? <EyeOff style={{ width: 16, height: 16 }} /> : <Eye style={{ width: 16, height: 16 }} />}
+                </button>
+              </div>
+            </div>
+
+            <div style={{ textAlign: "right", marginBottom: 20 }}>
+              <Link
+                href="/derm/mot-de-passe-oublie"
+                data-testid="link-forgot-password"
+                style={{ fontSize: 12, color: DS.violetMid, fontWeight: 700, textDecoration: "none" }}
+              >
+                Mot de passe oublié ?
+              </Link>
             </div>
 
             <button

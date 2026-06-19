@@ -183,7 +183,7 @@ export default function ProPatients() {
                 style={{ borderBottom: i < displayPatients.length - 1 ? "1px solid rgba(255,255,255,0.07)" : "none" }}
               >
                 <Link
-                  href={`/pro/patient/${p.id}`}
+                  href={`/derm/patient/${p.id}`}
                   data-testid={`card-patient-${p.id}`}
                   className="flex items-center gap-3 p-4 transition-colors"
                   style={{ background: "transparent" }}

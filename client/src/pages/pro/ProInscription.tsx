@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
-import { Stethoscope, ArrowLeft, ArrowRight, CheckCircle2, Loader2, ShieldCheck } from "lucide-react";
+import { Stethoscope, ArrowLeft, ArrowRight, CheckCircle2, Loader2, ShieldCheck, Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -307,6 +307,9 @@ function Field({
 }) {
   const inputBorder = "rgba(167,139,250,0.2)";
   const violetMid = "#a78bfa";
+  const isPassword = type === "password";
+  const [reveal, setReveal] = useState(false);
+  const effectiveType = isPassword && reveal ? "text" : type;
   return (
     <div>
       <label
@@ -321,29 +324,42 @@ function Field({
       >
         {label}
       </label>
-      <input
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        required={required}
-        minLength={minLength}
-        data-testid={testid}
-        style={{
-          width: "100%",
-          padding: "11px 14px",
-          borderRadius: 12,
-          background: "#0d0a0e",
-          border: `1px solid ${inputBorder}`,
-          color: "#f3f0ff",
-          fontSize: 14,
-          outline: "none",
-          boxSizing: "border-box",
-          fontFamily: `-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif`,
-        }}
-        onFocus={(e) => (e.target.style.borderColor = violetMid)}
-        onBlur={(e) => (e.target.style.borderColor = inputBorder)}
-      />
+      <div style={{ position: "relative" }}>
+        <input
+          type={effectiveType}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          required={required}
+          minLength={minLength}
+          data-testid={testid}
+          style={{
+            width: "100%",
+            padding: isPassword ? "11px 42px 11px 14px" : "11px 14px",
+            borderRadius: 12,
+            background: "#0d0a0e",
+            border: `1px solid ${inputBorder}`,
+            color: "#f3f0ff",
+            fontSize: 14,
+            outline: "none",
+            boxSizing: "border-box",
+            fontFamily: `-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif`,
+          }}
+          onFocus={(e) => (e.target.style.borderColor = violetMid)}
+          onBlur={(e) => (e.target.style.borderColor = inputBorder)}
+        />
+        {isPassword && (
+          <button
+            type="button"
+            onClick={() => setReveal(!reveal)}
+            aria-label={reveal ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+            data-testid="button-toggle-password"
+            style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.35)", display: "flex", alignItems: "center", padding: 4 }}
+          >
+            {reveal ? <EyeOff style={{ width: 16, height: 16 }} /> : <Eye style={{ width: 16, height: 16 }} />}
+          </button>
+        )}
+      </div>
     </div>
   );
 }

@@ -275,7 +275,7 @@ export default function DermOnboarding() {
 
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {createdPatientId && (
-                <a href={`/pro/patient/${createdPatientId}`}
+                <a href={`/derm/patient/${createdPatientId}`}
                   style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: DS.violet, color: "#fff", borderRadius: 9999, padding: "13px 0", fontSize: 14, fontWeight: 800, textDecoration: "none" }}>
                   <FileText size={16} /> Voir le dossier patient & PDF
                 </a>

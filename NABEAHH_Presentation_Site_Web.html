@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NABEAHH — Proposition Site E-commerce & SEO</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --gold: #C9A84C;
+      --gold-light: #E8C96A;
+      --gold-pale: rgba(201,168,76,0.12);
+      --dark: #0A0A0A;
+      --surface: #111111;
+      --surface2: #1A1A1A;
+      --border: rgba(201,168,76,0.2);
+      --text: #F5F0E8;
+      --body: rgba(245,240,232,0.7);
+      --muted: rgba(245,240,232,0.4);
+    }
+
+    body {
+      background: var(--dark);
+      color: var(--text);
+      font-family: 'Inter', system-ui, sans-serif;
+      line-height: 1.6;
+    }
+
+    /* ── COVER ── */
+    .cover {
+      min-height: 100vh;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      text-align: center;
+      padding: 60px 24px;
+      background: radial-gradient(ellipse at 50% 0%, rgba(201,168,76,0.15) 0%, transparent 60%);
+      border-bottom: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
+    }
+    .cover::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: repeating-linear-gradient(
+        90deg,
+        transparent,
+        transparent 60px,
+        rgba(201,168,76,0.03) 60px,
+        rgba(201,168,76,0.03) 61px
+      );
+    }
+    .cover-badge {
+      display: inline-block;
+      border: 1px solid var(--border);
+      color: var(--gold);
+      font-size: 11px; font-weight: 700; letter-spacing: 3px;
+      text-transform: uppercase;
+      padding: 6px 20px; border-radius: 30px;
+      margin-bottom: 32px;
+      background: rgba(201,168,76,0.05);
+    }
+    .cover-brand {
+      font-size: clamp(64px, 15vw, 120px);
+      font-weight: 900;
+      letter-spacing: -2px;
+      background: linear-gradient(135deg, #E8C96A, #C9A84C, #8B6914);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1;
+      margin-bottom: 16px;
+    }
+    .cover-tagline {
+      font-size: clamp(16px, 3vw, 22px);
+      color: var(--body);
+      font-weight: 300;
+      letter-spacing: 1px;
+      margin-bottom: 48px;
+    }
+    .cover-divider {
+      width: 60px; height: 2px;
+      background: linear-gradient(90deg, transparent, var(--gold), transparent);
+      margin: 0 auto 48px;
+    }
+    .cover-subtitle {
+      font-size: 18px; color: var(--muted);
+      max-width: 500px; line-height: 1.7;
+    }
+    .cover-info {
+      margin-top: 60px;
+      display: flex; gap: 40px; flex-wrap: wrap; justify-content: center;
+    }
+    .cover-info-item { text-align: center; }
+    .cover-info-item .label { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+    .cover-info-item .value { font-size: 16px; font-weight: 600; color: var(--text); }
+
+    /* ── SECTIONS ── */
+    .section { padding: 80px 24px; max-width: 860px; margin: 0 auto; }
+    .section-tag {
+      display: inline-block;
+      color: var(--gold); font-size: 11px; font-weight: 700;
+      letter-spacing: 3px; text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+    .section-title {
+      font-size: clamp(28px, 5vw, 42px); font-weight: 800;
+      line-height: 1.2; margin-bottom: 20px;
+    }
+    .section-body { color: var(--body); font-size: 17px; max-width: 680px; margin-bottom: 40px; }
+    hr.divider { border: none; border-top: 1px solid var(--border); margin: 0; }
+
+    /* ── PROBLEM ── */
+    .pain-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 32px; }
+    .pain-card {
+      background: var(--surface);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 12px; padding: 20px;
+    }
+    .pain-icon { font-size: 24px; margin-bottom: 10px; }
+    .pain-card h3 { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+    .pain-card p { font-size: 13px; color: var(--muted); }
+
+    /* ── SOLUTION FEATURES ── */
+    .features-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .feature-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px; padding: 28px;
+      position: relative; overflow: hidden;
+    }
+    .feature-card::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    }
+    .feature-number {
+      font-size: 48px; font-weight: 900; color: rgba(201,168,76,0.1);
+      line-height: 1; margin-bottom: 12px;
+    }
+    .feature-card h3 { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+    .feature-card p { font-size: 14px; color: var(--body); }
+    .feature-tag {
+      display: inline-block; margin-top: 12px;
+      background: var(--gold-pale); color: var(--gold);
+      font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px;
+    }
+
+    /* ── PAGES ── */
+    .pages-list { display: flex; flex-direction: column; gap: 12px; }
+    .page-item {
+      display: flex; align-items: center; gap: 16px;
+      background: var(--surface);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 12px; padding: 16px 20px;
+    }
+    .page-icon {
+      width: 40px; height: 40px; border-radius: 10px;
+      background: var(--gold-pale);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; flex-shrink: 0;
+    }
+    .page-item h4 { font-size: 15px; font-weight: 600; margin-bottom: 2px; }
+    .page-item p { font-size: 13px; color: var(--muted); }
+    .page-badge {
+      margin-left: auto; font-size: 11px; font-weight: 600;
+      background: rgba(34,197,94,0.12); color: #4ade80;
+      padding: 3px 10px; border-radius: 20px; white-space: nowrap;
+    }
+
+    /* ── SEO ── */
+    .seo-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+    .seo-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px; padding: 20px; text-align: center;
+    }
+    .seo-icon { font-size: 32px; margin-bottom: 10px; }
+    .seo-card h4 { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+    .seo-card p { font-size: 12px; color: var(--muted); }
+
+    /* ── DEVIS ── */
+    .devis-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px; overflow: hidden;
+    }
+    .devis-header {
+      background: linear-gradient(135deg, rgba(201,168,76,0.15), rgba(201,168,76,0.05));
+      padding: 32px; border-bottom: 1px solid var(--border);
+      text-align: center;
+    }
+    .devis-price {
+      font-size: 64px; font-weight: 900;
+      background: linear-gradient(135deg, #E8C96A, #C9A84C);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+      line-height: 1;
+    }
+    .devis-price-label { font-size: 14px; color: var(--muted); margin-top: 6px; }
+    .devis-items { padding: 32px; }
+    .devis-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 14px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .devis-item:last-child { border-bottom: none; }
+    .devis-item-name { font-size: 15px; font-weight: 500; }
+    .devis-item-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .devis-item-price { font-size: 15px; font-weight: 700; color: var(--gold); white-space: nowrap; }
+    .devis-total {
+      background: linear-gradient(135deg, rgba(201,168,76,0.1), transparent);
+      border-top: 2px solid var(--gold);
+      padding: 24px 32px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .devis-total-label { font-size: 18px; font-weight: 700; }
+    .devis-total-price {
+      font-size: 28px; font-weight: 900; color: var(--gold);
+    }
+
+    /* ── TIMELINE ── */
+    .timeline { display: flex; flex-direction: column; gap: 0; }
+    .timeline-item { display: flex; gap: 24px; padding-bottom: 32px; position: relative; }
+    .timeline-item:last-child { padding-bottom: 0; }
+    .timeline-left { display: flex; flex-direction: column; align-items: center; }
+    .timeline-dot {
+      width: 40px; height: 40px; border-radius: 50%;
+      background: var(--gold-pale); border: 2px solid var(--gold);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 14px; color: var(--gold);
+      flex-shrink: 0;
+    }
+    .timeline-line { width: 2px; flex: 1; background: rgba(201,168,76,0.15); margin-top: 8px; }
+    .timeline-item:last-child .timeline-line { display: none; }
+    .timeline-content { padding-top: 8px; }
+    .timeline-content h4 { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+    .timeline-content p { font-size: 14px; color: var(--body); }
+    .timeline-duration {
+      display: inline-block; margin-top: 8px;
+      background: var(--gold-pale); color: var(--gold);
+      font-size: 11px; font-weight: 600; padding: 2px 10px; border-radius: 20px;
+    }
+
+    /* ── WHY ── */
+    .why-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .why-card {
+      display: flex; gap: 14px;
+      background: var(--surface);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 12px; padding: 18px;
+    }
+    .why-icon { font-size: 24px; flex-shrink: 0; }
+    .why-card h4 { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+    .why-card p { font-size: 13px; color: var(--muted); }
+
+    /* ── CTA FINAL ── */
+    .cta-final {
+      text-align: center; padding: 80px 24px;
+      background: radial-gradient(ellipse at 50% 100%, rgba(201,168,76,0.12) 0%, transparent 60%);
+      border-top: 1px solid var(--border);
+    }
+    .cta-final h2 { font-size: clamp(28px, 5vw, 42px); font-weight: 800; margin-bottom: 16px; }
+    .cta-final p { color: var(--body); font-size: 17px; max-width: 500px; margin: 0 auto 40px; }
+    .cta-btn {
+      display: inline-block;
+      background: linear-gradient(135deg, var(--gold), #8B6914);
+      color: var(--dark); font-weight: 800; font-size: 16px;
+      padding: 16px 40px; border-radius: 40px; text-decoration: none;
+      letter-spacing: 0.5px;
+    }
+    .cta-contact { margin-top: 24px; font-size: 14px; color: var(--muted); }
+
+    /* ── FOOTER ── */
+    footer {
+      padding: 32px 24px; text-align: center;
+      border-top: 1px solid var(--border);
+      font-size: 13px; color: var(--muted);
+    }
+
+    @media (max-width: 600px) {
+      .pain-grid, .features-grid, .seo-grid, .why-grid { grid-template-columns: 1fr; }
+      .cover-info { gap: 24px; }
+      .devis-price { font-size: 48px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- COVER -->
+  <section class="cover">
+    <div class="cover-badge">Proposition commerciale confidentielle</div>
+    <div class="cover-brand">NABEAHH</div>
+    <div class="cover-tagline">Votre boutique lunettes, enfin en ligne</div>
+    <div class="cover-divider"></div>
+    <p class="cover-subtitle">
+      Transformez votre présence Instagram en une vraie boutique e-commerce qui vend 24h/24 et que Google recommande à vos futurs clients.
+    </p>
+    <div class="cover-info">
+      <div class="cover-info-item">
+        <div class="label">Client</div>
+        <div class="value">NABEAHH</div>
+      </div>
+      <div class="cover-info-item">
+        <div class="label">Localisation</div>
+        <div class="value">Douala, Cameroun</div>
+      </div>
+      <div class="cover-info-item">
+        <div class="label">Date</div>
+        <div class="value">Juin 2026</div>
+      </div>
+      <div class="cover-info-item">
+        <div class="label">Investissement</div>
+        <div class="value">30 000 FCFA</div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- PROBLÈME -->
+  <section class="section">
+    <div class="section-tag">01 — Situation actuelle</div>
+    <h2 class="section-title">Vous vendez sur Instagram. C'est bien. Mais ce n'est pas assez.</h2>
+    <p class="section-body">
+      Instagram et WhatsApp vous permettent de vendre à vos abonnés existants. Mais des centaines de clients potentiels à Douala cherchent des lunettes sur Google chaque jour — et ils ne vous trouvent pas.
+    </p>
+    <div class="pain-grid">
+      <div class="pain-card">
+        <div class="pain-icon">📵</div>
+        <h3>Invisible sur Google</h3>
+        <p>Sans site web, NABEAHH n'existe pas pour les moteurs de recherche. Zéro trafic organique.</p>
+      </div>
+      <div class="pain-card">
+        <div class="pain-icon">🕐</div>
+        <h3>Ventes limitées à vos heures</h3>
+        <p>Vous répondez manuellement à chaque commande sur WhatsApp. Un site vend pendant que vous dormez.</p>
+      </div>
+      <div class="pain-card">
+        <div class="pain-icon">🤝</div>
+        <h3>Pas de crédibilité pro</h3>
+        <p>Les clients hésitent à payer sans voir un site sérieux. Un site inspire confiance et justifie les prix.</p>
+      </div>
+      <div class="pain-card">
+        <div class="pain-icon">📊</div>
+        <h3>Aucune donnée client</h3>
+        <p>Vous ne savez pas combien de personnes voient vos posts, ni d'où viennent vos meilleures ventes.</p>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- SOLUTION -->
+  <section class="section">
+    <div class="section-tag">02 — Ce que je vous propose</div>
+    <h2 class="section-title">Un site e-commerce professionnel + un SEO qui attire des clients</h2>
+    <p class="section-body">
+      Un site complet, à votre image, optimisé pour Google, accessible sur tous les téléphones — livré en moins de 2 semaines.
+    </p>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-number">01</div>
+        <h3>Design luxe à votre image</h3>
+        <p>Un site élégant qui reflète l'identité NABEAHH — couleurs, typographie, ambiance. Vos lunettes mises en valeur avec de belles photos produits.</p>
+        <span class="feature-tag">Design sur mesure</span>
+      </div>
+      <div class="feature-card">
+        <div class="feature-number">02</div>
+        <h3>Boutique en ligne complète</h3>
+        <p>Catalogue de produits, filtres par style/prix, fiche produit détaillée, commande via WhatsApp intégré. Zéro friction pour vos clients.</p>
+        <span class="feature-tag">E-commerce</span>
+      </div>
+      <div class="feature-card">
+        <div class="feature-number">03</div>
+        <h3>SEO optimisé dès le départ</h3>
+        <p>Votre site configuré pour apparaître sur Google quand quelqu'un cherche "lunettes Douala" ou "lunettes de soleil Cameroun".</p>
+        <span class="feature-tag">Google & trafic</span>
+      </div>
+      <div class="feature-card">
+        <div class="feature-number">04</div>
+        <h3>100% mobile-first</h3>
+        <p>Vos clients commandent depuis leur téléphone. Votre site est conçu pour être parfait sur smartphone — rapide, fluide, élégant.</p>
+        <span class="feature-tag">Mobile optimisé</span>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- PAGES DU SITE -->
+  <section class="section">
+    <div class="section-tag">03 — Contenu du site</div>
+    <h2 class="section-title">Les pages incluses</h2>
+    <p class="section-body">Un site complet avec toutes les pages essentielles pour vendre et être trouvé sur Google.</p>
+    <div class="pages-list">
+      <div class="page-item">
+        <div class="page-icon">🏠</div>
+        <div>
+          <h4>Page d'accueil</h4>
+          <p>Hero accrocheur, best-sellers, histoire de la marque, CTA WhatsApp</p>
+        </div>
+        <span class="page-badge">Inclus</span>
+      </div>
+      <div class="page-item">
+        <div class="page-icon">🕶️</div>
+        <div>
+          <h4>Catalogue / Boutique</h4>
+          <p>Tous vos modèles avec photos, prix, filtres par style et disponibilité</p>
+        </div>
+        <span class="page-badge">Inclus</span>
+      </div>
+      <div class="page-item">
+        <div class="page-icon">📋</div>
+        <div>
+          <h4>Fiche produit</h4>
+          <p>Photo HD, description, tailles, couleurs disponibles, bouton "Commander sur WhatsApp"</p>
+        </div>
+        <span class="page-badge">Inclus</span>
+      </div>
+      <div class="page-item">
+        <div class="page-icon">✨</div>
+        <div>
+          <h4>À propos / Notre histoire</h4>
+          <p>L'histoire de NABEAHH, la vision, les valeurs — crée la confiance et booste le SEO</p>
+        </div>
+        <span class="page-badge">Inclus</span>
+      </div>
+      <div class="page-item">
+        <div class="page-icon">📞</div>
+        <div>
+          <h4>Contact & Commande</h4>
+          <p>WhatsApp direct, Instagram, Snapchat, adresse Douala, horaires</p>
+        </div>
+        <span class="page-badge">Inclus</span>
+      </div>
+      <div class="page-item">
+        <div class="page-icon">🔍</div>
+        <div>
+          <h4>SEO technique complet</h4>
+          <p>Google Search Console, sitemap, métas, schemas, optimisation mobile</p>
+        </div>
+        <span class="page-badge">Inclus</span>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- SEO -->
+  <section class="section">
+    <div class="section-tag">04 — Stratégie SEO</div>
+    <h2 class="section-title">Comment Google va envoyer des clients chez vous</h2>
+    <p class="section-body">
+      Le SEO (référencement naturel), c'est la capacité de votre site à apparaître sur Google sans payer de publicité. Voici ce qui est inclus :
+    </p>
+    <div class="seo-grid">
+      <div class="seo-card">
+        <div class="seo-icon">🎯</div>
+        <h4>Mots-clés ciblés</h4>
+        <p>"lunettes Douala", "lunettes de soleil Cameroun", "lunettes tendance Douala"...</p>
+      </div>
+      <div class="seo-card">
+        <div class="seo-icon">📄</div>
+        <h4>Métas optimisées</h4>
+        <p>Chaque page a un titre et une description uniques qui donnent envie de cliquer sur Google.</p>
+      </div>
+      <div class="seo-card">
+        <div class="seo-icon">🗺️</div>
+        <h4>Sitemap & Indexation</h4>
+        <p>Toutes les pages soumises à Google pour une indexation rapide.</p>
+      </div>
+      <div class="seo-card">
+        <div class="seo-icon">📍</div>
+        <h4>SEO Local Douala</h4>
+        <p>Optimisé pour les recherches géolocalisées à Douala et au Cameroun.</p>
+      </div>
+      <div class="seo-card">
+        <div class="seo-icon">⚡</div>
+        <h4>Performance mobile</h4>
+        <p>Site rapide = meilleur classement Google. Optimisé pour les connexions africaines.</p>
+      </div>
+      <div class="seo-card">
+        <div class="seo-icon">🏪</div>
+        <h4>Google Business</h4>
+        <p>Configuration de la fiche Google Business pour apparaître sur Google Maps.</p>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- DEVIS -->
+  <section class="section">
+    <div class="section-tag">05 — Investissement</div>
+    <h2 class="section-title">Ce que vous investissez</h2>
+    <p class="section-body">Un prix unique, tout inclus. Pas de surprise, pas de coût caché.</p>
+    <div class="devis-box">
+      <div class="devis-header">
+        <div class="devis-price">30 000</div>
+        <div class="devis-price-label">FCFA — Paiement unique</div>
+      </div>
+      <div class="devis-items">
+        <div class="devis-item">
+          <div>
+            <div class="devis-item-name">Design & développement du site</div>
+            <div class="devis-item-sub">5 pages complètes, design sur mesure NABEAHH, mobile-first</div>
+          </div>
+          <div class="devis-item-price">Inclus</div>
+        </div>
+        <div class="devis-item">
+          <div>
+            <div class="devis-item-name">Catalogue produits</div>
+            <div class="devis-item-sub">Mise en ligne de jusqu'à 20 modèles de lunettes</div>
+          </div>
+          <div class="devis-item-price">Inclus</div>
+        </div>
+        <div class="devis-item">
+          <div>
+            <div class="devis-item-name">Intégration WhatsApp & réseaux sociaux</div>
+            <div class="devis-item-sub">Bouton commande WhatsApp, liens Instagram, Snapchat</div>
+          </div>
+          <div class="devis-item-price">Inclus</div>
+        </div>
+        <div class="devis-item">
+          <div>
+            <div class="devis-item-name">SEO complet</div>
+            <div class="devis-item-sub">Métas, schemas, sitemap, Google Search Console, SEO local Douala</div>
+          </div>
+          <div class="devis-item-price">Inclus</div>
+        </div>
+        <div class="devis-item">
+          <div>
+            <div class="devis-item-name">Déploiement en ligne</div>
+            <div class="devis-item-sub">Mise en ligne sur votre nom de domaine (domaine non inclus ~3 000 FCFA/an)</div>
+          </div>
+          <div class="devis-item-price">Inclus</div>
+        </div>
+        <div class="devis-item">
+          <div>
+            <div class="devis-item-name">Formation utilisation</div>
+            <div class="devis-item-sub">Je vous explique comment ajouter des produits et suivre vos stats</div>
+          </div>
+          <div class="devis-item-price">Inclus</div>
+        </div>
+      </div>
+      <div class="devis-total">
+        <div class="devis-total-label">Total TTC</div>
+        <div class="devis-total-price">30 000 FCFA</div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- TIMELINE -->
+  <section class="section">
+    <div class="section-tag">06 — Planning</div>
+    <h2 class="section-title">Votre site en ligne en moins de 2 semaines</h2>
+    <div class="timeline">
+      <div class="timeline-item">
+        <div class="timeline-left">
+          <div class="timeline-dot">1</div>
+          <div class="timeline-line"></div>
+        </div>
+        <div class="timeline-content">
+          <h4>Briefing & collecte des infos</h4>
+          <p>Vous me partagez vos photos de lunettes, vos prix, vos couleurs préférées et vos textes.</p>
+          <span class="timeline-duration">Jour 1-2</span>
+        </div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-left">
+          <div class="timeline-dot">2</div>
+          <div class="timeline-line"></div>
+        </div>
+        <div class="timeline-content">
+          <h4>Design & développement</h4>
+          <p>Je construis le site complet : pages, catalogue, design NABEAHH, intégration WhatsApp.</p>
+          <span class="timeline-duration">Jour 3-9</span>
+        </div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-left">
+          <div class="timeline-dot">3</div>
+          <div class="timeline-line"></div>
+        </div>
+        <div class="timeline-content">
+          <h4>Révisions & validation</h4>
+          <p>Vous validez le design. Je fais les corrections souhaitées — jusqu'à 2 tours de révision inclus.</p>
+          <span class="timeline-duration">Jour 10-11</span>
+        </div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-left">
+          <div class="timeline-dot">4</div>
+          <div class="timeline-line"></div>
+        </div>
+        <div class="timeline-content">
+          <h4>Mise en ligne & SEO</h4>
+          <p>Déploiement sur votre domaine, configuration Google Search Console, soumission sitemap.</p>
+          <span class="timeline-duration">Jour 12-14</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- POURQUOI MOI -->
+  <section class="section">
+    <div class="section-tag">07 — Pourquoi faire confiance</div>
+    <h2 class="section-title">Ce que vous obtenez en choisissant cette prestation</h2>
+    <div class="why-grid">
+      <div class="why-card">
+        <div class="why-icon">🇨🇲</div>
+        <div>
+          <h4>Contexte camerounais</h4>
+          <p>Site conçu pour les connexions mobiles africaines, optimisé pour Google Cameroun.</p>
+        </div>
+      </div>
+      <div class="why-card">
+        <div class="why-icon">💬</div>
+        <div>
+          <h4>Suivi WhatsApp inclus</h4>
+          <p>Je reste disponible 30 jours après livraison pour toute question ou petite modification.</p>
+        </div>
+      </div>
+      <div class="why-card">
+        <div class="why-icon">🔒</div>
+        <div>
+          <h4>Paiement à la livraison</h4>
+          <p>Vous payez seulement quand le site est en ligne et que vous êtes satisfaite.</p>
+        </div>
+      </div>
+      <div class="why-card">
+        <div class="why-icon">📈</div>
+        <div>
+          <h4>ROI rapide</h4>
+          <p>Une seule vente supplémentaire via le site rembourse déjà une partie de l'investissement.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA FINAL -->
+  <section class="cta-final">
+    <h2>Prête à lancer NABEAHH en ligne ?</h2>
+    <p>Des centaines de clients cherchent des lunettes à Douala sur Google. Soyez la première à les accueillir.</p>
+    <a href="https://wa.me/237" class="cta-btn">Confirmer sur WhatsApp →</a>
+    <p class="cta-contact">Ou répondez directement à cette présentation</p>
+  </section>
+
+  <footer>
+    <p>Proposition préparée pour <strong>NABEAHH</strong> · Douala, Cameroun · Juin 2026</p>
+    <p style="margin-top: 6px;">Document confidentiel — réservé à NABEAHH</p>
+  </footer>
+
+</body>
+</html>

@@ -38,6 +38,7 @@ const Premium = lazy(() => import("@/pages/Premium"));
 const Pro = lazy(() => import("@/pages/Pro"));
 const ProInscription = lazy(() => import("@/pages/pro/ProInscription"));
 const ProConnexion = lazy(() => import("@/pages/pro/ProConnexion"));
+const ProMotDePasseOublie = lazy(() => import("@/pages/pro/ProMotDePasseOublie"));
 const ProDashboard = lazy(() => import("@/pages/pro/ProDashboard"));
 const ProPatients = lazy(() => import("@/pages/pro/ProPatients"));
 const ProPatient = lazy(() => import("@/pages/pro/ProPatient"));
@@ -85,6 +86,7 @@ function Router() {
       <Route path="/derm/inscription" component={ProInscription} />
       <Route path="/derm/onboarding" component={DermOnboarding} />
       <Route path="/derm/connexion" component={ProConnexion} />
+      <Route path="/derm/mot-de-passe-oublie" component={ProMotDePasseOublie} />
       <Route path="/derm/dashboard" component={ProDashboard} />
       <Route path="/derm/patients" component={ProPatients} />
       <Route path="/derm/patient/:id" component={ProPatient} />

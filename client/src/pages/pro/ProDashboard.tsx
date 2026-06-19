@@ -14,7 +14,7 @@ import {
   TrendingUp,
   Clock,
 } from "lucide-react";
-import { useProAccount, useProPatients, useUpdateProAccount } from "@/hooks/use-pro";
+import { useProAccount, useProPatients, useUpdateProAccount, useProStats } from "@/hooks/use-pro";
 import { ProLayout, ProCard } from "@/components/ProLayout";
 
 const DS = {
@@ -55,6 +55,7 @@ export default function ProDashboard() {
   const [, setLocation] = useLocation();
   const { data: accData, isLoading } = useProAccount();
   const { data: patientsData } = useProPatients("");
+  const { data: stats } = useProStats();
   const updateAcc = useUpdateProAccount();
   const [tourOpen, setTourOpen] = useState(false);
   const [tourStep, setTourStep] = useState(0);
@@ -224,10 +225,10 @@ export default function ProDashboard() {
         style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12, marginTop: 16 }}
       >
         <KpiCard to="/derm/patients" icon={<Users style={{ width: 16, height: 16, color: DS.violetMid }} />} value={patientCount} label="Patients" testid="kpi-patients" />
-        <KpiCard to="/derm/statistiques" icon={<BarChart3 style={{ width: 16, height: 16, color: DS.successText }} />} value="—" label="Statistiques" testid="kpi-stats" />
+        <KpiCard to="/derm/statistiques" icon={<BarChart3 style={{ width: 16, height: 16, color: DS.successText }} />} value={stats?.totalScans ?? 0} label="Analyses" testid="kpi-stats" />
         <KpiCard to="/derm/patients" icon={<Activity style={{ width: 16, height: 16, color: "#f87171" }} />} value={statusCounts.priority} label="Priorité haute" testid="kpi-urgent" />
         {accData?.isAdmin && (
-          <KpiCard to="/derm/dataset" icon={<span style={{ fontSize: 14 }}>🧬</span>} value="—" label="Dataset IA" testid="kpi-dataset" />
+          <KpiCard to="/derm/dataset" icon={<span style={{ fontSize: 14 }}>🧬</span>} label="Dataset IA" testid="kpi-dataset" />
         )}
       </motion.div>
 
@@ -281,7 +282,7 @@ export default function ProDashboard() {
                 {recentPatients.map((p, i) => (
                   <Link
                     key={p.id}
-                    href={`/pro/patient/${p.id}`}
+                    href={`/derm/patient/${p.id}`}
                     data-testid={`row-patient-${p.id}`}
                     style={{
                       display: "flex",
@@ -537,8 +538,10 @@ function KpiCard({ to, icon, value, label, testid }: any) {
       }}
     >
       <div style={{ marginBottom: 10 }}>{icon}</div>
-      <p style={{ fontSize: 24, fontWeight: 800, color: "#f3f0ff", margin: "0 0 2px" }}>{value}</p>
-      <p style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.35)", margin: 0 }}>{label}</p>
+      {value !== undefined && value !== null && (
+        <p style={{ fontSize: 24, fontWeight: 800, color: "#f3f0ff", margin: "0 0 2px" }}>{value}</p>
+      )}
+      <p style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.35)", margin: value !== undefined && value !== null ? 0 : "4px 0 0" }}>{label}</p>
     </Link>
   );
 }
