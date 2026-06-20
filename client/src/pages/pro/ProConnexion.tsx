@@ -43,7 +43,8 @@ export default function ProConnexion() {
       if (!res.ok) throw new Error(data.message || "Erreur");
       await qc.invalidateQueries({ queryKey: ["/api/pro/account"] });
       await qc.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      setLocation("/derm/dashboard");
+      // Secrétaire → ses patients ; médecin → tableau de bord
+      setLocation(data.role === "secretary" ? "/derm/patients" : "/derm/dashboard");
     } catch (err: any) {
       toast({ title: "Connexion échouée", description: err.message, variant: "destructive" });
     } finally {

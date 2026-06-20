@@ -101,6 +101,41 @@ function requireActivePro(req: any, res: any, next: any) {
   });
 }
 
+// Middleware — accès aux données patients d'un cabinet : autorisé au MÉDECIN
+// propriétaire OU à une SECRÉTAIRE liée. Résout req.proAccount vers le compte du
+// cabinet (celui du médecin) et exige qu'il soit actif. req.isSecretary = rôle.
+function requireProAccess(req: any, res: any, next: any) {
+  const userId = req.session?.userId;
+  if (!userId) return res.status(401).json({ message: "Connexion requise" });
+  (async () => {
+    // 1) Compte pro propre (médecin) ?
+    let acc: any = await getProAccountForUser(userId);
+    let isSecretary = false;
+    if (!acc) {
+      // 2) Sinon : secrétaire liée à un cabinet ?
+      const [u] = await db.select().from(users).where(eq(users.id, userId));
+      if (u?.role === "secretary") {
+        const [sec] = await db.select().from(secretaryAccounts).where(eq(secretaryAccounts.userId, userId));
+        if (sec) {
+          const [linked] = await db.select().from(proAccounts).where(eq(proAccounts.id, sec.proAccountId));
+          if (linked) { acc = linked; isSecretary = true; }
+        }
+      }
+    }
+    if (!acc) return res.status(403).json({ message: "Accès cabinet requis" });
+    if (!isProActive(acc)) {
+      return res.status(402).json({ code: "PRO_SUBSCRIPTION_REQUIRED", message: "L'abonnement du cabinet est expiré." });
+    }
+    (req as any).proAccount = acc;
+    (req as any).proActive = true;
+    (req as any).isSecretary = isSecretary;
+    next();
+  })().catch(err => {
+    console.error("[requireProAccess] error:", err);
+    res.status(500).json({ message: "Erreur serveur" });
+  });
+}
+
 // Middleware — exige un utilisateur authentifié avec role "doctor"
 // 🔑 SÉCURITÉ CRITIQUE : empêche les secrétaires d'appeler /api/analyze
 function requireDoctor(req: any, res: any, next: any) {
@@ -252,7 +287,17 @@ export function registerProRoutes(app: Express) {
         return res.status(401).json({ message: "Email ou mot de passe incorrect" });
       }
       const acc = await getProAccountForUser(user.id);
-      if (!acc) return res.status(403).json({ message: "Aucun compte Pro lié à cet email. Inscris-toi d'abord." });
+      if (!acc) {
+        // Secrétaire : pas de compte pro propre, mais accès autorisé si liée à un cabinet
+        if (user.role === "secretary") {
+          req.session.userId = user.id;
+          return req.session.save((err: any) => {
+            if (err) return res.status(500).json({ message: "Erreur session" });
+            res.json({ success: true, role: "secretary" });
+          });
+        }
+        return res.status(403).json({ message: "Aucun compte Pro lié à cet email. Inscris-toi d'abord." });
+      }
 
       req.session.userId = user.id;
       req.session.save((err: any) => {
@@ -264,7 +309,7 @@ export function registerProRoutes(app: Express) {
           country: null,
           city: null,
         }).catch(() => {});
-        res.json({ success: true, account: acc });
+        res.json({ success: true, account: acc, role: "doctor" });
       });
     } catch (err) {
       console.error("[pro/login] error:", err);
@@ -330,7 +375,7 @@ export function registerProRoutes(app: Express) {
   // ───────────────────────────────────────────
   // GET /api/pro/patients — liste avec recherche
   // ───────────────────────────────────────────
-  app.get("/api/pro/patients", requireActivePro, async (req: any, res) => {
+  app.get("/api/pro/patients", requireProAccess, async (req: any, res) => {
     try {
       const q = (req.query.q as string || "").trim().toLowerCase();
       const list = await db.select().from(patients)
@@ -351,7 +396,7 @@ export function registerProRoutes(app: Express) {
   // ───────────────────────────────────────────
   // GET /api/pro/pending-patients — patients en attente d'analyse
   // ───────────────────────────────────────────
-  app.get("/api/pro/pending-patients", requireActivePro, async (req: any, res) => {
+  app.get("/api/pro/pending-patients", requireProAccess, async (req: any, res) => {
     try {
       const list = await db.select().from(patients)
         .where(and(
@@ -372,7 +417,7 @@ export function registerProRoutes(app: Express) {
   // ───────────────────────────────────────────
   // POST /api/pro/patients — créer patient
   // ───────────────────────────────────────────
-  app.post("/api/pro/patients", requireActivePro, async (req: any, res) => {
+  app.post("/api/pro/patients", requireProAccess, async (req: any, res) => {
     try {
       const schema = insertPatientSchema.extend({
         dermatologistId: z.number().optional(),
@@ -393,7 +438,7 @@ export function registerProRoutes(app: Express) {
   // ───────────────────────────────────────────
   // POST /api/pro/patients/:id/submit-for-review — secrétaire valide le dossier
   // ───────────────────────────────────────────
-  app.post("/api/pro/patients/:id/submit-for-review", requireActivePro, async (req: any, res) => {
+  app.post("/api/pro/patients/:id/submit-for-review", requireProAccess, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       const [existing] = await db.select().from(patients)
@@ -423,7 +468,7 @@ export function registerProRoutes(app: Express) {
   // ───────────────────────────────────────────
   // GET /api/pro/patients/:id — dossier complet patient
   // ───────────────────────────────────────────
-  app.get("/api/pro/patients/:id", requireActivePro, async (req: any, res) => {
+  app.get("/api/pro/patients/:id", requireProAccess, async (req: any, res) => {
     const id = parseInt(req.params.id);
     const [p] = await db.select().from(patients)
       .where(and(eq(patients.id, id), eq(patients.dermatologistId, req.proAccount.id)));
@@ -475,7 +520,7 @@ export function registerProRoutes(app: Express) {
   // POST /api/pro/scans/:id/attach — rattacher un scan à un patient + contexte clinique
   // (appelé après /api/analyze pour finaliser le dossier patient Pro)
   // ───────────────────────────────────────────
-  app.post("/api/pro/scans/:id/attach", requireActivePro, async (req: any, res) => {
+  app.post("/api/pro/scans/:id/attach", requireProAccess, async (req: any, res) => {
     try {
       const scanId = parseInt(req.params.id);
       const schema = z.object({
