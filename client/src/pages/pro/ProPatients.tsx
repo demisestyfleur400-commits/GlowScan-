@@ -30,6 +30,7 @@ export default function ProPatients() {
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [viewTab, setViewTab] = useState<"all" | "pending">("all");
+  const [secView, setSecView] = useState<"today" | "all">("today"); // secrétaire : aujourd'hui par défaut
   const { data, isLoading } = useProPatients(q);
   const { data: pendingData, isLoading: isPendingLoading } = useProPendingPatients();
   const { data: accountData } = useProAccount();
@@ -57,12 +58,16 @@ export default function ProPatients() {
       ? allPatients
       : allPatients.filter(p => p.status === statusFilter);
 
-  // Secrétaire : vue restreinte aux patients créés AUJOURD'HUI (son flux du jour).
-  const displayPatients = isDoctor ? baseList : baseList.filter(p => isToday((p as any).createdAt));
+  // Secrétaire : "aujourd'hui" par défaut, avec possibilité de voir tous ses patients.
+  const displayPatients = isDoctor
+    ? baseList
+    : secView === "today"
+      ? baseList.filter(p => isToday((p as any).createdAt))
+      : baseList;
 
   return (
     <ProLayout
-      title={isDoctor ? "Patientèle" : "Patients du jour"}
+      title={isDoctor ? "Patientèle" : "Mes patients"}
       back={isDoctor ? "/derm/dashboard" : undefined}
       rightAction={
         <Link
@@ -109,6 +114,26 @@ export default function ProPatients() {
           >
             Tous les patients
           </button>
+        </div>
+      )}
+
+      {/* Toggle secrétaire : Aujourd'hui (défaut) / Tous */}
+      {!isDoctor && (
+        <div className="flex gap-2 mb-3">
+          {([["today", "Aujourd'hui"], ["all", "Tous mes patients"]] as const).map(([v, label]) => (
+            <button
+              key={v}
+              onClick={() => setSecView(v)}
+              data-testid={`secview-${v}`}
+              className="flex-shrink-0 px-4 py-2 rounded-full text-xs font-extrabold transition-all active:scale-95"
+              style={secView === v
+                ? { background: NAVY, color: "#fff" }
+                : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(200,185,255,0.75)" }
+              }
+            >
+              {label}
+            </button>
+          ))}
         </div>
       )}
 
@@ -165,7 +190,13 @@ export default function ProPatients() {
         <ProCard className="p-10 text-center">
           <Users className="w-10 h-10 mx-auto mb-3" style={{ color: "rgba(255,255,255,0.6)" }} />
           <p className="mb-4 text-sm font-medium" style={{ color: "rgba(200,185,255,0.75)" }}>
-            {viewTab === "pending" ? "✅ Aucun dossier en attente" : (q ? "Aucun patient trouvé" : (isDoctor ? "Aucun patient encore enregistré" : "Aucun patient créé aujourd'hui"))}
+            {viewTab === "pending"
+              ? "✅ Aucun dossier en attente"
+              : (q
+                ? "Aucun patient trouvé"
+                : (isDoctor
+                  ? "Aucun patient encore enregistré"
+                  : (secView === "today" ? "Aucun patient créé aujourd'hui" : "Aucun patient enregistré")))}
           </p>
           {viewTab === "all" && (
             <Link
