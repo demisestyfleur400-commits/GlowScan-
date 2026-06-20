@@ -162,14 +162,20 @@ export function registerProRoutes(app: Express) {
       const schema = z.object({
         fullName: z.string().min(2),
         email: z.string().email(),
-        password: z.string().min(6),
+        password: z.string().min(8), // 8 car. min pour des données médicales
         cabinetName: z.string().optional().nullable(),
         phone: z.string().optional().nullable(),
         city: z.string().optional().nullable(),
+        // Numéro d'ordre professionnel (ONMC) — collecté pour crédibilité.
+        // Non encore persisté (pas de colonne) : loggé pour vérification manuelle.
+        licenseNumber: z.string().optional().nullable(),
         consent: z.literal(true),
       });
       const data = schema.parse(req.body);
       const emailLower = data.email.toLowerCase().trim();
+      if (data.licenseNumber) {
+        console.log(`[pro/register] 🪪 Numéro d'ordre déclaré par ${emailLower} : ${data.licenseNumber} (à vérifier manuellement)`);
+      }
 
       // 1. Vérifier email existant
       const [existing] = await db.select().from(users).where(eq(users.email, emailLower));

@@ -31,14 +31,38 @@ export default function ProInscription() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [cabinetName, setCabinetName] = useState("");
   const [phone, setPhone] = useState("");
   const [city, setCity] = useState("");
+  const [licenseNumber, setLicenseNumber] = useState("");
   const [consent, setConsent] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // Force du mot de passe : longueur + variété de caractères
+  const pwStrength = (() => {
+    let score = 0;
+    if (password.length >= 8) score++;
+    if (password.length >= 12) score++;
+    if (/[A-Z]/.test(password) && /[a-z]/.test(password)) score++;
+    if (/\d/.test(password)) score++;
+    if (/[^A-Za-z0-9]/.test(password)) score++;
+    if (score <= 1) return { level: 1, label: "Faible", color: "#f43f5e" };
+    if (score <= 3) return { level: 2, label: "Moyen", color: "#fbbf24" };
+    return { level: 3, label: "Fort", color: "#10b981" };
+  })();
+  const passwordsMatch = confirmPassword.length > 0 && password === confirmPassword;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (password.length < 8) {
+      toast({ title: "Mot de passe trop court", description: "8 caractères minimum pour des données médicales.", variant: "destructive" });
+      return;
+    }
+    if (password !== confirmPassword) {
+      toast({ title: "Les mots de passe ne correspondent pas", variant: "destructive" });
+      return;
+    }
     if (!consent) {
       toast({ title: "Consentement requis", description: "Cochez la case RGPD pour continuer.", variant: "destructive" });
       return;
@@ -56,6 +80,7 @@ export default function ProInscription() {
           cabinetName: cabinetName || null,
           phone: phone || null,
           city: city || null,
+          licenseNumber: licenseNumber || null,
           consent: true,
         }),
       });
@@ -182,7 +207,25 @@ export default function ProInscription() {
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <Field label="Nom complet *" placeholder="Dr Marie Mbarga" value={fullName} onChange={setFullName} required testid="input-fullname" />
               <Field label="Email professionnel *" type="email" placeholder="cabinet@exemple.com" value={email} onChange={setEmail} required testid="input-email" />
-              <Field label="Mot de passe *" type="password" placeholder="Min. 6 caractères" value={password} onChange={setPassword} required minLength={6} testid="input-password" />
+              <div>
+                <Field label="Mot de passe *" type="password" placeholder="Min. 8 caractères" value={password} onChange={setPassword} required minLength={8} testid="input-password" />
+                {password.length > 0 && (
+                  <div style={{ marginTop: 8 }}>
+                    <div style={{ display: "flex", gap: 4 }}>
+                      {[1, 2, 3].map((i) => (
+                        <div key={i} style={{ flex: 1, height: 4, borderRadius: 9999, background: i <= pwStrength.level ? pwStrength.color : "rgba(255,255,255,0.1)", transition: "background 0.2s" }} />
+                      ))}
+                    </div>
+                    <p style={{ fontSize: 11, fontWeight: 700, color: pwStrength.color, marginTop: 4 }}>Force : {pwStrength.label}</p>
+                  </div>
+                )}
+              </div>
+              <div>
+                <Field label="Confirmer le mot de passe *" type="password" placeholder="Retapez le mot de passe" value={confirmPassword} onChange={setConfirmPassword} required minLength={8} testid="input-confirm-password" />
+                {confirmPassword.length > 0 && !passwordsMatch && (
+                  <p style={{ fontSize: 11, fontWeight: 700, color: "#f43f5e", marginTop: 6 }}>Les mots de passe ne correspondent pas</p>
+                )}
+              </div>
             </div>
 
             {/* Cabinet section */}
@@ -211,6 +254,13 @@ export default function ProInscription() {
                 <Field label="Nom du cabinet" placeholder="Cabinet Bonanjo" value={cabinetName} onChange={setCabinetName} testid="input-cabinet" />
                 <Field label="Téléphone WhatsApp" placeholder="237 6XX XX XX XX" value={phone} onChange={setPhone} testid="input-phone" />
                 <Field label="Ville" placeholder="Douala" value={city} onChange={setCity} testid="input-city" />
+                <Field label="Numéro d'ordre (ONMC)" placeholder="Ex : ONMC-2024-XXXX" value={licenseNumber} onChange={setLicenseNumber} testid="input-license" />
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "8px 10px", borderRadius: 10, background: "rgba(16,185,129,0.06)", border: "1px solid rgba(16,185,129,0.2)" }}>
+                  <ShieldCheck style={{ width: 13, height: 13, color: "#6ee7b7", marginTop: 1, flexShrink: 0 }} />
+                  <span style={{ fontSize: 11, color: "#6ee7b7", lineHeight: 1.5 }}>
+                    Votre statut de professionnel de santé sera vérifié sous 24 h. Cela renforce la confiance de vos patients.
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -245,7 +295,7 @@ export default function ProInscription() {
 
             <button
               type="submit"
-              disabled={loading || !fullName || !email || !password || !consent}
+              disabled={loading || !fullName || !email || password.length < 8 || !passwordsMatch || !consent}
               data-testid="button-submit-register"
               style={{
                 width: "100%",
@@ -260,8 +310,8 @@ export default function ProInscription() {
                 fontWeight: 800,
                 fontSize: 14,
                 border: "none",
-                cursor: loading || !fullName || !email || !password || !consent ? "not-allowed" : "pointer",
-                opacity: loading || !fullName || !email || !password || !consent ? 0.5 : 1,
+                cursor: loading || !fullName || !email || password.length < 8 || !passwordsMatch || !consent ? "not-allowed" : "pointer",
+                opacity: loading || !fullName || !email || password.length < 8 || !passwordsMatch || !consent ? 0.5 : 1,
                 fontFamily: DS.font,
                 transition: "opacity 0.15s",
               }}
