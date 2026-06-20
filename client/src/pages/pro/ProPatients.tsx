@@ -6,9 +6,10 @@ import { useProPatients, useProPendingPatients, useProAccount } from "@/hooks/us
 import { useRealtimeScans } from "@/hooks/use-realtime";
 import { ProLayout, ProCard, StatusBadge } from "@/components/ProLayout";
 import PendingPatientsList from "@/components/PendingPatientsList";
+import { DERM } from "@/lib/design-tokens";
 
-const NAVY = "#7c3aed";
-const INK = "#f3f0ff";
+const NAVY = DERM.violet;
+const INK = DERM.text;
 
 const STATUS_FILTERS = [
   { v: "all", label: "Tous" },
@@ -44,16 +45,25 @@ export default function ProPatients() {
   const pendingPatients = pendingData?.patients || [];
   const pendingCount = pendingData?.count || 0;
 
-  const displayPatients = viewTab === "pending"
+  const isToday = (d?: string | Date | null) => {
+    if (!d) return false;
+    const x = new Date(d), n = new Date();
+    return x.getFullYear() === n.getFullYear() && x.getMonth() === n.getMonth() && x.getDate() === n.getDate();
+  };
+
+  const baseList = viewTab === "pending"
     ? pendingPatients
     : statusFilter === "all"
       ? allPatients
       : allPatients.filter(p => p.status === statusFilter);
 
+  // Secrétaire : vue restreinte aux patients créés AUJOURD'HUI (son flux du jour).
+  const displayPatients = isDoctor ? baseList : baseList.filter(p => isToday((p as any).createdAt));
+
   return (
     <ProLayout
-      title="Patientèle"
-      back="/derm/dashboard"
+      title={isDoctor ? "Patientèle" : "Patients du jour"}
+      back={isDoctor ? "/derm/dashboard" : undefined}
       rightAction={
         <Link
           href="/derm/analyse?nouveau=1"
@@ -155,7 +165,7 @@ export default function ProPatients() {
         <ProCard className="p-10 text-center">
           <Users className="w-10 h-10 mx-auto mb-3" style={{ color: "rgba(255,255,255,0.6)" }} />
           <p className="mb-4 text-sm font-medium" style={{ color: "rgba(200,185,255,0.75)" }}>
-            {viewTab === "pending" ? "✅ Aucun dossier en attente" : (q ? "Aucun patient trouvé" : "Aucun patient encore enregistré")}
+            {viewTab === "pending" ? "✅ Aucun dossier en attente" : (q ? "Aucun patient trouvé" : (isDoctor ? "Aucun patient encore enregistré" : "Aucun patient créé aujourd'hui"))}
           </p>
           {viewTab === "all" && (
             <Link

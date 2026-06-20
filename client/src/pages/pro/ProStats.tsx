@@ -3,11 +3,12 @@ import { Users, BarChart3, TrendingUp, Calendar, ShoppingBag } from "lucide-reac
 import { useProStats, useProAccount } from "@/hooks/use-pro";
 import { ProLayout, ProCard } from "@/components/ProLayout";
 import { LoadingScreen } from "./ProDashboard";
+import { DERM } from "@/lib/design-tokens";
 
-// Design System tokens
-const NAVY = "#7c3aed";
-const INK = "#f3f0ff";
-const GREEN = "#10b981";
+// Couleurs sourcées depuis les design tokens unifiés
+const NAVY = DERM.violet;
+const INK = DERM.text;
+const GREEN = DERM.green;
 
 export default function ProStats() {
   const { data, isLoading } = useProStats();

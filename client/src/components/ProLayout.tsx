@@ -36,7 +36,7 @@ export function ProLayout({ children, title, back, hideBottomNav, rightAction }:
   const navItems = isSecretary
     ? [
         { href: "/derm/analyse", icon: ScanLine, label: "Nouveau patient", primary: true },
-        { href: "/derm/patients", icon: Users, label: "Mes patients" },
+        { href: "/derm/patients", icon: Users, label: "Mes patients du jour" },
       ]
     : NAV_ITEMS;
 
