@@ -94,7 +94,7 @@ export default function ProPatients() {
             className="flex-shrink-0 px-4 py-2 rounded-full text-xs font-extrabold transition-all active:scale-95"
             style={viewTab === "all"
               ? { background: NAVY, color: "#fff" }
-              : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(200,185,255,0.65)" }
+              : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(200,185,255,0.75)" }
             }
           >
             Tous les patients
@@ -106,7 +106,7 @@ export default function ProPatients() {
       {viewTab === "all" && (
         <ProCard className="p-2 mb-3">
           <div className="flex items-center gap-2 px-2.5 py-1">
-            <Search className="w-4 h-4 flex-shrink-0" style={{ color: "rgba(255,255,255,0.35)" }} />
+            <Search className="w-4 h-4 flex-shrink-0" style={{ color: "rgba(255,255,255,0.6)" }} />
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}
@@ -131,7 +131,7 @@ export default function ProPatients() {
                 className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-extrabold transition-all active:scale-95"
                 style={on
                   ? { background: f.v === "all" ? NAVY : `${(f as any).color}22`, border: `1.5px solid ${f.v === "all" ? NAVY : (f as any).color}`, color: f.v === "all" ? "#fff" : (f as any).color }
-                  : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(200,185,255,0.65)" }
+                  : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(200,185,255,0.75)" }
                 }
               >
                 {f.label}
@@ -148,13 +148,13 @@ export default function ProPatients() {
 
       {/* Liste */}
       {(viewTab === "all" ? isLoading : isPendingLoading) && (
-        <p className="text-center text-sm py-12" style={{ color: "rgba(200,185,255,0.65)" }}>Chargement…</p>
+        <p className="text-center text-sm py-12" style={{ color: "rgba(200,185,255,0.75)" }}>Chargement…</p>
       )}
 
       {!(viewTab === "all" ? isLoading : isPendingLoading) && displayPatients.length === 0 && (
         <ProCard className="p-10 text-center">
-          <Users className="w-10 h-10 mx-auto mb-3" style={{ color: "rgba(255,255,255,0.35)" }} />
-          <p className="mb-4 text-sm font-medium" style={{ color: "rgba(200,185,255,0.65)" }}>
+          <Users className="w-10 h-10 mx-auto mb-3" style={{ color: "rgba(255,255,255,0.6)" }} />
+          <p className="mb-4 text-sm font-medium" style={{ color: "rgba(200,185,255,0.75)" }}>
             {viewTab === "pending" ? "✅ Aucun dossier en attente" : (q ? "Aucun patient trouvé" : "Aucun patient encore enregistré")}
           </p>
           {viewTab === "all" && (
@@ -201,7 +201,7 @@ export default function ProPatients() {
                     <p className="text-sm font-extrabold truncate" style={{ color: INK }} data-testid={`text-name-${p.id}`}>
                       {p.firstName} {p.lastName}
                     </p>
-                    <p className="text-[11px] truncate mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>
+                    <p className="text-[11px] truncate mt-0.5" style={{ color: "rgba(255,255,255,0.6)" }}>
                       {p.age ? `${p.age} ans · ` : ""}
                       {p.sex || ""}
                       {p.lastScanAt

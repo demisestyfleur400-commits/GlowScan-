@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { ProLayout, ProCard, ProInput, LogoutButton  } from "@/components/ProLayout";
 import { LoadingScreen } from "./ProDashboard";
+import { DERM } from "@/lib/design-tokens";
 
 const NAVY = "#7c3aed";
 const INK = "#f3f0ff";
@@ -17,10 +18,10 @@ const ORANGE_NUMBER = "690501392";
 const PRO_PRICE = 30000;
 
 const DS = {
-  surface: "#13101f",
-  border: "rgba(255,255,255,0.07)",
-  body: "rgba(200,185,255,0.65)",
-  muted: "rgba(255,255,255,0.35)",
+  surface: DERM.surface,
+  border: DERM.border,
+  body: DERM.textBody,
+  muted: DERM.textMuted,
 };
 
 export default function ProCabinet() {
@@ -182,7 +183,7 @@ export default function ProCabinet() {
   if (accData?.user?.role === "secretary") {
     return (
       <ProLayout title="Mon cabinet" back="/derm/patients">
-        <div style={{ textAlign: "center", padding: "40px 24px", color: "rgba(200,185,255,0.65)" }}>
+        <div style={{ textAlign: "center", padding: "40px 24px", color: "rgba(200,185,255,0.75)" }}>
           <p>Les secrétaires n'ont pas accès aux paramètres cabinet.</p>
         </div>
       </ProLayout>
@@ -574,13 +575,13 @@ function IdLine({ label, value, onCopy }: { label: string; value: string; onCopy
   return (
     <div className="flex items-center justify-between gap-2">
       <div className="min-w-0">
-        <span className="text-[10px] uppercase tracking-wider font-extrabold" style={{ color: "rgba(255,255,255,0.35)" }}>{label} : </span>
+        <span className="text-[10px] uppercase tracking-wider font-extrabold" style={{ color: "rgba(255,255,255,0.6)" }}>{label} : </span>
         <span className="text-sm font-extrabold" style={{ color: "#f3f0ff" }}>{value}</span>
       </div>
       <button
         onClick={onCopy}
         className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-extrabold flex-shrink-0"
-        style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", color: "rgba(200,185,255,0.65)" }}
+        style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", color: "rgba(200,185,255,0.75)" }}
       >
         <Copy className="w-3 h-3" /> Copier
       </button>
@@ -591,7 +592,7 @@ function IdLine({ label, value, onCopy }: { label: string; value: string; onCopy
 function Row({ label, value, testid }: any) {
   return (
     <div className="flex items-center justify-between py-1.5" style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
-      <span className="text-[11px] uppercase tracking-wider font-extrabold" style={{ color: "rgba(255,255,255,0.35)" }}>{label}</span>
+      <span className="text-[11px] uppercase tracking-wider font-extrabold" style={{ color: "rgba(255,255,255,0.6)" }}>{label}</span>
       <span className="text-sm font-extrabold" style={{ color: "#f3f0ff" }} data-testid={testid}>{value}</span>
     </div>
   );

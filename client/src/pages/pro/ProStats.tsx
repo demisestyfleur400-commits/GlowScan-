@@ -19,7 +19,7 @@ export default function ProStats() {
   if (accData?.user?.role === "secretary") {
     return (
       <ProLayout title="Performances" back="/derm/patients">
-        <div style={{ textAlign: "center", padding: "40px 24px", color: "rgba(200,185,255,0.65)" }}>
+        <div style={{ textAlign: "center", padding: "40px 24px", color: "rgba(200,185,255,0.75)" }}>
           <p>Les secrétaires n'ont pas accès aux performances du cabinet.</p>
         </div>
       </ProLayout>
@@ -41,7 +41,7 @@ export default function ProStats() {
             >
               <Calendar className="w-4 h-4" style={{ color: "#a78bfa" }} />
             </div>
-            <p className="text-[11px] font-extrabold uppercase tracking-widest mb-2" style={{ color: "rgba(200,185,255,0.65)" }}>Statut patients</p>
+            <p className="text-[11px] font-extrabold uppercase tracking-widest mb-2" style={{ color: "rgba(200,185,255,0.75)" }}>Statut patients</p>
             <div className="flex items-center gap-2.5 text-xs font-extrabold flex-wrap">
               <span className="flex items-center gap-1" style={{ color: "#f9a8d4" }} title="Priorité">
                 <span className="w-1.5 h-1.5 rounded-full" style={{ background: "#f43f5e" }} />{data.statusBreakdown.priority}
@@ -61,7 +61,7 @@ export default function ProStats() {
 
         <div className="grid lg:grid-cols-2 gap-4">
           <Section title="Top 5 problèmes de peau" icon={<BarChart3 className="w-4 h-4" />} accent={NAVY}>
-            {data.topConditions.length === 0 && <p className="text-xs" style={{ color: "rgba(200,185,255,0.65)" }}>Aucune donnée encore.</p>}
+            {data.topConditions.length === 0 && <p className="text-xs" style={{ color: "rgba(200,185,255,0.75)" }}>Aucune donnée encore.</p>}
             {data.topConditions.map((c, i) => {
               const max = data.topConditions[0]?.count || 1;
               return (
@@ -73,7 +73,7 @@ export default function ProStats() {
                   className="mb-3 last:mb-0"
                 >
                   <div className="flex items-center justify-between text-xs mb-1.5">
-                    <span className="truncate flex-1 font-bold" style={{ color: "rgba(200,185,255,0.65)" }}>{c.name}</span>
+                    <span className="truncate flex-1 font-bold" style={{ color: "rgba(200,185,255,0.75)" }}>{c.name}</span>
                     <span className="font-extrabold" style={{ color: NAVY }}>{c.count}</span>
                   </div>
                   <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
@@ -85,13 +85,13 @@ export default function ProStats() {
           </Section>
 
           <Section title="Top 5 produits recommandés" icon={<ShoppingBag className="w-4 h-4" />} accent={GREEN}>
-            {data.topProducts.length === 0 && <p className="text-xs" style={{ color: "rgba(200,185,255,0.65)" }}>Aucune donnée encore.</p>}
+            {data.topProducts.length === 0 && <p className="text-xs" style={{ color: "rgba(200,185,255,0.75)" }}>Aucune donnée encore.</p>}
             {data.topProducts.map((p) => {
               const max = data.topProducts[0]?.count || 1;
               return (
                 <div key={p.name} className="mb-3 last:mb-0">
                   <div className="flex items-center justify-between text-xs mb-1.5">
-                    <span className="truncate flex-1 font-bold" style={{ color: "rgba(200,185,255,0.65)" }}>{p.name}</span>
+                    <span className="truncate flex-1 font-bold" style={{ color: "rgba(200,185,255,0.75)" }}>{p.name}</span>
                     <span className="font-extrabold" style={{ color: "#6ee7b7" }}>{p.count}×</span>
                   </div>
                   <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
@@ -104,7 +104,7 @@ export default function ProStats() {
         </div>
 
         <Section title="Consultations par mois" icon={<Calendar className="w-4 h-4" />} accent="#a78bfa">
-          {data.monthly.length === 0 && <p className="text-xs" style={{ color: "rgba(200,185,255,0.65)" }}>Aucune donnée encore.</p>}
+          {data.monthly.length === 0 && <p className="text-xs" style={{ color: "rgba(200,185,255,0.75)" }}>Aucune donnée encore.</p>}
           {data.monthly.length > 0 && (
             <div className="flex items-end gap-1.5 h-32 mt-3">
               {data.monthly.map((m) => {
@@ -118,7 +118,7 @@ export default function ProStats() {
                       className="w-full rounded-t-md transition-all hover:opacity-80 min-h-[4px]"
                       style={{ height: `${(m.count / max) * 100}%`, background: "linear-gradient(to top, #7c3aed, #a78bfa)" }}
                     />
-                    <span className="text-[10px] font-medium" style={{ color: "rgba(255,255,255,0.35)" }}>{m.month.slice(5)}</span>
+                    <span className="text-[10px] font-medium" style={{ color: "rgba(255,255,255,0.6)" }}>{m.month.slice(5)}</span>
                   </div>
                 );
               })}
@@ -140,7 +140,7 @@ function KPI({ icon, accent, label, value, testid }: any) {
         <span style={{ color: accent }}>{icon}</span>
       </div>
       <p className="text-2xl font-extrabold" style={{ color: INK }}>{value}</p>
-      <p className="text-[11px] font-extrabold uppercase tracking-widest mt-0.5" style={{ color: "rgba(200,185,255,0.65)" }}>{label}</p>
+      <p className="text-[11px] font-extrabold uppercase tracking-widest mt-0.5" style={{ color: "rgba(200,185,255,0.75)" }}>{label}</p>
     </ProCard>
   );
 }

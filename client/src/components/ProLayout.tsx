@@ -82,7 +82,7 @@ export function ProLayout({ children, title, back, hideBottomNav, rightAction }:
                   className="flex items-center gap-3 px-4 py-3 text-xs font-bold rounded-xl transition-all"
                   style={isActive
                     ? { background: "rgba(124,58,237,0.15)", border: "1px solid rgba(167,139,250,0.3)", color: "#c4b5fd" }
-                    : { color: "rgba(200,185,255,0.65)" }
+                    : { color: "rgba(200,185,255,0.75)" }
                   }
                 >
                   <Icon className="w-4 h-4 flex-shrink-0" />
@@ -108,7 +108,7 @@ export function ProLayout({ children, title, back, hideBottomNav, rightAction }:
             <button
               onClick={() => logout()}
               className="w-full flex items-center gap-3 px-4 py-3 text-xs font-bold rounded-xl transition-opacity hover:opacity-70"
-              style={{ color: "rgba(255,255,255,0.35)" }}
+              style={{ color: "rgba(255,255,255,0.6)" }}
             >
               <LogOut className="w-4 h-4" />
               <span>Déconnexion</span>
@@ -131,7 +131,7 @@ export function ProLayout({ children, title, back, hideBottomNav, rightAction }:
                   href={back}
                   data-testid="link-back"
                   className="p-2 rounded-xl transition-opacity hover:opacity-70 active:scale-95"
-                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(200,185,255,0.65)" }}
+                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(200,185,255,0.75)" }}
                 >
                   <ArrowLeft className="w-4 h-4" />
                 </Link>
@@ -202,7 +202,7 @@ export function ProLayout({ children, title, back, hideBottomNav, rightAction }:
                   href={item.href}
                   data-testid={`navlink-${item.label.toLowerCase()}`}
                   className="flex flex-col items-center justify-center gap-1 transition-all"
-                  style={{ color: active ? "#a78bfa" : "rgba(255,255,255,0.35)" }}
+                  style={{ color: active ? "#a78bfa" : "rgba(255,255,255,0.6)" }}
                 >
                   <Icon className="w-4 h-4" />
                   <span className="text-[9px] font-bold">{item.label.split(" ")[0]}</span>
@@ -263,7 +263,7 @@ export function ProInput({ label, testid, ...props }: { label?: string; testid?:
   return (
     <div className="w-full">
       {label && (
-        <label className="block text-[10px] font-extrabold uppercase tracking-wider mb-1.5" style={{ color: "rgba(255,255,255,0.35)" }}>
+        <label className="block text-[10px] font-extrabold uppercase tracking-wider mb-1.5" style={{ color: "rgba(255,255,255,0.6)" }}>
           {label}
         </label>
       )}

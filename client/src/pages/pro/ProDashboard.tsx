@@ -16,17 +16,18 @@ import {
 } from "lucide-react";
 import { useProAccount, useProPatients, useUpdateProAccount, useProStats } from "@/hooks/use-pro";
 import { ProLayout, ProCard } from "@/components/ProLayout";
+import { DERM } from "@/lib/design-tokens";
 
 const DS = {
-  bg: "#0d0a0e",
-  surface: "#13101f",
-  violet: "#7c3aed",
-  violetMid: "#a78bfa",
-  violetLight: "#c4b5fd",
-  pink: "#E91E8C",
-  textPrimary: "#f3f0ff",
-  textBody: "rgba(200,185,255,0.65)",
-  textMuted: "rgba(255,255,255,0.35)",
+  bg: DERM.bg,
+  surface: DERM.surface,
+  violet: DERM.violet,
+  violetMid: DERM.violetMid,
+  violetLight: DERM.violetLight,
+  pink: DERM.pink,
+  textPrimary: DERM.text,
+  textBody: DERM.textBody,
+  textMuted: DERM.textMuted,
   cardBorder: "rgba(255,255,255,0.07)",
   cardVioletBg: "rgba(167,139,250,0.06)",
   cardVioletBorder: "rgba(167,139,250,0.18)",
@@ -541,7 +542,7 @@ function KpiCard({ to, icon, value, label, testid }: any) {
       {value !== undefined && value !== null && (
         <p style={{ fontSize: 24, fontWeight: 800, color: "#f3f0ff", margin: "0 0 2px" }}>{value}</p>
       )}
-      <p style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.35)", margin: value !== undefined && value !== null ? 0 : "4px 0 0" }}>{label}</p>
+      <p style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.6)", margin: value !== undefined && value !== null ? 0 : "4px 0 0" }}>{label}</p>
     </Link>
   );
 }
@@ -558,7 +559,7 @@ export function LoadingScreen() {
         fontFamily: `-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif`,
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 12, color: "rgba(200,185,255,0.65)" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, color: "rgba(200,185,255,0.75)" }}>
         <div
           style={{
             width: 20,
