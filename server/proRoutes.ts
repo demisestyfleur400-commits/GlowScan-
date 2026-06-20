@@ -166,8 +166,8 @@ export function registerProRoutes(app: Express) {
         cabinetName: z.string().optional().nullable(),
         phone: z.string().optional().nullable(),
         city: z.string().optional().nullable(),
-        // Numéro d'ordre professionnel (ONMC) — collecté pour crédibilité.
-        // Non encore persisté (pas de colonne) : loggé pour vérification manuelle.
+        // Numéro d'ordre professionnel (ONMC) — persisté (pro_accounts.license_number),
+        // à vérifier manuellement.
         licenseNumber: z.string().optional().nullable(),
         consent: z.literal(true),
       });
@@ -209,6 +209,7 @@ export function registerProRoutes(app: Express) {
         cabinetName: data.cabinetName || null,
         phone: data.phone || null,
         city: data.city || null,
+        licenseNumber: data.licenseNumber || null,
         trialEndsAt,
         subscriptionStatus: "trial",
         consentSignedAt: new Date(),
@@ -314,6 +315,7 @@ export function registerProRoutes(app: Express) {
         cabinetName: z.string().nullable().optional(),
         phone: z.string().nullable().optional(),
         city: z.string().nullable().optional(),
+        licenseNumber: z.string().nullable().optional(),
         onboardingDone: z.boolean().optional(),
       });
       const data = schema.parse(req.body);

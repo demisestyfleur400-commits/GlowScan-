@@ -355,6 +355,7 @@ export const proAccounts = pgTable("pro_accounts", {
   cabinetName: text("cabinet_name"),                   // Nom du cabinet (optionnel)
   phone: text("phone"),                                 // WhatsApp dermato (pour signature)
   city: text("city"),
+  licenseNumber: text("license_number"),                // N° d'ordre professionnel (ONMC) — vérif manuelle
   trialEndsAt: timestamp("trial_ends_at").notNull(),    // 14 jours après inscription
   subscriptionStatus: text("subscription_status").notNull().default("trial"), // trial | active | expired
   subscriptionExpiresAt: timestamp("subscription_expires_at"),
