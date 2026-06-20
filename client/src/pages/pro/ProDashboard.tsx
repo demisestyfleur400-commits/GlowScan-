@@ -65,16 +65,21 @@ export default function ProDashboard() {
     if (accData?.account && !accData.account.onboardingDone) setTourOpen(true);
   }, [accData?.account?.onboardingDone]);
 
-  useEffect(() => {
-    if (!isLoading && !accData?.account) setLocation("/derm");
-  }, [isLoading, accData]);
+  const role = accData?.user?.role;
 
-  if (isLoading || !accData?.account) {
+  useEffect(() => {
+    // Redirige vers la landing uniquement les visiteurs SANS compte ET non-secrétaires.
+    // La secrétaire a une session valide (mais pas de proAccount) → écran dédié ci-dessous.
+    if (!isLoading && !accData?.account && role !== "secretary") setLocation("/derm");
+  }, [isLoading, accData, role]);
+
+  if (isLoading) {
     return <LoadingScreen />;
   }
 
-  // 🔑 SÉCURITÉ : Les secrétaires n'ont pas accès au tableau de bord
-  if (accData?.user?.role === "secretary") {
+  // 🔑 SÉCURITÉ : Les secrétaires n'ont pas accès au tableau de bord (vérifié AVANT
+  // la garde account-null, car une secrétaire n'a pas de proAccount).
+  if (role === "secretary") {
     return (
       <div style={{
         minHeight: "100vh",
@@ -111,6 +116,12 @@ export default function ProDashboard() {
         </div>
       </div>
     );
+  }
+
+  // Pas de compte (et pas secrétaire) → l'effet ci-dessus redirige vers /derm ;
+  // on affiche le loader le temps que la navigation se fasse.
+  if (!accData?.account) {
+    return <LoadingScreen />;
   }
 
   const acc = accData.account;
