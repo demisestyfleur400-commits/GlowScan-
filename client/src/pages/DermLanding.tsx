@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "wouter";
 import {
@@ -14,8 +15,11 @@ const DS = {
   violetLight: "#c4b5fd",
   border: "rgba(167,139,250,0.18)",
   text: "#f3f0ff",
-  muted: "rgba(200,185,255,0.65)",
-  subtle: "rgba(255,255,255,0.35)",
+  muted: "rgba(200,185,255,0.75)",
+  subtle: "rgba(255,255,255,0.6)",
+  green: "#10b981",
+  amber: "#fbbf24",
+  red: "#f43f5e",
 };
 
 const features = [
@@ -109,7 +113,10 @@ function Nav() {
       display: "flex", alignItems: "center", justifyContent: "space-between",
       padding: "12px 24px",
     }}>
-      <span style={{ fontSize: 18, fontWeight: 900, color: DS.violet }}>✦ GlowScan DERM</span>
+      <span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 18, fontWeight: 900, color: DS.text }}>
+        <img src="/logo-glowscan-square.jpeg" alt="GlowScan" width={28} height={28} style={{ borderRadius: 8, objectFit: "cover" }} />
+        GlowScan <span style={{ color: DS.violet }}>DERM</span>
+      </span>
       <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
         <Link href="/derm/connexion">
           <span style={{ fontSize: 13, color: DS.muted, cursor: "pointer", fontWeight: 600 }}>Connexion</span>
@@ -131,6 +138,17 @@ export default function DermLanding() {
     description: "Plateforme IA de diagnostic dermatologique pour professionnels. Analysez les patients, suivez les dossiers et accédez à un dataset de peaux africaines certifié.",
     canonical: "https://glow-scan.com/derm",
   });
+
+  // Preuve sociale dynamique : nombre réel de dermatologues inscrits
+  const [partnerCount, setPartnerCount] = useState<number | null>(null);
+  useEffect(() => {
+    fetch("/api/pro/partners-count")
+      .then((r) => r.json())
+      .then((d) => setPartnerCount(typeof d?.count === "number" ? d.count : null))
+      .catch(() => setPartnerCount(null));
+  }, []);
+  // Plancher d'amorçage pour ne jamais afficher un chiffre décourageant
+  const displayedPartners = Math.max(partnerCount ?? 0, 3);
 
   return (
     <div style={{ background: DS.bg, minHeight: "100vh", color: DS.text, fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif" }}>
@@ -171,6 +189,65 @@ export default function DermLanding() {
             </Link>
           </div>
         </motion.div>
+      </section>
+
+      {/* ── APERÇU PRODUIT ── */}
+      <section style={{ maxWidth: 980, margin: "0 auto", padding: "20px 24px 40px" }}>
+        <p style={{ textAlign: "center", fontSize: 12, fontWeight: 800, letterSpacing: ".5px", textTransform: "uppercase", color: DS.violetMid, marginBottom: 6 }}>
+          À quoi ça ressemble
+        </p>
+        <h2 style={{ fontSize: 26, fontWeight: 900, textAlign: "center", marginBottom: 28 }}>
+          Une interface clinique, pas un gadget
+        </h2>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(280px,1fr))", gap: 18 }}>
+          {/* Mockup 1 — Tableau de bord */}
+          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+            style={{ background: DS.surface, border: `1px solid ${DS.border}`, borderRadius: 20, padding: 16 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <span style={{ fontSize: 11, fontWeight: 800, color: DS.muted }}>Tableau de bord</span>
+              <span style={{ fontSize: 10, fontWeight: 800, color: DS.violetMid, background: "rgba(124,58,237,0.12)", padding: "3px 8px", borderRadius: 9999 }}>Essai · 14 j</span>
+            </div>
+            <p style={{ fontSize: 15, fontWeight: 900, marginBottom: 12 }}>Bonjour, Dr Mbarga 👋</p>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8, marginBottom: 12 }}>
+              {[["Patients", "48", DS.violetMid], ["Priorité", "5", DS.red], ["En suivi", "12", DS.amber]].map(([l, v, c]) => (
+                <div key={l} style={{ background: "rgba(255,255,255,0.04)", borderRadius: 10, padding: "8px 10px" }}>
+                  <p style={{ fontSize: 18, fontWeight: 900, color: c as string, margin: 0 }}>{v}</p>
+                  <p style={{ fontSize: 9, color: DS.subtle, margin: 0 }}>{l}</p>
+                </div>
+              ))}
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(124,58,237,0.10)", border: `1px solid ${DS.border}`, borderRadius: 12, padding: "10px 12px" }}>
+              <div style={{ width: 28, height: 28, borderRadius: 8, background: DS.violet }} />
+              <div>
+                <p style={{ fontSize: 11, fontWeight: 800, margin: 0 }}>Analyser un patient</p>
+                <p style={{ fontSize: 9, color: DS.subtle, margin: 0 }}>Patient → photo → IA → dossier</p>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Mockup 2 — Rapport clinique */}
+          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.08 }}
+            style={{ background: DS.surface, border: `1px solid ${DS.border}`, borderRadius: 20, padding: 16 }}>
+            <span style={{ fontSize: 11, fontWeight: 800, color: DS.muted }}>Rapport clinique IA</span>
+            <div style={{ marginTop: 10, marginBottom: 12, padding: 12, borderRadius: 12, background: "rgba(124,58,237,0.08)", border: `1px solid ${DS.border}` }}>
+              <p style={{ fontSize: 13, fontWeight: 900, margin: 0 }}>Acné inflammatoire modérée</p>
+              <p style={{ fontSize: 10, color: DS.muted, margin: "2px 0 0" }}>Fitzpatrick V · Glow Score 52/100 · Confiance élevée</p>
+            </div>
+            {[["Zone T", DS.red], ["Joues", DS.amber], ["Front", DS.green]].map(([z, c]) => (
+              <div key={z} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                <span style={{ width: 6, height: 6, borderRadius: 9999, background: c as string }} />
+                <span style={{ fontSize: 10, color: DS.subtle }}>{z} — analyse zone par zone</span>
+              </div>
+            ))}
+            <div style={{ marginTop: 10, display: "flex", gap: 6, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 9, fontWeight: 800, background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.25)", padding: "3px 8px", borderRadius: 9999, color: "#6ee7b7" }}>Protocole matin/soir</span>
+              <span style={{ fontSize: 9, fontWeight: 800, background: "rgba(124,58,237,0.12)", color: DS.violetMid, padding: "3px 8px", borderRadius: 9999 }}>PDF signé</span>
+            </div>
+          </motion.div>
+        </div>
+        <p style={{ textAlign: "center", fontSize: 11, color: DS.subtle, marginTop: 14 }}>
+          Aperçu illustratif de l'interface GlowScan DERM.
+        </p>
       </section>
 
       {/* ── BÉNÉFICES ── */}
@@ -258,7 +335,7 @@ export default function DermLanding() {
             {[1, 2, 3].map(i => <Star key={i} size={16} color="#fbbf24" fill="#fbbf24" />)}
           </div>
           <h2 style={{ fontSize: 24, fontWeight: 900, marginBottom: 10 }}>
-            3 dermatologues partenaires déjà actifs.
+            {displayedPartners} dermatologues partenaires déjà actifs.
           </h2>
           <p style={{ color: DS.muted, fontSize: 15, marginBottom: 28 }}>
             Rejoignez le réseau GlowScan DERM.

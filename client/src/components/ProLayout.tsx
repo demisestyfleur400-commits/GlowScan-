@@ -57,12 +57,12 @@ export function ProLayout({ children, title, back, hideBottomNav, rightAction }:
             style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}
           >
             <Link href="/derm/dashboard" className="flex items-center gap-3">
-              <div
-                className="w-8 h-8 rounded-xl flex items-center justify-center"
-                style={{ background: "rgba(124,58,237,0.15)", border: "1px solid rgba(124,58,237,0.3)" }}
-              >
-                <Stethoscope className="w-4 h-4" style={{ color: "#a78bfa" }} />
-              </div>
+              <img
+                src="/logo-glowscan-square.jpeg"
+                alt="GlowScan"
+                className="w-8 h-8 rounded-xl object-cover"
+                style={{ border: "1px solid rgba(124,58,237,0.3)" }}
+              />
               <div className="leading-tight">
                 <p className="text-sm font-extrabold" style={{ color: "#f3f0ff" }}>GlowScan DERM</p>
                 <p className="text-[9px] uppercase tracking-widest font-bold" style={{ color: "#a78bfa" }}>Clinical Engine</p>

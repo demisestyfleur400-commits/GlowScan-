@@ -578,6 +578,19 @@ export function registerProRoutes(app: Express) {
   });
 
   // ───────────────────────────────────────────
+  // GET /api/pro/partners-count — nombre de dermatologues (public, pour la landing)
+  // ───────────────────────────────────────────
+  app.get("/api/pro/partners-count", async (_req: any, res) => {
+    try {
+      const rows = await db.select({ id: proAccounts.id }).from(proAccounts);
+      res.json({ count: rows.length });
+    } catch (err) {
+      console.error("[pro/partners-count] error:", err);
+      res.json({ count: 0 });
+    }
+  });
+
+  // ───────────────────────────────────────────
   // GET /api/pro/stats — KPIs cabinet
   // ───────────────────────────────────────────
   app.get("/api/pro/stats", requireActivePro, async (req: any, res) => {
