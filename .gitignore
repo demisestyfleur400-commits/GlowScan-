@@ -27,3 +27,6 @@ Thumbs.db
 
 coverage/
 .nyc_output/
+
+# Fichiers de présentation d'autres projets (ne pas versionner ici)
+NABEAHH_Presentation_Site_Web.html
