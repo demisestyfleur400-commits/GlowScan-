@@ -1153,32 +1153,39 @@ Règles :
       });
       const data = schema.parse(req.body);
 
+      const emailLower = data.email.toLowerCase().trim();
+
       // Vérifier l'email n'existe pas déjà
-      const existingUser = await db.select().from(users).where(eq(users.email, data.email));
+      const existingUser = await db.select().from(users).where(eq(users.email, emailLower));
       if (existingUser.length > 0) {
         return res.status(400).json({ message: "Cet email existe déjà" });
       }
 
-      // Créer l'utilisateur secrétaire avec role="secretary"
       const hashedPassword = await bcrypt.hash(data.password, 10);
-      const [newUser] = await db.insert(users).values({
-        email: data.email.toLowerCase().trim(),
-        firstName: data.fullName.split(" ")[0] || "Secrétaire",
-        lastName: data.fullName.split(" ").slice(1).join(" ") || "",
-        passwordHash: hashedPassword,
-        role: "secretary", // 🔑 Marquer comme secrétaire
-      }).returning();
 
-      // Créer le compte secrétaire lié au dermatologue
-      const [secretary] = await db.insert(secretaryAccounts).values({
-        userId: newUser.id,
-        proAccountId: req.proAccount.id,
-        fullName: data.fullName,
-        email: data.email.toLowerCase().trim(),
-        createdBy: req.session.userId,
-      }).returning();
+      // Transaction : si la création du compte secrétaire échoue, la création de
+      // l'utilisateur est annulée → plus jamais d'utilisateur orphelin (qui
+      // provoquait ensuite un faux 400 « email existe déjà »).
+      const secretary = await db.transaction(async (tx) => {
+        const [newUser] = await tx.insert(users).values({
+          email: emailLower,
+          firstName: data.fullName.split(" ")[0] || "Secrétaire",
+          lastName: data.fullName.split(" ").slice(1).join(" ") || "",
+          passwordHash: hashedPassword,
+          role: "secretary", // 🔑 Marquer comme secrétaire
+        }).returning();
 
-      console.log(`[secretary] ✅ Secrétaire créée: ${data.fullName} (${data.email})`);
+        const [sec] = await tx.insert(secretaryAccounts).values({
+          userId: newUser.id,
+          proAccountId: req.proAccount.id,
+          fullName: data.fullName,
+          email: emailLower,
+          createdBy: req.session.userId,
+        }).returning();
+        return sec;
+      });
+
+      console.log(`[secretary] ✅ Secrétaire créée: ${data.fullName} (${emailLower})`);
       res.json({
         success: true,
         message: "Secrétaire créée avec succès",
