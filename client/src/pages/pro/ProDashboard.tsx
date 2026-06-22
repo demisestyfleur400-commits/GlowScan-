@@ -239,9 +239,6 @@ export default function ProDashboard() {
         <KpiCard to="/derm/patients" icon={<Users style={{ width: 16, height: 16, color: DS.violetMid }} />} value={patientCount} label="Patients" testid="kpi-patients" />
         <KpiCard to="/derm/statistiques" icon={<BarChart3 style={{ width: 16, height: 16, color: DS.successText }} />} value={stats?.totalScans ?? 0} label="Analyses" testid="kpi-stats" />
         <KpiCard to="/derm/patients" icon={<Activity style={{ width: 16, height: 16, color: "#f87171" }} />} value={statusCounts.priority} label="Priorité haute" testid="kpi-urgent" />
-        {accData?.isAdmin && (
-          <KpiCard to="/derm/dataset" icon={<span style={{ fontSize: 14 }}>🧬</span>} label="Dataset IA" testid="kpi-dataset" />
-        )}
       </motion.div>
 
       {/* 2-col grid */}

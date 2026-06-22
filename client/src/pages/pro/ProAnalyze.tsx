@@ -1705,15 +1705,6 @@ export default function ProAnalyze() {
                     Retrouvez ce dossier dans <strong style={{ color: DS.body }}>Patients → {patientLabel}</strong>
                   </p>
 
-                  {datasetSent && (
-                    <div
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-extrabold mb-5"
-                      style={{ background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.25)", color: "#6ee7b7" }}
-                    >
-                      <Sparkles className="w-3 h-3" />
-                      Ajouté au dataset GlowScan (RLHF)
-                    </div>
-                  )}
 
                   {/* Récap dossier */}
                   <div

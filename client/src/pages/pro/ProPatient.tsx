@@ -229,7 +229,7 @@ export default function ProPatient() {
   const handleValidate = async (scanId: number, isVerified: boolean) => {
     try {
       await validate.mutateAsync({ scanId, isVerified, expertNote: validateNote, expertCorrectedCondition: validateCorrection });
-      toast({ title: isVerified ? "Validé" : "Rejeté", description: isVerified ? "Ajouté au dataset GlowScan" : "Sera réétudié" });
+      toast({ title: isVerified ? "Diagnostic validé" : "Diagnostic rejeté", description: isVerified ? "Validation enregistrée." : "Sera réévalué." });
       setValidatingId(null);
       setValidateNote("");
       setValidateCorrection("");
@@ -563,7 +563,7 @@ export default function ProPatient() {
                   style={{ background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.25)", color: "#6ee7b7" }}
                 >
                   <CheckCircle2 className="w-3 h-3" />
-                  Validé pour le dataset GlowScan {s.expertReviewer ? `· ${s.expertReviewer}` : ""}
+                  Diagnostic validé {s.expertReviewer ? `· ${s.expertReviewer}` : ""}
                 </div>
               )}
 
@@ -578,7 +578,7 @@ export default function ProPatient() {
                   style={{ color: NAVY }}
                 >
                   <Sparkles className="w-3 h-3" />
-                  Valider pour le dataset
+                  Valider le diagnostic
                 </button>
               )}
 

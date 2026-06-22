@@ -135,7 +135,7 @@ function Nav() {
 export default function DermLanding() {
   useSEO({
     title: "GlowScan Derm — Outil IA pour Dermatologues et Professionnels de Santé",
-    description: "Plateforme IA de diagnostic dermatologique pour professionnels. Analysez les patients, suivez les dossiers et accédez à un dataset de peaux africaines certifié.",
+    description: "Plateforme IA de diagnostic dermatologique pour professionnels. Analysez vos patients, générez des rapports cliniques et suivez vos dossiers — expertise dédiée aux peaux africaines.",
     canonical: "https://glow-scan.com/derm",
   });
 

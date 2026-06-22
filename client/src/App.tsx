@@ -46,7 +46,6 @@ const ProAnalyze = lazy(() => import("@/pages/pro/ProAnalyze"));
 const ProStats = lazy(() => import("@/pages/pro/ProStats"));
 const ProCabinet = lazy(() => import("@/pages/pro/ProCabinet"));
 const DermOnboarding = lazy(() => import("@/pages/pro/DermOnboarding"));
-const ProDataset = lazy(() => import("@/pages/pro/ProDataset"));
 const Privacy = lazy(() => import("@/pages/Privacy"));
 const DermatoPortal = lazy(() => import("@/pages/DermatoPortal"));
 const DermLanding = lazy(() => import("@/pages/DermLanding"));
@@ -93,7 +92,6 @@ function Router() {
       <Route path="/derm/analyse" component={ProAnalyze} />
       <Route path="/derm/statistiques" component={ProStats} />
       <Route path="/derm/cabinet" component={ProCabinet} />
-      <Route path="/derm/dataset" component={ProDataset} />
 
       {/* Redirects from old /pro paths to new /derm paths */}
       <Route path="/pro" component={() => { window.location.href = "/derm"; return null; }} />
