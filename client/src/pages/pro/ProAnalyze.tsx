@@ -1457,6 +1457,11 @@ export default function ProAnalyze() {
                     userFirstName={firstName || lastName || undefined}
                     area="face"
                     isPro={true}
+                    doctorName={accountData?.account?.fullName || undefined}
+                    doctorLicense={(accountData?.account as any)?.licenseNumber || undefined}
+                    cabinetName={accountData?.account?.cabinetName || undefined}
+                    practitionerNotes={practitionerNotes || undefined}
+                    overrideNote={overrideType !== "none" ? `${overrideCondition || ""}${overrideReason ? " — " + overrideReason : (overrideSummary ? " — " + overrideSummary : "")}`.trim() : undefined}
                     patientIntake={{
                       fullName: `${firstName} ${lastName}`.trim() || undefined,
                       phone: phone || undefined,

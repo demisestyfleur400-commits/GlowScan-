@@ -1078,6 +1078,8 @@ interface PatientIntakeProp {
   duration?: string;
   previousProducts?: string;
   allergies?: string;
+  region?: string;
+  motif?: string;
 }
 
 interface ResultCardProps {
@@ -1089,9 +1091,15 @@ interface ResultCardProps {
   userFirstName?: string | null;
   patientIntake?: PatientIntakeProp | null;
   isPro?: boolean;
+  // ── Données médecin / clinique (mode DERM uniquement, pour les pages médicales du PDF) ──
+  doctorName?: string | null;
+  doctorLicense?: string | null;
+  cabinetName?: string | null;
+  practitionerNotes?: string | null;
+  overrideNote?: string | null;
 }
 
-export function ResultCard({ result, scanId, savedScanId, area, imageUrl, userFirstName, patientIntake, isPro = false }: ResultCardProps) {
+export function ResultCard({ result, scanId, savedScanId, area, imageUrl, userFirstName, patientIntake, isPro = false, doctorName, doctorLicense, cabinetName, practitionerNotes, overrideNote }: ResultCardProps) {
   const { toast } = useToast();
   const { user } = useAuth();
   const { isPremium } = useSubscription();
@@ -1353,6 +1361,64 @@ export function ResultCard({ result, scanId, savedScanId, area, imageUrl, userFi
         l === "CRITIQUE" ? "#dc2626" : l === "Élevé" ? "#E91E8C" : "#f59e0b";
       const levelBg = (l: string) =>
         l === "CRITIQUE" ? "#fef2f2" : l === "Élevé" ? "#fdf2f8" : "#fffbeb";
+
+      // ═══ PAGES MÉDICALES (DERM uniquement) — ajoutées APRÈS le PDF patient ═══
+      // On n'enlève rien au PDF B2C : ces sections s'ajoutent en pages 6+.
+      const pi: any = patientIntake || {};
+      const rr: any = result;
+      const medRow = (l: string, v: any) => v ? `<div style="display:flex;margin-bottom:5px"><div style="width:190px;font-size:10px;font-weight:700;color:#4c1d95;flex-shrink:0">${l}</div><div style="font-size:10px;color:#1a1a1a;flex:1">${v}</div></div>` : "";
+      const medCard = (title: string, body: string) => `<div style="border:1px solid #ddd6fe;border-radius:8px;margin-bottom:14px;overflow:hidden"><div style="background:#8B5CF6;padding:8px 14px"><span style="font-size:11px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:.5px">${title}</span></div><div style="padding:12px 14px;background:#faf9ff">${body}</div></div>`;
+      const medicalSections = isPro ? `
+<div style="page-break-before:always;padding:24px 28px;font-family:Arial,Helvetica,sans-serif">
+  <div style="background:#1a1a2e;border-left:4px solid #8B5CF6;padding:9px 14px;margin-bottom:14px;border-radius:4px">
+    <span style="font-size:9.5px;font-weight:800;color:#c4b5fd;letter-spacing:1px;text-transform:uppercase">🔒 Section Médicale — Réservée au Dermatologue</span>
+  </div>
+
+  ${medCard("1 · En-tête médical", `
+    ${medRow("Dermatologue référent", doctorName ? "Dr " + doctorName : "—")}
+    ${medRow("N° ordre médical", doctorLicense || "—")}
+    ${medRow("Cabinet", cabinetName || "—")}
+    ${doctorName ? "<div style='margin-top:6px;font-size:10px;color:#4c1d95;font-style:italic'>Rapport transmis au Dr " + doctorName + "</div>" : ""}
+  `)}
+
+  ${medCard("2 · Anamnèse clinique structurée", `
+    ${medRow("Durée exacte du problème", pi.duration)}
+    ${medRow("Antécédents dermatologiques", rr.antecedentsIntegration)}
+    ${medRow("Traitements antérieurs tentés", pi.previousProducts)}
+    ${medRow("Allergies connues", pi.allergies)}
+    ${medRow("Contexte environnemental", pi.region)}
+    ${medRow("Motif (mots du patient)", pi.motif ? "« " + pi.motif + " »" : "")}
+    ${imageUrl ? "<div style='margin-top:8px'><div style='font-size:10px;font-weight:700;color:#4c1d95;margin-bottom:4px'>Photo soumise à l'analyse</div><img src='" + imageUrl + "' style='width:120px;height:120px;object-fit:cover;border-radius:6px;border:2px solid #8B5CF6'/></div>" : ""}
+  `)}
+
+  ${medCard("3 · Diagnostic clinique IA enrichi", `
+    ${medRow("Diagnostic principal", rr.condition)}
+    ${rr.conditionSecondaire ? medRow("Diagnostic secondaire", rr.conditionSecondaire) : ""}
+    ${medRow("Classification ICD-10 (indicative)", rr.icd10 || "À confirmer par le praticien")}
+    ${medRow("Sévérité", (rr.severity || "—") + (rr.severityLabel ? " — " + rr.severityLabel : ""))}
+    ${rr.redFlags && rr.redFlags.length ? medRow("Facteurs aggravants / signaux", rr.redFlags.join(" · ")) : ""}
+    ${rr.prognostic ? medRow("Évolution probable sans traitement", rr.prognostic) : ""}
+    ${rr.confidence ? medRow("Niveau de confiance IA", rr.confidence) : ""}
+  `)}
+
+  ${medCard("4 · Note médicale du dermatologue", `
+    ${overrideNote ? medRow("Diagnostic révisé / validé", overrideNote) : "<div style='font-size:10px;color:#6b7280;font-style:italic;margin-bottom:8px'>Diagnostic IA validé sans modification.</div>"}
+    <div style="font-size:10px;font-weight:700;color:#4c1d95;margin:6px 0 4px">Observations du praticien :</div>
+    <div style="min-height:50px;border:1px solid #ddd6fe;border-radius:6px;padding:10px;font-size:10px;color:#1a1a1a;background:#fff;line-height:1.7">${practitionerNotes ? practitionerNotes.replace(/\n/g, "<br>") : ""}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:14px">
+      <div><div style="font-size:9px;color:#6b7280;margin-bottom:4px">Signature</div><div style="height:36px;border-bottom:1px solid #999"></div><div style="font-size:9px;font-weight:700;color:#4c1d95;margin-top:4px">Dr ${doctorName || "..."}</div></div>
+      <div><div style="font-size:9px;color:#6b7280;margin-bottom:4px">Cachet du cabinet</div><div style="height:36px;border:1px dashed #c4b5fd;border-radius:4px"></div></div>
+    </div>
+  `)}
+
+  ${medCard("5 · Suivi & réévaluation", `
+    ${medRow("Réévaluation recommandée", rr.clinicalProtocol?.followUpWeeks ? "Dans " + rr.clinicalProtocol.followUpWeeks + " semaines" : "À l'appréciation du praticien")}
+    ${medRow("Indicateurs à surveiller", (rr.redFlags && rr.redFlags.length) ? rr.redFlags.join(" · ") : "Évolution des lésions · tolérance au protocole · observance")}
+    ${medRow("Référence vers spécialiste si", rr.clinicalProtocol?.referralNeeded ? (rr.clinicalProtocol.referralReason || "Aggravation ou absence d'amélioration") : "Aggravation, absence d'amélioration à 6-8 semaines, ou doute diagnostique")}
+  `)}
+
+  <div style="text-align:center;font-size:8px;color:#9ca3af;margin-top:10px">🔒 Section médicale confidentielle · Réf ${reportNumber} · GlowScan DERM</div>
+</div>` : "";
 
       const html = `<!DOCTYPE html>
 <html lang="fr">
@@ -1816,6 +1882,8 @@ ${pdfBestProduct ? `
     <div class="footer-ref">${reportNumber}</div>
   </div>
 </div>
+
+${medicalSections}
 
 </body>
 </html>`;
@@ -3020,8 +3088,8 @@ ${pdfBestProduct ? `
           </div>
         )}
 
-        {/* ── Bouton export PDF (grand public uniquement) ── */}
-        {!isPro && <button
+        {/* ── Bouton export PDF (patient B2C + pages médicales ajoutées en mode DERM) ── */}
+        {<button
           onClick={handleDownloadPDF}
           disabled={pdfGenerating}
           data-testid="button-download-pdf"
@@ -3049,13 +3117,13 @@ ${pdfBestProduct ? `
             ) : (
               <>
                 <span>📄</span>
-                Télécharger mon rapport
+                {isPro ? "Télécharger le rapport complet" : "Télécharger mon rapport"}
               </>
             )}
           </span>
           {!pdfGenerating && (
             <span style={{ fontSize: "10px", color: "rgba(255,255,255,0.6)", fontWeight: 500 }}>
-              Partageable avec votre dermatologue
+              {isPro ? "Pages patient + section médicale dermatologue" : "Partageable avec votre dermatologue"}
             </span>
           )}
         </button>}
