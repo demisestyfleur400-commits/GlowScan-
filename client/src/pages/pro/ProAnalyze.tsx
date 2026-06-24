@@ -663,7 +663,10 @@ export default function ProAnalyze() {
     if (!r) return null;
 
     const date = new Date().toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
-    const refNum = `GS-PRO-${new Date().getFullYear()}-${Math.random().toString(36).slice(2,7).toUpperCase()}`;
+    // Référence TRAÇABLE : basée sur le scan réel (jamais aléatoire).
+    const refNum = (r as any).reference
+      || ((r as any).savedScanId ? `GS-${new Date().getFullYear()}-${String((r as any).savedScanId).padStart(4, "0")}` : null)
+      || (patientId ? `GS-${new Date().getFullYear()}-P${patientId}` : `GS-${new Date().getFullYear()}-PENDING`);
     const protocol = r.clinicalProtocol || {};
     const morning: any[] = protocol.morning || r.protocol?.morning || [];
     const evening: any[] = protocol.evening || r.protocol?.evening || [];
@@ -702,8 +705,8 @@ export default function ProAnalyze() {
     };
   };
 
-  // ── Generate classic PDF HTML (existing template) ──
-  const generateClassicPdfHtml = (): string | undefined => {
+  // ── Generate classic PDF HTML (template clinique complet — utilisé en DERM) ──
+  const generateClassicPdfHtml = (qrCodeSvg?: string): string | undefined => {
     const data = extractPdfData();
     if (!data) return undefined;
 
@@ -716,6 +719,17 @@ export default function ProAnalyze() {
     const prognostic: string = r.prognostic || "";
     const redFlags: string[] = r.redFlags || [];
     const confidence: string = r.confidence || "";
+    const followUp: string = r.clinicalProtocol?.followUpWeeks ? `Suivi recommandé dans ${r.clinicalProtocol.followUpWeeks} semaines.` : "";
+
+    // ── Identité du MÉDECIN (depuis le compte cabinet, pas le patient) ──
+    const doctorName = accountData?.account?.fullName || "—";
+    const doctorCabinet = accountData?.account?.cabinetName || "";
+    const doctorCity = accountData?.account?.city || "";
+    const doctorLicense = (accountData?.account as any)?.licenseNumber || "";
+    // ── Fitzpatrick extrait du skinType (ex : "... · Fitzpatrick V") ──
+    const fitzMatch = (r.skinType || "").match(/Fitzpatrick\s+(VI|IV|V|III|II|I)/i);
+    const fitzpatrick = fitzMatch ? `Fitzpatrick ${fitzMatch[1].toUpperCase()}` : (r.skinType || "—");
+    const sexLabel = sex === "F" ? "Féminin" : sex === "M" ? "Masculin" : "—";
 
     const overrideBadge = overrideType === "partial"
       ? `<span style="display:inline-block;background:#7c3aed;color:#fff;font-size:8px;font-weight:700;padding:2px 8px;border-radius:4px;margin-left:6px">✓ Révisé par Dr. ${firstName || lastName || "..."}</span>`
@@ -775,33 +789,69 @@ export default function ProAnalyze() {
 
 <!-- HEADER CLINIQUE -->
 <div style="background:${TEAL};padding:16px 28px;display:flex;justify-content:space-between;align-items:center">
-  <div>
-    <div style="font-size:19px;font-weight:900;color:#fff;letter-spacing:1px">✦ GlowScan DERM</div>
-    <div style="font-size:8.5px;color:rgba(255,255,255,0.7);margin-top:2px">RAPPORT DE CONSULTATION DERMATOLOGIQUE</div>
+  <div style="display:flex;align-items:center;gap:12px">
+    <img src="${window.location.origin}/logo-glowscan-square.jpeg" alt="GlowScan" style="width:38px;height:38px;border-radius:8px;object-fit:cover" />
+    <div>
+      <div style="font-size:19px;font-weight:900;color:#fff;letter-spacing:1px">GlowScan DERM</div>
+      <div style="font-size:8.5px;color:rgba(255,255,255,0.7);margin-top:2px">RAPPORT DE CONSULTATION DERMATOLOGIQUE</div>
+    </div>
   </div>
   <div style="text-align:right">
-    <div style="font-size:10px;color:rgba(255,255,255,0.9);font-weight:700">Réf : ${refNum}</div>
-    <div style="font-size:8.5px;color:rgba(255,255,255,0.65)">Date : ${date} · Valable 3 mois</div>
+    <div style="display:inline-block;background:#dc2626;color:#fff;font-size:7.5px;font-weight:800;padding:3px 9px;border-radius:4px;letter-spacing:.5px;text-transform:uppercase;margin-bottom:5px">🔒 Document médical confidentiel</div>
+    <div style="font-size:10px;color:rgba(255,255,255,0.95);font-weight:700">Réf : ${refNum}</div>
+    <div style="font-size:8.5px;color:rgba(255,255,255,0.65)">Date : ${date}</div>
   </div>
 </div>
 
 <div style="padding:18px 28px 0">
 
-  <!-- SECTION 1 : PATIENT -->
-  ${sectionWrap("Informations Patient &amp; Antécédents", `
-    ${infoRowClin("Nom complet", firstName + " " + lastName)}
-    ${age ? infoRowClin("Âge", age + " ans") : ""}
-    ${patientRegion ? infoRowClin("Zone géographique", patientRegion) : ""}
-    ${zonesAnalysis.length > 0 ? infoRowClin("Profil analysé", zonesAnalysis.length + " zones distinctes — " + zonesAnalysis.map((z:any)=>z.zone).slice(0,3).join(", ")) : ""}
-    ${antecedentsIntegration ? infoRowClin("Analyse des antécédents", antecedentsIntegration) : ""}
+  <!-- BLOC MÉDECIN -->
+  ${sectionWrap("Médecin", `
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+      <div style="flex:1">
+        ${infoRowClin("Praticien", "Dr " + doctorName)}
+        ${infoRowClin("Spécialité", "Dermatologue" + (doctorLicense ? " · N° ordre " + doctorLicense : ""))}
+        ${doctorCabinet ? infoRowClin("Cabinet", doctorCabinet + (doctorCity ? " — " + doctorCity : "")) : (doctorCity ? infoRowClin("Ville", doctorCity) : "")}
+      </div>
+      <span style="display:inline-block;background:#059669;color:#fff;font-size:8px;font-weight:800;padding:4px 10px;border-radius:4px;white-space:nowrap;flex-shrink:0">✓ Validé cliniquement</span>
+    </div>
+  `)}
+
+  <!-- INFORMATIONS PATIENT — 6 champs -->
+  ${sectionWrap("Informations Patient", `
+    ${infoRowClin("Nom complet", (firstName + " " + lastName).trim() || "—")}
+    ${infoRowClin("Âge / Sexe", (age ? age + " ans" : "—") + " · " + sexLabel)}
+    ${infoRowClin("Téléphone", phone || "—")}
+    ${infoRowClin("Phototype", fitzpatrick)}
+    ${infoRowClin("Ville", patientRegion || doctorCity || "—")}
+    ${infoRowClin("Date de consultation", date)}
+  `)}
+
+  <!-- ANAMNÈSE COMPLÈTE -->
+  ${sectionWrap("Anamnèse &amp; Antécédents", `
     ${problemDuration ? infoRowClin("Durée du problème", problemDuration) : ""}
-    ${previousProducts ? infoRowClin("Produits utilisés", previousProducts) : ""}
+    ${previousProducts ? infoRowClin("Produits déjà utilisés", previousProducts) : ""}
     ${allergies ? "<div style='display:flex;gap:0;margin-bottom:6px'><div style='width:200px;font-size:10px;font-weight:700;color:#374151;flex-shrink:0'>Allergies</div><div style='font-size:10px;color:#dc2626;flex:1;font-weight:700'>⚠ " + allergies + "</div></div>" : ""}
-    ${consultMotif ? infoRowClin("Motif de consultation", consultMotif) : ""}
+    ${consultMotif ? infoRowClin("Motif (mots du patient)", "« " + consultMotif + " »") : ""}
+    ${antecedentsIntegration ? infoRowClin("Intégration clinique", antecedentsIntegration) : ""}
+    ${questionnaire.filter((q:any)=>answers[q.id] !== undefined && answers[q.id] !== null && answers[q.id] !== "").map((q:any)=>infoRowClin(q.label, String(answers[q.id]))).join("")}
+    ${(problemDuration||previousProducts||allergies||consultMotif||antecedentsIntegration||Object.keys(answers||{}).length>0) ? "" : "<p style='font-size:10px;color:#6b7280;font-style:italic'>Aucun antécédent renseigné.</p>"}
   `)}
 
   <!-- SECTION 2 : DIAGNOSTIC -->
   ${sectionWrap("Diagnostic Clinique Visuel au Pixel (Détaillé)", `
+    ${photoBase64 ? `<div style="display:flex;gap:16px;align-items:flex-start;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid #e5e7eb">
+      <img src="${photoBase64}" alt="Photo clinique" style="width:150px;height:150px;object-fit:cover;border-radius:6px;border:2px solid ${TEAL};flex-shrink:0" />
+      <div style="flex:1">
+        <div style="font-size:7.5px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Diagnostic principal</div>
+        <div style="font-size:14px;font-weight:900;color:#1a1a1a;margin-bottom:4px">${effectiveCondition}${r.conditionSecondaire ? " + " + r.conditionSecondaire : ""}</div>
+        <div style="font-size:10px;color:#6b7280;margin-bottom:8px">${effectiveSeverity} · ${r.skinType || "—"}</div>
+        <div style="display:inline-block;border:2px solid ${GOLD_BADGE};border-radius:6px;padding:6px 14px;text-align:center">
+          <span style="font-size:7.5px;font-weight:700;color:${GOLD_BADGE};text-transform:uppercase;letter-spacing:.5px">Glow Score</span>
+          <div style="font-size:26px;font-weight:900;color:${GOLD_BADGE};line-height:1.1">${effectiveScore}<span style="font-size:11px;color:#6b7280">/100</span></div>
+        </div>
+      </div>
+    </div>` : ""}
     <p style="font-size:10.5px;color:#1a1a1a;line-height:1.8;margin-bottom:14px">
       L'analyse des clichés par l'imagerie GlowScan révèle une
       <strong>${r.skinType || effectiveCondition}</strong>.${overrideBadge}
@@ -899,6 +949,12 @@ export default function ProAnalyze() {
     ${infoRowClin("Conditionnement", "Produits scellés + guide d'utilisation inclus")}
   `) : ""}
 
+  <!-- PRONOSTIC & SUIVI -->
+  ${(prognostic || followUp) ? sectionWrap("Pronostic &amp; Suivi Recommandé", `
+    ${prognostic ? "<p style='font-size:10px;color:#374151;line-height:1.8;margin-bottom:" + (followUp ? "8px" : "0") + "'>" + prognostic + "</p>" : ""}
+    ${followUp ? "<div style='font-size:10px;font-weight:700;color:" + TEAL + ";padding:8px 12px;background:#f0fafa;border-left:3px solid " + TEAL + ";border-radius:0 4px 4px 0'>📅 " + followUp + "</div>" : ""}
+  `) : ""}
+
   <!-- NOTES PRATICIEN (si remplies) -->
   ${practitionerNotes.trim() ? `
   <div style="margin-bottom:16px;border:1px solid #7c3aed;border-radius:4px;overflow:hidden">
@@ -922,6 +978,11 @@ export default function ProAnalyze() {
         <div style="font-size:8.5px;color:#9ca3af">Réf : ${refNum}</div>
       </div>
     </div>
+    ${qrCodeSvg ? `<div style="text-align:center;margin-top:14px">
+      <div style="font-size:8px;color:#6b7280;margin-bottom:4px">Suivi / vérification du dossier patient</div>
+      <div style="display:inline-block;width:84px;height:84px">${qrCodeSvg}</div>
+    </div>` : ""}
+
     <!-- BLOC SIGNATURE PRATICIEN -->
     <div style="margin-top:18px;border:1px solid #e5e7eb;border-radius:6px;padding:16px 20px;background:#f9fafb">
       <div style="font-size:9px;font-weight:800;color:${TEAL};text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px">Signature du praticien</div>
@@ -929,8 +990,8 @@ export default function ProAnalyze() {
         <div>
           <div style="font-size:8.5px;color:#6b7280;margin-bottom:4px">Signature :</div>
           <div style="height:40px;border-bottom:1px solid #d1d5db;margin-bottom:6px"></div>
-          <div style="font-size:9px;font-weight:700;color:#374151">Dr. ${firstName !== "" ? lastName + " " + firstName : (r as any).dermatologue || "..."}</div>
-          <div style="font-size:8.5px;color:#6b7280">Dermatologue · GlowScan DERM</div>
+          <div style="font-size:9px;font-weight:700;color:#374151">Dr ${doctorName}</div>
+          <div style="font-size:8.5px;color:#6b7280">Dermatologue${doctorCabinet ? " · " + doctorCabinet : ""}${doctorLicense ? " · N° ordre " + doctorLicense : ""}</div>
         </div>
         <div>
           <div style="font-size:8.5px;color:#6b7280;margin-bottom:4px">Cachet du cabinet :</div>
@@ -943,7 +1004,7 @@ export default function ProAnalyze() {
     </div>
 
     <div style="margin-top:8px;padding-top:8px;border-top:1px solid #e5e7eb;font-size:8px;color:#9ca3af;line-height:1.7">
-      ⚠️ Disclaimer légal : Cette analyse est fournie à titre indicatif uniquement et ne constitue pas un avis médical. Elle est un outil d'aide à l'examen clinique pour le professionnel de santé qualifié. Elle ne remplace pas l'examen clinique complet, l'évaluation cutanée directe, ni une prescription médicale. Responsabilité médicale : le praticien reste seul responsable du diagnostic et du traitement. GlowScan DERM © ${new Date().getFullYear()} — Tous droits réservés.
+      🔒 Document médical confidentiel établi et validé par le praticien soussigné · Réf ${refNum} · À usage strictement professionnel et personnel au patient. GlowScan DERM © ${new Date().getFullYear()}.
     </div>
   </div>
 
@@ -998,8 +1059,9 @@ export default function ProAnalyze() {
       return undefined;
     }
 
-    // Choose template: use premium if QR code available, otherwise use classic
-    const html = qrCodeSvg ? generatePremiumPdfHtml(qrCodeSvg) : generateClassicPdfHtml();
+    // DERM : toujours le template clinique complet (classic enrichi), avec le QR
+    // intégré s'il est disponible. (Le template premium minimal n'est plus utilisé.)
+    const html = generateClassicPdfHtml(qrCodeSvg);
     if (!html) return undefined;
     if (returnHtml) return html;
 
