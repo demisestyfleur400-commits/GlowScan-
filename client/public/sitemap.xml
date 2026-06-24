@@ -45,4 +45,23 @@
     <priority>0.3</priority>
     <lastmod>2026-01-01</lastmod>
   </url>
+  <!-- Blog -->
+  <url>
+    <loc>https://glow-scan.com/blog/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+    <lastmod>2026-06-24</lastmod>
+  </url>
+  <url>
+    <loc>https://glow-scan.com/blog/acne-peau-noire-traitement.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <lastmod>2026-06-17</lastmod>
+  </url>
+  <url>
+    <loc>https://glow-scan.com/blog/analyser-sa-peau-africaine-guide.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <lastmod>2026-06-24</lastmod>
+  </url>
 </urlset>

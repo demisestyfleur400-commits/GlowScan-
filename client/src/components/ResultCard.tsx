@@ -1097,9 +1097,11 @@ interface ResultCardProps {
   cabinetName?: string | null;
   practitionerNotes?: string | null;
   overrideNote?: string | null;
+  // Expose la génération du PDF (B2C + pages médicales) au parent (ex: bouton de fin de flux DERM)
+  onPdfReady?: (downloadPdf: () => void) => void;
 }
 
-export function ResultCard({ result, scanId, savedScanId, area, imageUrl, userFirstName, patientIntake, isPro = false, doctorName, doctorLicense, cabinetName, practitionerNotes, overrideNote }: ResultCardProps) {
+export function ResultCard({ result, scanId, savedScanId, area, imageUrl, userFirstName, patientIntake, isPro = false, doctorName, doctorLicense, cabinetName, practitionerNotes, overrideNote, onPdfReady }: ResultCardProps) {
   const { toast } = useToast();
   const { user } = useAuth();
   const { isPremium } = useSubscription();
@@ -1911,6 +1913,13 @@ ${medicalSections}
       setPdfGenerating(false);
     }
   };
+
+  // Expose la dernière version de handleDownloadPDF au parent (capture les notes
+  // praticien / override à jour). Permet au bouton de fin de flux DERM de générer
+  // le MÊME PDF unifié (B2C + pages médicales).
+  React.useEffect(() => {
+    if (onPdfReady) onPdfReady(handleDownloadPDF);
+  });
 
   const getProductRole = (p: typeof catalog[0]): "nettoyant" | "serum" | "creme" => {
     const n = p.name.toLowerCase();

@@ -350,6 +350,8 @@ export default function ProAnalyze() {
   const [photoBase64, setPhotoBase64] = useState<string | null>(null);
   const [photoSize, setPhotoSize] = useState<number>(0);
   const fileRef = useRef<HTMLInputElement>(null);
+  // Fonction de génération du PDF unifié (B2C + pages médicales), exposée par ResultCard
+  const pdfFnRef = useRef<(() => void) | null>(null);
   const [dragOver, setDragOver] = useState(false);
 
   // Step 3 : Diagnostic
