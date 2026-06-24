@@ -712,6 +712,8 @@ export default function ProAnalyze() {
 
     const { date, refNum, result: r, effectiveCondition, effectiveSeverity, effectiveScore, morning, evening, orderLines, totalEstime } = data;
     const clinicalSummary: string = r.clinicalSummary || r.details || "";
+    // Résumé affiché : note du Clinical Override si présente, sinon résumé clinique IA.
+    const effectiveSummary: string = (overrideType !== "none" && overrideSummary) ? overrideSummary : clinicalSummary;
     const zonesAnalysis: any[] = r.zonesAnalysis || [];
     const toxicIngredients: any[] = r.toxicIngredients || [];
     const logistics: string = r.logistics || "";

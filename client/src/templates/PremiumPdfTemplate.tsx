@@ -307,10 +307,7 @@ export function PremiumPdfTemplate({
     }
 
     <div class="disclaimer">
-      <strong>⚠️ Avis Légal:</strong> Cette analyse est fournie à titre indicatif uniquement
-      et ne constitue pas un diagnostic médical. Elle ne remplace pas l'examen clinique
-      complet, l'évaluation directe de la peau, ni une prescription médicale.
-      Le praticien reste seul responsable du diagnostic et du traitement.
+      🔒 Document médical confidentiel établi et validé par le praticien soussigné · À usage strictement professionnel.
     </div>
 
     ${qrCodeSvg ? `<div class="qr-code">${qrCodeSvg}</div>` : ""}
