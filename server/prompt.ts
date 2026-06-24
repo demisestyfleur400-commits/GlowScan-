@@ -470,9 +470,15 @@ antecedentsIntegration — 3 à 4 phrases :
   Explique précisément comment les produits utilisés, la durée, la région
   et le motif de consultation modifient le diagnostic ou la prise en charge.
 
-toxicIngredients — 3 à 5 ingrédients minimum :
+toxicIngredients — LIÉS AU DIAGNOSTIC détecté (PAS de liste générique) :
+  Ne lister QUE des ingrédients réellement contre-indiqués pour CETTE pathologie
+  et/ou ces antécédents. Chaque "reason" doit citer explicitement le diagnostic.
+  Ex : acné active → comédogènes (huile de coco, beurre de cacao), silicones occlusifs ;
+  hyperpigmentation → hydroquinone, mercure, corticoïdes dépigmentants ;
+  eczéma / xérose → alcool dénat., SLS, parfums ; rosacée / peau réactive → rétinol fort, AHA/BHA concentrés.
+  Si la peau est SAINE ou qu'aucun ingrédient n'est pertinent → retourner [] (liste vide).
   ingredient : nom chimique + nom commun entre parenthèses.
-  reason : mécanisme de toxicité spécifique à cette peau. Minimum 2 phrases.
+  reason : mécanisme de toxicité spécifique à CE diagnostic. Minimum 2 phrases.
 
 clinicalProtocol.morning et evening — 3 à 4 étapes chacun :
   step : nom de l'action (Nettoyage, Sérum actif, Traitement ciblé, Protection solaire)

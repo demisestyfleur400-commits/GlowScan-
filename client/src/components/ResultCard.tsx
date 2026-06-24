@@ -1196,141 +1196,114 @@ export function ResultCard({ result, scanId, savedScanId, area, imageUrl, userFi
     result.condition.split("").reduce((h, c) => ((h << 5) - h + c.charCodeAt(0)) | 0, 0)
   ).toString(36).slice(0, 5).toUpperCase()}`;
 
-  // ── Ingrédients toxiques — enrichis par antécédents et allergies ─────────
+  // ── Ingrédients toxiques — STRICTEMENT liés au diagnostic / antécédents ────
+  // Plus aucune liste générique : si rien ne correspond au diagnostic détecté,
+  // on retourne une liste vide (la section sera masquée). Personnalisation réelle.
   const getToxicIngredients = () => {
+    // DERM : l'IA génère déjà des ingrédients spécifiques au diagnostic
+    // (champ toxicIngredients du prompt DERM) → on les affiche directement.
+    const aiTox = (result as any).toxicIngredients;
+    if (isPro && Array.isArray(aiTox) && aiTox.length > 0) {
+      return aiTox
+        .map((t: any) => ({
+          name: String(t?.ingredient || t?.name || "").trim(),
+          why: String(t?.reason || t?.why || "").trim(),
+          level: t?.level || "Élevé",
+        }))
+        .filter((t: any) => t.name);
+    }
+
     const c = (result.condition + " " + (result.skinType || "")).toLowerCase();
     const allergyText = (patientIntake?.allergies || "").toLowerCase();
     const prevProducts = (patientIntake?.previousProducts || "").toLowerCase();
+    const out: { name: string; why: string; level: string }[] = [];
 
-    const base = [
-      { name: "Alcool dénat. (Alcohol Denat.)", why: "Détruit le film hydrolipidique, fragilise la barrière cutanée", level: "Élevé" },
-      { name: "Sodium Lauryl Sulfate (SLS)", why: "Détergent ultra-agressif — décape la peau et aggrave les rougeurs", level: "Élevé" },
-      {
-        name: "Fragrance / Parfum synthétique",
-        why: /parfum|fragrance|fragances/.test(allergyText)
-          ? "⚠ ALLERGIE DÉCLARÉE — Risque de réaction cutanée sévère sur votre peau"
-          : "Principale cause d'allergie cutanée et d'irritations chroniques",
-        level: /parfum|fragrance/.test(allergyText) ? "CRITIQUE" : "Moyen",
-      },
-      { name: "Parabènes (Methylparaben, Propylparaben)", why: "Perturbateurs endocriniens suspectés — pénètrent dans la peau", level: "Moyen" },
-    ];
-
-    const specific: { name: string; why: string; level: string }[] = [];
-
-    // Basé sur les antécédents produits utilisés
+    // ── Antécédents (produits déjà utilisés) ──
     if (/éclaircissant|éclaircissante|blanchissant|dépigment|dépigmentant|white|lightening/.test(prevProducts)) {
-      specific.push(
-        { name: "Mercure (Mercury / Hg)", why: "Détecté dans certaines crèmes éclaircissantes que vous avez utilisées — TOXIQUE, neurotoxique, interdit au Cameroun", level: "CRITIQUE" },
-        { name: "Hydroquinone >2%", why: "Présent dans les crèmes éclaircissantes — rebond pigmentaire sévère sur peaux noires à l'arrêt", level: "CRITIQUE" },
+      out.push(
+        { name: "Mercure (Mercury / Hg)", why: "Détecté dans des crèmes éclaircissantes que vous avez utilisées — neurotoxique, interdit", level: "CRITIQUE" },
+        { name: "Hydroquinone >2%", why: "Présent dans les crèmes éclaircissantes utilisées — rebond pigmentaire sévère à l'arrêt", level: "CRITIQUE" },
       );
     }
     if (/cortisone|corticoïde|betamethasone|clobetasol/.test(prevProducts)) {
-      specific.push(
-        { name: "Corticoïdes topiques (Betamethasone, Clobetasol)", why: "Produits détectés dans vos antécédents — amincissement cutané irréversible, rebond à l'arrêt", level: "CRITIQUE" },
-      );
+      out.push({ name: "Corticoïdes topiques (Betamethasone, Clobetasol)", why: "Détectés dans vos antécédents — amincissement cutané irréversible, effet rebond à l'arrêt", level: "CRITIQUE" });
     }
+    // ── Allergies déclarées ──
+    if (/parfum|fragrance|fragances/.test(allergyText)) out.push({ name: "Fragrance / Parfum", why: "ALLERGIE DÉCLARÉE — risque de réaction cutanée sur votre peau", level: "CRITIQUE" });
+    if (/lanoline|lanolin/.test(allergyText)) out.push({ name: "Lanoline (Lanolin)", why: "ALLERGIE DÉCLARÉE — présente dans de nombreuses crèmes hydratantes", level: "CRITIQUE" });
+    if (/nickel/.test(allergyText)) out.push({ name: "Sulfate de nickel", why: "ALLERGIE DÉCLARÉE — peut être présent dans certains actifs", level: "CRITIQUE" });
+    if (/propylene|propylène/.test(allergyText)) out.push({ name: "Propylene Glycol", why: "ALLERGIE DÉCLARÉE — solvant répandu dans crèmes et lotions", level: "CRITIQUE" });
 
-    // Basé sur les allergies déclarées
-    if (/lanoline|lanolin/.test(allergyText)) {
-      specific.push({ name: "Lanoline (Lanolin)", why: "ALLERGIE DÉCLARÉE — Présente dans de nombreuses crèmes hydratantes", level: "CRITIQUE" });
-    }
-    if (/nickel/.test(allergyText)) {
-      specific.push({ name: "Sulfate de nickel", why: "ALLERGIE DÉCLARÉE — Peut être présent dans certains actifs cosmétiques", level: "CRITIQUE" });
-    }
-    if (/propylene|propylène/.test(allergyText)) {
-      specific.push({ name: "Propylene Glycol", why: "ALLERGIE DÉCLARÉE — Solvant très répandu dans les crèmes et lotions", level: "CRITIQUE" });
-    }
-
-    // Basé sur le diagnostic
+    // ── Diagnostic détecté ──
     if (/tache|hyperpigment|pih|mélasma/.test(c)) {
-      if (!specific.some(s => s.name.includes("Mercure")))
-        specific.push({ name: "Mercure (Mercury / Hg)", why: "Présent dans certaines crèmes africaines — TOXIQUE, neurotoxique, interdit", level: "CRITIQUE" });
-      if (!specific.some(s => s.name.includes("Hydroquinone")))
-        specific.push({ name: "Hydroquinone >2%", why: "Rebond pigmentaire sur peaux noires, risque d'ochronose (taches bleu-grisâtre permanentes)", level: "Élevé" });
-      if (!specific.some(s => s.name.includes("Corticoïdes")))
-        specific.push({ name: "Corticoïdes sans prescription", why: "Amincissement cutané, rebond immédiat des taches à l'arrêt", level: "Élevé" });
-      specific.push({ name: "Huile minérale (Mineral Oil)", why: "Obstrue les pores, emprisonne les pigments oxydés et ralentit le renouvellement cellulaire", level: "Moyen" });
+      if (!out.some(s => s.name.includes("Mercure"))) out.push({ name: "Mercure (Mercury / Hg)", why: "Aggrave l'hyperpigmentation détectée — neurotoxique, interdit", level: "CRITIQUE" });
+      if (!out.some(s => s.name.includes("Hydroquinone"))) out.push({ name: "Hydroquinone >2%", why: "Sur l'hyperpigmentation détectée : risque d'ochronose (taches bleu-grisâtre permanentes)", level: "Élevé" });
+      if (!out.some(s => s.name.includes("Corticoïdes"))) out.push({ name: "Corticoïdes sans prescription", why: "Rebond immédiat des taches à l'arrêt", level: "Élevé" });
+      out.push({ name: "Huile minérale (Mineral Oil)", why: "Emprisonne les pigments oxydés et ralentit le renouvellement — entretient les taches", level: "Moyen" });
     }
     if (/acn[eé]|bouton|comédon|imperfection/.test(c)) {
-      specific.push(
-        { name: "Huile de coco (visage)", why: "Score comédogène 4/5 — bouche les pores et aggrave directement l'acné", level: "Élevé" },
-        { name: "Beurre de cacao (visage)", why: "Très comédogène sur le visage — réservé strictement au corps", level: "Élevé" },
-        { name: "Dimethicone / Silicones", why: "Créent un film occlusif qui emprisonne sébum et bactéries sous la peau", level: "Moyen" },
-        { name: "Isopropyl Myristate", why: "Pénétrant comédogène — présent dans de nombreuses crèmes bon marché", level: "Moyen" },
+      out.push(
+        { name: "Huile de coco (visage)", why: "Comédogène 4/5 — bouche les pores et aggrave directement l'acné détectée", level: "Élevé" },
+        { name: "Beurre de cacao (visage)", why: "Très comédogène sur visage acnéique — à réserver au corps", level: "Élevé" },
+        { name: "Dimethicone / Silicones", why: "Film occlusif qui emprisonne sébum et bactéries — entretient l'acné", level: "Moyen" },
+        { name: "Isopropyl Myristate", why: "Pénétrant comédogène — favorise les comédons", level: "Moyen" },
       );
     }
-    if (/sèche|déshydrat|tiraillement/.test(c)) {
-      specific.push(
-        { name: "Alcool isopropylique / éthylique", why: "Assèche intensément — totalement contre-productif sur peau déjà déshydratée", level: "Élevé" },
-        { name: "Menthol / Camphre", why: "Sensation fraîche trompeuse — irritants cutanés qui aggravent la sécheresse", level: "Moyen" },
+    if (/eczéma|eczema|dermatite|sèche|déshydrat|tiraillement|xérose/.test(c)) {
+      out.push(
+        { name: "Alcool dénat. (Alcohol Denat.)", why: "Détruit le film hydrolipidique — aggrave la sécheresse/l'eczéma détecté", level: "Élevé" },
+        { name: "Sodium Lauryl Sulfate (SLS)", why: "Détergent agressif qui décape une barrière déjà fragilisée", level: "Élevé" },
+        { name: "Parfum / Fragrance", why: "Irritant fréquent — déclenche les poussées sur peau sèche/eczémateuse", level: "Moyen" },
       );
     }
-    if (/sensib|réactiv|rougeur/.test(c)) {
-      specific.push(
-        { name: "Rétinol (sans prescription)", why: "Trop puissant pour peaux réactives — provoque inflammations et desquamations", level: "Élevé" },
-        { name: "AHA/BHA en concentration élevée", why: "Exfoliants chimiques agressifs — sur-irritent les peaux déjà réactives", level: "Moyen" },
+    if (/sensib|réactiv|rougeur|rosacée|rosacee/.test(c)) {
+      out.push(
+        { name: "Rétinol sans prescription", why: "Trop puissant pour la peau réactive détectée — inflammations et desquamations", level: "Élevé" },
+        { name: "AHA/BHA en forte concentration", why: "Exfoliants agressifs — sur-irritent une peau déjà réactive", level: "Moyen" },
       );
     }
 
-    // Dédupliquer par nom
+    // Dédup par nom
     const seen = new Set<string>();
-    const all = [...specific, ...base].filter(t => {
-      if (seen.has(t.name)) return false;
-      seen.add(t.name);
-      return true;
-    });
-    return all;
+    return out.filter(t => { if (seen.has(t.name)) return false; seen.add(t.name); return true; });
   };
 
-  // ── Conseils d'hygiène enrichis par antécédents ────────────────────────────
+  // ── Conseils d'hygiène — STRICTEMENT liés au diagnostic / antécédents ──────
+  // Aucune liste générique : vide si le diagnostic ne génère rien de spécifique.
   const getHygieneAdvice = () => {
     const c = (result.condition + " " + (result.skinType || "")).toLowerCase();
     const prevProducts = (patientIntake?.previousProducts || "").toLowerCase();
     const allergies = (patientIntake?.allergies || "").toLowerCase();
+    const out: string[] = [];
 
-    const base = [
-      "🚿 Nettoyer le visage matin et soir avec de l'eau tiède (jamais chaude — dilate les pores)",
-      "☀️ Protection solaire SPF 50+ tous les matins — indispensable sous le soleil équatorial",
-      "💧 Boire minimum 1,5L d'eau par jour — l'hydratation interne se reflète sur la peau",
-      "🛏️ Changer la taie d'oreiller toutes les 2 à 3 nuits — source majeure de bactéries",
-      "🙌 Ne jamais toucher ou percer les boutons — cicatrices et taches durables sur peaux noires",
-    ];
-    const specific: string[] = [];
+    // ── Antécédents ──
+    if (/éclaircissant|éclaircissante|blanchissant/.test(prevProducts)) out.push("🚨 Arrêt des crèmes éclaircissantes actuelles — souvent à base de mercure/hydroquinone qui aggravent votre condition");
+    if (/cortisone|corticoïde/.test(prevProducts)) out.push("⚠️ Sevrage progressif des corticoïdes — l'arrêt brutal provoque un rebond ; demandez un plan de sevrage");
+    if (allergies && allergies !== "aucune" && allergies.trim()) out.push(`⚠️ Allergie déclarée (${patientIntake?.allergies}) — vérifiez la liste INCI de chaque produit avant application`);
 
-    // Avertissements basés sur les antécédents
-    if (/éclaircissant|éclaircissante|blanchissant/.test(prevProducts)) {
-      specific.push("🚨 ARRÊT IMMÉDIAT des crèmes éclaircissantes actuelles — elles contiennent probablement du mercure ou de l'hydroquinone qui aggravent votre condition");
-    }
-    if (/cortisone|corticoïde/.test(prevProducts)) {
-      specific.push("⚠️ Sevrage progressif des corticoïdes — un arrêt brutal provoque un rebond violent, consultez un dermatologue pour un plan de sevrage");
-    }
+    // ── Diagnostic détecté ──
+    if (/tache|hyperpigment|pih|mélasma/.test(c)) out.push(
+      "☀️ SPF 50+ obligatoire chaque matin — sans protection, les taches détectées s'aggravent activement",
+      "🕶️ Chapeau ou ombre entre 11h et 15h — les UV entretiennent l'hyperpigmentation",
+      "🚫 Pas d'exfoliation agressive — elle relance l'inflammation et fonce les taches",
+    );
+    if (/acn[eé]|bouton|comédon/.test(c)) out.push(
+      "🙌 Ne jamais toucher ni percer les boutons — cicatrices et taches durables sur peau noire",
+      "🛏️ Changer la taie d'oreiller toutes les 2-3 nuits — réduit les bactéries au contact de l'acné",
+      "📱 Désinfecter l'écran du téléphone — contact direct avec la zone acnéique",
+      "🧖 Masque à l'argile 1×/semaine maximum — au-delà, irritation et rebond séborrhéique",
+    );
+    if (/eczéma|eczema|dermatite|sèche|déshydrat|tiraillement|xérose/.test(c)) out.push(
+      "🛁 Douches courtes à l'eau tiède — l'eau chaude détruit la barrière lipidique déjà fragile",
+      "🧼 Pas de savon agressif — nettoyant surgras sans sulfates uniquement",
+      "🧴 Crème appliquée sur peau encore humide — limite la perte d'eau",
+    );
+    if (/sensib|réactiv|rougeur|rosacée|rosacee/.test(c)) out.push(
+      "🌡️ Éviter eau très chaude, hammam et écarts de température — déclencheurs de rougeurs",
+      "🚫 Suspendre exfoliants et actifs forts — privilégier des produits sans parfum",
+    );
 
-    // Avertissements basés sur les allergies
-    if (allergies && allergies !== "aucune" && allergies.trim()) {
-      specific.push(`⚠️ Allergie déclarée (${patientIntake?.allergies}) — vérifiez systématiquement la liste INCI de chaque produit avant application`);
-    }
-
-    if (/tache|hyperpigment/.test(c)) {
-      specific.push(
-        "🕶️ Porter un chapeau ou rester à l'ombre entre 11h et 15h — les UV aggravent activement les taches",
-        "🚫 Éviter toute crème éclaircissante non certifiée — elles contiennent souvent du mercure",
-        "🍊 Consommer des aliments riches en vitamine C (mangue, papaye, citron) — action anti-pigmentaire naturelle",
-      );
-    }
-    if (/acn[eé]|bouton/.test(c)) {
-      specific.push(
-        "🍬 Réduire le sucre raffiné et les fritures — index glycémique élevé = plus de sébum",
-        "📱 Désinfecter l'écran du téléphone quotidiennement — contact direct avec la peau du visage",
-        "🧖 Masque purifiant à l'argile 1× par semaine maximum — trop souvent = irritation",
-      );
-    }
-    if (/sèche|déshydrat/.test(c)) {
-      specific.push(
-        "🛁 Douche courte à l'eau tiède — l'eau chaude détruit la barrière lipidique",
-        "🧴 Appliquer la crème visage sur peau encore légèrement humide — absorption optimale",
-      );
-    }
-    return [...specific, ...base].slice(0, 7);
+    return out;
   };
 
   // ── Téléchargement PDF via print window (zéro dépendance, 100% mobile) ──
@@ -2911,6 +2884,7 @@ ${pdfBestProduct ? `
         {/* ═══ BLOC 7bis — 🚫 Ingrédients toxiques à bannir ═══ */}
         {(() => {
           const toxics = getToxicIngredients();
+          if (toxics.length === 0) return null; // peau saine / rien de spécifique → pas de section générique
           const levelColor = (l: string) => l === "CRITIQUE" ? "#dc2626" : l === "Élevé" ? "#E91E8C" : "#f59e0b";
           const levelBg = (l: string) => l === "CRITIQUE" ? "rgba(220,38,38,0.08)" : l === "Élevé" ? "rgba(233,30,140,0.08)" : "rgba(245,158,11,0.08)";
           const levelBorder = (l: string) => l === "CRITIQUE" ? "rgba(220,38,38,0.25)" : l === "Élevé" ? "rgba(233,30,140,0.2)" : "rgba(245,158,11,0.2)";
@@ -2952,6 +2926,7 @@ ${pdfBestProduct ? `
         {/* ═══ BLOC 7ter — 💡 Conseils d'hygiène personnalisés ═══ */}
         {(() => {
           const hygiene = getHygieneAdvice();
+          if (hygiene.length === 0) return null; // rien de spécifique au diagnostic → pas de conseils génériques
           return (
             <div data-testid="block-hygiene" style={{ ...DS.subtleCard, padding: "20px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
