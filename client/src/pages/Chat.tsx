@@ -25,7 +25,7 @@ function PremiumGatePage({ feature }: { feature: string }) {
     <div
       className="min-h-screen flex flex-col items-center justify-center px-6 pb-20 relative"
       style={{
-        background: "#0d0a0e",
+        background: "#fbfbfe",
         fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
       }}
     >
@@ -62,13 +62,13 @@ function PremiumGatePage({ feature }: { feature: string }) {
             Module premium
           </span>
         </div>
-        <h1 className="text-xl font-bold mb-2" style={{ color: "#f3f0ff" }}>
+        <h1 className="text-xl font-bold mb-2" style={{ color: "#1f1a2e" }}>
           {feature}
         </h1>
-        <p className="text-xs leading-relaxed max-w-xs font-medium" style={{ color: "rgba(200,185,255,0.65)" }}>
+        <p className="text-xs leading-relaxed max-w-xs font-medium" style={{ color: "#5a5470" }}>
           Débloquez l'accès illimité à l'assistant {feature}, aux analyses continues et aux protocoles avancés pour{" "}
-          <strong style={{ color: "#f3f0ff" }}>500 FCFA/semaine</strong> ou{" "}
-          <strong style={{ color: "#f3f0ff" }}>2 000 FCFA/mois</strong>.
+          <strong style={{ color: "#1f1a2e" }}>500 FCFA/semaine</strong> ou{" "}
+          <strong style={{ color: "#1f1a2e" }}>2 000 FCFA/mois</strong>.
         </p>
       </div>
 
@@ -85,8 +85,8 @@ function PremiumGatePage({ feature }: { feature: string }) {
             key={item}
             className="flex items-center gap-3 p-3"
             style={{
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.07)",
+              background: "rgba(0,0,0,0.04)",
+              border: "1px solid rgba(0,0,0,0.07)",
               borderRadius: "16px",
             }}
           >
@@ -100,7 +100,7 @@ function PremiumGatePage({ feature }: { feature: string }) {
             >
               <span className="text-xs font-bold" style={{ color: "#a78bfa" }}>✓</span>
             </div>
-            <span className="text-xs font-medium" style={{ color: "#f3f0ff" }}>{item}</span>
+            <span className="text-xs font-medium" style={{ color: "#1f1a2e" }}>{item}</span>
           </div>
         ))}
       </div>
@@ -121,7 +121,7 @@ function PremiumGatePage({ feature }: { feature: string }) {
       <a
         href="/"
         className="mt-5 text-xs font-bold transition-opacity hover:opacity-80 relative z-10"
-        style={{ color: "rgba(255,255,255,0.35)" }}
+        style={{ color: "rgba(0,0,0,0.35)" }}
       >
         ← Accueil
       </a>
@@ -227,9 +227,9 @@ export default function Chat() {
     <div
       className="flex flex-col h-screen max-w-lg mx-auto"
       style={{
-        background: "#0d0a0e",
-        borderLeft: "1px solid rgba(255,255,255,0.05)",
-        borderRight: "1px solid rgba(255,255,255,0.05)",
+        background: "#fbfbfe",
+        borderLeft: "1px solid rgba(0,0,0,0.05)",
+        borderRight: "1px solid rgba(0,0,0,0.05)",
         fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
       }}
     >
@@ -238,7 +238,7 @@ export default function Chat() {
         className="px-4 py-3 flex items-center gap-3 sticky top-0 z-10"
         style={{
           background: "rgba(13,10,14,0.95)",
-          borderBottom: "1px solid rgba(255,255,255,0.07)",
+          borderBottom: "1px solid rgba(0,0,0,0.07)",
           backdropFilter: "blur(20px)",
         }}
       >
@@ -246,9 +246,9 @@ export default function Chat() {
           <button
             className="w-8 h-8 rounded-xl flex items-center justify-center transition-colors"
             style={{
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.07)",
-              color: "rgba(200,185,255,0.65)",
+              background: "rgba(0,0,0,0.04)",
+              border: "1px solid rgba(0,0,0,0.07)",
+              color: "#5a5470",
             }}
           >
             <ArrowLeft className="w-4 h-4" />
@@ -267,7 +267,7 @@ export default function Chat() {
         </div>
 
         <div className="text-left">
-          <p className="text-xs font-bold" style={{ color: "#f3f0ff" }}>
+          <p className="text-xs font-bold" style={{ color: "#1f1a2e" }}>
             GlowScan AI
           </p>
           <p className="text-[10px] font-medium flex items-center gap-1" style={{ color: "#6ee7b7" }}>
@@ -316,9 +316,9 @@ export default function Chat() {
                         color: "#a78bfa",
                       }
                     : {
-                        background: "rgba(255,255,255,0.06)",
-                        border: "1px solid rgba(255,255,255,0.1)",
-                        color: "rgba(200,185,255,0.65)",
+                        background: "rgba(0,0,0,0.06)",
+                        border: "1px solid rgba(0,0,0,0.1)",
+                        color: "#5a5470",
                       }
                 }
               >
@@ -335,17 +335,17 @@ export default function Chat() {
                 style={
                   msg.role === "assistant"
                     ? {
-                        background: "rgba(255,255,255,0.04)",
-                        border: "1px solid rgba(255,255,255,0.07)",
+                        background: "rgba(0,0,0,0.04)",
+                        border: "1px solid rgba(0,0,0,0.07)",
                         borderRadius: "16px",
-                        color: "rgba(200,185,255,0.65)",
+                        color: "#5a5470",
                         fontWeight: 500,
                       }
                     : {
                         background: "rgba(124,58,237,0.18)",
                         border: "1px solid rgba(167,139,250,0.25)",
                         borderRadius: "16px",
-                        color: "#f3f0ff",
+                        color: "#1f1a2e",
                         fontWeight: 600,
                       }
                 }
@@ -377,7 +377,7 @@ export default function Chat() {
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-2 pt-4">
             <p
               className="text-[10px] font-bold tracking-wide text-center"
-              style={{ color: "rgba(255,255,255,0.25)" }}
+              style={{ color: "rgba(0,0,0,0.25)" }}
             >
               Questions fréquentes
             </p>
@@ -391,7 +391,7 @@ export default function Chat() {
                     background: "rgba(167,139,250,0.08)",
                     border: "1px solid rgba(167,139,250,0.18)",
                     borderRadius: "9999px",
-                    color: "rgba(200,185,255,0.65)",
+                    color: "#5a5470",
                   }}
                   data-testid={`suggestion-${i}`}
                 >
@@ -410,7 +410,7 @@ export default function Chat() {
         className="px-4 py-3 sticky bottom-0"
         style={{
           background: "rgba(13,10,14,0.95)",
-          borderTop: "1px solid rgba(255,255,255,0.07)",
+          borderTop: "1px solid rgba(0,0,0,0.07)",
           backdropFilter: "blur(20px)",
         }}
       >
@@ -419,7 +419,7 @@ export default function Chat() {
           <div
             className="flex-1 flex items-center gap-2 px-3.5 py-2.5 transition-all"
             style={{
-              background: "#13101f",
+              background: "#ffffff",
               border: "1px solid rgba(167,139,250,0.2)",
               borderRadius: "12px",
             }}
@@ -435,7 +435,7 @@ export default function Chat() {
               onKeyDown={e => e.key === "Enter" && !e.shiftKey && send()}
               placeholder="Posez votre question sur votre peau..."
               className="flex-1 bg-transparent text-xs outline-none font-medium"
-              style={{ color: "#f3f0ff" }}
+              style={{ color: "#1f1a2e" }}
               data-testid="input-chat"
               disabled={isLoading}
             />
@@ -459,7 +459,7 @@ export default function Chat() {
         {/* Disclaimer */}
         <div
           className="flex items-center justify-center gap-1 mt-2 text-[10px] font-medium"
-          style={{ color: "rgba(255,255,255,0.25)" }}
+          style={{ color: "rgba(0,0,0,0.25)" }}
         >
           <ShieldAlert className="w-3 h-3" />
           <span>GlowScan AI fournit des indicateurs informatifs et ne remplace pas un avis médical.</span>

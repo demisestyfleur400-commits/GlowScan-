@@ -185,17 +185,17 @@ export default function AuthPage() {
     <div
       className="min-h-screen w-full flex flex-col px-6 py-10 relative overflow-hidden"
       style={{
-        background: "#0d0a0e",
+        background: "#fbfdfb",
         fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
-        color: "#f3f0ff",
+        color: "#1f2a26",
       }}
     >
       {/* Ambient glows */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[400px] h-[400px] rounded-full"
-          style={{ background: "radial-gradient(circle, rgba(124,58,237,0.15), transparent)" }} />
+          style={{ background: "radial-gradient(circle, rgba(47,158,110,0.15), transparent)" }} />
         <div className="absolute bottom-[-5%] right-[-10%] w-[300px] h-[300px] rounded-full"
-          style={{ background: "radial-gradient(circle, rgba(124,58,237,0.10), transparent)" }} />
+          style={{ background: "radial-gradient(circle, rgba(47,158,110,0.10), transparent)" }} />
       </div>
 
       {/* Header */}
@@ -203,11 +203,11 @@ export default function AuthPage() {
         <button
           onClick={() => mode === "register" || mode === "login" ? setLocation("/") : setMode("login")}
           className="w-10 h-10 rounded-xl flex items-center justify-center transition-all active:scale-95"
-          style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(200,185,255,0.65)" }}
+          style={{ background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.07)", color: "#4a5a52" }}
         >
           <ArrowLeft className="w-4 h-4" />
         </button>
-        <div className="rounded-xl p-2" style={{ background: "#13101f", border: "1px solid rgba(167,139,250,0.2)" }}>
+        <div className="rounded-xl p-2" style={{ background: "#ffffff", border: "1px solid rgba(47,158,110,0.2)" }}>
           <img src="/logo-glowscan.jpeg" alt="GlowScan" className="h-7 w-auto object-contain" />
         </div>
         <div className="w-10 h-10" />
@@ -223,12 +223,12 @@ export default function AuthPage() {
           >
             <div className="text-center mb-2">
               <div className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 mb-3 text-[10px] font-bold tracking-wide"
-                style={{ background: "rgba(167,139,250,0.1)", border: "1px solid rgba(167,139,250,0.2)", color: "#c4b5fd" }}>
+                style={{ background: "rgba(47,158,110,0.1)", border: "1px solid rgba(47,158,110,0.2)", color: "#c4b5fd" }}>
                 <Sparkles className="w-3 h-3" />
                 Gratuit · 30 secondes
               </div>
-              <h1 className="text-2xl font-bold" style={{ color: "#f3f0ff" }}>Crée ton profil peau</h1>
-              <p className="text-xs font-medium mt-1" style={{ color: "rgba(200,185,255,0.55)" }}>
+              <h1 className="text-2xl font-bold" style={{ color: "#1f2a26" }}>Crée ton profil peau</h1>
+              <p className="text-xs font-medium mt-1" style={{ color: "#4a5a52" }}>
                 Un compte pour sauvegarder toutes tes analyses
               </p>
             </div>
@@ -246,18 +246,18 @@ export default function AuthPage() {
                 <p className="text-xs font-bold" style={{ color: "#fbbf24" }}>
                   ⚠️ Ce compte existe déjà
                 </p>
-                <p className="text-[11px]" style={{ color: "rgba(200,185,255,0.7)" }}>
+                <p className="text-[11px]" style={{ color: "#4a5a52" }}>
                   Un compte avec <strong>{contact}</strong> est déjà enregistré.
                 </p>
                 <div className="flex gap-2">
                   <button type="button" onClick={goLogin}
                     className="flex-1 py-2.5 rounded-xl text-xs font-extrabold"
-                    style={{ background: "#7c3aed", color: "#fff" }}>
+                    style={{ background: "#2f9e6e", color: "#fff" }}>
                     Se connecter
                   </button>
                   <button type="button" onClick={() => goForgot(contact)}
                     className="flex-1 py-2.5 rounded-xl text-xs font-extrabold"
-                    style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(200,185,255,0.8)" }}>
+                    style={{ background: "rgba(0,0,0,0.07)", border: "1px solid rgba(0,0,0,0.1)", color: "#4a5a52" }}>
                     Mot de passe oublié ?
                   </button>
                 </div>
@@ -267,17 +267,17 @@ export default function AuthPage() {
             {!accountExistsHint && (
               <button type="submit" disabled={loading} data-testid="button-register-finish"
                 className="w-full py-4 text-sm font-extrabold mt-2 transition-all active:scale-[0.98] disabled:opacity-50 relative overflow-hidden"
-                style={{ background: "linear-gradient(135deg, #E91E8C, #f43f5e)", borderRadius: "14px", color: "#fff" }}>
+                style={{ background: "linear-gradient(135deg, #2f9e6e, #f43f5e)", borderRadius: "14px", color: "#fff" }}>
                 <div className="absolute top-0 left-0 right-0 h-1/2"
-                  style={{ background: "linear-gradient(to bottom, rgba(255,255,255,0.1), transparent)", borderRadius: "14px 14px 0 0" }} />
+                  style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.1), transparent)", borderRadius: "14px 14px 0 0" }} />
                 <span className="relative z-10">{loading ? "Création du compte..." : "Obtenir mon bilan gratuit →"}</span>
               </button>
             )}
 
-            <p className="text-center text-[10px] font-medium" style={{ color: "rgba(255,255,255,0.25)" }}>
+            <p className="text-center text-[10px] font-medium" style={{ color: "rgba(0,0,0,0.25)" }}>
               Gratuit · Données privées · Sans engagement
             </p>
-            <p className="text-center text-xs font-medium pt-1" style={{ color: "rgba(200,185,255,0.65)" }}>
+            <p className="text-center text-xs font-medium pt-1" style={{ color: "#4a5a52" }}>
               Déjà inscrit·e ?{" "}
               <button type="button" onClick={goLogin} className="font-bold" style={{ color: "#a78bfa" }}>
                 Se connecter
@@ -293,8 +293,8 @@ export default function AuthPage() {
             className="flex-1 flex flex-col justify-center relative z-10 space-y-4 max-w-sm mx-auto w-full"
           >
             <div className="text-center mb-2">
-              <h1 className="text-2xl font-bold" style={{ color: "#f3f0ff" }}>Connexion</h1>
-              <p className="text-xs font-medium mt-1" style={{ color: "rgba(200,185,255,0.55)" }}>
+              <h1 className="text-2xl font-bold" style={{ color: "#1f2a26" }}>Connexion</h1>
+              <p className="text-xs font-medium mt-1" style={{ color: "#4a5a52" }}>
                 Retrouve ton historique de diagnostics
               </p>
             </div>
@@ -313,11 +313,11 @@ export default function AuthPage() {
 
             <button type="submit" disabled={loading} data-testid="button-login-submit"
               className="w-full py-4 text-sm font-bold mt-1 transition-all active:scale-[0.98] disabled:opacity-50"
-              style={{ background: "#7c3aed", borderRadius: "14px", color: "#fff" }}>
+              style={{ background: "#2f9e6e", borderRadius: "14px", color: "#fff" }}>
               {loading ? "Connexion..." : "Se connecter"}
             </button>
 
-            <p className="text-center text-xs font-medium pt-1" style={{ color: "rgba(200,185,255,0.65)" }}>
+            <p className="text-center text-xs font-medium pt-1" style={{ color: "#4a5a52" }}>
               Première visite ?{" "}
               <button type="button" onClick={() => setMode("register")} className="font-bold" style={{ color: "#a78bfa" }}>
                 Créer un profil gratuit
@@ -338,8 +338,8 @@ export default function AuthPage() {
                     style={{ background: "rgba(37,211,102,0.1)", border: "1px solid rgba(37,211,102,0.2)" }}>
                     <MessageCircle className="w-7 h-7" style={{ color: "#25d366" }} />
                   </div>
-                  <h1 className="text-2xl font-bold" style={{ color: "#f3f0ff" }}>Mot de passe oublié</h1>
-                  <p className="text-xs font-medium mt-1" style={{ color: "rgba(200,185,255,0.55)" }}>
+                  <h1 className="text-2xl font-bold" style={{ color: "#1f2a26" }}>Mot de passe oublié</h1>
+                  <p className="text-xs font-medium mt-1" style={{ color: "#4a5a52" }}>
                     On t'envoie un code par SMS
                   </p>
                 </div>
@@ -358,7 +358,7 @@ export default function AuthPage() {
                   style={{ background: "linear-gradient(135deg, #25d366, #128c7e)", borderRadius: "14px", color: "#fff" }}>
                   {loading ? "Envoi en cours..." : "Recevoir mon code par SMS →"}
                 </button>
-                <p className="text-center text-xs" style={{ color: "rgba(200,185,255,0.5)" }}>
+                <p className="text-center text-xs" style={{ color: "#4a5a52" }}>
                   <button type="button" onClick={goLogin} style={{ color: "#a78bfa" }}>← Retour à la connexion</button>
                 </p>
               </form>
@@ -374,17 +374,17 @@ export default function AuthPage() {
                           style={{ background: "rgba(37,211,102,0.1)", border: "1px solid rgba(37,211,102,0.2)" }}>
                           <CheckCircle2 className="w-8 h-8" style={{ color: "#25d366" }} />
                         </div>
-                        <h2 className="text-xl font-bold" style={{ color: "#f3f0ff" }}>SMS envoyé ✅</h2>
-                        <p className="text-xs mt-2" style={{ color: "rgba(200,185,255,0.7)" }}>
+                        <h2 className="text-xl font-bold" style={{ color: "#1f2a26" }}>SMS envoyé ✅</h2>
+                        <p className="text-xs mt-2" style={{ color: "#4a5a52" }}>
                           Un code a été envoyé à <strong>{forgotResult.maskedContact}</strong>
                         </p>
-                        <p className="text-[11px] mt-1" style={{ color: "rgba(200,185,255,0.5)" }}>
+                        <p className="text-[11px] mt-1" style={{ color: "#4a5a52" }}>
                           Valide 15 minutes — Vérifie tes SMS
                         </p>
                       </div>
                       <button onClick={() => setMode("reset")}
                         className="w-full py-4 text-sm font-extrabold"
-                        style={{ background: "#7c3aed", borderRadius: "14px", color: "#fff" }}>
+                        style={{ background: "#2f9e6e", borderRadius: "14px", color: "#fff" }}>
                         J'ai reçu le code → Continuer →
                       </button>
                     </div>
@@ -394,21 +394,21 @@ export default function AuthPage() {
                   <>
                     <div className="text-center">
                       <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
-                        style={{ background: "rgba(124,58,237,0.1)", border: "1px solid rgba(124,58,237,0.2)" }}>
+                        style={{ background: "rgba(47,158,110,0.1)", border: "1px solid rgba(47,158,110,0.2)" }}>
                         <KeyRound className="w-8 h-8" style={{ color: "#a78bfa" }} />
                       </div>
-                      <h2 className="text-xl font-bold" style={{ color: "#f3f0ff" }}>Ton code de réinitialisation</h2>
-                      <p className="text-xs mt-1" style={{ color: "rgba(200,185,255,0.7)" }}>
+                      <h2 className="text-xl font-bold" style={{ color: "#1f2a26" }}>Ton code de réinitialisation</h2>
+                      <p className="text-xs mt-1" style={{ color: "#4a5a52" }}>
                         Compte : <strong>{forgotResult.maskedContact}</strong>
                       </p>
                     </div>
                     <div className="rounded-2xl p-6 text-center"
-                      style={{ background: "rgba(124,58,237,0.12)", border: "2px solid rgba(124,58,237,0.4)" }}>
-                      <p className="text-xs font-bold mb-2" style={{ color: "rgba(200,185,255,0.8)" }}>📋 TON CODE À 6 CHIFFRES</p>
-                      <p className="text-5xl font-black tracking-widest my-3" style={{ color: "#f3f0ff", fontFamily: "monospace", letterSpacing: "8px" }}>
+                      style={{ background: "rgba(47,158,110,0.12)", border: "2px solid rgba(47,158,110,0.4)" }}>
+                      <p className="text-xs font-bold mb-2" style={{ color: "#4a5a52" }}>📋 TON CODE À 6 CHIFFRES</p>
+                      <p className="text-5xl font-black tracking-widest my-3" style={{ color: "#1f2a26", fontFamily: "monospace", letterSpacing: "8px" }}>
                         {forgotResult.code}
                       </p>
-                      <p className="text-[11px]" style={{ color: "rgba(200,185,255,0.5)" }}>⏰ Valide 15 minutes</p>
+                      <p className="text-[11px]" style={{ color: "#4a5a52" }}>⏰ Valide 15 minutes</p>
                     </div>
                     <button onClick={() => {
                       if (forgotResult.code) {
@@ -418,14 +418,14 @@ export default function AuthPage() {
                     }}
                       disabled={!forgotResult.code}
                       className="w-full py-4 text-sm font-extrabold disabled:opacity-50"
-                      style={{ background: "#7c3aed", borderRadius: "14px", color: "#fff" }}>
+                      style={{ background: "#2f9e6e", borderRadius: "14px", color: "#fff" }}>
                       ✅ J'ai noté le code →
                     </button>
                   </>
                 )}
                 <button onClick={() => { setForgotResult(null); setForgotContact(""); }}
                   className="w-full py-2 text-xs font-bold"
-                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "12px", color: "rgba(200,185,255,0.7)" }}>
+                  style={{ background: "rgba(0,0,0,0.05)", border: "1px solid rgba(0,0,0,0.1)", borderRadius: "12px", color: "#4a5a52" }}>
                   Pas reçu? Renvoyer le code
                 </button>
               </div>
@@ -445,14 +445,14 @@ export default function AuthPage() {
                   <CheckCircle2 className="w-8 h-8" style={{ color: "#10b981" }} />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold" style={{ color: "#f3f0ff" }}>Mot de passe mis à jour !</h2>
-                  <p className="text-xs mt-1" style={{ color: "rgba(200,185,255,0.55)" }}>
+                  <h2 className="text-xl font-bold" style={{ color: "#1f2a26" }}>Mot de passe mis à jour !</h2>
+                  <p className="text-xs mt-1" style={{ color: "#4a5a52" }}>
                     Tu peux maintenant te connecter avec ton nouveau mot de passe.
                   </p>
                 </div>
                 <button onClick={goLogin}
                   className="w-full py-4 text-sm font-extrabold"
-                  style={{ background: "#7c3aed", borderRadius: "14px", color: "#fff" }}>
+                  style={{ background: "#2f9e6e", borderRadius: "14px", color: "#fff" }}>
                   Se connecter →
                 </button>
               </div>
@@ -460,11 +460,11 @@ export default function AuthPage() {
               <form onSubmit={handleReset} className="space-y-4">
                 <div className="text-center mb-2">
                   <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
-                    style={{ background: "rgba(124,58,237,0.1)", border: "1px solid rgba(124,58,237,0.2)" }}>
+                    style={{ background: "rgba(47,158,110,0.1)", border: "1px solid rgba(47,158,110,0.2)" }}>
                     <KeyRound className="w-7 h-7" style={{ color: "#a78bfa" }} />
                   </div>
-                  <h1 className="text-2xl font-bold" style={{ color: "#f3f0ff" }}>Nouveau mot de passe</h1>
-                  <p className="text-xs font-medium mt-1" style={{ color: "rgba(200,185,255,0.55)" }}>
+                  <h1 className="text-2xl font-bold" style={{ color: "#1f2a26" }}>Nouveau mot de passe</h1>
+                  <p className="text-xs font-medium mt-1" style={{ color: "#4a5a52" }}>
                     Saisis le code reçu et choisis un nouveau mot de passe
                   </p>
                 </div>
@@ -474,11 +474,11 @@ export default function AuthPage() {
 
                 <button type="submit" disabled={loading || resetCode.length < 6 || newPwd.length < 6}
                   className="w-full py-4 text-sm font-extrabold transition-all active:scale-[0.98] disabled:opacity-40"
-                  style={{ background: "linear-gradient(135deg, #7c3aed, #5b21b6)", borderRadius: "14px", color: "#fff" }}>
+                  style={{ background: "linear-gradient(135deg, #2f9e6e, #5b21b6)", borderRadius: "14px", color: "#fff" }}>
                   {loading ? "Mise à jour..." : "Enregistrer le nouveau mot de passe →"}
                 </button>
 
-                <p className="text-center text-xs" style={{ color: "rgba(200,185,255,0.5)" }}>
+                <p className="text-center text-xs" style={{ color: "#4a5a52" }}>
                   Pas reçu le code ?{" "}
                   <button type="button" onClick={() => goForgot(forgotContact)} style={{ color: "#a78bfa" }}>Renvoyer</button>
                 </p>
@@ -491,8 +491,8 @@ export default function AuthPage() {
 
       {/* Footer */}
       <div className="text-center mt-auto pt-8 relative z-10 flex justify-center items-center gap-1.5 text-[10px] font-medium"
-        style={{ color: "rgba(255,255,255,0.25)" }}>
-        <ShieldAlert className="w-3 h-3" style={{ color: "rgba(167,139,250,0.5)" }} />
+        style={{ color: "rgba(0,0,0,0.25)" }}>
+        <ShieldAlert className="w-3 h-3" style={{ color: "rgba(47,158,110,0.5)" }} />
         <span>Données chiffrées · Jamais revendues</span>
       </div>
     </div>
@@ -506,7 +506,7 @@ function Field({ icon, type, placeholder, value, onChange, testId, autoFocus }: 
 }) {
   return (
     <div className="relative">
-      <div className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: "rgba(167,139,250,0.5)" }}>
+      <div className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: "rgba(47,158,110,0.5)" }}>
         {icon}
       </div>
       <input
@@ -514,9 +514,9 @@ function Field({ icon, type, placeholder, value, onChange, testId, autoFocus }: 
         onChange={e => onChange(e.target.value)}
         autoFocus={autoFocus} data-testid={testId}
         className="w-full pl-11 pr-4 py-4 text-xs font-medium outline-none transition-all"
-        style={{ background: "#13101f", border: "1px solid rgba(167,139,250,0.2)", borderRadius: "12px", color: "#f3f0ff" }}
-        onFocus={e => (e.target.style.borderColor = "rgba(167,139,250,0.5)")}
-        onBlur={e => (e.target.style.borderColor = "rgba(167,139,250,0.2)")}
+        style={{ background: "#ffffff", border: "1px solid rgba(47,158,110,0.2)", borderRadius: "12px", color: "#1f2a26" }}
+        onFocus={e => (e.target.style.borderColor = "rgba(47,158,110,0.5)")}
+        onBlur={e => (e.target.style.borderColor = "rgba(47,158,110,0.2)")}
       />
     </div>
   );
@@ -528,19 +528,19 @@ function PwdField({ value, onChange, show, onToggle, testId, placeholder, autoFo
 }) {
   return (
     <div className="relative">
-      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "rgba(167,139,250,0.5)" }} />
+      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "rgba(47,158,110,0.5)" }} />
       <input
         type={show ? "text" : "password"} placeholder={placeholder} value={value}
         onChange={e => onChange(e.target.value)}
         autoFocus={autoFocus} required data-testid={testId}
         className="w-full pl-11 pr-12 py-4 text-xs font-medium outline-none transition-all"
-        style={{ background: "#13101f", border: "1px solid rgba(167,139,250,0.2)", borderRadius: "12px", color: "#f3f0ff" }}
-        onFocus={e => (e.target.style.borderColor = "rgba(167,139,250,0.5)")}
-        onBlur={e => (e.target.style.borderColor = "rgba(167,139,250,0.2)")}
+        style={{ background: "#ffffff", border: "1px solid rgba(47,158,110,0.2)", borderRadius: "12px", color: "#1f2a26" }}
+        onFocus={e => (e.target.style.borderColor = "rgba(47,158,110,0.5)")}
+        onBlur={e => (e.target.style.borderColor = "rgba(47,158,110,0.2)")}
       />
       <button type="button" onClick={onToggle}
         className="absolute right-4 top-1/2 -translate-y-1/2 transition-colors"
-        style={{ color: "rgba(167,139,250,0.5)" }}>
+        style={{ color: "rgba(47,158,110,0.5)" }}>
         {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
       </button>
     </div>
