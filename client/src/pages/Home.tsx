@@ -11,11 +11,11 @@ import Landing from "@/pages/Landing";
 import { catalog, formatPrice, type Product } from "@shared/catalog";
 import type { FeaturedProduct } from "@shared/schema";
 
-import tipPhoto from "../lib/IMG_0122.png";
-import cardSkinbotPhoto from "../lib/IMG_0139.png";
-import cardNutrimentsPhoto from "../lib/IMG_0140.png";
-import cardRoutinePhoto from "../lib/IMG_0133.png";
-import cardEvolutionPhoto from "../lib/IMG_0131.png";
+import tipPhoto from "../lib/IMG_0122.webp";
+import cardSkinbotPhoto from "../lib/IMG_0139.webp";
+import cardNutrimentsPhoto from "../lib/IMG_0140.webp";
+import cardRoutinePhoto from "../lib/IMG_0133.webp";
+import cardEvolutionPhoto from "../lib/IMG_0131.webp";
 
 import { productImages } from "@/lib/productImages";
 
