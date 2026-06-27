@@ -297,7 +297,7 @@ function ProductDetailModal({
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         className="fixed inset-0 z-50"
-        style={{ background: "rgba(13,10,14,0.7)", backdropFilter: "blur(6px)" }}
+        style={{ background: "rgba(251,253,254,0.7)", backdropFilter: "blur(6px)" }}
         onClick={onClose}
       />
       <motion.div
@@ -310,8 +310,8 @@ function ProductDetailModal({
         aria-modal="true"
         className="fixed inset-x-0 bottom-0 z-50 flex flex-col"
         style={{
-          background: "#13101f",
-          border: "1px solid rgba(255,255,255,0.07)",
+          background: "#ffffff",
+          border: "1px solid rgba(0,0,0,0.07)",
           borderRadius: "28px 28px 0 0",
           maxHeight: "94vh",
         }}
@@ -319,30 +319,30 @@ function ProductDetailModal({
         {/* Header */}
         <div
           className="flex items-center justify-between px-5 py-4 flex-shrink-0"
-          style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}
+          style={{ borderBottom: "1px solid rgba(0,0,0,0.07)" }}
         >
           <button
             onClick={onClose}
             className="w-10 h-10 flex items-center justify-center transition-all active:scale-95"
             style={{
-              background: "rgba(255,255,255,0.08)",
-              border: "1px solid rgba(255,255,255,0.15)",
+              background: "rgba(0,0,0,0.08)",
+              border: "1px solid rgba(0,0,0,0.15)",
               borderRadius: "9999px",
-              color: "rgba(200,185,255,0.65)",
+              color: "#4a5568",
             }}
             aria-label="Retour"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
-          <div className="w-10 h-1 rounded-full" style={{ background: "rgba(255,255,255,0.15)" }} />
+          <div className="w-10 h-1 rounded-full" style={{ background: "rgba(0,0,0,0.15)" }} />
           <button
             onClick={onClose}
             className="w-10 h-10 flex items-center justify-center transition-all active:scale-95"
             style={{
-              background: "rgba(255,255,255,0.08)",
-              border: "1px solid rgba(255,255,255,0.15)",
+              background: "rgba(0,0,0,0.08)",
+              border: "1px solid rgba(0,0,0,0.15)",
               borderRadius: "9999px",
-              color: "rgba(200,185,255,0.65)",
+              color: "#4a5568",
             }}
             aria-label="Fermer"
           >
@@ -355,19 +355,19 @@ function ProductDetailModal({
           {/* Product image */}
           <div
             className="relative aspect-square flex items-center justify-center overflow-hidden"
-            style={{ background: "rgba(255,255,255,0.04)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}
+            style={{ background: "rgba(0,0,0,0.04)", borderBottom: "1px solid rgba(0,0,0,0.06)" }}
           >
             {img ? (
               <img src={img} alt={product.name} className="w-full h-full object-cover" />
             ) : (
-              <Sparkles className="w-16 h-16" style={{ color: "rgba(167,139,250,0.3)" }} />
+              <Sparkles className="w-16 h-16" style={{ color: "rgba(37,99,235,0.3)" }} />
             )}
             <div className="absolute bottom-4 left-4">
               <span
                 className="inline-flex items-center gap-1.5 text-[10px] font-700 px-3 py-1.5"
                 style={{
-                  background: "rgba(13,10,14,0.85)",
-                  border: "1px solid rgba(255,255,255,0.1)",
+                  background: "rgba(251,253,254,0.85)",
+                  border: "1px solid rgba(0,0,0,0.1)",
                   borderRadius: "8px",
                   color: "#c4b5fd",
                   backdropFilter: "blur(10px)",
@@ -385,16 +385,16 @@ function ProductDetailModal({
               <span className="text-[10px] font-700 uppercase tracking-widest" style={{ color: "#a78bfa" }}>
                 {brand}
               </span>
-              <h2 className="text-xl font-800 leading-tight mt-1" style={{ color: "#f3f0ff" }}>
+              <h2 className="text-xl font-800 leading-tight mt-1" style={{ color: "#1a2235" }}>
                 {product.name}
               </h2>
               <div className="flex items-baseline gap-3 mt-2">
-                <span className="text-2xl font-800" style={{ color: "#f3f0ff" }}>
+                <span className="text-2xl font-800" style={{ color: "#1a2235" }}>
                   {product.price ? formatPrice(product.price) : "Sur demande"}
                 </span>
                 <span
                   className="text-[10px] font-700 uppercase tracking-wider"
-                  style={{ color: "rgba(255,255,255,0.35)" }}
+                  style={{ color: "rgba(0,0,0,0.35)" }}
                 >
                   Livraison rapide
                 </span>
@@ -406,14 +406,14 @@ function ProductDetailModal({
               <div
                 className="rounded-2xl p-4"
                 style={{
-                  background: "rgba(233,30,140,0.06)",
-                  border: "1px solid rgba(233,30,140,0.2)",
+                  background: "rgba(37,99,235,0.06)",
+                  border: "1px solid rgba(37,99,235,0.2)",
                 }}
               >
-                <p className="text-[10px] font-bold tracking-wide mb-1.5" style={{ color: "#E91E8C" }}>
+                <p className="text-[10px] font-bold tracking-wide mb-1.5" style={{ color: "#2563eb" }}>
                   {packCopy.emoji} {packCopy.packName}
                 </p>
-                <p className="text-sm font-bold leading-snug mb-2" style={{ color: "#f3f0ff" }}>
+                <p className="text-sm font-bold leading-snug mb-2" style={{ color: "#1a2235" }}>
                   {packCopy.accroche}
                 </p>
                 <p className="text-[10px] font-medium" style={{ color: "rgba(249,168,212,0.8)" }}>
@@ -426,9 +426,9 @@ function ProductDetailModal({
               <p
                 className="text-xs md:text-sm font-500 leading-relaxed px-4 py-3"
                 style={{
-                  color: "rgba(200,185,255,0.65)",
-                  background: "rgba(167,139,250,0.06)",
-                  border: "1px solid rgba(167,139,250,0.18)",
+                  color: "#4a5568",
+                  background: "rgba(37,99,235,0.06)",
+                  border: "1px solid rgba(37,99,235,0.18)",
                   borderRadius: "24px",
                 }}
               >
@@ -443,8 +443,8 @@ function ProductDetailModal({
                 animate={{ opacity: 1, y: 0 }}
                 className="p-4"
                 style={{
-                  background: "rgba(167,139,250,0.06)",
-                  border: "1px solid rgba(167,139,250,0.18)",
+                  background: "rgba(37,99,235,0.06)",
+                  border: "1px solid rgba(37,99,235,0.18)",
                   borderRadius: "24px",
                 }}
               >
@@ -454,7 +454,7 @@ function ProductDetailModal({
                     Analyse clinique GlowScan
                   </h3>
                 </div>
-                <p className="text-xs md:text-sm font-500 leading-relaxed" style={{ color: "rgba(200,185,255,0.65)" }}>
+                <p className="text-xs md:text-sm font-500 leading-relaxed" style={{ color: "#4a5568" }}>
                   {reason}
                 </p>
               </motion.section>
@@ -462,18 +462,18 @@ function ProductDetailModal({
 
             {/* Benefits list */}
             <section>
-              <h3 className="text-xs font-700 mb-3" style={{ color: "rgba(200,185,255,0.65)" }}>
+              <h3 className="text-xs font-700 mb-3" style={{ color: "#4a5568" }}>
                 Impact ciblé sur{" "}
                 <span style={{ color: "#c4b5fd" }}>{targetLabel}</span> :
               </h3>
               <ul className="space-y-2.5">
                 {benefits.map((b, i) => (
-                  <li key={i} className="flex items-start gap-3 text-xs md:text-sm font-500 leading-relaxed" style={{ color: "rgba(200,185,255,0.65)" }}>
+                  <li key={i} className="flex items-start gap-3 text-xs md:text-sm font-500 leading-relaxed" style={{ color: "#4a5568" }}>
                     <div
                       className="w-5 h-5 flex items-center justify-center flex-shrink-0 mt-0.5"
                       style={{
-                        background: "rgba(167,139,250,0.15)",
-                        border: "1px solid rgba(167,139,250,0.3)",
+                        background: "rgba(37,99,235,0.15)",
+                        border: "1px solid rgba(37,99,235,0.3)",
                         borderRadius: "8px",
                       }}
                     >
@@ -506,7 +506,7 @@ function ProductDetailModal({
         <div
           className="p-4 flex-shrink-0"
           style={{
-            borderTop: "1px solid rgba(255,255,255,0.07)",
+            borderTop: "1px solid rgba(0,0,0,0.07)",
             background: "rgba(19,16,31,0.97)",
             backdropFilter: "blur(20px)",
           }}
@@ -516,7 +516,7 @@ function ProductDetailModal({
             onClick={() => onOrder(product)}
             className="w-full flex items-center justify-center gap-2 py-4 text-sm font-800"
             style={{
-              background: "linear-gradient(135deg,#E91E8C,#f43f5e)",
+              background: "linear-gradient(135deg,#2563eb,#f43f5e)",
               borderRadius: "12px",
               color: "#fff",
             }}
@@ -620,9 +620,9 @@ function ProductCard({
         gap: 14,
         alignItems: "flex-start",
         boxShadow: recommended
-          ? "0 2px 16px rgba(124,58,237,0.12)"
+          ? "0 2px 16px rgba(37,99,235,0.12)"
           : "0 2px 12px rgba(0,0,0,0.06)",
-        border: recommended ? "1.5px solid rgba(124,58,237,0.2)" : "1px solid #f0f0f0",
+        border: recommended ? "1.5px solid rgba(37,99,235,0.2)" : "1px solid #f0f0f0",
         position: "relative",
       }}
     >
@@ -630,7 +630,7 @@ function ProductCard({
       {recommended && (
         <div style={{
           position: "absolute", top: -1, left: 16,
-          background: "#7c3aed", color: "#fff",
+          background: "#2563eb", color: "#fff",
           fontSize: 9, fontWeight: 800, letterSpacing: ".04em",
           padding: "3px 8px", borderRadius: "0 0 8px 8px",
           display: "flex", alignItems: "center", gap: 3,
@@ -810,7 +810,7 @@ export default function Shop() {
     return (
       <div
         className="min-h-screen flex flex-col items-center justify-center px-6"
-        style={{ background: "#0d0a0e", fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif' }}
+        style={{ background: "#fbfdfe", fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif' }}
       >
         {/* Glow orb */}
         <div
@@ -821,26 +821,26 @@ export default function Shop() {
             top: "50%",
             left: "50%",
             transform: "translate(-50%,-60%)",
-            background: "radial-gradient(circle, rgba(124,58,237,0.15), transparent)",
+            background: "radial-gradient(circle, rgba(37,99,235,0.15), transparent)",
             borderRadius: "9999px",
           }}
         />
         <div
           className="w-16 h-16 flex items-center justify-center mb-6 text-2xl relative"
           style={{
-            background: "rgba(167,139,250,0.06)",
-            border: "1px solid rgba(167,139,250,0.18)",
+            background: "rgba(37,99,235,0.06)",
+            border: "1px solid rgba(37,99,235,0.18)",
             borderRadius: "24px",
           }}
         >
           🛍️
         </div>
-        <h1 className="text-xl font-800 mb-2" style={{ color: "#f3f0ff" }}>
+        <h1 className="text-xl font-800 mb-2" style={{ color: "#1a2235" }}>
           Boutique GlowScan
         </h1>
         <p
           className="text-xs font-500 text-center max-w-xs mb-8 leading-relaxed"
-          style={{ color: "rgba(200,185,255,0.65)" }}
+          style={{ color: "#4a5568" }}
         >
           Accède aux prescriptions cosmétiques calibrées pour ta mélanine et ton type de peau.
         </p>
@@ -848,7 +848,7 @@ export default function Shop() {
           href="/auth"
           className="w-full max-w-xs flex items-center justify-center py-3.5 text-sm font-800"
           style={{
-            background: "#7c3aed",
+            background: "#2563eb",
             borderRadius: "9999px",
             color: "#fff",
           }}

@@ -359,7 +359,7 @@ export default function Analyze() {
     <div
       className="min-h-screen pb-24"
       style={{
-        background: "#0d0a0e",
+        background: "#fbfdfb",
         fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
       }}
     >
@@ -376,14 +376,14 @@ export default function Analyze() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="fixed inset-0 z-50 flex flex-col items-center justify-center px-5"
-              style={{ background: "#0d0a0e" }}
+              style={{ background: "#fbfdfb" }}
               data-testid="screen-analyzing"
             >
               {/* Ambient glow */}
               <div className="pointer-events-none absolute inset-0 overflow-hidden">
                 <div
                   className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[480px] h-[480px] rounded-full"
-                  style={{ background: "radial-gradient(circle, rgba(124,58,237,0.15), transparent)" }}
+                  style={{ background: "radial-gradient(circle, rgba(47,158,110,0.15), transparent)" }}
                 />
               </div>
 
@@ -393,8 +393,8 @@ export default function Analyze() {
                   <div
                     className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-[10px] font-bold tracking-wide animate-pulse"
                     style={{
-                      background: "rgba(167,139,250,0.15)",
-                      border: "1px solid rgba(167,139,250,0.3)",
+                      background: "rgba(47,158,110,0.15)",
+                      border: "1px solid rgba(47,158,110,0.3)",
                       color: "#c4b5fd",
                     }}
                   >
@@ -407,7 +407,7 @@ export default function Analyze() {
                 <div
                   className="relative w-56 h-56 mx-auto rounded-2xl overflow-hidden"
                   style={{
-                    border: "1px solid rgba(167,139,250,0.25)",
+                    border: "1px solid rgba(47,158,110,0.25)",
                     background: "rgba(14,11,26,1)",
                   }}
                 >
@@ -425,7 +425,7 @@ export default function Analyze() {
                   <div
                     className="absolute inset-0 opacity-10"
                     style={{
-                      backgroundImage: "linear-gradient(rgba(167,139,250,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(167,139,250,0.6) 1px, transparent 1px)",
+                      backgroundImage: "linear-gradient(rgba(47,158,110,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(47,158,110,0.6) 1px, transparent 1px)",
                       backgroundSize: "20px 20px",
                     }}
                   />
@@ -442,18 +442,18 @@ export default function Analyze() {
                 <div className="space-y-2">
                   <div
                     className="flex justify-between text-[10px] font-medium"
-                    style={{ color: "rgba(200,185,255,0.65)" }}
+                    style={{ color: "#4a5a52" }}
                   >
                     <span>{LOADING_STEPS[loadingStep].icon} {LOADING_STEPS[loadingStep].msg}</span>
                     <span style={{ color: "#c4b5fd" }}>{LOADING_STEPS[loadingStep].pct}%</span>
                   </div>
                   <div
                     className="w-full h-1 rounded-full overflow-hidden"
-                    style={{ background: "rgba(255,255,255,0.06)" }}
+                    style={{ background: "rgba(0,0,0,0.06)" }}
                   >
                     <motion.div
                       className="h-full rounded-full"
-                      style={{ background: "linear-gradient(90deg, #7c3aed, #a78bfa)" }}
+                      style={{ background: "linear-gradient(90deg, #2f9e6e, #a78bfa)" }}
                       animate={{ width: `${LOADING_STEPS[loadingStep].pct}%` }}
                       transition={{ duration: 0.4 }}
                     />
@@ -464,9 +464,9 @@ export default function Analyze() {
                 <p
                   className="text-xs leading-relaxed font-medium p-4 rounded-2xl min-h-[64px] flex items-center justify-center"
                   style={{
-                    color: "rgba(200,185,255,0.65)",
-                    background: "rgba(255,255,255,0.04)",
-                    border: "1px solid rgba(255,255,255,0.07)",
+                    color: "#4a5a52",
+                    background: "rgba(0,0,0,0.04)",
+                    border: "1px solid rgba(0,0,0,0.07)",
                   }}
                 >
                   {LOADING_TIPS[loadingTip]}
@@ -488,7 +488,7 @@ export default function Analyze() {
               <div className="pointer-events-none absolute inset-0 overflow-hidden">
                 <div
                   className="absolute top-0 left-1/2 -translate-x-1/2 w-[360px] h-[360px] rounded-full"
-                  style={{ background: "radial-gradient(circle, rgba(124,58,237,0.15), transparent)" }}
+                  style={{ background: "radial-gradient(circle, rgba(47,158,110,0.15), transparent)" }}
                 />
               </div>
 
@@ -496,18 +496,18 @@ export default function Analyze() {
                 <div
                   className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[10px] font-bold tracking-wide mb-4"
                   style={{
-                    background: "rgba(167,139,250,0.15)",
-                    border: "1px solid rgba(167,139,250,0.3)",
+                    background: "rgba(47,158,110,0.15)",
+                    border: "1px solid rgba(47,158,110,0.3)",
                     color: "#c4b5fd",
                   }}
                 >
                   <Sparkles className="w-3 h-3" />
                   Nouveau diagnostic
                 </div>
-                <h1 className="text-xl font-bold" style={{ color: "#f3f0ff" }}>
+                <h1 className="text-xl font-bold" style={{ color: "#1f2a26" }}>
                   Que veux-tu analyser ?
                 </h1>
-                <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.35)" }}>
+                <p className="text-xs mt-1" style={{ color: "rgba(0,0,0,0.35)" }}>
                   Choisis une zone pour commencer
                 </p>
               </div>
@@ -532,28 +532,28 @@ export default function Analyze() {
                     onClick={() => handleAreaSelect(area.id)}
                     className="rounded-2xl p-5 text-left flex items-start gap-4 transition-all active:scale-[0.98]"
                     style={{
-                      background: "rgba(167,139,250,0.06)",
-                      border: "1px solid rgba(167,139,250,0.18)",
+                      background: "rgba(47,158,110,0.06)",
+                      border: "1px solid rgba(47,158,110,0.18)",
                     }}
                   >
                     <div
                       className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
                       style={{
-                        background: "rgba(124,58,237,0.15)",
-                        border: "1px solid rgba(167,139,250,0.25)",
+                        background: "rgba(47,158,110,0.15)",
+                        border: "1px solid rgba(47,158,110,0.25)",
                       }}
                     >
                       {area.icon}
                     </div>
                     <div className="flex-1">
-                      <h3 className="text-sm font-bold" style={{ color: "#f3f0ff" }}>
+                      <h3 className="text-sm font-bold" style={{ color: "#1f2a26" }}>
                         {area.label}
                       </h3>
-                      <p className="text-xs mt-0.5 leading-normal" style={{ color: "rgba(200,185,255,0.65)" }}>
+                      <p className="text-xs mt-0.5 leading-normal" style={{ color: "#4a5a52" }}>
                         {area.desc}
                       </p>
                     </div>
-                    <ChevronRight className="w-4 h-4 self-center" style={{ color: "rgba(255,255,255,0.25)" }} />
+                    <ChevronRight className="w-4 h-4 self-center" style={{ color: "rgba(0,0,0,0.25)" }} />
                   </button>
                 ))}
               </div>
@@ -574,14 +574,14 @@ export default function Analyze() {
                   onClick={() => setStep("select")}
                   className="w-9 h-9 rounded-xl flex items-center justify-center transition-all active:scale-95"
                   style={{
-                    background: "rgba(255,255,255,0.04)",
-                    border: "1px solid rgba(255,255,255,0.07)",
-                    color: "rgba(200,185,255,0.65)",
+                    background: "rgba(0,0,0,0.04)",
+                    border: "1px solid rgba(0,0,0,0.07)",
+                    color: "#4a5a52",
                   }}
                 >
                   <ArrowLeft className="w-4 h-4" />
                 </button>
-                <span className="text-xs font-bold" style={{ color: "#f3f0ff" }}>
+                <span className="text-xs font-bold" style={{ color: "#1f2a26" }}>
                   {selectedArea === "hair" ? "Photo du cuir chevelu" : "Capture faciale"}
                 </span>
               </div>
@@ -619,7 +619,7 @@ export default function Analyze() {
                         </li>
                       ))}
                     </ul>
-                    <p className="text-[10px] mt-2 font-medium" style={{ color: "rgba(255,255,255,0.35)" }}>
+                    <p className="text-[10px] mt-2 font-medium" style={{ color: "rgba(0,0,0,0.35)" }}>
                       Une photo floue ou trop éloignée empêche l'analyse — l'IA a besoin de voir ta peau clairement.
                     </p>
                   </div>
@@ -629,8 +629,8 @@ export default function Analyze() {
               <div
                 className="rounded-2xl p-5"
                 style={{
-                  background: "rgba(255,255,255,0.04)",
-                  border: "1px solid rgba(255,255,255,0.07)",
+                  background: "rgba(0,0,0,0.04)",
+                  border: "1px solid rgba(0,0,0,0.07)",
                 }}
               >
                 {/* autoStart=true : la caméra démarre seulement quand cette section est montée */}
@@ -653,37 +653,37 @@ export default function Analyze() {
                 <button
                   onClick={() => setStep("upload")}
                   className="w-9 h-9 rounded-xl flex items-center justify-center transition-all active:scale-95"
-                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(200,185,255,0.65)" }}
+                  style={{ background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.07)", color: "#4a5a52" }}
                 >
                   <ArrowLeft className="w-4 h-4" />
                 </button>
                 <div>
-                  <p className="text-sm font-bold" style={{ color: "#f3f0ff" }}>Votre dossier de consultation</p>
-                  <p className="text-[10px]" style={{ color: "rgba(255,255,255,0.35)" }}>Pour personnaliser votre diagnostic</p>
+                  <p className="text-sm font-bold" style={{ color: "#1f2a26" }}>Votre dossier de consultation</p>
+                  <p className="text-[10px]" style={{ color: "rgba(0,0,0,0.35)" }}>Pour personnaliser votre diagnostic</p>
                 </div>
               </div>
 
               {/* Aperçu photo */}
               {uploadedImage && (
-                <div className="flex items-center gap-3 rounded-2xl p-3" style={{ background: "rgba(167,139,250,0.06)", border: "1px solid rgba(167,139,250,0.18)" }}>
-                  <img src={uploadedImage} alt="Photo" className="w-12 h-12 rounded-xl object-cover border-2" style={{ borderColor: "#7c3aed" }} />
+                <div className="flex items-center gap-3 rounded-2xl p-3" style={{ background: "rgba(47,158,110,0.06)", border: "1px solid rgba(47,158,110,0.18)" }}>
+                  <img src={uploadedImage} alt="Photo" className="w-12 h-12 rounded-xl object-cover border-2" style={{ borderColor: "#2f9e6e" }} />
                   <div>
                     <p className="text-xs font-bold" style={{ color: "#c4b5fd" }}>Photo reçue ✓</p>
-                    <p className="text-[10px]" style={{ color: "rgba(255,255,255,0.35)" }}>Analyse prête — complète le dossier</p>
+                    <p className="text-[10px]" style={{ color: "rgba(0,0,0,0.35)" }}>Analyse prête — complète le dossier</p>
                   </div>
                 </div>
               )}
 
               <form onSubmit={handleIntakeSubmit} className="space-y-3">
-                <div className="rounded-2xl p-4 space-y-3" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
-                  <p className="text-[10px] font-bold tracking-wider uppercase" style={{ color: "rgba(255,255,255,0.35)" }}>
+                <div className="rounded-2xl p-4 space-y-3" style={{ background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.07)" }}>
+                  <p className="text-[10px] font-bold tracking-wider uppercase" style={{ color: "rgba(0,0,0,0.35)" }}>
                     Informations personnelles
                   </p>
 
                   {/* Nom et Prénom */}
                   <div>
-                    <label className="text-xs font-bold block mb-1.5" style={{ color: "#f3f0ff" }}>
-                      👤 Nom et Prénom <span style={{ color: "rgba(255,255,255,0.35)", fontWeight: 400 }}>(optionnel)</span>
+                    <label className="text-xs font-bold block mb-1.5" style={{ color: "#1f2a26" }}>
+                      👤 Nom et Prénom <span style={{ color: "rgba(0,0,0,0.35)", fontWeight: 400 }}>(optionnel)</span>
                     </label>
                     <input
                       type="text"
@@ -691,16 +691,16 @@ export default function Analyze() {
                       value={intake.fullName}
                       onChange={e => updateIntake("fullName", e.target.value)}
                       className="w-full px-3.5 py-2.5 text-xs font-medium outline-none transition-colors"
-                      style={{ background: "#13101f", border: "1px solid rgba(167,139,250,0.2)", borderRadius: "10px", color: "#f3f0ff" }}
-                      onFocus={e => (e.target.style.borderColor = "rgba(167,139,250,0.5)")}
-                      onBlur={e => (e.target.style.borderColor = "rgba(167,139,250,0.2)")}
+                      style={{ background: "#ffffff", border: "1px solid rgba(47,158,110,0.2)", borderRadius: "10px", color: "#1f2a26" }}
+                      onFocus={e => (e.target.style.borderColor = "rgba(47,158,110,0.5)")}
+                      onBlur={e => (e.target.style.borderColor = "rgba(47,158,110,0.2)")}
                     />
                   </div>
 
                   {/* Téléphone */}
                   <div>
-                    <label className="text-xs font-bold block mb-1.5" style={{ color: "#f3f0ff" }}>
-                      📞 Numéro de téléphone <span style={{ color: "rgba(255,255,255,0.35)", fontWeight: 400 }}>(optionnel)</span>
+                    <label className="text-xs font-bold block mb-1.5" style={{ color: "#1f2a26" }}>
+                      📞 Numéro de téléphone <span style={{ color: "rgba(0,0,0,0.35)", fontWeight: 400 }}>(optionnel)</span>
                     </label>
                     <input
                       type="tel"
@@ -708,23 +708,23 @@ export default function Analyze() {
                       value={intake.phone}
                       onChange={e => updateIntake("phone", e.target.value)}
                       className="w-full px-3.5 py-2.5 text-xs font-medium outline-none transition-colors"
-                      style={{ background: "#13101f", border: "1px solid rgba(167,139,250,0.2)", borderRadius: "10px", color: "#f3f0ff" }}
-                      onFocus={e => (e.target.style.borderColor = "rgba(167,139,250,0.5)")}
-                      onBlur={e => (e.target.style.borderColor = "rgba(167,139,250,0.2)")}
+                      style={{ background: "#ffffff", border: "1px solid rgba(47,158,110,0.2)", borderRadius: "10px", color: "#1f2a26" }}
+                      onFocus={e => (e.target.style.borderColor = "rgba(47,158,110,0.5)")}
+                      onBlur={e => (e.target.style.borderColor = "rgba(47,158,110,0.2)")}
                     />
                   </div>
 
                   {/* Âge */}
                   <div>
-                    <label className="text-xs font-bold block mb-1.5" style={{ color: "#f3f0ff" }}>
-                      ⏳ Âge <span style={{ color: "#E91E8C" }}>*</span>
+                    <label className="text-xs font-bold block mb-1.5" style={{ color: "#1f2a26" }}>
+                      ⏳ Âge <span style={{ color: "#2f9e6e" }}>*</span>
                     </label>
                     <select
                       required
                       value={intake.age}
                       onChange={e => updateIntake("age", e.target.value)}
                       className="w-full px-3.5 py-2.5 text-xs font-medium outline-none transition-colors"
-                      style={{ background: "#13101f", border: "1px solid rgba(167,139,250,0.2)", borderRadius: "10px", color: intake.age ? "#f3f0ff" : "rgba(255,255,255,0.35)" }}
+                      style={{ background: "#ffffff", border: "1px solid rgba(47,158,110,0.2)", borderRadius: "10px", color: intake.age ? "#1f2a26" : "rgba(0,0,0,0.35)" }}
                     >
                       <option value="" disabled>Sélectionne ton âge</option>
                       <option value="moins de 15 ans">Moins de 15 ans</option>
@@ -738,22 +738,22 @@ export default function Analyze() {
                   </div>
                 </div>
 
-                <div className="rounded-2xl p-4 space-y-3" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
-                  <p className="text-[10px] font-bold tracking-wider uppercase" style={{ color: "rgba(255,255,255,0.35)" }}>
+                <div className="rounded-2xl p-4 space-y-3" style={{ background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.07)" }}>
+                  <p className="text-[10px] font-bold tracking-wider uppercase" style={{ color: "rgba(0,0,0,0.35)" }}>
                     Antécédents et symptômes
                   </p>
 
                   {/* Durée du problème */}
                   <div>
-                    <label className="text-xs font-bold block mb-1.5" style={{ color: "#f3f0ff" }}>
-                      🩺 Depuis combien de temps avez-vous ce problème ? <span style={{ color: "#E91E8C" }}>*</span>
+                    <label className="text-xs font-bold block mb-1.5" style={{ color: "#1f2a26" }}>
+                      🩺 Depuis combien de temps avez-vous ce problème ? <span style={{ color: "#2f9e6e" }}>*</span>
                     </label>
                     <select
                       required
                       value={intake.duration}
                       onChange={e => updateIntake("duration", e.target.value)}
                       className="w-full px-3.5 py-2.5 text-xs font-medium outline-none transition-colors"
-                      style={{ background: "#13101f", border: "1px solid rgba(167,139,250,0.2)", borderRadius: "10px", color: intake.duration ? "#f3f0ff" : "rgba(255,255,255,0.35)" }}
+                      style={{ background: "#ffffff", border: "1px solid rgba(47,158,110,0.2)", borderRadius: "10px", color: intake.duration ? "#1f2a26" : "rgba(0,0,0,0.35)" }}
                     >
                       <option value="" disabled>Sélectionne la durée</option>
                       <option value="quelques jours">Quelques jours (moins d'une semaine)</option>
@@ -768,7 +768,7 @@ export default function Analyze() {
 
                   {/* Produits déjà utilisés */}
                   <div>
-                    <label className="text-xs font-bold block mb-1.5" style={{ color: "#f3f0ff" }}>
+                    <label className="text-xs font-bold block mb-1.5" style={{ color: "#1f2a26" }}>
                       🛍️ Avez-vous déjà appliqué des produits ou des crèmes ?
                     </label>
                     <textarea
@@ -777,15 +777,15 @@ export default function Analyze() {
                       onChange={e => updateIntake("previousProducts", e.target.value)}
                       rows={2}
                       className="w-full px-3.5 py-2.5 text-xs font-medium outline-none transition-colors resize-none"
-                      style={{ background: "#13101f", border: "1px solid rgba(167,139,250,0.2)", borderRadius: "10px", color: "#f3f0ff" }}
-                      onFocus={e => (e.target.style.borderColor = "rgba(167,139,250,0.5)")}
-                      onBlur={e => (e.target.style.borderColor = "rgba(167,139,250,0.2)")}
+                      style={{ background: "#ffffff", border: "1px solid rgba(47,158,110,0.2)", borderRadius: "10px", color: "#1f2a26" }}
+                      onFocus={e => (e.target.style.borderColor = "rgba(47,158,110,0.5)")}
+                      onBlur={e => (e.target.style.borderColor = "rgba(47,158,110,0.2)")}
                     />
                   </div>
 
                   {/* Allergies */}
                   <div>
-                    <label className="text-xs font-bold block mb-1.5" style={{ color: "#f3f0ff" }}>
+                    <label className="text-xs font-bold block mb-1.5" style={{ color: "#1f2a26" }}>
                       ⚠️ Avez-vous des allergies cutanées connues ?
                     </label>
                     <input
@@ -794,9 +794,9 @@ export default function Analyze() {
                       value={intake.allergies}
                       onChange={e => updateIntake("allergies", e.target.value)}
                       className="w-full px-3.5 py-2.5 text-xs font-medium outline-none transition-colors"
-                      style={{ background: "#13101f", border: "1px solid rgba(167,139,250,0.2)", borderRadius: "10px", color: "#f3f0ff" }}
-                      onFocus={e => (e.target.style.borderColor = "rgba(167,139,250,0.5)")}
-                      onBlur={e => (e.target.style.borderColor = "rgba(167,139,250,0.2)")}
+                      style={{ background: "#ffffff", border: "1px solid rgba(47,158,110,0.2)", borderRadius: "10px", color: "#1f2a26" }}
+                      onFocus={e => (e.target.style.borderColor = "rgba(47,158,110,0.5)")}
+                      onBlur={e => (e.target.style.borderColor = "rgba(47,158,110,0.2)")}
                     />
                   </div>
                 </div>
@@ -804,13 +804,13 @@ export default function Analyze() {
                 <button
                   type="submit"
                   className="w-full py-4 text-sm font-extrabold transition-all active:scale-[0.98] relative overflow-hidden"
-                  style={{ background: "linear-gradient(135deg, #E91E8C, #f43f5e)", borderRadius: "14px", color: "#fff" }}
+                  style={{ background: "linear-gradient(135deg, #2f9e6e, #f43f5e)", borderRadius: "14px", color: "#fff" }}
                 >
-                  <div className="absolute top-0 left-0 right-0 h-1/2" style={{ background: "linear-gradient(to bottom, rgba(255,255,255,0.1), transparent)", borderRadius: "14px 14px 0 0" }} />
+                  <div className="absolute top-0 left-0 right-0 h-1/2" style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.1), transparent)", borderRadius: "14px 14px 0 0" }} />
                   <span className="relative z-10">✦ Lancer mon analyse GlowScan</span>
                 </button>
 
-                <p className="text-center text-[10px]" style={{ color: "rgba(255,255,255,0.25)" }}>
+                <p className="text-center text-[10px]" style={{ color: "rgba(0,0,0,0.25)" }}>
                   Tes données restent privées · Analyse en 30 secondes
                 </p>
               </form>
@@ -830,19 +830,19 @@ export default function Analyze() {
               <div
                 className="rounded-2xl p-5 relative overflow-hidden"
                 style={{
-                  background: "rgba(167,139,250,0.06)",
-                  border: "1px solid rgba(167,139,250,0.18)",
+                  background: "rgba(47,158,110,0.06)",
+                  border: "1px solid rgba(47,158,110,0.18)",
                 }}
               >
                 <div
                   className="pointer-events-none absolute top-0 right-0 w-32 h-32 rounded-full"
-                  style={{ background: "radial-gradient(circle, rgba(124,58,237,0.15), transparent)" }}
+                  style={{ background: "radial-gradient(circle, rgba(47,158,110,0.15), transparent)" }}
                 />
                 <div className="flex items-center gap-2 mb-2" style={{ color: "#a78bfa" }}>
                   <HelpCircle className="w-4 h-4" />
                   <span className="text-[10px] font-bold tracking-wide">Première observation IA</span>
                 </div>
-                <p className="text-xs font-medium leading-relaxed italic" style={{ color: "rgba(200,185,255,0.65)" }}>
+                <p className="text-xs font-medium leading-relaxed italic" style={{ color: "#4a5a52" }}>
                   "{consultationData.observations_visuelles}"
                 </p>
               </div>
@@ -852,20 +852,20 @@ export default function Analyze() {
                 onSubmit={handleConsultationSubmit}
                 className="space-y-4 rounded-2xl p-5"
                 style={{
-                  background: "rgba(255,255,255,0.04)",
-                  border: "1px solid rgba(255,255,255,0.07)",
+                  background: "rgba(0,0,0,0.04)",
+                  border: "1px solid rgba(0,0,0,0.07)",
                 }}
               >
                 <span
                   className="text-[10px] font-bold tracking-wide block mb-1"
-                  style={{ color: "rgba(255,255,255,0.35)" }}
+                  style={{ color: "rgba(0,0,0,0.35)" }}
                 >
                   Quelques questions pour affiner le diagnostic
                 </span>
 
                 {consultationData.questions.map((q) => (
                   <div key={q.id} className="space-y-1.5">
-                    <label className="text-xs font-bold leading-normal block" style={{ color: "#f3f0ff" }}>
+                    <label className="text-xs font-bold leading-normal block" style={{ color: "#1f2a26" }}>
                       {q.label}
                     </label>
                     <input
@@ -876,13 +876,13 @@ export default function Analyze() {
                       onChange={(e) => handleInputChange(q.id, e.target.value)}
                       className="w-full px-3.5 py-2.5 text-xs font-medium outline-none transition-colors"
                       style={{
-                        background: "#13101f",
-                        border: "1px solid rgba(167,139,250,0.2)",
+                        background: "#ffffff",
+                        border: "1px solid rgba(47,158,110,0.2)",
                         borderRadius: "12px",
-                        color: "#f3f0ff",
+                        color: "#1f2a26",
                       }}
-                      onFocus={e => (e.target.style.borderColor = "rgba(167,139,250,0.5)")}
-                      onBlur={e => (e.target.style.borderColor = "rgba(167,139,250,0.2)")}
+                      onFocus={e => (e.target.style.borderColor = "rgba(47,158,110,0.5)")}
+                      onBlur={e => (e.target.style.borderColor = "rgba(47,158,110,0.2)")}
                     />
                   </div>
                 ))}
@@ -891,7 +891,7 @@ export default function Analyze() {
                   type="submit"
                   className="w-full py-3.5 text-sm font-bold mt-2 transition-all active:scale-[0.98]"
                   style={{
-                    background: "#7c3aed",
+                    background: "#2f9e6e",
                     borderRadius: "9999px",
                     color: "#fff",
                   }}
@@ -913,7 +913,7 @@ export default function Analyze() {
             >
               <Suspense fallback={
                 <div style={{ display: "flex", justifyContent: "center", padding: "48px 0" }}>
-                  <div style={{ width: "32px", height: "32px", border: "3px solid rgba(167,139,250,0.3)", borderTopColor: "#a78bfa", borderRadius: "9999px", animation: "spin 0.8s linear infinite" }} />
+                  <div style={{ width: "32px", height: "32px", border: "3px solid rgba(47,158,110,0.3)", borderTopColor: "#a78bfa", borderRadius: "9999px", animation: "spin 0.8s linear infinite" }} />
                 </div>
               }>
                 <ResultCard
@@ -943,25 +943,25 @@ export default function Analyze() {
               animate={{ opacity: 1, y: 0 }}
               className="rounded-2xl p-6 text-center space-y-5"
               style={{
-                background: "rgba(255,255,255,0.04)",
-                border: "1px solid rgba(255,255,255,0.07)",
+                background: "rgba(0,0,0,0.04)",
+                border: "1px solid rgba(0,0,0,0.07)",
               }}
             >
               <div
                 className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto"
                 style={{
-                  background: "rgba(124,58,237,0.12)",
-                  border: "1px solid rgba(167,139,250,0.25)",
+                  background: "rgba(47,158,110,0.12)",
+                  border: "1px solid rgba(47,158,110,0.25)",
                 }}
               >
                 <Lock className="w-6 h-6" style={{ color: "#a78bfa" }} />
               </div>
 
               <div>
-                <h3 className="text-base font-bold" style={{ color: "#f3f0ff" }}>
+                <h3 className="text-base font-bold" style={{ color: "#1f2a26" }}>
                   Garde ta peau en mémoire
                 </h3>
-                <p className="text-xs mt-2 leading-relaxed" style={{ color: "rgba(200,185,255,0.65)" }}>
+                <p className="text-xs mt-2 leading-relaxed" style={{ color: "#4a5a52" }}>
                   Crée ton compte gratuit pour sauvegarder tes analyses, suivre l'évolution de ta peau et accéder à ton historique à tout moment.
                 </p>
               </div>
@@ -970,7 +970,7 @@ export default function Analyze() {
                 onClick={() => (window.location.href = "/auth")}
                 className="w-full py-3.5 text-sm font-bold transition-all active:scale-[0.98]"
                 style={{
-                  background: "#7c3aed",
+                  background: "#2f9e6e",
                   borderRadius: "9999px",
                   color: "#fff",
                 }}
