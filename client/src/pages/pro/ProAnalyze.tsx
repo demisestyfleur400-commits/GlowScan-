@@ -1474,6 +1474,7 @@ export default function ProAnalyze() {
                       region: patientRegion || undefined,
                       motif: consultMotif || undefined,
                     }}
+                    onPdfReady={(fn) => { pdfFnRef.current = fn; }}
                   />
                 </Suspense>
 
@@ -1892,7 +1893,11 @@ export default function ProAnalyze() {
                   {/* Actions */}
                   {/* ── Bouton principal PDF ── */}
                   <button
-                    onClick={openPdfViewer}
+                    onClick={() => {
+                      // PDF unifié = base B2C + pages médicales (généré par ResultCard).
+                      if (pdfFnRef.current) { pdfFnRef.current(); }
+                      else { openPdfViewer(); } // filet de secours
+                    }}
                     data-testid="button-pdf"
                     className="w-full inline-flex items-center justify-center gap-2 py-3.5 rounded-full text-white font-extrabold active:scale-[0.98] transition-all mb-3"
                     style={{ background: NAVY, fontSize: 14 }}
