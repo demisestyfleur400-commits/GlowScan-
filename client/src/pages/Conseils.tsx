@@ -79,12 +79,12 @@ const SECTIONS: { skin: string; emoji: string; tips: string[] }[] = [
 ];
 
 const DS = {
-  base: "#0d0a0e",
-  surface: "#13101f",
-  text: "#f3f0ff",
-  body: "rgba(200,185,255,0.65)",
-  muted: "rgba(255,255,255,0.35)",
-  border: "rgba(255,255,255,0.07)",
+  base: "#fbfdfb",
+  surface: "#ffffff",
+  text: "#1f2a26",
+  body: "#4a5a52",
+  muted: "#6b7d76",
+  border: "rgba(0,0,0,0.07)",
 };
 
 export default function Conseils() {
@@ -118,27 +118,27 @@ export default function Conseils() {
       {/* Header */}
       <header
         className="px-5 pt-12 pb-5 sticky top-0 z-10"
-        style={{ background: "rgba(13,10,14,0.92)", backdropFilter: "blur(12px)", borderBottom: `1px solid ${DS.border}` }}
+        style={{ background: "rgba(251,253,251,0.9)", backdropFilter: "blur(12px)", borderBottom: `1px solid ${DS.border}` }}
       >
         <div className="flex items-center gap-4">
           <button
             onClick={() => setLocation("/")}
             data-testid="button-back"
             className="w-10 h-10 rounded-xl flex items-center justify-center active:scale-95 transition-all"
-            style={{ background: "rgba(255,255,255,0.05)", border: `1px solid ${DS.border}` }}
+            style={{ background: "rgba(0,0,0,0.05)", border: `1px solid ${DS.border}` }}
             aria-label="Retour"
           >
             <ArrowLeft className="w-4 h-4" style={{ color: DS.body }} />
           </button>
           <div className="flex-1">
-            <span className="text-[10px] font-extrabold tracking-widest uppercase" style={{ color: "#a78bfa" }}>
+            <span className="text-[10px] font-extrabold tracking-widest uppercase" style={{ color: "#3fbf86" }}>
               Base de connaissances
             </span>
             <h1 className="text-xl font-extrabold tracking-tight mt-0.5" style={{ color: DS.text }}>
               Protocoles cutanés
             </h1>
           </div>
-          <Sparkles className="w-4 h-4" style={{ color: "rgba(255,255,255,0.25)" }} />
+          <Sparkles className="w-4 h-4" style={{ color: "rgba(0,0,0,0.25)" }} />
         </div>
       </header>
 
@@ -150,17 +150,17 @@ export default function Conseils() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
           className="rounded-2xl overflow-hidden"
-          style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${DS.border}` }}
+          style={{ background: "rgba(0,0,0,0.04)", border: `1px solid ${DS.border}` }}
           data-testid="section-personalized-tips"
         >
           {/* Header carte */}
           <div
             className="px-5 py-4 flex items-center justify-between"
-            style={{ background: "rgba(124,58,237,0.1)", borderBottom: "1px solid rgba(167,139,250,0.15)" }}
+            style={{ background: "rgba(47,158,110,0.1)", borderBottom: "1px solid rgba(47,158,110,0.15)" }}
           >
             <div>
               <div className="flex items-center gap-1.5 opacity-80">
-                <Wand2 className="w-3.5 h-3.5" style={{ color: "#a78bfa" }} />
+                <Wand2 className="w-3.5 h-3.5" style={{ color: "#3fbf86" }} />
                 <span className="text-[9px] font-extrabold tracking-widest uppercase" style={{ color: DS.muted }}>
                   Analyse algorithmique
                 </span>
@@ -171,7 +171,7 @@ export default function Conseils() {
             </div>
             <span
               className="px-2.5 py-1 rounded-lg text-[9px] font-extrabold uppercase tracking-widest"
-              style={{ background: "rgba(167,139,250,0.15)", border: "1px solid rgba(167,139,250,0.3)", color: "#c4b5fd" }}
+              style={{ background: "rgba(47,158,110,0.15)", border: "1px solid rgba(47,158,110,0.3)", color: "#7fd3a6" }}
             >
               Live Core
             </span>
@@ -182,10 +182,10 @@ export default function Conseils() {
               <div className="space-y-3.5" data-testid="personalized-loading">
                 {[0, 1, 2].map((i) => (
                   <div key={i} className="flex items-start gap-3 animate-pulse">
-                    <div className="w-6 h-6 rounded-lg flex-shrink-0" style={{ background: "rgba(255,255,255,0.06)" }} />
+                    <div className="w-6 h-6 rounded-lg flex-shrink-0" style={{ background: "rgba(0,0,0,0.06)" }} />
                     <div className="flex-1 space-y-2 pt-1">
-                      <div className="h-2.5 rounded w-full" style={{ background: "rgba(255,255,255,0.06)" }} />
-                      <div className="h-2.5 rounded w-5/6" style={{ background: "rgba(255,255,255,0.06)" }} />
+                      <div className="h-2.5 rounded w-full" style={{ background: "rgba(0,0,0,0.06)" }} />
+                      <div className="h-2.5 rounded w-5/6" style={{ background: "rgba(0,0,0,0.06)" }} />
                     </div>
                   </div>
                 ))}
@@ -198,7 +198,7 @@ export default function Conseils() {
                 <button
                   onClick={() => setLocation("/analyze")}
                   className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-extrabold text-white active:scale-95 transition-all"
-                  style={{ background: "#7c3aed" }}
+                  style={{ background: "#2f9e6e" }}
                 >
                   <ScanLine className="w-4 h-4" />
                   Lancer le scan facial IA
@@ -224,9 +224,9 @@ export default function Conseils() {
                   >
                     <div
                       className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0"
-                      style={{ background: "rgba(124,58,237,0.15)", border: "1px solid rgba(167,139,250,0.25)" }}
+                      style={{ background: "rgba(47,158,110,0.15)", border: "1px solid rgba(47,158,110,0.25)" }}
                     >
-                      <span className="text-[10px] font-extrabold" style={{ color: "#c4b5fd" }}>{i + 1}</span>
+                      <span className="text-[10px] font-extrabold" style={{ color: "#7fd3a6" }}>{i + 1}</span>
                     </div>
                     <p className="text-xs leading-relaxed font-medium flex-1 pt-0.5" style={{ color: DS.body }}>
                       {tip}
@@ -261,11 +261,11 @@ export default function Conseils() {
                 <div
                   key={tIdx}
                   className="flex items-start gap-3.5 p-4 rounded-xl"
-                  style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${DS.border}` }}
+                  style={{ background: "rgba(0,0,0,0.04)", border: `1px solid ${DS.border}` }}
                 >
                   <div
                     className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0"
-                    style={{ background: "rgba(255,255,255,0.06)", border: `1px solid ${DS.border}` }}
+                    style={{ background: "rgba(0,0,0,0.06)", border: `1px solid ${DS.border}` }}
                   >
                     <span className="text-[10px] font-extrabold" style={{ color: DS.muted }}>{tIdx + 1}</span>
                   </div>
@@ -284,11 +284,11 @@ export default function Conseils() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           className="rounded-2xl p-5 relative overflow-hidden"
-          style={{ background: "rgba(167,139,250,0.06)", border: "1px solid rgba(167,139,250,0.2)" }}
+          style={{ background: "rgba(47,158,110,0.06)", border: "1px solid rgba(47,158,110,0.2)" }}
         >
-          <div className="pointer-events-none absolute top-0 right-0 w-32 h-32" style={{ background: "radial-gradient(circle, rgba(124,58,237,0.15) 0%, transparent 70%)" }} />
+          <div className="pointer-events-none absolute top-0 right-0 w-32 h-32" style={{ background: "radial-gradient(circle, rgba(47,158,110,0.15) 0%, transparent 70%)" }} />
 
-          <span className="text-[9px] font-extrabold tracking-widest uppercase block mb-1" style={{ color: "#a78bfa" }}>
+          <span className="text-[9px] font-extrabold tracking-widest uppercase block mb-1" style={{ color: "#3fbf86" }}>
             Core Engine · SkinBot
           </span>
           <h3 className="text-base font-extrabold mb-1.5" style={{ color: DS.text }}>
@@ -300,7 +300,7 @@ export default function Conseils() {
           <button
             onClick={() => setLocation("/chat")}
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-extrabold text-white active:scale-95 transition-all"
-            style={{ background: "#7c3aed" }}
+            style={{ background: "#2f9e6e" }}
           >
             Consulter SkinBot <ChevronRight className="w-3.5 h-3.5" />
           </button>

@@ -25,13 +25,13 @@ import type { AnalysisResult } from "@shared/schema";
 //  Design tokens (inline, no tailwind conflict)
 // ─────────────────────────────────────────────────────────────────────
 const DS = {
-  bg: "#0d0a0e",
-  surface: "#13101f",
-  element: "#0e0b1a",
-  textPrimary: "#f3f0ff",
-  textBody: "rgba(200,185,255,0.65)",
-  textMuted: "rgba(255,255,255,0.35)",
-  textHint: "rgba(255,255,255,0.25)",
+  bg: "#fbfbfe",
+  surface: "#ffffff",
+  element: "#f3f1fb",
+  textPrimary: "#1f1a2e",
+  textBody: "#5a5470",
+  textMuted: "#8b86a0",
+  textHint: "#a8a3ba",
   violet: "#7c3aed",
   violetMid: "#a78bfa",
   violetLight: "#c4b5fd",
@@ -40,8 +40,8 @@ const DS = {
   green: "#6ee7b7",
   amber: "#fbbf24",
   subtleCard: {
-    background: "rgba(255,255,255,0.04)",
-    border: "1px solid rgba(255,255,255,0.07)",
+    background: "rgba(0,0,0,0.04)",
+    border: "1px solid rgba(0,0,0,0.07)",
     borderRadius: 24,
   },
   violetCard: {
@@ -116,7 +116,7 @@ function ScoreChart({ scans }: { scans: Array<{ score: number | null; createdAt:
         </defs>
         {[0, 25, 50, 75, 100].map(v => (
           <line key={v} x1={pad} y1={toY(v)} x2={W - pad} y2={toY(v)}
-            stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
+            stroke="rgba(0,0,0,0.06)" strokeWidth="1" />
         ))}
         <path d={path} fill="none" stroke="url(#chartGrad)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
         {pts.map((p, i) => (
@@ -222,12 +222,12 @@ function ScanDetailModal({ scan, onClose }: { scan: ScanRecord; onClose: () => v
     >
       <div
         className="sticky top-0 z-10 px-4 py-3 flex items-center gap-3"
-        style={{ background: "rgba(13,10,14,0.95)", borderBottom: "1px solid rgba(255,255,255,0.07)", backdropFilter: "blur(20px)" }}
+        style={{ background: "rgba(251,251,254,0.9)", borderBottom: "1px solid rgba(0,0,0,0.07)", backdropFilter: "blur(20px)" }}
       >
         <button
           onClick={onClose}
           className="w-9 h-9 flex items-center justify-center active:scale-90 transition-all"
-          style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "9999px", color: DS.textBody }}
+          style={{ background: "rgba(0,0,0,0.08)", border: "1px solid rgba(0,0,0,0.15)", borderRadius: "9999px", color: DS.textBody }}
           data-testid="button-close-scan-detail"
         >
           <ArrowLeft className="w-4 h-4" />
@@ -278,12 +278,12 @@ function CompareModal({ scanA, scanB, onClose }: { scanA: ScanRecord; scanB: Sca
     >
       <div
         className="sticky top-0 z-10 px-4 py-3 flex items-center gap-3"
-        style={{ background: "rgba(13,10,14,0.95)", borderBottom: "1px solid rgba(255,255,255,0.07)", backdropFilter: "blur(20px)" }}
+        style={{ background: "rgba(251,251,254,0.9)", borderBottom: "1px solid rgba(0,0,0,0.07)", backdropFilter: "blur(20px)" }}
       >
         <button
           onClick={onClose}
           className="w-9 h-9 flex items-center justify-center active:scale-90 transition-all"
-          style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "9999px", color: DS.textBody }}
+          style={{ background: "rgba(0,0,0,0.08)", border: "1px solid rgba(0,0,0,0.15)", borderRadius: "9999px", color: DS.textBody }}
           data-testid="button-close-compare"
         >
           <ArrowLeft className="w-4 h-4" />
@@ -329,7 +329,7 @@ function CompareModal({ scanA, scanB, onClose }: { scanA: ScanRecord; scanB: Sca
         <div className="p-5" style={{ ...DS.subtleCard } as React.CSSProperties}>
           <h3 className="text-xs font-700 uppercase tracking-wider mb-3" style={{ color: DS.textMuted }}>Condition détectée</h3>
           <div className="grid grid-cols-2 gap-3">
-            <div className="p-3" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16 }}>
+            <div className="p-3" style={{ background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 16 }}>
               <p className="text-[10px] mb-1" style={{ color: DS.textMuted }}>
                 {scanA.createdAt ? format(new Date(scanA.createdAt), "d MMM", { locale: fr }) : "Avant"}
               </p>
@@ -524,7 +524,7 @@ export default function Profile() {
         {/* Tabs */}
         <div
           className="flex items-center gap-1 p-1 w-fit mb-6"
-          style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "12px" }}
+          style={{ background: "rgba(0,0,0,0.05)", border: "1px solid rgba(0,0,0,0.08)", borderRadius: "12px" }}
         >
           {(["profil", "fidelite"] as const).map((tab) => (
             <button
@@ -575,8 +575,8 @@ export default function Profile() {
                     key={tile.label}
                     className="p-5"
                     style={{
-                      background: "rgba(255,255,255,0.03)",
-                      border: "1px solid rgba(255,255,255,0.06)",
+                      background: "rgba(0,0,0,0.03)",
+                      border: "1px solid rgba(0,0,0,0.06)",
                       borderRadius: "16px",
                       padding: "14px",
                     }}
@@ -609,7 +609,7 @@ export default function Profile() {
                     style={
                       isPremium
                         ? { background: "rgba(167,139,250,0.15)", border: "1px solid rgba(167,139,250,0.3)", borderRadius: "12px" }
-                        : { background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: "12px" }
+                        : { background: "rgba(0,0,0,0.08)", border: "1px solid rgba(0,0,0,0.12)", borderRadius: "12px" }
                     }
                   >
                     {isPremium
@@ -682,7 +682,7 @@ export default function Profile() {
 
                   <div
                     className="flex items-center justify-between px-4 py-3 mb-3"
-                    style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(167,139,250,0.25)", borderRadius: "16px" }}
+                    style={{ background: "rgba(0,0,0,0.05)", border: "1px solid rgba(167,139,250,0.25)", borderRadius: "16px" }}
                   >
                     <span
                       className="text-2xl font-800 tracking-[0.15em]"
@@ -800,7 +800,7 @@ export default function Profile() {
                       </div>
                     </div>
 
-                    <div className="w-full h-1.5 rounded-full overflow-hidden mb-3" style={{ background: "rgba(255,255,255,0.07)" }}>
+                    <div className="w-full h-1.5 rounded-full overflow-hidden mb-3" style={{ background: "rgba(0,0,0,0.07)" }}>
                       <div
                         className="h-full rounded-full transition-all"
                         style={{ width: `${progress}%`, background: isDue ? DS.amber : DS.violet }}
@@ -870,7 +870,7 @@ export default function Profile() {
                     style={
                       compareMode
                         ? { background: DS.violet, color: "#fff", borderRadius: "9999px" }
-                        : { background: "rgba(255,255,255,0.08)", color: DS.textBody, border: "1px solid rgba(255,255,255,0.15)", borderRadius: "9999px" }
+                        : { background: "rgba(0,0,0,0.08)", color: DS.textBody, border: "1px solid rgba(0,0,0,0.15)", borderRadius: "9999px" }
                     }
                   >
                     <GitCompare className="w-3.5 h-3.5" />
@@ -891,7 +891,7 @@ export default function Profile() {
                       style={
                         filterArea === area
                           ? { background: DS.violet, color: "#fff", borderRadius: "9999px" }
-                          : { background: "rgba(255,255,255,0.06)", color: DS.textMuted, border: "1px solid rgba(255,255,255,0.08)", borderRadius: "9999px" }
+                          : { background: "rgba(0,0,0,0.06)", color: DS.textMuted, border: "1px solid rgba(0,0,0,0.08)", borderRadius: "9999px" }
                       }
                     >
                       {area === "all" ? "Tous" : `${AREA_EMOJI[area]} ${AREA_LABELS[area]}`}
@@ -900,8 +900,8 @@ export default function Profile() {
                           className="text-[10px] px-1.5 py-0.5"
                           style={
                             filterArea === area
-                              ? { background: "rgba(255,255,255,0.2)", borderRadius: "9999px" }
-                              : { background: "rgba(255,255,255,0.08)", color: DS.textHint, borderRadius: "9999px" }
+                              ? { background: "rgba(0,0,0,0.2)", borderRadius: "9999px" }
+                              : { background: "rgba(0,0,0,0.08)", color: DS.textHint, borderRadius: "9999px" }
                           }
                         >
                           {scans.filter(s => s.area === area).length}
@@ -952,7 +952,7 @@ export default function Profile() {
                 if (filtered.length === 0) return (
                   <div
                     className="text-center py-10"
-                    style={{ background: "rgba(255,255,255,0.03)", border: "1px dashed rgba(255,255,255,0.12)", borderRadius: 24 }}
+                    style={{ background: "rgba(0,0,0,0.03)", border: "1px dashed rgba(0,0,0,0.12)", borderRadius: 24 }}
                   >
                     <Filter className="w-10 h-10 mx-auto mb-2" style={{ color: DS.textHint }} />
                     <p className="text-sm font-500" style={{ color: DS.textMuted }}>
@@ -1000,7 +1000,7 @@ export default function Profile() {
                                 style={
                                   isSelected
                                     ? { background: DS.violet, border: `2px solid ${DS.violet}`, borderRadius: "10px" }
-                                    : { border: "2px solid rgba(255,255,255,0.2)", background: "rgba(255,255,255,0.04)", borderRadius: "10px" }
+                                    : { border: "2px solid rgba(0,0,0,0.2)", background: "rgba(0,0,0,0.04)", borderRadius: "10px" }
                                 }
                               >
                                 {isSelected && <Check className="w-4 h-4" style={{ color: "#fff" }} />}
@@ -1045,7 +1045,7 @@ export default function Profile() {
                             </div>
                           </div>
 
-                          <div className="mt-3 w-full h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.07)" }}>
+                          <div className="mt-3 w-full h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(0,0,0,0.07)" }}>
                             <div
                               className="h-full rounded-full transition-all"
                               style={{ width: `${scoreVal}%`, background: getScoreColor(scoreVal) }}
@@ -1062,7 +1062,7 @@ export default function Profile() {
               {scans && scans.length === 0 && (
                 <div
                   className="text-center py-16"
-                  style={{ background: "rgba(255,255,255,0.03)", border: "1px dashed rgba(255,255,255,0.12)", borderRadius: 24 }}
+                  style={{ background: "rgba(0,0,0,0.03)", border: "1px dashed rgba(0,0,0,0.12)", borderRadius: 24 }}
                 >
                   <Calendar className="w-12 h-12 mx-auto mb-3" style={{ color: DS.textHint }} />
                   <h3 className="text-lg font-700 mb-2" style={{ color: DS.textBody }}>Aucun historique</h3>
@@ -1152,7 +1152,7 @@ export default function Profile() {
                             <p className="text-xs" style={{ color: DS.textBody }}>{item.subtitle}</p>
                           </div>
                         </div>
-                        <div className="flex items-center justify-between mt-2 pt-2" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                        <div className="flex items-center justify-between mt-2 pt-2" style={{ borderTop: "1px solid rgba(0,0,0,0.06)" }}>
                           <span className="text-lg font-800" style={{ color: item.color }}>{item.pts}</span>
                           <span className="text-xs" style={{ color: DS.textMuted }}>par action</span>
                         </div>
@@ -1185,13 +1185,13 @@ export default function Profile() {
                                   style={
                                     canRedeem
                                       ? { background: "rgba(16,185,129,0.1)", color: DS.green, border: "1px solid rgba(16,185,129,0.25)", borderRadius: "8px" }
-                                      : { background: "rgba(255,255,255,0.05)", color: DS.textMuted, borderRadius: "8px" }
+                                      : { background: "rgba(0,0,0,0.05)", color: DS.textMuted, borderRadius: "8px" }
                                   }
                                 >
                                   {reward.points} pts
                                 </span>
                               </div>
-                              <div className="w-full h-1.5 rounded-full overflow-hidden mb-3" style={{ background: "rgba(255,255,255,0.07)" }}>
+                              <div className="w-full h-1.5 rounded-full overflow-hidden mb-3" style={{ background: "rgba(0,0,0,0.07)" }}>
                                 <div
                                   className="h-full rounded-full transition-all duration-500"
                                   style={{ width: `${progress}%`, background: DS.violet }}
@@ -1208,7 +1208,7 @@ export default function Profile() {
                                   style={
                                     canRedeem
                                       ? { background: "linear-gradient(135deg,#E91E8C,#f43f5e)", color: "#fff", borderRadius: "10px" }
-                                      : { background: "rgba(255,255,255,0.07)", color: DS.textHint, borderRadius: "10px", cursor: "not-allowed" }
+                                      : { background: "rgba(0,0,0,0.07)", color: DS.textHint, borderRadius: "10px", cursor: "not-allowed" }
                                   }
                                   data-testid={`button-redeem-${reward.type}`}
                                 >
@@ -1243,7 +1243,7 @@ export default function Profile() {
                                   className="text-xs font-700 px-2 py-0.5"
                                   style={
                                     reward.used
-                                      ? { background: "rgba(255,255,255,0.07)", color: DS.textMuted, borderRadius: "8px" }
+                                      ? { background: "rgba(0,0,0,0.07)", color: DS.textMuted, borderRadius: "8px" }
                                       : { background: "rgba(16,185,129,0.1)", color: DS.green, border: "1px solid rgba(16,185,129,0.25)", borderRadius: "8px" }
                                   }
                                 >
@@ -1279,7 +1279,7 @@ export default function Profile() {
                         <Sparkles className="w-5 h-5" style={{ color: DS.violetMid }} /> Historique des points
                       </h3>
                       <div className="overflow-hidden" style={{ ...DS.subtleCard } as React.CSSProperties}>
-                        <div className="divide-y" style={{ borderColor: "rgba(255,255,255,0.06)" } as React.CSSProperties}>
+                        <div className="divide-y" style={{ borderColor: "rgba(0,0,0,0.06)" } as React.CSSProperties}>
                           {loyaltyData.history.slice(0, 20).map((entry: any) => (
                             <div key={entry.id} className="px-4 py-3 flex items-center justify-between" data-testid={`history-${entry.id}`}>
                               <div className="flex items-center gap-3">
@@ -1329,7 +1329,7 @@ export default function Profile() {
                         <div className="flex items-center gap-2 mb-2">
                           <div
                             className="flex-1 px-4 py-3 text-center"
-                            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(167,139,250,0.3)", borderRadius: "16px" }}
+                            style={{ background: "rgba(0,0,0,0.05)", border: "1px solid rgba(167,139,250,0.3)", borderRadius: "16px" }}
                           >
                             <span className="text-xl font-800 tracking-widest" style={{ color: DS.violetLight }} data-testid="text-referral-code">
                               {referralData.code}
@@ -1362,7 +1362,7 @@ export default function Profile() {
                         </button>
                       </>
                     ) : (
-                      <div className="h-16 animate-pulse" style={{ background: "rgba(255,255,255,0.06)", borderRadius: "12px" }} />
+                      <div className="h-16 animate-pulse" style={{ background: "rgba(0,0,0,0.06)", borderRadius: "12px" }} />
                     )}
                   </div>
 
@@ -1370,7 +1370,7 @@ export default function Profile() {
                   {(!loyaltyData?.history || loyaltyData.history.length === 0) && (
                     <div
                       className="text-center py-12"
-                      style={{ background: "rgba(255,255,255,0.03)", border: "1px dashed rgba(255,255,255,0.12)", borderRadius: 24 }}
+                      style={{ background: "rgba(0,0,0,0.03)", border: "1px dashed rgba(0,0,0,0.12)", borderRadius: 24 }}
                     >
                       <Star className="w-12 h-12 mx-auto mb-3" style={{ color: DS.textHint }} />
                       <h3 className="text-lg font-700 mb-2" style={{ color: DS.textBody }}>Commencer à gagner des points</h3>
