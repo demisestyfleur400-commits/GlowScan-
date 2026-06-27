@@ -44,7 +44,7 @@ function ScoreArc({ score }: { score: number }) {
             <stop offset="100%" stopColor="#059669" />
           </linearGradient>
         </defs>
-        <path d="M 20,100 A 80,80 0 0 1 180,100" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="14" strokeLinecap="round" />
+        <path d="M 20,100 A 80,80 0 0 1 180,100" fill="none" stroke="rgba(0,0,0,0.06)" strokeWidth="14" strokeLinecap="round" />
         <path
           d="M 20,100 A 80,80 0 0 1 180,100"
           fill="none"
@@ -53,8 +53,8 @@ function ScoreArc({ score }: { score: number }) {
           strokeLinecap="round"
           strokeDasharray={`${filled} ${ARC_LEN}`}
         />
-        <text x="100" y="88" fill="#f3f0ff" fontSize="28" fontWeight="800" textAnchor="middle">{score}</text>
-        <text x="100" y="102" fill="rgba(200,185,255,0.65)" fontSize="7" textAnchor="middle">Score peau</text>
+        <text x="100" y="88" fill="#1f1a2e" fontSize="28" fontWeight="800" textAnchor="middle">{score}</text>
+        <text x="100" y="102" fill="#5a5470" fontSize="7" textAnchor="middle">Score peau</text>
       </svg>
       <span className="text-xs font-bold mt-1" style={{ color }}>{label}</span>
     </div>
@@ -66,10 +66,10 @@ function MacroBar({ label, value, color, max }: { label: string; value: number; 
   return (
     <div>
       <div className="flex justify-between mb-1">
-        <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "rgba(200,185,255,0.65)" }}>{label}</span>
-        <span className="text-[10px] font-extrabold" style={{ color: "#f3f0ff", fontWeight: 800 }}>{value}g</span>
+        <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "#5a5470" }}>{label}</span>
+        <span className="text-[10px] font-extrabold" style={{ color: "#1f1a2e", fontWeight: 800 }}>{value}g</span>
       </div>
-      <div className="overflow-hidden" style={{ height: "3px", background: "rgba(255,255,255,0.06)", borderRadius: "9999px" }}>
+      <div className="overflow-hidden" style={{ height: "3px", background: "rgba(0,0,0,0.06)", borderRadius: "9999px" }}>
         <motion.div
           className="h-full"
           style={{ background: color, borderRadius: "9999px" }}
@@ -142,7 +142,7 @@ export default function NutrimentScan() {
     return (
       <div
         className="min-h-screen flex flex-col items-center justify-center px-6 pb-20"
-        style={{ background: "#0d0a0e", fontFamily: DS }}
+        style={{ background: "#fbfbfe", fontFamily: DS }}
       >
         <div
           className="w-20 h-20 flex items-center justify-center mb-6 text-4xl"
@@ -158,10 +158,10 @@ export default function NutrimentScan() {
             <Crown className="w-4 h-4" style={{ color: "#c4b5fd" }} />
             <span className="text-xs font-bold" style={{ color: "#c4b5fd" }}>Fonctionnalité premium</span>
           </div>
-          <h1 className="text-2xl font-extrabold mb-3" style={{ color: "#f3f0ff", fontWeight: 800, fontFamily: DS }}>
+          <h1 className="text-2xl font-extrabold mb-3" style={{ color: "#1f1a2e", fontWeight: 800, fontFamily: DS }}>
             Scan nutriment
           </h1>
-          <p className="text-sm leading-relaxed max-w-xs" style={{ color: "rgba(200,185,255,0.65)" }}>
+          <p className="text-sm leading-relaxed max-w-xs" style={{ color: "#5a5470" }}>
             Découvre si ce que tu manges est bon pour ta peau. Analyse IA de tes plats et aliments, avec score cutané personnalisé.
           </p>
         </div>
@@ -176,7 +176,7 @@ export default function NutrimentScan() {
             <div
               key={item}
               className="flex items-center gap-3 p-3.5"
-              style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: "16px" }}
+              style={{ background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: "16px" }}
             >
               <div
                 className="w-6 h-6 flex items-center justify-center flex-shrink-0"
@@ -184,7 +184,7 @@ export default function NutrimentScan() {
               >
                 <span className="text-xs font-bold" style={{ color: "#c4b5fd" }}>✓</span>
               </div>
-              <span className="text-sm font-medium" style={{ color: "rgba(200,185,255,0.65)" }}>{item}</span>
+              <span className="text-sm font-medium" style={{ color: "#5a5470" }}>{item}</span>
             </div>
           ))}
         </div>
@@ -201,7 +201,7 @@ export default function NutrimentScan() {
           <Crown className="w-5 h-5" />
           Passer premium — 2 000 FCFA/mois
         </a>
-        <a href="/" className="mt-4 text-sm font-medium" style={{ color: "rgba(255,255,255,0.35)" }}>
+        <a href="/" className="mt-4 text-sm font-medium" style={{ color: "rgba(0,0,0,0.35)" }}>
           ← Retour à l'accueil
         </a>
       </div>
@@ -211,7 +211,7 @@ export default function NutrimentScan() {
   return (
     <div
       className="min-h-screen pb-10"
-      style={{ background: "#0d0a0e", fontFamily: DS }}
+      style={{ background: "#fbfbfe", fontFamily: DS }}
       data-testid="page-nutriment-scan"
     >
       {/* Glow orb */}
@@ -232,21 +232,21 @@ export default function NutrimentScan() {
       {/* Header */}
       <div
         className="px-5 pt-14 pb-4 flex items-center gap-3 sticky top-0 z-10"
-        style={{ background: "rgba(13,10,14,0.95)", borderBottom: "1px solid rgba(255,255,255,0.07)", backdropFilter: "blur(20px)" }}
+        style={{ background: "rgba(13,10,14,0.95)", borderBottom: "1px solid rgba(0,0,0,0.07)", backdropFilter: "blur(20px)" }}
       >
         <button
           onClick={() => setLocation("/")}
           className="w-9 h-9 flex items-center justify-center transition-all active:scale-90"
-          style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: "12px" }}
+          style={{ background: "rgba(0,0,0,0.07)", border: "1px solid rgba(0,0,0,0.12)", borderRadius: "12px" }}
           data-testid="button-back"
         >
-          <ArrowLeft className="w-4 h-4" style={{ color: "rgba(255,255,255,0.6)" }} />
+          <ArrowLeft className="w-4 h-4" style={{ color: "rgba(0,0,0,0.6)" }} />
         </button>
         <div>
-          <h1 className="text-base font-extrabold flex items-center gap-2" style={{ color: "#f3f0ff", fontWeight: 800 }}>
+          <h1 className="text-base font-extrabold flex items-center gap-2" style={{ color: "#1f1a2e", fontWeight: 800 }}>
             <Leaf className="w-4 h-4" style={{ color: "#a78bfa" }} /> Scan nutriment
           </h1>
-          <p className="text-[11px]" style={{ color: "rgba(200,185,255,0.65)" }}>
+          <p className="text-[11px]" style={{ color: "#5a5470" }}>
             L'IA analyse l'impact de tes aliments sur ta peau
           </p>
         </div>
@@ -266,7 +266,7 @@ export default function NutrimentScan() {
                   height: 280,
                   borderRadius: "24px",
                   borderColor: isDragActive ? "rgba(124,58,237,0.6)" : "rgba(167,139,250,0.2)",
-                  background: isDragActive ? "rgba(124,58,237,0.08)" : "rgba(255,255,255,0.03)",
+                  background: isDragActive ? "rgba(124,58,237,0.08)" : "rgba(0,0,0,0.03)",
                 }}
               >
                 <input {...getInputProps()} />
@@ -277,10 +277,10 @@ export default function NutrimentScan() {
                   <span className="text-3xl">🥗</span>
                 </div>
                 <div className="text-center px-6">
-                  <p className="text-sm font-extrabold" style={{ color: "#f3f0ff", fontWeight: 800 }}>
+                  <p className="text-sm font-extrabold" style={{ color: "#1f1a2e", fontWeight: 800 }}>
                     {isDragActive ? "Dépose l'aliment ici" : "Photo d'un plat ou d'une étiquette"}
                   </p>
-                  <p className="text-[11px] mt-1 leading-relaxed" style={{ color: "rgba(200,185,255,0.65)" }}>
+                  <p className="text-[11px] mt-1 leading-relaxed" style={{ color: "#5a5470" }}>
                     Prends en photo ce que tu manges — plat, fruit, étiquette nutritionnelle, emballage
                   </p>
                 </div>
@@ -296,7 +296,7 @@ export default function NutrimentScan() {
                   <button
                     onClick={e => { e.stopPropagation(); fileInputRef.current?.click(); }}
                     className="flex items-center gap-1.5 text-sm font-bold px-4 py-2.5 transition-all active:scale-95"
-                    style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "9999px", color: "#f3f0ff", fontWeight: 700 }}
+                    style={{ background: "rgba(0,0,0,0.08)", border: "1px solid rgba(0,0,0,0.15)", borderRadius: "9999px", color: "#1f1a2e", fontWeight: 700 }}
                   >
                     <Camera className="w-3.5 h-3.5" /> Caméra
                   </button>
@@ -311,14 +311,14 @@ export default function NutrimentScan() {
                 />
               </div>
             ) : (
-              <div className="relative overflow-hidden" style={{ borderRadius: "24px", border: "1px solid rgba(255,255,255,0.07)" }}>
+              <div className="relative overflow-hidden" style={{ borderRadius: "24px", border: "1px solid rgba(0,0,0,0.07)" }}>
                 <img src={preview} alt="Aliment" className="w-full object-cover" style={{ maxHeight: 300 }} />
                 <button
                   onClick={reset}
                   className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center"
-                  style={{ background: "rgba(13,10,14,0.7)", borderRadius: "9999px", border: "1px solid rgba(255,255,255,0.12)" }}
+                  style={{ background: "rgba(13,10,14,0.7)", borderRadius: "9999px", border: "1px solid rgba(255,255,255,0.2)" }}
                 >
-                  <X className="w-4 h-4" style={{ color: "#f3f0ff" }} />
+                  <X className="w-4 h-4" style={{ color: "#fff" }} />
                 </button>
               </div>
             )}
@@ -350,7 +350,7 @@ export default function NutrimentScan() {
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   className="mt-4 p-8 flex flex-col items-center gap-4"
-                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: "24px" }}
+                  style={{ background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: "24px" }}
                 >
                   <div className="relative w-16 h-16">
                     <div
@@ -364,8 +364,8 @@ export default function NutrimentScan() {
                     <span className="absolute inset-0 m-auto w-8 h-8 flex items-center justify-center text-2xl">🔬</span>
                   </div>
                   <div className="text-center">
-                    <p className="text-sm font-extrabold" style={{ color: "#f3f0ff", fontWeight: 800 }}>Analyse nutritionnelle…</p>
-                    <p className="text-[11px] mt-1" style={{ color: "rgba(200,185,255,0.65)" }}>
+                    <p className="text-sm font-extrabold" style={{ color: "#1f1a2e", fontWeight: 800 }}>Analyse nutritionnelle…</p>
+                    <p className="text-[11px] mt-1" style={{ color: "#5a5470" }}>
                       L'IA détecte les nutriments et leur impact sur ta peau
                     </p>
                   </div>
@@ -381,8 +381,8 @@ export default function NutrimentScan() {
               >
                 <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: "#f43f5e" }} />
                 <div>
-                  <p className="text-[13px] font-bold" style={{ color: "#f3f0ff" }}>Erreur d'analyse</p>
-                  <p className="text-[11px] mt-0.5" style={{ color: "rgba(200,185,255,0.65)" }}>{error}</p>
+                  <p className="text-[13px] font-bold" style={{ color: "#1f1a2e" }}>Erreur d'analyse</p>
+                  <p className="text-[11px] mt-0.5" style={{ color: "#5a5470" }}>{error}</p>
                 </div>
               </div>
             )}
@@ -400,7 +400,7 @@ export default function NutrimentScan() {
               {/* Main identity + skin score card */}
               <div
                 className="overflow-hidden"
-                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: "24px" }}
+                style={{ background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: "24px" }}
               >
                 <div className="flex gap-0">
                   {preview && (
@@ -415,12 +415,12 @@ export default function NutrimentScan() {
                         <p className="text-[9px] font-bold uppercase tracking-widest" style={{ color: "#a78bfa" }}>
                           {result.category}
                         </p>
-                        <p className="text-sm font-extrabold leading-snug" style={{ color: "#f3f0ff", fontWeight: 800 }}>
+                        <p className="text-sm font-extrabold leading-snug" style={{ color: "#1f1a2e", fontWeight: 800 }}>
                           {result.foodName}
                         </p>
                       </div>
                     </div>
-                    <p className="text-[11px] leading-snug italic" style={{ color: "rgba(200,185,255,0.65)" }}>
+                    <p className="text-[11px] leading-snug italic" style={{ color: "#5a5470" }}>
                       "{result.verdict}"
                     </p>
                     <div
@@ -429,7 +429,7 @@ export default function NutrimentScan() {
                     >
                       <Zap className="w-3 h-3" style={{ color: "#c4b5fd" }} />
                       <span className="text-[11px] font-extrabold" style={{ color: "#c4b5fd", fontWeight: 800 }}>{result.calories} kcal</span>
-                      <span className="text-[9px] font-medium" style={{ color: "rgba(200,185,255,0.65)" }}>/ 100g</span>
+                      <span className="text-[9px] font-medium" style={{ color: "#5a5470" }}>/ 100g</span>
                     </div>
                   </div>
                 </div>
@@ -437,7 +437,7 @@ export default function NutrimentScan() {
                 {/* Skin score arc */}
                 <div
                   className="flex flex-col items-center py-4"
-                  style={{ borderTop: "1px solid rgba(255,255,255,0.07)", background: "rgba(255,255,255,0.02)" }}
+                  style={{ borderTop: "1px solid rgba(0,0,0,0.07)", background: "rgba(0,0,0,0.02)" }}
                 >
                   <ScoreArc score={result.skinScore} />
                 </div>
@@ -446,9 +446,9 @@ export default function NutrimentScan() {
               {/* Macronutrients */}
               <div
                 className="p-4"
-                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: "24px" }}
+                style={{ background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: "24px" }}
               >
-                <p className="text-[11px] font-extrabold mb-3 flex items-center gap-1.5 uppercase tracking-wider" style={{ color: "#f3f0ff", fontWeight: 800 }}>
+                <p className="text-[11px] font-extrabold mb-3 flex items-center gap-1.5 uppercase tracking-wider" style={{ color: "#1f1a2e", fontWeight: 800 }}>
                   <Leaf className="w-3.5 h-3.5" style={{ color: "#a78bfa" }} /> Macronutriments / 100g
                 </p>
                 <div className="space-y-3">
@@ -460,10 +460,10 @@ export default function NutrimentScan() {
 
                 {/* Vitamins & minerals */}
                 {(result.vitamins.length > 0 || result.minerals.length > 0) && (
-                  <div className="mt-3 pt-3 space-y-2" style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}>
+                  <div className="mt-3 pt-3 space-y-2" style={{ borderTop: "1px solid rgba(0,0,0,0.07)" }}>
                     {result.vitamins.length > 0 && (
                       <div>
-                        <p className="text-[9px] font-bold uppercase tracking-wider mb-1.5" style={{ color: "rgba(255,255,255,0.35)" }}>
+                        <p className="text-[9px] font-bold uppercase tracking-wider mb-1.5" style={{ color: "rgba(0,0,0,0.35)" }}>
                           Vitamines
                         </p>
                         <div className="flex flex-wrap gap-1">
@@ -481,7 +481,7 @@ export default function NutrimentScan() {
                     )}
                     {result.minerals.length > 0 && (
                       <div>
-                        <p className="text-[9px] font-bold uppercase tracking-wider mb-1.5" style={{ color: "rgba(255,255,255,0.35)" }}>
+                        <p className="text-[9px] font-bold uppercase tracking-wider mb-1.5" style={{ color: "rgba(0,0,0,0.35)" }}>
                           Minéraux
                         </p>
                         <div className="flex flex-wrap gap-1">
@@ -514,7 +514,7 @@ export default function NutrimentScan() {
                     {result.skinBenefits.map(b => (
                       <div key={b} className="flex items-start gap-2">
                         <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" style={{ color: "#6ee7b7" }} />
-                        <span className="text-[11px] leading-snug" style={{ color: "rgba(200,185,255,0.65)" }}>{b}</span>
+                        <span className="text-[11px] leading-snug" style={{ color: "#5a5470" }}>{b}</span>
                       </div>
                     ))}
                   </div>
@@ -533,7 +533,7 @@ export default function NutrimentScan() {
                   {result.skinWarnings.map(w => (
                     <div key={w} className="flex items-start gap-2">
                       <span className="text-xs flex-shrink-0" style={{ color: "#fbbf24" }}>•</span>
-                      <p className="text-[11px] leading-snug" style={{ color: "rgba(200,185,255,0.65)" }}>{w}</p>
+                      <p className="text-[11px] leading-snug" style={{ color: "#5a5470" }}>{w}</p>
                     </div>
                   ))}
                 </div>
@@ -548,7 +548,7 @@ export default function NutrimentScan() {
                   <p className="text-[11px] font-extrabold mb-1 flex items-center gap-1.5" style={{ color: "#c4b5fd", fontWeight: 800 }}>
                     <Zap className="w-3.5 h-3.5" /> Conseil personnalisé
                   </p>
-                  <p className="text-[11px] leading-snug" style={{ color: "rgba(200,185,255,0.65)" }}>{result.tip}</p>
+                  <p className="text-[11px] leading-snug" style={{ color: "#5a5470" }}>{result.tip}</p>
                 </div>
               )}
 
@@ -558,7 +558,7 @@ export default function NutrimentScan() {
                   onClick={reset}
                   data-testid="button-scan-new-nutriment"
                   className="flex-1 py-3.5 text-sm font-bold transition-all active:scale-95"
-                  style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "9999px", color: "#f3f0ff", fontWeight: 700 }}
+                  style={{ background: "rgba(0,0,0,0.08)", border: "1px solid rgba(0,0,0,0.15)", borderRadius: "9999px", color: "#1f1a2e", fontWeight: 700 }}
                 >
                   Scanner autre chose
                 </button>

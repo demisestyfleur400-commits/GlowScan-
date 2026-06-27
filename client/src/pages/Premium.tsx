@@ -103,18 +103,18 @@ export default function Premium() {
     return (
       <div
         className="min-h-screen flex flex-col items-center justify-center p-6 text-center"
-        style={{ background: "#0d0a0e", fontFamily: DS }}
+        style={{ background: "#fbfdfe", fontFamily: DS }}
       >
         <div
           className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5"
-          style={{ background: "rgba(167,139,250,0.06)", border: "1px solid rgba(167,139,250,0.18)" }}
+          style={{ background: "rgba(37,99,235,0.06)", border: "1px solid rgba(37,99,235,0.18)" }}
         >
           <Crown className="w-6 h-6" style={{ color: "#a78bfa" }} />
         </div>
-        <h1 className="text-xl font-extrabold tracking-tight mb-2" style={{ color: "#f3f0ff", fontWeight: 800 }}>
+        <h1 className="text-xl font-extrabold tracking-tight mb-2" style={{ color: "#1a2235", fontWeight: 800 }}>
           Licence active
         </h1>
-        <p className="text-xs max-w-xs mx-auto mb-6" style={{ color: "rgba(200,185,255,0.65)" }}>
+        <p className="text-xs max-w-xs mx-auto mb-6" style={{ color: "#4a5568" }}>
           Ton abonnement GlowScan Premium est actif. Profite de toutes les fonctionnalités sans limite.
         </p>
         <Button onClick={() => setLocation("/")} variant="premium" className="w-full max-w-xs">
@@ -127,19 +127,19 @@ export default function Premium() {
   // ── Pending verification ──
   if (statusData?.request?.status === "pending" && step === "offer") {
     return (
-      <div className="min-h-screen flex flex-col" style={{ background: "#0d0a0e", fontFamily: DS }}>
+      <div className="min-h-screen flex flex-col" style={{ background: "#fbfdfe", fontFamily: DS }}>
         <div
           className="p-4 flex items-center gap-3 sticky top-0 z-10"
-          style={{ background: "rgba(13,10,14,0.95)", borderBottom: "1px solid rgba(255,255,255,0.07)", backdropFilter: "blur(20px)" }}
+          style={{ background: "rgba(13,10,14,0.95)", borderBottom: "1px solid rgba(0,0,0,0.07)", backdropFilter: "blur(20px)" }}
         >
           <button
             onClick={() => setLocation(-1 as any)}
             className="p-2 transition-colors"
-            style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: "12px", color: "rgba(255,255,255,0.6)" }}
+            style={{ background: "rgba(0,0,0,0.07)", border: "1px solid rgba(0,0,0,0.12)", borderRadius: "12px", color: "rgba(0,0,0,0.6)" }}
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
-          <span className="text-xs font-bold tracking-widest" style={{ color: "#f3f0ff" }}>Vérification de licence</span>
+          <span className="text-xs font-bold tracking-widest" style={{ color: "#1a2235" }}>Vérification de licence</span>
         </div>
         <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
           <div
@@ -148,20 +148,20 @@ export default function Premium() {
           >
             <Clock className="w-5 h-5 animate-pulse" style={{ color: "#fbbf24" }} />
           </div>
-          <h2 className="text-base font-extrabold tracking-tight mb-1" style={{ color: "#f3f0ff", fontWeight: 800 }}>
+          <h2 className="text-base font-extrabold tracking-tight mb-1" style={{ color: "#1a2235", fontWeight: 800 }}>
             Transaction en cours
           </h2>
-          <p className="text-xs max-w-xs mx-auto mb-4 leading-relaxed" style={{ color: "rgba(200,185,255,0.65)" }}>
+          <p className="text-xs max-w-xs mx-auto mb-4 leading-relaxed" style={{ color: "#4a5568" }}>
             Ta demande avec la référence{" "}
             <span
               className="font-bold"
-              style={{ color: "#f3f0ff", background: "rgba(255,255,255,0.07)", padding: "0 6px", borderRadius: "8px" }}
+              style={{ color: "#1a2235", background: "rgba(0,0,0,0.07)", padding: "0 6px", borderRadius: "8px" }}
             >
               {statusData.request.reference}
             </span>{" "}
             est en cours de validation par nos équipes.
           </p>
-          <p className="text-[10px] font-medium max-w-xs" style={{ color: "rgba(255,255,255,0.35)" }}>
+          <p className="text-[10px] font-medium max-w-xs" style={{ color: "rgba(0,0,0,0.35)" }}>
             L'activation définitive s'effectue généralement dans un délai inférieur à 24 heures.
           </p>
         </div>
@@ -170,7 +170,7 @@ export default function Premium() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: "#0d0a0e", fontFamily: DS }}>
+    <div className="min-h-screen flex flex-col" style={{ background: "#fbfdfe", fontFamily: DS }}>
       {/* Glow orb */}
       <div
         style={{
@@ -180,7 +180,7 @@ export default function Premium() {
           transform: "translateX(-50%)",
           width: "700px",
           height: "700px",
-          background: "radial-gradient(circle, rgba(124,58,237,0.15), transparent)",
+          background: "radial-gradient(circle, rgba(37,99,235,0.15), transparent)",
           pointerEvents: "none",
           zIndex: 0,
         }}
@@ -189,16 +189,16 @@ export default function Premium() {
       {/* Header */}
       <div
         className="px-4 py-3.5 flex items-center gap-3 sticky top-0 z-10"
-        style={{ background: "rgba(13,10,14,0.95)", borderBottom: "1px solid rgba(255,255,255,0.07)", backdropFilter: "blur(20px)" }}
+        style={{ background: "rgba(13,10,14,0.95)", borderBottom: "1px solid rgba(0,0,0,0.07)", backdropFilter: "blur(20px)" }}
       >
         <button
           onClick={() => (step === "offer" ? setLocation(-1 as any) : setStep("offer"))}
           className="p-2 transition-all"
-          style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: "12px", color: "rgba(255,255,255,0.6)" }}
+          style={{ background: "rgba(0,0,0,0.07)", border: "1px solid rgba(0,0,0,0.12)", borderRadius: "12px", color: "rgba(0,0,0,0.6)" }}
         >
           <ArrowLeft className="w-4 h-4" />
         </button>
-        <span className="text-xs font-bold tracking-widest" style={{ color: "#f3f0ff" }}>GlowScan — passer premium</span>
+        <span className="text-xs font-bold tracking-widest" style={{ color: "#1a2235" }}>GlowScan — passer premium</span>
       </div>
 
       <div className="relative flex-1 overflow-y-auto pb-12" style={{ zIndex: 1 }}>
@@ -217,8 +217,8 @@ export default function Premium() {
               <div
                 className="relative overflow-hidden text-center p-6"
                 style={{
-                  background: "rgba(233,30,140,0.1)",
-                  border: "2px solid rgba(233,30,140,0.4)",
+                  background: "rgba(37,99,235,0.1)",
+                  border: "2px solid rgba(37,99,235,0.4)",
                   borderRadius: "24px",
                 }}
               >
@@ -229,34 +229,34 @@ export default function Premium() {
                     right: 0,
                     width: "220px",
                     height: "220px",
-                    background: "radial-gradient(circle, rgba(233,30,140,0.12), transparent)",
+                    background: "radial-gradient(circle, rgba(37,99,235,0.12), transparent)",
                     pointerEvents: "none",
                   }}
                 />
                 <div className="relative">
                   <div
                     className="inline-flex items-center gap-1.5 px-3 py-1 mb-4"
-                    style={{ background: "rgba(233,30,140,0.15)", border: "1px solid rgba(233,30,140,0.3)", borderRadius: "9999px" }}
+                    style={{ background: "rgba(37,99,235,0.15)", border: "1px solid rgba(37,99,235,0.3)", borderRadius: "9999px" }}
                   >
                     <span className="text-[10px] font-bold tracking-widest" style={{ color: "#f9a8d4" }}>Offre de lancement</span>
                   </div>
                   <h2
                     className="text-xl font-extrabold tracking-tight mb-1"
-                    style={{ color: "#f3f0ff", fontWeight: 800 }}
+                    style={{ color: "#1a2235", fontWeight: 800 }}
                   >
                     Activer mon abonnement
                   </h2>
-                  <p className="text-xs mb-6" style={{ color: "rgba(200,185,255,0.65)" }}>
+                  <p className="text-xs mb-6" style={{ color: "#4a5568" }}>
                     Débloque le Scan Produit IA et le Routine Tracker — conçus pour transformer ta peau.
                   </p>
                   <div
                     className="px-5 py-3.5 w-full"
-                    style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: "16px" }}
+                    style={{ background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: "16px" }}
                   >
-                    <p className="text-2xl font-extrabold tracking-tight" style={{ color: "#f3f0ff", fontWeight: 800 }}>
+                    <p className="text-2xl font-extrabold tracking-tight" style={{ color: "#1a2235", fontWeight: 800 }}>
                       2 000 FCFA / mois
                     </p>
-                    <p className="text-[10px] font-medium mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>
+                    <p className="text-[10px] font-medium mt-0.5" style={{ color: "rgba(0,0,0,0.35)" }}>
                       Aucun abonnement caché · Paiement unique
                     </p>
                   </div>
@@ -266,15 +266,15 @@ export default function Premium() {
               {/* Features comparison */}
               <div
                 className="p-5 space-y-4"
-                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: "24px" }}
+                style={{ background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: "24px" }}
               >
                 <div>
-                  <span className="text-[9px] font-bold uppercase tracking-widest block mb-2.5" style={{ color: "rgba(255,255,255,0.35)" }}>
+                  <span className="text-[9px] font-bold uppercase tracking-widest block mb-2.5" style={{ color: "rgba(0,0,0,0.35)" }}>
                     Plan Gratuit — déjà disponible
                   </span>
                   <div className="space-y-2">
                     {FEATURES_FREE.map(f => (
-                      <div key={f.text} className="flex items-start gap-2.5 text-xs font-medium" style={{ color: "rgba(200,185,255,0.55)" }}>
+                      <div key={f.text} className="flex items-start gap-2.5 text-xs font-medium" style={{ color: "#4a5568" }}>
                         <CheckCircle2 className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style={{ color: "#6ee7b7" }} />
                         <span>{f.text}</span>
                       </div>
@@ -282,13 +282,13 @@ export default function Premium() {
                   </div>
                 </div>
 
-                <div className="pt-4" style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}>
+                <div className="pt-4" style={{ borderTop: "1px solid rgba(0,0,0,0.07)" }}>
                   <span className="text-[9px] font-bold uppercase tracking-widest block mb-2.5" style={{ color: "#c4b5fd" }}>
                     Fonctionnalités premium débloquées
                   </span>
                   <div className="space-y-2.5">
                     {FEATURES_PREMIUM.map(f => (
-                      <div key={f.text} className="flex items-start gap-2.5 text-xs font-bold" style={{ color: "#f3f0ff" }}>
+                      <div key={f.text} className="flex items-start gap-2.5 text-xs font-bold" style={{ color: "#1a2235" }}>
                         <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" style={{ color: "#a78bfa" }} />
                         <span>{f.text}</span>
                       </div>
@@ -300,22 +300,22 @@ export default function Premium() {
               {/* Founder quote */}
               <div
                 className="p-5 flex items-start gap-4"
-                style={{ background: "rgba(167,139,250,0.06)", border: "1px solid rgba(167,139,250,0.18)", borderRadius: "24px" }}
+                style={{ background: "rgba(37,99,235,0.06)", border: "1px solid rgba(37,99,235,0.18)", borderRadius: "24px" }}
               >
                 <div
                   className="w-10 h-10 flex items-center justify-center shrink-0 text-sm font-extrabold"
-                  style={{ background: "#7c3aed", borderRadius: "12px", color: "#fff", fontWeight: 800 }}
+                  style={{ background: "#2563eb", borderRadius: "12px", color: "#fff", fontWeight: 800 }}
                 >
                   DE
                 </div>
                 <div>
-                  <span className="text-[9px] font-bold uppercase tracking-widest block" style={{ color: "rgba(255,255,255,0.35)" }}>
+                  <span className="text-[9px] font-bold uppercase tracking-widest block" style={{ color: "rgba(0,0,0,0.35)" }}>
                     Note d'ingénierie
                   </span>
-                  <p className="text-xs font-medium leading-relaxed mt-1" style={{ color: "rgba(200,185,255,0.65)" }}>
+                  <p className="text-xs font-medium leading-relaxed mt-1" style={{ color: "#4a5568" }}>
                     "Nous développons des modèles algorithmiques entraînés spécifiquement sur les variations mélaniques et climatiques d'Afrique centrale. L'abonnement mensuel nous permet de financer la puissance de calcul et d'améliorer continuellement l'IA pour notre communauté."
                   </p>
-                  <span className="text-[10px] font-bold block mt-1.5" style={{ color: "rgba(255,255,255,0.35)" }}>
+                  <span className="text-[10px] font-bold block mt-1.5" style={{ color: "rgba(0,0,0,0.35)" }}>
                     — Demise Essawe, Fondateur GlowScan
                   </span>
                 </div>
@@ -330,10 +330,10 @@ export default function Premium() {
                   <div
                     key={label}
                     className="p-3 flex items-center gap-2.5"
-                    style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "16px" }}
+                    style={{ background: "rgba(0,0,0,0.03)", border: "1px solid rgba(0,0,0,0.06)", borderRadius: "16px" }}
                   >
                     {icon}
-                    <p className="text-[10px] font-bold leading-tight" style={{ color: "rgba(200,185,255,0.65)" }}>{label}</p>
+                    <p className="text-[10px] font-bold leading-tight" style={{ color: "#4a5568" }}>{label}</p>
                   </div>
                 ))}
               </div>
@@ -344,7 +344,7 @@ export default function Premium() {
                   onClick={() => setLocation("/auth")}
                   className="w-full py-4 text-sm font-extrabold transition-all active:scale-[0.98]"
                   style={{
-                    background: "linear-gradient(135deg,#E91E8C,#f43f5e)",
+                    background: "linear-gradient(135deg,#2563eb,#f43f5e)",
                     borderRadius: "12px",
                     color: "#fff",
                     fontWeight: 800,
@@ -357,7 +357,7 @@ export default function Premium() {
                   onClick={() => setStep("payment")}
                   className="w-full py-4 text-sm font-extrabold flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
                   style={{
-                    background: "linear-gradient(135deg,#E91E8C,#f43f5e)",
+                    background: "linear-gradient(135deg,#2563eb,#f43f5e)",
                     borderRadius: "12px",
                     color: "#fff",
                     fontWeight: 800,
@@ -381,13 +381,13 @@ export default function Premium() {
             >
               <div
                 className="p-5 space-y-5"
-                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: "24px" }}
+                style={{ background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: "24px" }}
               >
                 <div>
-                  <h2 className="text-sm font-extrabold tracking-wide" style={{ color: "#f3f0ff", fontWeight: 800 }}>
+                  <h2 className="text-sm font-extrabold tracking-wide" style={{ color: "#1a2235", fontWeight: 800 }}>
                     Passerelle de dépôt manuel
                   </h2>
-                  <p className="text-xs mt-0.5" style={{ color: "rgba(200,185,255,0.65)" }}>
+                  <p className="text-xs mt-0.5" style={{ color: "#4a5568" }}>
                     Traitement sécurisé via Mobile Money régional.
                   </p>
                 </div>
@@ -404,12 +404,12 @@ export default function Premium() {
                       className="flex flex-col items-center gap-1.5 p-4 text-center transition-all"
                       style={
                         method === m.id
-                          ? { background: "rgba(124,58,237,0.12)", border: "2px solid rgba(124,58,237,0.4)", borderRadius: "16px" }
-                          : { background: "rgba(255,255,255,0.04)", border: "2px solid rgba(255,255,255,0.08)", borderRadius: "16px" }
+                          ? { background: "rgba(37,99,235,0.12)", border: "2px solid rgba(37,99,235,0.4)", borderRadius: "16px" }
+                          : { background: "rgba(0,0,0,0.04)", border: "2px solid rgba(0,0,0,0.08)", borderRadius: "16px" }
                       }
                     >
                       <span className="text-lg">{m.badge}</span>
-                      <span className="text-xs font-extrabold tracking-tight" style={{ color: "#f3f0ff", fontWeight: 800 }}>{m.label}</span>
+                      <span className="text-xs font-extrabold tracking-tight" style={{ color: "#1a2235", fontWeight: 800 }}>{m.label}</span>
                       {method === m.id && <CheckCircle2 className="w-3.5 h-3.5 mt-0.5" style={{ color: "#a78bfa" }} />}
                     </button>
                   ))}
@@ -418,52 +418,52 @@ export default function Premium() {
                 {/* Payment instructions */}
                 <div
                   className="p-4 space-y-2"
-                  style={{ background: "#0e0b1a", border: "1px solid rgba(167,139,250,0.2)", borderRadius: "12px" }}
+                  style={{ background: "#eef2fb", border: "1px solid rgba(37,99,235,0.2)", borderRadius: "12px" }}
                 >
-                  <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.35)" }}>
+                  <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "rgba(0,0,0,0.35)" }}>
                     Instruction d'envoi :
                   </p>
-                  <p className="text-xs font-medium" style={{ color: "rgba(200,185,255,0.65)" }}>
+                  <p className="text-xs font-medium" style={{ color: "#4a5568" }}>
                     Effectue un transfert de exactement{" "}
-                    <span className="font-extrabold" style={{ color: "#f3f0ff", fontWeight: 800 }}>{planPrice} FCFA</span>{" "}
+                    <span className="font-extrabold" style={{ color: "#1a2235", fontWeight: 800 }}>{planPrice} FCFA</span>{" "}
                     au numéro ci-dessous :
                   </p>
                   <div
                     className="flex items-center justify-between px-3.5 py-2.5"
-                    style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "12px" }}
+                    style={{ background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.1)", borderRadius: "12px" }}
                   >
-                    <span className="text-base font-extrabold tracking-wider" style={{ color: "#f3f0ff", fontWeight: 800 }}>
+                    <span className="text-base font-extrabold tracking-wider" style={{ color: "#1a2235", fontWeight: 800 }}>
                       {paymentNumber}
                     </span>
                     <span
                       className="text-[9px] font-bold px-2 py-0.5"
-                      style={{ background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.5)", borderRadius: "8px" }}
+                      style={{ background: "rgba(0,0,0,0.08)", color: "rgba(0,0,0,0.5)", borderRadius: "8px" }}
                     >
                       {method === "mtn_momo" ? "MTN" : "Orange"}
                     </span>
                   </div>
-                  <p className="text-[9px] leading-normal pt-1" style={{ color: "rgba(255,255,255,0.35)" }}>
+                  <p className="text-[9px] leading-normal pt-1" style={{ color: "rgba(0,0,0,0.35)" }}>
                     Note : n'ajoute aucun motif textuel lors de l'envoi pour accélérer le rapprochement automatique. Renseigne ton numéro de transaction ci-dessous après validation.
                   </p>
                 </div>
 
                 {/* Phone input */}
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold uppercase tracking-widest block" style={{ color: "rgba(255,255,255,0.35)" }}>
+                  <label className="text-[10px] font-bold uppercase tracking-widest block" style={{ color: "rgba(0,0,0,0.35)" }}>
                     Numéro émetteur (celui qui a payé)
                   </label>
                   <div
                     className="flex items-center gap-2 px-3.5 py-3 transition-all"
-                    style={{ background: "#13101f", border: "1px solid rgba(167,139,250,0.2)", borderRadius: "12px" }}
+                    style={{ background: "#ffffff", border: "1px solid rgba(37,99,235,0.2)", borderRadius: "12px" }}
                   >
-                    <Phone className="w-4 h-4 flex-shrink-0" style={{ color: "rgba(255,255,255,0.35)" }} />
+                    <Phone className="w-4 h-4 flex-shrink-0" style={{ color: "rgba(0,0,0,0.35)" }} />
                     <input
                       type="tel"
                       placeholder="Ex: 67X XX XX XX"
                       value={phone}
                       onChange={e => setPhone(e.target.value)}
                       className="flex-1 text-xs font-bold outline-none bg-transparent"
-                      style={{ color: "#f3f0ff" }}
+                      style={{ color: "#1a2235" }}
                     />
                   </div>
                 </div>
@@ -473,7 +473,7 @@ export default function Premium() {
                   disabled={loading || !phone.trim()}
                   className="w-full py-4 text-sm font-extrabold flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{
-                    background: "linear-gradient(135deg,#E91E8C,#f43f5e)",
+                    background: "linear-gradient(135deg,#2563eb,#f43f5e)",
                     borderRadius: "12px",
                     color: "#fff",
                     fontWeight: 800,
@@ -523,10 +523,10 @@ export default function Premium() {
                 </div>
 
                 <div>
-                  <h2 className="text-base font-extrabold tracking-tight" style={{ color: "#f3f0ff", fontWeight: 800 }}>
+                  <h2 className="text-base font-extrabold tracking-tight" style={{ color: "#1a2235", fontWeight: 800 }}>
                     Demande prise en charge
                   </h2>
-                  <p className="text-xs mt-1 leading-relaxed" style={{ color: "rgba(200,185,255,0.65)" }}>
+                  <p className="text-xs mt-1 leading-relaxed" style={{ color: "#4a5568" }}>
                     Les logs de paiement ont été transmis au registre réseau. Validation finale sous 24 heures maximum.
                   </p>
                 </div>
@@ -534,23 +534,23 @@ export default function Premium() {
                 {/* Reference display */}
                 <div
                   className="p-4 text-center space-y-1 relative"
-                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: "16px" }}
+                  style={{ background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: "16px" }}
                 >
-                  <span className="text-[9px] font-bold uppercase tracking-widest block" style={{ color: "rgba(255,255,255,0.35)" }}>
+                  <span className="text-[9px] font-bold uppercase tracking-widest block" style={{ color: "rgba(0,0,0,0.35)" }}>
                     Référence système unique
                   </span>
                   <div className="flex items-center justify-center gap-3">
-                    <span className="text-lg font-extrabold tracking-wider" style={{ color: "#f3f0ff", fontWeight: 800 }}>
+                    <span className="text-lg font-extrabold tracking-wider" style={{ color: "#1a2235", fontWeight: 800 }}>
                       {requestData.reference}
                     </span>
                     <button
                       onClick={() => copyRef(requestData.reference)}
                       className="p-1.5 transition-all active:scale-90"
-                      style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: "8px" }}
+                      style={{ background: "rgba(0,0,0,0.07)", border: "1px solid rgba(0,0,0,0.12)", borderRadius: "8px" }}
                     >
                       {copied
                         ? <Check className="w-3.5 h-3.5" style={{ color: "#6ee7b7" }} />
-                        : <Copy className="w-3.5 h-3.5" style={{ color: "rgba(255,255,255,0.5)" }} />
+                        : <Copy className="w-3.5 h-3.5" style={{ color: "rgba(0,0,0,0.5)" }} />
                       }
                     </button>
                   </div>
@@ -578,10 +578,10 @@ export default function Premium() {
                   onClick={() => setLocation("/")}
                   className="w-full py-3 text-xs font-bold transition-all active:scale-[0.98]"
                   style={{
-                    background: "rgba(255,255,255,0.08)",
-                    border: "1px solid rgba(255,255,255,0.15)",
+                    background: "rgba(0,0,0,0.08)",
+                    border: "1px solid rgba(0,0,0,0.15)",
                     borderRadius: "9999px",
-                    color: "#f3f0ff",
+                    color: "#1a2235",
                     fontWeight: 700,
                   }}
                 >
@@ -592,13 +592,13 @@ export default function Premium() {
               {/* Validation protocol */}
               <div
                 className="p-4 space-y-2"
-                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: "24px" }}
+                style={{ background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: "24px" }}
               >
-                <div className="flex items-center gap-2" style={{ color: "rgba(255,255,255,0.35)" }}>
+                <div className="flex items-center gap-2" style={{ color: "rgba(0,0,0,0.35)" }}>
                   <ShieldAlert className="w-3.5 h-3.5" />
                   <span className="text-[9px] font-bold uppercase tracking-widest">Protocole de validation</span>
                 </div>
-                <ul className="text-[11px] font-medium space-y-1.5 list-disc list-inside" style={{ color: "rgba(200,185,255,0.65)" }}>
+                <ul className="text-[11px] font-medium space-y-1.5 list-disc list-inside" style={{ color: "#4a5568" }}>
                   <li>Vérification du hachage de la transaction Mobile Money.</li>
                   <li>Déploiement des accès illimités sur ton ID utilisateur.</li>
                   <li>Crédit automatique des points de fidélité au premier scan.</li>
