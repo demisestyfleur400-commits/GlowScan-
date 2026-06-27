@@ -23,18 +23,18 @@ import { productImages } from "@/lib/productImages";
 //  Design system constants
 // ─────────────────────────────────────────────────────────────────────────
 const DS = {
-  bg: "#0d0a0e",
-  surface: "#13101f",
-  element: "#0e0b1a",
-  textPrimary: "#f3f0ff",
-  textBody: "rgba(200,185,255,0.65)",
-  textMuted: "rgba(255,255,255,0.35)",
-  textHint: "rgba(255,255,255,0.25)",
-  violet: "#7c3aed",
-  violetMid: "#a78bfa",
-  violetLight: "#c4b5fd",
-  pink: "#E91E8C",
-  font: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
+  bg: "#fbfdfb",                 // blanc cassé
+  surface: "#ffffff",            // cartes blanches
+  element: "#f1f6f3",            // surface vert-gris très clair
+  textPrimary: "#1f2a26",        // texte foncé
+  textBody: "#4a5a52",           // texte secondaire vert-gris
+  textMuted: "#6b7d76",          // texte atténué
+  textHint: "#9aa8a1",           // texte très atténué
+  violet: "#2f9e6e",             // vert principal (CTA)
+  violetMid: "#3fbf86",          // vert moyen
+  violetLight: "#7fd3a6",        // vert clair
+  pink: "#2f9e6e",               // ancien rose → vert (thème blanc/vert)
+  font: "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, system-ui, sans-serif",
 } as const;
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -130,7 +130,7 @@ function CircularScore({ score, color }: { score: number; color: string }) {
           cy={size / 2}
           r={radius}
           fill="transparent"
-          stroke="rgba(167,139,250,0.12)"
+          stroke="rgba(47,158,110,0.12)"
           strokeWidth={stroke}
         />
         <motion.circle
@@ -395,7 +395,7 @@ function ExplorerSheet({ open, onClose }: { open: boolean; onClose: () => void }
             style={{
               background: DS.surface,
               borderRadius: "28px 28px 0 0",
-              border: "1px solid rgba(167,139,250,0.15)",
+              border: "1px solid rgba(47,158,110,0.15)",
               borderBottom: "none",
               fontFamily: DS.font,
             }}
@@ -408,14 +408,14 @@ function ExplorerSheet({ open, onClose }: { open: boolean; onClose: () => void }
             <div className="pt-3 pb-1 flex justify-center">
               <div
                 className="w-10 h-1 rounded-full"
-                style={{ background: "rgba(167,139,250,0.25)" }}
+                style={{ background: "rgba(47,158,110,0.25)" }}
               />
             </div>
 
             {/* Header */}
             <div
               className="px-5 pt-2 pb-4 flex items-center justify-between"
-              style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}
+              style={{ borderBottom: "1px solid rgba(0,0,0,0.07)" }}
             >
               <div>
                 <p
@@ -437,8 +437,8 @@ function ExplorerSheet({ open, onClose }: { open: boolean; onClose: () => void }
                 onClick={onClose}
                 className="w-8 h-8 flex items-center justify-center active:scale-90 transition-transform"
                 style={{
-                  background: "rgba(255,255,255,0.05)",
-                  border: "1px solid rgba(255,255,255,0.1)",
+                  background: "rgba(0,0,0,0.05)",
+                  border: "1px solid rgba(0,0,0,0.1)",
                   borderRadius: "12px",
                 }}
                 data-testid="explorer-close"
@@ -461,8 +461,8 @@ function ExplorerSheet({ open, onClose }: { open: boolean; onClose: () => void }
                   data-testid={item.kind === "logout" ? "menu-item-logout" : `menu-item-${item.path.replace(/\//g, "-")}`}
                   className={`w-full flex items-center gap-3.5 p-3.5 text-left active:scale-[0.99] transition-transform ${item.kind === "logout" && isLoggingOut ? "opacity-40" : ""}`}
                   style={{
-                    background: "rgba(255,255,255,0.03)",
-                    border: "1px solid rgba(255,255,255,0.06)",
+                    background: "rgba(0,0,0,0.03)",
+                    border: "1px solid rgba(0,0,0,0.06)",
                     borderRadius: "16px",
                   }}
                 >
@@ -471,10 +471,10 @@ function ExplorerSheet({ open, onClose }: { open: boolean; onClose: () => void }
                     style={{
                       background: item.kind === "logout"
                         ? "rgba(233,30,140,0.08)"
-                        : "rgba(124,58,237,0.12)",
+                        : "rgba(47,158,110,0.12)",
                       border: item.kind === "logout"
                         ? "1px solid rgba(233,30,140,0.2)"
-                        : "1px solid rgba(167,139,250,0.2)",
+                        : "1px solid rgba(47,158,110,0.2)",
                       borderRadius: "10px",
                     }}
                   >
@@ -520,7 +520,7 @@ function daysSince(date: string | Date) {
 function getScoreColor(score: number) {
   if (score >= 75) return { hex: "#10b981", stateBg: "rgba(16,185,129,0.08)", stateBorder: "rgba(16,185,129,0.2)", stateText: "#6ee7b7" };
   if (score >= 50) return { hex: "#f59e0b", stateBg: "rgba(245,158,11,0.08)", stateBorder: "rgba(245,158,11,0.2)", stateText: "#fbbf24" };
-  return { hex: "#E91E8C", stateBg: "rgba(233,30,140,0.08)", stateBorder: "rgba(233,30,140,0.2)", stateText: "#f9a8d4" };
+  return { hex: "#2f9e6e", stateBg: "rgba(233,30,140,0.08)", stateBorder: "rgba(233,30,140,0.2)", stateText: "#f9a8d4" };
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -577,13 +577,13 @@ export default function Home() {
         {/* Glow orb — no box-shadow */}
         <div
           className="absolute w-64 h-64"
-          style={{ background: "radial-gradient(circle, rgba(124,58,237,0.15), transparent)" }}
+          style={{ background: "radial-gradient(circle, rgba(47,158,110,0.15), transparent)" }}
         />
         <div
           className="w-12 h-12 relative flex items-center justify-center"
           style={{
             background: DS.surface,
-            border: "1px solid rgba(167,139,250,0.2)",
+            border: "1px solid rgba(47,158,110,0.2)",
             borderRadius: "20px",
           }}
         >
@@ -634,11 +634,11 @@ export default function Home() {
       <div className="pointer-events-none fixed inset-0 overflow-hidden z-0" aria-hidden="true">
         <div
           className="absolute top-[-10%] right-[-5%] w-[400px] h-[400px]"
-          style={{ background: "radial-gradient(circle, rgba(124,58,237,0.12), transparent)" }}
+          style={{ background: "radial-gradient(circle, rgba(47,158,110,0.12), transparent)" }}
         />
         <div
           className="absolute bottom-[20%] left-[-10%] w-[300px] h-[300px]"
-          style={{ background: "radial-gradient(circle, rgba(124,58,237,0.08), transparent)" }}
+          style={{ background: "radial-gradient(circle, rgba(47,158,110,0.08), transparent)" }}
         />
       </div>
 
@@ -647,7 +647,7 @@ export default function Home() {
         className="px-5 pt-12 pb-4 sticky top-0 z-40"
         style={{
           background: `${DS.bg}e6`,
-          borderBottom: "1px solid rgba(255,255,255,0.07)",
+          borderBottom: "1px solid rgba(0,0,0,0.07)",
           backdropFilter: "blur(20px)",
         }}
       >
@@ -657,7 +657,7 @@ export default function Home() {
               className="w-8 h-8 flex items-center justify-center"
               style={{
                 background: DS.surface,
-                border: "1px solid rgba(167,139,250,0.2)",
+                border: "1px solid rgba(47,158,110,0.2)",
                 borderRadius: "12px",
               }}
             >
@@ -669,8 +669,8 @@ export default function Home() {
             onClick={() => setExplorerOpen(true)}
             className="w-9 h-9 flex items-center justify-center active:scale-95 transition-all"
             style={{
-              background: "rgba(255,255,255,0.05)",
-              border: "1px solid rgba(255,255,255,0.1)",
+              background: "rgba(0,0,0,0.05)",
+              border: "1px solid rgba(0,0,0,0.1)",
               borderRadius: "12px",
             }}
             data-testid="button-menu"
@@ -706,19 +706,19 @@ export default function Home() {
             className="relative overflow-hidden"
             data-testid="section-status"
             style={{
-              background: "rgba(124,58,237,0.08)",
-              border: "1px solid rgba(167,139,250,0.18)",
+              background: "rgba(47,158,110,0.08)",
+              border: "1px solid rgba(47,158,110,0.18)",
               borderRadius: "24px",
             }}
           >
             {/* Glow orb inside card */}
             <div
               className="absolute top-[-30px] right-[-30px] w-40 h-40"
-              style={{ background: "radial-gradient(circle, rgba(124,58,237,0.2), transparent)" }}
+              style={{ background: "radial-gradient(circle, rgba(47,158,110,0.2), transparent)" }}
             />
             <div
               className="absolute bottom-[-20px] left-[-20px] w-28 h-28"
-              style={{ background: "radial-gradient(circle, rgba(167,139,250,0.1), transparent)" }}
+              style={{ background: "radial-gradient(circle, rgba(47,158,110,0.1), transparent)" }}
             />
 
             <div className="relative p-6">
@@ -749,7 +749,7 @@ export default function Home() {
                 data-testid="button-scan-now"
                 className="w-full h-12 font-extrabold text-sm flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
                 style={{
-                  background: "#7c3aed",
+                  background: "#2f9e6e",
                   borderRadius: "9999px",
                   color: "#f3f0ff",
                 }}
@@ -767,7 +767,7 @@ export default function Home() {
             <div className="mb-3 flex items-center gap-2">
               <div
                 className="w-5 h-5 rounded-full flex items-center justify-center"
-                style={{ background: "rgba(124,58,237,0.15)" }}
+                style={{ background: "rgba(47,158,110,0.15)" }}
               >
                 <Target className="w-3 h-3" style={{ color: DS.violetMid }} strokeWidth={1.5} />
               </div>
@@ -778,8 +778,8 @@ export default function Home() {
               <div
                 className="p-5"
                 style={{
-                  background: "rgba(255,255,255,0.04)",
-                  border: "1px solid rgba(255,255,255,0.07)",
+                  background: "rgba(0,0,0,0.04)",
+                  border: "1px solid rgba(0,0,0,0.07)",
                   borderRadius: "24px",
                 }}
               >
@@ -829,16 +829,16 @@ export default function Home() {
               <div
                 className="p-6 text-center"
                 style={{
-                  background: "rgba(255,255,255,0.04)",
-                  border: "1px solid rgba(255,255,255,0.07)",
+                  background: "rgba(0,0,0,0.04)",
+                  border: "1px solid rgba(0,0,0,0.07)",
                   borderRadius: "24px",
                 }}
               >
                 <div
                   className="w-12 h-12 flex items-center justify-center mx-auto mb-3"
                   style={{
-                    background: "rgba(124,58,237,0.1)",
-                    border: "1px solid rgba(167,139,250,0.2)",
+                    background: "rgba(47,158,110,0.1)",
+                    border: "1px solid rgba(47,158,110,0.2)",
                     borderRadius: "16px",
                   }}
                 >
@@ -875,8 +875,8 @@ export default function Home() {
             <div
               className="overflow-hidden"
               style={{
-                background: "rgba(255,255,255,0.04)",
-                border: "1px solid rgba(255,255,255,0.07)",
+                background: "rgba(0,0,0,0.04)",
+                border: "1px solid rgba(0,0,0,0.07)",
                 borderRadius: "24px",
               }}
             >
@@ -959,7 +959,7 @@ export default function Home() {
             <div className="mb-3 px-1 flex items-center gap-2">
               <div
                 className="w-5 h-5 rounded-full flex items-center justify-center"
-                style={{ background: "rgba(124,58,237,0.15)" }}
+                style={{ background: "rgba(47,158,110,0.15)" }}
               >
                 <Sparkles className="w-3 h-3" style={{ color: DS.violetMid }} strokeWidth={1.5} />
               </div>
@@ -979,8 +979,8 @@ export default function Home() {
                   transition={{ duration: 0.4, delay: i * 0.08, ease: EASE }}
                   className="min-w-[260px] max-w-[260px] snap-start overflow-hidden relative flex flex-col text-left"
                   style={{
-                    background: "rgba(167,139,250,0.06)",
-                    border: "1px solid rgba(167,139,250,0.18)",
+                    background: "rgba(47,158,110,0.06)",
+                    border: "1px solid rgba(47,158,110,0.18)",
                     borderRadius: "24px",
                   }}
                   data-testid={`knowledge-card-${card.testid}`}
@@ -1023,8 +1023,8 @@ export default function Home() {
                       data-testid={`button-knowledge-${card.testid}`}
                       className="w-full py-3 text-[10px] font-extrabold active:scale-95 transition-all"
                       style={{
-                        background: "rgba(255,255,255,0.08)",
-                        border: "1px solid rgba(255,255,255,0.15)",
+                        background: "rgba(0,0,0,0.08)",
+                        border: "1px solid rgba(0,0,0,0.15)",
                         borderRadius: "9999px",
                         color: DS.textPrimary,
                         letterSpacing: "0.05em",
@@ -1047,8 +1047,8 @@ export default function Home() {
               data-testid="button-pro-cta"
               className="w-full text-left p-4 active:scale-[0.99] transition-all"
               style={{
-                background: "rgba(255,255,255,0.04)",
-                border: "1px solid rgba(255,255,255,0.07)",
+                background: "rgba(0,0,0,0.04)",
+                border: "1px solid rgba(0,0,0,0.07)",
                 borderRadius: "24px",
               }}
             >
@@ -1115,8 +1115,8 @@ export default function Home() {
                   transition={{ duration: 0.4, delay: i * 0.07, ease: EASE }}
                   className="min-w-[270px] max-w-[270px] snap-start flex flex-col p-5"
                   style={{
-                    background: "rgba(255,255,255,0.04)",
-                    border: "1px solid rgba(167,139,250,0.15)",
+                    background: "rgba(0,0,0,0.04)",
+                    border: "1px solid rgba(47,158,110,0.15)",
                     borderRadius: "24px",
                     position: "relative",
                   }}
@@ -1154,8 +1154,8 @@ export default function Home() {
                       style={{
                         background: t.score
                           ? "rgba(16,185,129,0.1)"
-                          : "rgba(167,139,250,0.1)",
-                        border: `1px solid ${t.score ? "rgba(16,185,129,0.25)" : "rgba(167,139,250,0.25)"}`,
+                          : "rgba(47,158,110,0.1)",
+                        border: `1px solid ${t.score ? "rgba(16,185,129,0.25)" : "rgba(47,158,110,0.25)"}`,
                         borderRadius: "8px",
                       }}
                     >
@@ -1210,8 +1210,8 @@ export default function Home() {
                     transition={{ duration: 0.4, delay: i * 0.08, ease: EASE }}
                     className="min-w-[170px] max-w-[170px] snap-start overflow-hidden flex flex-col text-left"
                     style={{
-                      background: "rgba(255,255,255,0.04)",
-                      border: "1px solid rgba(255,255,255,0.07)",
+                      background: "rgba(0,0,0,0.04)",
+                      border: "1px solid rgba(0,0,0,0.07)",
                       borderRadius: "20px",
                     }}
                     data-testid={`featured-product-${p.id}`}
@@ -1220,7 +1220,7 @@ export default function Home() {
                       className="relative w-full h-28 flex items-center justify-center p-3"
                       style={{
                         background: DS.element,
-                        borderBottom: "1px solid rgba(255,255,255,0.06)",
+                        borderBottom: "1px solid rgba(0,0,0,0.06)",
                       }}
                     >
                       {p.image ? (
@@ -1238,8 +1238,8 @@ export default function Home() {
                       <div
                         className="absolute top-2 left-2 text-[8px] font-bold px-2 py-0.5"
                         style={{
-                          background: "rgba(167,139,250,0.15)",
-                          border: "1px solid rgba(167,139,250,0.3)",
+                          background: "rgba(47,158,110,0.15)",
+                          border: "1px solid rgba(47,158,110,0.3)",
                           borderRadius: "8px",
                           color: DS.violetLight,
                           letterSpacing: "0.05em",
@@ -1276,7 +1276,7 @@ export default function Home() {
                           data-testid={`button-order-${p.id}`}
                           className="w-full py-2 text-[10px] font-extrabold active:scale-95 transition-all flex items-center justify-center"
                           style={{
-                            background: "linear-gradient(135deg, #E91E8C, #f43f5e)",
+                            background: "linear-gradient(135deg, #2f9e6e, #f43f5e)",
                             borderRadius: "12px",
                             color: "#f3f0ff",
                             letterSpacing: "0.04em",
@@ -1299,7 +1299,7 @@ export default function Home() {
         className="fixed bottom-0 left-0 right-0 z-50"
         style={{
           background: `${DS.surface}f0`,
-          borderTop: "1px solid rgba(167,139,250,0.12)",
+          borderTop: "1px solid rgba(47,158,110,0.12)",
           backdropFilter: "blur(20px)",
           paddingBottom: "env(safe-area-inset-bottom, 8px)",
         }}
@@ -1312,7 +1312,7 @@ export default function Home() {
             whileTap={{ scale: 0.95 }}
             className="relative flex items-center gap-2 px-8 py-3.5 font-extrabold text-xs overflow-hidden"
             style={{
-              background: "#7c3aed",
+              background: "#2f9e6e",
               borderRadius: "9999px",
               color: "#f3f0ff",
               letterSpacing: "0.06em",
