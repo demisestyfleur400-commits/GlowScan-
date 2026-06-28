@@ -788,7 +788,8 @@ function normalizeStep(s: any, i: number): ProtocolStep {
 }
 
 // ─── DS tokens (inline) ─────────────────────────────────────────────
-const DS = {
+// Thème SOMBRE — utilisé en mode DERM (isPro), page noire.
+const DS_DARK = {
   font: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
   bg: "#0d0a0e",
   surface: "#13101f",
@@ -811,6 +812,36 @@ const DS = {
     borderRadius: "24px",
   } as React.CSSProperties,
 };
+
+// Thème CLAIR — utilisé en B2C (page blanche). Cartes blanches solides + texte
+// foncé → lisible sur fond clair. Accent vert.
+const DS_LIGHT = {
+  font: '"Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, system-ui, sans-serif',
+  bg: "#fbfdfb",
+  surface: "#ffffff",
+  element: "#f1f6f3",
+  textPrimary: "#1f2a26",
+  textBody: "#4a5a52",
+  textMuted: "#6b7d76",
+  violet: "#2f9e6e",
+  violetMid: "#2f9e6e",
+  violetLight: "#2f9e6e",
+  pink: "#2f9e6e",
+  subtleCard: {
+    background: "#ffffff",
+    border: "1px solid rgba(0,0,0,0.08)",
+    borderRadius: "24px",
+  } as React.CSSProperties,
+  violetCard: {
+    background: "rgba(47,158,110,0.06)",
+    border: "1px solid rgba(47,158,110,0.2)",
+    borderRadius: "24px",
+  } as React.CSSProperties,
+};
+
+// DS actif — réassigné à chaque rendu de ResultCard selon isPro (voir composant).
+// (Les sous-composants de ce module lisent ce DS au moment du rendu synchrone.)
+let DS = DS_DARK;
 
 // ─── Composants UI ──────────────────────────────────────────────────
 
@@ -1102,6 +1133,9 @@ interface ResultCardProps {
 }
 
 export function ResultCard({ result, scanId, savedScanId, area, imageUrl, userFirstName, patientIntake, isPro = false, doctorName, doctorLicense, cabinetName, practitionerNotes, overrideNote, onPdfReady }: ResultCardProps) {
+  // 🎨 Thème actif : clair en B2C (page blanche), sombre en DERM (isPro).
+  // Réassigne le DS module-level lu par les sous-composants pendant ce rendu.
+  DS = isPro ? DS_DARK : DS_LIGHT;
   const { toast } = useToast();
   const { user } = useAuth();
   const { isPremium } = useSubscription();
