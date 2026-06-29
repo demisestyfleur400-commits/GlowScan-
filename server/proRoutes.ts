@@ -65,6 +65,12 @@ function isProActive(acc: { trialEndsAt: Date; subscriptionStatus: string; subsc
   return false;
 }
 
+// Met à jour users.last_login (SQL brut → ne dépend pas du schéma Drizzle ;
+// no-op silencieux si la colonne n'existe pas encore). Fire-and-forget.
+function touchLastLogin(userId: string) {
+  db.execute(sql`UPDATE "users" SET "last_login" = now() WHERE "id" = ${userId}`).catch(() => {});
+}
+
 function statusFromScore(score: number): "red" | "yellow" | "green" {
   if (score < 40) return "red";
   if (score < 65) return "yellow";
@@ -251,7 +257,7 @@ export function registerProRoutes(app: Express) {
       }).returning();
 
       // 3. Login session
-      req.session.userId = userId;
+      req.session.userId = userId; touchLastLogin(userId);
       req.session.save((err: any) => {
         if (err) {
           console.error("[pro/register] session save:", err);
@@ -290,7 +296,7 @@ export function registerProRoutes(app: Express) {
       if (!acc) {
         // Secrétaire : pas de compte pro propre, mais accès autorisé si liée à un cabinet
         if (user.role === "secretary") {
-          req.session.userId = user.id;
+          req.session.userId = user.id; touchLastLogin(user.id);
           return req.session.save((err: any) => {
             if (err) return res.status(500).json({ message: "Erreur session" });
             res.json({ success: true, role: "secretary" });
@@ -299,7 +305,7 @@ export function registerProRoutes(app: Express) {
         return res.status(403).json({ message: "Aucun compte Pro lié à cet email. Inscris-toi d'abord." });
       }
 
-      req.session.userId = user.id;
+      req.session.userId = user.id; touchLastLogin(user.id);
       req.session.save((err: any) => {
         if (err) return res.status(500).json({ message: "Erreur session" });
         // ── Tracking connexion DERM (non-bloquant) ──
@@ -1116,7 +1122,7 @@ Règles :
       }
 
       // Login session
-      req.session.userId = user.id;
+      req.session.userId = user.id; touchLastLogin(user.id);
       req.session.save((err: any) => {
         if (err) {
           console.error("[secretary/login] session save:", err);

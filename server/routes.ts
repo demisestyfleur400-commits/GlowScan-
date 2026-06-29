@@ -2209,6 +2209,76 @@ Réponds en 2-4 phrases max, sois direct et utile.`;
     }
   });
 
+  // GET /api/admin/dermatologists-activity — monitoring de l'activité des dermatologues
+  // Agrège pro_accounts + users + patients + scans (données existantes, aucune table créée).
+  app.get("/api/admin/dermatologists-activity", async (req: any, res) => {
+    if (!checkAdminKey(req)) return res.status(403).json({ message: "Accès refusé" });
+    try {
+      const baseSelect = (withLastLogin: boolean) => sql`
+        SELECT pa.id, pa.user_id, pa.full_name, pa.cabinet_name, pa.city, pa.phone,
+               pa.subscription_status, pa.subscription_expires_at, pa.trial_ends_at, pa.created_at,
+               u.email,
+               ${withLastLogin ? sql`u.last_login,` : sql`NULL::timestamp AS last_login,`}
+               (SELECT count(*) FROM patients p WHERE p.dermatologist_id = pa.id) AS patient_count,
+               (SELECT count(*) FROM scans s WHERE s.patient_id IN (SELECT id FROM patients WHERE dermatologist_id = pa.id)) AS analysis_count
+        FROM pro_accounts pa
+        LEFT JOIN users u ON u.id = pa.user_id
+        ORDER BY pa.created_at DESC`;
+
+      // Tente avec last_login ; si la colonne n'existe pas encore → fallback sans.
+      let result: any;
+      try { result = await db.execute(baseSelect(true)); }
+      catch { result = await db.execute(baseSelect(false)); }
+      const rows: any[] = (result?.rows ?? result ?? []) as any[];
+
+      const now = Date.now();
+      const DAY = 86400000;
+      const dermatologists = rows.map((row) => {
+        const lastLogin = row.last_login ? new Date(row.last_login) : null;
+        const trialEndsAt = row.trial_ends_at ? new Date(row.trial_ends_at) : null;
+        const subStatus = String(row.subscription_status || "trial");
+        const analysisCount = Number(row.analysis_count) || 0;
+        const patientCount = Number(row.patient_count) || 0;
+        const daysSinceLogin = lastLogin ? Math.floor((now - lastLogin.getTime()) / DAY) : null;
+        const trialExpired = subStatus === "trial" && !!trialEndsAt && trialEndsAt.getTime() < now;
+        const isPaid = subStatus === "active";
+        const trialDaysLeft = subStatus === "trial" && trialEndsAt
+          ? Math.max(0, Math.ceil((trialEndsAt.getTime() - now) / DAY)) : null;
+
+        const status = isPaid ? "paid" : trialExpired ? "expired" : subStatus === "trial" ? "trial" : "expired";
+
+        const blockers: string[] = [];
+        if (!lastLogin) blockers.push("Jamais connecté");
+        else if (analysisCount === 0) blockers.push("Bloqué — 0 analyse");
+        if (trialExpired && !isPaid) blockers.push("Essai expiré — non converti");
+        if (daysSinceLogin !== null && daysSinceLogin > 7) blockers.push("Inactif");
+
+        return {
+          id: row.id,
+          userId: row.user_id,
+          fullName: row.full_name || "—",
+          email: row.email || "—",
+          cabinetName: row.cabinet_name || null,
+          city: row.city || null,
+          phone: row.phone || null,
+          createdAt: row.created_at,
+          status,           // trial | paid | expired
+          patientCount,
+          analysisCount,
+          lastLogin: lastLogin ? lastLogin.toISOString() : null,
+          daysSinceLogin,
+          trialDaysLeft,
+          blockers,
+        };
+      });
+
+      res.json({ dermatologists, total: dermatologists.length });
+    } catch (err) {
+      console.error("[admin/dermatologists-activity] error:", err);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
   // GET /api/admin/retention — segments de rétention, couvre TOUS les utilisateurs
   // Sources contact : premiumRequests.phone (prioritaire) > email faux tel-XXX@phone.glowscan.cm > email réel
   app.get("/api/admin/retention", async (req: any, res) => {

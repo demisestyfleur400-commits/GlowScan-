@@ -57,7 +57,12 @@ export default function Admin() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [period, setPeriod] = useState<Period>("all");
-  const [adminTab, setAdminTab] = useState<"traction" | "stats" | "premium" | "leads" | "partenaires" | "vedettes" | "dataset" | "retention">("traction");
+  const [adminTab, setAdminTab] = useState<"traction" | "stats" | "premium" | "leads" | "partenaires" | "vedettes" | "dataset" | "retention" | "dermatologues">("traction");
+  // ── Activité dermatologues ──
+  const [dermActivity, setDermActivity] = useState<any[]>([]);
+  const [dermLoading, setDermLoading] = useState(false);
+  const [dermFilter, setDermFilter] = useState<"all" | "trial" | "paid" | "blocked">("all");
+  const [dermSort, setDermSort] = useState<"created" | "activity">("created");
   const [datasetItems, setDatasetItems] = useState<any[]>([]);
   const [datasetTotal, setDatasetTotal] = useState(0);
   const [datasetPage, setDatasetPage] = useState(1);
@@ -135,7 +140,21 @@ export default function Admin() {
     if (adminTab === "dataset") { fetchDataset(adminKey); fetchDatasetStats(adminKey); }
     if (adminTab === "vedettes") fetchFeatured();
     if (adminTab === "retention") fetchRetention(adminKey);
+    if (adminTab === "dermatologues") fetchDermActivity(adminKey);
   }, [adminTab]);
+
+  const fetchDermActivity = async (key: string) => {
+    setDermLoading(true);
+    try {
+      const res = await fetch("/api/admin/dermatologists-activity", { headers: { "x-admin-key": key } });
+      const body = await res.json();
+      if (res.ok) setDermActivity(body.dermatologists || []);
+    } catch (e) {
+      console.error("[derm-activity] fetch err", e);
+    } finally {
+      setDermLoading(false);
+    }
+  };
 
   const fetchFeatured = async () => {
     setFeaturedLoading(true);
@@ -371,6 +390,7 @@ export default function Admin() {
           >
             {[
               { key: "dataset", label: "Dataset", icon: Stethoscope, badge: datasetStats?.pending || 0, activeColor: "#10b981" },
+              { key: "dermatologues", label: "Dermatologues", icon: Stethoscope, badge: dermActivity.filter((d: any) => (d.blockers?.length || 0) > 0).length, activeColor: "#f43f5e" },
               { key: "traction", label: "Traction", icon: TrendingUp, badge: 0, activeColor: DS.violet },
               { key: "stats", label: "Stats", icon: BarChart2, badge: 0, activeColor: DS.violet },
               { key: "premium", label: "Abonnés", icon: Crown, badge: subscribers.filter(s => s.isPremium).length, activeColor: "#fbbf24" },
@@ -797,6 +817,110 @@ export default function Admin() {
             onReview={reviewScan} accessKey={adminKey}
           />
         )}
+
+        {/* ===== ACTIVITÉ DERMATOLOGUES ===== */}
+        {adminTab === "dermatologues" && (() => {
+          const STATUS_META: Record<string, { label: string; color: string; bg: string }> = {
+            trial: { label: "Essai gratuit", color: "#fbbf24", bg: "rgba(245,158,11,0.12)" },
+            paid: { label: "Payant", color: "#6ee7b7", bg: "rgba(16,185,129,0.12)" },
+            expired: { label: "Expiré", color: "#f9a8d4", bg: "rgba(244,63,94,0.12)" },
+          };
+          const isBlocked = (d: any) => (d.blockers?.length || 0) > 0;
+          let list = dermActivity.filter((d: any) => {
+            if (dermFilter === "all") return true;
+            if (dermFilter === "blocked") return isBlocked(d);
+            return d.status === dermFilter;
+          });
+          list = [...list].sort((a: any, b: any) =>
+            dermSort === "created"
+              ? new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+              : new Date(b.lastLogin || 0).getTime() - new Date(a.lastLogin || 0).getTime()
+          );
+          const relancer = (d: any) => {
+            const tel = (d.phone || "").replace(/\D/g, "");
+            const prenom = (d.fullName || "").split(" ").slice(-1)[0] || d.fullName || "";
+            const msg = encodeURIComponent(
+              `Bonjour Dr ${prenom}, c'est l'équipe GlowScan DERM 👋. On a vu que vous n'avez pas encore profité pleinement de votre espace. Besoin d'un coup de main pour lancer votre première analyse ? On est là.`
+            );
+            if (!tel) { alert("Pas de numéro WhatsApp pour ce dermatologue."); return; }
+            window.open(`https://wa.me/${tel}?text=${msg}`, "_blank");
+          };
+          const fmtDate = (v: any) => (v ? new Date(v).toLocaleDateString("fr-FR") : "—");
+
+          return (
+            <div className="space-y-3">
+              {/* Filtres + tri */}
+              <div className="flex flex-wrap items-center gap-2">
+                {([["all", "Tous"], ["trial", "Essai"], ["paid", "Payant"], ["blocked", "Bloqué"]] as const).map(([v, label]) => (
+                  <button key={v} onClick={() => setDermFilter(v)}
+                    className="px-3 py-1.5 rounded-full text-xs font-bold transition-all"
+                    style={dermFilter === v
+                      ? { background: DS.violet, color: "#fff" }
+                      : { background: DS.surface, border: `1px solid ${DS.border}`, color: DS.body }}>
+                    {label}
+                  </button>
+                ))}
+                <div className="flex-1" />
+                <button onClick={() => setDermSort(dermSort === "created" ? "activity" : "created")}
+                  className="px-3 py-1.5 rounded-full text-xs font-bold"
+                  style={{ background: DS.surface, border: `1px solid ${DS.border}`, color: DS.violetMid }}>
+                  Tri : {dermSort === "created" ? "Inscription" : "Activité"}
+                </button>
+                <button onClick={() => fetchDermActivity(adminKey)}
+                  className="px-3 py-1.5 rounded-full text-xs font-bold"
+                  style={{ background: DS.surface, border: `1px solid ${DS.border}`, color: DS.body }}>↻</button>
+              </div>
+
+              {dermLoading && <p className="text-center text-xs py-8" style={{ color: DS.muted }}>Chargement…</p>}
+              {!dermLoading && list.length === 0 && <p className="text-center text-xs py-8" style={{ color: DS.muted }}>Aucun dermatologue.</p>}
+
+              {list.map((d: any) => {
+                const sm = STATUS_META[d.status] || STATUS_META.expired;
+                return (
+                  <div key={d.id} className="rounded-2xl p-4" style={{ background: DS.surface, border: `1px solid ${DS.border}` }}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-extrabold truncate" style={{ color: DS.text }}>Dr {d.fullName}</p>
+                        <p className="text-[11px] truncate" style={{ color: DS.muted }}>{d.email}{d.city ? ` · ${d.city}` : ""}</p>
+                        <p className="text-[10px] mt-0.5" style={{ color: DS.muted }}>Inscrit le {fmtDate(d.createdAt)}</p>
+                      </div>
+                      <span className="px-2.5 py-1 rounded-lg text-[10px] font-extrabold whitespace-nowrap flex-shrink-0"
+                        style={{ background: sm.bg, color: sm.color }}>
+                        {sm.label}{d.status === "trial" && d.trialDaysLeft != null ? ` · ${d.trialDaysLeft}j` : ""}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2 mt-3">
+                      {[["Patients", d.patientCount], ["Analyses", d.analysisCount], ["Dern. connexion", d.lastLogin ? fmtDate(d.lastLogin) : "Jamais"]].map(([l, v]) => (
+                        <div key={l as string} className="rounded-lg px-2.5 py-2" style={{ background: "rgba(255,255,255,0.03)" }}>
+                          <p className="text-[9px] uppercase tracking-wider font-bold" style={{ color: DS.muted }}>{l}</p>
+                          <p className="text-sm font-extrabold mt-0.5" style={{ color: DS.text }}>{v}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    {(d.blockers?.length || 0) > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mt-3">
+                        {d.blockers.map((b: string) => (
+                          <span key={b} className="px-2 py-1 rounded-md text-[10px] font-bold"
+                            style={{ background: "rgba(244,63,94,0.1)", color: "#f9a8d4", border: "1px solid rgba(244,63,94,0.25)" }}>
+                            ⚠ {b}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    <button onClick={() => relancer(d)}
+                      className="w-full mt-3 py-2.5 rounded-full text-xs font-extrabold flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
+                      style={{ background: "linear-gradient(135deg, #25d366, #128c7e)", color: "#fff" }}>
+                      Relancer sur WhatsApp
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()}
 
         {/* ===== RÉTENTION ===== */}
         {adminTab === "retention" && (
