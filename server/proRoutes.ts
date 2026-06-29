@@ -207,6 +207,7 @@ export function registerProRoutes(app: Express) {
         cabinetName: z.string().optional().nullable(),
         phone: z.string().optional().nullable(),
         city: z.string().optional().nullable(),
+        country: z.string().optional().nullable(),
         // Numéro d'ordre professionnel (ONMC) — persisté (pro_accounts.license_number),
         // à vérifier manuellement.
         licenseNumber: z.string().optional().nullable(),
@@ -255,6 +256,11 @@ export function registerProRoutes(app: Express) {
         subscriptionStatus: "trial",
         consentSignedAt: new Date(),
       }).returning();
+
+      // Pays — écrit en SQL brut (colonne hors schéma Drizzle, no-op si absente)
+      if (data.country) {
+        db.execute(sql`UPDATE "pro_accounts" SET "country" = ${data.country} WHERE "id" = ${acc.id}`).catch(() => {});
+      }
 
       // 3. Login session
       req.session.userId = userId; touchLastLogin(userId);
@@ -366,12 +372,18 @@ export function registerProRoutes(app: Express) {
         cabinetName: z.string().nullable().optional(),
         phone: z.string().nullable().optional(),
         city: z.string().nullable().optional(),
+        country: z.string().nullable().optional(),
         licenseNumber: z.string().nullable().optional(),
         onboardingDone: z.boolean().optional(),
       });
       const data = schema.parse(req.body);
-      const [updated] = await db.update(proAccounts).set(data).where(eq(proAccounts.id, req.proAccount.id)).returning();
-      res.json({ account: updated });
+      // country est hors schéma Drizzle → on l'écrit en SQL brut, séparément.
+      const { country, ...drizzleData } = data;
+      const [updated] = await db.update(proAccounts).set(drizzleData).where(eq(proAccounts.id, req.proAccount.id)).returning();
+      if (country !== undefined) {
+        await db.execute(sql`UPDATE "pro_accounts" SET "country" = ${country} WHERE "id" = ${req.proAccount.id}`).catch(() => {});
+      }
+      res.json({ account: { ...updated, country: country !== undefined ? country : (updated as any).country } });
     } catch (err: any) {
       if (err?.issues) return res.status(400).json({ message: "Données invalides" });
       res.status(500).json({ message: "Erreur serveur" });

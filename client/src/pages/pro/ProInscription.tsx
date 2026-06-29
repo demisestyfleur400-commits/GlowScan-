@@ -35,6 +35,7 @@ export default function ProInscription() {
   const [cabinetName, setCabinetName] = useState("");
   const [phone, setPhone] = useState("");
   const [city, setCity] = useState("");
+  const [country, setCountry] = useState("Cameroun");
   const [licenseNumber, setLicenseNumber] = useState("");
   const [consent, setConsent] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -80,6 +81,7 @@ export default function ProInscription() {
           cabinetName: cabinetName || null,
           phone: phone || null,
           city: city || null,
+          country: country || null,
           licenseNumber: licenseNumber || null,
           consent: true,
         }),
@@ -254,6 +256,7 @@ export default function ProInscription() {
                 <Field label="Nom du cabinet" placeholder="Cabinet Bonanjo" value={cabinetName} onChange={setCabinetName} testid="input-cabinet" />
                 <Field label="Téléphone WhatsApp" placeholder="237 6XX XX XX XX" value={phone} onChange={setPhone} testid="input-phone" />
                 <Field label="Ville" placeholder="Douala" value={city} onChange={setCity} testid="input-city" />
+                <Field label="Pays" placeholder="Cameroun" value={country} onChange={setCountry} testid="input-country" />
                 <Field label="Numéro d'ordre (ONMC)" placeholder="Ex : ONMC-2024-XXXX" value={licenseNumber} onChange={setLicenseNumber} testid="input-license" />
                 <div style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "8px 10px", borderRadius: 10, background: "rgba(16,185,129,0.06)", border: "1px solid rgba(16,185,129,0.2)" }}>
                   <ShieldCheck style={{ width: 13, height: 13, color: "#6ee7b7", marginTop: 1, flexShrink: 0 }} />

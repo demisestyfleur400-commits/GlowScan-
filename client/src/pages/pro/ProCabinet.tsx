@@ -35,6 +35,7 @@ export default function ProCabinet() {
   const [cabinetName, setCabinetName] = useState("");
   const [phone, setPhone] = useState("");
   const [city, setCity] = useState("");
+  const [country, setCountry] = useState("");
   const [licenseNumber, setLicenseNumber] = useState("");
 
   // ── Équipe / secrétaires ──
@@ -104,6 +105,7 @@ export default function ProCabinet() {
       setCabinetName(accData.account.cabinetName || "");
       setPhone(accData.account.phone || "");
       setCity(accData.account.city || "");
+      setCountry((accData.account as any).country || "");
       setLicenseNumber((accData.account as any).licenseNumber || "");
     }
   }, [accData?.account]);
@@ -121,6 +123,7 @@ export default function ProCabinet() {
         cabinetName: cabinetName || null,
         phone: phone || null,
         city: city || null,
+        country: country || null,
         licenseNumber: licenseNumber || null,
       });
       toast({ title: "Profil mis à jour" });
@@ -221,6 +224,7 @@ export default function ProCabinet() {
               <Row label="Cabinet" value={acc.cabinetName || "—"} testid="text-cabinet" />
               <Row label="WhatsApp" value={acc.phone || "—"} testid="text-phone" />
               <Row label="Ville" value={acc.city || "—"} testid="text-city" />
+              <Row label="Pays" value={(acc as any).country || "—"} testid="text-country" />
               <Row label="N° d'ordre" value={(acc as any).licenseNumber || "—"} testid="text-license" />
             </div>
           ) : (
@@ -229,6 +233,7 @@ export default function ProCabinet() {
               <ProInput label="Cabinet" value={cabinetName} onChange={(e) => setCabinetName(e.target.value)} testid="input-cabinet" />
               <ProInput label="WhatsApp" value={phone} onChange={(e) => setPhone(e.target.value)} testid="input-phone" />
               <ProInput label="Ville" value={city} onChange={(e) => setCity(e.target.value)} testid="input-city" />
+              <ProInput label="Pays" value={country} onChange={(e) => setCountry(e.target.value)} testid="input-country" />
               <ProInput label="N° d'ordre (ONMC)" value={licenseNumber} onChange={(e) => setLicenseNumber(e.target.value)} testid="input-license" />
               <div className="flex gap-2 pt-1">
                 <button

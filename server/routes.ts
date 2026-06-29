@@ -2214,18 +2214,20 @@ Réponds en 2-4 phrases max, sois direct et utile.`;
   app.get("/api/admin/dermatologists-activity", async (req: any, res) => {
     if (!checkAdminKey(req)) return res.status(403).json({ message: "Accès refusé" });
     try {
-      const baseSelect = (withLastLogin: boolean) => sql`
+      // `full` = inclut les colonnes optionnelles (last_login, country) qui peuvent
+      // ne pas encore exister en base (migrations 0005/0006).
+      const baseSelect = (full: boolean) => sql`
         SELECT pa.id, pa.user_id, pa.full_name, pa.cabinet_name, pa.city, pa.phone,
                pa.subscription_status, pa.subscription_expires_at, pa.trial_ends_at, pa.created_at,
                u.email,
-               ${withLastLogin ? sql`u.last_login,` : sql`NULL::timestamp AS last_login,`}
+               ${full ? sql`u.last_login, pa.country,` : sql`NULL::timestamp AS last_login, NULL::varchar AS country,`}
                (SELECT count(*) FROM patients p WHERE p.dermatologist_id = pa.id) AS patient_count,
                (SELECT count(*) FROM scans s WHERE s.patient_id IN (SELECT id FROM patients WHERE dermatologist_id = pa.id)) AS analysis_count
         FROM pro_accounts pa
         LEFT JOIN users u ON u.id = pa.user_id
         ORDER BY pa.created_at DESC`;
 
-      // Tente avec last_login ; si la colonne n'existe pas encore → fallback sans.
+      // Tente avec les colonnes optionnelles ; si l'une manque → fallback sans.
       let result: any;
       try { result = await db.execute(baseSelect(true)); }
       catch { result = await db.execute(baseSelect(false)); }
@@ -2260,6 +2262,7 @@ Réponds en 2-4 phrases max, sois direct et utile.`;
           email: row.email || "—",
           cabinetName: row.cabinet_name || null,
           city: row.city || null,
+          country: row.country || null,
           phone: row.phone || null,
           createdAt: row.created_at,
           status,           // trial | paid | expired

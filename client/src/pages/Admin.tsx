@@ -881,7 +881,7 @@ export default function Admin() {
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="text-sm font-extrabold truncate" style={{ color: DS.text }}>Dr {d.fullName}</p>
-                        <p className="text-[11px] truncate" style={{ color: DS.muted }}>{d.email}{d.city ? ` · ${d.city}` : ""}</p>
+                        <p className="text-[11px] truncate" style={{ color: DS.muted }}>{d.email}{(d.city || d.country) ? ` · ${[d.city, d.country].filter(Boolean).join(", ")}` : ""}</p>
                         <p className="text-[10px] mt-0.5" style={{ color: DS.muted }}>Inscrit le {fmtDate(d.createdAt)}</p>
                       </div>
                       <span className="px-2.5 py-1 rounded-lg text-[10px] font-extrabold whitespace-nowrap flex-shrink-0"
