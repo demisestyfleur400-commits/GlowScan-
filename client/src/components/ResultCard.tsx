@@ -2372,7 +2372,7 @@ ${medicalSections}
 
           const waNumber = "237674377959"; // toutes les commandes → numéro unique GlowScan
           const waMsg = encodeURIComponent(
-            `Bonjour GlowScan 👋\n\nMon analyse a révélé : *${result.condition}*\n\nJe veux commander :\n• ${benefit}\n  Prix : ${bestProduct.price?.toLocaleString("fr-FR")} FCFA\n\nLivraison à Douala SVP 🙏`
+            `Bonjour GlowScan 👋\n\nMon analyse a révélé : *${result.condition}*\n\nJe veux commander :\n• ${bestProduct.name}\n  Réf : ${bestProduct.id}${bestProduct.brand ? ` · ${bestProduct.brand}` : ""}\n  Prix : ${bestProduct.price?.toLocaleString("fr-FR")} FCFA\n\nLivraison à Douala SVP 🙏`
           );
 
           return (
