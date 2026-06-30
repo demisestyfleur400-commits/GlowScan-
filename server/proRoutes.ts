@@ -439,12 +439,18 @@ export function registerProRoutes(app: Express) {
     try {
       const schema = insertPatientSchema.extend({
         dermatologistId: z.number().optional(),
+        clinicalRecord: z.any().optional(), // dossier clinique structuré (hors schéma Drizzle)
       });
       const parsed = schema.parse({ ...req.body, dermatologistId: req.proAccount.id });
+      // clinicalRecord est hors schéma Drizzle → exclu de l'INSERT, écrit en SQL brut.
+      const { clinicalRecord, ...patientData } = parsed as any;
       const [p] = await db.insert(patients).values({
-        ...parsed,
+        ...patientData,
         dermatologistId: req.proAccount.id,
       }).returning();
+      if (clinicalRecord && typeof clinicalRecord === "object") {
+        db.execute(sql`UPDATE "patients" SET "clinical_record" = ${JSON.stringify(clinicalRecord)}::jsonb WHERE "id" = ${p.id}`).catch(() => {});
+      }
       res.json({ patient: p });
     } catch (err: any) {
       if (err?.issues) return res.status(400).json({ message: "Données invalides", issues: err.issues });

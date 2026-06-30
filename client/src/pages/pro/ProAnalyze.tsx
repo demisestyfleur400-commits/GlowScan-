@@ -43,6 +43,7 @@ const ResultCard = lazy(() =>
 import { useToast } from "@/hooks/use-toast";
 import type { AnalysisResult, Patient } from "@shared/schema";
 import { ProLayout, ProCard, ProInput } from "@/components/ProLayout";
+import { ClinicalDossierForm, type ClinicalRecord } from "@/components/pro/ClinicalDossierForm";
 import PDFViewerModal from "@/components/PDFViewerModal";
 import { PremiumPdfTemplate } from "@/templates/PremiumPdfTemplate";
 
@@ -378,6 +379,17 @@ export default function ProAnalyze() {
   const [allergies, setAllergies] = useState("");
   const [consultMotif, setConsultMotif] = useState("");
 
+  // Dossier clinique structuré (Étape 1) — stocké en JSON, miroir vers le pipeline IA
+  const [clinicalRecord, setClinicalRecord] = useState<ClinicalRecord>({});
+  useEffect(() => {
+    const cr = clinicalRecord;
+    setConsultMotif(cr.motif || "");
+    setProblemDuration(cr.hmaDebut || "");
+    setPreviousProducts(cr.atcdCosmeto || "");
+    setPatientRegion(cr.ville || "");
+    setAllergies([cr.allergMedic, cr.allergAlimentaires, cr.allergEnv, cr.atopie].filter(Boolean).join(" ; "));
+  }, [clinicalRecord]);
+
   // Notes cliniques du praticien
   const [practitionerNotes, setPractitionerNotes] = useState("");
 
@@ -455,6 +467,7 @@ export default function ProAnalyze() {
         age: age ? parseInt(age) : null,
         sex,
         whatsappNumber: phone.trim() || null,
+        clinicalRecord,
       });
       setPatientId(r.patient.id);
       setPatient(r.patient);
@@ -1109,6 +1122,7 @@ export default function ProAnalyze() {
     setQuestionnaire([]); setAnswers({});
     setDossierSaved(false); setDatasetSent(false); setSavingDossier(false);
     setProblemDuration(""); setPreviousProducts(""); setAllergies(""); setConsultMotif("");
+    setClinicalRecord({});
     setPractitionerNotes("");
     setSelectedStatus(null); setAntecedentsOpen(false);
   };
@@ -1203,74 +1217,12 @@ export default function ProAnalyze() {
                     </div>
                     <ProInput label="Téléphone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} testid="input-phone" placeholder="237 6XX..." />
                   </div>
-                  {/* ─── Antécédents (accordion) ─── */}
+                  {/* ─── Dossier clinique structuré (démarche médicale) ─── */}
                   <div>
-                    <button
-                      type="button"
-                      onClick={() => setAntecedentsOpen(v => !v)}
-                      className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-extrabold transition-all"
-                      style={{ background: "rgba(124,58,237,0.08)", border: "1px solid rgba(124,58,237,0.2)", color: "#a78bfa" }}
-                    >
-                      <span>🩺 Antécédents et symptômes</span>
-                      <span style={{ fontSize: "16px", lineHeight: 1 }}>{antecedentsOpen ? "−" : "+"}</span>
-                    </button>
-                    {antecedentsOpen && (
-                      <div className="mt-2 space-y-2 rounded-xl p-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(167,139,250,0.15)" }}>
-                        <div>
-                          <label className="text-xs font-extrabold mb-1 block" style={{ color: DS.body }}>Depuis combien de temps ce problème ?</label>
-                          <select value={problemDuration} onChange={e => setProblemDuration(e.target.value)}
-                            className="w-full px-3 py-2 rounded-xl text-xs outline-none"
-                            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(167,139,250,0.2)", color: problemDuration ? INK : DS.muted }}>
-                            <option value="">Sélectionner</option>
-                            <option value="quelques jours">Quelques jours</option>
-                            <option value="1 à 3 semaines">1 à 3 semaines</option>
-                            <option value="1 à 3 mois">1 à 3 mois</option>
-                            <option value="3 à 6 mois">3 à 6 mois</option>
-                            <option value="plus de 6 mois">Plus de 6 mois</option>
-                            <option value="plus d'un an">Plus d'un an (chronique)</option>
-                            <option value="depuis toujours">Depuis toujours</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label className="text-xs font-extrabold mb-1 block" style={{ color: DS.body }}>Région / Ville du patient</label>
-                          <select value={patientRegion} onChange={e => setPatientRegion(e.target.value)}
-                            className="w-full px-3 py-2 rounded-xl text-xs outline-none"
-                            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(167,139,250,0.2)", color: patientRegion ? INK : DS.muted }}>
-                            <option value="">Sélectionner</option>
-                            <option value="Douala">Douala</option>
-                            <option value="Yaoundé">Yaoundé</option>
-                            <option value="Bafoussam">Bafoussam</option>
-                            <option value="Ouest Cameroun">Ouest Cameroun</option>
-                            <option value="Nord-Ouest">Nord-Ouest</option>
-                            <option value="Adamaoua">Adamaoua</option>
-                            <option value="Est">Est</option>
-                            <option value="Littoral (hors Douala)">Littoral (hors Douala)</option>
-                            <option value="Autre pays">Autre pays</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label className="text-xs font-extrabold mb-1 block" style={{ color: DS.body }}>Produits ou crèmes déjà appliqués ?</label>
-                          <textarea value={previousProducts} onChange={e => setPreviousProducts(e.target.value)}
-                            placeholder="Ex : crème éclaircissante, savon noir, aloe vera... (ou Aucun)"
-                            rows={2} className="w-full px-3 py-2 rounded-xl text-xs outline-none resize-none"
-                            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(167,139,250,0.2)", color: INK }} />
-                        </div>
-                        <div>
-                          <label className="text-xs font-extrabold mb-1 block" style={{ color: DS.body }}>Allergies cutanées connues ?</label>
-                          <input type="text" value={allergies} onChange={e => setAllergies(e.target.value)}
-                            placeholder="Ex : parfum, lanoline... (ou Aucune)"
-                            className="w-full px-3 py-2 rounded-xl text-xs outline-none"
-                            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(167,139,250,0.2)", color: INK }} />
-                        </div>
-                        <div>
-                          <label className="text-xs font-extrabold mb-1 block" style={{ color: DS.body }}>Motif de consultation (mots du patient)</label>
-                          <textarea value={consultMotif} onChange={e => setConsultMotif(e.target.value)}
-                            placeholder="Ce que le patient décrit lui-même..."
-                            rows={2} className="w-full px-3 py-2 rounded-xl text-xs outline-none resize-none"
-                            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(167,139,250,0.2)", color: INK }} />
-                        </div>
-                      </div>
-                    )}
+                    <p className="text-xs font-extrabold mb-2 px-1" style={{ color: "#a78bfa" }}>
+                      🩺 Dossier clinique
+                    </p>
+                    <ClinicalDossierForm value={clinicalRecord} onChange={setClinicalRecord} />
                   </div>
 
                   <button
