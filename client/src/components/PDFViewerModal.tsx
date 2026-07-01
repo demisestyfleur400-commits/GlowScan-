@@ -198,6 +198,24 @@ export default function PDFViewerModal({
     return currentHtml;
   }, [currentHtml]);
 
+  // Insère un nouveau bloc « Note » éditable dans le rapport (là où tout est vide).
+  const handleAddNote = useCallback(() => {
+    const doc = iframeRef.current?.contentDocument;
+    if (!doc) return;
+    const wrap = doc.createElement("div");
+    wrap.setAttribute("style", "margin:14px 12mm;border:1px solid #d1d5db;border-radius:4px;overflow:hidden;break-inside:avoid");
+    wrap.innerHTML =
+      '<div style="background:#1a3a3a;padding:7px 14px"><span style="font-size:10.5px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:.4px">Note du praticien</span></div>' +
+      '<div contenteditable="true" class="gs-edit" data-gs-edit="1" style="background:#fff;padding:11px 14px;font-size:10.5px;color:#111;line-height:1.7;min-height:44px"></div>';
+    doc.body.appendChild(wrap);
+    const editable = wrap.querySelector('[contenteditable]') as HTMLElement | null;
+    if (editable) {
+      lastEditableRef.current = editable;
+      editable.focus();
+      editable.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, []);
+
   // Suit le champ éditable actuellement ciblé dans le PDF (focusin sur l'iframe).
   const handleIframeLoad = useCallback(() => {
     try {
@@ -437,6 +455,16 @@ export default function PDFViewerModal({
         {mode === "view" && (
           <>
             <ActionBtn
+              onClick={handleAddNote}
+              icon="＋"
+              label="Note"
+              style={{
+                border: "1.5px solid #1a3a3a",
+                color: "#1a3a3a",
+                background: "#fff",
+              }}
+            />
+            <ActionBtn
               onClick={enterEditMode}
               icon="✏️"
               label="Modifier"
@@ -602,7 +630,7 @@ export default function PDFViewerModal({
             textAlign: "center",
           }}
         >
-          ✏️ Cliquez sur un mot ou une ligne vierge pour le modifier{voiceSupported ? " — ou 🎙️ dictez à la voix avec le bouton micro" : ""}, puis Télécharger ou Envoyer.
+          ✏️ Cliquez sur un mot pour le modifier · ＋ Note pour ajouter du texte{voiceSupported ? " · 🎙️ dictez à la voix" : ""} · puis Télécharger ou Envoyer.
         </div>
       )}
 
