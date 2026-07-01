@@ -396,6 +396,8 @@ export default function ProAnalyze() {
 
   // Notes cliniques du praticien
   const [practitionerNotes, setPractitionerNotes] = useState("");
+  // Étape 7 — choix du rapport remis au patient : fusionné (IA + clinique) / clinique seul / IA seul.
+  const [reportMode, setReportMode] = useState<"fusionne" | "clinique" | "ia">("fusionne");
 
   // Clinical Override
   const [showPartialOverride, setShowPartialOverride] = useState(false);
@@ -1459,6 +1461,7 @@ export default function ProAnalyze() {
                       region: patientRegion || undefined,
                       motif: consultMotif || undefined,
                     }}
+                    reportMode={reportMode}
                     onPdfReady={(fn) => { pdfFnRef.current = fn; }}
                   />
                 </Suspense>
@@ -1876,11 +1879,43 @@ export default function ProAnalyze() {
                   </div>
 
                   {/* Actions */}
+                  {/* ── Choix du rapport (Étape 7) ── */}
+                  <div className="mb-3">
+                    <p className="text-[10px] font-extrabold uppercase tracking-wider mb-2" style={{ color: DS.muted }}>
+                      Type de rapport remis au patient
+                    </p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {([
+                        { v: "fusionne", label: "Fusionné", sub: "IA + clinique" },
+                        { v: "clinique", label: "Clinique", sub: "médecin seul" },
+                        { v: "ia", label: "IA", sub: "analyse seule" },
+                      ] as const).map((opt) => {
+                        const on = reportMode === opt.v;
+                        return (
+                          <button
+                            key={opt.v}
+                            onClick={() => setReportMode(opt.v)}
+                            data-testid={`report-mode-${opt.v}`}
+                            className="py-2 px-2 rounded-xl text-center transition-all active:scale-[0.97]"
+                            style={on
+                              ? { background: "rgba(16,185,129,0.12)", border: "1.5px solid rgba(16,185,129,0.5)" }
+                              : { background: "rgba(255,255,255,0.03)", border: `1px solid ${DS.border}` }}
+                          >
+                            <span className="block text-xs font-extrabold" style={{ color: on ? "#6ee7b7" : DS.body }}>{opt.label}</span>
+                            <span className="block text-[9px] mt-0.5" style={{ color: DS.muted }}>{opt.sub}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
                   {/* ── Bouton principal PDF ── */}
                   <button
                     onClick={() => {
-                      // PDF unifié = base B2C + pages médicales (généré par ResultCard).
-                      if (pdfFnRef.current) { pdfFnRef.current(); }
+                      // Clinique seul → template clinique pur (generateClassicPdfHtml via openPdfViewer).
+                      // Fusionné / IA seul → PDF ResultCard (la section médicale est omise en mode IA).
+                      if (reportMode === "clinique") { openPdfViewer(); }
+                      else if (pdfFnRef.current) { pdfFnRef.current(); }
                       else { openPdfViewer(); } // filet de secours
                     }}
                     data-testid="button-pdf"
@@ -1888,7 +1923,7 @@ export default function ProAnalyze() {
                     style={{ background: NAVY, fontSize: 14 }}
                   >
                     <FileText className="w-4 h-4" />
-                    Voir le rapport clinique
+                    {reportMode === "clinique" ? "Voir le rapport clinique" : reportMode === "ia" ? "Voir le rapport IA" : "Voir le rapport complet"}
                   </button>
                   <p className="text-[11px] text-center mb-4" style={{ color: DS.muted }}>
                     Résultats de la consultation · Dr {lastName || "..."} — Modifier · Envoyer · Télécharger

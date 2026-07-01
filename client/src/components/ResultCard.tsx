@@ -1128,11 +1128,14 @@ interface ResultCardProps {
   cabinetName?: string | null;
   practitionerNotes?: string | null;
   overrideNote?: string | null;
+  // Choix du rapport (DERM) : "fusionne" = pages patient IA + section médicale (défaut) ;
+  // "ia" = pages patient IA seules (section médicale omise). "clinique" est géré côté parent.
+  reportMode?: "fusionne" | "clinique" | "ia";
   // Expose la génération du PDF (B2C + pages médicales) au parent (ex: bouton de fin de flux DERM)
   onPdfReady?: (downloadPdf: () => void) => void;
 }
 
-export function ResultCard({ result, scanId, savedScanId, area, imageUrl, userFirstName, patientIntake, isPro = false, doctorName, doctorLicense, cabinetName, practitionerNotes, overrideNote, onPdfReady }: ResultCardProps) {
+export function ResultCard({ result, scanId, savedScanId, area, imageUrl, userFirstName, patientIntake, isPro = false, doctorName, doctorLicense, cabinetName, practitionerNotes, overrideNote, reportMode = "fusionne", onPdfReady }: ResultCardProps) {
   // 🎨 Thème actif : clair en B2C (page blanche), sombre en DERM (isPro).
   // Réassigne le DS module-level lu par les sous-composants pendant ce rendu.
   DS = isPro ? DS_DARK : DS_LIGHT;
@@ -1404,7 +1407,7 @@ export function ResultCard({ result, scanId, savedScanId, area, imageUrl, userFi
       const rr: any = result;
       const medRow = (l: string, v: any) => v ? `<div style="display:flex;margin-bottom:5px"><div style="width:190px;font-size:10px;font-weight:700;color:#4c1d95;flex-shrink:0">${l}</div><div style="font-size:10px;color:#1a1a1a;flex:1">${v}</div></div>` : "";
       const medCard = (title: string, body: string) => `<div style="border:1px solid #ddd6fe;border-radius:8px;margin-bottom:14px;overflow:hidden"><div style="background:#8B5CF6;padding:8px 14px"><span style="font-size:11px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:.5px">${title}</span></div><div style="padding:12px 14px;background:#faf9ff">${body}</div></div>`;
-      const medicalSections = isPro ? `
+      const medicalSections = (isPro && reportMode !== "ia") ? `
 <div style="page-break-before:always;padding:24px 28px;font-family:Arial,Helvetica,sans-serif">
   <div style="background:#1a1a2e;border-left:4px solid #8B5CF6;padding:9px 14px;margin-bottom:14px;border-radius:4px">
     <span style="font-size:9.5px;font-weight:800;color:#c4b5fd;letter-spacing:1px;text-transform:uppercase">🔒 Section Médicale — Réservée au Dermatologue</span>
