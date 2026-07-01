@@ -216,10 +216,12 @@ export default function PDFViewerModal({
   const { supported: voiceSupported, listening: voiceListening, toggle: toggleVoice } = useVoiceDictation({
     onFinal: (t) => {
       const el = lastEditableRef.current;
-      if (!el || !t) return;
+      if (!t) return;
+      if (!el) { try { window.alert("Cliquez d'abord dans un champ ou une ligne du rapport, puis parlez."); } catch {} return; }
       const cur = (el.textContent || "").trim();
       el.textContent = cur ? `${cur} ${t}` : t;
     },
+    onError: (msg) => { try { window.alert(msg); } catch {} },
   });
   const [mode, setMode] = useState<"view" | "edit">("view");
   const [editFields, setEditFields] = useState<EditableFields>({

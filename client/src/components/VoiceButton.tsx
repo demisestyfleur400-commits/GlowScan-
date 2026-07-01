@@ -22,6 +22,7 @@ export function VoiceButton({
   const { supported, listening, toggle } = useVoiceDictation({
     lang,
     onFinal: (t) => { if (t) onText(t); },
+    onError: (msg) => { try { window.alert(msg); } catch {} },
   });
 
   if (!supported) return null;
