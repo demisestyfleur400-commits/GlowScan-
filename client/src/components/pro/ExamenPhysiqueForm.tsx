@@ -1,0 +1,158 @@
+import { useState } from "react";
+
+// ════════════════════════════════════════════════════════════════════════
+// Examen physique (DERM) — documenté par le médecin AVANT la photo et l'IA.
+// Respecte la démarche clinique (§3, §8) : lésions élémentaires, localisation,
+// nombre, morphologie, distribution, examen dermatologique, autres signes.
+// Composant contrôlé : value (objet) + onChange.
+// ════════════════════════════════════════════════════════════════════════
+
+export interface ExamenData {
+  phototype: string;
+  lesions: string[];
+  zones: string[];
+  lesionNombre: string;
+  lesionMorphologie: string;
+  lesionDistribution: string;
+  examPeau: string;
+  examPhaneres: string;
+  examMuqueuses: string;
+  examGanglions: string;
+  autresSignes: string;
+  pihRisk: string;
+  keloidRisk: string;
+}
+
+export const EMPTY_EXAMEN: ExamenData = {
+  phototype: "", lesions: [], zones: [], lesionNombre: "", lesionMorphologie: "",
+  lesionDistribution: "", examPeau: "", examPhaneres: "", examMuqueuses: "",
+  examGanglions: "", autresSignes: "", pihRisk: "", keloidRisk: "",
+};
+
+const PHOTOTYPES = [
+  { id: "IV", label: "IV", bg: "#c8956c", title: "Phototype IV — brun clair / métissée" },
+  { id: "V", label: "V", bg: "#8b5e3c", title: "Phototype V — noire / brun foncé" },
+  { id: "VI", label: "VI", bg: "#3b1f0e", title: "Phototype VI — très foncée / ébène" },
+];
+const LESION_OPTS = ["Macule", "Papule", "Pustule", "Nodule", "Comédon", "Plaque", "Squame", "Vésicule", "Bulle", "Cicatrice/PIH", "Chéloïde"];
+const ZONE_OPTS = ["Front", "Joue D", "Joue G", "Nez/Zone T", "Menton", "Cou", "Cuir chevelu", "Tronc", "Membres", "Mains", "Pieds"];
+
+const INK = "#f3f0ff";
+const MUTED = "rgba(255,255,255,0.55)";
+const fieldBg = "rgba(255,255,255,0.04)";
+const fieldBorder = "1px solid rgba(167,139,250,0.2)";
+
+export function ExamenPhysiqueForm({ value, onChange }: { value: ExamenData; onChange: (next: ExamenData) => void }) {
+  const [open, setOpen] = useState(true);
+  const set = (patch: Partial<ExamenData>) => onChange({ ...value, ...patch });
+  const toggle = (arr: string[], v: string) => (arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
+
+  const Text = ({ k, label, ml, ph }: { k: keyof ExamenData; label: string; ml?: boolean; ph?: string }) => (
+    <div>
+      <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: MUTED, marginBottom: 4 }}>{label}</label>
+      {ml ? (
+        <textarea value={value[k] as string} onChange={(e) => set({ [k]: e.target.value } as any)} rows={2} placeholder={ph}
+          style={{ width: "100%", padding: "9px 12px", borderRadius: 10, background: fieldBg, border: fieldBorder, color: INK, fontSize: 13, outline: "none", resize: "vertical", fontFamily: "inherit", boxSizing: "border-box" }} />
+      ) : (
+        <input type="text" value={value[k] as string} onChange={(e) => set({ [k]: e.target.value } as any)} placeholder={ph}
+          style={{ width: "100%", padding: "9px 12px", borderRadius: 10, background: fieldBg, border: fieldBorder, color: INK, fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+      )}
+    </div>
+  );
+
+  const RiskRow = ({ k, label }: { k: "pihRisk" | "keloidRisk"; label: string }) => (
+    <div>
+      <p style={{ fontSize: 10, fontWeight: 700, color: MUTED, marginBottom: 4 }}>{label}</p>
+      <div style={{ display: "flex", gap: 4 }}>
+        {[["low", "Faible", "#6ee7b7"], ["medium", "Moyen", "#fcd34d"], ["high", "Élevé", "#f87171"]].map(([v, l, c]) => (
+          <button key={v} type="button" onClick={() => set({ [k]: value[k] === v ? "" : v } as any)}
+            style={{ flex: 1, padding: "6px 0", borderRadius: 8, fontSize: 10, fontWeight: 700, cursor: "pointer",
+              background: value[k] === v ? `${c}33` : fieldBg, color: value[k] === v ? (c as string) : "#6b7280", border: "1px solid rgba(255,255,255,0.08)" }}>
+            {l}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{ borderRadius: 16, overflow: "hidden", background: "rgba(124,58,237,0.06)", border: "1px solid rgba(124,58,237,0.2)" }}>
+      <button type="button" onClick={() => setOpen(!open)}
+        style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", background: "transparent", border: "none", cursor: "pointer", color: INK, fontSize: 13, fontWeight: 800 }}>
+        <span>🔬 Examen physique</span>
+        <span style={{ fontSize: 16, color: "#a78bfa" }}>{open ? "−" : "+"}</span>
+      </button>
+      {open && (
+        <div style={{ padding: "0 14px 14px", display: "flex", flexDirection: "column", gap: 12 }}>
+          {/* Phototype */}
+          <div>
+            <p style={{ fontSize: 10, fontWeight: 700, color: MUTED, marginBottom: 6 }}>Phototype Fitzpatrick</p>
+            <div style={{ display: "flex", gap: 8 }}>
+              {PHOTOTYPES.map((p) => (
+                <button key={p.id} type="button" title={p.title} onClick={() => set({ phototype: value.phototype === p.id ? "" : p.id })}
+                  style={{ flex: 1, padding: "8px 0", borderRadius: 10, fontSize: 12, fontWeight: 800, cursor: "pointer",
+                    background: value.phototype === p.id ? p.bg : "rgba(255,255,255,0.06)", color: value.phototype === p.id ? "#fff" : "#9ca3af",
+                    border: value.phototype === p.id ? `2px solid ${p.bg}` : "1px solid rgba(255,255,255,0.1)" }}>
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Lésions élémentaires */}
+          <div>
+            <p style={{ fontSize: 10, fontWeight: 700, color: MUTED, marginBottom: 6 }}>Lésions élémentaires</p>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {LESION_OPTS.map((l) => {
+                const on = value.lesions.includes(l);
+                return (
+                  <button key={l} type="button" onClick={() => set({ lesions: toggle(value.lesions, l) })}
+                    style={{ padding: "5px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700, cursor: "pointer",
+                      background: on ? "rgba(139,92,246,0.3)" : "rgba(255,255,255,0.05)", color: on ? "#c4b5fd" : "#6b7280",
+                      border: on ? "1px solid #7c3aed" : "1px solid rgba(255,255,255,0.08)" }}>
+                    {l}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <Text k="lesionNombre" label="Nombre" ph="ex : 5-10, multiples…" />
+          <Text k="lesionMorphologie" label="Morphologie" ml ph="taille, couleur, contours, relief…" />
+          <Text k="lesionDistribution" label="Distribution" ph="symétrique, localisée, diffuse…" />
+
+          {/* Zones / localisation */}
+          <div>
+            <p style={{ fontSize: 10, fontWeight: 700, color: MUTED, marginBottom: 6 }}>Localisation / zones atteintes</p>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {ZONE_OPTS.map((z) => {
+                const on = value.zones.includes(z);
+                return (
+                  <button key={z} type="button" onClick={() => set({ zones: toggle(value.zones, z) })}
+                    style={{ padding: "5px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700, cursor: "pointer",
+                      background: on ? "rgba(59,130,246,0.3)" : "rgba(255,255,255,0.05)", color: on ? "#93c5fd" : "#6b7280",
+                      border: on ? "1px solid #3b82f6" : "1px solid rgba(255,255,255,0.08)" }}>
+                    {z}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Examen dermatologique */}
+          <Text k="examPeau" label="Peau" ml />
+          <Text k="examPhaneres" label="Phanères (ongles, cheveux)" />
+          <Text k="examMuqueuses" label="Muqueuses" />
+          <Text k="examGanglions" label="Aires ganglionnaires" />
+          <Text k="autresSignes" label="Autres signes cliniques pertinents" ml />
+
+          {/* Risques */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            <RiskRow k="pihRisk" label="Risque PIH" />
+            <RiskRow k="keloidRisk" label="Risque chéloïde" />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

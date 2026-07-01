@@ -478,6 +478,8 @@ export async function registerRoutes(
         chiefComplaint: intake.chiefComplaint || intake.motif,
         region: intake.region,
         motif: intake.motif,
+        // Examen physique du médecin (documenté AVANT l'IA) — l'IA doit en tenir compte
+        examenPhysiqueMedecin: (intake as any).examen || undefined,
       }, null, 2) : "Aucun antécédent fourni.";
 
       const patientContext = (!isProRequest && intake) ? `
@@ -1697,7 +1699,7 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
   // === Push J+7 — Rappel rescan ===
   app.post("/api/push/send-rescan-reminders", async (req, res) => {
     const adminKey = req.headers["x-admin-key"] || req.body?.adminKey;
-    if (adminKey !== process.env.ADMIN_KEY && adminKey !== "glowscan2024admin") {
+    if (adminKey !== process.env.ADMIN_KEY) {
       return res.status(403).json({ message: "Accès refusé" });
     }
     try {
@@ -1811,7 +1813,7 @@ Réponds en 2-4 phrases max, sois direct et utile.`;
   // POST /api/admin/subscription/activate — admin active un abonnement
   app.post("/api/admin/subscription/activate", async (req: any, res) => {
     const adminKey = req.headers["x-admin-key"];
-    if (adminKey !== "glowscan2024admin" && adminKey !== process.env.ADMIN_KEY) {
+    if (adminKey !== process.env.ADMIN_KEY) {
       return res.status(403).json({ message: "Accès refusé" });
     }
 
@@ -1855,11 +1857,11 @@ Réponds en 2-4 phrases max, sois direct et utile.`;
   // ═════════════════════════════════════════════════════════
   // DATASET RLHF — Validation par dermatologue expert
   // ═════════════════════════════════════════════════════════
-  const DERMATO_KEY = process.env.DERMATO_KEY || "dermato2024";
+  const DERMATO_KEY = process.env.DERMATO_KEY || "";
 
   function checkAdminKey(req: any): boolean {
     const k = (req.query.key as string) || (req.headers["x-admin-key"] as string) || req.body?.adminKey;
-    const ok = k === process.env.ADMIN_KEY || k === "glowscan2024admin";
+    const ok = k === process.env.ADMIN_KEY;
     if (ok && req.session) (req.session as any).isAdmin = true;
     return ok;
   }
@@ -1867,7 +1869,7 @@ Réponds en 2-4 phrases max, sois direct et utile.`;
   /** Accepte clé admin OU clé dermato (accès lecture dataset uniquement) */
   function checkDatasetKey(req: any): boolean {
     const k = (req.query.key as string) || (req.headers["x-admin-key"] as string) || req.body?.adminKey;
-    return (k === process.env.ADMIN_KEY || k === "glowscan2024admin" || k === DERMATO_KEY);
+    return (k === process.env.ADMIN_KEY || k === DERMATO_KEY);
   }
 
   // GET /api/admin/scan-image/:scanId — Proxy image dataset (admin ou dermato key)

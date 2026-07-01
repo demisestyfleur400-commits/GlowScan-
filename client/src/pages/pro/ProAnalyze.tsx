@@ -44,6 +44,7 @@ import { useToast } from "@/hooks/use-toast";
 import type { AnalysisResult, Patient } from "@shared/schema";
 import { ProLayout, ProCard, ProInput } from "@/components/ProLayout";
 import { ClinicalDossierForm, type ClinicalRecord } from "@/components/pro/ClinicalDossierForm";
+import { ExamenPhysiqueForm, EMPTY_EXAMEN, type ExamenData } from "@/components/pro/ExamenPhysiqueForm";
 import PDFViewerModal from "@/components/PDFViewerModal";
 import { PremiumPdfTemplate } from "@/templates/PremiumPdfTemplate";
 
@@ -64,8 +65,8 @@ type AnswerValue = "oui" | "non" | "nsp";
 
 const STEPS = [
   { n: 1, label: "Patient" },
-  { n: 2, label: "Photo" },
-  { n: 3, label: "Diagnostic" },
+  { n: 2, label: "Examen" },
+  { n: 3, label: "Analyse IA" },
   { n: 4, label: "Anamnèse" },
   { n: 5, label: "Dossier" },
 ];
@@ -379,6 +380,9 @@ export default function ProAnalyze() {
   const [allergies, setAllergies] = useState("");
   const [consultMotif, setConsultMotif] = useState("");
 
+  // Examen physique (Étape 2/3) — documenté AVANT la photo et l'IA
+  const [examen, setExamen] = useState<ExamenData>({ ...EMPTY_EXAMEN });
+
   // Dossier clinique structuré (Étape 1) — stocké en JSON, miroir vers le pipeline IA
   const [clinicalRecord, setClinicalRecord] = useState<ClinicalRecord>({});
   useEffect(() => {
@@ -528,9 +532,31 @@ export default function ProAnalyze() {
           consultMotif: consultMotif || undefined,
           region: patientRegion || undefined,
           motif: consultMotif || undefined,
+          // Examen physique du médecin (documenté AVANT l'IA) → contexte clinique
+          examen: {
+            phototype: examen.phototype || undefined,
+            lesionsElementaires: examen.lesions.length ? examen.lesions.join(", ") : undefined,
+            zonesAtteintes: examen.zones.length ? examen.zones.join(", ") : undefined,
+            nombre: examen.lesionNombre || undefined,
+            morphologie: examen.lesionMorphologie || undefined,
+            distribution: examen.lesionDistribution || undefined,
+            peau: examen.examPeau || undefined,
+            phaneres: examen.examPhaneres || undefined,
+            muqueuses: examen.examMuqueuses || undefined,
+            ganglions: examen.examGanglions || undefined,
+            autresSignes: examen.autresSignes || undefined,
+          },
         },
       });
       setResult(r as any);
+      // Enregistre l'examen physique du médecin comme annotation dataset (fire-and-forget)
+      const sid = (r as any).savedScanId;
+      if (sid && (examen.phototype || examen.lesions.length > 0)) {
+        fetch(`/api/training/annotate/${sid}`, {
+          method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include",
+          body: JSON.stringify({ phototype: examen.phototype, lesionTypes: examen.lesions, zonesAffected: examen.zones, pihRisk: examen.pihRisk, keloidRisk: examen.keloidRisk }),
+        }).catch(() => {});
+      }
       genQuestionnaire.mutate({
         condition: (r as any).condition || "Affection cutanée",
         area: "face",
@@ -588,7 +614,7 @@ export default function ProAnalyze() {
           clinicalContext: {
             questionnaire: answers,
             questionnaireItems: questionnaire,
-            antecedents: { problemDuration, previousProducts, allergies, consultMotif },
+            antecedents: { problemDuration, previousProducts, allergies, consultMotif }, examen,
             answeredAt: new Date().toISOString(),
           },
         });
@@ -629,7 +655,7 @@ export default function ProAnalyze() {
               clinicalContext: {
                 questionnaire: answers,
                 questionnaireItems: questionnaire,
-                antecedents: { problemDuration, previousProducts, allergies, consultMotif },
+                antecedents: { problemDuration, previousProducts, allergies, consultMotif }, examen,
                 answeredAt: new Date().toISOString(),
               },
             });
@@ -1123,6 +1149,7 @@ export default function ProAnalyze() {
     setDossierSaved(false); setDatasetSent(false); setSavingDossier(false);
     setProblemDuration(""); setPreviousProducts(""); setAllergies(""); setConsultMotif("");
     setClinicalRecord({});
+    setExamen({ ...EMPTY_EXAMEN });
     setPractitionerNotes("");
     setSelectedStatus(null); setAntecedentsOpen(false);
   };
@@ -1302,8 +1329,14 @@ export default function ProAnalyze() {
         {/* ════════ STEP 2 : Photo ════════ */}
         {step === 2 && (
           <ProCard className="p-5 mt-4">
-            <StepHeader n={2} title={`Photo de ${patientLabel}`} subtitle="Optimisée automatiquement pour peaux phototypes IV-VI" />
+            <StepHeader n={2} title={`Examen de ${patientLabel}`} subtitle="Documentez votre examen physique, PUIS ajoutez la photo (l'IA vient après)." />
 
+            {/* ── Examen physique du médecin — AVANT la photo et l'IA (§2, §3) ── */}
+            <div className="mb-4">
+              <ExamenPhysiqueForm value={examen} onChange={setExamen} />
+            </div>
+
+            <p className="text-xs font-extrabold mb-2 px-1" style={{ color: "#a78bfa" }}>📷 Photo clinique</p>
             {!photoBase64 ? (
               <div
                 onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
@@ -1861,11 +1894,7 @@ export default function ProAnalyze() {
                     Résultats de la consultation · Dr {lastName || "..."} — Modifier · Envoyer · Télécharger
                   </p>
 
-                  {/* ── QuickAnnotate — GlowScan AI Dataset Builder ─────── */}
-                  <QuickAnnotate
-                    scanId={(result as any)?.savedScanId}
-                    condition={(result as any)?.condition}
-                  />
+                  {/* Examen physique désormais collecté AVANT l'analyse (étape 2) */}
 
                   <div className="grid grid-cols-2 gap-2 mt-3">
                     <button
