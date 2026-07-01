@@ -117,18 +117,12 @@ export function useVoiceDictation(opts?: VoiceDictationOptions) {
     }
   }, [opts?.lang]);
 
-  // Démarre la dictée. Sur les navigateurs de bureau, on demande d'abord
-  // explicitement l'autorisation micro (getUserMedia) pour éviter l'échec
-  // silencieux : si l'utilisateur refuse, on affiche un message clair.
+  // Démarre la dictée. On laisse l'API vocale déclencher la POPUP D'AUTORISATION
+  // STANDARD du navigateur (« Autoriser le micro ? »). Clic sur « Autoriser » → ça
+  // marche directement. Le message d'aide n'apparaît que si l'autorisation a
+  // réellement été refusée/bloquée (onerror « not-allowed »).
   const start = useCallback((lang?: string) => {
-    const md = navigator.mediaDevices;
-    if (md?.getUserMedia && !isIOS()) {
-      md.getUserMedia({ audio: true })
-        .then((stream) => { stream.getTracks().forEach((t) => t.stop()); beginRecognition(lang); })
-        .catch(() => onErrorRef.current?.(errorMessage("not-allowed")));
-    } else {
-      beginRecognition(lang);
-    }
+    beginRecognition(lang);
   }, [beginRecognition]);
 
   const toggle = useCallback((lang?: string) => {
