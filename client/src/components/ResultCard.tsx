@@ -318,6 +318,7 @@ import { productImages as centralProductImages } from "@/lib/productImages";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
+import { buildObservationSections, type ObservationData } from "@/lib/observationPdf";
 
 const productImages = centralProductImages;
 
@@ -1131,11 +1132,14 @@ interface ResultCardProps {
   // Choix du rapport (DERM) : "fusionne" = pages patient IA + section médicale (défaut) ;
   // "ia" = pages patient IA seules (section médicale omise). "clinique" est géré côté parent.
   reportMode?: "fusionne" | "clinique" | "ia";
+  // Dossier clinique structuré + examen physique (mode DERM) pour la trame « Observation médicale » du PDF fusionné.
+  clinicalRecord?: Record<string, string> | null;
+  examen?: any;
   // Expose la génération du PDF (B2C + pages médicales) au parent (ex: bouton de fin de flux DERM)
   onPdfReady?: (downloadPdf: () => void) => void;
 }
 
-export function ResultCard({ result, scanId, savedScanId, area, imageUrl, userFirstName, patientIntake, isPro = false, doctorName, doctorLicense, cabinetName, practitionerNotes, overrideNote, reportMode = "fusionne", onPdfReady }: ResultCardProps) {
+export function ResultCard({ result, scanId, savedScanId, area, imageUrl, userFirstName, patientIntake, isPro = false, doctorName, doctorLicense, cabinetName, practitionerNotes, overrideNote, reportMode = "fusionne", clinicalRecord, examen, onPdfReady }: ResultCardProps) {
   // 🎨 Thème actif : clair en B2C (page blanche), sombre en DERM (isPro).
   // Réassigne le DS module-level lu par les sous-composants pendant ce rendu.
   DS = isPro ? DS_DARK : DS_LIGHT;
@@ -1405,57 +1409,68 @@ export function ResultCard({ result, scanId, savedScanId, area, imageUrl, userFi
       // On n'enlève rien au PDF B2C : ces sections s'ajoutent en pages 6+.
       const pi: any = patientIntake || {};
       const rr: any = result;
-      const medRow = (l: string, v: any) => v ? `<div style="display:flex;margin-bottom:5px"><div style="width:190px;font-size:10px;font-weight:700;color:#4c1d95;flex-shrink:0">${l}</div><div style="font-size:10px;color:#1a1a1a;flex:1">${v}</div></div>` : "";
-      const medCard = (title: string, body: string) => `<div style="border:1px solid #ddd6fe;border-radius:8px;margin-bottom:14px;overflow:hidden"><div style="background:#8B5CF6;padding:8px 14px"><span style="font-size:11px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:.5px">${title}</span></div><div style="padding:12px 14px;background:#faf9ff">${body}</div></div>`;
+      // ══ Étape 10 — Section médicale = trame « Observation médicale » (16 rubriques) ══
+      // Reproduit le plan d'observation médicale du cabinet ; champs collectés pré-remplis,
+      // rubriques non saisies en lignes vierges. Partagée avec le rapport « Clinique seul ».
+      const cr: any = clinicalRecord || {};
+      const ex: any = examen || {};
+      const joinNZ = (...xs: (string | undefined)[]) => xs.filter((x) => x && String(x).trim()).join("\n");
+      const obsData: ObservationData = {
+        date, refNum: reportNumber, doctorName: doctorName || undefined, doctorLicense: doctorLicense || undefined, cabinetName: cabinetName || undefined,
+        // 1 · Identification
+        patientName: pi.fullName || userFirstName || undefined,
+        dateNaissance: cr.dateNaissance, lieuNaissance: cr.lieuNaissance,
+        age: pi.age, ethnie: cr.ethnie, profession: cr.profession,
+        ville: cr.ville || pi.region, adresse: cr.adresse, phone: pi.phone,
+        email: cr.email, contactUrgence: cr.contactUrgence, religion: cr.religion, statutMarital: cr.statutMarital,
+        // 2 · Motif
+        motif: pi.motif || cr.motif,
+        // 3 · Antécédents
+        atcdCosmeto: cr.atcdCosmeto || pi.previousProducts, atcdMedicaux: cr.atcdMedicaux, atcdChirurgicaux: cr.atcdChirurgicaux,
+        allergAlimentaires: cr.allergAlimentaires, allergMedic: cr.allergMedic || pi.allergies, allergEnv: cr.allergEnv,
+        atopie: cr.atopie, groupeSanguin: cr.groupeSanguin, rhesus: cr.rhesus, serologieHiv: cr.serologieHiv,
+        gynecoObst: cr.gynecoObst, toxicologiques: cr.toxicologiques, atcdFamiliaux: cr.atcdFamiliaux,
+        // 4 · Mode de vie
+        modeVie: cr.modeVie,
+        // 5 · HMA
+        hma: joinNZ(
+          cr.hmaDebut ? `Début / durée : ${cr.hmaDebut}` : (pi.duration ? `Durée : ${pi.duration}` : ""),
+          cr.hmaInstallation ? `Installation : ${cr.hmaInstallation}` : "",
+          cr.hmaEvolution ? `Évolution : ${cr.hmaEvolution}` : "",
+          cr.hmaSymptomes ? `Symptômes associés : ${cr.hmaSymptomes}` : "",
+          cr.hmaTraitements ? `Traitements entrepris : ${cr.hmaTraitements}` : "",
+          rr.antecedentsIntegration || "",
+        ),
+        // 7 · Examen dermatologique
+        phototype: ex.phototype ? `Fitzpatrick ${ex.phototype}` : undefined,
+        lesions: ex.lesions?.length ? ex.lesions.join(", ") : undefined,
+        zones: ex.zones?.length ? ex.zones.join(", ") : undefined,
+        nombre: ex.lesionNombre, morphologie: ex.lesionMorphologie, distribution: ex.lesionDistribution,
+        examPeau: ex.examPeau, examPhaneres: ex.examPhaneres, examMuqueuses: ex.examMuqueuses,
+        examGanglions: ex.examGanglions, autresSignes: ex.autresSignes,
+        keloidRisk: ex.keloidRisk,
+        keloidDetails: joinNZ(ex.keloidAntecedents, ex.keloidLocalisation, ex.keloidAnciennete, ex.keloidSymptomes),
+        // 9 · Résumé syndromique
+        resumeSyndromique: rr.clinicalSummary || rr.details,
+        // 10 · Hypothèses
+        hypotheses: overrideNote || rr.condition, hypothesesSecondaire: rr.conditionSecondaire || undefined,
+        // 11 · Différentiels
+        differentiels: Array.isArray(rr.differentialDiagnosis) ? rr.differentialDiagnosis.join("\n") : undefined,
+        // 15 · Surveillance
+        surveillance: joinNZ(
+          rr.clinicalProtocol?.followUpWeeks ? `Réévaluation dans ${rr.clinicalProtocol.followUpWeeks} semaines.` : "",
+          (rr.redFlags && rr.redFlags.length) ? `Signaux à surveiller : ${rr.redFlags.join(" · ")}` : "",
+        ),
+        // 16 · Évolution / pronostic
+        evolution: rr.prognostic,
+        practitionerNotes: practitionerNotes ? practitionerNotes : undefined,
+      };
       const medicalSections = (isPro && reportMode !== "ia") ? `
 <div style="page-break-before:always;padding:24px 28px;font-family:Arial,Helvetica,sans-serif">
   <div style="background:#1a1a2e;border-left:4px solid #8B5CF6;padding:9px 14px;margin-bottom:14px;border-radius:4px">
-    <span style="font-size:9.5px;font-weight:800;color:#c4b5fd;letter-spacing:1px;text-transform:uppercase">🔒 Section Médicale — Réservée au Dermatologue</span>
+    <span style="font-size:9.5px;font-weight:800;color:#c4b5fd;letter-spacing:1px;text-transform:uppercase">🔒 Observation médicale — Réservée au Dermatologue</span>
   </div>
-
-  ${medCard("1 · En-tête médical", `
-    ${medRow("Dermatologue référent", doctorName ? "Dr " + doctorName : "—")}
-    ${medRow("N° ordre médical", doctorLicense || "—")}
-    ${medRow("Cabinet", cabinetName || "—")}
-    ${doctorName ? "<div style='margin-top:6px;font-size:10px;color:#4c1d95;font-style:italic'>Rapport transmis au Dr " + doctorName + "</div>" : ""}
-  `)}
-
-  ${medCard("2 · Anamnèse clinique structurée", `
-    ${medRow("Durée exacte du problème", pi.duration)}
-    ${medRow("Antécédents dermatologiques", rr.antecedentsIntegration)}
-    ${medRow("Traitements antérieurs tentés", pi.previousProducts)}
-    ${medRow("Allergies connues", pi.allergies)}
-    ${medRow("Contexte environnemental", pi.region)}
-    ${medRow("Motif (mots du patient)", pi.motif ? "« " + pi.motif + " »" : "")}
-    ${imageUrl ? "<div style='margin-top:8px'><div style='font-size:10px;font-weight:700;color:#4c1d95;margin-bottom:4px'>Photo soumise à l'analyse</div><img src='" + imageUrl + "' style='width:120px;height:120px;object-fit:cover;border-radius:6px;border:2px solid #8B5CF6'/></div>" : ""}
-  `)}
-
-  ${medCard("3 · Diagnostic clinique IA enrichi", `
-    ${medRow("Diagnostic principal", rr.condition)}
-    ${rr.conditionSecondaire ? medRow("Diagnostic secondaire", rr.conditionSecondaire) : ""}
-    ${medRow("Classification ICD-10 (indicative)", rr.icd10 || "À confirmer par le praticien")}
-    ${medRow("Sévérité", (rr.severity || "—") + (rr.severityLabel ? " — " + rr.severityLabel : ""))}
-    ${rr.redFlags && rr.redFlags.length ? medRow("Facteurs aggravants / signaux", rr.redFlags.join(" · ")) : ""}
-    ${rr.prognostic ? medRow("Évolution probable sans traitement", rr.prognostic) : ""}
-    ${rr.confidence ? medRow("Niveau de confiance IA", rr.confidence) : ""}
-  `)}
-
-  ${medCard("4 · Note médicale du dermatologue", `
-    ${overrideNote ? medRow("Diagnostic révisé / validé", overrideNote) : "<div style='font-size:10px;color:#6b7280;font-style:italic;margin-bottom:8px'>Diagnostic IA validé sans modification.</div>"}
-    <div style="font-size:10px;font-weight:700;color:#4c1d95;margin:6px 0 4px">Observations du praticien :</div>
-    <div style="min-height:50px;border:1px solid #ddd6fe;border-radius:6px;padding:10px;font-size:10px;color:#1a1a1a;background:#fff;line-height:1.7">${practitionerNotes ? practitionerNotes.replace(/\n/g, "<br>") : ""}</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:14px">
-      <div><div style="font-size:9px;color:#6b7280;margin-bottom:4px">Signature</div><div style="height:36px;border-bottom:1px solid #999"></div><div style="font-size:9px;font-weight:700;color:#4c1d95;margin-top:4px">Dr ${doctorName || "..."}</div></div>
-      <div><div style="font-size:9px;color:#6b7280;margin-bottom:4px">Cachet du cabinet</div><div style="height:36px;border:1px dashed #c4b5fd;border-radius:4px"></div></div>
-    </div>
-  `)}
-
-  ${medCard("5 · Suivi & réévaluation", `
-    ${medRow("Réévaluation recommandée", rr.clinicalProtocol?.followUpWeeks ? "Dans " + rr.clinicalProtocol.followUpWeeks + " semaines" : "À l'appréciation du praticien")}
-    ${medRow("Indicateurs à surveiller", (rr.redFlags && rr.redFlags.length) ? rr.redFlags.join(" · ") : "Évolution des lésions · tolérance au protocole · observance")}
-    ${medRow("Référence vers spécialiste si", rr.clinicalProtocol?.referralNeeded ? (rr.clinicalProtocol.referralReason || "Aggravation ou absence d'amélioration") : "Aggravation, absence d'amélioration à 6-8 semaines, ou doute diagnostique")}
-  `)}
-
+  ${buildObservationSections(obsData)}
   <div style="text-align:center;font-size:8px;color:#9ca3af;margin-top:10px">🔒 Section médicale confidentielle · Réf ${reportNumber} · GlowScan DERM</div>
 </div>` : "";
 

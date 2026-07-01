@@ -47,6 +47,7 @@ import { ClinicalDossierForm, type ClinicalRecord } from "@/components/pro/Clini
 import { ExamenPhysiqueForm, EMPTY_EXAMEN, type ExamenData } from "@/components/pro/ExamenPhysiqueForm";
 import PDFViewerModal from "@/components/PDFViewerModal";
 import { PremiumPdfTemplate } from "@/templates/PremiumPdfTemplate";
+import { buildObservationDoc, type ObservationData } from "@/lib/observationPdf";
 
 const NAVY = "#7c3aed";
 const INK = "#f3f0ff";
@@ -822,6 +823,78 @@ export default function ProAnalyze() {
       return `<div style="display:flex;gap:0;margin-bottom:10px;border:1px solid #e5e7eb;border-radius:4px;overflow:hidden;align-items:stretch"><div style="background:${TEAL};color:#fff;font-size:13px;font-weight:900;padding:12px 14px;flex-shrink:0;display:flex;align-items:center;justify-content:center;min-width:42px">${numStr}</div><div style="padding:10px 14px;flex:1"><div style="font-size:10.5px;font-weight:800;color:#1a1a1a;text-transform:uppercase;letter-spacing:.3px">${s.step || ""}</div>${s.product ? `<div style="font-size:9.5px;color:#374151;font-style:italic;margin-top:2px">Usage : ${s.product}${s.concentration ? ` — ${s.concentration}` : ""}${s.frequency ? ` — ${s.frequency}` : ""}</div>` : ""}${s.mechanism ? `<div style="font-size:9.5px;color:#4b5563;line-height:1.7;margin-top:5px">${s.mechanism}</div>` : ""}</div><div style="padding:10px 12px;display:flex;align-items:flex-start;flex-shrink:0">${getBadge(s, i)}</div></div>`;
     };
 
+    // ══ Étape 10 — Rapport « Observation médicale » (trame cabinet, 16 rubriques) ══
+    // Reproduit le plan d'observation médicale fourni : champs collectés pré-remplis,
+    // rubriques non collectées en lignes vierges. Remplace l'ancien template ci-dessous.
+    const cr: any = clinicalRecord || {};
+    const joinNZ = (...xs: (string | undefined)[]) => xs.filter((x) => x && String(x).trim()).join("\n");
+    const hmaText = joinNZ(
+      cr.hmaDebut ? `Début / durée : ${cr.hmaDebut}` : (problemDuration ? `Durée : ${problemDuration}` : ""),
+      cr.hmaInstallation ? `Installation : ${cr.hmaInstallation}` : "",
+      cr.hmaEvolution ? `Évolution : ${cr.hmaEvolution}` : "",
+      cr.hmaSymptomes ? `Symptômes associés : ${cr.hmaSymptomes}` : "",
+      cr.hmaTraitements ? `Traitements entrepris : ${cr.hmaTraitements}` : "",
+      cr.hmaConsultations ? `Consultations antérieures : ${cr.hmaConsultations}` : "",
+      cr.hmaExamens ? `Examens déjà réalisés : ${cr.hmaExamens}` : "",
+    );
+    const keloidDetails = joinNZ(
+      examen.keloidAntecedents ? `Antécédents : ${examen.keloidAntecedents}` : "",
+      examen.keloidLocalisation ? `Localisation : ${examen.keloidLocalisation}` : "",
+      examen.keloidAnciennete ? `Ancienneté : ${examen.keloidAnciennete}` : "",
+      examen.keloidSymptomes ? `Symptômes : ${examen.keloidSymptomes}` : "",
+    );
+    const wProto: any = r.clinicalProtocol || {};
+    const treatHtml = [
+      morning.length ? `<div style="font-weight:800;color:${TEAL};font-size:9px;text-transform:uppercase;letter-spacing:.4px;margin:0 0 6px">🌞 Matin</div>` + morning.map((s: any, i: number) => stepRow(s, i, i)).join("") : "",
+      evening.length ? `<div style="font-weight:800;color:${TEAL};font-size:9px;text-transform:uppercase;letter-spacing:.4px;margin:10px 0 6px">🌙 Soir</div>` + evening.map((s: any, i: number) => stepRow(s, i, morning.length + i)).join("") : "",
+      wProto.weekly ? `<div style="font-weight:800;color:${TEAL};font-size:9px;text-transform:uppercase;letter-spacing:.4px;margin:10px 0 6px">📅 Hebdomadaire</div><div style="font-size:10px;color:#374151;line-height:1.7">${wProto.weekly}</div>` : "",
+    ].filter(Boolean).join("") || undefined;
+
+    const obs: ObservationData = {
+      date, refNum, doctorName, doctorLicense, cabinetName: doctorCabinet, doctorCity, overrideBadge,
+      // 1 · Identification
+      patientName: `${firstName} ${lastName}`.trim() || undefined,
+      dateNaissance: cr.dateNaissance, lieuNaissance: cr.lieuNaissance,
+      age: age ? `${age} ans` : undefined, sex: sexLabel !== "—" ? sexLabel : undefined,
+      ethnie: cr.ethnie, profession: cr.profession,
+      ville: cr.ville || patientRegion || doctorCity, adresse: cr.adresse, phone: phone || undefined,
+      email: cr.email, contactUrgence: cr.contactUrgence, religion: cr.religion, statutMarital: cr.statutMarital,
+      // 2 · Motif
+      motif: consultMotif || cr.motif,
+      // 3 · Antécédents
+      atcdCosmeto: cr.atcdCosmeto || previousProducts, atcdMedicaux: cr.atcdMedicaux, atcdChirurgicaux: cr.atcdChirurgicaux,
+      allergAlimentaires: cr.allergAlimentaires, allergMedic: cr.allergMedic || (allergies || undefined), allergEnv: cr.allergEnv,
+      atopie: cr.atopie, groupeSanguin: cr.groupeSanguin, rhesus: cr.rhesus, serologieHiv: cr.serologieHiv,
+      gynecoObst: cr.gynecoObst, toxicologiques: cr.toxicologiques, atcdFamiliaux: cr.atcdFamiliaux,
+      // 4 · Mode de vie
+      modeVie: cr.modeVie,
+      // 5 · HMA
+      hma: hmaText,
+      // 7 · Examen dermatologique
+      phototype: examen.phototype ? `Fitzpatrick ${examen.phototype}` : (fitzpatrick !== "—" ? fitzpatrick : undefined),
+      lesions: examen.lesions?.length ? examen.lesions.join(", ") : undefined,
+      zones: examen.zones?.length ? examen.zones.join(", ") : undefined,
+      nombre: examen.lesionNombre, morphologie: examen.lesionMorphologie, distribution: examen.lesionDistribution,
+      examPeau: examen.examPeau, examPhaneres: examen.examPhaneres, examMuqueuses: examen.examMuqueuses,
+      examGanglions: examen.examGanglions, autresSignes: examen.autresSignes,
+      keloidRisk: examen.keloidRisk, keloidDetails,
+      // 9 · Résumé syndromique
+      resumeSyndromique: effectiveSummary || clinicalSummary,
+      // 10 · Hypothèses
+      hypotheses: effectiveCondition, hypothesesSecondaire: r.conditionSecondaire || undefined,
+      // 11 · Différentiels
+      differentiels: Array.isArray(r.differentialDiagnosis) ? r.differentialDiagnosis.join("\n") : undefined,
+      // 14 · Traitement
+      traitementHtml: treatHtml,
+      // 15 · Surveillance
+      surveillance: joinNZ(followUp, Array.isArray(redFlags) && redFlags.length ? `Signaux d'alarme : ${redFlags.join(" · ")}` : ""),
+      // 16 · Évolution / pronostic
+      evolution: prognostic,
+      practitionerNotes: practitionerNotes?.trim() || undefined,
+    };
+    return buildObservationDoc(obs);
+
+    // ── (legacy) ancien template, conservé pour référence, désormais inatteignable ──
     const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
 <title>GlowScan DERM — ${firstName} ${lastName}</title>
 <style>
@@ -1466,6 +1539,8 @@ export default function ProAnalyze() {
                       motif: consultMotif || undefined,
                     }}
                     reportMode={reportMode}
+                    clinicalRecord={clinicalRecord}
+                    examen={examen}
                     onPdfReady={(fn) => { pdfFnRef.current = fn; }}
                   />
                 </Suspense>
