@@ -147,7 +147,7 @@ function EditField({
         >
           {label}
         </label>
-        <VoiceButton dark={false} size={26} onText={(t) => onChange(value ? `${value} ${t}` : t)} />
+        <VoiceButton dark={false} size={26} value={value} onChange={(t) => onChange(t)} />
       </div>
       {multiline ? (
         <textarea

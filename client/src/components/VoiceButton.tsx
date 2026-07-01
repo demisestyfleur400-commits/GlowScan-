@@ -1,31 +1,71 @@
+import { useRef } from "react";
 import { useVoiceDictation } from "@/hooks/useVoiceDictation";
 
 // ════════════════════════════════════════════════════════════════════════
-// Bouton micro de dictée vocale — à placer à côté d'un champ.
-// Au clic : démarre l'écoute ; le texte reconnu est envoyé via onText().
-// Ne s'affiche que si le navigateur supporte la dictée.
+// Bouton micro de dictée vocale — à placer À CÔTÉ du champ (le clavier reste).
+// Deux modes :
+//  • Mode LIVE (recommandé) : passez `value` + `onChange`. Les mots s'écrivent
+//    en direct dans le champ pendant que le médecin parle (résultats intermédiaires),
+//    exactement comme la dictée d'un téléphone. Fluide et instantané.
+//  • Mode simple : passez `onText` — le texte reconnu est ajouté à la fin.
+// Ne s'affiche pas si le navigateur ne supporte pas la dictée.
 // ════════════════════════════════════════════════════════════════════════
 
 export function VoiceButton({
   onText,
+  value,
+  onChange,
   lang,
   size = 30,
   title = "Dicter à la voix",
   dark = true,
 }: {
-  onText: (text: string) => void;
+  onText?: (text: string) => void;
+  value?: string;
+  onChange?: (text: string) => void;
   lang?: string;
   size?: number;
   title?: string;
   dark?: boolean;
 }) {
+  const live = typeof onChange === "function";
+  // Valeur du champ au moment où l'on a commencé à parler (base sur laquelle on
+  // ajoute le texte intermédiaire, puis final).
+  const baseRef = useRef<string>("");
+  const startedRef = useRef<boolean>(false);
+
+  const append = (base: string, t: string) => (base ? `${base} ${t}` : t);
+
   const { supported, listening, toggle } = useVoiceDictation({
     lang,
-    onFinal: (t) => { if (t) onText(t); },
+    onInterim: (t) => {
+      if (!live || !t) return;
+      onChange!(append(baseRef.current, t));
+    },
+    onFinal: (t) => {
+      if (!t) return;
+      if (live) {
+        baseRef.current = append(baseRef.current, t);
+        onChange!(baseRef.current);
+      } else {
+        onText?.(t);
+      }
+    },
     onError: (msg) => { try { window.alert(msg); } catch {} },
   });
 
   if (!supported) return null;
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (live && !listening) {
+      // On démarre : on mémorise la valeur actuelle du champ comme base.
+      baseRef.current = (value || "").trim();
+      startedRef.current = true;
+    }
+    toggle(lang);
+  };
 
   const activeBg = "#ef4444";
   const idleBg = dark ? "rgba(167,139,250,0.15)" : "#ede9fe";
@@ -34,7 +74,7 @@ export function VoiceButton({
   return (
     <button
       type="button"
-      onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggle(lang); }}
+      onClick={handleClick}
       title={listening ? "Arrêter la dictée" : title}
       aria-label={title}
       style={{

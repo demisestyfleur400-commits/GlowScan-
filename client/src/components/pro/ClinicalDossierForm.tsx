@@ -102,10 +102,6 @@ export function ClinicalDossierForm({ value, onChange }: { value: ClinicalRecord
             {isOpen && (
               <div style={{ padding: "0 14px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
                 {sec.fields.map((f) => {
-                  const appendVoice = (t: string) => {
-                    const cur = value[f.key] || "";
-                    set(f.key, cur ? `${cur} ${t}` : t);
-                  };
                   return (
                   <div key={f.key}>
                     <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: MUTED, marginBottom: 4 }}>{f.label}</label>
@@ -127,7 +123,7 @@ export function ClinicalDossierForm({ value, onChange }: { value: ClinicalRecord
                           style={{ flex: 1, padding: "9px 12px", borderRadius: 10, background: fieldBg, border: fieldBorder, color: INK, fontSize: 13, outline: "none", boxSizing: "border-box" }}
                         />
                       )}
-                      <VoiceButton onText={appendVoice} />
+                      <VoiceButton value={value[f.key] || ""} onChange={(t) => set(f.key, t)} />
                     </div>
                   </div>
                   );

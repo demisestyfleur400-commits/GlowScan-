@@ -1552,7 +1552,7 @@ export default function ProAnalyze() {
                     <p className="text-[10px] font-extrabold uppercase tracking-wider" style={{ color: "rgba(167,139,250,0.5)" }}>
                       📝 Notes cliniques du praticien (optionnel) — incluses dans le PDF du patient
                     </p>
-                    <VoiceButton onText={(t) => setPractitionerNotes((cur) => (cur ? `${cur} ${t}` : t))} />
+                    <VoiceButton value={practitionerNotes} onChange={(t) => setPractitionerNotes(t)} />
                   </div>
                   <textarea
                     value={practitionerNotes}
