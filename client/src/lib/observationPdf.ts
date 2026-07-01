@@ -1,9 +1,9 @@
 // ════════════════════════════════════════════════════════════════════════
 // Rapport PDF « Observation médicale » (DERM)
-// Reproduit la trame classique d'observation médicale hospitalière (16 rubriques)
-// fournie par le cabinet. Les champs disponibles sont pré-remplis ; les rubriques
-// non collectées (constantes vitales, autres appareils, paracliniques…) sont
-// affichées en lignes vierges à compléter à la main ou à l'écran avant impression.
+// Reproduit la trame classique d'observation médicale hospitalière (16 rubriques).
+// N'affiche QUE ce qui est réellement renseigné : toute ligne, sous-section ou
+// rubrique vide est entièrement omise (aucune ligne vierge / effet brouillon).
+// Les rubriques visibles sont renumérotées en continu (1,2,3…).
 //
 // Module PARTAGÉ entre :
 //  - ProAnalyze  → rapport « Clinique seul » (document autonome, buildObservationDoc)
@@ -131,140 +131,159 @@ const esc = (s: any): string =>
 // pour le surlignage au survol/focus). data-gs-edit sert de repère (impression = normal).
 const EDITABLE = `contenteditable="true" class="gs-edit" data-gs-edit="1"`;
 
-// Ligne label + valeur (ou pointillés si vide). La VALEUR est éditable au clic.
+// Vrai si la valeur est vide/absente.
+const empty = (v?: string) => !v || !String(v).trim();
+
+// Ligne label + valeur. RIEN si la valeur est vide (aucune ligne pointillée).
 const row = (label: string, value?: string): string => {
-  const v = (value || "").trim();
-  const content = v
-    ? `<span ${EDITABLE} style="color:#111;flex:1">${esc(v)}</span>`
-    : `<span ${EDITABLE} style="color:#111;border-bottom:1px dotted #9ca3af;flex:1;min-height:13px"></span>`;
+  if (empty(value)) return "";
   return `<div style="display:flex;gap:8px;align-items:baseline;margin-bottom:5px;font-size:10.5px;line-height:1.5">
     <span style="font-weight:700;color:#374151;min-width:180px;flex-shrink:0">${esc(label)}</span>
-    ${content}
+    <span ${EDITABLE} style="color:#111;flex:1">${esc(String(value).trim())}</span>
   </div>`;
 };
 
-// Bloc de texte libre (ou N lignes vierges si vide) — éditable au clic.
-const freeText = (value?: string, blankLines = 3): string => {
-  const v = (value || "").trim();
-  if (v) return `<div ${EDITABLE} style="font-size:10.5px;color:#111;line-height:1.7;white-space:pre-wrap">${esc(v)}</div>`;
-  return Array.from({ length: blankLines })
-    .map(() => `<div ${EDITABLE} style="border-bottom:1px dotted #9ca3af;min-height:16px;font-size:10.5px;color:#111"></div>`)
-    .join("");
+// Bloc de texte libre. RIEN si vide (plus de lignes vierges).
+const freeText = (value?: string): string => {
+  if (empty(value)) return "";
+  return `<div ${EDITABLE} style="font-size:10.5px;color:#111;line-height:1.7;white-space:pre-wrap">${esc(String(value).trim())}</div>`;
 };
 
-const rubric = (num: string, title: string, inner: string): string =>
+// Sous-section (sous-titre + contenu). RIEN si tout le contenu est vide.
+const group = (subtitle: string, ...parts: string[]): string => {
+  const inner = parts.filter((p) => p && p.trim()).join("");
+  if (!inner.trim()) return "";
+  return `<div style="font-size:9.5px;font-weight:800;color:${TEAL};text-transform:uppercase;letter-spacing:.4px;margin:8px 0 5px">${esc(subtitle)}</div>${inner}`;
+};
+
+// Rendu pur d'une carte-rubrique (le numéro est calculé par l'appelant).
+const card = (num: string, title: string, inner: string): string =>
   `<div style="margin-bottom:14px;border:1px solid #d1d5db;border-radius:4px;overflow:hidden;break-inside:avoid">
     <div style="background:${TEAL};padding:7px 14px"><span style="font-size:10.5px;font-weight:800;color:#fff;letter-spacing:.4px;text-transform:uppercase">${num} · ${esc(title)}</span></div>
     <div style="background:#fff;padding:11px 14px">${inner}</div>
   </div>`;
 
-const subLabel = (t: string): string =>
-  `<div style="font-size:9.5px;font-weight:800;color:${TEAL};text-transform:uppercase;letter-spacing:.4px;margin:8px 0 5px">${esc(t)}</div>`;
+// Vrai si le HTML ne contient aucun contenu significatif (que des balises vides).
+const hasContent = (inner: string) =>
+  !!inner.replace(/<[^>]+>/g, "").trim() || /<img|<svg/i.test(inner);
+
+// Fabrique un numéroteur : les rubriques vides sont ignorées ET ne consomment pas
+// de numéro → numérotation continue (1,2,3…) sur les seules rubriques affichées.
+function makeNumberer() {
+  let n = 0;
+  return (title: string, ...blocks: string[]): string => {
+    const inner = blocks.filter((b) => b && b.trim()).join("");
+    if (!hasContent(inner)) return "";
+    n += 1;
+    return card(String(n), title, inner);
+  };
+}
 
 /**
  * Construit les 16 rubriques de l'observation médicale (sans wrapper HTML).
  * Réutilisable en pages intégrées (rapport fusionné).
  */
 export function buildObservationSections(d: ObservationData): string {
+  const rubric = makeNumberer();
   return `
-${rubric("1", "Identification", `
-  ${row("Nom et prénom", d.patientName)}
-  ${row("Date de naissance", d.dateNaissance)}
-  ${row("Lieu de naissance", d.lieuNaissance)}
-  ${row("Âge", d.age)}
-  ${row("Sexe", d.sex)}
-  ${row("Ethnie", d.ethnie)}
-  ${row("Profession", d.profession)}
-  ${row("Ville de résidence", d.ville)}
-  ${row("Adresse & contact", [d.adresse, d.phone].filter(Boolean).join(" · "))}
-  ${row("Email", d.email)}
-  ${row("Personne à joindre (urgence)", d.contactUrgence)}
-  ${row("Religion", d.religion)}
-  ${row("Statut marital", d.statutMarital)}
-`)}
+${rubric("Identification",
+  row("Nom et prénom", d.patientName),
+  row("Date de naissance", d.dateNaissance),
+  row("Lieu de naissance", d.lieuNaissance),
+  row("Âge", d.age),
+  row("Sexe", d.sex),
+  row("Ethnie", d.ethnie),
+  row("Profession", d.profession),
+  row("Ville de résidence", d.ville),
+  row("Adresse & contact", [d.adresse, d.phone].filter(Boolean).join(" · ")),
+  row("Email", d.email),
+  row("Personne à joindre (urgence)", d.contactUrgence),
+  row("Religion", d.religion),
+  row("Statut marital", d.statutMarital),
+)}
 
-${rubric("2", "Motif de consultation", freeText(d.motif, 2))}
+${rubric("Motif de consultation", freeText(d.motif))}
 
-${rubric("3", "Antécédents", `
-  ${subLabel("Personnels")}
-  ${row("Cosmétologiques", d.atcdCosmeto)}
-  ${row("Médicaux", d.atcdMedicaux)}
-  ${row("Chirurgicaux", d.atcdChirurgicaux)}
-  ${subLabel("Immuno-allergiques")}
-  ${row("Alimentaires", d.allergAlimentaires)}
-  ${row("Médicamenteuses", d.allergMedic)}
-  ${row("Environnementales", d.allergEnv)}
-  ${row("Atopie", d.atopie)}
-  ${subLabel("Biologiques & autres")}
-  ${row("Groupe sanguin / Rhésus", [d.groupeSanguin, d.rhesus].filter(Boolean).join(" "))}
-  ${row("Sérologie HIV", d.serologieHiv)}
-  ${row("Gynéco-obstétricaux", d.gynecoObst)}
-  ${row("Toxicologiques", d.toxicologiques)}
-  ${subLabel("Familiaux")}
-  ${freeText(d.atcdFamiliaux, 2)}
-`)}
+${rubric("Antécédents",
+  group("Personnels",
+    row("Cosmétologiques", d.atcdCosmeto),
+    row("Médicaux", d.atcdMedicaux),
+    row("Chirurgicaux", d.atcdChirurgicaux),
+  ),
+  group("Immuno-allergiques",
+    row("Alimentaires", d.allergAlimentaires),
+    row("Médicamenteuses", d.allergMedic),
+    row("Environnementales", d.allergEnv),
+    row("Atopie", d.atopie),
+  ),
+  group("Biologiques & autres",
+    row("Groupe sanguin / Rhésus", [d.groupeSanguin, d.rhesus].filter(Boolean).join(" ")),
+    row("Sérologie HIV", d.serologieHiv),
+    row("Gynéco-obstétricaux", d.gynecoObst),
+    row("Toxicologiques", d.toxicologiques),
+  ),
+  group("Familiaux", freeText(d.atcdFamiliaux)),
+)}
 
-${rubric("4", "Mode de vie", freeText(d.modeVie, 2))}
+${rubric("Mode de vie", freeText(d.modeVie))}
 
-${rubric("5", "Histoire de la maladie", freeText(d.hma, 4))}
+${rubric("Histoire de la maladie", freeText(d.hma))}
 
-${rubric("6", "Examen clinique — constantes", `
-  ${row("Température", d.temperature)}
-  ${row("Tension artérielle (TA)", d.ta)}
-  ${row("Glycémie à jeun (GAJ)", d.gaj)}
-  ${row("Fréquence respiratoire (FR)", d.fr)}
-  ${row("Fréquence cardiaque (FC)", d.fc)}
-  ${subLabel("État général")}
-  ${freeText(d.etatGeneral, 2)}
-`)}
+${rubric("Examen clinique — constantes",
+  row("Température", d.temperature),
+  row("Tension artérielle (TA)", d.ta),
+  row("Glycémie à jeun (GAJ)", d.gaj),
+  row("Fréquence respiratoire (FR)", d.fr),
+  row("Fréquence cardiaque (FC)", d.fc),
+  group("État général", freeText(d.etatGeneral)),
+)}
 
-${rubric("7", "Examen dermatologique", `
-  ${row("Phototype", d.phototype)}
-  ${row("Lésions élémentaires", d.lesions)}
-  ${row("Localisation / zones", d.zones)}
-  ${row("Nombre", d.nombre)}
-  ${row("Morphologie", d.morphologie)}
-  ${row("Distribution", d.distribution)}
-  ${subLabel("Peau")}
-  ${freeText(d.examPeau, 2)}
-  ${row("Phanères", d.examPhaneres)}
-  ${row("Muqueuses", d.examMuqueuses)}
-  ${row("Aires ganglionnaires", d.examGanglions)}
-  ${d.autresSignes ? subLabel("Autres signes") + freeText(d.autresSignes, 1) : ""}
-  ${(d.keloidRisk || d.keloidDetails) ? subLabel("Risque chéloïde") + row("Niveau", d.keloidRisk) + (d.keloidDetails ? freeText(d.keloidDetails, 1) : "") : ""}
-`)}
+${rubric("Examen dermatologique",
+  row("Phototype", d.phototype),
+  row("Lésions élémentaires", d.lesions),
+  row("Localisation / zones", d.zones),
+  row("Nombre", d.nombre),
+  row("Morphologie", d.morphologie),
+  row("Distribution", d.distribution),
+  group("Peau", freeText(d.examPeau)),
+  row("Phanères", d.examPhaneres),
+  row("Muqueuses", d.examMuqueuses),
+  row("Aires ganglionnaires", d.examGanglions),
+  group("Autres signes", freeText(d.autresSignes)),
+  group("Risque chéloïde", row("Niveau", d.keloidRisk), freeText(d.keloidDetails)),
+)}
 
-${rubric("8", "Autres appareils", `
-  ${row("Pleuro-pulmonaire", d.pleuroPulm)}
-  ${row("Digestif", d.digestif)}
-  ${row("Neurologique", d.neuro)}
-  ${row("Locomoteur", d.locomoteur)}
-  ${row("Uro-génital", d.uroGenital)}
-  ${row("Tête et cou", d.teteCou)}
-  ${row("Thyroïde", d.thyroide)}
-  ${row("Examen pelvien", d.pelvien)}
-`)}
+${rubric("Autres appareils",
+  row("Pleuro-pulmonaire", d.pleuroPulm),
+  row("Digestif", d.digestif),
+  row("Neurologique", d.neuro),
+  row("Locomoteur", d.locomoteur),
+  row("Uro-génital", d.uroGenital),
+  row("Tête et cou", d.teteCou),
+  row("Thyroïde", d.thyroide),
+  row("Examen pelvien", d.pelvien),
+)}
 
-${rubric("9", "Résumé syndromique", freeText(d.resumeSyndromique, 3))}
+${rubric("Résumé syndromique", freeText(d.resumeSyndromique))}
 
-${rubric("10", "Hypothèses diagnostiques", `
-  ${row("Diagnostic principal", d.hypotheses)}
-  ${d.hypothesesSecondaire ? row("Diagnostic secondaire", d.hypothesesSecondaire) : ""}
-`)}
+${rubric("Hypothèses diagnostiques",
+  row("Diagnostic principal", d.hypotheses),
+  row("Diagnostic secondaire", d.hypothesesSecondaire),
+)}
 
-${rubric("11", "Diagnostics différentiels", freeText(d.differentiels, 2))}
+${rubric("Diagnostics différentiels", freeText(d.differentiels))}
 
-${rubric("12", "Examens paracliniques", freeText(d.paracliniques, 3))}
+${rubric("Examens paracliniques", freeText(d.paracliniques))}
 
-${rubric("13", "Résultats", freeText(d.resultats, 3))}
+${rubric("Résultats", freeText(d.resultats))}
 
-${rubric("14", "Traitement", d.traitementHtml || freeText(undefined, 4))}
+${rubric("Traitement", d.traitementHtml || "")}
 
-${rubric("15", "Surveillance", freeText(d.surveillance, 2))}
+${rubric("Surveillance", freeText(d.surveillance))}
 
-${rubric("16", "Évolution", freeText(d.evolution, 3))}
+${rubric("Évolution", freeText(d.evolution))}
 
-${rubric("★", "Notes & conclusion du praticien", freeText(d.practitionerNotes, 3))}
+${rubric("Notes & conclusion du praticien", freeText(d.practitionerNotes))}
 `;
 }
 
