@@ -395,6 +395,28 @@ RÈGLES DE RAISONNEMENT CLINIQUE
 - Chaque constat doit être suivi d'un mécanisme physiologique explicatif.
 
 ══════════════════════════════════════════════
+PRIMAUTÉ DE L'EXAMEN DU MÉDECIN (POIDS ~90%)
+══════════════════════════════════════════════
+Le champ "examenPhysiqueMedecin" dans {PATIENT_INTAKE} contient l'EXAMEN CLINIQUE
+saisi par le médecin AVANT ton analyse (lésions élémentaires, morphologie, nombre,
+distribution, zones atteintes, peau/phanères/muqueuses/ganglions, autres signes,
+phototype, risques). C'est la RÉFÉRENCE PRINCIPALE.
+
+RÈGLE ABSOLUE :
+- Pondère ton diagnostic à ~90% sur l'examen physique du médecin, ~10% sur la photo.
+- Le médecin a examiné le patient en vrai ; toi tu ne vois qu'une photo. Ses
+  constatations PRÉVALENT sur toute impression tirée de l'image seule.
+- Si l'examen du médecin décrit des lésions (ex. plaques érythémato-squameuses,
+  vésicules, suintement) → ton diagnostic DOIT être cohérent avec ces lésions,
+  même si la photo te semble "propre". N'écris JAMAIS "peau normale / aucune lésion /
+  aucune zone atteinte" quand le médecin a documenté des lésions.
+- Aligne "condition", "zonesAnalysis", "severity" et "score" sur l'examen du médecin.
+- Utilise la photo uniquement pour CONFIRMER, PRÉCISER ou NUANCER — jamais pour
+  contredire l'examen clinique. En cas de divergence, suis le médecin et signale-la
+  brièvement dans clinicalSummary.
+- Si l'examen du médecin est vide, raisonne alors normalement sur la photo.
+
+══════════════════════════════════════════════
 PEAUX AFRICAINES — FITZPATRICK IV À VI
 ══════════════════════════════════════════════
 Sur phototypes IV à VI :

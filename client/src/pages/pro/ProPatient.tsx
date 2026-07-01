@@ -58,6 +58,11 @@ export default function ProPatient() {
   const previousScan = scans[1];
   const dermato = accData?.account;
 
+  // Étape 5 — primauté du diagnostic validé par le médecin. Si le médecin a corrigé
+  // (expertCorrectedCondition) on affiche SA correction, sinon le diagnostic IA.
+  const dxOf = (s?: { expertCorrectedCondition?: string | null; condition?: string | null } | null) =>
+    (s?.expertCorrectedCondition && String(s.expertCorrectedCondition).trim()) || s?.condition || "—";
+
   const sendWhatsApp = () => {
     if (!p.whatsappNumber) {
       toast({ title: "Pas de WhatsApp", description: "Ce patient n'a pas de numéro enregistré.", variant: "destructive" });
@@ -67,7 +72,7 @@ export default function ProPatient() {
     const products = (lastScan.recommendations as any)?.products?.slice(0, 3).join(", ") || "";
     const msg = encodeURIComponent(
       `Bonjour ${p.firstName}, suite à votre analyse GlowScan du ${new Date(lastScan.createdAt!).toLocaleDateString("fr-FR")},\n` +
-        `voici votre diagnostic : ${lastScan.condition || "—"}.\n` +
+        `voici votre diagnostic : ${dxOf(lastScan)}.\n` +
         (products ? `Produits recommandés : ${products}.\n` : "") +
         `Prochaine étape : ${lastScan.motivation || "rescannez dans 4 semaines pour mesurer votre progression."}\n\n` +
         `— ${dermato?.fullName || "Votre dermato"}\nvia GlowScan DERM`
@@ -167,7 +172,7 @@ export default function ProPatient() {
     <div class="scan-row" style="${i===0?"background:rgba(124,58,237,.04);border-color:rgba(124,58,237,.3)":""}">
       <div class="scan-date">${new Date(s.createdAt!).toLocaleDateString("fr-FR", {day:"numeric",month:"short",year:"numeric"})}</div>
       <div class="scan-score">${s.score}<span style="font-size:9px;color:#9ca3af">/100</span></div>
-      <div><div class="scan-cond">${s.condition||"—"}</div></div>
+      <div><div class="scan-cond">${dxOf(s)}</div></div>
       <div><span class="scan-sev" style="background:${s.severity==="Sévère"?"rgba(239,68,68,.1)":s.severity==="Modérée"?"rgba(251,191,36,.1)":"rgba(16,185,129,.1)"};color:${s.severity==="Sévère"?"#ef4444":s.severity==="Modérée"?"#f59e0b":"#10b981"}">${s.severity||"—"}</span></div>
     </div>`).join("")}
   </div>
@@ -178,7 +183,7 @@ export default function ProPatient() {
     <div style="display:flex;gap:12px;margin-bottom:10px">
       <div style="flex:1;background:#f8f7ff;border:1px solid #e8e3ff;border-radius:8px;padding:10px">
         <div class="lbl">Condition</div>
-        <div style="font-size:14px;font-weight:800;color:#0d0a0e;margin-top:2px"><span data-edit="diagnostic">${lastScan.condition||"—"}</span></div>
+        <div style="font-size:14px;font-weight:800;color:#0d0a0e;margin-top:2px"><span data-edit="diagnostic">${dxOf(lastScan)}</span></div>
         <div style="font-size:10px;color:#6b7280;margin-top:2px">${lastScan.skinType||""}</div>
       </div>
       <div style="background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.3);border-radius:8px;padding:10px;text-align:center;min-width:80px">
@@ -379,7 +384,7 @@ export default function ProPatient() {
               <p className="text-2xl font-extrabold mt-1" style={{ color: INK }}>
                 {previousScan.score}<span className="text-sm" style={{ color: DS.muted }}>/100</span>
               </p>
-              <p className="text-[10px] truncate mt-1" style={{ color: DS.body }}>{previousScan.condition}</p>
+              <p className="text-[10px] truncate mt-1" style={{ color: DS.body }}>{dxOf(previousScan)}</p>
             </div>
             <div
               className="text-center p-3 rounded-xl"
@@ -394,7 +399,7 @@ export default function ProPatient() {
               <p className="text-2xl font-extrabold mt-1" style={{ color: (evolution || 0) >= 0 ? "#6ee7b7" : "#fbbf24" }}>
                 {lastScan.score}<span className="text-sm opacity-70">/100</span>
               </p>
-              <p className="text-[10px] truncate mt-1" style={{ color: DS.body }}>{lastScan.condition}</p>
+              <p className="text-[10px] truncate mt-1" style={{ color: DS.body }}>{dxOf(lastScan)}</p>
             </div>
           </div>
           <p className="text-xs text-center mt-3" style={{ color: DS.body }}>
@@ -432,8 +437,14 @@ export default function ProPatient() {
               <div className="flex items-start justify-between mb-3">
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-extrabold" style={{ color: INK }} data-testid={`text-condition-${s.id}`}>
-                    {s.condition || "Diagnostic en attente"}
+                    {(s.expertCorrectedCondition && String(s.expertCorrectedCondition).trim()) || s.condition || "Diagnostic en attente"}
                   </p>
+                  {s.expertCorrectedCondition && String(s.expertCorrectedCondition).trim() && (
+                    <p className="text-[10px] mt-0.5" style={{ color: "#6ee7b7" }}>
+                      ✓ Diagnostic validé par le médecin
+                      {s.condition && s.condition !== s.expertCorrectedCondition ? ` · IA : ${s.condition}` : ""}
+                    </p>
+                  )}
                   <p className="text-[11px] mt-0.5" style={{ color: DS.muted }}>
                     {s.createdAt
                       ? new Date(s.createdAt).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
@@ -571,7 +582,7 @@ export default function ProPatient() {
                 <button
                   onClick={() => {
                     setValidatingId(s.id);
-                    setValidateCorrection(s.condition || "");
+                    setValidateCorrection(s.expertCorrectedCondition || s.condition || "");
                   }}
                   data-testid={`button-validate-${s.id}`}
                   className="mt-3 inline-flex items-center gap-1.5 text-[11px] font-extrabold hover:underline"

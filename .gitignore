@@ -30,3 +30,11 @@ coverage/
 
 # Fichiers de présentation d'autres projets (ne pas versionner ici)
 NABEAHH_Presentation_Site_Web.html
+
+# Clés SSH et fichiers sensibles
+key.txt
+key_copy.txt
+*.pem
+*.key
+*.p12
+*.pfx

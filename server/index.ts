@@ -12,6 +12,43 @@ const httpServer = createServer(app);
 // Setup WebSocket server
 setupWebSocket(httpServer);
 
+// ── CORS — n'accepter que les origines connues ────────────────────────────
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || "")
+  .split(",")
+  .map(s => s.trim())
+  .filter(Boolean);
+
+app.use((req: Request, res: Response, next: NextFunction) => {
+  const origin = req.headers.origin as string | undefined;
+  if (origin && (ALLOWED_ORIGINS.includes(origin) || ALLOWED_ORIGINS.length === 0)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+    res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization,x-admin-key");
+  }
+  if (req.method === "OPTIONS") return res.sendStatus(204);
+  next();
+});
+
+// ── Headers de sécurité HTTP (équivalent helmet) ──────────────────────────
+app.use((_req: Request, res: Response, next: NextFunction) => {
+  // Empêche le clickjacking
+  res.setHeader("X-Frame-Options", "DENY");
+  // Empêche le sniffing de type MIME
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  // Active le filtre XSS du navigateur
+  res.setHeader("X-XSS-Protection", "1; mode=block");
+  // Force HTTPS pendant 1 an (production uniquement)
+  if (process.env.NODE_ENV === "production") {
+    res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  }
+  // Empêche le navigateur d'envoyer le Referer complet
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  // Limite les fonctionnalités du navigateur
+  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  next();
+});
+
 declare module "http" {
   interface IncomingMessage {
     rawBody: unknown;

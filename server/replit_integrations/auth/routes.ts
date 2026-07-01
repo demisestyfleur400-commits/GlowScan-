@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { authStorage } from "./storage";
 import { isAuthenticated } from "./replitAuth";
 import bcrypt from "bcryptjs";
@@ -7,6 +7,46 @@ import { storage } from "../../storage";
 import { users } from "@shared/models/auth";
 import { eq, or } from "drizzle-orm";
 import twilio from "twilio";
+
+// ── Rate limiter simple en mémoire ───────────────────────────────────────────
+// Map<ip, { count, resetAt }>
+const _rateLimitStore = new Map<string, { count: number; resetAt: number }>();
+
+function createRateLimiter(maxRequests: number, windowMs: number) {
+  // Nettoyage périodique
+  setInterval(() => {
+    const now = Date.now();
+    for (const [k, v] of _rateLimitStore) {
+      if (v.resetAt < now) _rateLimitStore.delete(k);
+    }
+  }, windowMs);
+
+  return (req: Request, res: Response, next: NextFunction) => {
+    const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0].trim()
+      || req.socket?.remoteAddress
+      || "unknown";
+    const now = Date.now();
+    const entry = _rateLimitStore.get(ip);
+
+    if (!entry || entry.resetAt < now) {
+      _rateLimitStore.set(ip, { count: 1, resetAt: now + windowMs });
+      return next();
+    }
+
+    entry.count++;
+    if (entry.count > maxRequests) {
+      const retryAfter = Math.ceil((entry.resetAt - now) / 1000);
+      res.set("Retry-After", String(retryAfter));
+      return res.status(429).json({
+        message: `Trop de tentatives. Réessaie dans ${retryAfter} secondes.`,
+      });
+    }
+    next();
+  };
+}
+
+// 10 tentatives par 15 minutes pour login/register/reset
+const authLimiter = createRateLimiter(10, 15 * 60 * 1000);
 
 // ── Twilio SMS Client ──────────────────────────────────────────────────────
 const twilioClient = process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN
@@ -69,7 +109,7 @@ export function registerAuthRoutes(app: Express): void {
   });
 
   // ── POST /api/auth/register ── Inscription email/mot de passe
-  app.post("/api/auth/register", async (req: any, res) => {
+  app.post("/api/auth/register", authLimiter, async (req: any, res) => {
     const ip = req.headers["x-forwarded-for"] || req.socket?.remoteAddress || "?";
     try {
       const { firstName, email, password } = req.body;
@@ -128,7 +168,7 @@ export function registerAuthRoutes(app: Express): void {
   });
 
   // ── POST /api/auth/login ── Connexion email/mot de passe
-  app.post("/api/auth/login", async (req: any, res) => {
+  app.post("/api/auth/login", authLimiter, async (req: any, res) => {
     try {
       const { email, password } = req.body;
 
@@ -175,7 +215,7 @@ export function registerAuthRoutes(app: Express): void {
   // ── POST /api/auth/forgot-password ─────────────────────────────────────────
   // Body: { contact } — email ou numéro de téléphone
   // Envoie automatiquement un SMS via Twilio
-  app.post("/api/auth/forgot-password", async (req: any, res) => {
+  app.post("/api/auth/forgot-password", authLimiter, async (req: any, res) => {
     try {
       const { contact } = req.body;
       if (!contact?.trim()) {
@@ -241,7 +281,7 @@ export function registerAuthRoutes(app: Express): void {
 
   // ── POST /api/auth/reset-password ───────────────────────────────────────────
   // Body: { code, newPassword }
-  app.post("/api/auth/reset-password", async (req: any, res) => {
+  app.post("/api/auth/reset-password", authLimiter, async (req: any, res) => {
     try {
       const { code, newPassword } = req.body;
       if (!code || !newPassword) {
