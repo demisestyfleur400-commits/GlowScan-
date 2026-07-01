@@ -44,8 +44,10 @@ app.use((_req: Request, res: Response, next: NextFunction) => {
   }
   // Empêche le navigateur d'envoyer le Referer complet
   res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
-  // Limite les fonctionnalités du navigateur
-  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  // Limite les fonctionnalités du navigateur. On AUTORISE caméra + micro en
+  // same-origin (self) : nécessaires à la capture photo (analyse) et à la dictée
+  // vocale (getUserMedia). Sans "self", le navigateur bloque tout (NotAllowedError).
+  res.setHeader("Permissions-Policy", "camera=(self), microphone=(self), geolocation=()");
   next();
 });
 
