@@ -21,36 +21,58 @@ import ReconnectBanner from "@/components/ReconnectBanner";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import PWAInstallBanner from "@/components/PWAInstallBanner";
 
-const Home = lazy(() => import("@/pages/Home"));
-const Analyze = lazy(() => import("@/pages/Analyze"));
-const Profile = lazy(() => import("@/pages/Profile"));
-const Shop = lazy(() => import("@/pages/Shop"));
-const Admin = lazy(() => import("@/pages/Admin"));
-const Challenge = lazy(() => import("@/pages/Challenge"));
-const Chat = lazy(() => import("@/pages/Chat"));
-const ScanProduct = lazy(() => import("@/pages/ScanProduct"));
-const ProductScanCamera = lazy(() => import("@/pages/ProductScanCamera"));
-const NutrimentScan = lazy(() => import("@/pages/NutrimentScan"));
-const Routine = lazy(() => import("@/pages/Routine"));
-const Conseils = lazy(() => import("@/pages/Conseils"));
-const AuthPage = lazy(() => import("@/pages/AuthPage"));
-const Premium = lazy(() => import("@/pages/Premium"));
-const Pro = lazy(() => import("@/pages/Pro"));
-const ProInscription = lazy(() => import("@/pages/pro/ProInscription"));
-const ProConnexion = lazy(() => import("@/pages/pro/ProConnexion"));
-const ProMotDePasseOublie = lazy(() => import("@/pages/pro/ProMotDePasseOublie"));
-const ProDashboard = lazy(() => import("@/pages/pro/ProDashboard"));
-const ProPatients = lazy(() => import("@/pages/pro/ProPatients"));
-const ProPatient = lazy(() => import("@/pages/pro/ProPatient"));
-const ProAnalyze = lazy(() => import("@/pages/pro/ProAnalyze"));
-const ProStats = lazy(() => import("@/pages/pro/ProStats"));
-const ProCabinet = lazy(() => import("@/pages/pro/ProCabinet"));
-const DermOnboarding = lazy(() => import("@/pages/pro/DermOnboarding"));
-const Privacy = lazy(() => import("@/pages/Privacy"));
-const DermatoPortal = lazy(() => import("@/pages/DermatoPortal"));
-const DermLanding = lazy(() => import("@/pages/DermLanding"));
-const DermDemo = lazy(() => import("@/pages/DermDemo"));
-const NotFound = lazy(() => import("@/pages/not-found"));
+// Recharge la page UNE fois si un chunk lazy échoue à se charger. Après un
+// déploiement, les anciens fichiers hashés (ex. ProAnalyze-XXXX.js) sont supprimés ;
+// un onglet resté ouvert essaie de charger l'ancien nom → "Failed to fetch
+// dynamically imported module". On recharge → le navigateur récupère les nouveaux
+// fichiers. Un flag sessionStorage évite toute boucle de rechargement.
+function lazyWithRetry(factory: () => Promise<any>) {
+  return lazy(() =>
+    factory()
+      .then((m: any) => { try { sessionStorage.removeItem("gs_chunk_reload"); } catch {} return m; })
+      .catch((err: any) => {
+        try {
+          if (!sessionStorage.getItem("gs_chunk_reload")) {
+            sessionStorage.setItem("gs_chunk_reload", "1");
+            window.location.reload();
+            return new Promise(() => {}) as Promise<any>; // ne résout jamais : la page recharge
+          }
+        } catch {}
+        throw err;
+      })
+  );
+}
+
+const Home = lazyWithRetry(() => import("@/pages/Home"));
+const Analyze = lazyWithRetry(() => import("@/pages/Analyze"));
+const Profile = lazyWithRetry(() => import("@/pages/Profile"));
+const Shop = lazyWithRetry(() => import("@/pages/Shop"));
+const Admin = lazyWithRetry(() => import("@/pages/Admin"));
+const Challenge = lazyWithRetry(() => import("@/pages/Challenge"));
+const Chat = lazyWithRetry(() => import("@/pages/Chat"));
+const ScanProduct = lazyWithRetry(() => import("@/pages/ScanProduct"));
+const ProductScanCamera = lazyWithRetry(() => import("@/pages/ProductScanCamera"));
+const NutrimentScan = lazyWithRetry(() => import("@/pages/NutrimentScan"));
+const Routine = lazyWithRetry(() => import("@/pages/Routine"));
+const Conseils = lazyWithRetry(() => import("@/pages/Conseils"));
+const AuthPage = lazyWithRetry(() => import("@/pages/AuthPage"));
+const Premium = lazyWithRetry(() => import("@/pages/Premium"));
+const Pro = lazyWithRetry(() => import("@/pages/Pro"));
+const ProInscription = lazyWithRetry(() => import("@/pages/pro/ProInscription"));
+const ProConnexion = lazyWithRetry(() => import("@/pages/pro/ProConnexion"));
+const ProMotDePasseOublie = lazyWithRetry(() => import("@/pages/pro/ProMotDePasseOublie"));
+const ProDashboard = lazyWithRetry(() => import("@/pages/pro/ProDashboard"));
+const ProPatients = lazyWithRetry(() => import("@/pages/pro/ProPatients"));
+const ProPatient = lazyWithRetry(() => import("@/pages/pro/ProPatient"));
+const ProAnalyze = lazyWithRetry(() => import("@/pages/pro/ProAnalyze"));
+const ProStats = lazyWithRetry(() => import("@/pages/pro/ProStats"));
+const ProCabinet = lazyWithRetry(() => import("@/pages/pro/ProCabinet"));
+const DermOnboarding = lazyWithRetry(() => import("@/pages/pro/DermOnboarding"));
+const Privacy = lazyWithRetry(() => import("@/pages/Privacy"));
+const DermatoPortal = lazyWithRetry(() => import("@/pages/DermatoPortal"));
+const DermLanding = lazyWithRetry(() => import("@/pages/DermLanding"));
+const DermDemo = lazyWithRetry(() => import("@/pages/DermDemo"));
+const NotFound = lazyWithRetry(() => import("@/pages/not-found"));
 
 function RefRedirect() {
   const params = new URLSearchParams(window.location.search);
