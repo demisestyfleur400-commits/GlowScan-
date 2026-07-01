@@ -11,6 +11,14 @@ function getSpeechRecognition(): any | null {
   return w.SpeechRecognition || w.webkitSpeechRecognition || null;
 }
 
+// iOS/iPadOS gère mal le mode continu + auto-relance de l'API vocale : on passe
+// en reconnaissance « phrase par phrase » (plus fiable) sur ces appareils.
+function isIOS(): boolean {
+  const ua = navigator.userAgent || "";
+  return /iPad|iPhone|iPod/.test(ua) ||
+    (/Macintosh/.test(ua) && (navigator as any).maxTouchPoints > 1); // iPadOS se déguise en Mac
+}
+
 export function detectDictationLang(): string {
   const l = (document.documentElement.lang || navigator.language || "fr").toLowerCase();
   return l.startsWith("en") ? "en-US" : "fr-FR";
@@ -42,9 +50,11 @@ export function useVoiceDictation(opts?: VoiceDictationOptions) {
     const SR = getSpeechRecognition();
     if (!SR) return;
     try { recRef.current?.abort?.(); } catch {}
+    const ios = isIOS();
     const rec = new SR();
     rec.lang = lang || opts?.lang || detectDictationLang();
-    rec.continuous = true;
+    // iOS : phrase par phrase (pas de continu, l'utilisateur relance) ; ailleurs : continu.
+    rec.continuous = !ios;
     rec.interimResults = true;
 
     rec.onresult = (e: any) => {
@@ -67,9 +77,11 @@ export function useVoiceDictation(opts?: VoiceDictationOptions) {
     };
     rec.onend = () => {
       // Auto-relance tant que l'utilisateur veut écouter (Chrome coupe après un silence).
-      if (wantRef.current) {
+      // Sur iOS on NE relance PAS (l'API le supporte mal) : une phrase par appui.
+      if (wantRef.current && !ios) {
         try { rec.start(); return; } catch {}
       }
+      wantRef.current = false;
       setListening(false);
     };
 
