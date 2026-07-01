@@ -3149,8 +3149,9 @@ ${medicalSections}
           </div>
         )}
 
-        {/* ── Bouton export PDF (patient B2C + pages médicales ajoutées en mode DERM) ── */}
-        {<button
+        {/* ── Bouton export PDF (B2C uniquement — en DERM le rapport passe par le
+             flux dédié "Voir le rapport" + sélecteur de mode dans ProAnalyze). ── */}
+        {!isPro && <button
           onClick={handleDownloadPDF}
           disabled={pdfGenerating}
           data-testid="button-download-pdf"

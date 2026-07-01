@@ -264,7 +264,7 @@ ${rubric("15", "Surveillance", freeText(d.surveillance, 2))}
 
 ${rubric("16", "Évolution", freeText(d.evolution, 3))}
 
-${d.practitionerNotes ? rubric("+", "Notes du praticien", freeText(d.practitionerNotes, 1)) : ""}
+${rubric("★", "Notes & conclusion du praticien", freeText(d.practitionerNotes, 3))}
 `;
 }
 
