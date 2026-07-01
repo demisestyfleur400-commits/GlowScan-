@@ -229,6 +229,39 @@ export async function registerRoutes(
   registerAuthRoutes(app);
   registerProRoutes(app);
 
+  // ══ Transcription vocale (Whisper via Groq) — fiable sur TOUS les navigateurs ══
+  // Contrairement à l'API Web Speech (qui ne marche pas sur Edge/Safari), on
+  // enregistre l'audio côté client puis on le transcrit ici. Auto FR/EN.
+  app.post("/api/transcribe", async (req: any, res) => {
+    try {
+      if (!openai) {
+        return res.status(503).json({ message: "Transcription indisponible (fournisseur non configuré)." });
+      }
+      const { audioBase64, mimeType } = req.body || {};
+      if (!audioBase64 || typeof audioBase64 !== "string") {
+        return res.status(400).json({ message: "audioBase64 manquant." });
+      }
+      // Data URL éventuelle → on retire le préfixe.
+      const b64 = audioBase64.includes(",") ? audioBase64.split(",")[1] : audioBase64;
+      const buffer = Buffer.from(b64, "base64");
+      if (buffer.length < 800) {
+        // Trop court = quasi silence : on renvoie vide sans erreur.
+        return res.json({ text: "" });
+      }
+      const ext = (mimeType || "").includes("mp4") ? "mp4"
+        : (mimeType || "").includes("ogg") ? "ogg"
+        : (mimeType || "").includes("wav") ? "wav" : "webm";
+      const { toFile } = await import("openai");
+      const file = await toFile(buffer, `audio.${ext}`, { type: mimeType || "audio/webm" });
+      const model = USE_GROQ ? "whisper-large-v3-turbo" : "whisper-1";
+      const tr: any = await openai.audio.transcriptions.create({ file, model } as any);
+      res.json({ text: (tr?.text || "").trim() });
+    } catch (err: any) {
+      console.error("[transcribe] error:", err?.message || err);
+      res.status(500).json({ message: "Transcription impossible pour le moment." });
+    }
+  });
+
   // === Servir les photos d'analyses depuis Object Storage ===
   // Authentification requise + l'utilisateur ne peut voir QUE ses propres photos.
   app.get("/objects/scans/:filename", async (req, res) => {

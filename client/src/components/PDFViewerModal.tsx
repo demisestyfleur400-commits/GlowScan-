@@ -8,7 +8,7 @@
  */
 import { useState, useEffect, useCallback, useRef } from "react";
 import html2pdf from "html2pdf.js";
-import { useVoiceDictation } from "@/hooks/useVoiceDictation";
+import { useAudioTranscription } from "@/hooks/useAudioTranscription";
 import { VoiceButton } from "@/components/VoiceButton";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -231,8 +231,8 @@ export default function PDFViewerModal({
   }, []);
 
   // Dictée vocale → insère le texte reconnu dans le dernier champ cliqué du PDF.
-  const { supported: voiceSupported, listening: voiceListening, toggle: toggleVoice } = useVoiceDictation({
-    onFinal: (t) => {
+  const { supported: voiceSupported, status: voiceStatus, toggle: toggleVoice } = useAudioTranscription({
+    onResult: (t) => {
       const el = lastEditableRef.current;
       if (!t) return;
       if (!el) { try { window.alert("Cliquez d'abord dans un champ ou une ligne du rapport, puis parlez."); } catch {} return; }
@@ -241,6 +241,8 @@ export default function PDFViewerModal({
     },
     onError: (msg) => { try { window.alert(msg); } catch {} },
   });
+  const voiceListening = voiceStatus === "recording";
+  const voiceBusy = voiceStatus === "transcribing";
   const [mode, setMode] = useState<"view" | "edit">("view");
   const [editFields, setEditFields] = useState<EditableFields>({
     diagnostic: "",
@@ -659,8 +661,9 @@ export default function PDFViewerModal({
         {/* Micro flottant : dicte dans le champ du PDF cliqué au préalable */}
         {mode === "view" && voiceSupported && (
           <button
-            onClick={() => toggleVoice()}
-            title={voiceListening ? "Arrêter la dictée" : "Dicter à la voix (cliquez d'abord dans un champ du rapport)"}
+            onClick={() => { if (!voiceBusy) toggleVoice(); }}
+            disabled={voiceBusy}
+            title={voiceListening ? "Terminer la dictée" : voiceBusy ? "Transcription…" : "Dicter à la voix (cliquez d'abord dans un champ du rapport)"}
             style={{
               position: "absolute",
               bottom: 20,
@@ -669,7 +672,7 @@ export default function PDFViewerModal({
               height: 56,
               borderRadius: "50%",
               border: "none",
-              cursor: "pointer",
+              cursor: voiceBusy ? "wait" : "pointer",
               background: voiceListening ? "#ef4444" : "#7c3aed",
               color: "#fff",
               display: "flex",
@@ -682,12 +685,16 @@ export default function PDFViewerModal({
               zIndex: 5,
             }}
           >
-            <svg width={26} height={26} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="9" y="2" width="6" height="12" rx="3" />
-              <path d="M5 10v1a7 7 0 0 0 14 0v-1" />
-              <line x1="12" y1="19" x2="12" y2="22" />
-            </svg>
-            <style>{`@keyframes gsMicPulseModal{0%,100%{box-shadow:0 0 0 5px rgba(239,68,68,0.25),0 6px 20px rgba(0,0,0,0.25)}50%{box-shadow:0 0 0 11px rgba(239,68,68,0.08),0 6px 20px rgba(0,0,0,0.25)}}`}</style>
+            {voiceBusy ? (
+              <span style={{ width: 22, height: 22, border: "2px solid rgba(255,255,255,0.4)", borderTopColor: "#fff", borderRadius: "50%", display: "inline-block", animation: "gsMicSpin 0.7s linear infinite" }} />
+            ) : (
+              <svg width={26} height={26} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="9" y="2" width="6" height="12" rx="3" />
+                <path d="M5 10v1a7 7 0 0 0 14 0v-1" />
+                <line x1="12" y1="19" x2="12" y2="22" />
+              </svg>
+            )}
+            <style>{`@keyframes gsMicPulseModal{0%,100%{box-shadow:0 0 0 5px rgba(239,68,68,0.25),0 6px 20px rgba(0,0,0,0.25)}50%{box-shadow:0 0 0 11px rgba(239,68,68,0.08),0 6px 20px rgba(0,0,0,0.25)}}@keyframes gsMicSpin{to{transform:rotate(360deg)}}`}</style>
           </button>
         )}
 
