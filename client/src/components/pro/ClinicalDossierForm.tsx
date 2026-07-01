@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { VoiceButton } from "@/components/VoiceButton";
 
 // ════════════════════════════════════════════════════════════════════════
 // Dossier clinique structuré (DERM) — démarche médicale standard.
@@ -100,28 +101,37 @@ export function ClinicalDossierForm({ value, onChange }: { value: ClinicalRecord
             </button>
             {isOpen && (
               <div style={{ padding: "0 14px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
-                {sec.fields.map((f) => (
+                {sec.fields.map((f) => {
+                  const appendVoice = (t: string) => {
+                    const cur = value[f.key] || "";
+                    set(f.key, cur ? `${cur} ${t}` : t);
+                  };
+                  return (
                   <div key={f.key}>
                     <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: MUTED, marginBottom: 4 }}>{f.label}</label>
-                    {f.ml ? (
-                      <textarea
-                        value={value[f.key] || ""}
-                        onChange={(e) => set(f.key, e.target.value)}
-                        rows={2}
-                        placeholder={f.ph}
-                        style={{ width: "100%", padding: "9px 12px", borderRadius: 10, background: fieldBg, border: fieldBorder, color: INK, fontSize: 13, outline: "none", resize: "vertical", fontFamily: "inherit", boxSizing: "border-box" }}
-                      />
-                    ) : (
-                      <input
-                        type="text"
-                        value={value[f.key] || ""}
-                        onChange={(e) => set(f.key, e.target.value)}
-                        placeholder={f.ph}
-                        style={{ width: "100%", padding: "9px 12px", borderRadius: 10, background: fieldBg, border: fieldBorder, color: INK, fontSize: 13, outline: "none", boxSizing: "border-box" }}
-                      />
-                    )}
+                    <div style={{ display: "flex", alignItems: f.ml ? "flex-start" : "center", gap: 6 }}>
+                      {f.ml ? (
+                        <textarea
+                          value={value[f.key] || ""}
+                          onChange={(e) => set(f.key, e.target.value)}
+                          rows={2}
+                          placeholder={f.ph}
+                          style={{ flex: 1, padding: "9px 12px", borderRadius: 10, background: fieldBg, border: fieldBorder, color: INK, fontSize: 13, outline: "none", resize: "vertical", fontFamily: "inherit", boxSizing: "border-box" }}
+                        />
+                      ) : (
+                        <input
+                          type="text"
+                          value={value[f.key] || ""}
+                          onChange={(e) => set(f.key, e.target.value)}
+                          placeholder={f.ph}
+                          style={{ flex: 1, padding: "9px 12px", borderRadius: 10, background: fieldBg, border: fieldBorder, color: INK, fontSize: 13, outline: "none", boxSizing: "border-box" }}
+                        />
+                      )}
+                      <VoiceButton onText={appendVoice} />
+                    </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

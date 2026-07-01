@@ -8,6 +8,8 @@
  */
 import { useState, useEffect, useCallback, useRef } from "react";
 import html2pdf from "html2pdf.js";
+import { useVoiceDictation } from "@/hooks/useVoiceDictation";
+import { VoiceButton } from "@/components/VoiceButton";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 export interface EditableFields {
@@ -133,17 +135,20 @@ function EditField({
   };
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-      <label
-        style={{
-          fontSize: 10,
-          fontWeight: 800,
-          color: "#9ca3af",
-          textTransform: "uppercase",
-          letterSpacing: "0.06em",
-        }}
-      >
-        {label}
-      </label>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <label
+          style={{
+            fontSize: 10,
+            fontWeight: 800,
+            color: "#9ca3af",
+            textTransform: "uppercase",
+            letterSpacing: "0.06em",
+          }}
+        >
+          {label}
+        </label>
+        <VoiceButton dark={false} size={26} onText={(t) => onChange(value ? `${value} ${t}` : t)} />
+      </div>
       {multiline ? (
         <textarea
           value={value}
@@ -180,6 +185,8 @@ export default function PDFViewerModal({
   const [currentHtml, setCurrentHtml] = useState(htmlContent);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  // Dernier champ éditable cliqué DANS le PDF (pour y insérer la dictée vocale).
+  const lastEditableRef = useRef<HTMLElement | null>(null);
 
   // Récupère le HTML VIVANT de l'iframe (inclut les modifications inline faites
   // en cliquant directement sur un mot / une ligne vierge). Fallback : currentHtml.
@@ -190,6 +197,30 @@ export default function PDFViewerModal({
     } catch {}
     return currentHtml;
   }, [currentHtml]);
+
+  // Suit le champ éditable actuellement ciblé dans le PDF (focusin sur l'iframe).
+  const handleIframeLoad = useCallback(() => {
+    try {
+      const doc = iframeRef.current?.contentDocument;
+      if (!doc) return;
+      doc.addEventListener("focusin", (e: any) => {
+        const el = e.target as HTMLElement;
+        if (el && el.getAttribute && el.getAttribute("contenteditable") === "true") {
+          lastEditableRef.current = el;
+        }
+      });
+    } catch {}
+  }, []);
+
+  // Dictée vocale → insère le texte reconnu dans le dernier champ cliqué du PDF.
+  const { supported: voiceSupported, listening: voiceListening, toggle: toggleVoice } = useVoiceDictation({
+    onFinal: (t) => {
+      const el = lastEditableRef.current;
+      if (!el || !t) return;
+      const cur = (el.textContent || "").trim();
+      el.textContent = cur ? `${cur} ${t}` : t;
+    },
+  });
   const [mode, setMode] = useState<"view" | "edit">("view");
   const [editFields, setEditFields] = useState<EditableFields>({
     diagnostic: "",
@@ -569,7 +600,7 @@ export default function PDFViewerModal({
             textAlign: "center",
           }}
         >
-          ✏️ Cliquez sur n'importe quel mot ou ligne vierge du rapport pour le modifier directement, puis Télécharger ou Envoyer.
+          ✏️ Cliquez sur un mot ou une ligne vierge pour le modifier{voiceSupported ? " — ou 🎙️ dictez à la voix avec le bouton micro" : ""}, puis Télécharger ou Envoyer.
         </div>
       )}
 
@@ -579,6 +610,7 @@ export default function PDFViewerModal({
         {blobUrl && (
           <iframe
             ref={iframeRef}
+            onLoad={handleIframeLoad}
             src={blobUrl}
             title="Rapport clinique GlowScan"
             style={{
@@ -592,6 +624,41 @@ export default function PDFViewerModal({
               pointerEvents: mode === "edit" ? "none" : "auto",
             }}
           />
+        )}
+
+        {/* Micro flottant : dicte dans le champ du PDF cliqué au préalable */}
+        {mode === "view" && voiceSupported && (
+          <button
+            onClick={() => toggleVoice()}
+            title={voiceListening ? "Arrêter la dictée" : "Dicter à la voix (cliquez d'abord dans un champ du rapport)"}
+            style={{
+              position: "absolute",
+              bottom: 20,
+              right: 20,
+              width: 56,
+              height: 56,
+              borderRadius: "50%",
+              border: "none",
+              cursor: "pointer",
+              background: voiceListening ? "#ef4444" : "#7c3aed",
+              color: "#fff",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxShadow: voiceListening
+                ? "0 0 0 6px rgba(239,68,68,0.25), 0 6px 20px rgba(0,0,0,0.25)"
+                : "0 6px 20px rgba(124,58,237,0.4)",
+              animation: voiceListening ? "gsMicPulseModal 1.2s ease-in-out infinite" : "none",
+              zIndex: 5,
+            }}
+          >
+            <svg width={26} height={26} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="9" y="2" width="6" height="12" rx="3" />
+              <path d="M5 10v1a7 7 0 0 0 14 0v-1" />
+              <line x1="12" y1="19" x2="12" y2="22" />
+            </svg>
+            <style>{`@keyframes gsMicPulseModal{0%,100%{box-shadow:0 0 0 5px rgba(239,68,68,0.25),0 6px 20px rgba(0,0,0,0.25)}50%{box-shadow:0 0 0 11px rgba(239,68,68,0.08),0 6px 20px rgba(0,0,0,0.25)}}`}</style>
+          </button>
         )}
 
         {/* Panneau éditeur (glisse depuis la droite) */}

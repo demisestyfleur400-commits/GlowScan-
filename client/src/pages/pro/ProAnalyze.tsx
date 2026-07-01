@@ -48,6 +48,7 @@ import { ExamenPhysiqueForm, EMPTY_EXAMEN, type ExamenData } from "@/components/
 import PDFViewerModal from "@/components/PDFViewerModal";
 import { PremiumPdfTemplate } from "@/templates/PremiumPdfTemplate";
 import { buildObservationDoc, type ObservationData } from "@/lib/observationPdf";
+import { VoiceButton } from "@/components/VoiceButton";
 
 const NAVY = "#7c3aed";
 const INK = "#f3f0ff";
@@ -1547,9 +1548,12 @@ export default function ProAnalyze() {
 
                 {/* Notes cliniques praticien */}
                 <div className="mt-5 rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(167,139,250,0.15)" }}>
-                  <p className="text-[10px] font-extrabold mb-2 uppercase tracking-wider" style={{ color: "rgba(167,139,250,0.5)" }}>
-                    📝 Notes cliniques du praticien (optionnel) — incluses dans le PDF du patient
-                  </p>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-[10px] font-extrabold uppercase tracking-wider" style={{ color: "rgba(167,139,250,0.5)" }}>
+                      📝 Notes cliniques du praticien (optionnel) — incluses dans le PDF du patient
+                    </p>
+                    <VoiceButton onText={(t) => setPractitionerNotes((cur) => (cur ? `${cur} ${t}` : t))} />
+                  </div>
                   <textarea
                     value={practitionerNotes}
                     onChange={e => setPractitionerNotes(e.target.value)}

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { VoiceButton } from "@/components/VoiceButton";
 
 // ════════════════════════════════════════════════════════════════════════
 // Examen physique (DERM) — documenté par le médecin AVANT la photo et l'IA.
@@ -53,18 +54,27 @@ export function ExamenPhysiqueForm({ value, onChange }: { value: ExamenData; onC
   const set = (patch: Partial<ExamenData>) => onChange({ ...value, ...patch });
   const toggle = (arr: string[], v: string) => (arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
 
-  const Text = ({ k, label, ml, ph }: { k: keyof ExamenData; label: string; ml?: boolean; ph?: string }) => (
+  const Text = ({ k, label, ml, ph }: { k: keyof ExamenData; label: string; ml?: boolean; ph?: string }) => {
+    const appendVoice = (t: string) => {
+      const cur = (value[k] as string) || "";
+      set({ [k]: cur ? `${cur} ${t}` : t } as any);
+    };
+    return (
     <div>
       <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: MUTED, marginBottom: 4 }}>{label}</label>
-      {ml ? (
-        <textarea value={value[k] as string} onChange={(e) => set({ [k]: e.target.value } as any)} rows={2} placeholder={ph}
-          style={{ width: "100%", padding: "9px 12px", borderRadius: 10, background: fieldBg, border: fieldBorder, color: INK, fontSize: 13, outline: "none", resize: "vertical", fontFamily: "inherit", boxSizing: "border-box" }} />
-      ) : (
-        <input type="text" value={value[k] as string} onChange={(e) => set({ [k]: e.target.value } as any)} placeholder={ph}
-          style={{ width: "100%", padding: "9px 12px", borderRadius: 10, background: fieldBg, border: fieldBorder, color: INK, fontSize: 13, outline: "none", boxSizing: "border-box" }} />
-      )}
+      <div style={{ display: "flex", alignItems: ml ? "flex-start" : "center", gap: 6 }}>
+        {ml ? (
+          <textarea value={value[k] as string} onChange={(e) => set({ [k]: e.target.value } as any)} rows={2} placeholder={ph}
+            style={{ flex: 1, padding: "9px 12px", borderRadius: 10, background: fieldBg, border: fieldBorder, color: INK, fontSize: 13, outline: "none", resize: "vertical", fontFamily: "inherit", boxSizing: "border-box" }} />
+        ) : (
+          <input type="text" value={value[k] as string} onChange={(e) => set({ [k]: e.target.value } as any)} placeholder={ph}
+            style={{ flex: 1, padding: "9px 12px", borderRadius: 10, background: fieldBg, border: fieldBorder, color: INK, fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+        )}
+        <VoiceButton onText={appendVoice} />
+      </div>
     </div>
-  );
+    );
+  };
 
   const RiskRow = ({ k, label }: { k: "pihRisk" | "keloidRisk"; label: string }) => (
     <div>
