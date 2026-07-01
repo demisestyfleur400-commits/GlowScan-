@@ -192,6 +192,27 @@ export default function ProPatient() {
         <div style="font-size:9px;color:#6b7280">/100</div>
       </div>
     </div>
+    ${(() => {
+      const ex = ((lastScan.clinicalContext as any) || {}).examen as any | undefined;
+      if (!ex) return "";
+      const rows: [string, string][] = [];
+      if (ex.phototype) rows.push(["Phototype", `Fitzpatrick ${ex.phototype}`]);
+      if (ex.lesions?.length) rows.push(["Lésions élémentaires", ex.lesions.join(", ")]);
+      if (ex.zones?.length) rows.push(["Localisation", ex.zones.join(", ")]);
+      if (ex.lesionNombre) rows.push(["Nombre", ex.lesionNombre]);
+      if (ex.lesionMorphologie) rows.push(["Morphologie", ex.lesionMorphologie]);
+      if (ex.lesionDistribution) rows.push(["Distribution", ex.lesionDistribution]);
+      if (ex.examPeau) rows.push(["Peau", ex.examPeau]);
+      if (ex.examPhaneres) rows.push(["Phanères", ex.examPhaneres]);
+      if (ex.examMuqueuses) rows.push(["Muqueuses", ex.examMuqueuses]);
+      if (ex.examGanglions) rows.push(["Ganglions", ex.examGanglions]);
+      if (ex.autresSignes) rows.push(["Autres signes", ex.autresSignes]);
+      if (rows.length === 0) return "";
+      return `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px;margin-bottom:8px">
+        <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:#059669;margin-bottom:6px">👨‍⚕️ Examen du médecin</div>
+        ${rows.map(([k, v]) => `<div style="display:flex;gap:8px;font-size:11px;margin-bottom:3px"><span style="font-weight:800;color:#6b7280;min-width:110px">${k}</span><span style="color:#0d0a0e">${v}</span></div>`).join("")}
+      </div>`;
+    })()}
     ${lastScan.details ? `<div class="clin-box"><span data-edit="observations">${lastScan.details}</span></div>` : `<span data-edit="observations" style="display:none"></span>`}
   </div>` : ""}
 
@@ -466,18 +487,52 @@ export default function ProPatient() {
                 />
               )}
 
-              {s.analysis && (
-                <p className="text-xs leading-relaxed mb-2" style={{ color: DS.body }}>{s.analysis}</p>
-              )}
-
-              {s.dermatoNote && (
-                <p
-                  className="text-xs rounded-xl p-2.5 mb-2"
-                  style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${DS.border}`, color: INK }}
-                >
-                  <strong style={{ color: DS.body }}>Note :</strong> {s.dermatoNote}
-                </p>
-              )}
+              {/* ══ SECTION MÉDECIN (primaire) — examen physique + note, mis en avant ══ */}
+              {(() => {
+                const ex = ((s.clinicalContext as any) || {}).examen as any | undefined;
+                const rows: [string, string][] = [];
+                if (ex) {
+                  if (ex.phototype) rows.push(["Phototype", `Fitzpatrick ${ex.phototype}`]);
+                  if (ex.lesions?.length) rows.push(["Lésions élémentaires", ex.lesions.join(", ")]);
+                  if (ex.zones?.length) rows.push(["Localisation", ex.zones.join(", ")]);
+                  if (ex.lesionNombre) rows.push(["Nombre", ex.lesionNombre]);
+                  if (ex.lesionMorphologie) rows.push(["Morphologie", ex.lesionMorphologie]);
+                  if (ex.lesionDistribution) rows.push(["Distribution", ex.lesionDistribution]);
+                  if (ex.examPeau) rows.push(["Peau", ex.examPeau]);
+                  if (ex.examPhaneres) rows.push(["Phanères", ex.examPhaneres]);
+                  if (ex.examMuqueuses) rows.push(["Muqueuses", ex.examMuqueuses]);
+                  if (ex.examGanglions) rows.push(["Ganglions", ex.examGanglions]);
+                  if (ex.autresSignes) rows.push(["Autres signes", ex.autresSignes]);
+                  if (ex.pihRisk) rows.push(["Risque PIH", ex.pihRisk]);
+                  if (ex.keloidRisk) rows.push(["Risque chéloïde", ex.keloidRisk]);
+                }
+                if (rows.length === 0 && !s.dermatoNote) return null;
+                return (
+                  <div
+                    className="rounded-xl p-3 mb-3"
+                    style={{ background: "rgba(16,185,129,0.06)", border: "1px solid rgba(16,185,129,0.3)" }}
+                  >
+                    <p className="text-[10px] font-extrabold uppercase tracking-wider mb-2" style={{ color: "#6ee7b7" }}>
+                      👨‍⚕️ Examen du médecin
+                    </p>
+                    {rows.length > 0 && (
+                      <div className="space-y-1.5">
+                        {rows.map(([k, v]) => (
+                          <div key={k} className="flex gap-2 text-[11px]">
+                            <span className="font-extrabold flex-shrink-0" style={{ color: DS.muted, minWidth: 96 }}>{k}</span>
+                            <span style={{ color: INK }}>{v}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {s.dermatoNote && (
+                      <p className="text-[11px] leading-relaxed mt-2 pt-2" style={{ color: INK, borderTop: rows.length ? `1px solid ${DS.border}` : "none" }}>
+                        <strong style={{ color: DS.body }}>Note :</strong> {s.dermatoNote}
+                      </p>
+                    )}
+                  </div>
+                );
+              })()}
 
               {(() => {
                 const ctx = (s.clinicalContext as any) || {};
@@ -523,25 +578,29 @@ export default function ProPatient() {
                 );
               })()}
 
+              {/* ══ SECTION IA (secondaire) — repliée, indicative, sous l'examen du médecin ══ */}
               {(() => {
                 const fr = (s.recommendations as any)?._fullResult || {};
                 const zones = fr.analyse_zones as Record<string, string> | undefined;
                 const justif = fr.justification_score as string | undefined;
                 const conseil = fr.conseil_expert as string | undefined;
-                if (!zones && !justif && !conseil) return null;
+                if (!s.analysis && !zones && !justif && !conseil) return null;
                 return (
                   <details
                     className="mb-2 rounded-xl overflow-hidden"
-                    style={{ border: `1px solid ${DS.border}` }}
+                    style={{ border: `1px solid ${DS.border}`, opacity: 0.92 }}
                     data-testid={`technical-${s.id}`}
                   >
                     <summary
                       className="cursor-pointer text-[11px] font-extrabold px-3 py-2"
-                      style={{ color: DS.body, background: "rgba(255,255,255,0.03)" }}
+                      style={{ color: DS.muted, background: "rgba(255,255,255,0.03)" }}
                     >
-                      Analyse technique par zone
+                      🤖 Analyse IA (indicative)
                     </summary>
                     <div className="p-3 pt-0 space-y-2" style={{ background: "rgba(255,255,255,0.02)" }}>
+                      {s.analysis && (
+                        <p className="text-[11px] leading-relaxed pt-2" style={{ color: DS.body }}>{s.analysis}</p>
+                      )}
                       {zones && Object.entries(zones).map(([zone, desc]) => (
                         <div key={zone} className="text-[11px]">
                           <span className="font-extrabold uppercase tracking-wider" style={{ color: DS.muted }}>{zone}</span>
