@@ -248,17 +248,22 @@ export async function registerRoutes(
         // Trop court = quasi silence : on renvoie vide sans erreur.
         return res.json({ text: "" });
       }
-      const ext = (mimeType || "").includes("mp4") ? "mp4"
-        : (mimeType || "").includes("ogg") ? "ogg"
-        : (mimeType || "").includes("wav") ? "wav" : "webm";
+      const mt = (mimeType || "").toLowerCase();
+      const ext = mt.includes("mp4") || mt.includes("m4a") ? "m4a"
+        : mt.includes("ogg") ? "ogg"
+        : mt.includes("wav") ? "wav"
+        : mt.includes("mpeg") || mt.includes("mp3") ? "mp3" : "webm";
+      // Type propre sans le suffixe ";codecs=..." qui peut gêner certains fournisseurs.
+      const cleanType = (mimeType || "audio/webm").split(";")[0];
       const { toFile } = await import("openai");
-      const file = await toFile(buffer, `audio.${ext}`, { type: mimeType || "audio/webm" });
-      const model = USE_GROQ ? "whisper-large-v3-turbo" : "whisper-1";
-      const tr: any = await openai.audio.transcriptions.create({ file, model } as any);
+      const file = await toFile(buffer, `audio.${ext}`, { type: cleanType });
+      const model = process.env.TRANSCRIBE_MODEL || (USE_GROQ ? "whisper-large-v3-turbo" : "whisper-1");
+      const tr: any = await openai.audio.transcriptions.create({ file, model, language: "fr" } as any);
       res.json({ text: (tr?.text || "").trim() });
     } catch (err: any) {
-      console.error("[transcribe] error:", err?.message || err);
-      res.status(500).json({ message: "Transcription impossible pour le moment." });
+      const detail = err?.error?.message || err?.response?.data?.error?.message || err?.message || String(err);
+      console.error("[transcribe] error:", detail);
+      res.status(500).json({ message: "Transcription impossible pour le moment.", detail });
     }
   });
 

@@ -74,13 +74,16 @@ export function useAudioTranscription(opts?: AudioTranscriptionOptions) {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ audioBase64, mimeType: mimeRef.current || "audio/webm" }),
           });
-          if (!resp.ok) throw new Error("http " + resp.status);
-          const data = await resp.json();
+          const data = await resp.json().catch(() => ({}));
+          if (!resp.ok) {
+            onErrorRef.current?.(data?.detail ? `Transcription : ${data.detail}` : (data?.message || "Transcription impossible pour le moment."));
+            return;
+          }
           const text = (data?.text || "").trim();
           if (text) onResultRef.current?.(text);
           else onErrorRef.current?.("Aucune parole détectée. Réessayez en parlant plus près du micro.");
-        } catch {
-          onErrorRef.current?.("Transcription impossible pour le moment. Réessayez.");
+        } catch (e: any) {
+          onErrorRef.current?.("Transcription impossible (réseau). Réessayez.");
         } finally {
           setStatus("idle");
         }
