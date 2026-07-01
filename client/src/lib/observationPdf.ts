@@ -127,24 +127,28 @@ const TEAL = "#1a3a3a";
 const esc = (s: any): string =>
   String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-// Ligne label + valeur (ou pointillés si vide).
+// Attribut commun : rend un élément éditable au clic dans le viewer (classe gs-edit
+// pour le surlignage au survol/focus). data-gs-edit sert de repère (impression = normal).
+const EDITABLE = `contenteditable="true" class="gs-edit" data-gs-edit="1"`;
+
+// Ligne label + valeur (ou pointillés si vide). La VALEUR est éditable au clic.
 const row = (label: string, value?: string): string => {
   const v = (value || "").trim();
   const content = v
-    ? `<span style="color:#111">${esc(v)}</span>`
-    : `<span style="color:#9ca3af;border-bottom:1px dotted #9ca3af;flex:1;min-height:12px"></span>`;
+    ? `<span ${EDITABLE} style="color:#111;flex:1">${esc(v)}</span>`
+    : `<span ${EDITABLE} style="color:#111;border-bottom:1px dotted #9ca3af;flex:1;min-height:13px"></span>`;
   return `<div style="display:flex;gap:8px;align-items:baseline;margin-bottom:5px;font-size:10.5px;line-height:1.5">
     <span style="font-weight:700;color:#374151;min-width:180px;flex-shrink:0">${esc(label)}</span>
     ${content}
   </div>`;
 };
 
-// Bloc de texte libre (ou N lignes vierges si vide).
+// Bloc de texte libre (ou N lignes vierges si vide) — éditable au clic.
 const freeText = (value?: string, blankLines = 3): string => {
   const v = (value || "").trim();
-  if (v) return `<div style="font-size:10.5px;color:#111;line-height:1.7;white-space:pre-wrap">${esc(v)}</div>`;
+  if (v) return `<div ${EDITABLE} style="font-size:10.5px;color:#111;line-height:1.7;white-space:pre-wrap">${esc(v)}</div>`;
   return Array.from({ length: blankLines })
-    .map(() => `<div style="border-bottom:1px dotted #9ca3af;height:16px"></div>`)
+    .map(() => `<div ${EDITABLE} style="border-bottom:1px dotted #9ca3af;min-height:16px;font-size:10.5px;color:#111"></div>`)
     .join("");
 };
 
@@ -297,6 +301,12 @@ export function buildObservationDoc(d: ObservationData): string {
   @page { margin: 14mm 12mm; }
   * { box-sizing: border-box; }
   body { font-family: Arial, Helvetica, sans-serif; color: #111; margin: 0; }
+  /* Édition inline : cliquer sur un mot ou une ligne vierge pour le modifier. */
+  .gs-edit { outline: none; cursor: text; transition: background .12s; border-radius: 3px; padding: 0 2px; }
+  .gs-edit:hover { background: #fff7d6; }
+  .gs-edit:focus { background: #fff7d6; box-shadow: 0 0 0 2px rgba(245,158,11,.45); }
+  /* Masque les repères d'édition à l'impression / export PDF. */
+  @media print { .gs-edit:hover, .gs-edit:focus { background: transparent; box-shadow: none; } }
 </style></head>
 <body>
 ${header}

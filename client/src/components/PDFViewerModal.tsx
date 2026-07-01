@@ -6,7 +6,7 @@
  * identifier les zones éditables. L'édition se fait en panneau
  * latéral glissant; la sauvegarde réinjecte via regex dans le HTML.
  */
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import html2pdf from "html2pdf.js";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -179,6 +179,17 @@ export default function PDFViewerModal({
 }: PDFViewerModalProps) {
   const [currentHtml, setCurrentHtml] = useState(htmlContent);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  // Récupère le HTML VIVANT de l'iframe (inclut les modifications inline faites
+  // en cliquant directement sur un mot / une ligne vierge). Fallback : currentHtml.
+  const getLiveHtml = useCallback((): string => {
+    try {
+      const doc = iframeRef.current?.contentDocument;
+      if (doc?.documentElement) return "<!DOCTYPE html>" + doc.documentElement.outerHTML;
+    } catch {}
+    return currentHtml;
+  }, [currentHtml]);
   const [mode, setMode] = useState<"view" | "edit">("view");
   const [editFields, setEditFields] = useState<EditableFields>({
     diagnostic: "",
@@ -218,19 +229,19 @@ export default function PDFViewerModal({
   }, [isOpen]);
 
   const enterEditMode = () => {
-    setEditFields(extractEditFields(currentHtml));
+    setEditFields(extractEditFields(getLiveHtml()));
     setMode("edit");
   };
 
   const handleSaveEdits = () => {
-    const updated = applyEdits(currentHtml, editFields);
+    const updated = applyEdits(getLiveHtml(), editFields);
     setCurrentHtml(updated);
     setMode("view");
   };
 
   const handleDownload = useCallback(() => {
     const el = document.createElement("div");
-    el.innerHTML = currentHtml;
+    el.innerHTML = getLiveHtml();
     html2pdf()
       .set({
         margin: 0,
@@ -241,7 +252,7 @@ export default function PDFViewerModal({
       })
       .from(el)
       .save();
-  }, [currentHtml, filename]);
+  }, [getLiveHtml, filename]);
 
   const sendWhatsAppWithLink = (phone: string, pdfUrl: string) => {
     const msg = encodeURIComponent(
@@ -276,7 +287,7 @@ export default function PDFViewerModal({
     setUploadStatus("idle");
     try {
       const el = document.createElement("div");
-      el.innerHTML = currentHtml;
+      el.innerHTML = getLiveHtml();
       const pdfBlob = await html2pdf()
         .set({
           margin: 0,
@@ -311,7 +322,7 @@ export default function PDFViewerModal({
     } finally {
       setUploading(false);
     }
-  }, [currentHtml, filename, patientFirstName, patientPhone, phoneInput, dermatologue]);
+  }, [getLiveHtml, filename, patientFirstName, patientPhone, phoneInput, dermatologue]);
 
   if (!isOpen) return null;
 
@@ -545,11 +556,29 @@ export default function PDFViewerModal({
         </div>
       )}
 
+      {/* ── Aide édition inline ────────────────────────────────────────── */}
+      {mode === "view" && (
+        <div
+          style={{
+            padding: "7px 16px",
+            background: "#eff6ff",
+            borderBottom: "1px solid #bfdbfe",
+            fontSize: 11.5,
+            color: "#1e40af",
+            flexShrink: 0,
+            textAlign: "center",
+          }}
+        >
+          ✏️ Cliquez sur n'importe quel mot ou ligne vierge du rapport pour le modifier directement, puis Télécharger ou Envoyer.
+        </div>
+      )}
+
       {/* ── Zone principale ───────────────────────────────────────────── */}
       <div style={{ flex: 1, overflow: "hidden", position: "relative" }}>
         {/* Iframe PDF (toujours monté) */}
         {blobUrl && (
           <iframe
+            ref={iframeRef}
             src={blobUrl}
             title="Rapport clinique GlowScan"
             style={{
