@@ -94,7 +94,7 @@ function buildDermResult(a: any) {
   });
   const cp = a?.clinicalProtocol && typeof a.clinicalProtocol === "object" ? a.clinicalProtocol : {};
 
-  return {
+  const out: any = {
     condition: str(a?.condition, 200) || "Analyse clinique",
     conditionSecondaire: a?.conditionSecondaire === null ? null : str(a?.conditionSecondaire, 200),
     severity: str(a?.severity, 40) || "Modérée",
@@ -137,6 +137,20 @@ function buildDermResult(a: any) {
       str(a?.medicalDisclaimer, 600) ||
       "Ce rapport est un outil d'aide au diagnostic à l'usage exclusif du professionnel de santé. Il ne remplace pas l'examen clinique complet.",
   };
+
+  // ── §4 Cohérence interne (filet de sécurité déterministe) ──
+  // Uniquement des corrections SÛRES et non ambiguës, pour ne jamais contredire
+  // l'examen/override du médecin. Le gros du travail est fait par le prompt.
+  const isHealthy = /\b(peau\s+saine|aucune\s+(pathologie|l[ée]sion)|pas\s+de\s+pathologie|rien\s+[àa]\s+signaler)\b/i.test(out.condition || "");
+  if (isHealthy) {
+    // Peau saine ⇒ pas d'ingrédients à éviter, pas de red flags, score cohérent (haut).
+    out.toxicIngredients = [];
+    out.redFlags = [];
+    if (out.score < 80) out.score = 85;
+    if (!out.severity || /s[ée]v[èe]re|mod[ée]r/i.test(out.severity)) out.severity = "Aucune";
+  }
+
+  return out;
 }
 
 // Stockage temporaire d'images pour contourner la limitation base64 du proxy
