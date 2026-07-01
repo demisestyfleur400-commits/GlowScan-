@@ -207,6 +207,11 @@ export default function ProPatient() {
       if (ex.examMuqueuses) rows.push(["Muqueuses", ex.examMuqueuses]);
       if (ex.examGanglions) rows.push(["Ganglions", ex.examGanglions]);
       if (ex.autresSignes) rows.push(["Autres signes", ex.autresSignes]);
+      if (ex.keloidRisk) rows.push(["Risque chéloïde", ex.keloidRisk]);
+      if (ex.keloidAntecedents) rows.push(["Chéloïde — antécédents", ex.keloidAntecedents]);
+      if (ex.keloidLocalisation) rows.push(["Chéloïde — localisation", ex.keloidLocalisation]);
+      if (ex.keloidAnciennete) rows.push(["Chéloïde — ancienneté", ex.keloidAnciennete]);
+      if (ex.keloidSymptomes) rows.push(["Chéloïde — symptômes", ex.keloidSymptomes]);
       if (rows.length === 0) return "";
       return `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px;margin-bottom:8px">
         <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:#059669;margin-bottom:6px">👨‍⚕️ Examen du médecin</div>
@@ -505,6 +510,10 @@ export default function ProPatient() {
                   if (ex.autresSignes) rows.push(["Autres signes", ex.autresSignes]);
                   if (ex.pihRisk) rows.push(["Risque PIH", ex.pihRisk]);
                   if (ex.keloidRisk) rows.push(["Risque chéloïde", ex.keloidRisk]);
+                  if (ex.keloidAntecedents) rows.push(["Chéloïde — antécédents", ex.keloidAntecedents]);
+                  if (ex.keloidLocalisation) rows.push(["Chéloïde — localisation", ex.keloidLocalisation]);
+                  if (ex.keloidAnciennete) rows.push(["Chéloïde — ancienneté", ex.keloidAnciennete]);
+                  if (ex.keloidSymptomes) rows.push(["Chéloïde — symptômes", ex.keloidSymptomes]);
                 }
                 if (rows.length === 0 && !s.dermatoNote) return null;
                 return (

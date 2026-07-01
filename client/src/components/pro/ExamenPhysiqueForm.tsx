@@ -21,12 +21,18 @@ export interface ExamenData {
   autresSignes: string;
   pihRisk: string;
   keloidRisk: string;
+  // §9 — champs chéloïde conditionnels (affichés si risque Moyen/Élevé ou lésion « Chéloïde »)
+  keloidAntecedents: string;
+  keloidLocalisation: string;
+  keloidAnciennete: string;
+  keloidSymptomes: string;
 }
 
 export const EMPTY_EXAMEN: ExamenData = {
   phototype: "", lesions: [], zones: [], lesionNombre: "", lesionMorphologie: "",
   lesionDistribution: "", examPeau: "", examPhaneres: "", examMuqueuses: "",
   examGanglions: "", autresSignes: "", pihRisk: "", keloidRisk: "",
+  keloidAntecedents: "", keloidLocalisation: "", keloidAnciennete: "", keloidSymptomes: "",
 };
 
 const PHOTOTYPES = [
@@ -151,6 +157,18 @@ export function ExamenPhysiqueForm({ value, onChange }: { value: ExamenData; onC
             <RiskRow k="pihRisk" label="Risque PIH" />
             <RiskRow k="keloidRisk" label="Risque chéloïde" />
           </div>
+
+          {/* §9 — Sous-section chéloïde conditionnelle : n'apparaît que si le risque
+              est Moyen/Élevé ou si « Chéloïde » est coché en lésion élémentaire. */}
+          {(value.keloidRisk === "medium" || value.keloidRisk === "high" || value.lesions.includes("Chéloïde")) && (
+            <div style={{ borderRadius: 12, padding: 12, background: "rgba(248,113,113,0.06)", border: "1px solid rgba(248,113,113,0.25)", display: "flex", flexDirection: "column", gap: 10 }}>
+              <p style={{ fontSize: 11, fontWeight: 800, color: "#f87171", margin: 0 }}>⚠️ Documentation chéloïde</p>
+              <Text k="keloidAntecedents" label="Antécédents (personnels / familiaux)" ph="ex : chéloïde après piercing, antécédents familiaux…" />
+              <Text k="keloidLocalisation" label="Localisation des chéloïdes" ph="ex : lobe oreille, thorax, épaules…" />
+              <Text k="keloidAnciennete" label="Ancienneté / évolution" ph="ex : apparue il y a 2 ans, extension progressive…" />
+              <Text k="keloidSymptomes" label="Symptômes (prurit, douleur, extension)" ml />
+            </div>
+          )}
         </div>
       )}
     </div>

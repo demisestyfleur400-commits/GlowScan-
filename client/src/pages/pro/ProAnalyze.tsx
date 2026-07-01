@@ -547,6 +547,10 @@ export default function ProAnalyze() {
             muqueuses: examen.examMuqueuses || undefined,
             ganglions: examen.examGanglions || undefined,
             autresSignes: examen.autresSignes || undefined,
+            keloidRisk: examen.keloidRisk || undefined,
+            keloidDetails: (examen.keloidAntecedents || examen.keloidLocalisation || examen.keloidAnciennete || examen.keloidSymptomes)
+              ? [examen.keloidAntecedents, examen.keloidLocalisation, examen.keloidAnciennete, examen.keloidSymptomes].filter(Boolean).join(" · ")
+              : undefined,
           },
         },
       });
