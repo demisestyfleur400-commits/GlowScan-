@@ -853,6 +853,7 @@ export default function ProAnalyze() {
 
     const obs: ObservationData = {
       date, refNum, doctorName, doctorLicense, cabinetName: doctorCabinet, doctorCity, overrideBadge,
+      patientPhoto: photoBase64 || undefined,
       // 1 · Identification
       patientName: `${firstName} ${lastName}`.trim() || undefined,
       dateNaissance: cr.dateNaissance, lieuNaissance: cr.lieuNaissance,

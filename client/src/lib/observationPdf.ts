@@ -20,6 +20,9 @@ export interface ObservationData {
   doctorCity?: string;
   overrideBadge?: string; // HTML optionnel (badge « révisé par Dr … »)
 
+  // Bandeau
+  patientPhoto?: string; // data URL de la photo clinique
+
   // 1 · Identification
   patientName?: string;
   dateNaissance?: string;
@@ -185,7 +188,24 @@ function makeNumberer() {
  */
 export function buildObservationSections(d: ObservationData): string {
   const rubric = makeNumberer();
+  const practitionerLine = [
+    d.doctorName ? `Dr ${esc(d.doctorName)}` : "",
+    d.doctorLicense ? `N° ordre ${esc(d.doctorLicense)}` : "",
+    d.cabinetName ? esc(d.cabinetName) : "",
+    d.doctorCity ? esc(d.doctorCity) : "",
+  ].filter(Boolean).join(" · ");
+  const banner = (d.patientPhoto || practitionerLine || d.patientName || d.date)
+    ? `<div style="display:flex;gap:14px;align-items:center;margin-bottom:14px;padding-bottom:12px;border-bottom:2px solid ${TEAL}">
+        ${d.patientPhoto ? `<img src="${d.patientPhoto}" alt="" style="width:82px;height:82px;object-fit:cover;border-radius:8px;border:2px solid ${TEAL};flex-shrink:0"/>` : ""}
+        <div style="flex:1">
+          ${d.patientName ? `<div style="font-size:14px;font-weight:900;color:#111">${esc(d.patientName)}</div>` : ""}
+          ${practitionerLine ? `<div style="font-size:10px;color:#374151;margin-top:3px">${practitionerLine}${d.overrideBadge || ""}</div>` : ""}
+          ${(d.date || d.refNum) ? `<div style="font-size:9.5px;color:#6b7280;margin-top:2px">${esc(d.date || "")}${d.refNum ? " · Réf " + esc(d.refNum) : ""}</div>` : ""}
+        </div>
+      </div>`
+    : "";
   return `
+${banner}
 ${rubric("Identification",
   row("Nom et prénom", d.patientName),
   row("Date de naissance", d.dateNaissance),
@@ -292,17 +312,9 @@ ${rubric("Notes & conclusion du praticien", freeText(d.practitionerNotes))}
  */
 export function buildObservationDoc(d: ObservationData): string {
   const header = `
-  <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid ${TEAL};padding-bottom:12px;margin-bottom:16px">
-    <div>
-      <div style="font-size:17px;font-weight:900;color:${TEAL};letter-spacing:.5px">OBSERVATION MÉDICALE</div>
-      <div style="font-size:10px;color:#6b7280;margin-top:3px">${esc(d.cabinetName || "Cabinet de dermatologie")}${d.doctorCity ? " · " + esc(d.doctorCity) : ""}</div>
-    </div>
-    <div style="text-align:right;font-size:10px;color:#374151">
-      <div><b>Dr ${esc(d.doctorName || "…")}</b>${d.overrideBadge || ""}</div>
-      ${d.doctorLicense ? `<div style="color:#6b7280">N° ordre : ${esc(d.doctorLicense)}</div>` : ""}
-      <div style="color:#6b7280">${esc(d.date || "")}</div>
-      ${d.refNum ? `<div style="color:#6b7280">Réf : ${esc(d.refNum)}</div>` : ""}
-    </div>
+  <div style="text-align:center;border-bottom:2px solid ${TEAL};padding-bottom:10px;margin-bottom:14px">
+    <div style="font-size:17px;font-weight:900;color:${TEAL};letter-spacing:.5px">OBSERVATION MÉDICALE</div>
+    <div style="font-size:10px;color:#6b7280;margin-top:3px">${esc(d.cabinetName || "Cabinet de dermatologie")}${d.doctorCity ? " · " + esc(d.doctorCity) : ""}</div>
   </div>`;
 
   const footer = `

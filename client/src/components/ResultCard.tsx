@@ -1417,6 +1417,7 @@ export function ResultCard({ result, scanId, savedScanId, area, imageUrl, userFi
       const joinNZ = (...xs: (string | undefined)[]) => xs.filter((x) => x && String(x).trim()).join("\n");
       const obsData: ObservationData = {
         date, refNum: reportNumber, doctorName: doctorName || undefined, doctorLicense: doctorLicense || undefined, cabinetName: cabinetName || undefined,
+        patientPhoto: imageUrl || undefined,
         // 1 · Identification
         patientName: pi.fullName || userFirstName || undefined,
         dateNaissance: cr.dateNaissance, lieuNaissance: cr.lieuNaissance,
