@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { db } from "./db";
-import { proAccounts, patients, scans, premiumRequests, users, secretaryAccounts, insertProAccountSchema, insertPatientSchema, insertSecretaryAccountSchema, pageVisits } from "@shared/schema";
+import { proAccounts, patients, scans, premiumRequests, users, secretaryAccounts, insertProAccountSchema, insertPatientSchema, insertSecretaryAccountSchema, pageVisits, trainingData } from "@shared/schema";
 import { eq, and, desc, sql, count, gte, isNotNull } from "drizzle-orm";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
@@ -646,7 +646,30 @@ export function registerProRoutes(app: Express) {
         expertReviewer: req.proAccount.fullName,
         expertReviewedAt: new Date(),
       }).where(eq(scans.id, scanId)).returning();
-      console.log(`[pro/rlhf] 🩺 Scan #${scanId} ${data.isVerified ? "VALIDÉ" : "REJETÉ"} par ${req.proAccount.fullName} → dataset`);
+
+      // ── Synchro dataset : le GOLD n'est attribué QUE sur validation RÉELLE du médecin ──
+      // (auparavant tout scan DERM était "gold" par défaut, ce qui surévaluait la qualité).
+      try {
+        const corrected = (data.expertCorrectedCondition || "").trim();
+        const isCorrection = !!corrected && corrected.toLowerCase() !== (scan.condition || "").trim().toLowerCase();
+        let status: string, weight: number;
+        if (!data.isVerified) { status = "rejected"; weight = 0; }
+        else if (isCorrection) { status = "corrected"; weight = 4; }
+        else { status = "validated"; weight = 3; }
+        await db.update(trainingData).set({
+          dermValidationStatus: status,
+          finalStatus: status === "rejected" ? "rejected" : "validated",
+          validatedBy: `doctor_${req.proAccount.id}`,
+          validatedAt: new Date(),
+          trainingWeight: weight,
+          overrideReason: data.expertNote || null,
+          groundTruth: data.isVerified ? { condition: corrected || scan.condition, correctedByDoctor: isCorrection, reviewer: req.proAccount.fullName } : null,
+        }).where(eq(trainingData.scanId, scanId));
+      } catch (dsErr) {
+        console.error("[pro/rlhf] ⚠️ Synchro dataset non-bloquante:", dsErr instanceof Error ? dsErr.message : String(dsErr));
+      }
+
+      console.log(`[pro/rlhf] 🩺 Scan #${scanId} ${data.isVerified ? "VALIDÉ" : "REJETÉ"} par ${req.proAccount.fullName} → dataset (gold réel)`);
       res.json({ scan: updated });
     } catch (err) {
       console.error("[pro/scans/validate] error:", err);

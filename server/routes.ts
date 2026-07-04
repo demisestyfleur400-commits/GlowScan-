@@ -1181,9 +1181,17 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
             }
           }
 
-          // ── Chaque scan GlowScan DERM (B2B) est automatiquement gold ───
-          // Le dermatologue est présent → son contexte clinique valide la donnée.
-          const isGold = isProMode;
+          // ── GOLD HONNÊTE : un scan DERM n'est PAS gold par défaut ───
+          // « Médecin présent » ≠ « médecin a validé ». Le statut gold (validated/
+          // corrected) est attribué UNIQUEMENT quand le dermatologue valide réellement
+          // le diagnostic (POST /api/pro/scans/:id/validate). À l'insertion, tout reste
+          // "pending" ; le DERM a juste un poids un peu supérieur (2) au B2C auto (1).
+          // ── Empreinte image (traçabilité / déduplication du dataset) ───
+          let imageHash: string | null = null;
+          try {
+            const raw = typeof image === "string" ? (image.includes(",") ? image.split(",")[1] : image) : "";
+            if (raw) { const { createHash } = await import("crypto"); imageHash = createHash("sha256").update(raw).digest("hex"); }
+          } catch {}
 
           // ── Taxonomie GlowScan AI — classification automatique ─────────
           const allText = [
@@ -1243,17 +1251,19 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
             zonesAnalysis: r.zonesAnalysis || null,
             clinicalProtocol: r.clinicalProtocol || null,
             b2bOutput: isProMode ? finalResult : null,
-            // ── Gold automatique pour scans DERM ───
-            dermValidationStatus: isGold ? "validated" : "pending",
-            validatedBy: isGold ? "derm_gold" : "ai_only",
-            validatedAt: isGold ? new Date() : null,
-            finalStatus: isGold ? "validated" : "pending",
-            trainingWeight: isGold ? 3 : 1,
+            // ── Empreinte image (traçabilité dataset) ───
+            imageHash,
+            // ── Statut : PENDING tant qu'un médecin n'a pas validé (gold honnête) ───
+            dermValidationStatus: "pending",
+            validatedBy: isProMode ? "derm_present" : "ai_only",
+            validatedAt: null,
+            finalStatus: "pending",
+            trainingWeight: isProMode ? 2 : 1,
             isAnonymized: !userId,
             gdprConsent: true,
             annotation: enrichedAnnotation,
           });
-          console.log(`[training] ✅ Dataset record créé scan #${savedScanId} (${isProMode ? "B2B 🏆 GOLD" : "B2C"})`);
+          console.log(`[training] ✅ Dataset record créé scan #${savedScanId} (${isProMode ? "B2B · pending (gold à la validation médecin)" : "B2C · pending"})`);
         } catch (trainErr) {
           console.error("[training] ⚠️ Échec insert training_data (non-bloquant):", trainErr instanceof Error ? trainErr.message : String(trainErr));
         }
@@ -4219,12 +4229,17 @@ Réponds UNIQUEMENT avec ce JSON strict (rien d'autre) :
         }),
       };
 
+      // Le poids n'est renforcé que si le diagnostic a DÉJÀ été validé par un médecin.
+      // Sinon (pending), l'annotation d'examen enrichit la donnée mais ne la rend pas gold.
+      const isValidated = rec.dermValidationStatus === "validated" || rec.dermValidationStatus === "corrected";
+      const nextWeight = isValidated
+        ? (mergedAnnotation.annotationScore >= 80 ? 5 : mergedAnnotation.annotationScore >= 60 ? 3 : rec.trainingWeight)
+        : rec.trainingWeight;
       await db.update(trainingData)
         .set({
           annotation: mergedAnnotation,
           skinPhototype: phototype || rec.skinPhototype,
-          // Upgrade trainingWeight si annotation complète
-          trainingWeight: mergedAnnotation.annotationScore >= 80 ? 5 : mergedAnnotation.annotationScore >= 60 ? 3 : rec.trainingWeight,
+          trainingWeight: nextWeight,
         })
         .where(eq(trainingData.scanId, scanId));
 
