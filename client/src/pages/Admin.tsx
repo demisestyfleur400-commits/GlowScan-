@@ -57,7 +57,10 @@ export default function Admin() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [period, setPeriod] = useState<Period>("all");
-  const [adminTab, setAdminTab] = useState<"traction" | "stats" | "premium" | "leads" | "partenaires" | "vedettes" | "dataset" | "retention" | "dermatologues">("traction");
+  const [adminTab, setAdminTab] = useState<"traction" | "stats" | "premium" | "leads" | "partenaires" | "vedettes" | "dataset" | "retention" | "dermatologues" | "iavsdoc">("traction");
+  // ── IA vs Médecin (concordance) ──
+  const [iaVsDoc, setIaVsDoc] = useState<any | null>(null);
+  const [iaVsDocLoading, setIaVsDocLoading] = useState(false);
   // ── Activité dermatologues ──
   const [dermActivity, setDermActivity] = useState<any[]>([]);
   const [dermLoading, setDermLoading] = useState(false);
@@ -141,7 +144,16 @@ export default function Admin() {
     if (adminTab === "vedettes") fetchFeatured();
     if (adminTab === "retention") fetchRetention(adminKey);
     if (adminTab === "dermatologues") fetchDermActivity(adminKey);
+    if (adminTab === "iavsdoc") fetchIaVsDoc(adminKey);
   }, [adminTab]);
+
+  const fetchIaVsDoc = async (key: string) => {
+    setIaVsDocLoading(true);
+    try {
+      const res = await fetch("/api/admin/ai-vs-doctor", { headers: { "x-admin-key": key } });
+      if (res.ok) setIaVsDoc(await res.json());
+    } catch (e) { console.error("[ia-vs-doc] fetch err", e); } finally { setIaVsDocLoading(false); }
+  };
 
   const fetchDermActivity = async (key: string) => {
     setDermLoading(true);
@@ -390,6 +402,7 @@ export default function Admin() {
           >
             {[
               { key: "dataset", label: "Dataset", icon: Stethoscope, badge: datasetStats?.pending || 0, activeColor: "#10b981" },
+              { key: "iavsdoc", label: "IA vs Médecin", icon: BarChart2, badge: 0, activeColor: "#7c3aed" },
               { key: "dermatologues", label: "Dermatologues", icon: Stethoscope, badge: dermActivity.filter((d: any) => (d.blockers?.length || 0) > 0).length, activeColor: "#f43f5e" },
               { key: "traction", label: "Traction", icon: TrendingUp, badge: 0, activeColor: DS.violet },
               { key: "stats", label: "Stats", icon: BarChart2, badge: 0, activeColor: DS.violet },
@@ -817,6 +830,117 @@ export default function Admin() {
             onReview={reviewScan} accessKey={adminKey}
           />
         )}
+
+        {/* ===== IA vs MÉDECIN (concordance) ===== */}
+        {adminTab === "iavsdoc" && (() => {
+          const d = iaVsDoc;
+          const reviewed = d?.reviewed || 0;
+          const concordant = d?.concordant || 0;
+          const rate = reviewed > 0 ? Math.round((concordant / reviewed) * 100) : 0;
+          const rateColor = rate >= 80 ? "#10b981" : rate >= 60 ? "#fbbf24" : "#f43f5e";
+          const card = (label: string, value: any, color: string) => (
+            <div className="rounded-2xl p-4" style={{ background: DS.surface, border: `1px solid ${DS.border}` }}>
+              <p className="text-2xl font-extrabold" style={{ color }}>{value}</p>
+              <p className="text-[11px] mt-1" style={{ color: DS.muted }}>{label}</p>
+            </div>
+          );
+          return (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div>
+                  <h3 className="text-lg font-extrabold" style={{ color: DS.text }}>IA vs Médecin — Concordance</h3>
+                  <p className="text-[11px]" style={{ color: DS.muted }}>
+                    Sur les scans validés par un dermatologue. Le diagnostic du médecin fait foi.
+                  </p>
+                </div>
+                <a
+                  href={`/api/admin/dataset-export?status=validated&key=${encodeURIComponent(adminKey)}`}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-extrabold"
+                  style={{ background: "#10b981", color: "#fff" }}
+                >
+                  ⬇️ Exporter le dataset (JSONL)
+                </a>
+              </div>
+
+              {iaVsDocLoading && <p className="text-sm" style={{ color: DS.muted }}>Chargement…</p>}
+              {!iaVsDocLoading && reviewed === 0 && (
+                <div className="rounded-2xl p-6 text-center" style={{ background: DS.surface, border: `1px solid ${DS.border}` }}>
+                  <p className="text-sm font-extrabold" style={{ color: DS.text }}>Aucun scan validé par un médecin pour l’instant.</p>
+                  <p className="text-[11px] mt-1" style={{ color: DS.muted }}>
+                    Dès que des dermatologues valident/corrigent des diagnostics, la concordance s’affiche ici.
+                  </p>
+                </div>
+              )}
+
+              {!iaVsDocLoading && reviewed > 0 && (
+                <>
+                  <div className="rounded-2xl p-5 text-center" style={{ background: DS.surface, border: `1px solid ${DS.border}` }}>
+                    <p className="text-5xl font-black" style={{ color: rateColor }}>{rate}%</p>
+                    <p className="text-xs mt-1" style={{ color: DS.muted }}>de concordance IA ↔ médecin ({concordant}/{reviewed})</p>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    {card("Scans validés", reviewed, DS.text)}
+                    {card("Concordants", concordant, "#10b981")}
+                    {card("Corrigés par le médecin", d.corrected, "#f43f5e")}
+                  </div>
+
+                  {/* Top confusions */}
+                  <div className="rounded-2xl p-4" style={{ background: DS.surface, border: `1px solid ${DS.border}` }}>
+                    <p className="text-sm font-extrabold mb-2" style={{ color: DS.text }}>Top corrections (là où l’IA se trompe)</p>
+                    {(!d.confusions || d.confusions.length === 0) ? (
+                      <p className="text-[11px]" style={{ color: DS.muted }}>Aucune correction enregistrée — l’IA concorde partout. 🎯</p>
+                    ) : (
+                      <div className="space-y-1.5">
+                        {d.confusions.map((c: any, i: number) => (
+                          <div key={i} className="flex items-center justify-between text-[12px] py-1" style={{ borderBottom: `1px solid ${DS.border}` }}>
+                            <span style={{ color: DS.body }}>
+                              <span style={{ color: "#f43f5e" }}>IA : {c.ia}</span>
+                              <span style={{ color: DS.muted }}> → </span>
+                              <span style={{ color: "#10b981" }}>Médecin : {c.doc}</span>
+                            </span>
+                            <span className="font-extrabold" style={{ color: DS.text }}>×{c.count}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Par phototype */}
+                  <div className="rounded-2xl p-4" style={{ background: DS.surface, border: `1px solid ${DS.border}` }}>
+                    <p className="text-sm font-extrabold mb-2" style={{ color: DS.text }}>Précision par phototype</p>
+                    <div className="space-y-1.5">
+                      {(d.byPhototype || []).map((p: any, i: number) => {
+                        const pr = p.total > 0 ? Math.round((p.concordant / p.total) * 100) : 0;
+                        return (
+                          <div key={i} className="flex items-center justify-between text-[12px]">
+                            <span style={{ color: DS.body }}>Phototype {p.phototype}</span>
+                            <span style={{ color: DS.muted }}>{p.concordant}/{p.total}</span>
+                            <span className="font-extrabold" style={{ color: pr >= 80 ? "#10b981" : pr >= 60 ? "#fbbf24" : "#f43f5e" }}>{pr}%</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Dernières corrections */}
+                  <div className="rounded-2xl p-4" style={{ background: DS.surface, border: `1px solid ${DS.border}` }}>
+                    <p className="text-sm font-extrabold mb-2" style={{ color: DS.text }}>Dernières corrections</p>
+                    <div className="space-y-1.5">
+                      {(d.recent || []).map((r: any, i: number) => (
+                        <div key={i} className="text-[11px] py-1" style={{ borderBottom: `1px solid ${DS.border}` }}>
+                          <span style={{ color: "#f43f5e" }}>{r.ia}</span>
+                          <span style={{ color: DS.muted }}> → </span>
+                          <span style={{ color: "#10b981" }}>{r.doc}</span>
+                          {r.reviewer ? <span style={{ color: DS.muted }}> · {r.reviewer}</span> : null}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          );
+        })()}
 
         {/* ===== ACTIVITÉ DERMATOLOGUES ===== */}
         {adminTab === "dermatologues" && (() => {

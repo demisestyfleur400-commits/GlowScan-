@@ -1973,6 +1973,97 @@ Réponds en 2-4 phrases max, sois direct et utile.`;
     }
   });
 
+  // GET /api/admin/ai-vs-doctor — Concordance IA ↔ diagnostic validé par le médecin.
+  // Source de vérité : scans revus par un dermatologue (expert_reviewer / is_verified).
+  // Aucun appel IA : pure agrégation SQL. Sert à cibler les améliorations B2C & DERM.
+  app.get("/api/admin/ai-vs-doctor", async (req: any, res) => {
+    if (!checkDatasetKey(req)) return res.status(403).json({ message: "Accès refusé" });
+    try {
+      const R = (x: any): any[] => (x?.rows ?? x ?? []) as any[];
+      const reviewedCond = sql`(expert_reviewer IS NOT NULL OR is_verified = true) AND condition IS NOT NULL AND trim(condition) <> ''`;
+
+      const summary = R(await db.execute(sql`
+        SELECT
+          COUNT(*) AS reviewed,
+          COUNT(*) FILTER (WHERE NULLIF(trim(expert_corrected_condition),'') IS NULL
+            OR lower(trim(expert_corrected_condition)) = lower(trim(condition))) AS concordant,
+          COUNT(*) FILTER (WHERE NULLIF(trim(expert_corrected_condition),'') IS NOT NULL
+            AND lower(trim(expert_corrected_condition)) <> lower(trim(condition))) AS corrected
+        FROM scans WHERE ${reviewedCond}
+      `))[0] || {};
+
+      const confusions = R(await db.execute(sql`
+        SELECT trim(condition) AS ia, trim(expert_corrected_condition) AS doc, COUNT(*) AS cnt
+        FROM scans
+        WHERE ${reviewedCond}
+          AND NULLIF(trim(expert_corrected_condition),'') IS NOT NULL
+          AND lower(trim(expert_corrected_condition)) <> lower(trim(condition))
+        GROUP BY 1, 2 ORDER BY cnt DESC LIMIT 8
+      `));
+
+      const byPhototype = R(await db.execute(sql`
+        SELECT COALESCE(NULLIF(clinical_context->'examen'->>'phototype',''), '—') AS phototype,
+          COUNT(*) AS total,
+          COUNT(*) FILTER (WHERE NULLIF(trim(expert_corrected_condition),'') IS NULL
+            OR lower(trim(expert_corrected_condition)) = lower(trim(condition))) AS concordant
+        FROM scans WHERE ${reviewedCond}
+        GROUP BY 1 ORDER BY total DESC
+      `));
+
+      const recent = R(await db.execute(sql`
+        SELECT condition AS ia, expert_corrected_condition AS doc, expert_reviewer AS reviewer, expert_reviewed_at AS at
+        FROM scans
+        WHERE ${reviewedCond}
+          AND NULLIF(trim(expert_corrected_condition),'') IS NOT NULL
+          AND lower(trim(expert_corrected_condition)) <> lower(trim(condition))
+        ORDER BY expert_reviewed_at DESC NULLS LAST LIMIT 12
+      `));
+
+      res.json({
+        reviewed: Number(summary.reviewed || 0),
+        concordant: Number(summary.concordant || 0),
+        corrected: Number(summary.corrected || 0),
+        confusions: confusions.map((r) => ({ ia: r.ia, doc: r.doc, count: Number(r.cnt) })),
+        byPhototype: byPhototype.map((r) => ({ phototype: r.phototype, total: Number(r.total), concordant: Number(r.concordant) })),
+        recent: recent.map((r) => ({ ia: r.ia, doc: r.doc, reviewer: r.reviewer, at: r.at })),
+      });
+    } catch (err) {
+      console.error("[ai-vs-doctor] error:", err);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // GET /api/admin/dataset-export — Export JSONL du dataset (bouton dashboard admin).
+  // Guardé par la clé admin (comme le reste de l'onglet Dataset).
+  app.get("/api/admin/dataset-export", async (req: any, res) => {
+    if (!checkDatasetKey(req)) return res.status(403).json({ message: "Accès refusé" });
+    try {
+      const status = (req.query.status as string) || "validated";
+      let q: any = db.select().from(trainingData).orderBy(desc(trainingData.createdAt));
+      if (status !== "all") q = q.where(eq(trainingData.dermValidationStatus, status));
+      const records: TrainingData[] = await q;
+      const date = new Date().toISOString().slice(0, 10);
+      res.setHeader("Content-Type", "application/x-ndjson");
+      res.setHeader("Content-Disposition", `attachment; filename="glowscan-dataset-${status}-${date}.jsonl"`);
+      res.setHeader("Cache-Control", "no-store");
+      for (const rec of records) {
+        res.write(JSON.stringify({
+          id: rec.id, scan_id: rec.scanId, mode: rec.mode, source: rec.source,
+          ai_model: rec.aiModelVersion, primary_condition: rec.primaryCondition,
+          secondary_condition: rec.secondaryCondition, severity: rec.severity, score: rec.score,
+          phototype: rec.skinPhototype, image_quality: rec.imageQuality,
+          validation_status: rec.dermValidationStatus, validated_by: rec.validatedBy,
+          training_weight: rec.trainingWeight, annotation: rec.annotation,
+          ai_diagnosis: rec.aiDiagnosis, created_at: rec.createdAt,
+        }) + "\n");
+      }
+      res.end();
+    } catch (err) {
+      console.error("[dataset-export] error:", err);
+      if (!res.headersSent) res.status(500).json({ message: "Erreur export" });
+    }
+  });
+
   // POST /api/admin/dataset/:id/review
   app.post("/api/admin/dataset/:id/review", async (req: any, res) => {
     if (!checkDatasetKey(req)) return res.status(403).json({ message: "Accès refusé" });
