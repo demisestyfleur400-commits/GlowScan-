@@ -60,6 +60,29 @@ export default function ProDashboard() {
   const updateAcc = useUpdateProAccount();
   const [tourOpen, setTourOpen] = useState(false);
   const [tourStep, setTourStep] = useState(0);
+  // File d'attente de validation (fait croître le volume de données GOLD réelles)
+  const [pending, setPending] = useState<any[]>([]);
+  const [validatingId, setValidatingId] = useState<number | null>(null);
+
+  const loadPending = async () => {
+    try {
+      const res = await fetch("/api/pro/pending-validations", { credentials: "include" });
+      if (res.ok) { const d = await res.json(); setPending(d.items || []); }
+    } catch {}
+  };
+  useEffect(() => { if (accData?.account) loadPending(); }, [accData?.account?.id]);
+
+  const validatePending = async (scanId: number) => {
+    setValidatingId(scanId);
+    try {
+      const res = await fetch(`/api/pro/scans/${scanId}/validate`, {
+        method: "POST", credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isVerified: true }),
+      });
+      if (res.ok) setPending((p) => p.filter((x) => x.scanId !== scanId));
+    } catch {} finally { setValidatingId(null); }
+  };
 
   useEffect(() => {
     if (accData?.account && !accData.account.onboardingDone) setTourOpen(true);
@@ -189,6 +212,50 @@ export default function ProDashboard() {
           </Link>
         </div>
       </motion.div>
+
+      {/* ══ FILE D'ATTENTE DE VALIDATION (données GOLD) ══ */}
+      {pending.length > 0 && (
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: 16 }}>
+          <div style={{ background: DS.warningBg, border: `1px solid ${DS.warningBorder}`, borderRadius: 20, padding: "16px 18px" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+              <p style={{ fontSize: 13, fontWeight: 800, color: DS.textPrimary, margin: 0 }}>
+                🩺 {pending.length} diagnostic{pending.length > 1 ? "s" : ""} à valider
+              </p>
+              <span style={{ fontSize: 10, color: DS.textMuted }}>Valider enrichit le dataset GlowScan</span>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {pending.slice(0, 5).map((s) => (
+                <div key={s.scanId} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, background: "rgba(255,255,255,0.04)", borderRadius: 12, padding: "9px 12px" }}>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <p style={{ fontSize: 12, fontWeight: 700, color: DS.textPrimary, margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      {s.condition || "Diagnostic"}
+                    </p>
+                    <p style={{ fontSize: 10, color: DS.textMuted, margin: "1px 0 0" }}>
+                      {[s.firstName, s.lastName].filter(Boolean).join(" ") || "Patient"}
+                      {s.createdAt ? ` · ${new Date(s.createdAt).toLocaleDateString("fr-FR")}` : ""}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => validatePending(s.scanId)}
+                    disabled={validatingId === s.scanId}
+                    style={{ flexShrink: 0, background: "#10b981", color: "#fff", border: "none", borderRadius: 9999, padding: "6px 12px", fontSize: 11, fontWeight: 800, cursor: "pointer", opacity: validatingId === s.scanId ? 0.6 : 1 }}
+                  >
+                    {validatingId === s.scanId ? "…" : "✓ Valider"}
+                  </button>
+                  <Link href={`/derm/patient/${s.patientId}`} style={{ flexShrink: 0, background: "rgba(255,255,255,0.07)", color: DS.textBody, borderRadius: 9999, padding: "6px 12px", fontSize: 11, fontWeight: 800, textDecoration: "none" }}>
+                    Corriger
+                  </Link>
+                </div>
+              ))}
+            </div>
+            {pending.length > 5 && (
+              <p style={{ fontSize: 10, color: DS.textMuted, margin: "8px 0 0", textAlign: "center" }}>
+                + {pending.length - 5} autre{pending.length - 5 > 1 ? "s" : ""} — voir les fiches patients
+              </p>
+            )}
+          </div>
+        </motion.div>
+      )}
 
       {/* Primary CTA */}
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>

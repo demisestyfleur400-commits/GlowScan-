@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { db } from "./db";
 import { proAccounts, patients, scans, premiumRequests, users, secretaryAccounts, insertProAccountSchema, insertPatientSchema, insertSecretaryAccountSchema, pageVisits, trainingData } from "@shared/schema";
-import { eq, and, desc, sql, count, gte, isNotNull } from "drizzle-orm";
+import { eq, and, desc, sql, count, gte, isNotNull, isNull } from "drizzle-orm";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import OpenAI from "openai";
@@ -673,6 +673,32 @@ export function registerProRoutes(app: Express) {
       res.json({ scan: updated });
     } catch (err) {
       console.error("[pro/scans/validate] error:", err);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // ───────────────────────────────────────────
+  // GET /api/pro/pending-validations — file d'attente : scans du dermato pas encore
+  // validés (jamais revus). Sert à faire croître le volume de données GOLD réelles.
+  // ───────────────────────────────────────────
+  app.get("/api/pro/pending-validations", requireActivePro, async (req: any, res) => {
+    try {
+      const rows = await db.select({
+        scanId: scans.id, patientId: scans.patientId, condition: scans.condition,
+        createdAt: scans.createdAt, firstName: patients.firstName, lastName: patients.lastName,
+      }).from(scans)
+        .innerJoin(patients, eq(scans.patientId, patients.id))
+        .where(and(
+          eq(patients.dermatologistId, req.proAccount.id),
+          eq(scans.isVerified, false),
+          isNull(scans.expertReviewer),
+          isNotNull(scans.condition),
+        ))
+        .orderBy(desc(scans.createdAt))
+        .limit(50);
+      res.json({ items: rows, count: rows.length });
+    } catch (err) {
+      console.error("[pro/pending-validations] error:", err);
       res.status(500).json({ message: "Erreur serveur" });
     }
   });

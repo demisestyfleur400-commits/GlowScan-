@@ -178,8 +178,22 @@ async function uploadScanImageToStorage(base64DataUrl: string): Promise<string |
       mime = match[1].toLowerCase();
       b64 = match[2];
     }
-    const buffer = Buffer.from(b64, "base64");
+    let buffer = Buffer.from(b64, "base64");
     if (buffer.length === 0) return null;
+
+    // ── Anonymisation : suppression des métadonnées EXIF/GPS/appareil ──
+    // Un ré-encodage via sharp retire toute métadonnée (localisation, modèle de
+    // téléphone, date…) et applique l'orientation. Essentiel pour un dataset
+    // licenciable : l'image ne trahit plus l'identité ni le lieu du patient.
+    try {
+      const sharp = (await import("sharp")).default;
+      const img = sharp(buffer).rotate();
+      if (mime.includes("png")) { buffer = await img.png().toBuffer(); }
+      else { buffer = await img.jpeg({ quality: 90 }).toBuffer(); mime = "image/jpeg"; }
+      b64 = buffer.toString("base64");
+    } catch (exifErr) {
+      console.error("[analyze] ⚠️ Nettoyage EXIF ignoré (sharp):", exifErr instanceof Error ? exifErr.message : String(exifErr));
+    }
 
     // ── Chemin 1 : Replit Object Storage (si PRIVATE_OBJECT_DIR défini) ──
     const privateDir = process.env.PRIVATE_OBJECT_DIR || "";
@@ -212,8 +226,8 @@ async function uploadScanImageToStorage(base64DataUrl: string): Promise<string |
     // ── Chemin 2 : fallback base64 (Railway / pas d'Object Storage configuré) ──
     // Stockage de la data URL directement en DB — ~50-300KB par scan, OK pour
     // le dataset RLHF tant que le volume est < 1000 scans.
-    console.log(`[analyze] 📸 Photo sauvegardée en base64 (${Math.round(buffer.length / 1024)}KB) — Object Storage non configuré`);
-    return base64DataUrl;
+    console.log(`[analyze] 📸 Photo sauvegardée en base64 (${Math.round(buffer.length / 1024)}KB, EXIF nettoyé) — Object Storage non configuré`);
+    return `data:${mime};base64,${b64}`;
   } catch (err) {
     console.error("[analyze] ❌ Échec stockage photo:", err);
     return null;
@@ -2049,23 +2063,45 @@ Réponds en 2-4 phrases max, sois direct et utile.`;
     if (!checkDatasetKey(req)) return res.status(403).json({ message: "Accès refusé" });
     try {
       const status = (req.query.status as string) || "validated";
+      const anon = req.query.anon === "1" || req.query.anon === "true";
       let q: any = db.select().from(trainingData).orderBy(desc(trainingData.createdAt));
       if (status !== "all") q = q.where(eq(trainingData.dermValidationStatus, status));
       const records: TrainingData[] = await q;
       const date = new Date().toISOString().slice(0, 10);
+
+      // Mode anonymisé (licence B2B) : pseudonymise l'identifiant et retire tout
+      // lien patient/médecin nominatif. Le sel garde la pseudonymisation stable.
+      const { createHash } = await import("crypto");
+      const salt = process.env.DATASET_EXPORT_SALT || process.env.ADMIN_KEY || "glowscan-salt";
+      const pseudo = (v: any) => createHash("sha256").update(salt + "|" + String(v)).digest("hex").slice(0, 16);
+      const scrub = (obj: any) => {
+        if (!obj || typeof obj !== "object") return obj;
+        const c: any = Array.isArray(obj) ? [...obj] : { ...obj };
+        for (const k of ["reviewer", "dermatoAnnotatedBy", "validatedBy", "userId", "correctedByDoctor"]) delete c[k];
+        return c;
+      };
+
       res.setHeader("Content-Type", "application/x-ndjson");
-      res.setHeader("Content-Disposition", `attachment; filename="glowscan-dataset-${status}-${date}.jsonl"`);
+      res.setHeader("Content-Disposition", `attachment; filename="glowscan-dataset-${status}${anon ? "-anon" : ""}-${date}.jsonl"`);
       res.setHeader("Cache-Control", "no-store");
       for (const rec of records) {
-        res.write(JSON.stringify({
-          id: rec.id, scan_id: rec.scanId, mode: rec.mode, source: rec.source,
+        const base: any = {
+          mode: rec.mode, source: rec.source,
           ai_model: rec.aiModelVersion, primary_condition: rec.primaryCondition,
           secondary_condition: rec.secondaryCondition, severity: rec.severity, score: rec.score,
-          phototype: rec.skinPhototype, image_quality: rec.imageQuality,
-          validation_status: rec.dermValidationStatus, validated_by: rec.validatedBy,
-          training_weight: rec.trainingWeight, annotation: rec.annotation,
+          phototype: rec.skinPhototype, image_quality: rec.imageQuality, image_hash: rec.imageHash,
+          validation_status: rec.dermValidationStatus,
+          training_weight: rec.trainingWeight,
+          annotation: anon ? scrub(rec.annotation) : rec.annotation,
+          ground_truth: anon ? scrub(rec.groundTruth) : rec.groundTruth,
           ai_diagnosis: rec.aiDiagnosis, created_at: rec.createdAt,
-        }) + "\n");
+        };
+        if (anon) {
+          base.sample_id = pseudo(rec.id);          // identifiant stable non réversible
+        } else {
+          base.id = rec.id; base.scan_id = rec.scanId; base.validated_by = rec.validatedBy;
+        }
+        res.write(JSON.stringify(base) + "\n");
       }
       res.end();
     } catch (err) {

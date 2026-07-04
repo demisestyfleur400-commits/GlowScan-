@@ -853,13 +853,23 @@ export default function Admin() {
                     Sur les scans validés par un dermatologue. Le diagnostic du médecin fait foi.
                   </p>
                 </div>
-                <a
-                  href={`/api/admin/dataset-export?status=validated&key=${encodeURIComponent(adminKey)}`}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-extrabold"
-                  style={{ background: "#10b981", color: "#fff" }}
-                >
-                  ⬇️ Exporter le dataset (JSONL)
-                </a>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <a
+                    href={`/api/admin/dataset-export?status=validated&key=${encodeURIComponent(adminKey)}`}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-extrabold"
+                    style={{ background: "#10b981", color: "#fff" }}
+                  >
+                    ⬇️ Export dataset (JSONL)
+                  </a>
+                  <a
+                    href={`/api/admin/dataset-export?status=validated&anon=1&key=${encodeURIComponent(adminKey)}`}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-extrabold"
+                    style={{ background: "rgba(124,58,237,0.15)", color: "#a78bfa", border: "1px solid rgba(124,58,237,0.4)" }}
+                    title="Pseudonymisé, sans lien patient ni nom de médecin — pour licence B2B"
+                  >
+                    🔒 Export anonymisé
+                  </a>
+                </div>
               </div>
 
               {iaVsDocLoading && <p className="text-sm" style={{ color: DS.muted }}>Chargement…</p>}
