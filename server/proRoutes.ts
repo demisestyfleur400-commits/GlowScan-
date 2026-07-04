@@ -9,6 +9,10 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import QRCode from "qrcode";
 import { emitToPatient, emitToUser } from "./ws";
 
+// Version du texte de consentement patient actuellement en vigueur.
+// Incrémenter à chaque modification du texte affiché au patient (preuve opposable).
+const CONSENT_VERSION = "v1-2026-07";
+
 // Même logique provider que routes.ts : Groq > Gemini > OpenAI
 const _proGroqKey   = process.env.GROQ_API_KEY || "";
 const _proGeminiKey = process.env.GEMINI_API_KEY || "";
@@ -440,16 +444,30 @@ export function registerProRoutes(app: Express) {
       const schema = insertPatientSchema.extend({
         dermatologistId: z.number().optional(),
         clinicalRecord: z.any().optional(), // dossier clinique structuré (hors schéma Drizzle)
+        // Consentement patient (hors schéma Drizzle → écrit en SQL brut, migration 0008)
+        consentCare: z.boolean().optional(),
+        consentResearch: z.boolean().optional(),
+        consentVersion: z.string().optional(),
       });
       const parsed = schema.parse({ ...req.body, dermatologistId: req.proAccount.id });
-      // clinicalRecord est hors schéma Drizzle → exclu de l'INSERT, écrit en SQL brut.
-      const { clinicalRecord, ...patientData } = parsed as any;
+      const { clinicalRecord, consentCare, consentResearch, consentVersion, ...patientData } = parsed as any;
       const [p] = await db.insert(patients).values({
         ...patientData,
         dermatologistId: req.proAccount.id,
       }).returning();
       if (clinicalRecord && typeof clinicalRecord === "object") {
         db.execute(sql`UPDATE "patients" SET "clinical_record" = ${JSON.stringify(clinicalRecord)}::jsonb WHERE "id" = ${p.id}`).catch(() => {});
+      }
+      // Consentement patient : soins (requis) + réutilisation dataset/recherche (optionnel).
+      // Horodaté + versionné = preuve opposable. Résilient si migration pas encore lancée.
+      if (consentCare !== undefined || consentResearch !== undefined) {
+        const ver = consentVersion || CONSENT_VERSION;
+        db.execute(sql`UPDATE "patients" SET
+          "consent_care" = ${!!consentCare},
+          "consent_research" = ${!!consentResearch},
+          "consent_version" = ${ver},
+          "consent_signed_at" = NOW()
+          WHERE "id" = ${p.id}`).catch((e: any) => console.error("[pro/patients] consent write (migration 0008 ?):", e?.message || e));
       }
       res.json({ patient: p });
     } catch (err: any) {
