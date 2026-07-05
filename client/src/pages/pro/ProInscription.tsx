@@ -5,6 +5,9 @@ import { Stethoscope, ArrowLeft, ArrowRight, CheckCircle2, Loader2, ShieldCheck,
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 
+// Doit rester synchronisé avec DERM_TERMS_VERSION dans DermConditions.tsx
+const DERM_TERMS_VERSION = "v1-2026-07";
+
 const DS = {
   bg: "#0d0a0e",
   surface: "#13101f",
@@ -84,6 +87,7 @@ export default function ProInscription() {
           country: country || null,
           licenseNumber: licenseNumber || null,
           consent: true,
+          consentVersion: DERM_TERMS_VERSION,
         }),
       });
       const data = await res.json();
@@ -292,7 +296,17 @@ export default function ProInscription() {
                 <ShieldCheck
                   style={{ display: "inline", width: 13, height: 13, marginRight: 4, color: DS.violetMid, verticalAlign: "middle" }}
                 />
-                J'accepte que les photos et données médicales de mes patients soient utilisées de manière anonymisée pour améliorer le modèle IA de GlowScan, conformément au RGPD. Je suis le responsable du traitement vis-à-vis de mes patients.
+                J'ai lu et j'accepte les{" "}
+                <a
+                  href="/derm/conditions"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  style={{ color: DS.violetMid, fontWeight: 700, textDecoration: "underline" }}
+                >
+                  Conditions d'utilisation & la Politique de confidentialité
+                </a>{" "}
+                de GlowScan DERM. En tant que responsable du traitement de mes patients, je m'engage à recueillir leur consentement pour l'analyse et la réutilisation anonymisée de leurs données.
               </span>
             </label>
 

@@ -9,9 +9,10 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import QRCode from "qrcode";
 import { emitToPatient, emitToUser } from "./ws";
 
-// Version du texte de consentement patient actuellement en vigueur.
-// Incrémenter à chaque modification du texte affiché au patient (preuve opposable).
-const CONSENT_VERSION = "v1-2026-07";
+// Version des Conditions d'utilisation & Politique de confidentialité DERM en vigueur.
+// Le dermatologue (responsable de la plateforme) les accepte à l'inscription.
+// Incrémenter à chaque modification du texte (preuve opposable de la version acceptée).
+const TERMS_VERSION = "v1-2026-07";
 
 // Même logique provider que routes.ts : Groq > Gemini > OpenAI
 const _proGroqKey   = process.env.GROQ_API_KEY || "";
@@ -216,6 +217,7 @@ export function registerProRoutes(app: Express) {
         // à vérifier manuellement.
         licenseNumber: z.string().optional().nullable(),
         consent: z.literal(true),
+        consentVersion: z.string().optional(), // version des CGU/Confidentialité acceptée
       });
       const data = schema.parse(req.body);
       const emailLower = data.email.toLowerCase().trim();
@@ -265,6 +267,8 @@ export function registerProRoutes(app: Express) {
       if (data.country) {
         db.execute(sql`UPDATE "pro_accounts" SET "country" = ${data.country} WHERE "id" = ${acc.id}`).catch(() => {});
       }
+      // Version des Conditions & Confidentialité acceptée (preuve opposable, SQL brut)
+      db.execute(sql`UPDATE "pro_accounts" SET "consent_version" = ${data.consentVersion || TERMS_VERSION} WHERE "id" = ${acc.id}`).catch(() => {});
 
       // 3. Login session
       req.session.userId = userId; touchLastLogin(userId);
@@ -444,30 +448,15 @@ export function registerProRoutes(app: Express) {
       const schema = insertPatientSchema.extend({
         dermatologistId: z.number().optional(),
         clinicalRecord: z.any().optional(), // dossier clinique structuré (hors schéma Drizzle)
-        // Consentement patient (hors schéma Drizzle → écrit en SQL brut, migration 0008)
-        consentCare: z.boolean().optional(),
-        consentResearch: z.boolean().optional(),
-        consentVersion: z.string().optional(),
       });
       const parsed = schema.parse({ ...req.body, dermatologistId: req.proAccount.id });
-      const { clinicalRecord, consentCare, consentResearch, consentVersion, ...patientData } = parsed as any;
+      const { clinicalRecord, ...patientData } = parsed as any;
       const [p] = await db.insert(patients).values({
         ...patientData,
         dermatologistId: req.proAccount.id,
       }).returning();
       if (clinicalRecord && typeof clinicalRecord === "object") {
         db.execute(sql`UPDATE "patients" SET "clinical_record" = ${JSON.stringify(clinicalRecord)}::jsonb WHERE "id" = ${p.id}`).catch(() => {});
-      }
-      // Consentement patient : soins (requis) + réutilisation dataset/recherche (optionnel).
-      // Horodaté + versionné = preuve opposable. Résilient si migration pas encore lancée.
-      if (consentCare !== undefined || consentResearch !== undefined) {
-        const ver = consentVersion || CONSENT_VERSION;
-        db.execute(sql`UPDATE "patients" SET
-          "consent_care" = ${!!consentCare},
-          "consent_research" = ${!!consentResearch},
-          "consent_version" = ${ver},
-          "consent_signed_at" = NOW()
-          WHERE "id" = ${p.id}`).catch((e: any) => console.error("[pro/patients] consent write (migration 0008 ?):", e?.message || e));
       }
       res.json({ patient: p });
     } catch (err: any) {

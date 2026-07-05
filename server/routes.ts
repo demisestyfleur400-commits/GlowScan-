@@ -2066,26 +2066,7 @@ Réponds en 2-4 phrases max, sois direct et utile.`;
       const anon = req.query.anon === "1" || req.query.anon === "true";
       let q: any = db.select().from(trainingData).orderBy(desc(trainingData.createdAt));
       if (status !== "all") q = q.where(eq(trainingData.dermValidationStatus, status));
-      let records: TrainingData[] = await q;
-
-      // Export anonymisé/licenciable : UNIQUEMENT les patients ayant consenti à la
-      // réutilisation recherche (consent_research). Base légale du partage B2B.
-      // Résilient si la migration 0008 (colonnes consentement) n'est pas encore lancée.
-      if (anon) {
-        let consentedScanIds: Set<number> | null = null;
-        try {
-          const rows = (await db.execute(sql`
-            SELECT s.id FROM scans s JOIN patients p ON s.patient_id = p.id
-            WHERE p.consent_research = true
-          `) as any);
-          const arr = (rows?.rows ?? rows ?? []) as any[];
-          consentedScanIds = new Set(arr.map((r) => Number(r.id)));
-        } catch (e) {
-          console.error("[dataset-export] filtre consentement indisponible (migration 0008 ?):", e instanceof Error ? e.message : String(e));
-          consentedScanIds = new Set(); // sécurité : rien n'est exporté tant qu'on ne peut pas vérifier le consentement
-        }
-        records = records.filter((r) => r.scanId != null && consentedScanIds!.has(Number(r.scanId)));
-      }
+      const records: TrainingData[] = await q;
       const date = new Date().toISOString().slice(0, 10);
 
       // Mode anonymisé (licence B2B) : pseudonymise l'identifiant et retire tout

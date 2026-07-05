@@ -349,9 +349,6 @@ export default function ProAnalyze() {
   const [age, setAge] = useState("");
   const [sex, setSex] = useState<"F" | "M" | "—">("—");
   const [phone, setPhone] = useState("");
-  // Consentement patient (opt-in explicite). Soins = requis ; recherche/dataset = optionnel.
-  const [consentCare, setConsentCare] = useState(false);
-  const [consentResearch, setConsentResearch] = useState(false);
 
   // Step 2 : Photo
   const [photoBase64, setPhotoBase64] = useState<string | null>(null);
@@ -471,10 +468,6 @@ export default function ProAnalyze() {
       toast({ title: "Nom requis", variant: "destructive" });
       return;
     }
-    if (!consentCare) {
-      toast({ title: "Consentement requis", description: "Le patient doit consentir à l'analyse de sa peau.", variant: "destructive" });
-      return;
-    }
     try {
       const r = await createPatient.mutateAsync({
         firstName: firstName.trim() || "—",
@@ -483,8 +476,6 @@ export default function ProAnalyze() {
         sex,
         whatsappNumber: phone.trim() || null,
         clinicalRecord,
-        consentCare,
-        consentResearch,
       });
       setPatientId(r.patient.id);
       setPatient(r.patient);
@@ -1340,27 +1331,6 @@ export default function ProAnalyze() {
                       🩺 Dossier clinique
                     </p>
                     <ClinicalDossierForm value={clinicalRecord} onChange={setClinicalRecord} />
-                  </div>
-
-                  {/* ─── Consentement patient (opt-in, horodaté & versionné) ─── */}
-                  <div className="rounded-2xl p-3.5" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(167,139,250,0.2)" }}>
-                    <p className="text-[10px] font-extrabold uppercase tracking-wider mb-2.5" style={{ color: "#a78bfa" }}>
-                      🔒 Consentement du patient
-                    </p>
-                    <label className="flex items-start gap-2.5 mb-2.5 cursor-pointer">
-                      <input type="checkbox" checked={consentCare} onChange={(e) => setConsentCare(e.target.checked)}
-                        data-testid="checkbox-consent-care" style={{ marginTop: 2, width: 16, height: 16, accentColor: "#7c3aed", flexShrink: 0 }} />
-                      <span className="text-[11.5px] leading-snug" style={{ color: "#f3f0ff" }}>
-                        Le patient consent à l'<strong>analyse de sa peau</strong> (photo + dossier) dans le cadre de sa consultation. <span style={{ color: "#f87171" }}>(requis)</span>
-                      </span>
-                    </label>
-                    <label className="flex items-start gap-2.5 cursor-pointer">
-                      <input type="checkbox" checked={consentResearch} onChange={(e) => setConsentResearch(e.target.checked)}
-                        data-testid="checkbox-consent-research" style={{ marginTop: 2, width: 16, height: 16, accentColor: "#7c3aed", flexShrink: 0 }} />
-                      <span className="text-[11.5px] leading-snug" style={{ color: "rgba(243,240,255,0.75)" }}>
-                        Le patient accepte la <strong>réutilisation anonymisée</strong> de ses données (sans identité) pour la recherche et l'amélioration de l'IA. <span style={{ color: "rgba(255,255,255,0.4)" }}>(optionnel)</span>
-                      </span>
-                    </label>
                   </div>
 
                   <button
