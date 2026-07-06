@@ -30,6 +30,15 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
+// ── Redirect www → non-www (canonical URL for SEO) ───────────────────────
+app.use((req: Request, res: Response, next: NextFunction) => {
+  if (req.hostname && req.hostname.startsWith("www.")) {
+    const nonWww = req.hostname.slice(4);
+    return res.redirect(301, `https://${nonWww}${req.originalUrl}`);
+  }
+  next();
+});
+
 // ── Headers de sécurité HTTP (équivalent helmet) ──────────────────────────
 app.use((_req: Request, res: Response, next: NextFunction) => {
   // Empêche le clickjacking

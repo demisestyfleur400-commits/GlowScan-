@@ -51,6 +51,18 @@ export function serveStatic(app: Express) {
     },
   }));
 
+  // Serve blog/index.html explicitly for /blog and /blog/ routes
+  // (express.static won't do it with index: false, causing Google to get the SPA instead)
+  const blogIndex = path.resolve(distPath, "blog", "index.html");
+  if (fs.existsSync(blogIndex)) {
+    app.get(["/blog", "/blog/"], (_req, res) => {
+      res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+      res.setHeader("Pragma", "no-cache");
+      res.setHeader("Expires", "0");
+      res.sendFile(blogIndex);
+    });
+  }
+
   // Fall through to index.html for any unknown route (SPA routing)
   app.use("/{*path}", (_req, res) => {
     res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
