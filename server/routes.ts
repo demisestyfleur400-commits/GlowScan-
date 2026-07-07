@@ -1327,10 +1327,13 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
         try { req.session.anonymousScanUsed = true; req.session.save(() => {}); } catch {}
       }
 
-      // Retourner une vraie erreur — pas de fausse analyse
+      // Retourner une vraie erreur — pas de fausse analyse.
+      // `detail` = message brut du fournisseur (Groq) pour diagnostiquer (ex. modèle
+      // introuvable/décommissionné, clé, quota). Affiché temporairement côté client.
       return res.status(503).json({
         code: "AI_UNAVAILABLE",
         message: "Erreur de connexion — réessayez",
+        detail: errMsg,
       });
     }
   });

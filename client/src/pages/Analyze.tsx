@@ -265,7 +265,9 @@ export default function Analyze() {
           setIsAnalyzing(false);
           toast({
             title: "Erreur de connexion — réessayez",
-            description: "Le service IA est momentanément indisponible. Reprends une photo et relance l'analyse.",
+            description: errBody.detail
+              ? `Service IA indisponible. Détail : ${errBody.detail}`
+              : "Le service IA est momentanément indisponible. Reprends une photo et relance l'analyse.",
             variant: "destructive",
           });
           setStep("upload");
