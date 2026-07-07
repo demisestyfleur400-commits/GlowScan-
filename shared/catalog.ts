@@ -20,7 +20,6 @@ export function formatPrice(price: number): string {
 
 export const BRAND_MAP: Record<string, string> = {
   "+237658651775": "Andrea Skincare",
-  "+237688978963": "Hair Bloom",
   "+237655728663": "Ebony Hair",
   "+237674377959": "GlowScan Dermo",
 };
@@ -192,65 +191,6 @@ export const catalog: Product[] = [
     whatsapp: "+237674377959",
   },
 
-  // ═══════════════════════════════════════════
-  // HAIR BLOOM — Cheveux (partenaire local)
-  // ═══════════════════════════════════════════
-
-  {
-    id: "shampooing-chebe",
-    name: "Shampooing Chebe – Hair Bloom",
-    description: "Shampooing de Chébé 300ml. Nettoie en douceur sans agresser et prépare les cheveux aux soins.",
-    category: "cheveux",
-    price: 6500,
-    targets: ["cheveux cassants", "cuir chevelu sensible", "nettoyage doux", "chute de cheveux"],
-    usagePoints: ["Nettoie en douceur sans agresser", "Prépare les cheveux aux soins"],
-    brand: "Hair Bloom",
-    whatsapp: "+237674377959"
-  },
-  {
-    id: "huile-chebe",
-    name: "Huile Chebe – Hair Bloom",
-    description: "Huile de Chébé hydratante 60ml avec propriétés de croissance capillaire.",
-    category: "cheveux",
-    price: 5000,
-    targets: ["cheveux secs", "croissance cheveux", "hydratation capillaire", "épaisseur cheveux"],
-    usagePoints: ["Nourrit intensément les cheveux secs", "Apporte souplesse et épaisseur"],
-    brand: "Hair Bloom",
-    whatsapp: "+237674377959"
-  },
-  {
-    id: "creme-chebe",
-    name: "Crème Chebe – Hair Bloom",
-    description: "Crème de Chébé hydratante et nourrissante 200ml pour les cheveux à base d'extrait de Chébé.",
-    category: "cheveux",
-    price: 5500,
-    targets: ["cheveux secs", "protection thermique", "nutrition capillaire", "cheveux abîmés"],
-    usagePoints: ["Hydrate et nourrit en profondeur", "Protège contre la chaleur et les agressions extérieures"],
-    brand: "Hair Bloom",
-    whatsapp: "+237674377959"
-  },
-  {
-    id: "poudre-chebe",
-    name: "Poudre de Chébé – Hair Bloom",
-    description: "Poudre de Chébé pure 100g. Renforce les cheveux, réduit la casse et favorise la pousse naturelle.",
-    category: "cheveux",
-    price: 5000,
-    targets: ["chute de cheveux", "casse cheveux", "croissance cheveux", "renforcement capillaire"],
-    usagePoints: ["Renforce les cheveux et réduit la casse", "Favorise la pousse naturelle"],
-    brand: "Hair Bloom",
-    whatsapp: "+237674377959"
-  },
-  {
-    id: "serum-hairbloom",
-    name: "Sérum Hair Bloom",
-    description: "Sérum capillaire Hair Bloom 60ml. Apporte brillance, douceur et protection aux cheveux.",
-    category: "cheveux",
-    price: 7500,
-    targets: ["cheveux ternes", "brillance cheveux", "protection capillaire", "douceur cheveux"],
-    usagePoints: ["Apporte brillance et douceur", "Protège les cheveux des agressions"],
-    brand: "Hair Bloom",
-    whatsapp: "+237674377959"
-  },
 
   // ═══════════════════════════════════════════
   // EBONY HAIR (BISSA'A Cosmetics) — 100% naturel, Douala
