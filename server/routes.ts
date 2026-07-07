@@ -271,6 +271,19 @@ export async function registerRoutes(
     res.json(info);
   });
 
+  // ══ Liste des modèles disponibles sur la clé — ouvrir /api/ai-models ══
+  // Renvoie les IDs de modèles réellement accessibles par la clé Groq courante.
+  app.get("/api/ai-models", async (_req: any, res) => {
+    try {
+      if (!openai) return res.json({ ok: false, error: "Client IA non configuré" });
+      const list: any = await openai.models.list();
+      const ids = (list?.data || list?.body?.data || []).map((m: any) => m.id).sort();
+      res.json({ ok: true, count: ids.length, models: ids });
+    } catch (e: any) {
+      res.json({ ok: false, status: e?.status, error: e?.error?.message || e?.message || String(e) });
+    }
+  });
+
   // ══ Transcription vocale (Whisper via Groq) — fiable sur TOUS les navigateurs ══
   // Contrairement à l'API Web Speech (qui ne marche pas sur Edge/Safari), on
   // enregistre l'audio côté client puis on le transcrit ici. Auto FR/EN.
