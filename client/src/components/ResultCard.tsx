@@ -127,11 +127,11 @@ function DermatologistSection({
       {/* Titre section */}
       <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" }}>
         <span style={{ fontSize: "15px" }}>💬</span>
-        <p style={{ fontSize: "12px", fontWeight: 700, color: "rgba(200,185,255,0.9)" }}>
+        <p style={{ fontSize: "12px", fontWeight: 700, color: "#7c3aed" }}>
           Consulter un dermatologue expert
         </p>
         {docs.length > 1 && (
-          <span style={{ marginLeft: "auto", fontSize: "10px", color: "rgba(167,139,250,0.5)", fontWeight: 600 }}>
+          <span style={{ marginLeft: "auto", fontSize: "10px", color: "#7c3aed", fontWeight: 600 }}>
             {currentIdx + 1}/{docs.length}
           </span>
         )}
@@ -201,13 +201,13 @@ function DermatologistSection({
 
             {/* Infos */}
             <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ fontSize: "13px", fontWeight: 800, color: "#f3f0ff", marginBottom: "2px" }}>
+              <p style={{ fontSize: "13px", fontWeight: 800, color: "#1a1a2e", marginBottom: "2px" }}>
                 {doc.name}
               </p>
-              <p style={{ fontSize: "11px", color: "rgba(200,185,255,0.75)", marginBottom: "5px" }}>
+              <p style={{ fontSize: "11px", color: "#6b7280", marginBottom: "5px" }}>
                 {doc.title}
               </p>
-              <p style={{ fontSize: "10px", color: "rgba(200,185,255,0.5)", display: "flex", alignItems: "center", gap: "4px" }}>
+              <p style={{ fontSize: "10px", color: "#9ca3af", display: "flex", alignItems: "center", gap: "4px" }}>
                 <span>📍</span> {doc.location} {doc.flag}
               </p>
             </div>
