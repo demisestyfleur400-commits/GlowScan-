@@ -244,6 +244,33 @@ export async function registerRoutes(
   registerAuthRoutes(app);
   registerProRoutes(app);
 
+  // ══ Diagnostic santé IA — ouvrir /api/ai-health dans le navigateur ══
+  // Teste un appel minimal au modèle courant et renvoie l'erreur BRUTE du fournisseur
+  // (Groq). Sert à diagnostiquer instantanément un souci modèle/clé/quota.
+  app.get("/api/ai-health", async (_req: any, res) => {
+    const info: any = { provider: AI_PROVIDER, model: AI_MODEL, useGroq: USE_GROQ, useGemini: USE_GEMINI };
+    try {
+      if (USE_GEMINI && gemini) {
+        const m = gemini.getGenerativeModel({ model: AI_MODEL });
+        const r = await m.generateContent("ping");
+        info.ok = true; info.reply = r.response.text().slice(0, 40);
+      } else if (openai) {
+        const r = await openai.chat.completions.create(
+          { model: AI_MODEL, messages: [{ role: "user", content: "ping" }], max_tokens: 5 } as any,
+          { maxRetries: 0 },
+        );
+        info.ok = true; info.reply = (r.choices?.[0]?.message?.content || "").slice(0, 40);
+      } else {
+        info.ok = false; info.error = "Aucun client IA configuré (clé manquante ?)";
+      }
+    } catch (e: any) {
+      info.ok = false;
+      info.status = e?.status || e?.response?.status;
+      info.error = e?.error?.message || e?.response?.data?.error?.message || e?.message || String(e);
+    }
+    res.json(info);
+  });
+
   // ══ Transcription vocale (Whisper via Groq) — fiable sur TOUS les navigateurs ══
   // Contrairement à l'API Web Speech (qui ne marche pas sur Edge/Safari), on
   // enregistre l'audio côté client puis on le transcrit ici. Auto FR/EN.
