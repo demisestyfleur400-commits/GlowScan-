@@ -204,7 +204,8 @@ export const catalog: Product[] = [
     price: 6500,
     targets: ["cheveux cassants", "cuir chevelu sensible", "nettoyage doux", "chute de cheveux"],
     usagePoints: ["Nettoie en douceur sans agresser", "Prépare les cheveux aux soins"],
-    whatsapp: "+237688978963"
+    brand: "Hair Bloom",
+    whatsapp: "+237674377959"
   },
   {
     id: "huile-chebe",
@@ -214,7 +215,8 @@ export const catalog: Product[] = [
     price: 5000,
     targets: ["cheveux secs", "croissance cheveux", "hydratation capillaire", "épaisseur cheveux"],
     usagePoints: ["Nourrit intensément les cheveux secs", "Apporte souplesse et épaisseur"],
-    whatsapp: "+237688978963"
+    brand: "Hair Bloom",
+    whatsapp: "+237674377959"
   },
   {
     id: "creme-chebe",
@@ -224,7 +226,8 @@ export const catalog: Product[] = [
     price: 5500,
     targets: ["cheveux secs", "protection thermique", "nutrition capillaire", "cheveux abîmés"],
     usagePoints: ["Hydrate et nourrit en profondeur", "Protège contre la chaleur et les agressions extérieures"],
-    whatsapp: "+237688978963"
+    brand: "Hair Bloom",
+    whatsapp: "+237674377959"
   },
   {
     id: "poudre-chebe",
@@ -234,7 +237,8 @@ export const catalog: Product[] = [
     price: 5000,
     targets: ["chute de cheveux", "casse cheveux", "croissance cheveux", "renforcement capillaire"],
     usagePoints: ["Renforce les cheveux et réduit la casse", "Favorise la pousse naturelle"],
-    whatsapp: "+237688978963"
+    brand: "Hair Bloom",
+    whatsapp: "+237674377959"
   },
   {
     id: "serum-hairbloom",
@@ -244,7 +248,8 @@ export const catalog: Product[] = [
     price: 7500,
     targets: ["cheveux ternes", "brillance cheveux", "protection capillaire", "douceur cheveux"],
     usagePoints: ["Apporte brillance et douceur", "Protège les cheveux des agressions"],
-    whatsapp: "+237688978963"
+    brand: "Hair Bloom",
+    whatsapp: "+237674377959"
   },
 
   // ═══════════════════════════════════════════
@@ -259,7 +264,8 @@ export const catalog: Product[] = [
     price: 5500,
     targets: ["cheveux secs", "hydratation capillaire", "nutrition cheveux", "souplesse", "brillance"],
     usagePoints: ["Hydrate en profondeur les cheveux secs", "Apporte souplesse et brillance", "100% naturel"],
-    whatsapp: "+237655728663"
+    brand: "Ebony Hair",
+    whatsapp: "+237674377959"
   },
   {
     id: "ebony-hair-huile-coiffante",
@@ -269,7 +275,8 @@ export const catalog: Product[] = [
     price: 4500,
     targets: ["cheveux secs", "coiffage", "protection capillaire", "nutrition cheveux"],
     usagePoints: ["Protège et nourrit les cheveux", "Fixe et sublime la coiffure", "Formule 100% naturelle"],
-    whatsapp: "+237655728663"
+    brand: "Ebony Hair",
+    whatsapp: "+237674377959"
   },
   {
     id: "ebony-hair-soin-profond",
@@ -279,7 +286,8 @@ export const catalog: Product[] = [
     price: 13000,
     targets: ["cheveux secs", "cheveux crépus", "cheveux frisés", "cheveux défrisés", "masque capillaire", "réparation", "nutrition intense"],
     usagePoints: ["Nourrit intensément les cheveux crépus et frisés", "Restaure la fibre capillaire abîmée", "Résultats visibles dès la première utilisation"],
-    whatsapp: "+237655728663"
+    brand: "Ebony Hair",
+    whatsapp: "+237674377959"
   },
   {
     id: "ebony-hair-shampoing-lekie",
@@ -289,7 +297,8 @@ export const catalog: Product[] = [
     price: 5000,
     targets: ["cheveux secs", "nettoyage doux", "hydratation", "shampoing naturel", "sans sulfate"],
     usagePoints: ["Nettoie en douceur sans déssécher", "Hydrate la fibre capillaire", "Formule solide zéro déchet"],
-    whatsapp: "+237655728663"
+    brand: "Ebony Hair",
+    whatsapp: "+237674377959"
   },
   {
     id: "ebony-hair-apres-shampoing",
@@ -299,7 +308,8 @@ export const catalog: Product[] = [
     price: 7000,
     targets: ["cheveux crépus", "cheveux frisés", "démêlage", "nœuds", "nutrition capillaire", "après shampoing"],
     usagePoints: ["Démêle sans tirer ni casser", "Nourrit intensément les cheveux crépus", "Laisse les cheveux doux et souples"],
-    whatsapp: "+237655728663"
+    brand: "Ebony Hair",
+    whatsapp: "+237674377959"
   },
   {
     id: "ebony-hair-spray-demelant",
@@ -309,7 +319,8 @@ export const catalog: Product[] = [
     price: 7000,
     targets: ["démêlage", "cheveux emmêlés", "nœuds", "souplesse cheveux", "spray capillaire"],
     usagePoints: ["Assouplit immédiatement les cheveux", "Démêlage facile et rapide", "Peut s'utiliser sur cheveux humides ou secs"],
-    whatsapp: "+237655728663"
+    brand: "Ebony Hair",
+    whatsapp: "+237674377959"
   },
   {
     id: "ebony-hair-mousse-karite",
@@ -319,7 +330,8 @@ export const catalog: Product[] = [
     price: 6500,
     targets: ["cheveux secs", "boucles", "coiffage naturel", "karité", "nutrition cheveux", "définition boucles"],
     usagePoints: ["Nourrit et hydrate les cheveux secs", "Définit et sublime les boucles", "Au beurre de karité 100% naturel"],
-    whatsapp: "+237655728663"
+    brand: "Ebony Hair",
+    whatsapp: "+237674377959"
   },
   {
     id: "ebony-hair-masque-reparation",
@@ -329,7 +341,8 @@ export const catalog: Product[] = [
     price: 17000,
     targets: ["cheveux abîmés", "réparation capillaire", "cheveux cassants", "cheveux crépus", "soin intensif", "masque profond"],
     usagePoints: ["Répare la fibre capillaire en profondeur", "Idéal pour cheveux très abîmés ou cassants", "Résultats visibles après 1 utilisation"],
-    whatsapp: "+237655728663"
+    brand: "Ebony Hair",
+    whatsapp: "+237674377959"
   },
   {
     id: "ebony-hair-activateur-repousse",
@@ -339,7 +352,8 @@ export const catalog: Product[] = [
     price: 13000,
     targets: ["alopécie", "chute de cheveux", "tempes dégarnies", "calvitie", "repousse cheveux", "alopécie de traction"],
     usagePoints: ["Stimule la repousse sur les zones dégarnies", "Idéal pour alopécie de traction et calvitie", "Application sur cuir chevelu sec"],
-    whatsapp: "+237655728663"
+    brand: "Ebony Hair",
+    whatsapp: "+237674377959"
   },
   {
     id: "ebony-hair-huile-ricin",
@@ -349,7 +363,8 @@ export const catalog: Product[] = [
     price: 8000,
     targets: ["croissance cheveux", "chute de cheveux", "renforcement capillaire", "huile naturelle", "cuir chevelu"],
     usagePoints: ["Favorise la croissance capillaire", "Renforce et épaissit la fibre", "Application en massage sur le cuir chevelu"],
-    whatsapp: "+237655728663"
+    brand: "Ebony Hair",
+    whatsapp: "+237674377959"
   },
   {
     id: "ebony-hair-huile-avocat",
@@ -359,7 +374,8 @@ export const catalog: Product[] = [
     price: 7000,
     targets: ["cuir chevelu sec", "cheveux secs", "hydratation capillaire", "huile végétale", "nutrition cheveux"],
     usagePoints: ["Nourrit le cuir chevelu sec et abîmé", "Hydrate en profondeur la fibre capillaire", "Apporte brillance et souplesse"],
-    whatsapp: "+237655728663"
+    brand: "Ebony Hair",
+    whatsapp: "+237674377959"
   },
   {
     id: "ebony-hair-huile-ail",
@@ -369,7 +385,8 @@ export const catalog: Product[] = [
     price: 7000,
     targets: ["pellicules", "cuir chevelu gras", "antipelliculaire", "assainissement cuir chevelu", "démangeaisons"],
     usagePoints: ["Combat efficacement les pellicules", "Assainit le cuir chevelu", "Stimule la pousse"],
-    whatsapp: "+237655728663"
+    brand: "Ebony Hair",
+    whatsapp: "+237674377959"
   },
   {
     id: "ebony-hair-huile-neem",
@@ -379,7 +396,8 @@ export const catalog: Product[] = [
     price: 7000,
     targets: ["pellicules", "cuir chevelu irrité", "dermatite séborrhéique", "antifongique", "démangeaisons cuir chevelu"],
     usagePoints: ["Propriétés antibactériennes et antifongiques", "Traite la dermatite séborrhéique", "Soulage les démangeaisons"],
-    whatsapp: "+237655728663"
+    brand: "Ebony Hair",
+    whatsapp: "+237674377959"
   },
   {
     id: "ebony-hair-huile-coco",
@@ -389,7 +407,8 @@ export const catalog: Product[] = [
     price: 7000,
     targets: ["cheveux secs", "brillance cheveux", "nutrition capillaire", "hydratation", "cheveux ternes"],
     usagePoints: ["Nourrit les cheveux et les rend brillants", "Peut s'utiliser sur cheveux et peau", "100% naturelle et pure"],
-    whatsapp: "+237655728663"
+    brand: "Ebony Hair",
+    whatsapp: "+237674377959"
   },
   {
     id: "ebony-hair-huile-fenugrec",
@@ -399,7 +418,8 @@ export const catalog: Product[] = [
     price: 8000,
     targets: ["chute de cheveux", "renforcement capillaire", "fortifiant cheveux", "cheveux fragilisés", "croissance cheveux"],
     usagePoints: ["Fortifie et renforce la fibre capillaire", "Prévient la chute des cheveux", "Stimule la repousse"],
-    whatsapp: "+237655728663"
+    brand: "Ebony Hair",
+    whatsapp: "+237674377959"
   },
 
   // Ebony Hair — Corps & Peau
@@ -411,7 +431,8 @@ export const catalog: Product[] = [
     price: 5500,
     targets: ["peau grasse", "impuretés", "nettoyage profond", "purification peau", "sébum excessif"],
     usagePoints: ["Purifie et nettoie la peau en profondeur", "Élimine les impuretés et l'excès de sébum", "100% naturel"],
-    whatsapp: "+237655728663"
+    brand: "Ebony Hair",
+    whatsapp: "+237674377959"
   },
   {
     id: "ebony-savon-exfoliant",
@@ -421,7 +442,8 @@ export const catalog: Product[] = [
     price: 4500,
     targets: ["grain de peau", "peau rugueuse", "cellules mortes", "exfoliation", "peau douce", "teint terne"],
     usagePoints: ["Affine et adoucit le grain de peau", "Élimine les cellules mortes", "Révèle un teint plus lumineux"],
-    whatsapp: "+237655728663"
+    brand: "Ebony Hair",
+    whatsapp: "+237674377959"
   },
   {
     id: "ebony-savon-surgras",
@@ -431,7 +453,8 @@ export const catalog: Product[] = [
     price: 4500,
     targets: ["peau sèche", "peau sensible", "nettoyage doux", "hydratation peau", "irritation peau"],
     usagePoints: ["Nettoie en douceur les peaux sèches", "Respecte le film hydrolipidique", "Idéal peaux sensibles"],
-    whatsapp: "+237655728663"
+    brand: "Ebony Hair",
+    whatsapp: "+237674377959"
   },
   {
     id: "ebony-savon-corps",
@@ -441,7 +464,8 @@ export const catalog: Product[] = [
     price: 5000,
     targets: ["poils incarnés", "peau mixte", "nettoyage visage", "charbon actif", "peau grasse", "barbe"],
     usagePoints: ["Nettoie la peau en profondeur au charbon actif", "Élimine peaux mortes et poils incarnés", "3-en-1 : barbe, visage, corps"],
-    whatsapp: "+237655728663"
+    brand: "Ebony Hair",
+    whatsapp: "+237674377959"
   },
   {
     id: "ebony-glycerine-vegetale",
@@ -451,7 +475,8 @@ export const catalog: Product[] = [
     price: 4500,
     targets: ["peau sèche", "hydratation peau", "humectant naturel", "peau déshydratée", "cheveux secs"],
     usagePoints: ["Attire et retient l'humidité", "Idéale pour peaux et cheveux déshydratés", "Peut s'utiliser seule ou en mélange"],
-    whatsapp: "+237655728663"
+    brand: "Ebony Hair",
+    whatsapp: "+237674377959"
   },
   {
     id: "ebony-huile-moringa",
@@ -461,7 +486,8 @@ export const catalog: Product[] = [
     price: 8000,
     targets: ["peau terne", "anti-âge", "rides", "nutrition peau", "éclat peau", "hyperpigmentation"],
     usagePoints: ["Propriétés antiseptiques et anti-âge", "Nourrit et illumine le teint", "Riche en antioxydants"],
-    whatsapp: "+237655728663"
+    brand: "Ebony Hair",
+    whatsapp: "+237674377959"
   },
   {
     id: "ebony-huile-carotte",
@@ -471,7 +497,8 @@ export const catalog: Product[] = [
     price: 7000,
     targets: ["teint terne", "éclat peau", "protection solaire naturelle", "hyperpigmentation", "taches peau", "unification teint"],
     usagePoints: ["Apporte éclat et luminosité au teint", "Protège l'épiderme", "Riche en bêta-carotène naturel"],
-    whatsapp: "+237655728663"
+    brand: "Ebony Hair",
+    whatsapp: "+237674377959"
   },
   {
     id: "ebony-huile-sesame",
@@ -481,7 +508,8 @@ export const catalog: Product[] = [
     price: 7000,
     targets: ["peau sèche", "cuir chevelu sec", "nutrition peau", "sécheresse", "hydratation naturelle"],
     usagePoints: ["Combat efficacement la sécheresse cutanée", "Nourrit et assouplit la peau", "Convient peau et cheveux"],
-    whatsapp: "+237655728663"
+    brand: "Ebony Hair",
+    whatsapp: "+237674377959"
   },
 
   // ═══════════════════════════════════════════════════════════════
