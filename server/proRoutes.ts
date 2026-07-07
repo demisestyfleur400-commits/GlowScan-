@@ -21,8 +21,9 @@ const _proOpenaiKey = process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_
 const _proOpenaiBase = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || undefined;
 const PRO_USE_GROQ   = !!_proGroqKey;
 const PRO_USE_GEMINI = !PRO_USE_GROQ && !!_proGeminiKey;
-// Migration Scout → Maverick (Scout déprécié par Groq, décommissionné le 17/07/2026).
-const PRO_GROQ_MODEL = process.env.GROQ_MODEL || "meta-llama/llama-4-maverick-17b-128e-instruct";
+// Maverick non accessible sur la clé (404) → Scout, seul modèle vision dispo
+// (décommissionné le 17/07/2026). Surcharge via GROQ_MODEL env quand Maverick activé.
+const PRO_GROQ_MODEL = process.env.GROQ_MODEL || "meta-llama/llama-4-scout-17b-16e-instruct";
 const PRO_AI_MODEL   = PRO_USE_GROQ ? PRO_GROQ_MODEL
                      : PRO_USE_GEMINI ? "gemini-2.0-flash" : "gpt-4o-mini";
 
