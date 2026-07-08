@@ -782,7 +782,7 @@ export default function Analyze() {
                       🛍️ Quels produits utilisez-vous actuellement sur votre peau ? <span style={{ color: "#dc2626" }}>*</span>
                     </label>
                     <textarea
-                      placeholder="Ex : Movate, Carotone, savon noir... (ou écris « Aucun »)"
+                      placeholder="Ex : Nivea, CeraVe, savon noir, crème de ma tante... (ou « Aucun »)"
                       value={intake.previousProducts}
                       onChange={e => { updateIntake("previousProducts", e.target.value); setShowProdSug(true); }}
                       onFocus={e => { setShowProdSug(true); e.target.style.borderColor = "rgba(47,158,110,0.5)"; }}
