@@ -9,6 +9,8 @@ import { Navbar } from "@/components/Navbar";
 import { FileUpload } from "@/components/FileUpload";
 import { UpgradeModal } from "@/components/UpgradeModal";
 import { ConsentBanner, hasUserConsented } from "@/components/ConsentBanner";
+import { ToxicAlert } from "@/components/ToxicAlert";
+import { PRODUCT_SUGGESTIONS, detectToxicProducts } from "@/lib/toxic-products";
 
 // ResultCard est énorme (~1900 lignes) — on le charge seulement quand on en a besoin
 const ResultCard = lazy(() =>
@@ -86,6 +88,7 @@ export default function Analyze() {
   const loadingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const tipIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [needsConsent, setNeedsConsent] = useState(false);
+  const [showProdSug, setShowProdSug] = useState(false);
   const pendingImageRef = useRef<string | null>(null);
 
   const [consultationData, setConsultationData] = useState<ConsultationData | null>(null);
@@ -201,6 +204,11 @@ export default function Analyze() {
   const handleIntakeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!uploadedImage) return;
+    // Champ produits utilisés = obligatoire (alimente l'IA + l'alerte produits nocifs)
+    if (!intake.previousProducts.trim()) {
+      toast({ title: "Champ requis", description: "Indiquez les produits que vous utilisez actuellement (ou écrivez « Aucun »).", variant: "destructive" });
+      return;
+    }
     setIsAnalyzing(true);
 
     try {
@@ -768,21 +776,49 @@ export default function Analyze() {
                     </select>
                   </div>
 
-                  {/* Produits déjà utilisés */}
-                  <div>
+                  {/* Produits utilisés — OBLIGATOIRE (alimente l'IA + alerte produits nocifs) */}
+                  <div style={{ position: "relative" }}>
                     <label className="text-xs font-bold block mb-1.5" style={{ color: "#1f2a26" }}>
-                      🛍️ Avez-vous déjà appliqué des produits ou des crèmes ?
+                      🛍️ Quels produits utilisez-vous actuellement sur votre peau ? <span style={{ color: "#dc2626" }}>*</span>
                     </label>
                     <textarea
-                      placeholder="Ex : Crème éclaircissante, savon noir, gel aloe vera... (ou écris 'Aucun')"
+                      placeholder="Ex : Movate, Carotone, savon noir... (ou écris « Aucun »)"
                       value={intake.previousProducts}
-                      onChange={e => updateIntake("previousProducts", e.target.value)}
+                      onChange={e => { updateIntake("previousProducts", e.target.value); setShowProdSug(true); }}
+                      onFocus={e => { setShowProdSug(true); e.target.style.borderColor = "rgba(47,158,110,0.5)"; }}
+                      onBlur={e => { setTimeout(() => setShowProdSug(false), 150); e.target.style.borderColor = "rgba(47,158,110,0.2)"; }}
                       rows={2}
                       className="w-full px-3.5 py-2.5 text-xs font-medium outline-none transition-colors resize-none"
                       style={{ background: "#ffffff", border: "1px solid rgba(47,158,110,0.2)", borderRadius: "10px", color: "#1f2a26" }}
-                      onFocus={e => (e.target.style.borderColor = "rgba(47,158,110,0.5)")}
-                      onBlur={e => (e.target.style.borderColor = "rgba(47,158,110,0.2)")}
                     />
+                    {/* Suggestions d'auto-complétion */}
+                    {showProdSug && (() => {
+                      const q = intake.previousProducts.toLowerCase();
+                      const last = q.split(/[,;]/).pop()?.trim() || "";
+                      const list = PRODUCT_SUGGESTIONS.filter(s => !last || s.toLowerCase().includes(last));
+                      if (list.length === 0) return null;
+                      return (
+                        <div style={{ position: "absolute", zIndex: 20, left: 0, right: 0, marginTop: 4, background: "#fff", border: "1px solid rgba(0,0,0,0.1)", borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", overflow: "hidden", maxHeight: 200, overflowY: "auto" }}>
+                          {list.map(s => (
+                            <button
+                              key={s} type="button"
+                              onMouseDown={(e) => { e.preventDefault(); updateIntake("previousProducts", s === "Aucun produit actuellement" ? "Aucun" : s); setShowProdSug(false); }}
+                              style={{ display: "block", width: "100%", textAlign: "left", padding: "9px 12px", background: "transparent", border: "none", cursor: "pointer", fontSize: 12.5, color: "#1f2a26" }}
+                              onMouseOver={(e) => (e.currentTarget.style.background = "rgba(47,158,110,0.08)")}
+                              onMouseOut={(e) => (e.currentTarget.style.background = "transparent")}
+                            >
+                              {s}
+                            </button>
+                          ))}
+                        </div>
+                      );
+                    })()}
+                    {/* Alerte en direct si produit nocif tapé */}
+                    {detectToxicProducts(intake.previousProducts).length > 0 && (
+                      <p style={{ fontSize: 11, fontWeight: 700, color: "#b91c1c", marginTop: 6 }}>
+                        ⚠️ Produit à risque détecté — une alerte détaillée s'affichera avec ton résultat.
+                      </p>
+                    )}
                   </div>
 
                   {/* Allergies */}
@@ -913,6 +949,8 @@ export default function Analyze() {
               exit={{ opacity: 0 }}
               className="space-y-5"
             >
+              {/* ⚠️ Alerte produits nocifs — en haut du résultat, additionnelle */}
+              <ToxicAlert products={detectToxicProducts(intake.previousProducts)} />
               <Suspense fallback={
                 <div style={{ display: "flex", justifyContent: "center", padding: "48px 0" }}>
                   <div style={{ width: "32px", height: "32px", border: "3px solid rgba(47,158,110,0.3)", borderTopColor: "#a78bfa", borderRadius: "9999px", animation: "spin 0.8s linear infinite" }} />

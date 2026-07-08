@@ -527,6 +527,13 @@ toxicIngredients — LIÉS AU DIAGNOSTIC détecté (PAS de liste générique) :
   Si la peau est SAINE ou qu'aucun ingrédient n'est pertinent → retourner [] (liste vide).
   ingredient : nom chimique + nom commun entre parenthèses.
   reason : mécanisme de toxicité spécifique à CE diagnostic. Minimum 2 phrases.
+  ⚠️ PRODUITS NOCIFS DÉCLARÉS : si "Produits actuellement utilisés" mentionne un
+  produit connu comme dangereux (ex. Movate = mercure/calomel ; Carotone,
+  Diphantoine = corticoïdes/hydroquinone ; Fair & Lovely = éclaircissants non
+  contrôlés), AJOUTE-le en priorité dans toxicIngredients et explique pourquoi CE
+  produit précis est dangereux pour CETTE peau (phototypes IV-VI) avec les effets
+  documentés : ochronose exogène irréversible (hydroquinone), atrophie cutanée et
+  dépendance (corticoïdes), néphrotoxicité/neurotoxicité (mercure).
 
 clinicalProtocol.morning et evening — 3 à 4 étapes chacun :
   step : nom de l'action (Nettoyage, Sérum actif, Traitement ciblé, Protection solaire)

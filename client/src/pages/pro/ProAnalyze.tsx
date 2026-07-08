@@ -49,6 +49,8 @@ import PDFViewerModal from "@/components/PDFViewerModal";
 import { PremiumPdfTemplate } from "@/templates/PremiumPdfTemplate";
 import { buildObservationDoc, type ObservationData } from "@/lib/observationPdf";
 import { VoiceButton } from "@/components/VoiceButton";
+import { ToxicAlert } from "@/components/ToxicAlert";
+import { detectToxicProducts } from "@/lib/toxic-products";
 
 const NAVY = "#7c3aed";
 const INK = "#f3f0ff";
@@ -1514,6 +1516,11 @@ export default function ProAnalyze() {
               <ScanLoader photo={photoBase64} />
             ) : (
               <>
+                {/* ⚠️ Produit nocif identifié dans l'anamnèse (produits déclarés) */}
+                <ToxicAlert
+                  title="Produit nocif identifié dans l'anamnèse"
+                  products={detectToxicProducts([previousProducts, clinicalRecord?.atcdCosmeto].filter(Boolean).join(", "))}
+                />
                 <Suspense fallback={
                   <div className="flex justify-center py-12">
                     <Loader2 className="w-6 h-6 animate-spin" style={{ color: NAVY }} />
