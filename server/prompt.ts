@@ -553,9 +553,17 @@ toxicIngredients — LIÉS AU DIAGNOSTIC détecté (PAS de liste générique) :
     l'hydroquinone, atrophie cutanée + dépendance pour les corticoïdes,
     néphro/neurotoxicité pour le mercure).
   • Produits dermatologiques reconnus et sûrs (ex. CeraVe, La Roche-Posay, Bioderma,
-    Cetaphil, Nivea de base, Cérat, Topicrem, Vaseline) → NE PAS alarmer inutilement ;
-    tu peux les valider brièvement.
+    Cetaphil, Nivea de base, Cérat, Topicrem, Vaseline) → non toxiques, mais voir
+    l'adéquation ci-dessous.
   • Produit inconnu → reste prudent et invite à vérifier la composition.
+  ➡️ ADÉQUATION AU TYPE DE PEAU (aussi important que la toxicité) : même NON toxique,
+  un produit peut être INADAPTÉ au diagnostic/type de peau du patient. Évalue-le :
+  ex. huile de coco / beurre de cacao (comédogènes) sur peau acnéique ; crème très
+  riche/occlusive sur peau grasse ; produits à l'alcool ou parfumés sur peau sèche,
+  eczéma ou barrière altérée ; exfoliants forts (AHA/BHA, rétinol) sur peau réactive
+  ou rosacée. Si un produit déclaré ne convient pas → signale-le dans toxicIngredients
+  (ou clinicalSummary), explique POURQUOI il ne convient pas à CETTE peau, et propose
+  un remplacement adapté.
 
 clinicalProtocol.morning et evening — 3 à 4 étapes chacun :
   step : nom de l'action (Nettoyage, Sérum actif, Traitement ciblé, Protection solaire)
