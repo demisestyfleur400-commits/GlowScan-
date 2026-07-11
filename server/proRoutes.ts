@@ -363,8 +363,16 @@ export function registerProRoutes(app: Express) {
       : null;
     const isAdmin = (req.session as any)?.isAdmin === true;
 
+    // Opt-in consultation B2C (colonnes hors schéma Drizzle → lues en SQL brut).
+    let b2cAvailable = false, consultPriceFcfa = 3000;
+    try {
+      const r: any = await db.execute(sql`SELECT b2c_available, consult_price_fcfa FROM pro_accounts WHERE id = ${acc.id}`);
+      const row = (r?.rows ?? r ?? [])[0];
+      if (row) { b2cAvailable = row.b2c_available === true; consultPriceFcfa = Number(row.consult_price_fcfa) || 3000; }
+    } catch {}
+
     res.json({
-      account: acc,
+      account: { ...acc, b2cAvailable, consultPriceFcfa },
       active,
       daysLeftTrial: daysLeft,
       isAdmin,
@@ -385,15 +393,24 @@ export function registerProRoutes(app: Express) {
         country: z.string().nullable().optional(),
         licenseNumber: z.string().nullable().optional(),
         onboardingDone: z.boolean().optional(),
+        // Opt-in consultation B2C (hors schéma Drizzle → SQL brut)
+        b2cAvailable: z.boolean().optional(),
+        consultPriceFcfa: z.number().int().min(0).max(1000000).optional(),
       });
       const data = schema.parse(req.body);
-      // country est hors schéma Drizzle → on l'écrit en SQL brut, séparément.
-      const { country, ...drizzleData } = data;
+      // country / opt-in B2C sont hors schéma Drizzle → écrits en SQL brut, séparément.
+      const { country, b2cAvailable, consultPriceFcfa, ...drizzleData } = data;
       const [updated] = await db.update(proAccounts).set(drizzleData).where(eq(proAccounts.id, req.proAccount.id)).returning();
       if (country !== undefined) {
         await db.execute(sql`UPDATE "pro_accounts" SET "country" = ${country} WHERE "id" = ${req.proAccount.id}`).catch(() => {});
       }
-      res.json({ account: { ...updated, country: country !== undefined ? country : (updated as any).country } });
+      if (b2cAvailable !== undefined) {
+        await db.execute(sql`UPDATE "pro_accounts" SET "b2c_available" = ${b2cAvailable} WHERE "id" = ${req.proAccount.id}`).catch(() => {});
+      }
+      if (consultPriceFcfa !== undefined) {
+        await db.execute(sql`UPDATE "pro_accounts" SET "consult_price_fcfa" = ${consultPriceFcfa} WHERE "id" = ${req.proAccount.id}`).catch(() => {});
+      }
+      res.json({ account: { ...updated, country: country !== undefined ? country : (updated as any).country, b2cAvailable, consultPriceFcfa } });
     } catch (err: any) {
       if (err?.issues) return res.status(400).json({ message: "Données invalides" });
       res.status(500).json({ message: "Erreur serveur" });

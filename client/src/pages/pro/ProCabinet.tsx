@@ -37,6 +37,10 @@ export default function ProCabinet() {
   const [city, setCity] = useState("");
   const [country, setCountry] = useState("");
   const [licenseNumber, setLicenseNumber] = useState("");
+  // Opt-in consultation B2C
+  const [b2cAvailable, setB2cAvailable] = useState(false);
+  const [consultPrice, setConsultPrice] = useState("3000");
+  const [savingB2c, setSavingB2c] = useState(false);
 
   // ── Équipe / secrétaires ──
   const { data: secretariesData } = useSecretaries();
@@ -107,6 +111,8 @@ export default function ProCabinet() {
       setCity(accData.account.city || "");
       setCountry((accData.account as any).country || "");
       setLicenseNumber((accData.account as any).licenseNumber || "");
+      setB2cAvailable((accData.account as any).b2cAvailable === true);
+      setConsultPrice(String((accData.account as any).consultPriceFcfa ?? 3000));
     }
   }, [accData?.account]);
 
@@ -255,6 +261,56 @@ export default function ProCabinet() {
               </div>
             </div>
           )}
+        </ProCard>
+
+        {/* Consultation en ligne (B2C) — opt-in */}
+        <ProCard className="p-5">
+          <div className="flex items-center gap-2 mb-1">
+            <span style={{ fontSize: 16 }}>💬</span>
+            <h2 className="font-extrabold text-base" style={{ color: INK }}>Consultation en ligne</h2>
+          </div>
+          <p className="text-xs mb-4" style={{ color: DS.muted }}>
+            Activez-la pour recevoir des patients directement depuis l'app GlowScan (grand public) et discuter en ligne.
+          </p>
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-sm font-extrabold" style={{ color: INK }}>Je suis consultable en ligne</span>
+            <button
+              onClick={() => setB2cAvailable((v) => !v)}
+              data-testid="toggle-b2c"
+              style={{
+                width: 48, height: 28, borderRadius: 9999, border: "none", cursor: "pointer",
+                background: b2cAvailable ? "#10b981" : "rgba(255,255,255,0.15)", position: "relative", transition: "background .2s",
+              }}
+            >
+              <span style={{ position: "absolute", top: 3, left: b2cAvailable ? 23 : 3, width: 22, height: 22, borderRadius: "50%", background: "#fff", transition: "left .2s" }} />
+            </button>
+          </div>
+          {b2cAvailable && (
+            <div className="mb-4">
+              <label className="text-[11px] font-extrabold uppercase tracking-wider" style={{ color: DS.muted }}>Prix de la consultation (FCFA)</label>
+              <input
+                type="number" value={consultPrice} onChange={(e) => setConsultPrice(e.target.value)}
+                data-testid="input-consult-price"
+                className="w-full mt-1.5 px-3.5 py-2.5 rounded-xl text-sm outline-none"
+                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(167,139,250,0.2)", color: INK }}
+              />
+            </div>
+          )}
+          <button
+            onClick={async () => {
+              setSavingB2c(true);
+              try {
+                await updateAcc.mutateAsync({ b2cAvailable, consultPriceFcfa: parseInt(consultPrice) || 3000 });
+                toast({ title: b2cAvailable ? "Consultation en ligne activée ✅" : "Consultation en ligne désactivée" });
+              } catch { toast({ title: "Erreur", variant: "destructive" }); }
+              finally { setSavingB2c(false); }
+            }}
+            disabled={savingB2c}
+            className="w-full py-2.5 rounded-full text-white text-sm font-extrabold disabled:opacity-50"
+            style={{ background: NAVY }}
+          >
+            {savingB2c ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Enregistrer"}
+          </button>
         </ProCard>
 
         {/* Abonnement */}

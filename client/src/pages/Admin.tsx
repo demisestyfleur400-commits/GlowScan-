@@ -57,10 +57,13 @@ export default function Admin() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [period, setPeriod] = useState<Period>("all");
-  const [adminTab, setAdminTab] = useState<"traction" | "stats" | "premium" | "leads" | "partenaires" | "vedettes" | "dataset" | "retention" | "dermatologues" | "iavsdoc">("traction");
+  const [adminTab, setAdminTab] = useState<"traction" | "stats" | "premium" | "leads" | "partenaires" | "vedettes" | "dataset" | "retention" | "dermatologues" | "iavsdoc" | "consults">("traction");
   // ── IA vs Médecin (concordance) ──
   const [iaVsDoc, setIaVsDoc] = useState<any | null>(null);
   const [iaVsDocLoading, setIaVsDocLoading] = useState(false);
+  // ── Consultations (confirmation paiement) ──
+  const [consults, setConsults] = useState<any[]>([]);
+  const [consultsBusy, setConsultsBusy] = useState<number | null>(null);
   // ── Activité dermatologues ──
   const [dermActivity, setDermActivity] = useState<any[]>([]);
   const [dermLoading, setDermLoading] = useState(false);
@@ -145,7 +148,22 @@ export default function Admin() {
     if (adminTab === "retention") fetchRetention(adminKey);
     if (adminTab === "dermatologues") fetchDermActivity(adminKey);
     if (adminTab === "iavsdoc") fetchIaVsDoc(adminKey);
+    if (adminTab === "consults") fetchConsults(adminKey);
   }, [adminTab]);
+
+  const fetchConsults = async (key: string) => {
+    try {
+      const res = await fetch("/api/admin/consultations", { headers: { "x-admin-key": key } });
+      if (res.ok) { const d = await res.json(); setConsults(d.consultations || []); }
+    } catch {}
+  };
+  const confirmConsult = async (id: number) => {
+    setConsultsBusy(id);
+    try {
+      const res = await fetch(`/api/admin/consultations/${id}/confirm`, { method: "POST", headers: { "x-admin-key": adminKey } });
+      if (res.ok) fetchConsults(adminKey);
+    } catch {} finally { setConsultsBusy(null); }
+  };
 
   const fetchIaVsDoc = async (key: string) => {
     setIaVsDocLoading(true);
@@ -403,6 +421,7 @@ export default function Admin() {
             {[
               { key: "dataset", label: "Dataset", icon: Stethoscope, badge: datasetStats?.pending || 0, activeColor: "#10b981" },
               { key: "iavsdoc", label: "IA vs Médecin", icon: BarChart2, badge: 0, activeColor: "#7c3aed" },
+              { key: "consults", label: "Consultations", icon: MessageCircle, badge: consults.filter((c) => c.paymentStatus !== "paid").length, activeColor: "#10b981" },
               { key: "dermatologues", label: "Dermatologues", icon: Stethoscope, badge: dermActivity.filter((d: any) => (d.blockers?.length || 0) > 0).length, activeColor: "#f43f5e" },
               { key: "traction", label: "Traction", icon: TrendingUp, badge: 0, activeColor: DS.violet },
               { key: "stats", label: "Stats", icon: BarChart2, badge: 0, activeColor: DS.violet },
@@ -951,6 +970,46 @@ export default function Admin() {
             </div>
           );
         })()}
+
+        {/* ===== CONSULTATIONS — confirmation paiement ===== */}
+        {adminTab === "consults" && (
+          <div className="space-y-3">
+            <div>
+              <h3 className="text-lg font-extrabold" style={{ color: DS.text }}>Consultations en ligne</h3>
+              <p className="text-[11px]" style={{ color: DS.muted }}>Confirme le paiement Mobile Money pour ouvrir la conversation patient ↔ dermatologue.</p>
+            </div>
+            {consults.length === 0 && (
+              <div className="rounded-2xl p-6 text-center" style={{ background: DS.surface, border: `1px solid ${DS.border}` }}>
+                <p className="text-sm" style={{ color: DS.muted }}>Aucune consultation pour l'instant.</p>
+              </div>
+            )}
+            {consults.map((c) => (
+              <div key={c.id} className="rounded-2xl p-4" style={{ background: DS.surface, border: `1px solid ${DS.border}` }}>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-extrabold" style={{ color: DS.text }}>#{c.id} · {c.condition || "Consultation"}</p>
+                    <p className="text-[11px] mt-0.5" style={{ color: DS.muted }}>
+                      {(c.priceFcfa || 0).toLocaleString("fr-FR")} FCFA · {c.paymentStatus === "paid" ? "✅ payé" : "en attente"}
+                      {c.paymentRef ? ` · réf : ${c.paymentRef}` : " · pas de réf"}
+                    </p>
+                  </div>
+                  {c.paymentStatus !== "paid" ? (
+                    <button
+                      onClick={() => confirmConsult(c.id)}
+                      disabled={consultsBusy === c.id}
+                      className="flex-shrink-0 px-4 py-2 rounded-xl text-sm font-extrabold text-white"
+                      style={{ background: "#10b981", opacity: consultsBusy === c.id ? 0.6 : 1 }}
+                    >
+                      {consultsBusy === c.id ? "…" : "Confirmer le paiement"}
+                    </button>
+                  ) : (
+                    <span className="flex-shrink-0 text-[11px] font-extrabold px-3 py-1.5 rounded-full" style={{ background: "rgba(16,185,129,0.12)", color: "#6ee7b7" }}>Ouverte</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* ===== ACTIVITÉ DERMATOLOGUES ===== */}
         {adminTab === "dermatologues" && (() => {
