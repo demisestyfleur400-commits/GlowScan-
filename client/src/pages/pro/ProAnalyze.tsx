@@ -1439,6 +1439,39 @@ export default function ProAnalyze() {
           <ProCard className="p-5 mt-4">
             <StepHeader n={2} title={`Examen de ${patientLabel}`} subtitle="Documentez votre examen physique, PUIS ajoutez la photo (l'IA vient après)." />
 
+            {/* ── Récapitulatif du dossier saisi (ex. par la secrétaire) — repliable ── */}
+            {(() => {
+              const cr: any = clinicalRecord || {};
+              const LABELS: [string, string][] = [
+                ["motif", "Motif"],
+                ["hmaDebut", "Début / durée"], ["hmaInstallation", "Installation"], ["hmaEvolution", "Évolution"],
+                ["hmaSymptomes", "Symptômes"], ["hmaTraitements", "Traitements entrepris"],
+                ["hmaConsultations", "Consultations antérieures"], ["hmaExamens", "Examens réalisés"],
+                ["atcdCosmeto", "Antéc. cosmétologiques"], ["atcdMedicaux", "Antéc. médicaux"], ["atcdChirurgicaux", "Antéc. chirurgicaux"],
+                ["allergAlimentaires", "Allergies alimentaires"], ["allergMedic", "Allergies médic."], ["allergEnv", "Allergies environ."],
+                ["atopie", "Atopie"], ["groupeSanguin", "Groupe sanguin"], ["rhesus", "Rhésus"], ["serologieHiv", "Sérologie HIV"],
+                ["gynecoObst", "Gynéco-obstétrical"], ["toxicologiques", "Toxicologiques"], ["atcdFamiliaux", "Antéc. familiaux"],
+                ["modeVie", "Mode de vie"], ["profession", "Profession"], ["ethnie", "Ethnie"], ["ville", "Ville"],
+              ];
+              const rows = LABELS.filter(([k]) => (cr[k] || "").trim());
+              if (rows.length === 0) return null;
+              return (
+                <details open className="mb-4 rounded-xl overflow-hidden" style={{ border: "1px solid rgba(16,185,129,0.3)", background: "rgba(16,185,129,0.06)" }}>
+                  <summary className="cursor-pointer text-[12px] font-extrabold px-3 py-2.5" style={{ color: "#6ee7b7" }}>
+                    📋 Dossier déjà rempli — {rows.length} champ{rows.length > 1 ? "s" : ""} (relire avant l'examen)
+                  </summary>
+                  <div className="px-3 pb-3 space-y-1.5">
+                    {rows.map(([k, label]) => (
+                      <div key={k} className="flex gap-2 text-[11.5px]">
+                        <span className="font-extrabold flex-shrink-0" style={{ color: "rgba(255,255,255,0.5)", minWidth: 130 }}>{label}</span>
+                        <span style={{ color: "#f3f0ff" }}>{cr[k]}</span>
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              );
+            })()}
+
             {/* ── Examen physique du médecin — AVANT la photo et l'IA (§2, §3) ── */}
             <div className="mb-4">
               <ExamenPhysiqueForm value={examen} onChange={setExamen} />
