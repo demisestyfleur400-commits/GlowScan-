@@ -1456,7 +1456,7 @@ export default function ProAnalyze() {
               const rows = LABELS.filter(([k]) => (cr[k] || "").trim());
               if (rows.length === 0) return null;
               return (
-                <details open className="mb-4 rounded-xl overflow-hidden" style={{ border: "1px solid rgba(16,185,129,0.3)", background: "rgba(16,185,129,0.06)" }}>
+                <details className="mb-4 rounded-xl overflow-hidden" style={{ border: "1px solid rgba(16,185,129,0.3)", background: "rgba(16,185,129,0.06)" }}>
                   <summary className="cursor-pointer text-[12px] font-extrabold px-3 py-2.5" style={{ color: "#6ee7b7" }}>
                     📋 Dossier déjà rempli — {rows.length} champ{rows.length > 1 ? "s" : ""} (relire avant l'examen)
                   </summary>
