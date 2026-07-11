@@ -13,7 +13,7 @@ import { GLOWSCAN_SYSTEM_PROMPT, GLOWSCAN_DERM_SYSTEM_PROMPT } from "./prompt";
 import { classifyCondition, extractPhototype, calcAnnotationScore } from "./taxonomy";
 import webpush from "web-push";
 import { db } from "./db";
-import { referrals, loyaltyPoints, subscriptions, scans, leads, premiumRequests, wellnessLogs, trainingData, proAccounts, type TrainingData } from "@shared/schema";
+import { referrals, loyaltyPoints, subscriptions, scans, leads, premiumRequests, wellnessLogs, trainingData, proAccounts, consultations, consultationMessages, type TrainingData } from "@shared/schema";
 import { users } from "@shared/models/auth";
 import { eq, and, sql, gte, count, lte, desc, avg, inArray } from "drizzle-orm";
 import { whatsappClicks, orders, pageVisits } from "@shared/schema";
@@ -283,6 +283,120 @@ export async function registerRoutes(
       res.json({ ok: true, count: ids.length, models: ids });
     } catch (e: any) {
       res.json({ ok: false, status: e?.status, error: e?.error?.message || e?.message || String(e) });
+    }
+  });
+
+  // ════════════════════════════════════════════════════════════════════
+  // CONSULTATIONS IN-APP (circuit fermé B2C ↔ dermatologue)
+  // ════════════════════════════════════════════════════════════════════
+  const Rows = (x: any): any[] => (x?.rows ?? x ?? []) as any[];
+
+  // Liste des dermatologues consultables en B2C (opt-in b2c_available).
+  app.get("/api/b2c/dermatologists", async (_req: any, res) => {
+    try {
+      const rows = Rows(await db.execute(sql`
+        SELECT id, full_name, cabinet_name, city, license_number,
+               COALESCE(consult_price_fcfa, 3000) AS price
+        FROM pro_accounts
+        WHERE b2c_available = true
+        ORDER BY full_name`));
+      res.json({ dermatologists: rows.map((r) => ({
+        id: r.id, fullName: r.full_name, cabinet: r.cabinet_name, city: r.city,
+        licenseNumber: r.license_number, price: Number(r.price) || 3000,
+      })) });
+    } catch (e) {
+      // Table/colonnes pas encore migrées → liste vide (pas d'erreur bloquante)
+      res.json({ dermatologists: [] });
+    }
+  });
+
+  // Ouvre une consultation (statut pending_payment). Embarque le contexte (photo + diagnostic).
+  app.post("/api/consultations", async (req: any, res) => {
+    const userId = getUID(req);
+    if (!userId) return res.status(401).json({ message: "Connexion requise" });
+    try {
+      const { proAccountId, scanId, condition, imageUrl } = req.body || {};
+      if (!proAccountId) return res.status(400).json({ message: "Dermatologue requis" });
+      const pr = Rows(await db.execute(sql`SELECT COALESCE(consult_price_fcfa,3000) AS p, b2c_available FROM pro_accounts WHERE id = ${Number(proAccountId)}`));
+      if (!pr[0] || pr[0].b2c_available !== true) return res.status(400).json({ message: "Ce dermatologue n'est pas disponible en consultation." });
+      const price = Number(pr[0].p) || 3000;
+      const [c] = await db.insert(consultations).values({
+        userId,
+        proAccountId: Number(proAccountId),
+        scanId: scanId ? Number(scanId) : null,
+        condition: condition || null,
+        imageUrl: imageUrl || null,
+        status: "pending_payment",
+        paymentStatus: "unpaid",
+        priceFcfa: price,
+      }).returning();
+      res.json({ consultation: c });
+    } catch (err) {
+      console.error("[consultations create] error:", err);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // Le patient déclare son paiement Mobile Money (référence) — en attente de confirmation.
+  app.post("/api/consultations/:id/payment-ref", async (req: any, res) => {
+    const userId = getUID(req);
+    if (!userId) return res.status(401).json({ message: "Connexion requise" });
+    try {
+      const id = parseInt(req.params.id);
+      const { ref } = req.body || {};
+      const [c] = await db.select().from(consultations).where(eq(consultations.id, id));
+      if (!c || c.userId !== userId) return res.status(404).json({ message: "Consultation introuvable" });
+      await db.update(consultations).set({ paymentRef: (ref || "").toString().slice(0, 120) }).where(eq(consultations.id, id));
+      res.json({ ok: true });
+    } catch (err) {
+      console.error("[consultations payment-ref] error:", err);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // Consultations du patient connecté.
+  app.get("/api/consultations/mine", async (req: any, res) => {
+    const userId = getUID(req);
+    if (!userId) return res.status(401).json({ message: "Connexion requise" });
+    try {
+      const list = await db.select().from(consultations)
+        .where(eq(consultations.userId, userId))
+        .orderBy(desc(consultations.createdAt));
+      res.json({ consultations: list });
+    } catch (e) {
+      res.json({ consultations: [] });
+    }
+  });
+
+  // Admin : confirme le paiement → la consultation s'ouvre.
+  app.post("/api/admin/consultations/:id/confirm", async (req: any, res) => {
+    if (!checkDatasetKey(req)) return res.status(403).json({ message: "Accès refusé" });
+    try {
+      const id = parseInt(req.params.id);
+      const [c] = await db.update(consultations)
+        .set({ paymentStatus: "paid", status: "open" })
+        .where(eq(consultations.id, id)).returning();
+      if (!c) return res.status(404).json({ message: "Consultation introuvable" });
+      // Notifier le dermatologue (best-effort) : émission WS sur son compte user.
+      try {
+        const pr = Rows(await db.execute(sql`SELECT user_id FROM pro_accounts WHERE id = ${c.proAccountId}`));
+        if (pr[0]?.user_id) emitToUser(pr[0].user_id, "consultation:opened", { consultationId: c.id });
+      } catch {}
+      res.json({ consultation: c });
+    } catch (err) {
+      console.error("[consultations confirm] error:", err);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // Admin : liste des consultations en attente de confirmation de paiement.
+  app.get("/api/admin/consultations", async (req: any, res) => {
+    if (!checkDatasetKey(req)) return res.status(403).json({ message: "Accès refusé" });
+    try {
+      const list = await db.select().from(consultations).orderBy(desc(consultations.createdAt)).limit(100);
+      res.json({ consultations: list });
+    } catch (e) {
+      res.json({ consultations: [] });
     }
   });
 
