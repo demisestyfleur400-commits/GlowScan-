@@ -291,6 +291,24 @@ export async function registerRoutes(
   // ════════════════════════════════════════════════════════════════════
   const Rows = (x: any): any[] => (x?.rows ?? x ?? []) as any[];
 
+  // Notification web-push best-effort vers un utilisateur (consultations).
+  async function pushToUser(userId: string | null | undefined, title: string, body: string, url: string) {
+    if (!userId) return;
+    try {
+      const subs = await storage.getPushSubscriptionsByUser(userId);
+      for (const sub of subs) {
+        try {
+          await webpush.sendNotification(
+            { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+            JSON.stringify({ title, body, url }),
+          );
+        } catch (err: any) {
+          if (err?.statusCode === 410 || err?.statusCode === 404) await storage.deletePushSubscription(sub.endpoint);
+        }
+      }
+    } catch {}
+  }
+
   // Liste des dermatologues consultables en B2C (opt-in b2c_available).
   app.get("/api/b2c/dermatologists", async (_req: any, res) => {
     try {
@@ -380,7 +398,10 @@ export async function registerRoutes(
       // Notifier le dermatologue (best-effort) : émission WS sur son compte user.
       try {
         const pr = Rows(await db.execute(sql`SELECT user_id FROM pro_accounts WHERE id = ${c.proAccountId}`));
-        if (pr[0]?.user_id) emitToUser(pr[0].user_id, "consultation:opened", { consultationId: c.id });
+        if (pr[0]?.user_id) {
+          emitToUser(pr[0].user_id, "consultation:opened", { consultationId: c.id });
+          pushToUser(pr[0].user_id, "Nouvelle consultation 🩺", "Un patient vous consulte en ligne sur GlowScan.", "/derm/consultations");
+        }
       } catch {}
       res.json({ consultation: c });
     } catch (err) {
@@ -466,6 +487,11 @@ export async function registerRoutes(
       const payload = { consultationId: id, message: m };
       try { if (c.userId) emitToUser(c.userId, "consultation:message", payload); } catch {}
       try { if (doctorUserId) emitToUser(doctorUserId, "consultation:message", payload); } catch {}
+
+      // Notification push au DESTINATAIRE (l'autre partie).
+      const preview = (body || "📷 Image").slice(0, 90);
+      if (side === "patient") pushToUser(doctorUserId, "Nouveau message patient", preview, "/derm/consultations");
+      else pushToUser(c.userId, "Réponse de votre dermatologue 👩🏾‍⚕️", preview, "/consultations");
 
       res.json({ message: m });
     } catch (err) {
