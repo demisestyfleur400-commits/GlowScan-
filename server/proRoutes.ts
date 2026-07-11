@@ -506,10 +506,18 @@ export function registerProRoutes(app: Express) {
     const [p] = await db.select().from(patients)
       .where(and(eq(patients.id, id), eq(patients.dermatologistId, req.proAccount.id)));
     if (!p) return res.status(404).json({ message: "Patient introuvable" });
+    // Dossier clinique (colonne hors schéma Drizzle) → lu en SQL brut et attaché.
+    // Permet au médecin de REPRENDRE le dossier saisi par la secrétaire sans re-saisir.
+    let clinicalRecord: any = null;
+    try {
+      const r: any = await db.execute(sql`SELECT "clinical_record" FROM "patients" WHERE "id" = ${id}`);
+      const row = (r?.rows ?? r ?? [])[0];
+      clinicalRecord = row?.clinical_record ?? null;
+    } catch {}
     const patientScans = await db.select().from(scans)
       .where(eq(scans.patientId, id))
       .orderBy(desc(scans.createdAt));
-    res.json({ patient: p, scans: patientScans });
+    res.json({ patient: { ...p, clinicalRecord }, scans: patientScans });
   });
 
   // ───────────────────────────────────────────

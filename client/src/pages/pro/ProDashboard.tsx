@@ -14,7 +14,7 @@ import {
   TrendingUp,
   Clock,
 } from "lucide-react";
-import { useProAccount, useProPatients, useUpdateProAccount, useProStats } from "@/hooks/use-pro";
+import { useProAccount, useProPatients, useUpdateProAccount, useProStats, useProPendingPatients } from "@/hooks/use-pro";
 import { ProLayout, ProCard } from "@/components/ProLayout";
 import { DERM } from "@/lib/design-tokens";
 
@@ -57,6 +57,7 @@ export default function ProDashboard() {
   const { data: accData, isLoading } = useProAccount();
   const { data: patientsData } = useProPatients("");
   const { data: stats } = useProStats();
+  const { data: pendingData } = useProPendingPatients();
   const updateAcc = useUpdateProAccount();
   const [tourOpen, setTourOpen] = useState(false);
   const [tourStep, setTourStep] = useState(0);
@@ -212,6 +213,41 @@ export default function ProDashboard() {
           </Link>
         </div>
       </motion.div>
+
+      {/* ══ PATIENTS EN ATTENTE D'ANALYSE (dossiers préparés par la secrétaire) ══ */}
+      {(pendingData?.patients?.length || 0) > 0 && (
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: 16 }}>
+          <div style={{ background: "rgba(124,58,237,0.08)", border: `1px solid ${DS.cardVioletBorder}`, borderRadius: 20, padding: "16px 18px" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+              <p style={{ fontSize: 13, fontWeight: 800, color: DS.textPrimary, margin: 0 }}>
+                📋 {pendingData!.patients.length} patient{pendingData!.patients.length > 1 ? "s" : ""} en attente d'analyse
+              </p>
+              <span style={{ fontSize: 10, color: DS.textMuted }}>Dossier prêt · reprends l'examen</span>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {pendingData!.patients.slice(0, 6).map((p) => (
+                <Link
+                  key={p.id}
+                  href={`/derm/analyse?patient=${p.id}`}
+                  style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, background: "rgba(255,255,255,0.04)", borderRadius: 12, padding: "10px 12px", textDecoration: "none" }}
+                >
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <p style={{ fontSize: 13, fontWeight: 700, color: DS.textPrimary, margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      {[p.firstName, p.lastName].filter(Boolean).join(" ") || "Patient"}
+                    </p>
+                    <p style={{ fontSize: 10, color: DS.textMuted, margin: "1px 0 0" }}>
+                      {p.age ? `${p.age} ans · ` : ""}{p.createdAt ? new Date(p.createdAt).toLocaleDateString("fr-FR") : ""}
+                    </p>
+                  </div>
+                  <span style={{ flexShrink: 0, background: DS.violet, color: "#fff", borderRadius: 9999, padding: "6px 14px", fontSize: 11, fontWeight: 800 }}>
+                    Continuer →
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </motion.div>
+      )}
 
       {/* ══ FILE D'ATTENTE DE VALIDATION (données GOLD) ══ */}
       {pending.length > 0 && (

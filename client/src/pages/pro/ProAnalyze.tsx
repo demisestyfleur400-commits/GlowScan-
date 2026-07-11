@@ -449,6 +449,7 @@ export default function ProAnalyze() {
         setSex((p.sex as any) || "—");
         setPhone(p.whatsappNumber || "");
         setPatientMode("existing");
+        loadPatientDossier(p.id);
         setStep(2);
       }
     }
@@ -479,12 +480,35 @@ export default function ProAnalyze() {
         whatsappNumber: phone.trim() || null,
         clinicalRecord,
       });
+      // Secrétaire : elle remplit le questionnaire puis ENVOIE au médecin (pas d'examen).
+      // Le patient apparaît dans « patients en attente » du dermatologue.
+      if (!isDoctor) {
+        try {
+          await fetch(`/api/pro/patients/${r.patient.id}/submit-for-review`, { method: "POST", credentials: "include" });
+        } catch {}
+        toast({ title: "Dossier envoyé au médecin ✅", description: `${firstName} ${lastName} est en attente d'analyse.` });
+        resetAll();
+        return;
+      }
       setPatientId(r.patient.id);
       setPatient(r.patient);
       setStep(2);
     } catch (err: any) {
       toast({ title: "Erreur", description: err.message, variant: "destructive" });
     }
+  };
+
+  // Charge le dossier clinique déjà saisi (par la secrétaire ou lors d'une visite
+  // précédente) pour que le médecin REPRENNE sans re-saisir. Met à jour clinicalRecord
+  // (le useEffect mirroir remplit motif/durée/produits/allergies/région).
+  const loadPatientDossier = async (id: number) => {
+    try {
+      const res = await fetch(`/api/pro/patients/${id}`, { credentials: "include" });
+      if (!res.ok) return;
+      const d = await res.json();
+      const cr = d?.patient?.clinicalRecord;
+      if (cr && typeof cr === "object") setClinicalRecord(cr);
+    } catch {}
   };
 
   const selectExisting = (p: Patient) => {
@@ -495,6 +519,7 @@ export default function ProAnalyze() {
     setAge(p.age?.toString() || "");
     setSex((p.sex as any) || "—");
     setPhone(p.whatsappNumber || "");
+    loadPatientDossier(p.id);
     setStep(2);
   };
 
@@ -1342,7 +1367,7 @@ export default function ProAnalyze() {
                     className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-full text-white text-sm font-extrabold disabled:opacity-50 active:scale-[0.98] transition-all"
                     style={{ background: NAVY }}
                   >
-                    {createPatient.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Créer & continuer <ArrowRight className="w-4 h-4" /></>}
+                    {createPatient.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : (isDoctor ? <>Créer & continuer <ArrowRight className="w-4 h-4" /></> : <>Envoyer au médecin <ArrowRight className="w-4 h-4" /></>)}
                   </button>
                 </form>
               </ProCard>
