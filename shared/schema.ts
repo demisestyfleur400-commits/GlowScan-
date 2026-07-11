@@ -626,3 +626,40 @@ export interface AnalysisResult {
     };
   };
 }
+
+// ════════════════════════════════════════════════════════════════════════
+// CONSULTATIONS IN-APP (circuit fermé B2C ↔ dermatologue) — chat + paiement
+// ════════════════════════════════════════════════════════════════════════
+export const consultations = pgTable("consultations", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => users.id),          // patient B2C
+  proAccountId: integer("pro_account_id").notNull().references(() => proAccounts.id), // dermatologue
+  scanId: integer("scan_id").references(() => scans.id),                 // contexte (photo + diagnostic IA)
+  // Contexte figé au moment de l'ouverture (évite de dépendre du scan)
+  condition: text("condition"),
+  imageUrl: text("image_url"),
+  // Cycle de vie : en attente de paiement → ouverte → répondue → clôturée
+  status: varchar("status", { length: 20 }).default("pending_payment"),  // pending_payment | open | answered | closed
+  paymentStatus: varchar("payment_status", { length: 20 }).default("unpaid"), // unpaid | paid
+  paymentRef: text("payment_ref"),                                       // réf. Mobile Money / preuve
+  priceFcfa: integer("price_fcfa").default(0),
+  // Compteurs de non-lus par côté (pour les badges d'inbox)
+  unreadPatient: integer("unread_patient").default(0),
+  unreadDoctor: integer("unread_doctor").default(0),
+  lastMessageAt: timestamp("last_message_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const consultationMessages = pgTable("consultation_messages", {
+  id: serial("id").primaryKey(),
+  consultationId: integer("consultation_id").notNull().references(() => consultations.id, { onDelete: "cascade" }),
+  senderType: varchar("sender_type", { length: 10 }).notNull(),         // patient | doctor
+  senderId: text("sender_id").notNull(),
+  body: text("body"),
+  imageUrl: text("image_url"),
+  readAt: timestamp("read_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type Consultation = typeof consultations.$inferSelect;
+export type ConsultationMessage = typeof consultationMessages.$inferSelect;
