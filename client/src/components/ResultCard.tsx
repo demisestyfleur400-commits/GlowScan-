@@ -318,6 +318,7 @@ import { productImages as centralProductImages } from "@/lib/productImages";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
+import { ConsultationLauncher } from "@/components/ConsultationLauncher";
 import { buildObservationSections, type ObservationData } from "@/lib/observationPdf";
 
 const productImages = centralProductImages;
@@ -3211,13 +3212,13 @@ ${medicalSections}
         </div>
       </motion.div>
 
-      {/* Bloc dermatologue partenaire (B2C uniquement) */}
-      {/* Absurde en mode DERM : l'utilisateur EST le dermatologue, on ne
-          l'oriente pas vers un confrère partenaire. */}
+      {/* Consultation IN-APP (B2C) — circuit fermé : plus de WhatsApp, la
+          conversation se fait directement dans GlowScan. */}
       {!isPro && (
-        <DermatologistSection
-          score={result.score || 0}
+        <ConsultationLauncher
+          scanId={savedScanId || scanId || undefined}
           condition={result.condition || ""}
+          imageUrl={imageUrl || undefined}
         />
       )}
 
