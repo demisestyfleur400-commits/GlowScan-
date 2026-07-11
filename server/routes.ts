@@ -400,6 +400,80 @@ export async function registerRoutes(
     }
   });
 
+  // Résout le rôle du user courant sur une consultation (patient / doctor).
+  async function consultAccess(c: any, userId: string): Promise<{ side: "patient" | "doctor" | null; doctorUserId: string | null }> {
+    let doctorUserId: string | null = null;
+    try {
+      const pr = Rows(await db.execute(sql`SELECT user_id FROM pro_accounts WHERE id = ${c.proAccountId}`));
+      doctorUserId = pr[0]?.user_id || null;
+    } catch {}
+    const side = c.userId === userId ? "patient" : (doctorUserId === userId ? "doctor" : null);
+    return { side, doctorUserId };
+  }
+
+  // Détail d'une consultation + fil de messages (accès patient OU dermatologue).
+  app.get("/api/consultations/:id", async (req: any, res) => {
+    const userId = getUID(req);
+    if (!userId) return res.status(401).json({ message: "Connexion requise" });
+    try {
+      const id = parseInt(req.params.id);
+      const [c] = await db.select().from(consultations).where(eq(consultations.id, id));
+      if (!c) return res.status(404).json({ message: "Consultation introuvable" });
+      const { side } = await consultAccess(c, userId);
+      if (!side) return res.status(403).json({ message: "Accès refusé" });
+      const msgs = await db.select().from(consultationMessages)
+        .where(eq(consultationMessages.consultationId, id))
+        .orderBy(consultationMessages.createdAt);
+      // Marque lu pour mon côté (remet le compteur de non-lus à 0).
+      try {
+        await db.update(consultations)
+          .set(side === "patient" ? { unreadPatient: 0 } : { unreadDoctor: 0 })
+          .where(eq(consultations.id, id));
+      } catch {}
+      res.json({ consultation: c, messages: msgs, side });
+    } catch (err) {
+      console.error("[consultations get] error:", err);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // Envoyer un message dans une consultation (temps réel via WebSocket).
+  app.post("/api/consultations/:id/messages", async (req: any, res) => {
+    const userId = getUID(req);
+    if (!userId) return res.status(401).json({ message: "Connexion requise" });
+    try {
+      const id = parseInt(req.params.id);
+      const body = (req.body?.body || "").toString().trim();
+      const imageUrl = req.body?.imageUrl || null;
+      if (!body && !imageUrl) return res.status(400).json({ message: "Message vide" });
+      const [c] = await db.select().from(consultations).where(eq(consultations.id, id));
+      if (!c) return res.status(404).json({ message: "Consultation introuvable" });
+      const { side, doctorUserId } = await consultAccess(c, userId);
+      if (!side) return res.status(403).json({ message: "Accès refusé" });
+      if (c.paymentStatus !== "paid") return res.status(402).json({ message: "Consultation non encore confirmée." });
+
+      const [m] = await db.insert(consultationMessages).values({
+        consultationId: id, senderType: side, senderId: userId,
+        body: body || null, imageUrl,
+      }).returning();
+
+      const patch: any = { lastMessageAt: new Date() };
+      if (side === "patient") patch.unreadDoctor = (c.unreadDoctor || 0) + 1;
+      else { patch.unreadPatient = (c.unreadPatient || 0) + 1; patch.status = "answered"; }
+      await db.update(consultations).set(patch).where(eq(consultations.id, id));
+
+      // Temps réel : émission aux deux parties (chacune dans sa room user).
+      const payload = { consultationId: id, message: m };
+      try { if (c.userId) emitToUser(c.userId, "consultation:message", payload); } catch {}
+      try { if (doctorUserId) emitToUser(doctorUserId, "consultation:message", payload); } catch {}
+
+      res.json({ message: m });
+    } catch (err) {
+      console.error("[consultations message] error:", err);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
   // ══ Transcription vocale (Whisper via Groq) — fiable sur TOUS les navigateurs ══
   // Contrairement à l'API Web Speech (qui ne marche pas sur Edge/Safari), on
   // enregistre l'audio côté client puis on le transcrit ici. Auto FR/EN.

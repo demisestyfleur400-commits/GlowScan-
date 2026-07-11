@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { db } from "./db";
-import { proAccounts, patients, scans, premiumRequests, users, secretaryAccounts, insertProAccountSchema, insertPatientSchema, insertSecretaryAccountSchema, pageVisits, trainingData } from "@shared/schema";
+import { proAccounts, patients, scans, premiumRequests, users, secretaryAccounts, insertProAccountSchema, insertPatientSchema, insertSecretaryAccountSchema, pageVisits, trainingData, consultations } from "@shared/schema";
 import { eq, and, desc, sql, count, gte, isNotNull, isNull } from "drizzle-orm";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
@@ -718,6 +718,40 @@ export function registerProRoutes(app: Express) {
       console.error("[pro/pending-validations] error:", err);
       res.status(500).json({ message: "Erreur serveur" });
     }
+  });
+
+  // ───────────────────────────────────────────
+  // GET /api/pro/consultations — consultations B2C reçues par ce dermatologue
+  // ───────────────────────────────────────────
+  app.get("/api/pro/consultations", requireProAccess, async (req: any, res) => {
+    try {
+      const rows = await db.select({
+        id: consultations.id, userId: consultations.userId, status: consultations.status,
+        paymentStatus: consultations.paymentStatus, condition: consultations.condition,
+        imageUrl: consultations.imageUrl, unreadDoctor: consultations.unreadDoctor,
+        lastMessageAt: consultations.lastMessageAt, createdAt: consultations.createdAt,
+        priceFcfa: consultations.priceFcfa,
+        patientFirstName: users.firstName, patientEmail: users.email,
+      })
+        .from(consultations)
+        .leftJoin(users, eq(consultations.userId, users.id))
+        .where(and(eq(consultations.proAccountId, req.proAccount.id), eq(consultations.paymentStatus, "paid")))
+        .orderBy(desc(consultations.lastMessageAt), desc(consultations.createdAt))
+        .limit(100);
+      res.json({ consultations: rows });
+    } catch (e) {
+      res.json({ consultations: [] });
+    }
+  });
+
+  // GET /api/pro/consultations/unread-count — badge nombre de messages non lus
+  app.get("/api/pro/consultations/unread-count", requireProAccess, async (req: any, res) => {
+    try {
+      const rows = await db.select({ u: consultations.unreadDoctor }).from(consultations)
+        .where(and(eq(consultations.proAccountId, req.proAccount.id), eq(consultations.paymentStatus, "paid")));
+      const total = rows.reduce((a, r) => a + (r.u || 0), 0);
+      res.json({ count: total });
+    } catch (e) { res.json({ count: 0 }); }
   });
 
   // ───────────────────────────────────────────

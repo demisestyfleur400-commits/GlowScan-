@@ -142,9 +142,12 @@ export function ConsultationLauncher({ scanId, condition, imageUrl }: { scanId?:
           <div style={{ textAlign: "center", padding: "8px 0" }}>
             <div style={{ fontSize: 34, marginBottom: 6 }}>✅</div>
             <p style={{ fontSize: 13.5, fontWeight: 800, color: "#1a1a2e", margin: "0 0 4px" }}>Paiement enregistré</p>
-            <p style={{ fontSize: 12, color: "#6b7280", margin: 0, lineHeight: 1.6 }}>
+            <p style={{ fontSize: 12, color: "#6b7280", margin: "0 0 12px", lineHeight: 1.6 }}>
               Dès que ton paiement est confirmé, la conversation s'ouvre dans <strong>« Mes consultations »</strong>. Tu seras notifié(e).
             </p>
+            <a href="/consultations" style={{ display: "inline-block", background: VIOLET, color: "#fff", borderRadius: 9999, padding: "10px 20px", fontSize: 12.5, fontWeight: 800, textDecoration: "none" }}>
+              Voir mes consultations
+            </a>
           </div>
         )}
       </div>
