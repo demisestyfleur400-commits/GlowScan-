@@ -8,6 +8,23 @@ import { useConsultationSocket } from "@/hooks/use-consultation-socket";
 
 interface Msg { id: number; senderType: "patient" | "doctor"; body?: string | null; imageUrl?: string | null; createdAt?: string; }
 
+// Compresse une image en base64 JPEG (max ~1000px) pour l'envoi dans le chat.
+async function compressToBase64(file: File, maxDim = 1000, quality = 0.72): Promise<string> {
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const r = new FileReader(); r.onload = () => resolve(String(r.result)); r.onerror = reject; r.readAsDataURL(file);
+  });
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const i = new Image(); i.onload = () => resolve(i); i.onerror = reject; i.src = dataUrl;
+  });
+  let { width, height } = img;
+  if (width > maxDim || height > maxDim) {
+    const s = maxDim / Math.max(width, height); width = Math.round(width * s); height = Math.round(height * s);
+  }
+  const canvas = document.createElement("canvas"); canvas.width = width; canvas.height = height;
+  canvas.getContext("2d")!.drawImage(img, 0, 0, width, height);
+  return canvas.toDataURL("image/jpeg", quality);
+}
+
 export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
   consultationId: number; myUserId: string | null; dark?: boolean; onBack?: () => void;
 }) {
@@ -18,6 +35,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const fileRef = useRef<HTMLInputElement | null>(null);
 
   const load = async () => {
     try {
@@ -56,6 +74,24 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
         setMessages((prev) => prev.some((m) => m.id === d.message.id) ? prev : [...prev, d.message]);
       } else { setText(body); }
     } catch { setText(body); } finally { setSending(false); }
+  };
+
+  const sendImage = async (file: File | undefined | null) => {
+    if (!file || sending) return;
+    if (!file.type.startsWith("image/")) return;
+    setSending(true);
+    try {
+      const imageUrl = await compressToBase64(file);
+      const res = await fetch(`/api/consultations/${consultationId}/messages`, {
+        method: "POST", credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageUrl }),
+      });
+      if (res.ok) {
+        const d = await res.json();
+        setMessages((prev) => prev.some((m) => m.id === d.message.id) ? prev : [...prev, d.message]);
+      }
+    } catch {} finally { setSending(false); }
   };
 
   const BG = dark ? "#0d0a0e" : "#f6f7fb";
@@ -131,7 +167,22 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
       </div>
 
       {/* Saisie */}
-      <div style={{ display: "flex", gap: 8, padding: "10px 12px", borderTop: `1px solid ${BORDER}`, background: CARD }}>
+      <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "10px 12px", borderTop: `1px solid ${BORDER}`, background: CARD }}>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          style={{ display: "none" }}
+          onChange={(e) => { sendImage(e.target.files?.[0]); e.currentTarget.value = ""; }}
+        />
+        <button
+          onClick={() => fileRef.current?.click()}
+          disabled={sending}
+          title="Envoyer une photo"
+          style={{ background: "transparent", border: "none", cursor: "pointer", fontSize: 20, flexShrink: 0, opacity: sending ? 0.5 : 1, color: MUTED }}
+        >
+          📎
+        </button>
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}
