@@ -73,12 +73,27 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
         {onBack && (
           <button onClick={onBack} style={{ background: "transparent", border: "none", color: INK, fontSize: 18, cursor: "pointer" }}>←</button>
         )}
-        <div style={{ minWidth: 0 }}>
+        <div style={{ minWidth: 0, flex: 1 }}>
           <p style={{ fontSize: 13, fontWeight: 800, color: INK, margin: 0 }}>Consultation</p>
           <p style={{ fontSize: 11, color: MUTED, margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
             {ctx?.condition || "Dermatologie"}
           </p>
         </div>
+        {/* Dermatologue : convertir en dossier patient DERM */}
+        {side === "doctor" && (
+          <button
+            onClick={async () => {
+              try {
+                const res = await fetch(`/api/pro/consultations/${consultationId}/to-patient`, { method: "POST", credentials: "include" });
+                const d = await res.json();
+                if (res.ok && d.patientId) window.location.href = `/derm/patient/${d.patientId}`;
+              } catch {}
+            }}
+            style={{ flexShrink: 0, background: "rgba(124,58,237,0.2)", color: "#c4b5fd", border: "1px solid rgba(124,58,237,0.4)", borderRadius: 9999, padding: "6px 12px", fontSize: 11, fontWeight: 800, cursor: "pointer" }}
+          >
+            + Dossier patient
+          </button>
+        )}
       </div>
 
       {/* Contexte : photo + diagnostic */}

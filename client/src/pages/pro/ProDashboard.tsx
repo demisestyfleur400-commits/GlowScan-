@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useProAccount, useProPatients, useUpdateProAccount, useProStats, useProPendingPatients } from "@/hooks/use-pro";
 import { ProLayout, ProCard } from "@/components/ProLayout";
+import { DermNotifPrompt } from "@/components/DermNotifPrompt";
 import { DERM } from "@/lib/design-tokens";
 
 const DS = {
@@ -213,6 +214,8 @@ export default function ProDashboard() {
           </Link>
         </div>
       </motion.div>
+
+      <DermNotifPrompt />
 
       {/* ══ PATIENTS EN ATTENTE D'ANALYSE (dossiers préparés par la secrétaire) ══ */}
       {(pendingData?.patients?.length || 0) > 0 && (

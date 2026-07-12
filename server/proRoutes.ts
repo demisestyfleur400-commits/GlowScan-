@@ -771,6 +771,29 @@ export function registerProRoutes(app: Express) {
     } catch (e) { res.json({ count: 0 }); }
   });
 
+  // POST /api/pro/consultations/:id/to-patient — convertir une consultation
+  // en dossier patient DERM (pour un vrai suivi). Retourne l'id du patient créé.
+  app.post("/api/pro/consultations/:id/to-patient", requireProAccess, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const [c] = await db.select().from(consultations)
+        .where(and(eq(consultations.id, id), eq(consultations.proAccountId, req.proAccount.id)));
+      if (!c) return res.status(404).json({ message: "Consultation introuvable" });
+      const [u] = await db.select().from(users).where(eq(users.id, c.userId));
+      const firstName = (u?.firstName || "Patient").toString().slice(0, 60);
+      const [p] = await db.insert(patients).values({
+        dermatologistId: req.proAccount.id,
+        firstName,
+        lastName: "(consultation en ligne)",
+        intakePending: false,
+      }).returning();
+      res.json({ patientId: p.id });
+    } catch (err) {
+      console.error("[pro/consultations to-patient] error:", err);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
   // ───────────────────────────────────────────
   // GET /api/pro/partners-count — nombre de dermatologues (public, pour la landing)
   // ───────────────────────────────────────────
