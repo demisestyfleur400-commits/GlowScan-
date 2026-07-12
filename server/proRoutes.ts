@@ -400,7 +400,14 @@ export function registerProRoutes(app: Express) {
       const data = schema.parse(req.body);
       // country / opt-in B2C sont hors schéma Drizzle → écrits en SQL brut, séparément.
       const { country, b2cAvailable, consultPriceFcfa, ...drizzleData } = data;
-      const [updated] = await db.update(proAccounts).set(drizzleData).where(eq(proAccounts.id, req.proAccount.id)).returning();
+      // db.update().set({}) plante avec un objet vide → on ne met à jour que s'il y a
+      // des champs Drizzle. Sinon on récupère le compte tel quel.
+      let updated: any;
+      if (Object.keys(drizzleData).length > 0) {
+        [updated] = await db.update(proAccounts).set(drizzleData).where(eq(proAccounts.id, req.proAccount.id)).returning();
+      } else {
+        [updated] = await db.select().from(proAccounts).where(eq(proAccounts.id, req.proAccount.id));
+      }
       if (country !== undefined) {
         await db.execute(sql`UPDATE "pro_accounts" SET "country" = ${country} WHERE "id" = ${req.proAccount.id}`).catch(() => {});
       }
