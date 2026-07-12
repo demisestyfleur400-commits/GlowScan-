@@ -15,9 +15,9 @@ import webpush from "web-push";
 import { db } from "./db";
 import { referrals, loyaltyPoints, subscriptions, scans, leads, premiumRequests, wellnessLogs, trainingData, proAccounts, consultations, consultationMessages, type TrainingData } from "@shared/schema";
 import { users } from "@shared/models/auth";
-import { eq, and, sql, gte, count, lte, desc, avg, inArray } from "drizzle-orm";
+import { eq, and, sql, gte, count, lte, desc, avg, inArray, isNull } from "drizzle-orm";
 import { whatsappClicks, orders, pageVisits } from "@shared/schema";
-import { emitToUser } from "./ws";
+import { emitToUser, isUserOnline } from "./ws";
 
 // ── Sélection automatique du provider IA ────────────────────────────────
 // Priorité : GROQ_API_KEY (free, global, vision) → GEMINI_API_KEY → OPENAI_API_KEY
@@ -440,18 +440,26 @@ export async function registerRoutes(
       const id = parseInt(req.params.id);
       const [c] = await db.select().from(consultations).where(eq(consultations.id, id));
       if (!c) return res.status(404).json({ message: "Consultation introuvable" });
-      const { side } = await consultAccess(c, userId);
+      const { side, doctorUserId } = await consultAccess(c, userId);
       if (!side) return res.status(403).json({ message: "Accès refusé" });
-      const msgs = await db.select().from(consultationMessages)
-        .where(eq(consultationMessages.consultationId, id))
-        .orderBy(consultationMessages.createdAt);
-      // Marque lu pour mon côté (remet le compteur de non-lus à 0).
+      // Marque comme LUS les messages de l'AUTRE côté + remet le compteur à 0.
+      const otherType = side === "patient" ? "doctor" : "patient";
       try {
+        await db.update(consultationMessages)
+          .set({ readAt: new Date() })
+          .where(and(eq(consultationMessages.consultationId, id), eq(consultationMessages.senderType, otherType), isNull(consultationMessages.readAt)));
         await db.update(consultations)
           .set(side === "patient" ? { unreadPatient: 0 } : { unreadDoctor: 0 })
           .where(eq(consultations.id, id));
+        // Prévient l'autre partie que ses messages sont vus (accusé « Vu »).
+        const otherUserId = side === "patient" ? doctorUserId : c.userId;
+        if (otherUserId) emitToUser(otherUserId, "consultation:read", { consultationId: id, readerSide: side });
       } catch {}
-      res.json({ consultation: c, messages: msgs, side });
+      const msgs = await db.select().from(consultationMessages)
+        .where(eq(consultationMessages.consultationId, id))
+        .orderBy(consultationMessages.createdAt);
+      const otherUserId = side === "patient" ? doctorUserId : c.userId;
+      res.json({ consultation: c, messages: msgs, side, otherUserId, otherOnline: otherUserId ? isUserOnline(otherUserId) : false });
     } catch (err) {
       console.error("[consultations get] error:", err);
       res.status(500).json({ message: "Erreur serveur" });

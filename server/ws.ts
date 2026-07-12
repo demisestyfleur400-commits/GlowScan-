@@ -11,6 +11,32 @@ interface ClientConnection {
 
 const clients = new Map<string, ClientConnection>();
 
+// Présence en ligne : compteur de connexions actives par userId.
+const onlineUsers = new Map<string, number>();
+
+export function isUserOnline(userId: string): boolean {
+  return (onlineUsers.get(userId) || 0) > 0;
+}
+
+function broadcastPresence(userId: string, online: boolean) {
+  const message = JSON.stringify({ event: "presence:changed", data: { userId, online }, timestamp: Date.now() });
+  clients.forEach((client) => {
+    if (client.ws.readyState === WebSocket.OPEN) { try { client.ws.send(message); } catch {} }
+  });
+}
+
+function presenceJoin(userId: string) {
+  const n = (onlineUsers.get(userId) || 0) + 1;
+  onlineUsers.set(userId, n);
+  if (n === 1) broadcastPresence(userId, true);
+}
+
+function presenceLeave(userId: string) {
+  const n = (onlineUsers.get(userId) || 0) - 1;
+  if (n <= 0) { onlineUsers.delete(userId); broadcastPresence(userId, false); }
+  else onlineUsers.set(userId, n);
+}
+
 export function setupWebSocket(server: any) {
   const wss = new WebSocketServer({ noServer: true });
 
@@ -50,6 +76,7 @@ function onConnection(ws: WebSocket, request: IncomingMessage) {
   });
 
   ws.on("close", () => {
+    if (connection.userId) presenceLeave(connection.userId);
     clients.delete(clientId);
     console.log(`✗ WebSocket disconnected: ${clientId}`);
   });
@@ -78,7 +105,10 @@ function handleMessage(
 
   if (type === "join") {
     // Client joins specific rooms
-    if (userId) connection.userId = userId;
+    if (userId && connection.userId !== userId) {
+      connection.userId = userId;
+      presenceJoin(userId); // marque l'utilisateur en ligne (1 fois par connexion)
+    }
     if (patientId) connection.patientId = patientId;
     if (scanId) connection.scanId = scanId;
 

@@ -6,7 +6,7 @@ import { useConsultationSocket } from "@/hooks/use-consultation-socket";
 // et côté dermatologue (sombre) via le prop `dark`.
 // ════════════════════════════════════════════════════════════════════════
 
-interface Msg { id: number; senderType: "patient" | "doctor"; body?: string | null; imageUrl?: string | null; createdAt?: string; }
+interface Msg { id: number; senderType: "patient" | "doctor"; body?: string | null; imageUrl?: string | null; createdAt?: string; readAt?: string | null; }
 
 // Compresse une image en base64 JPEG (max ~1000px) pour l'envoi dans le chat.
 async function compressToBase64(file: File, maxDim = 1000, quality = 0.72): Promise<string> {
@@ -31,6 +31,8 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [side, setSide] = useState<"patient" | "doctor" | null>(null);
   const [ctx, setCtx] = useState<any>(null);
+  const [otherOnline, setOtherOnline] = useState(false);
+  const [otherUserId, setOtherUserId] = useState<string | null>(null);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -45,14 +47,25 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
         setMessages(d.messages || []);
         setSide(d.side);
         setCtx(d.consultation);
+        setOtherUserId(d.otherUserId || null);
+        setOtherOnline(!!d.otherOnline);
       }
     } catch {} finally { setLoading(false); }
   };
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [consultationId]);
 
-  useConsultationSocket(myUserId, (payload) => {
-    if (payload.consultationId === consultationId && payload.message) {
-      setMessages((prev) => prev.some((m) => m.id === payload.message.id) ? prev : [...prev, payload.message]);
+  useConsultationSocket(myUserId, (evt, data) => {
+    if (evt === "consultation:message") {
+      if (data.consultationId === consultationId && data.message) {
+        setMessages((prev) => prev.some((m) => m.id === data.message.id) ? prev : [...prev, data.message]);
+      }
+    } else if (evt === "presence:changed") {
+      if (otherUserId && data.userId === otherUserId) setOtherOnline(!!data.online);
+    } else if (evt === "consultation:read") {
+      // L'autre partie a lu mes messages → on marque les miens comme « Vu ».
+      if (data.consultationId === consultationId && data.readerSide !== side) {
+        setMessages((prev) => prev.map((m) => m.senderType === side ? { ...m, readAt: m.readAt || new Date().toISOString() } : m));
+      }
     }
   });
 
@@ -102,6 +115,9 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
   const MINE = "#7c3aed";
   const THEIRS = dark ? "rgba(255,255,255,0.08)" : "#eef0f6";
 
+  const mineMsgs = messages.filter((m) => m.senderType === side);
+  const lastMineId = mineMsgs.length ? mineMsgs[mineMsgs.length - 1].id : -1;
+
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", background: BG }}>
       {/* Header */}
@@ -111,8 +127,9 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
         )}
         <div style={{ minWidth: 0, flex: 1 }}>
           <p style={{ fontSize: 13, fontWeight: 800, color: INK, margin: 0 }}>Consultation</p>
-          <p style={{ fontSize: 11, color: MUTED, margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-            {ctx?.condition || "Dermatologie"}
+          <p style={{ fontSize: 11, margin: 0, display: "flex", alignItems: "center", gap: 5, color: otherOnline ? "#10b981" : MUTED }}>
+            <span style={{ width: 7, height: 7, borderRadius: "50%", background: otherOnline ? "#10b981" : "#9ca3af", display: "inline-block", flexShrink: 0 }} />
+            {otherOnline ? "En ligne" : "Hors ligne"}
           </p>
         </div>
         {/* Dermatologue : convertir en dossier patient DERM */}
@@ -150,6 +167,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
         )}
         {messages.map((m) => {
           const mine = m.senderType === side;
+          const showSeen = mine && m.id === lastMineId && !!m.readAt;
           return (
             <div key={m.id} style={{ alignSelf: mine ? "flex-end" : "flex-start", maxWidth: "78%" }}>
               <div style={{
@@ -161,6 +179,9 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
                 {m.imageUrl && <img src={m.imageUrl} alt="" style={{ maxWidth: "100%", borderRadius: 8, marginBottom: m.body ? 6 : 0 }} />}
                 {m.body}
               </div>
+              {showSeen && (
+                <p style={{ fontSize: 10, color: MUTED, textAlign: "right", margin: "2px 4px 0" }}>Vu ✓✓</p>
+              )}
             </div>
           );
         })}
