@@ -10,7 +10,6 @@ import { FileUpload } from "@/components/FileUpload";
 import { UpgradeModal } from "@/components/UpgradeModal";
 import { ConsentBanner, hasUserConsented } from "@/components/ConsentBanner";
 import { ToxicAlert } from "@/components/ToxicAlert";
-import { PostAnalysisDecision } from "@/components/PostAnalysisDecision";
 import { PRODUCT_SUGGESTIONS, detectToxicProducts } from "@/lib/toxic-products";
 
 // ResultCard est énorme (~1900 lignes) — on le charge seulement quand on en a besoin
@@ -952,9 +951,6 @@ export default function Analyze() {
             >
               {/* ⚠️ Alerte produits nocifs — en haut du résultat, additionnelle */}
               <ToxicAlert products={detectToxicProducts(intake.previousProducts)} />
-              {/* Bandeau de décision post-analyse (« et maintenant ? ») */}
-              <PostAnalysisDecision score={result.score} severity={(result as any).severity} redFlags={(result as any).redFlags} isLoggedIn={!!user} />
-              <div id="gs-analysis" />
               <Suspense fallback={
                 <div style={{ display: "flex", justifyContent: "center", padding: "48px 0" }}>
                   <div style={{ width: "32px", height: "32px", border: "3px solid rgba(47,158,110,0.3)", borderTopColor: "#a78bfa", borderRadius: "9999px", animation: "spin 0.8s linear infinite" }} />

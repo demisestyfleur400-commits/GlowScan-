@@ -3215,13 +3215,11 @@ ${medicalSections}
       {/* Consultation IN-APP (B2C) — circuit fermé : plus de WhatsApp, la
           conversation se fait directement dans GlowScan. */}
       {!isPro && (
-        <div id="gs-consult">
-          <ConsultationLauncher
-            scanId={savedScanId || scanId || undefined}
-            condition={result.condition || ""}
-            imageUrl={imageUrl || undefined}
-          />
-        </div>
+        <ConsultationLauncher
+          scanId={savedScanId || scanId || undefined}
+          condition={result.condition || ""}
+          imageUrl={imageUrl || undefined}
+        />
       )}
 
       {/* Disclaimer médical (B2C — orienté patient, masqué en mode DERM/pro) */}
