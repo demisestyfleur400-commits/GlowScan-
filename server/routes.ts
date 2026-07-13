@@ -999,12 +999,19 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
       const multiAngleNote = visionImages.length > 1
         ? `\n\nTu reçois ${visionImages.length} photos du MÊME patient sous différents angles (face, profil droit, profil gauche). Analyse-les ENSEMBLE et croise les angles pour un diagnostic plus fiable ; ne te limite pas à une seule vue.`
         : "";
+      // Consigne selon la zone analysée (visage / corps / cheveux).
+      const areaNote =
+        area === "body"
+          ? "\n\nZONE ANALYSÉE : LE CORPS (pas le visage). Raisonne en zones anatomiques du corps (tronc, dos, épaules, bras, avant-bras, mains, abdomen, jambes, pieds, plis/aisselles/aines) — n'utilise AUCUN repère facial (zone T, joues, front, menton). Pense aux pathologies fréquentes du corps sur peaux à fort phototype : eczéma/dermatite atopique, psoriasis, mycoses (dermatophyties, pityriasis versicolor), kératose pilaire, folliculite/pseudofolliculite, chéloïdes, hyperpigmentation post-inflammatoire, dyschromie, prurigo, gale, urticaire, vitiligo. Les zonesAnalysis doivent porter sur des zones du corps."
+          : area === "hair"
+          ? "\n\nZONE ANALYSÉE : LE CUIR CHEVELU / LES CHEVEUX. Raisonne cuir chevelu et phanères (alopécie de traction, pelade, dermite séborrhéique, folliculite, teigne, sécheresse/casse) — pas de repères faciaux."
+          : "";
       const callAI = async (extraInstruction = ""): Promise<string> => {
         const t0 = Date.now();
         const baseUserText = isProRequest
           ? "Lis d'abord les antécédents patient dans le system prompt, puis analyse cette photo à leur lumière. Retourne le JSON clinique complet."
           : prompt + patientContext;
-        const userText = baseUserText + fewShotBlock + extraInstruction + multiAngleNote + "\n\nIMPORTANT : Réponds UNIQUEMENT avec le JSON demandé, sans texte avant ni après.";
+        const userText = baseUserText + fewShotBlock + extraInstruction + multiAngleNote + areaNote + "\n\nIMPORTANT : Réponds UNIQUEMENT avec le JSON demandé, sans texte avant ni après.";
         let c = "";
         if (USE_GEMINI && gemini) {
           const m = gemini.getGenerativeModel({
