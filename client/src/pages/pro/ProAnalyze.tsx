@@ -434,29 +434,34 @@ export default function ProAnalyze() {
   // Clinical override
   const clinicalOverride = useClinicalOverride();
 
-  // ─── Pré-sélection patient si ?patient=ID dans l'URL ────────────────
+  // ─── Ouverture directe d'un patient via ?patient=ID (depuis « patients en
+  //     attente »). On charge le patient DIRECTEMENT (identité + dossier) et on
+  //     va DROIT à l'examen — sans repasser par la liste ni re-sélectionner. ──
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const pid = params.get("patient");
-    if (pid && patientsData?.patients) {
-      const p = patientsData.patients.find((x) => x.id === parseInt(pid));
-      if (p) {
+    if (params.get("nouveau") === "1") { setPatientMode("new"); return; }
+    if (!pid) return;
+    (async () => {
+      try {
+        const res = await fetch(`/api/pro/patients/${parseInt(pid)}`, { credentials: "include" });
+        if (!res.ok) return;
+        const d = await res.json();
+        const p = d.patient;
+        if (!p) return;
         setPatient(p);
         setPatientId(p.id);
-        setLastName(p.lastName);
-        setFirstName(p.firstName);
+        setLastName(p.lastName || "");
+        setFirstName(p.firstName || "");
         setAge(p.age?.toString() || "");
         setSex((p.sex as any) || "—");
         setPhone(p.whatsappNumber || "");
+        if (p.clinicalRecord && typeof p.clinicalRecord === "object") setClinicalRecord(p.clinicalRecord);
         setPatientMode("existing");
-        loadPatientDossier(p.id);
-        setStep(2);
-      }
-    }
-    if (params.get("nouveau") === "1") {
-      setPatientMode("new");
-    }
-  }, [patientsData]);
+        setStep(2); // droit à l'examen
+      } catch {}
+    })();
+  }, []);
 
   // ─── Helpers patient ────────────────────────────────────────────────
   const filteredPatients = (patientsData?.patients || []).filter((p) => {
