@@ -81,6 +81,10 @@ export default function Analyze() {
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [savedScanId, setSavedScanId] = useState<number | null>(null);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const [uploadedRight, setUploadedRight] = useState<string | null>(null); // profil droit (optionnel)
+  const [uploadedLeft, setUploadedLeft] = useState<string | null>(null);   // profil gauche (optionnel)
+  const extraRightRef = useRef<HTMLInputElement>(null);
+  const extraLeftRef = useRef<HTMLInputElement>(null);
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
@@ -201,6 +205,21 @@ export default function Analyze() {
     setStep("intake");
   };
 
+  // Photo supplémentaire (profil) — compression légère puis stockage.
+  const handleExtraPhoto = async (file: File | undefined | null, slot: "right" | "left") => {
+    if (!file || !file.type.startsWith("image/")) return;
+    try {
+      const dataUrl = await new Promise<string>((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = rej; r.readAsDataURL(file); });
+      const img = await new Promise<HTMLImageElement>((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = dataUrl; });
+      let { width, height } = img; const max = 1000;
+      if (width > max || height > max) { const s = max / Math.max(width, height); width = Math.round(width * s); height = Math.round(height * s); }
+      const cv = document.createElement("canvas"); cv.width = width; cv.height = height;
+      cv.getContext("2d")!.drawImage(img, 0, 0, width, height);
+      const out = cv.toDataURL("image/jpeg", 0.72);
+      if (slot === "right") setUploadedRight(out); else setUploadedLeft(out);
+    } catch {}
+  };
+
   const handleIntakeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!uploadedImage) return;
@@ -218,6 +237,7 @@ export default function Analyze() {
         credentials: "include",
         body: JSON.stringify({
           image: uploadedImage,
+          images: [uploadedImage, uploadedRight, uploadedLeft].filter(Boolean),
           area: selectedArea,
           reponses: answers,
           intake: {
@@ -351,7 +371,7 @@ export default function Analyze() {
     setSavedScanId(null);
     setConsultationData(null);
     setAnswers({});
-    setUploadedImage(null);
+    setUploadedImage(null); setUploadedRight(null); setUploadedLeft(null);
     setIntake({ fullName: user?.firstName || "", phone: "", age: "", duration: "", previousProducts: "", allergies: "" });
     setStep("select");
   };
@@ -836,6 +856,35 @@ export default function Analyze() {
                       onFocus={e => (e.target.style.borderColor = "rgba(47,158,110,0.5)")}
                       onBlur={e => (e.target.style.borderColor = "rgba(47,158,110,0.2)")}
                     />
+                  </div>
+
+                  {/* Photos supplémentaires (profils) — optionnel, pour un meilleur diagnostic */}
+                  <div>
+                    <label className="text-xs font-bold block mb-1.5" style={{ color: "#1f2a26" }}>
+                      📸 Ajouter les profils (optionnel — améliore le diagnostic)
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {([
+                        { label: "Profil droit", src: uploadedRight, ref: extraRightRef, slot: "right" as const, clear: () => setUploadedRight(null) },
+                        { label: "Profil gauche", src: uploadedLeft, ref: extraLeftRef, slot: "left" as const, clear: () => setUploadedLeft(null) },
+                      ]).map((s) => (
+                        <div key={s.slot}>
+                          <button type="button" onClick={() => s.ref.current?.click()}
+                            className="w-full rounded-xl overflow-hidden relative"
+                            style={{ aspectRatio: "3/4", border: s.src ? "1px solid rgba(0,0,0,0.1)" : "2px dashed rgba(47,158,110,0.3)", background: "#fff" }}>
+                            {s.src ? <img src={s.src} alt={s.label} className="w-full h-full object-cover" /> : (
+                              <div className="flex flex-col items-center justify-center h-full">
+                                <span style={{ fontSize: 20 }}>＋</span>
+                                <span className="text-[10px] font-extrabold" style={{ color: "#6b7280" }}>{s.label}</span>
+                              </div>
+                            )}
+                          </button>
+                          <input ref={s.ref} type="file" accept="image/*" className="hidden"
+                            onChange={(e) => { handleExtraPhoto(e.target.files?.[0], s.slot); if (e.currentTarget) e.currentTarget.value = ""; }} />
+                          {s.src && <button type="button" onClick={s.clear} className="w-full text-[10px] font-extrabold mt-0.5" style={{ color: "#9ca3af" }}>Retirer</button>}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
 
