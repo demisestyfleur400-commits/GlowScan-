@@ -710,7 +710,16 @@ export async function registerRoutes(
 
   app.post(api.scans.analyze.path, async (req: any, res) => {
     try {
-      const { image, area } = api.scans.analyze.input.parse(req.body);
+      let { image, area } = api.scans.analyze.input.parse(req.body);
+
+      // Multi-angles : le client peut envoyer jusqu'à 3 photos (face, profil droit,
+      // profil gauche) via req.body.images. La 1re sert de photo principale (stockage,
+      // qualité) ; toutes sont envoyées à l'IA pour un diagnostic plus fiable.
+      const rawImages: string[] = Array.isArray((req.body as any)?.images)
+        ? (req.body as any).images.filter((x: any) => typeof x === "string" && x.trim())
+        : [];
+      const imageList: string[] = rawImages.length > 0 ? rawImages : (image ? [image] : []);
+      if (imageList.length > 0) image = imageList[0];
 
       if (!image) {
         return res.status(400).json({ message: "Image is required" });
@@ -981,12 +990,21 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
       //  - max_tokens 1200, response_format json_object
       //  - timeout 30s + maxRetries 0 → un seul essai, on échoue vite
       const dataUrl = `data:${mimeForOpenAI};base64,${rawBase64ForOpenAI}`;
+      // Toutes les images (multi-angles) normalisées pour l'IA.
+      const visionImages = imageList.map((img) => {
+        let mime = "image/jpeg", b64 = img;
+        if (img.startsWith("data:")) { const m = img.match(/^data:([^;]+);base64,(.+)$/); if (m) { mime = m[1]; b64 = m[2]; } }
+        return { mime, b64, dataUrl: `data:${mime};base64,${b64}` };
+      });
+      const multiAngleNote = visionImages.length > 1
+        ? `\n\nTu reçois ${visionImages.length} photos du MÊME patient sous différents angles (face, profil droit, profil gauche). Analyse-les ENSEMBLE et croise les angles pour un diagnostic plus fiable ; ne te limite pas à une seule vue.`
+        : "";
       const callAI = async (extraInstruction = ""): Promise<string> => {
         const t0 = Date.now();
         const baseUserText = isProRequest
           ? "Lis d'abord les antécédents patient dans le system prompt, puis analyse cette photo à leur lumière. Retourne le JSON clinique complet."
           : prompt + patientContext;
-        const userText = baseUserText + fewShotBlock + extraInstruction + "\n\nIMPORTANT : Réponds UNIQUEMENT avec le JSON demandé, sans texte avant ni après.";
+        const userText = baseUserText + fewShotBlock + extraInstruction + multiAngleNote + "\n\nIMPORTANT : Réponds UNIQUEMENT avec le JSON demandé, sans texte avant ni après.";
         let c = "";
         if (USE_GEMINI && gemini) {
           const m = gemini.getGenerativeModel({
@@ -997,7 +1015,7 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
             m.generateContent({
               contents: [{ role: "user", parts: [
                 { text: userText },
-                { inlineData: { mimeType: mimeForOpenAI, data: rawBase64ForOpenAI } },
+                ...visionImages.map((vi) => ({ inlineData: { mimeType: vi.mime, data: vi.b64 } })),
               ]}],
               generationConfig: {
                 responseMimeType: "application/json",
@@ -1020,7 +1038,7 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
                 role: "user",
                 content: [
                   { type: "text", text: userText },
-                  { type: "image_url", image_url: { url: dataUrl } },
+                  ...visionImages.map((vi) => ({ type: "image_url" as const, image_url: { url: vi.dataUrl } })),
                 ],
               },
             ],
