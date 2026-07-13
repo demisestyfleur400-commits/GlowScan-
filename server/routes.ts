@@ -98,6 +98,7 @@ function buildDermResult(a: any) {
   const cp = a?.clinicalProtocol && typeof a.clinicalProtocol === "object" ? a.clinicalProtocol : {};
 
   const out: any = {
+    aiModelVersion: AI_MODEL, // version du modèle IA ayant produit ce diagnostic (traçabilité)
     condition: str(a?.condition, 200) || "Analyse clinique",
     conditionSecondaire: a?.conditionSecondaire === null ? null : str(a?.conditionSecondaire, 200),
     severity: str(a?.severity, 40) || "Modérée",

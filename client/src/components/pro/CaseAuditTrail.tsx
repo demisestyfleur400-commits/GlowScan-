@@ -22,8 +22,20 @@ const fmt = (d: any) => {
   } catch { return ""; }
 };
 
-export function CaseAuditTrail({ scan, modelLabel = "IA GlowScan" }: { scan: ScanLike; modelLabel?: string }) {
+function shortModel(v?: string): string {
+  if (!v) return "IA GlowScan";
+  // "meta-llama/llama-4-scout-17b-16e-instruct" → "IA GlowScan · Llama 4 Scout"
+  const s = v.toLowerCase();
+  if (s.includes("maverick")) return "IA GlowScan · Llama 4 Maverick";
+  if (s.includes("scout")) return "IA GlowScan · Llama 4 Scout";
+  if (s.includes("gemini")) return "IA GlowScan · Gemini";
+  if (s.includes("gpt")) return "IA GlowScan · GPT-4o";
+  return "IA GlowScan";
+}
+
+export function CaseAuditTrail({ scan, modelLabel }: { scan: ScanLike; modelLabel?: string }) {
   const hasExam = !!(scan.clinicalContext && (scan.clinicalContext.examen || scan.clinicalContext.antecedents));
+  const resolvedModel = modelLabel || shortModel(scan.clinicalContext?.modelVersion);
   const corrected = (scan.expertCorrectedCondition || "").trim();
   const isCorrection = !!corrected && corrected.toLowerCase() !== (scan.condition || "").trim().toLowerCase();
 
@@ -34,7 +46,7 @@ export function CaseAuditTrail({ scan, modelLabel = "IA GlowScan" }: { scan: Sca
   }
   steps.push({
     icon: "🤖", color: "#fbbf24",
-    title: `Diagnostic proposé par l'${modelLabel}`,
+    title: `Diagnostic proposé par l'${resolvedModel}`,
     detail: scan.condition || "—",
     date: scan.createdAt,
   });

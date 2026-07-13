@@ -51,6 +51,8 @@ import { buildObservationDoc, type ObservationData } from "@/lib/observationPdf"
 import { VoiceButton } from "@/components/VoiceButton";
 import { ToxicAlert } from "@/components/ToxicAlert";
 import { detectToxicProducts } from "@/lib/toxic-products";
+import { ClinicalRulesPanel } from "@/components/pro/ClinicalRulesPanel";
+import { evaluateRules } from "@/lib/clinicalRules";
 
 const NAVY = "#7c3aed";
 const INK = "#f3f0ff";
@@ -666,6 +668,7 @@ export default function ProAnalyze() {
             questionnaire: answers,
             questionnaireItems: questionnaire,
             antecedents: { problemDuration, previousProducts, allergies, consultMotif }, examen,
+            modelVersion: (result as any)?.aiModelVersion,
             answeredAt: new Date().toISOString(),
           },
         });
@@ -707,6 +710,7 @@ export default function ProAnalyze() {
                 questionnaire: answers,
                 questionnaireItems: questionnaire,
                 antecedents: { problemDuration, previousProducts, allergies, consultMotif }, examen,
+                modelVersion: (result as any)?.aiModelVersion,
                 answeredAt: new Date().toISOString(),
               },
             });
@@ -1589,6 +1593,18 @@ export default function ProAnalyze() {
                   title="Produit nocif identifié dans l'anamnèse"
                   products={detectToxicProducts([previousProducts, clinicalRecord?.atcdCosmeto].filter(Boolean).join(", "))}
                 />
+
+                {/* ── Brique 3 : Protocoles cliniques appliqués (règles) ── */}
+                <ClinicalRulesPanel rules={evaluateRules({
+                  condition: (result as any)?.condition,
+                  severity: (result as any)?.severity,
+                  score: (result as any)?.score,
+                  redFlags: (result as any)?.redFlags,
+                  products: [previousProducts, clinicalRecord?.atcdCosmeto].filter(Boolean).join(", "),
+                  durationText: problemDuration || clinicalRecord?.hmaDebut,
+                  phototype: examen.phototype,
+                  keloidRisk: examen.keloidRisk,
+                })} />
 
                 {/* ── Brique 1 : Trace de raisonnement IA (auditable) ── */}
                 {Array.isArray((result as any)?.reasoningSteps) && (result as any).reasoningSteps.length > 0 && (

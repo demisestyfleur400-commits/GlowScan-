@@ -179,6 +179,7 @@ export const dermAnalysisResponseSchema = z.object({
   photo_quality: z.string().optional(),
 
   clinicalSummary: z.string().optional(),
+  aiModelVersion: z.string().optional(),
 
   reasoningSteps: z.array(z.object({
     observation: z.string().optional(),
