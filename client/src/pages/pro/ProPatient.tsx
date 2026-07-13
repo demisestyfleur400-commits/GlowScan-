@@ -21,6 +21,7 @@ import {
   useUpdatePatientStatus,
 } from "@/hooks/use-pro";
 import { ProLayout, ProCard, ProInput, StatusBadge } from "@/components/ProLayout";
+import { CaseAuditTrail } from "@/components/pro/CaseAuditTrail";
 import PDFViewerModal from "@/components/PDFViewerModal";
 import { useToast } from "@/hooks/use-toast";
 import { LoadingScreen } from "./ProDashboard";
@@ -635,6 +636,11 @@ export default function ProPatient() {
                   </details>
                 );
               })()}
+
+              {/* 🔒 Brique 2 — Journal d'audit du cas (traçabilité) */}
+              <div className="mt-2">
+                <CaseAuditTrail scan={s as any} />
+              </div>
 
               {s.isVerified && (
                 <div
