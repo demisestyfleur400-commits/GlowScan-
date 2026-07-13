@@ -15,7 +15,7 @@ const GREEN = "#10b981";
 
 const MTN_NUMBER = "674377959";
 const ORANGE_NUMBER = "690501392";
-const PRO_PRICE = 30000;
+const PRO_PRICE = 10000;
 
 const DS = {
   surface: DERM.surface,
@@ -327,7 +327,7 @@ export default function ProCabinet() {
                   Essai gratuit · <strong style={{ color: INK }}>{accData.daysLeftTrial} jours restants</strong>
                 </p>
               </div>
-              <p className="text-xs mb-4" style={{ color: DS.muted }}>Continuer après l'essai pour 30 000 FCFA / mois.</p>
+              <p className="text-xs mb-4" style={{ color: DS.muted }}>Continuer après l'essai pour 10 000 FCFA / mois.</p>
               {statusData?.request?.status === "pending" ? (
                 <div
                   className="rounded-xl p-3"
@@ -345,7 +345,7 @@ export default function ProCabinet() {
                   style={{ background: NAVY }}
                 >
                   <Crown className="w-4 h-4" />
-                  S'abonner — 30 000 FCFA / mois
+                  S'abonner — 10 000 FCFA / mois
                 </button>
               )}
             </>
@@ -525,7 +525,7 @@ export default function ProCabinet() {
               {!subRef ? (
                 <>
                   <h3 className="text-lg font-extrabold mb-1" style={{ color: INK }}>Activer mon abonnement Pro</h3>
-                  <p className="text-xs mb-4" style={{ color: DS.muted }}>30 000 FCFA / mois — Mobile Money</p>
+                  <p className="text-xs mb-4" style={{ color: DS.muted }}>10 000 FCFA / mois — Mobile Money</p>
                   <div className="grid grid-cols-2 gap-3 mb-4">
                     {(
                       [

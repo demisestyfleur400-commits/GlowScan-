@@ -196,7 +196,7 @@ export default function ProInscription() {
               Créer mon compte DERM
             </h1>
             <p style={{ fontSize: 14, color: DS.textBody, margin: 0 }}>
-              14 jours d'essai gratuit · sans carte bancaire · 30 000 FCFA/mois ensuite
+              14 jours d'essai gratuit · sans carte bancaire · 10 000 FCFA/mois ensuite
             </p>
           </div>
 

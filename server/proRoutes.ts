@@ -54,7 +54,7 @@ function cacheKey(condition: string, area: string) {
 }
 
 const OWNER_WHATSAPP = "237674377959";
-const PRO_PRICE_FCFA = 30000;
+const PRO_PRICE_FCFA = 10000;
 const TRIAL_DAYS = 14;
 
 // ─────────────────────────────────────────────
@@ -107,7 +107,7 @@ function requireActivePro(req: any, res: any, next: any) {
     if (!(req as any).proActive) {
       return res.status(402).json({
         code: "PRO_SUBSCRIPTION_REQUIRED",
-        message: "Ton essai gratuit est terminé. Abonne-toi pour continuer (30 000 FCFA / mois).",
+        message: "Ton essai gratuit est terminé. Abonne-toi pour continuer (10 000 FCFA / mois).",
       });
     }
     next();
@@ -964,7 +964,7 @@ ${patientScans.length === 0 ? '<p class="meta">Aucune analyse enregistrée.</p>'
   });
 
   // ───────────────────────────────────────────
-  // POST /api/pro/subscribe — demande de paiement abonnement Pro 20k FCFA
+  // POST /api/pro/subscribe — demande de paiement abonnement Pro 10k FCFA
   // (réutilise premiumRequests avec method=mtn_momo / orange_money)
   // ───────────────────────────────────────────
   app.post("/api/pro/subscribe", requirePro, async (req: any, res) => {
@@ -986,7 +986,7 @@ ${patientScans.length === 0 ? '<p class="meta">Aucune analyse enregistrée.</p>'
         phone,
         amount: PRO_PRICE_FCFA,
         status: "pending",
-        note: "GlowScan DERM — Abonnement dermato 30k FCFA/mois",
+        note: "GlowScan DERM — Abonnement dermato 10k FCFA/mois",
       }).returning();
 
       const msg = encodeURIComponent(
