@@ -53,6 +53,7 @@ import { ToxicAlert } from "@/components/ToxicAlert";
 import { detectToxicProducts } from "@/lib/toxic-products";
 import { ClinicalRulesPanel } from "@/components/pro/ClinicalRulesPanel";
 import { evaluateRules } from "@/lib/clinicalRules";
+import { ConfidenceEscalation } from "@/components/pro/ConfidenceEscalation";
 
 const NAVY = "#7c3aed";
 const INK = "#f3f0ff";
@@ -1593,6 +1594,9 @@ export default function ProAnalyze() {
                   title="Produit nocif identifié dans l'anamnèse"
                   products={detectToxicProducts([previousProducts, clinicalRecord?.atcdCosmeto].filter(Boolean).join(", "))}
                 />
+
+                {/* ── Brique 4 : Confiance + escalade ── */}
+                <ConfidenceEscalation result={result} />
 
                 {/* ── Brique 3 : Protocoles cliniques appliqués (règles) ── */}
                 <ClinicalRulesPanel rules={evaluateRules({
