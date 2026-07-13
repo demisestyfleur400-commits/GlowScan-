@@ -568,6 +568,13 @@ export default function ProAnalyze() {
           consultMotif: consultMotif || undefined,
           region: patientRegion || undefined,
           motif: consultMotif || undefined,
+          // Anamnèse oui/non (signes fonctionnels, saisie à l'intake avant l'examen)
+          anamnese: (() => {
+            const cr: any = clinicalRecord || {};
+            const labels: Record<string, string> = { prurit: "Prurit", douleur: "Douleur/brûlure", soleil: "Aggravation au soleil", extension: "Extension des lésions", fievre: "Fièvre", atopie: "Terrain atopique", medicaments: "Médicaments en cours", familial: "Antécédents familiaux cutanés" };
+            const parts = Object.keys(labels).map((k) => cr[`anam_${k}`] ? `${labels[k]} : ${cr[`anam_${k}`]}` : "").filter(Boolean);
+            return parts.length ? parts.join(" · ") : undefined;
+          })(),
           // Examen physique du médecin (documenté AVANT l'IA) → contexte clinique
           examen: {
             phototype: examen.phototype || undefined,

@@ -77,6 +77,19 @@ const SECTIONS: Section[] = [
   },
 ];
 
+// Anamnèse — signes fonctionnels (oui/non), remplis dès l'intake (avant l'examen).
+// Stockés dans le dossier sous la clé anam_<key>.
+const ANAMNESE_YESNO: { key: string; label: string }[] = [
+  { key: "prurit", label: "Démangeaisons (prurit) ?" },
+  { key: "douleur", label: "Douleur ou brûlure ?" },
+  { key: "soleil", label: "Aggravation au soleil ?" },
+  { key: "extension", label: "Les lésions s'étendent-elles ?" },
+  { key: "fievre", label: "Fièvre associée ?" },
+  { key: "atopie", label: "Terrain allergique / atopique ?" },
+  { key: "medicaments", label: "Prise de médicaments en cours ?" },
+  { key: "familial", label: "Antécédents familiaux cutanés ?" },
+];
+
 export function ClinicalDossierForm({ value, onChange }: { value: ClinicalRecord; onChange: (next: ClinicalRecord) => void }) {
   const [open, setOpen] = useState<string>("motif"); // Motif ouvert par défaut
   const set = (k: string, v: string) => onChange({ ...value, [k]: v });
@@ -133,6 +146,46 @@ export function ClinicalDossierForm({ value, onChange }: { value: ClinicalRecord
           </div>
         );
       })}
+
+      {/* ── Anamnèse : signes fonctionnels (oui/non) — avant l'examen ── */}
+      {(() => {
+        const isOpen = open === "anamYesNo";
+        const answered = ANAMNESE_YESNO.filter((q) => (value[`anam_${q.key}`] || "").trim()).length;
+        return (
+          <div style={{ borderRadius: 14, overflow: "hidden", background: "rgba(124,58,237,0.06)", border: "1px solid rgba(124,58,237,0.18)" }}>
+            <button type="button" onClick={() => setOpen(isOpen ? "" : "anamYesNo")}
+              style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", background: "transparent", border: "none", cursor: "pointer", color: INK, fontSize: 13, fontWeight: 800 }}>
+              <span>❓ Anamnèse — signes fonctionnels{answered > 0 ? <span style={{ color: "#a78bfa", marginLeft: 6, fontWeight: 700 }}>· {answered}</span> : null}</span>
+              <span style={{ fontSize: 16, lineHeight: 1, color: "#a78bfa" }}>{isOpen ? "−" : "+"}</span>
+            </button>
+            {isOpen && (
+              <div style={{ padding: "0 14px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
+                {ANAMNESE_YESNO.map((q) => {
+                  const cur = value[`anam_${q.key}`] || "";
+                  return (
+                    <div key={q.key}>
+                      <p style={{ fontSize: 12, fontWeight: 700, color: INK, margin: "0 0 5px" }}>{q.label}</p>
+                      <div style={{ display: "flex", gap: 6 }}>
+                        {[["oui", "Oui", "#6ee7b7", "rgba(16,185,129,0.15)"], ["non", "Non", "#f87171", "rgba(248,113,113,0.15)"], ["nsp", "NSP", "#9ca3af", "rgba(255,255,255,0.06)"]].map(([v, lab, col, bg]) => {
+                          const on = cur === v;
+                          return (
+                            <button key={v} type="button" onClick={() => set(`anam_${q.key}`, on ? "" : (v as string))}
+                              style={{ flex: 1, padding: "8px 0", borderRadius: 10, fontSize: 12, fontWeight: 800, cursor: "pointer",
+                                background: on ? (bg as string) : "rgba(255,255,255,0.03)", color: on ? (col as string) : "#6b7280",
+                                border: on ? `1px solid ${col}` : "1px solid rgba(255,255,255,0.08)" }}>
+                              {lab}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 }
