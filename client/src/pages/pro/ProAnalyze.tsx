@@ -1589,6 +1589,29 @@ export default function ProAnalyze() {
                   title="Produit nocif identifié dans l'anamnèse"
                   products={detectToxicProducts([previousProducts, clinicalRecord?.atcdCosmeto].filter(Boolean).join(", "))}
                 />
+
+                {/* ── Brique 1 : Trace de raisonnement IA (auditable) ── */}
+                {Array.isArray((result as any)?.reasoningSteps) && (result as any).reasoningSteps.length > 0 && (
+                  <div className="mb-4 rounded-2xl overflow-hidden" style={{ background: "rgba(124,58,237,0.06)", border: "1px solid rgba(167,139,250,0.2)" }}>
+                    <div className="px-4 py-3" style={{ borderBottom: "1px solid rgba(167,139,250,0.15)" }}>
+                      <p className="text-xs font-extrabold uppercase tracking-wider" style={{ color: "#a78bfa" }}>🧠 Trace de raisonnement de l'IA</p>
+                      <p className="text-[10px] mt-0.5" style={{ color: DS.muted }}>Chaque étape est indicative — votre jugement prime.</p>
+                    </div>
+                    <div className="p-3 space-y-2.5">
+                      {(result as any).reasoningSteps.map((s: any, i: number) => (
+                        <div key={i} className="flex gap-2.5">
+                          <span className="flex-shrink-0 w-5 h-5 rounded-full text-[10px] font-extrabold flex items-center justify-center" style={{ background: "rgba(124,58,237,0.2)", color: "#c4b5fd" }}>{i + 1}</span>
+                          <div className="text-[11.5px] leading-relaxed" style={{ color: INK }}>
+                            {s.observation && <p><span style={{ color: "#6ee7b7", fontWeight: 700 }}>Observation :</span> {s.observation}</p>}
+                            {s.rule && <p style={{ color: DS.body }}><span style={{ color: "#fbbf24", fontWeight: 700 }}>Règle :</span> {s.rule}</p>}
+                            {s.conclusion && <p><span style={{ color: "#a78bfa", fontWeight: 700 }}>→ Conclusion :</span> {s.conclusion}</p>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <Suspense fallback={
                   <div className="flex justify-center py-12">
                     <Loader2 className="w-6 h-6 animate-spin" style={{ color: NAVY }} />

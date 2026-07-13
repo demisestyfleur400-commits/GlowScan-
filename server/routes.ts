@@ -106,6 +106,13 @@ function buildDermResult(a: any) {
     skinType: str(a?.skinType, 200),
     photo_quality: str(a?.photo_quality, 40),
     clinicalSummary: str(a?.clinicalSummary, 3000),
+    reasoningSteps: Array.isArray(a?.reasoningSteps)
+      ? a.reasoningSteps.slice(0, 6).map((s: any) => ({
+          observation: str(s?.observation, 600) || "",
+          rule: str(s?.rule, 600) || "",
+          conclusion: str(s?.conclusion, 600) || "",
+        })).filter((s: any) => s.observation || s.rule || s.conclusion)
+      : [],
     zonesAnalysis: Array.isArray(a?.zonesAnalysis)
       ? a.zonesAnalysis.slice(0, 10).map((z: any) => ({
           zone: str(z?.zone, 60) || "Zone",

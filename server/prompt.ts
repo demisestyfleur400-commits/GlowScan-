@@ -413,6 +413,9 @@ RÈGLES DE RAISONNEMENT CLINIQUE
 - Si l'image ne permet pas de conclure : retourner cas non conclu.
 - Sévérité réelle : dis "acné modérée" et non "quelques imperfections".
 - Chaque constat doit être suivi d'un mécanisme physiologique explicatif.
+- TRACE DE RAISONNEMENT : renseigne "reasoningSteps" avec 2 à 5 étapes traçables
+  (observation → règle/mécanisme → conclusion) qui montrent COMMENT tu arrives à
+  ton diagnostic. Le médecin doit pouvoir auditer et corriger chaque étape.
 
 ══════════════════════════════════════════════
 PRIMAUTÉ DE L'EXAMEN DU MÉDECIN (POIDS ~90%)
@@ -661,6 +664,14 @@ Le rapport doit être exploitable en consultation — lisible, précis, structur
   "photo_quality": "bonne | acceptable | limitée",
 
   "clinicalSummary": "4–5 phrases cliniques structurées",
+
+  "reasoningSteps": [
+    {
+      "observation": "Ce que TU observes concrètement (signe visible ou donnée de l'examen/antécédents)",
+      "rule": "La règle clinique ou le mécanisme physiopathologique qui s'applique",
+      "conclusion": "Ce que tu en déduis (hypothèse, orientation)"
+    }
+  ],
 
   "zonesAnalysis": [
     {

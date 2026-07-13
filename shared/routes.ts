@@ -180,6 +180,12 @@ export const dermAnalysisResponseSchema = z.object({
 
   clinicalSummary: z.string().optional(),
 
+  reasoningSteps: z.array(z.object({
+    observation: z.string().optional(),
+    rule: z.string().optional(),
+    conclusion: z.string().optional(),
+  }).passthrough()).optional(),
+
   zonesAnalysis: z.array(z.object({
     zone: z.string(),
     status: z.string().optional(),
