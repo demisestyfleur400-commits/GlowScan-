@@ -17,7 +17,6 @@ if (process.env.NODE_ENV === "production") {
   });
 }
 
-import ReconnectBanner from "@/components/ReconnectBanner";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import PWAInstallBanner from "@/components/PWAInstallBanner";
 
@@ -152,7 +151,6 @@ function App() {
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
-          <ReconnectBanner />
           <Router />
           <PWAInstallBanner />
           <Toaster />
