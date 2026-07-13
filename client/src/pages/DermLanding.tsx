@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import {
   Clock, FileText, Users, CheckCircle2, MessageCircle, ArrowRight,
   Sparkles, Brain, Shield, TrendingUp, Star,
 } from "lucide-react";
 import { useSEO } from "@/hooks/useSEO";
+import { useProAccount } from "@/hooks/use-pro";
 
 const DS = {
   bg: "#0d0a0e",
@@ -138,6 +139,15 @@ export default function DermLanding() {
     description: "Plateforme IA de diagnostic dermatologique pour professionnels. Analysez vos patients, générez des rapports cliniques et suivez vos dossiers — expertise dédiée aux peaux africaines.",
     canonical: "https://glow-scan.com/derm",
   });
+
+  // Déjà connecté ? → on ne montre PAS la landing marketing, on renvoie direct
+  // vers l'espace (le médecin reste connecté 30 jours, plus besoin de re-login).
+  const [, setLocation] = useLocation();
+  const { data: accData } = useProAccount();
+  useEffect(() => {
+    if (accData?.account) setLocation("/derm/dashboard");
+    else if (accData?.user?.role === "secretary") setLocation("/derm/patients");
+  }, [accData]);
 
   // Preuve sociale dynamique : nombre réel de dermatologues inscrits
   const [partnerCount, setPartnerCount] = useState<number | null>(null);
