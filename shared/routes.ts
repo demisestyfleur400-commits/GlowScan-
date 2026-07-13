@@ -56,7 +56,8 @@ export const api = {
       method: 'POST' as const,
       path: '/api/analyze' as const,
       input: z.object({
-        image: z.string(), // Base64 or URL
+        image: z.string(), // Base64 or URL (photo principale)
+        images: z.array(z.string()).optional(), // multi-angles (face, profil D, profil G)
         area: z.enum(['face', 'body', 'hair']),
       }),
       responses: {

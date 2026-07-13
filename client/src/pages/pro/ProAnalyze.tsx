@@ -352,10 +352,15 @@ export default function ProAnalyze() {
   const [sex, setSex] = useState<"F" | "M" | "—">("—");
   const [phone, setPhone] = useState("");
 
-  // Step 2 : Photo
+  // Step 2 : Photos (multi-angles). photoBase64 = portrait/face (principale).
   const [photoBase64, setPhotoBase64] = useState<string | null>(null);
+  const [photoRight, setPhotoRight] = useState<string | null>(null); // profil droit
+  const [photoLeft, setPhotoLeft] = useState<string | null>(null);   // profil gauche
   const [photoSize, setPhotoSize] = useState<number>(0);
+  const [examArea, setExamArea] = useState<"face" | "body">("face"); // rubrique : visage ou corps
   const fileRef = useRef<HTMLInputElement>(null);
+  const fileRefRight = useRef<HTMLInputElement>(null);
+  const fileRefLeft = useRef<HTMLInputElement>(null);
   // Fonction de génération du PDF unifié (B2C + pages médicales), exposée par ResultCard
   const pdfFnRef = useRef<(() => void) | null>(null);
   const [dragOver, setDragOver] = useState(false);
@@ -528,20 +533,18 @@ export default function ProAnalyze() {
     setStep(2);
   };
 
-  // ─── Step 2 : upload + compression ─────────────────────────────────
-  const handleFile = async (file: File | undefined | null) => {
+  // ─── Step 2 : upload + compression (par angle) ─────────────────────
+  const handleFile = async (file: File | undefined | null, slot: "face" | "right" | "left" = "face") => {
     if (!file) return;
     if (!file.type.startsWith("image/")) {
       toast({ title: "Format invalide", description: "Image uniquement", variant: "destructive" });
       return;
     }
     try {
-      const t0 = performance.now();
       const { base64, sizeKb } = await compressImage(file);
-      const dt = Math.round(performance.now() - t0);
-      setPhotoBase64(base64);
-      setPhotoSize(sizeKb);
-      toast({ title: "Photo optimisée", description: `${sizeKb} Ko · ${dt} ms` });
+      if (slot === "right") setPhotoRight(base64);
+      else if (slot === "left") setPhotoLeft(base64);
+      else { setPhotoBase64(base64); setPhotoSize(sizeKb); }
     } catch (err: any) {
       toast({ title: "Erreur compression", description: err.message, variant: "destructive" });
     }
@@ -557,7 +560,8 @@ export default function ProAnalyze() {
     try {
       const r = await analyze.mutateAsync({
         image: photoBase64,
-        area: "face",
+        images: [photoBase64, photoRight, photoLeft].filter(Boolean) as string[],
+        area: examArea,
         intake: {
           fullName: `${firstName} ${lastName}`.trim() || undefined,
           phone: phone || undefined,
@@ -1263,7 +1267,7 @@ export default function ProAnalyze() {
     setPatientMode("choice");
     setPatient(null); setPatientId(null);
     setLastName(""); setFirstName(""); setAge(""); setSex("—"); setPhone("");
-    setPhotoBase64(null); setPhotoSize(0);
+    setPhotoBase64(null); setPhotoRight(null); setPhotoLeft(null); setPhotoSize(0); setExamArea("face");
     setResult(null);
     setQuestionnaire([]); setAnswers({});
     setDossierSaved(false); setDatasetSent(false); setSavingDossier(false);
@@ -1489,60 +1493,54 @@ export default function ProAnalyze() {
               <ExamenPhysiqueForm value={examen} onChange={setExamen} />
             </div>
 
-            <p className="text-xs font-extrabold mb-2 px-1" style={{ color: "#a78bfa" }}>📷 Photo clinique</p>
-            {!photoBase64 ? (
-              <div
-                onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-                onDragLeave={() => setDragOver(false)}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  setDragOver(false);
-                  handleFile(e.dataTransfer.files[0]);
-                }}
-                onClick={() => fileRef.current?.click()}
-                data-testid="dropzone"
-                className="rounded-2xl p-10 text-center cursor-pointer transition-all"
-                style={{
-                  border: `2px dashed ${dragOver ? NAVY : "rgba(167,139,250,0.3)"}`,
-                  background: dragOver ? "rgba(124,58,237,0.08)" : "rgba(255,255,255,0.03)",
-                }}
-              >
-                <Upload className="w-8 h-8 mx-auto mb-2" style={{ color: dragOver ? NAVY : "rgba(200,185,255,0.4)" }} />
-                <p className="text-sm font-extrabold" style={{ color: INK }}>Cliquez ou déposez la photo ici</p>
-                <p className="text-[11px] mt-1" style={{ color: DS.muted }}>Compression auto vers WebP &lt; 500 Ko</p>
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/*"
-                  onChange={(e) => handleFile(e.target.files?.[0])}
-                  className="hidden"
-                  data-testid="input-file"
-                />
-              </div>
-            ) : (
-              <div>
-                <div
-                  className="relative rounded-2xl overflow-hidden mb-3"
-                  style={{ border: `1px solid ${DS.border}` }}
-                >
-                  <img src={photoBase64} alt="aperçu" className="w-full h-64 object-cover" data-testid="img-preview" />
-                  <span
-                    className="absolute top-2 right-2 px-2 py-1 rounded-lg text-[11px] font-extrabold"
-                    style={{ background: "rgba(16,185,129,0.15)", border: "1px solid rgba(16,185,129,0.3)", color: "#6ee7b7" }}
-                  >
-                    {photoSize} Ko · WebP
-                  </span>
-                </div>
-                <button
-                  onClick={() => { setPhotoBase64(null); setPhotoSize(0); }}
-                  className="w-full text-xs font-extrabold py-1 mb-3"
-                  style={{ color: DS.muted }}
-                  data-testid="button-replace"
-                >
-                  Remplacer la photo
+            {/* Rubrique : Visage ou Corps */}
+            <div className="flex gap-2 mb-3">
+              {([["face", "🙂 Visage"], ["body", "🧍 Corps"]] as const).map(([v, lab]) => (
+                <button key={v} type="button" onClick={() => setExamArea(v)}
+                  className="flex-1 py-2 rounded-xl text-xs font-extrabold transition-all"
+                  style={examArea === v
+                    ? { background: "rgba(124,58,237,0.18)", border: "1.5px solid rgba(124,58,237,0.5)", color: "#c4b5fd" }
+                    : { background: "rgba(255,255,255,0.03)", border: `1px solid ${DS.border}`, color: DS.muted }}>
+                  {lab}
                 </button>
-              </div>
-            )}
+              ))}
+            </div>
+
+            <p className="text-xs font-extrabold mb-2 px-1" style={{ color: "#a78bfa" }}>
+              📷 Photos cliniques <span style={{ color: DS.muted }}>— portrait requis, profils recommandés</span>
+            </p>
+            <div className="grid grid-cols-3 gap-2 mb-3">
+              {([
+                { key: "face" as const, label: "Portrait", src: photoBase64, ref: fileRef, set: (v: string | null) => { setPhotoBase64(v); if (!v) setPhotoSize(0); } },
+                { key: "right" as const, label: "Profil D", src: photoRight, ref: fileRefRight, set: setPhotoRight },
+                { key: "left" as const, label: "Profil G", src: photoLeft, ref: fileRefLeft, set: setPhotoLeft },
+              ]).map((slot) => (
+                <div key={slot.key}>
+                  <button type="button" onClick={() => slot.ref.current?.click()}
+                    className="w-full rounded-xl overflow-hidden relative"
+                    style={{ aspectRatio: "3/4", border: slot.src ? `1px solid ${DS.border}` : "2px dashed rgba(167,139,250,0.3)", background: "rgba(255,255,255,0.03)" }}>
+                    {slot.src ? (
+                      <img src={slot.src} alt={slot.label} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-full">
+                        <Upload className="w-5 h-5 mb-1" style={{ color: "rgba(200,185,255,0.4)" }} />
+                        <span className="text-[10px] font-extrabold" style={{ color: DS.muted }}>+ {slot.label}</span>
+                      </div>
+                    )}
+                  </button>
+                  <p className="text-[10px] text-center mt-1 font-extrabold" style={{ color: slot.src ? "#6ee7b7" : DS.muted }}>
+                    {slot.label}{slot.src ? " ✓" : ""}
+                  </p>
+                  <input ref={slot.ref} type="file" accept="image/*" className="hidden"
+                    onChange={(e) => { handleFile(e.target.files?.[0], slot.key); if (e.currentTarget) e.currentTarget.value = ""; }} />
+                  {slot.src && (
+                    <button type="button" onClick={() => slot.set(null)} className="w-full text-[10px] font-extrabold mt-0.5" style={{ color: DS.muted }}>
+                      Retirer
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
 
             <div className="flex gap-2 mt-3">
               <button
