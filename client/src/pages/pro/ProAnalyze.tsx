@@ -941,6 +941,18 @@ export default function ProAnalyze() {
       // 16 · Évolution / pronostic
       evolution: prognostic,
       practitionerNotes: practitionerNotes?.trim() || undefined,
+      // ── Briques Norm Ai ──
+      confidence: r.confidence || undefined,
+      modelVersion: (r as any).aiModelVersion || undefined,
+      reasoningSteps: Array.isArray((r as any).reasoningSteps) ? (r as any).reasoningSteps : undefined,
+      appliedRules: evaluateRules({
+        condition: r.condition, severity: r.severity, score: r.score, redFlags,
+        products: [previousProducts, clinicalRecord?.atcdCosmeto].filter(Boolean).join(", "),
+        durationText: problemDuration || clinicalRecord?.hmaDebut,
+        phototype: examen.phototype, keloidRisk: examen.keloidRisk,
+      }),
+      validatedBy: doctorName && doctorName !== "—" ? `Dr ${doctorName}` : undefined,
+      validatedAt: date,
     };
     return buildObservationDoc(obs);
 
@@ -2080,52 +2092,16 @@ export default function ProAnalyze() {
                     )}
                   </div>
 
-                  {/* Actions */}
-                  {/* ── Choix du rapport (Étape 7) ── */}
-                  <div className="mb-3">
-                    <p className="text-[10px] font-extrabold uppercase tracking-wider mb-2" style={{ color: DS.muted }}>
-                      Type de rapport remis au patient
-                    </p>
-                    <div className="grid grid-cols-3 gap-2">
-                      {([
-                        { v: "fusionne", label: "Fusionné", sub: "IA + clinique" },
-                        { v: "clinique", label: "Clinique", sub: "médecin seul" },
-                        { v: "ia", label: "IA", sub: "analyse seule" },
-                      ] as const).map((opt) => {
-                        const on = reportMode === opt.v;
-                        return (
-                          <button
-                            key={opt.v}
-                            onClick={() => setReportMode(opt.v)}
-                            data-testid={`report-mode-${opt.v}`}
-                            className="py-2 px-2 rounded-xl text-center transition-all active:scale-[0.97]"
-                            style={on
-                              ? { background: "rgba(16,185,129,0.12)", border: "1.5px solid rgba(16,185,129,0.5)" }
-                              : { background: "rgba(255,255,255,0.03)", border: `1px solid ${DS.border}` }}
-                          >
-                            <span className="block text-xs font-extrabold" style={{ color: on ? "#6ee7b7" : DS.body }}>{opt.label}</span>
-                            <span className="block text-[9px] mt-0.5" style={{ color: DS.muted }}>{opt.sub}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* ── Bouton principal PDF ── */}
+                  {/* Actions — Rapport clinique = observation médicale UNIQUEMENT
+                      (plus de pages patient B2C collées en haut). */}
                   <button
-                    onClick={() => {
-                      // Clinique seul → template clinique pur (generateClassicPdfHtml via openPdfViewer).
-                      // Fusionné / IA seul → PDF ResultCard (la section médicale est omise en mode IA).
-                      if (reportMode === "clinique") { openPdfViewer(); }
-                      else if (pdfFnRef.current) { pdfFnRef.current(); }
-                      else { openPdfViewer(); } // filet de secours
-                    }}
+                    onClick={() => openPdfViewer()}
                     data-testid="button-pdf"
                     className="w-full inline-flex items-center justify-center gap-2 py-3.5 rounded-full text-white font-extrabold active:scale-[0.98] transition-all mb-3"
                     style={{ background: NAVY, fontSize: 14 }}
                   >
                     <FileText className="w-4 h-4" />
-                    {reportMode === "clinique" ? "Voir le rapport clinique" : reportMode === "ia" ? "Voir le rapport IA" : "Voir le rapport complet"}
+                    Voir le rapport clinique
                   </button>
                   <p className="text-[11px] text-center mb-4" style={{ color: DS.muted }}>
                     Résultats de la consultation · Dr {lastName || "..."} — Modifier · Envoyer · Télécharger

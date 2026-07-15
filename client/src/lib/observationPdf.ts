@@ -123,6 +123,14 @@ export interface ObservationData {
 
   // Notes libres du praticien (optionnel)
   practitionerNotes?: string;
+
+  // ── Briques « Norm Ai » (IA augmentée + traçabilité) ──
+  confidence?: string;                                             // niveau de confiance IA
+  modelVersion?: string;                                           // version du modèle (audit)
+  reasoningSteps?: { observation?: string; rule?: string; conclusion?: string }[];
+  appliedRules?: { level?: string; label?: string; action?: string }[];
+  validatedBy?: string;                                            // médecin ayant validé
+  validatedAt?: string;                                            // date de validation
 }
 
 const TEAL = "#1a3a3a";
@@ -157,6 +165,35 @@ const group = (subtitle: string, ...parts: string[]): string => {
   const inner = parts.filter((p) => p && p.trim()).join("");
   if (!inner.trim()) return "";
   return `<div style="font-size:9.5px;font-weight:800;color:${TEAL};text-transform:uppercase;letter-spacing:.4px;margin:8px 0 5px">${esc(subtitle)}</div>${inner}`;
+};
+
+// Brique 1 — trace de raisonnement (observation → règle → conclusion).
+const reasoningHtml = (steps?: { observation?: string; rule?: string; conclusion?: string }[]): string => {
+  if (!steps || steps.length === 0) return "";
+  return steps.map((s, i) => `
+    <div style="margin-bottom:8px;padding-bottom:8px;${i < steps.length - 1 ? "border-bottom:1px solid #eef0f2;" : ""}">
+      <div style="font-size:9px;font-weight:800;color:${TEAL};text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">Étape ${i + 1}</div>
+      ${s.observation ? `<div style="font-size:10.5px;color:#111;line-height:1.6"><b>Observation :</b> ${esc(s.observation)}</div>` : ""}
+      ${s.rule ? `<div style="font-size:10.5px;color:#374151;line-height:1.6"><b>Règle :</b> ${esc(s.rule)}</div>` : ""}
+      ${s.conclusion ? `<div style="font-size:10.5px;color:#111;line-height:1.6"><b>→ Conclusion :</b> ${esc(s.conclusion)}</div>` : ""}
+    </div>`).join("");
+};
+
+// Brique 3 — protocoles cliniques appliqués (règles déclenchées).
+const rulesHtml = (rules?: { level?: string; label?: string; action?: string }[]): string => {
+  if (!rules || rules.length === 0) return "";
+  return rules.map((r) => {
+    const col = r.level === "urgent" ? "#dc2626" : r.level === "important" ? "#d97706" : "#7c3aed";
+    const tag = r.level === "urgent" ? "URGENT" : r.level === "important" ? "IMPORTANT" : "INFO";
+    return `<div style="display:flex;gap:8px;margin-bottom:7px">
+      <span style="color:${col};font-weight:900;font-size:12px;flex-shrink:0">✓</span>
+      <div style="font-size:10.5px;line-height:1.6">
+        <span style="font-size:8px;font-weight:800;color:${col};border:1px solid ${col}66;border-radius:3px;padding:1px 5px;margin-right:5px">${tag}</span>
+        <b style="color:#111">${esc(r.label || "")}</b>
+        <div style="color:#374151;margin-top:2px">→ ${esc(r.action || "")}</div>
+      </div>
+    </div>`;
+  }).join("");
 };
 
 // Rendu pur d'une carte-rubrique (le numéro est calculé par l'appelant).
@@ -289,9 +326,14 @@ ${rubric("Résumé syndromique", freeText(d.resumeSyndromique))}
 ${rubric("Hypothèses diagnostiques",
   row("Diagnostic principal", d.hypotheses),
   row("Diagnostic secondaire", d.hypothesesSecondaire),
+  row("Niveau de confiance (IA)", d.confidence),
 )}
 
+${rubric("Raisonnement clinique assisté (IA)", reasoningHtml(d.reasoningSteps))}
+
 ${rubric("Diagnostics différentiels", freeText(d.differentiels))}
+
+${rubric("Protocoles cliniques appliqués", rulesHtml(d.appliedRules))}
 
 ${rubric("Examens paracliniques", freeText(d.paracliniques))}
 
@@ -311,15 +353,28 @@ ${rubric("Notes & conclusion du praticien", freeText(d.practitionerNotes))}
  * Document PDF autonome complet (mode « Clinique seul »).
  */
 export function buildObservationDoc(d: ObservationData): string {
+  const modelShort = !d.modelVersion ? "IA GlowScan"
+    : /maverick/i.test(d.modelVersion) ? "IA GlowScan · Llama 4 Maverick"
+    : /scout/i.test(d.modelVersion) ? "IA GlowScan · Llama 4 Scout"
+    : /gemini/i.test(d.modelVersion) ? "IA GlowScan · Gemini" : "IA GlowScan";
+
   const header = `
   <div style="text-align:center;border-bottom:2px solid ${TEAL};padding-bottom:10px;margin-bottom:14px">
     <div style="font-size:17px;font-weight:900;color:${TEAL};letter-spacing:.5px">OBSERVATION MÉDICALE</div>
     <div style="font-size:10px;color:#6b7280;margin-top:3px">${esc(d.cabinetName || "Cabinet de dermatologie")}${d.doctorCity ? " · " + esc(d.doctorCity) : ""}</div>
+    <div style="font-size:8px;color:#9ca3af;margin-top:3px;letter-spacing:.3px">Rapport clinique assisté par IA · validation et responsabilité du praticien</div>
+  </div>`;
+
+  // Brique 2 — traçabilité : qui a proposé / validé, avec quelle version.
+  const trace = `
+  <div style="margin-top:16px;background:#f7faf9;border:1px solid #d8e4e1;border-radius:6px;padding:8px 12px;font-size:8.5px;color:#374151;line-height:1.6">
+    <b style="color:${TEAL}">Traçabilité —</b> Diagnostic proposé par ${esc(modelShort)}${d.validatedBy ? ` · Validé/corrigé par <b>${esc(d.validatedBy)}</b>` : " · <b>en attente de validation médecin</b>"}${d.validatedAt ? ` le ${esc(d.validatedAt)}` : ""}. Le diagnostic validé par le praticien fait foi.
   </div>`;
 
   const footer = `
-  <div style="margin-top:18px;border-top:1px solid #d1d5db;padding-top:10px;display:flex;justify-content:space-between;align-items:flex-end">
-    <div style="font-size:8.5px;color:#9ca3af;max-width:60%;line-height:1.5">Document médical confidentiel établi et validé par le praticien soussigné · À usage strictement professionnel · À conserver dans le dossier médical du patient.</div>
+  ${trace}
+  <div style="margin-top:14px;border-top:1px solid #d1d5db;padding-top:10px;display:flex;justify-content:space-between;align-items:flex-end">
+    <div style="font-size:8.5px;color:#9ca3af;max-width:55%;line-height:1.5">Document médical confidentiel établi et validé par le praticien soussigné · À usage strictement professionnel · À conserver dans le dossier médical du patient.</div>
     <div style="text-align:center">
       <div style="font-size:9px;color:#6b7280;margin-bottom:28px">Signature et cachet du médecin</div>
       <div style="border-top:1px solid #374151;width:150px"></div>
