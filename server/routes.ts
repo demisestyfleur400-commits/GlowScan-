@@ -26,9 +26,12 @@ const _geminiKey  = process.env.GEMINI_API_KEY || "";
 const _openaiKey  = process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY || "";
 const _openaiBase = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || process.env.OPENAI_BASE_URL || undefined;
 
-const USE_GROQ   = !!_groqKey;
-const USE_GEMINI = !USE_GROQ && !!_geminiKey;
-const AI_PROVIDER   = USE_GROQ ? "Groq" : USE_GEMINI ? "Gemini" : "OpenAI";
+// ⚠️ Groq décommissionne Llama 4 Scout le 17/07/2026 (seul modèle VISION dispo sur
+// la clé) et Maverick n'y est pas accessible. → On PRIORISE Gemini pour l'IA dès
+// qu'une clé Gemini existe. Groq reste dispo pour l'audio (Whisper, non concerné).
+const USE_GEMINI = !!_geminiKey;
+const USE_GROQ   = !USE_GEMINI && !!_groqKey;
+const AI_PROVIDER   = USE_GEMINI ? "Gemini" : USE_GROQ ? "Groq" : "OpenAI";
 // Modèle Groq VISION. Maverick (llama-4-maverick-17b-128e) n'est PAS accessible
 // sur la clé actuelle (404) → on reste sur Scout, seul modèle vision disponible,
 // fonctionnel jusqu'au décommissionnement Groq (17/07/2026).
@@ -54,6 +57,15 @@ const openai = !USE_GEMINI ? new OpenAI({
   apiKey:  USE_GROQ ? _groqKey : (_openaiKey || "sk-missing"),
   baseURL: USE_GROQ ? "https://api.groq.com/openai/v1" : (_openaiBase || undefined),
   timeout: USE_GROQ ? 180000 : 60000, // 3min for Groq, 1min for OpenAI
+}) : null;
+
+// Client Groq DÉDIÉ à l'audio (Whisper), indépendant du provider IA. Reste
+// disponible même quand l'IA texte/vision est sur Gemini. Whisper n'est pas
+// concerné par le décommissionnement de Scout.
+const groqAudio = _groqKey ? new OpenAI({
+  apiKey: _groqKey,
+  baseURL: "https://api.groq.com/openai/v1",
+  timeout: 180000,
 }) : null;
 
 /**
@@ -521,8 +533,10 @@ export async function registerRoutes(
   // enregistre l'audio côté client puis on le transcrit ici. Auto FR/EN.
   app.post("/api/transcribe", async (req: any, res) => {
     try {
-      if (!openai) {
-        return res.status(503).json({ message: "Transcription indisponible (fournisseur non configuré)." });
+      // Whisper : Groq en priorité (dédié audio), sinon le client openai courant.
+      const audioClient = groqAudio || openai;
+      if (!audioClient) {
+        return res.status(503).json({ message: "Transcription indisponible (clé Groq/OpenAI manquante)." });
       }
       const { audioBase64, mimeType } = req.body || {};
       if (!audioBase64 || typeof audioBase64 !== "string") {
@@ -544,8 +558,8 @@ export async function registerRoutes(
       const cleanType = (mimeType || "audio/webm").split(";")[0];
       const { toFile } = await import("openai");
       const file = await toFile(buffer, `audio.${ext}`, { type: cleanType });
-      const model = process.env.TRANSCRIBE_MODEL || (USE_GROQ ? "whisper-large-v3-turbo" : "whisper-1");
-      const tr: any = await openai.audio.transcriptions.create({ file, model, language: "fr" } as any);
+      const model = process.env.TRANSCRIBE_MODEL || (groqAudio ? "whisper-large-v3-turbo" : "whisper-1");
+      const tr: any = await audioClient.audio.transcriptions.create({ file, model, language: "fr" } as any);
       res.json({ text: (tr?.text || "").trim() });
     } catch (err: any) {
       const detail = err?.error?.message || err?.response?.data?.error?.message || err?.message || String(err);
