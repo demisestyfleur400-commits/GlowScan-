@@ -24,7 +24,8 @@ const PRO_USE_GROQ   = !!_proGroqKey;
 const PRO_USE_GEMINI = !PRO_USE_GROQ && !!_proGeminiKey;
 // Maverick non accessible sur la clé (404) → Scout, seul modèle vision dispo
 // (décommissionné le 17/07/2026). Surcharge via GROQ_MODEL env quand Maverick activé.
-const PRO_GROQ_MODEL = process.env.GROQ_MODEL || "meta-llama/llama-4-maverick-17b-128e-instruct";
+// Questionnaire DERM = texte seul → modèle texte fiable (Scout/Maverick supprimés).
+const PRO_GROQ_MODEL = process.env.GROQ_MODEL || "llama-3.3-70b-versatile";
 const PRO_AI_MODEL   = PRO_USE_GROQ ? PRO_GROQ_MODEL
                      : PRO_USE_GEMINI ? "gemini-2.0-flash" : "gpt-4o-mini";
 

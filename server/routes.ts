@@ -35,7 +35,9 @@ const AI_PROVIDER   = USE_GROQ ? "Groq" : USE_GEMINI ? "Gemini" : "OpenAI";
 // fonctionnel jusqu'au décommissionnement Groq (17/07/2026).
 // ⚠️ Dès que Maverick est activé sur le compte Groq, définir la variable Railway
 // GROQ_MODEL=meta-llama/llama-4-maverick-17b-128e-instruct (aucun redéploiement code).
-const GROQ_MODEL    = process.env.GROQ_MODEL || "meta-llama/llama-4-maverick-17b-128e-instruct";
+// Scout/Maverick ne sont plus accessibles sur la clé → seul modèle VISION restant
+// chez Groq : le système multimodal Compound. compound-mini = plus rapide.
+const GROQ_MODEL    = process.env.GROQ_MODEL || "groq/compound-mini";
 const AI_MODEL      = USE_GROQ ? GROQ_MODEL : USE_GEMINI ? "gemini-2.0-flash" : "gpt-4o";
 const AI_MODEL_FAST = USE_GROQ ? GROQ_MODEL : USE_GEMINI ? "gemini-2.0-flash" : "gpt-4o-mini";
 
@@ -1057,7 +1059,11 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
           // Timeout = client init (180s Groq / 60s OpenAI).
           // maxRetries: 0 → un seul essai, on échoue vite (comportement B2C
           // d'origine). Sans ça le SDK retente 2× en silence et ralentit tout.
-          const r = await openai.chat.completions.create({
+          // Les systèmes agentiques Groq (groq/compound*) ne supportent pas
+          // response_format json_object → on l'omet pour eux (le JSON est extrait
+          // du texte par le parseur robuste plus bas).
+          const isCompound = /compound/i.test(AI_MODEL);
+          const req: any = {
             model: AI_MODEL,
             messages: [
               { role: "system", content: activeSystemPrompt },
@@ -1071,8 +1077,9 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
             ],
             max_tokens: 4500,
             temperature: 0.2,
-            response_format: { type: "json_object" },
-          }, { maxRetries: 0 });
+          };
+          if (!isCompound) req.response_format = { type: "json_object" };
+          const r = await openai.chat.completions.create(req, { maxRetries: 0 });
           c = r.choices[0]?.message?.content || "";
           console.log(`[analyze] finish: ${r.choices[0]?.finish_reason}`);
         } else {
