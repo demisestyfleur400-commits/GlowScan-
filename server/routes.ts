@@ -26,10 +26,12 @@ const _geminiKey  = process.env.GEMINI_API_KEY || "";
 const _openaiKey  = process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY || "";
 const _openaiBase = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || process.env.OPENAI_BASE_URL || undefined;
 
-// Priorité Groq (choix utilisateur) → Gemini → OpenAI.
-const USE_GROQ   = !!_groqKey;
-const USE_GEMINI = !USE_GROQ && !!_geminiKey;
-const AI_PROVIDER   = USE_GROQ ? "Groq" : USE_GEMINI ? "Gemini" : "OpenAI";
+// TEMPORAIRE : Gemini prioritaire (Groq n'a plus de modèle vision sur la clé —
+// Scout/Maverick supprimés, Compound KO). Groq reste dispo pour l'audio (Whisper).
+// Repasser Groq prioritaire quand Maverick sera débloqué (tier payant).
+const USE_GEMINI = !!_geminiKey;
+const USE_GROQ   = !USE_GEMINI && !!_groqKey;
+const AI_PROVIDER   = USE_GEMINI ? "Gemini" : USE_GROQ ? "Groq" : "OpenAI";
 // Modèle Groq VISION. Maverick (llama-4-maverick-17b-128e) n'est PAS accessible
 // sur la clé actuelle (404) → on reste sur Scout, seul modèle vision disponible,
 // fonctionnel jusqu'au décommissionnement Groq (17/07/2026).
