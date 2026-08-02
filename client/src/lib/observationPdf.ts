@@ -124,6 +124,11 @@ export interface ObservationData {
   // Notes libres du praticien (optionnel)
   practitionerNotes?: string;
 
+  // ── Triage (Triage Engineering) ──
+  triageLabel?: string;
+  triageColor?: string;
+  triageReason?: string;
+
   // ── Briques « Norm Ai » (IA augmentée + traçabilité) ──
   confidence?: string;                                             // niveau de confiance IA
   modelVersion?: string;                                           // version du modèle (audit)
@@ -241,8 +246,16 @@ export function buildObservationSections(d: ObservationData): string {
         </div>
       </div>`
     : "";
+  const triageBar = d.triageLabel ? `
+  <div style="border-radius:8px;padding:9px 14px;margin-bottom:14px;background:${(d.triageColor || "#059669")}14;border:1px solid ${(d.triageColor || "#059669")}55">
+    <span style="font-size:8.5px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:${d.triageColor || "#059669"}">Triage</span>
+    <div style="font-size:13px;font-weight:900;color:#111;margin-top:1px">${esc(d.triageLabel)}</div>
+    ${d.triageReason ? `<div style="font-size:9.5px;color:#6b7280;margin-top:1px">${esc(d.triageReason)}</div>` : ""}
+  </div>` : "";
+
   return `
 ${banner}
+${triageBar}
 ${rubric("Identification",
   row("Nom et prénom", d.patientName),
   row("Date de naissance", d.dateNaissance),

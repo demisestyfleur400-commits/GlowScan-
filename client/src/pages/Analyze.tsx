@@ -11,6 +11,8 @@ import { UpgradeModal } from "@/components/UpgradeModal";
 import { ConsentBanner, hasUserConsented } from "@/components/ConsentBanner";
 import { ToxicAlert } from "@/components/ToxicAlert";
 import { PRODUCT_SUGGESTIONS, detectToxicProducts } from "@/lib/toxic-products";
+import { TriageBadge } from "@/components/TriageBadge";
+import { classifyTriage } from "@/lib/clinicalRules";
 
 // ResultCard est énorme (~1900 lignes) — on le charge seulement quand on en a besoin
 const ResultCard = lazy(() =>
@@ -998,6 +1000,16 @@ export default function Analyze() {
               exit={{ opacity: 0 }}
               className="space-y-5"
             >
+              {/* 🚦 Triage — Urgence / À orienter / Suivi standard */}
+              <TriageBadge dark={false} triage={classifyTriage({
+                condition: (result as any)?.condition,
+                severity: (result as any)?.severity,
+                score: (result as any)?.score,
+                redFlags: (result as any)?.redFlags,
+                products: intake.previousProducts,
+                durationText: intake.duration,
+                phototype: ((result as any)?.skinType || "").match(/\b(IV|V|VI)\b/)?.[1],
+              })} />
               {/* ⚠️ Alerte produits nocifs — en haut du résultat, additionnelle */}
               <ToxicAlert products={detectToxicProducts(intake.previousProducts)} />
               <Suspense fallback={
