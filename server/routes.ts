@@ -26,26 +26,33 @@ const _geminiKey  = process.env.GEMINI_API_KEY || "";
 const _openaiKey  = process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY || "";
 const _openaiBase = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || process.env.OPENAI_BASE_URL || undefined;
 
-// TEMPORAIRE : Gemini prioritaire (Groq n'a plus de modèle vision sur la clé —
-// Scout/Maverick supprimés, Compound KO). Groq reste dispo pour l'audio (Whisper).
-// Repasser Groq prioritaire quand Maverick sera débloqué (tier payant).
-const USE_GEMINI = !!_geminiKey;
-const USE_GROQ   = !USE_GEMINI && !!_groqKey;
-const AI_PROVIDER   = USE_GEMINI ? "Gemini" : USE_GROQ ? "Groq" : "OpenAI";
-// Modèle Groq VISION. Maverick (llama-4-maverick-17b-128e) n'est PAS accessible
-// sur la clé actuelle (404) → on reste sur Scout, seul modèle vision disponible,
-// fonctionnel jusqu'au décommissionnement Groq (17/07/2026).
-// ⚠️ Dès que Maverick est activé sur le compte Groq, définir la variable Railway
-// GROQ_MODEL=meta-llama/llama-4-maverick-17b-128e-instruct (aucun redéploiement code).
-// Scout/Maverick ne sont plus accessibles sur la clé → seul modèle VISION restant
-// chez Groq : le système multimodal Compound. compound-mini = plus rapide.
-const GROQ_MODEL    = process.env.GROQ_MODEL || "groq/compound-mini";
+// Choix du provider. Groq a de nouveau un modèle VISION (Qwen 3.6 27B,
+// qwen/qwen3.6-27b) + un free tier généreux → il redevient prioritaire par
+// défaut. Gemini (free tier vite saturé, 429) reste en secours.
+// Override explicite via Railway : AI_PROVIDER=groq|gemini|openai (ignore la
+// priorité si la clé correspondante est présente).
+const _forceProvider = (process.env.AI_PROVIDER || "").toLowerCase();
+const _canGroq = !!_groqKey, _canGemini = !!_geminiKey, _canOpenAI = !!_openaiKey;
+let USE_GROQ = false, USE_GEMINI = false;
+if (_forceProvider === "groq" && _canGroq) USE_GROQ = true;
+else if (_forceProvider === "gemini" && _canGemini) USE_GEMINI = true;
+else if (_forceProvider === "openai" && _canOpenAI) { /* openai */ }
+else if (_canGroq) USE_GROQ = true;          // défaut : Groq prioritaire (vision de retour)
+else if (_canGemini) USE_GEMINI = true;      // secours : Gemini
+const AI_PROVIDER   = USE_GROQ ? "Groq" : USE_GEMINI ? "Gemini" : "OpenAI";
+// Modèle Groq VISION — Qwen 3.6 27B (qwen/qwen3.6-27b). Configurable via
+// GROQ_MODEL dans Railway sans redéploiement.
+const GROQ_MODEL    = process.env.GROQ_MODEL || "qwen/qwen3.6-27b";
 // Modèle Gemini configurable via Railway (GEMINI_MODEL) sans redéploiement.
 // Défaut : gemini-2.5-flash — quota gratuit journalier SÉPARÉ de la 2.0-flash,
 // donc si la 2.0 est saturée (429), basculer la variable débloque l'analyse.
 const GEMINI_MODEL  = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 const AI_MODEL      = USE_GROQ ? GROQ_MODEL : USE_GEMINI ? GEMINI_MODEL : "gpt-4o";
 const AI_MODEL_FAST = USE_GROQ ? GROQ_MODEL : USE_GEMINI ? GEMINI_MODEL : "gpt-4o-mini";
+// Modèles de raisonnement (compound, qwen, deepseek, gpt-oss…) : ils ne
+// supportent pas response_format=json_object → on l'omet et le JSON est extrait
+// du texte par le parseur robuste. Sinon l'appel Groq échoue (400).
+const AI_IS_REASONING = /compound|qwen|reasoning|deepseek|gpt-oss/i.test(AI_MODEL);
 
 if (!_groqKey && !_geminiKey && !_openaiKey) {
   console.error("⚠️  IA : aucune clé trouvée (GROQ_API_KEY, GEMINI_API_KEY ou OPENAI_API_KEY manquante)");
@@ -1070,7 +1077,6 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
           // Les systèmes agentiques Groq (groq/compound*) ne supportent pas
           // response_format json_object → on l'omet pour eux (le JSON est extrait
           // du texte par le parseur robuste plus bas).
-          const isCompound = /compound/i.test(AI_MODEL);
           const req: any = {
             model: AI_MODEL,
             messages: [
@@ -1086,7 +1092,7 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
             max_tokens: 4500,
             temperature: 0.2,
           };
-          if (!isCompound) req.response_format = { type: "json_object" };
+          if (!AI_IS_REASONING) req.response_format = { type: "json_object" };
           const r = await openai.chat.completions.create(req, { maxRetries: 0 });
           c = r.choices[0]?.message?.content || "";
           console.log(`[analyze] finish: ${r.choices[0]?.finish_reason}`);
@@ -3544,7 +3550,7 @@ Ne mentionne JAMAIS la qualité de l'image.`;
           }],
           max_tokens: 800,
           temperature: 0.3,
-          response_format: { type: "json_object" },
+          ...(AI_IS_REASONING ? {} : { response_format: { type: "json_object" as const } }),
         }, { timeout: 30000, maxRetries: 0 });
         raw = response.choices[0]?.message?.content || "";
       } else {
@@ -4031,7 +4037,7 @@ Règles : pas de marque, pas d'ingrédient interdit en Afrique, ton chaleureux, 
         messages: [{ role: "user", content: prompt }],
         max_tokens: 400,
         temperature: 0.7,
-        response_format: { type: "json_object" },
+        ...(AI_IS_REASONING ? {} : { response_format: { type: "json_object" as const } }),
       });
       const raw = completion.choices[0]?.message?.content || "{}";
       let parsed: any = {};
@@ -4158,7 +4164,7 @@ Réponds UNIQUEMENT avec ce JSON strict (rien d'autre) :
         const response = await openai.chat.completions.create({
           model: AI_MODEL,
           temperature: 0.4,
-          response_format: { type: "json_object" },
+          ...(AI_IS_REASONING ? {} : { response_format: { type: "json_object" as const } }),
           max_tokens: 600,
           messages: [
             { role: "system", content: consultSystemPrompt },

@@ -19,15 +19,20 @@ const _proGroqKey   = process.env.GROQ_API_KEY || "";
 const _proGeminiKey = process.env.GEMINI_API_KEY || "";
 const _proOpenaiKey = process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY || "";
 const _proOpenaiBase = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || undefined;
-// TEMPORAIRE : Gemini prioritaire (Groq sans modèle vision sur la clé).
-const PRO_USE_GEMINI = !!_proGeminiKey;
-const PRO_USE_GROQ   = !PRO_USE_GEMINI && !!_proGroqKey;
-// Maverick non accessible sur la clé (404) → Scout, seul modèle vision dispo
-// (décommissionné le 17/07/2026). Surcharge via GROQ_MODEL env quand Maverick activé.
-// Questionnaire DERM = texte seul → modèle texte fiable (Scout/Maverick supprimés).
-const PRO_GROQ_MODEL = process.env.GROQ_MODEL || "llama-3.3-70b-versatile";
+// Même sélection que routes.ts : override AI_PROVIDER, sinon Groq prioritaire.
+const _proForce = (process.env.AI_PROVIDER || "").toLowerCase();
+let PRO_USE_GROQ = false, PRO_USE_GEMINI = false;
+if (_proForce === "groq" && _proGroqKey) PRO_USE_GROQ = true;
+else if (_proForce === "gemini" && _proGeminiKey) PRO_USE_GEMINI = true;
+else if (_proForce === "openai" && _proOpenaiKey) { /* openai */ }
+else if (_proGroqKey) PRO_USE_GROQ = true;
+else if (_proGeminiKey) PRO_USE_GEMINI = true;
+// Questionnaire/aide DERM = TEXTE seul → modèle texte dédié (GROQ_TEXT_MODEL),
+// INDÉPENDANT de GROQ_MODEL (qui porte le modèle VISION qwen). Évite qu'un
+// modèle de raisonnement casse response_format sur les appels texte pro.
+const PRO_GROQ_MODEL = process.env.GROQ_TEXT_MODEL || "llama-3.3-70b-versatile";
 const PRO_AI_MODEL   = PRO_USE_GROQ ? PRO_GROQ_MODEL
-                     : PRO_USE_GEMINI ? "gemini-2.0-flash" : "gpt-4o-mini";
+                     : PRO_USE_GEMINI ? (process.env.GEMINI_MODEL || "gemini-2.5-flash") : "gpt-4o-mini";
 
 // Gemini native SDK (uniquement sans clé Groq)
 const proGemini = PRO_USE_GEMINI ? new GoogleGenerativeAI(_proGeminiKey) : null;
