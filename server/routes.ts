@@ -40,8 +40,12 @@ const AI_PROVIDER   = USE_GEMINI ? "Gemini" : USE_GROQ ? "Groq" : "OpenAI";
 // Scout/Maverick ne sont plus accessibles sur la clé → seul modèle VISION restant
 // chez Groq : le système multimodal Compound. compound-mini = plus rapide.
 const GROQ_MODEL    = process.env.GROQ_MODEL || "groq/compound-mini";
-const AI_MODEL      = USE_GROQ ? GROQ_MODEL : USE_GEMINI ? "gemini-2.0-flash" : "gpt-4o";
-const AI_MODEL_FAST = USE_GROQ ? GROQ_MODEL : USE_GEMINI ? "gemini-2.0-flash" : "gpt-4o-mini";
+// Modèle Gemini configurable via Railway (GEMINI_MODEL) sans redéploiement.
+// Défaut : gemini-2.5-flash — quota gratuit journalier SÉPARÉ de la 2.0-flash,
+// donc si la 2.0 est saturée (429), basculer la variable débloque l'analyse.
+const GEMINI_MODEL  = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+const AI_MODEL      = USE_GROQ ? GROQ_MODEL : USE_GEMINI ? GEMINI_MODEL : "gpt-4o";
+const AI_MODEL_FAST = USE_GROQ ? GROQ_MODEL : USE_GEMINI ? GEMINI_MODEL : "gpt-4o-mini";
 
 if (!_groqKey && !_geminiKey && !_openaiKey) {
   console.error("⚠️  IA : aucune clé trouvée (GROQ_API_KEY, GEMINI_API_KEY ou OPENAI_API_KEY manquante)");
@@ -1691,6 +1695,16 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
       // Retourner une vraie erreur — pas de fausse analyse.
       // `detail` = message brut du fournisseur (Groq) pour diagnostiquer (ex. modèle
       // introuvable/décommissionné, clé, quota). Affiché temporairement côté client.
+      // Quota gratuit du fournisseur épuisé (429 / rate limit) → message clair,
+      // pas le dump technique. L'utilisateur comprend qu'il faut patienter.
+      const isQuota = /429|too many requests|quota|rate limit|resource_exhausted/i.test(errMsg);
+      if (isQuota) {
+        return res.status(429).json({
+          code: "AI_QUOTA",
+          message: "Le service d'analyse est momentanément saturé. Réessaie dans quelques minutes 🙏",
+        });
+      }
+
       return res.status(503).json({
         code: "AI_UNAVAILABLE",
         message: "Erreur de connexion — réessayez",

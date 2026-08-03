@@ -294,6 +294,16 @@ export default function Analyze() {
           setStep("upload");
           return;
         }
+        if (analyzeRes.status === 429 && errBody.code === "AI_QUOTA") {
+          setIsAnalyzing(false);
+          toast({
+            title: "Service saturé — réessaie bientôt",
+            description: errBody.message || "Le service d'analyse est momentanément saturé. Réessaie dans quelques minutes.",
+            variant: "destructive",
+          });
+          setStep("upload");
+          return;
+        }
         if (analyzeRes.status === 503 && errBody.code === "AI_UNAVAILABLE") {
           setIsAnalyzing(false);
           toast({
