@@ -836,6 +836,7 @@ export async function registerRoutes(
       // Pour le mode B2C, ils sont injectés dans le message utilisateur
       const patientIntakeData = intake ? JSON.stringify({
         age: intake.age,
+        sexe: (intake as any).sexe,
         duration: intake.duration,
         previousProducts: intake.previousProducts,
         allergies: intake.allergies,
@@ -851,6 +852,7 @@ export async function registerRoutes(
 DOSSIER PATIENT — INFORMATIONS CLINIQUES
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ${intake.age ? `• Âge de la patiente : ${intake.age}` : ""}
+${(intake as any).sexe ? `• Sexe : ${(intake as any).sexe}` : ""}
 ${intake.duration ? `• Problème présent depuis : ${intake.duration}` : ""}
 ${intake.previousProducts?.trim() ? `• Produits / crèmes déjà utilisés : ${intake.previousProducts}` : "• Aucun produit déjà utilisé mentionné"}
 ${intake.allergies?.trim() ? `• Allergies cutanées connues : ${intake.allergies}` : "• Aucune allergie connue signalée"}
@@ -1554,6 +1556,43 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
             autoClassifiedAt: new Date().toISOString(),
           };
 
+          // ── Chantier n°1 : labels démographiques peuplés dès l'insertion ──────
+          // Sans ces champs, le dataset "peau africaine" n'est ni mesurable ni
+          // entraînable. On les dérive du dossier d'intake + du mode d'analyse.
+          // Phototype : IA (extractPhototype) faute d'annotation médecin, tracé
+          // via skinPhototype (colonne) ; la source reste dans l'annotation.
+          const skinPhototypeVal: string | null =
+            (r.skinPhototype || phototype || null) as string | null;
+
+          // Tranche d'âge normalisée à partir de l'âge libre saisi (ex "25 ans" → "26-35" ? non : "18-25").
+          const deriveAgeRange = (raw?: string): string | null => {
+            if (!raw) return null;
+            const m = String(raw).match(/\d{1,3}/);
+            if (!m) return null;
+            const n = parseInt(m[0], 10);
+            if (isNaN(n) || n <= 0 || n > 120) return null;
+            if (n < 18) return "0-17";
+            if (n <= 25) return "18-25";
+            if (n <= 35) return "26-35";
+            if (n <= 45) return "36-45";
+            if (n <= 60) return "46-60";
+            return "60+";
+          };
+          const ageRangeVal = deriveAgeRange((intake as any)?.age);
+
+          // Sexe : non collecté en B2C ; capté si présent (intake DERM / futur champ), sinon null honnête.
+          const rawSex = String((intake as any)?.sexe || (intake as any)?.sex || (intake as any)?.gender || "").toLowerCase();
+          const patientSexVal: string | null =
+            /^f|femme|female/.test(rawSex) ? "female" :
+            /^h|^m|homme|male/.test(rawSex) ? "male" :
+            rawSex ? "other" : null;
+
+          // Pays / localisation : région saisie à l'intake.
+          const countryVal: string | null = ((intake as any)?.region || null) as string | null;
+
+          // Zone anatomique analysée (face / body / hair).
+          const bodyAreaVal: string | null = (area || null) as string | null;
+
           await db.insert(trainingData).values({
             scanId: savedScanId,
             mode: isProMode ? "B2B" : "B2C",
@@ -1567,8 +1606,12 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
             score: r.score || null,
             severity: r.severity || null,
             confidence: r.confidence || null,
-            skinState: null,
-            skinPhototype: null,
+            skinState: r.skinState || null,
+            skinPhototype: skinPhototypeVal,
+            ageRange: ageRangeVal,
+            patientSex: patientSexVal,
+            country: countryVal,
+            bodyArea: bodyAreaVal,
             balance: r.balance || null,
             redFlags: r.redFlags || null,
             details: r.details || null,

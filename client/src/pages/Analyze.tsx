@@ -50,6 +50,7 @@ interface PatientIntake {
   fullName: string;
   phone: string;
   age: string;
+  sexe: string;
   duration: string;
   previousProducts: string;
   allergies: string;
@@ -105,6 +106,7 @@ export default function Analyze() {
     fullName: user?.firstName || "",
     phone: "",
     age: "",
+    sexe: "",
     duration: "",
     previousProducts: "",
     allergies: "",
@@ -246,6 +248,7 @@ export default function Analyze() {
             fullName: intake.fullName.trim() || undefined,
             phone: intake.phone.trim() || undefined,
             age: intake.age || undefined,
+            sexe: intake.sexe || undefined,
             duration: intake.duration || undefined,
             previousProducts: intake.previousProducts.trim() || undefined,
             allergies: intake.allergies.trim() || undefined,
@@ -766,6 +769,25 @@ export default function Analyze() {
                       <option value="31-40 ans">31 – 40 ans</option>
                       <option value="41-50 ans">41 – 50 ans</option>
                       <option value="plus de 50 ans">Plus de 50 ans</option>
+                    </select>
+                  </div>
+
+                  {/* Sexe */}
+                  <div>
+                    <label className="text-xs font-bold block mb-1.5" style={{ color: "#1f2a26" }}>
+                      🧍 Sexe <span style={{ color: "#2f9e6e" }}>*</span>
+                    </label>
+                    <select
+                      required
+                      value={intake.sexe}
+                      onChange={e => updateIntake("sexe", e.target.value)}
+                      className="w-full px-3.5 py-2.5 text-xs font-medium outline-none transition-colors"
+                      style={{ background: "#ffffff", border: "1px solid rgba(47,158,110,0.2)", borderRadius: "10px", color: intake.sexe ? "#1f2a26" : "rgba(0,0,0,0.35)" }}
+                    >
+                      <option value="" disabled>Sélectionne</option>
+                      <option value="femme">Femme</option>
+                      <option value="homme">Homme</option>
+                      <option value="autre">Autre / je préfère ne pas dire</option>
                     </select>
                   </div>
                 </div>

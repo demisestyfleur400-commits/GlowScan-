@@ -796,7 +796,23 @@ export function registerProRoutes(app: Express) {
         lastName: "(consultation en ligne)",
         intakePending: false,
       }).returning();
-      res.json({ patientId: p.id });
+
+      // ── Chantier n°2 : boucle prédiction IA ↔ vérité terrain ──────────────
+      // Le scan B2C d'origine (photo + diagnostic IA de la consultation) est
+      // rattaché au dossier patient créé. Le dermato le retrouve dans le dossier,
+      // peut le valider/corriger, et training_data récupère la ground truth du
+      // MÊME individu. Sans ça, la prédiction B2C restait orpheline.
+      if (c.scanId) {
+        try {
+          await db.update(scans)
+            .set({ patientId: p.id })
+            .where(and(eq(scans.id, c.scanId), sql`${scans.patientId} IS NULL`));
+        } catch (linkErr) {
+          console.warn("[pro/consultations to-patient] rattachement scan échoué:", (linkErr as any)?.message);
+        }
+      }
+
+      res.json({ patientId: p.id, scanLinked: !!c.scanId });
     } catch (err) {
       console.error("[pro/consultations to-patient] error:", err);
       res.status(500).json({ message: "Erreur serveur" });
