@@ -12,10 +12,6 @@ import { catalog, formatPrice, type Product } from "@shared/catalog";
 import type { FeaturedProduct } from "@shared/schema";
 
 import tipPhoto from "../lib/IMG_0122.webp";
-import cardSkinbotPhoto from "../lib/IMG_0139.webp";
-import cardNutrimentsPhoto from "../lib/IMG_0140.webp";
-import cardRoutinePhoto from "../lib/IMG_0133.webp";
-import cardEvolutionPhoto from "../lib/IMG_0131.webp";
 
 import { productImages } from "@/lib/productImages";
 
@@ -176,40 +172,6 @@ function CircularScore({ score, color }: { score: number; color: string }) {
 // ─────────────────────────────────────────────────────────────────────────
 //  Knowledge cards data
 // ─────────────────────────────────────────────────────────────────────────
-const KNOWLEDGE_CARDS = [
-  {
-    photo: cardSkinbotPhoto,
-    title: "Analyse Continue IA",
-    text: "Mieux que quiconque. Pose-lui tes questions techniques — réponses calibrées sur TON profil cutané.",
-    cta: "Interroger SkinBot",
-    path: "/chat",
-    testid: "GlowScan AI",
-  },
-  {
-    photo: cardNutrimentsPhoto,
-    title: "Matrice des nutriments",
-    text: "GlowScan évalue l'impact biochimique de ton alimentation sur la barrière épidermique.",
-    cta: "Analyser mes nutriments",
-    path: "/nutriment-scan",
-    testid: "nutriments",
-  },
-  {
-    photo: cardRoutinePhoto,
-    title: "Protocoles sur-mesure",
-    text: "Aucun traitement générique. Chaque recommandation répond strictement à tes besoins cellulaires.",
-    cta: "Accéder au protocole",
-    path: "/routine",
-    testid: "routine",
-  },
-  {
-    photo: cardEvolutionPhoto,
-    title: "Suivi évolutif 48h",
-    text: "Mesure les variations microscopiques et l'amélioration de tes indices d'analyse jour après jour.",
-    cta: "Consulter les métriques",
-    path: "/profile?tab=evolution",
-    testid: "evolution",
-  },
-];
 
 const LOCAL_PRODUCT_IMAGES: Record<string, string> = productImages;
 
@@ -255,7 +217,6 @@ const EXPLORER_ITEMS: MenuItem[] = [
   { kind: "link", label: "Mon profil", desc: "Configuration de session, métriques, droits", path: "/profile", icon: <User className="w-4 h-4" style={{ color: DS.violetMid }} strokeWidth={1.5} /> },
   { kind: "link", label: "Scanner ma peau", desc: "Acquisition optique et diagnostic IA", path: "/analyze", icon: <ScanLine className="w-4 h-4" style={{ color: DS.violetMid }} strokeWidth={1.5} /> },
   { kind: "link", label: "SkinBot Engine", desc: "Agent conversationnel d'assistance", path: "/chat", icon: <Bot className="w-4 h-4" style={{ color: DS.violetMid }} strokeWidth={1.5} /> },
-  { kind: "link", label: "Analyse des nutriments", desc: "Évaluation de l'impact nutritionnel", path: "/nutriment-scan", icon: <Apple className="w-4 h-4" style={{ color: DS.violetMid }} strokeWidth={1.5} /> },
   { kind: "link", label: "Boutique clinique", desc: "Formulations adaptées à vos indices", path: "/shop", icon: <ShoppingBag className="w-4 h-4" style={{ color: DS.violetMid }} strokeWidth={1.5} /> },
   { kind: "link", label: "Protocole de soin", desc: "Planification d'application matin & soir", path: "/routine", icon: <ListChecks className="w-4 h-4" style={{ color: DS.violetMid }} strokeWidth={1.5} /> },
   { kind: "link", label: "Courbe d'évolution", desc: "Visualisation des variations biométriques", path: "/profile?tab=evolution", icon: <TrendingUp className="w-4 h-4" style={{ color: DS.violetMid }} strokeWidth={1.5} /> },
@@ -760,91 +721,6 @@ export default function Home() {
           </section>
         </SlideLeft>
 
-        {/* ─── Section 4: Knowledge cards ─── */}
-        <FadeUp delay={0.22}>
-          <section data-testid="section-knowledge">
-            <div className="mb-3 px-1 flex items-center gap-2">
-              <div
-                className="w-5 h-5 rounded-full flex items-center justify-center"
-                style={{ background: "rgba(47,158,110,0.15)" }}
-              >
-                <Sparkles className="w-3 h-3" style={{ color: DS.violetMid }} strokeWidth={1.5} />
-              </div>
-              <h2 className="text-sm font-bold" style={{ color: DS.textBody }}>Explorer</h2>
-            </div>
-
-            <div
-              className="flex gap-3 overflow-x-auto pb-3 -mx-4 px-4 snap-x snap-mandatory"
-              style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}
-            >
-              {KNOWLEDGE_CARDS.map((card, i) => (
-                <motion.div
-                  key={card.testid}
-                  initial={{ opacity: 0, x: 40 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={VIEW}
-                  transition={{ duration: 0.4, delay: i * 0.08, ease: EASE }}
-                  className="min-w-[260px] max-w-[260px] snap-start overflow-hidden relative flex flex-col text-left"
-                  style={{
-                    background: "rgba(47,158,110,0.06)",
-                    border: "1px solid rgba(47,158,110,0.18)",
-                    borderRadius: "24px",
-                  }}
-                  data-testid={`knowledge-card-${card.testid}`}
-                >
-                  <div
-                    className="relative w-full h-36 overflow-hidden"
-                    style={{ background: DS.element }}
-                  >
-                    <img
-                      src={card.photo}
-                      alt={card.title}
-                      className="w-full h-full object-cover opacity-70"
-                      loading="lazy"
-                      decoding="async"
-                    />
-                    <div
-                      className="absolute inset-0"
-                      style={{ background: "linear-gradient(to top, rgba(13,10,14,0.95) 0%, transparent 55%)" }}
-                    />
-                    <div className="absolute bottom-3 left-3 right-3">
-                      <p
-                        className="text-xs font-extrabold tracking-tight"
-                        style={{ color: DS.textPrimary }}
-                      >
-                        {card.title}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="p-4 flex-1 flex flex-col justify-between">
-                    <p
-                      className="text-[11px] leading-relaxed font-medium mb-4"
-                      style={{ color: DS.textBody }}
-                    >
-                      {card.text}
-                    </p>
-                    {/* Secondary button */}
-                    <button
-                      onClick={() => setLocation(card.path)}
-                      data-testid={`button-knowledge-${card.testid}`}
-                      className="w-full py-3 text-[10px] font-extrabold active:scale-95 transition-all"
-                      style={{
-                        background: "rgba(0,0,0,0.08)",
-                        border: "1px solid rgba(0,0,0,0.15)",
-                        borderRadius: "9999px",
-                        color: DS.textPrimary,
-                        letterSpacing: "0.05em",
-                      }}
-                    >
-                      Accéder au module
-                    </button>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </section>
-        </FadeUp>
 
         {/* ─── Section 5: Pro dermatologist CTA ─── */}
         <FadeUp delay={0.28}>
