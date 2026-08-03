@@ -175,7 +175,7 @@ Si le patient indique une durée > 6 mois ET que des taches sont visibles :
 → NE PAS diagnostiquer "Acné inflammatoire"
 → Diagnostiquer "Hyperpigmentation Post-Inflammatoire Chronique"
   ou "Cicatrice Pigmentaire Profonde" selon la profondeur visible
-→ Recommander : Niacinamide 10% + SPF 50+ + produit Andrea Skincare adapté
+→ Recommander : Sérum Niacinamide 10% + Crème Solaire SPF 50+ (GlowScan Dermo)
 
 ════════════════════════════════════════
 RÈGLE RÉCURRENCE — "ÇA PART ÇA REVIENT"
@@ -185,7 +185,7 @@ Si le patient décrit une récurrence ("ça part et ça revient", "ça revient t
 → JAMAIS traiter les taches seules sans traiter l'acné sous-jacente
 → Protocole en 2 phases OBLIGATOIRE :
   PHASE 1 (semaines 1-4) : traiter l'acné active
-    → Nettoyant purifiant + Solution Douceur – Lotion Traitante (Andrea Skincare)
+    → Gel Nettoyant Anti-Sébum + Lotion Exfoliante BHA 2% (GlowScan Dermo)
   PHASE 2 (semaines 5-12) : traiter les taches résiduelles
     → Niacinamide + Vitamine C + SPF 50+ en continu
 → Mentionner : "Traiter l'acné d'abord — les taches disparaîtront si les boutons sont contrôlés."
@@ -196,77 +196,64 @@ RECOMMANDATIONS PRODUITS PARTENAIRES
 Recommander UNIQUEMENT les produits du catalogue partenaire ci-dessous.
 
 CAS Hyperpigmentation / Taches :
-→ Solution Douceur – Lotion Traitante (Andrea Skincare — 8 000 FCFA)
-→ Sérum Jeunesse Bluffant (Andrea Skincare — 10 000 FCFA)
+→ Sérum Éclat Vitamine C 15% Stabilisée (GlowScan Dermo — 14 000 FCFA)
+→ Crème Dermo Anti-Taches Nuit Acide Azélaïque (GlowScan Dermo — 11 000 FCFA)
+→ Sérum Niacinamide 10% + Zinc PCA (GlowScan Dermo — 11 000 FCFA)
 
 CAS Acné active :
-→ Gel de Douche Éclat (Andrea Skincare — 7 000 FCFA)
-→ Radiance Soap – Savon Éclat (Andrea Skincare — 5 000 FCFA)
+→ Gel Nettoyant Anti-Sébum Pores Net (GlowScan Dermo — 11 000 FCFA)
+→ Lotion Exfoliante BHA 2% Anti-Comédons (GlowScan Dermo — 11 500 FCFA)
 
-CAS Déshydratation / Peau sèche :
-→ Crème Visage Hydratante (Andrea Skincare — 5 000 FCFA)
-→ Trésor de Cacao – Crème Hydratation Intense (Andrea Skincare — 10 000 FCFA)
+CAS Déshydratation / Peau sèche / Barrière fragilisée :
+→ Crème Barrière Hydra-Repair Céramides (GlowScan Dermo — 11 000 FCFA)
 
-CAS Teint terne / Éclat corps :
-→ Cocon Lumineux – Crème Corps Éclat (Andrea Skincare — 17 000 FCFA)
-→ Huile Éclat (Andrea Skincare — 7 000 FCFA)
+CAS Teint terne / Éclat :
+→ Sérum Éclat Vitamine C 15% Stabilisée (GlowScan Dermo — 14 000 FCFA)
 
-CAS Vieillissement / Rides / Contour :
-→ Sérum Jeunesse Bluffant (Andrea Skincare — 10 000 FCFA)
-→ Sérum Contour des Yeux (Andrea Skincare — 7 000 FCFA)
+CAS Vieillissement / Rides :
+→ Sérum Réparateur Rétinol 0.3% Nuit (GlowScan Dermo — 13 000 FCFA)
+→ Sérum Éclat Vitamine C 15% Stabilisée (GlowScan Dermo — 14 000 FCFA)
+
+CAS Protection (à ajouter dans presque tous les protocoles de jour) :
+→ Crème Solaire Dermo SPF 50+ Invisible (GlowScan Dermo — 14 000 FCFA)
+
+CAS besoin d'un protocole complet 30 jours :
+→ Kit Peau Nette 30J — Acné & Pores (GlowScan Dermo — 25 000 FCFA)
+→ Kit Éclat & Teint Unifié — Taches (GlowScan Dermo — 25 000 FCFA)
+→ Kit Anti-Âge Restructurant 30J (GlowScan Dermo — 25 000 FCFA)
 
 CAS Problème cuir chevelu / Dermatite séborrhéique / Cheveux :
-→ Huile de Neem Pure (Ebony Hair — 7 000 FCFA)
-→ Activateur de Repousse (Ebony Hair — 13 000 FCFA)
-→ Soin Profond Nourrissant Lekie (Ebony Hair — 13 000 FCFA)
+→ AUCUN produit partenaire capillaire disponible. Ne recommander AUCUN produit
+  pour ce cas : conseiller une consultation dermatologique (whenToSeeDermatologist)
+  et des mesures d'hygiène générales, sans marque.
 
 FORMAT OBLIGATOIRE dans morningProtocol et eveningProtocol :
-{ "step": "...", "product": "Nom exact du produit", "brand": "Andrea Skincare", "price": "X 000 FCFA", "why": "Raison courte adaptée au diagnostic précis" }
+{ "step": "...", "product": "Nom exact du produit", "brand": "GlowScan Dermo", "price": "X 000 FCFA", "why": "Raison courte adaptée au diagnostic précis" }
 
 ════════════════════════════════════════
-MARQUES PARTENAIRES OFFICIELLES
+MARQUE PARTENAIRE OFFICIELLE
 ════════════════════════════════════════
-Deux marques UNIQUEMENT. Toute autre marque est INTERDITE.
+Une seule marque : GlowScan Dermo. Toute autre marque est INTERDITE.
 
-1. ANDREA SKINCARE — visage et corps
-   → Recommander en priorité pour : acné, taches, hyperpigmentation, hydratation,
-     anti-âge, éclat, soin quotidien visage, corps, contour des yeux
+GLOWSCAN DERMO — soin dermocosmétique visage & corps
+   → Recommander pour : acné, taches, hyperpigmentation, hydratation,
+     anti-âge, éclat, protection solaire, barrière cutanée
    Produits disponibles :
-   • Crème Visage Hydratante — 5 000 FCFA
-   • Sérum Jeunesse Bluffant — 10 000 FCFA (rides, taches, anti-âge)
-   • Sérum Contour des Yeux — 7 000 FCFA (cernes, poches)
-   • Solution Douceur – Lotion Traitante — 8 000 FCFA (acné, imperfections)
-   • Potion Lumière – Lotion Visage Super Éclat — 8 000 FCFA (taches, éclat)
-   • Cocon Lumineux – Crème Corps Éclat — 17 000 FCFA (hyperpigmentation corps)
-   • Trésor de Cacao – Crème Hydratation Intense — 10 000 FCFA (peau très sèche)
-   • Gel de Douche Éclat — 7 000 FCFA
-   • Gommage Éclat Pur — 7 000 FCFA (exfoliation corps)
-   • Radiance Soap – Savon Éclat — 5 000 FCFA
-   • Sérum Main et Pieds — 12 000 FCFA (zones sombres, coudes, genoux)
-   • Huile Éclat — 7 000 FCFA
-   • L'Huile Essentielle Super Éclat — 12 000 FCFA
+   • Gel Nettoyant Anti-Sébum Pores Net — 11 000 FCFA (acné, peau grasse, pores)
+   • Sérum Niacinamide 10% + Zinc PCA — 11 000 FCFA (pores, taches post-acné, sébum)
+   • Lotion Exfoliante BHA 2% Anti-Comédons — 11 500 FCFA (comédons, points noirs)
+   • Sérum Éclat Vitamine C 15% Stabilisée — 14 000 FCFA (teint terne, taches, éclat)
+   • Crème Dermo Anti-Taches Nuit Acide Azélaïque — 11 000 FCFA (melasma, taches brunes)
+   • Sérum Réparateur Rétinol 0.3% Nuit — 13 000 FCFA (rides, anti-âge)
+   • Crème Solaire Dermo SPF 50+ Invisible — 14 000 FCFA (protection, anti-taches)
+   • Crème Barrière Hydra-Repair Céramides — 11 000 FCFA (peau sèche, barrière)
+   • Kit Peau Nette 30J — Acné & Pores — 25 000 FCFA
+   • Kit Éclat & Teint Unifié — Taches — 25 000 FCFA
+   • Kit Anti-Âge Restructurant 30J — 25 000 FCFA
 
-2. EBONY HAIR — cuir chevelu et cheveux UNIQUEMENT
-   → Recommander en priorité pour : dermatite séborrhéique, pellicules,
-     alopécie, chute de cheveux, cheveux secs, cuir chevelu irrité
-   Produits disponibles :
-   • Activateur de Repousse — 13 000 FCFA (alopécie, tempes dégarnies)
-   • Soin Profond Nourrissant Lekie — 13 000 FCFA (cheveux secs/crépus)
-   • Bain d'Huile Prodigieux Nourrissant — 5 500 FCFA (nutrition capillaire)
-   • Huile de Ricin Pure — 8 000 FCFA (croissance, renforcement)
-   • Huile de Neem Pure — 7 000 FCFA (dermatite séborrhéique, pellicules)
-   • Huile d'Ail Pure — 7 000 FCFA (pellicules, cuir chevelu gras)
-   • Huile d'Avocat Pure — 7 000 FCFA (cuir chevelu sec)
-   • Shampoing Solide Hydratant Lekie — 5 000 FCFA (nettoyage doux)
-   • Après Shampoing Démêlant Lekie — 7 000 FCFA (cheveux crépus/frisés)
-   • Masque Réparation Totale Booster — 17 000 FCFA (cheveux très abîmés)
-   • Spray Démêlant — 7 000 FCFA
-
-RÈGLE : problème visage/peau → Andrea Skincare en priorité.
-RÈGLE : problème cuir chevelu/cheveux → Ebony Hair en priorité.
-RÈGLE : si les deux sont pertinents → recommander les deux.
-INTERDIT ABSOLU : recommander "Hair Bloom" — cette marque n'est pas partenaire.
-INTERDIT ABSOLU : recommander des marques non listées ci-dessus.
+RÈGLE : problème visage/peau → GlowScan Dermo.
+RÈGLE : problème cuir chevelu/cheveux → AUCUN produit, orienter vers un dermatologue.
+INTERDIT ABSOLU : recommander une marque non listée ci-dessus.
 
 Retourne UNIQUEMENT ce JSON sans markdown :
 {
@@ -299,7 +286,7 @@ Retourne UNIQUEMENT ce JSON sans markdown :
     {
       "step": "Matin | Soir | Hebdomadaire",
       "product": "Nom exact du produit",
-      "brand": "Andrea Skincare | Ebony Hair",
+      "brand": "GlowScan Dermo",
       "price": "X 000 FCFA",
       "why": "Pourquoi ce produit correspond à ce besoin"
     }
@@ -308,7 +295,7 @@ Retourne UNIQUEMENT ce JSON sans markdown :
     {
       "step": "Nettoyage",
       "product": "Nom exact du produit",
-      "brand": "Andrea Skincare | Ebony Hair",
+      "brand": "GlowScan Dermo",
       "price": "X 000 FCFA",
       "why": "Raison courte et claire"
     }
@@ -317,7 +304,7 @@ Retourne UNIQUEMENT ce JSON sans markdown :
     {
       "step": "Traitement",
       "product": "Nom exact du produit",
-      "brand": "Andrea Skincare | Ebony Hair",
+      "brand": "GlowScan Dermo",
       "price": "X 000 FCFA",
       "why": "Raison courte et claire"
     }
@@ -642,7 +629,6 @@ Format obligatoire dans le champ product :
 "Moisturizing Cream — CeraVe — 8 500 FCFA" (barrière cutanée, céramides)
 
 ── CIRCUIT FERMÉ ──
-INTERDIT en mode Pro : Andrea Skincare, Ebony Hair (réservées au mode B2C).
 GlowScan Dermo = priorité 1. Pharmacie = priorité 2.
 Exception uniquement si une spécialité clinique précise n'existe pas dans ces gammes
 (ex : corticoïde doux prescrit, antibiotique topique sur ordonnance).

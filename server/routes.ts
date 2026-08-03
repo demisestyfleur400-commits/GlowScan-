@@ -909,7 +909,7 @@ Retourne UNIQUEMENT ce JSON valide et complet, sans texte avant ni après :
   },
   "recommendations": {
     "products": [
-      "UN SEUL produit partenaire GlowScan — RÈGLE ABSOLUE. MARQUES LOCALES (priorité absolue) : Andrea Skincare visage/corps (Crème Visage, Sérum Jeunesse Bluffant, Solution Douceur anti-imperfections, Potion Lumière anti-taches, Gel Contour Yeux, Cocon Lumineux, Trésor Cacao, Gommage Éclat, Savon Radiance) — Ebony Hair ou Hair Bloom cheveux (Bain d'Huile, Soin Profond Lekie, Spray Démêlant, Activateur Repousse, Huile Ricin/Avocat/Ail/Neem, Poudre Chebe). GLOWSCAN DERMO (si local insuffisant) : Kit Peau Nette 30J, Kit Éclat Anti-Taches, Kit Anti-Âge, Gel Nettoyant Anti-Sébum, Sérum Niacinamide 10%, Sérum Vitamine C 15%, Crème Anti-Taches Nuit, Sérum Rétinol, Crème SPF50+, Crème Barrière Céramides. INTERDIT ABSOLU dans ce champ : Bioderma, Uriage, Topicrem, Nubiance, La Roche-Posay, Eucerin, CeraVe, Garnier, Nivea, L'Oréal — boutique /shop uniquement, jamais ici."
+      "UN SEUL produit partenaire GlowScan — RÈGLE ABSOLUE. Marque maison GLOWSCAN DERMO uniquement : Kit Peau Nette 30J, Kit Éclat Anti-Taches, Kit Anti-Âge, Gel Nettoyant Anti-Sébum, Sérum Niacinamide 10%, Lotion Exfoliante BHA 2%, Sérum Vitamine C 15%, Crème Anti-Taches Nuit, Sérum Rétinol, Crème SPF50+, Crème Barrière Céramides. Problème cuir chevelu/cheveux → AUCUN produit, orienter dermatologue. INTERDIT ABSOLU dans ce champ : Bioderma, Uriage, Topicrem, Nubiance, La Roche-Posay, Eucerin, CeraVe, Garnier, Nivea, L'Oréal — boutique /shop uniquement, jamais ici."
     ],
     "morning": [
       "Étape 1 matin précise avec produit nommé",
@@ -1251,14 +1251,13 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
 
       const { catalog } = await import("@shared/catalog");
       // ─── Règles métier B2B strictes ────────────────────────────────
-      // ResultCard recommande UNIQUEMENT :
-      //   1) Marques locales partenaires (Andrea Skincare, Ebony Hair) → commission B2B
-      //   2) GlowScan Dermo (kits & produits) → marge propre
+      // ResultCard recommande UNIQUEMENT la marque maison GlowScan Dermo
+      // (kits & produits) → marge propre.
       // Les marques internationales (Bioderma, Uriage, Topicrem, etc.)
       // sont dans la boutique /shop UNIQUEMENT — jamais dans le ResultCard.
       // Raison : pas de commission sur les internationales → casse le modèle B2B.
-      const PRICE_CAP_LOCAL = 12000; // plafond pour marques locales
-      const LOCAL_BRANDS = new Set(["Andrea Skincare", "Andrea", "Ebony Hair"]);
+      const PRICE_CAP_LOCAL = 12000; // plafond hérité (marques locales retirées)
+      const LOCAL_BRANDS = new Set<string>([]); // marques locales partenaires retirées
       const INTL_BRANDS  = new Set(["Bioderma", "Topicrem", "Uriage", "Nubiance", "La Roche-Posay", "Eucerin", "CeraVe"]);
 
       const isLocal        = (item: any) => LOCAL_BRANDS.has(item.brand || "");
@@ -3988,72 +3987,6 @@ Règles :
       .map((it: any) => ({ productId: it.productId, badge: it.badge ?? null }));
     const saved = await storage.setFeaturedProducts(cleaned);
     res.json(saved);
-  });
-
-  // ============== Conseils personnalisés IA ==============
-
-  // GET /api/conseils/personalized — génère 4 tips IA basés sur le dernier scan, cache 7j
-  app.get("/api/conseils/personalized", async (req: any, res) => {
-    const userId = req.session?.userId || req.user?.id || (req.user as any)?.claims?.sub;
-    if (!userId) return res.status(401).json({ message: "Non autorisé" });
-
-    try {
-      const userScans = await storage.getScansByUser(userId);
-      if (!userScans || userScans.length === 0) {
-        return res.json({ tips: [], hasScan: false });
-      }
-      const latest = userScans[0];
-      const cached = await storage.getCachedTips(userId);
-      const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
-      const isFresh = cached
-        && cached.scanId === latest.id
-        && cached.generatedAt
-        && Date.now() - new Date(cached.generatedAt).getTime() < SEVEN_DAYS;
-      if (isFresh && cached) {
-        return res.json({ tips: cached.tips, hasScan: true, cached: true });
-      }
-
-      // Construire le contexte à partir du dernier scan
-      const analysis: any = (latest as any).recommendations || {};
-      const summary: any = (latest as any).analysis ? String((latest as any).analysis).slice(0, 600) : "";
-      const score = (latest as any).glowScore ?? null;
-      const skinType = analysis?.skinType || (latest as any).skinType || "non précisé";
-      const issues: string[] = Array.isArray(analysis?.issues)
-        ? analysis.issues
-        : Array.isArray((latest as any).diagnoses)
-        ? (latest as any).diagnoses.map((d: any) => d?.name || d).filter(Boolean)
-        : [];
-
-      const prompt = `Tu es une dermatologue camerounaise bienveillante. Donne EXACTEMENT 4 conseils personnalisés courts (≤ 22 mots chacun), en français, pour une utilisatrice avec :
-- Type de peau : ${skinType}
-- Score Glow : ${score ?? "?"} / 100
-- Préoccupations : ${issues.join(", ") || "non précisé"}
-- Résumé analyse : ${summary}
-
-Règles : pas de marque, pas d'ingrédient interdit en Afrique, ton chaleureux, actionnable, adapté au climat tropical/humide. Réponds UNIQUEMENT en JSON : {"tips":["...","...","...","..."]}`;
-
-      const completion = await openai.chat.completions.create({
-        model: AI_MODEL_FAST,
-        messages: [{ role: "user", content: prompt }],
-        max_tokens: 400,
-        temperature: 0.7,
-        ...(AI_IS_REASONING ? {} : { response_format: { type: "json_object" as const } }),
-      });
-      const raw = completion.choices[0]?.message?.content || "{}";
-      let parsed: any = {};
-      try { parsed = JSON.parse(raw); } catch { parsed = {}; }
-      const tips: string[] = Array.isArray(parsed?.tips)
-        ? parsed.tips.map((t: any) => String(t)).filter((t: string) => t.length > 0).slice(0, 5)
-        : [];
-      if (tips.length === 0) {
-        return res.json({ tips: [], hasScan: true, error: "generation_failed" });
-      }
-      await storage.setCachedTips(userId, latest.id, tips);
-      res.json({ tips, hasScan: true, cached: false });
-    } catch (err: any) {
-      console.error("[/api/conseils/personalized] error:", err);
-      res.status(500).json({ message: err?.message ?? "Erreur" });
-    }
   });
 
   // ==================== RGPD ====================

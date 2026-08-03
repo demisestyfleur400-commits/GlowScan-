@@ -323,11 +323,8 @@ import { buildObservationSections, type ObservationData } from "@/lib/observatio
 
 const productImages = centralProductImages;
 
-// ─── Priorité marques locales ────────────────────────────────────────
-const LOCAL_WHATSAPP = new Set([
-  "+237658651775", // Andrea Skincare
-  "+237655728663", // Ebony Hair
-]);
+// ─── Priorité marques locales (marques partenaires locales retirées) ──────
+const LOCAL_WHATSAPP = new Set<string>([]);
 
 // ─── Image du produit — priorité: productImages.ts > catalog.image > null ──
 function getProductImage(product: typeof catalog[0]): string | undefined {
@@ -2096,38 +2093,8 @@ ${medicalSections}
     : findRoutineProducts();
   const bestKit = findBestKit();
 
-  // ── Pack cheveux Ebony Hair (seul partenaire capillaire officiel) ──────────────
-  const findHairPacks = () => {
-    if (currentArea !== "cheveux") return [];
-    const EBONY_WA   = "+237655728663";
-    const buildPack = (waKey: string, brandName: string) => {
-      const pool = catalog.filter(p => p.category === "cheveux" && p.whatsapp === waKey && !p.id.startsWith("kit-"));
-      if (pool.length === 0) return null;
-      // Nettoyant d'abord, puis sérum/huile, puis crème/masque
-      const nettoyants = pool.filter(p => getProductRole(p) === "nettoyant");
-      const serums     = pool.filter(p => getProductRole(p) === "serum");
-      const cremes     = pool.filter(p => getProductRole(p) === "creme");
-      const picked: typeof catalog = [];
-      if (nettoyants[0]) picked.push(nettoyants[0]);
-      if (serums[0])     picked.push(serums[0]);
-      if (cremes[0])     picked.push(cremes[0]);
-      // Compléter à 3 produits si manquant
-      const rest = pool.filter(p => !picked.includes(p));
-      while (picked.length < 3 && rest.length) picked.push(rest.shift()!);
-      if (picked.length === 0) return null;
-      const total = picked.reduce((s, p) => s + (p.price || 0), 0);
-      const waMsg = encodeURIComponent(
-        `Bonjour GlowScan 👋\n\nJe veux commander le Pack ${brandName} :\n` +
-        picked.map(p => `• ${p.name} — ${p.price?.toLocaleString("fr-FR")} FCFA`).join("\n") +
-        `\n\nTotal : ${total.toLocaleString("fr-FR")} FCFA`
-      );
-      return { brand: brandName, products: picked, total, waKey, waMsg };
-    };
-    return [
-      buildPack(EBONY_WA, "Ebony Hair"),
-    ].filter(Boolean) as NonNullable<ReturnType<typeof buildPack>>[];
-  };
-  const hairPacks = findHairPacks();
+  // Pack cheveux retiré : plus de partenaire capillaire dans le catalogue.
+  // Un problème cuir chevelu/cheveux oriente désormais vers un dermatologue.
 
   const getIntermediateOffer = () => {
     if (routineProducts.length < 2) return null;
@@ -3085,71 +3052,6 @@ ${medicalSections}
           );
         })()}
 
-        {/* ═══ BLOC 7b — Pack cheveux Ebony Hair (B2C uniquement) ═══ */}
-        {/* Vente grand public + marque Ebony Hair interdite en mode DERM/pro */}
-        {!isPro && currentArea === "cheveux" && hairPacks.length > 0 && (
-          <div style={{ marginTop: "8px" }}>
-            <p style={{ fontSize: "11px", fontWeight: 700, color: DS.textMuted, textTransform: "uppercase", letterSpacing: "0.15em", marginBottom: "12px" }}>
-              🌿 Choisis ton pack capillaire
-            </p>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-              {hairPacks.map(pack => (
-                <div key={pack.brand} style={{ borderRadius: "20px", padding: "16px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(167,139,250,0.2)", display: "flex", flexDirection: "column", gap: "10px" }}>
-                  {/* Header */}
-                  <div>
-                    <p style={{ fontSize: "12px", fontWeight: 800, color: DS.textPrimary, lineHeight: 1.2 }}>{pack.brand}</p>
-                    <p style={{ fontSize: "10px", color: DS.textMuted, marginTop: "2px" }}>Pack Routine Complète</p>
-                  </div>
-                  {/* Produits */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                    {pack.products.map(p => {
-                      const img = (productImages as any)[p.id] || p.image;
-                      return (
-                        <div key={p.id} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                          {img ? (
-                            <img src={img} alt={p.name} style={{ width: "32px", height: "32px", borderRadius: "8px", objectFit: "cover", flexShrink: 0 }} />
-                          ) : (
-                            <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "rgba(124,58,237,0.15)", flexShrink: 0 }} />
-                          )}
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <p style={{ fontSize: "10px", fontWeight: 700, color: DS.textPrimary, lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</p>
-                            <p style={{ fontSize: "9px", color: DS.textMuted }}>{p.price?.toLocaleString("fr-FR")} FCFA</p>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  {/* Total + CTA */}
-                  <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)", paddingTop: "10px" }}>
-                    <p style={{ fontSize: "11px", fontWeight: 800, color: DS.violetMid, marginBottom: "8px" }}>
-                      Total : {pack.total.toLocaleString("fr-FR")} FCFA
-                    </p>
-                    <a
-                      href={`https://wa.me/237674377959?text=${pack.waMsg}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{
-                        display: "block",
-                        width: "100%",
-                        padding: "9px 0",
-                        textAlign: "center",
-                        borderRadius: "12px",
-                        background: "linear-gradient(135deg, #E91E8C, #f43f5e)",
-                        color: "#fff",
-                        fontSize: "10px",
-                        fontWeight: 800,
-                        textDecoration: "none",
-                        letterSpacing: "0.04em",
-                      }}
-                    >
-                      Commander →
-                    </a>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* ── Bouton export PDF (B2C uniquement — en DERM le rapport passe par le
              flux dédié "Voir le rapport" + sélecteur de mode dans ProAnalyze). ── */}

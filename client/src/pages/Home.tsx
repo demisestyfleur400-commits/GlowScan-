@@ -172,59 +172,6 @@ function CircularScore({ score, color }: { score: number; color: string }) {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────
-//  Testimonials data
-// ─────────────────────────────────────────────────────────────────────────
-const TESTIMONIALS = [
-  {
-    name: "Christelle M.",
-    city: "Douala",
-    age: 28,
-    text: "Enfin un outil qui comprend les peaux noires. Mon dermatologue m'avait dit 'c'est normal' depuis des années. GlowScan a détecté une dartre en 30 secondes et m'a expliqué exactement quoi faire.",
-    tag: "Dartre identifiée",
-    score: null,
-  },
-  {
-    name: "Mariama K.",
-    city: "Yaoundé",
-    age: 23,
-    text: "J'avais des taches depuis mes boutons d'adolescence. GlowScan m'a dit exactement pourquoi et quoi utiliser. 3 semaines après, les taches ont diminué de moitié. Je recommande à toutes.",
-    tag: "Taches post-acné",
-    score: null,
-  },
-  {
-    name: "Prince T.",
-    city: "Bafoussam",
-    age: 25,
-    text: "Mon Glow Score est passé de 48 à 71 en 5 semaines. Je ne savais pas que mon mélange de produits créait des réactions. L'IA m'a tout expliqué, j'ai changé de routine et c'est visible.",
-    tag: "+23 pts en 5 sem.",
-    score: 71,
-  },
-  {
-    name: "Alima B.",
-    city: "Douala",
-    age: 31,
-    text: "J'ai essayé tellement de crèmes sans résultat. GlowScan m'a expliqué que le karité brut bouchait mes pores. Ça paraît simple mais aucun professionnel ne me l'avait dit. Maintenant ma peau respire.",
-    tag: "Acné cosmética",
-    score: null,
-  },
-  {
-    name: "Fatou D.",
-    city: "Douala",
-    age: 26,
-    text: "J'avais peur d'avoir du vitiligo. GlowScan a détecté que c'était de la dartre — guérie en 4 semaines avec une simple crème hydratante. Ce diagnostic m'a évité beaucoup d'angoisse et de dépenses inutiles.",
-    tag: "Diagnostic précis",
-    score: null,
-  },
-  {
-    name: "Reine N.",
-    city: "Yaoundé",
-    age: 24,
-    text: "Le diagnostic m'a appris que ma peau est déshydratée et non sèche. Ce ne sont pas les mêmes produits ! Cette distinction a tout changé. Trois semaines plus tard mon teint est transformé.",
-    tag: "Routine optimisée",
-    score: null,
-  },
-];
 
 // ─────────────────────────────────────────────────────────────────────────
 //  Knowledge cards data
@@ -264,52 +211,12 @@ const KNOWLEDGE_CARDS = [
   },
 ];
 
-const TIPS_BY_SKIN: Record<string, string[]> = {
-  mixte: [
-    "Évite de te laver le visage plus de 2 fois par jour — ça aggrave la production de sébum sur ta zone T.",
-    "Utilise deux soins différents : matifiant sur la zone T, hydratant sur les joues.",
-    "L'argile verte une fois par semaine fait des miracles sur la zone T sans dessécher tes joues.",
-  ],
-  grasse: [
-    "Le sébum est ta protection — n'agresse pas ta peau avec des nettoyants asséchants.",
-    "Le niacinamide (vitamine B3) régule le sébum sans irriter. Cherche-le dans tes sérums.",
-    "L'acide salicylique 2% débouche tes pores en douceur. À utiliser 2-3 fois par semaine.",
-  ],
-  seche: [
-    "Hydrate ta peau matin ET soir avec une crème riche en céramides ou en beurre de karité.",
-    "Évite l'eau trop chaude pour te laver le visage — elle aggrave la sécheresse.",
-    "Le sérum à l'acide hyaluronique appliqué sur peau humide retient l'hydratation toute la journée.",
-  ],
-  sensible: [
-    "Moins, c'est mieux. Limite-toi à 3 produits : nettoyant doux, crème hydratante, SPF.",
-    "Patch-test tout nouveau produit dans le creux du coude pendant 48h avant de l'appliquer au visage.",
-    "Évite les parfums, l'alcool et les huiles essentielles dans tes cosmétiques.",
-  ],
-  normale: [
-    "Ne te repose pas sur ta chance — le SPF tous les jours protège ton capital jeunesse.",
-    "Une routine simple suffit : nettoie, hydrate, protège. Pas besoin de 10 étapes.",
-    "Le rétinol après 25 ans booste le renouvellement cellulaire et garde ta peau éclatante.",
-  ],
-  default: [
-    "Le SPF tous les jours, même quand il pleut. Les UV traversent les nuages et accélèrent les taches.",
-    "Bois 1,5L d'eau par jour — ta peau hydratée de l'intérieur, ça se voit.",
-    "Dors 7h minimum. C'est la nuit que ta peau se régénère et produit du collagène.",
-  ],
-};
-
-function getTipForUser(skinType?: string) {
-  const key = (skinType || "default").toLowerCase();
-  const pool = TIPS_BY_SKIN[key] || TIPS_BY_SKIN.default;
-  const dayIdx = new Date().getDate() % pool.length;
-  return pool[dayIdx];
-}
-
 const LOCAL_PRODUCT_IMAGES: Record<string, string> = productImages;
 
 const FALLBACK_FEATURED = [
-  { productId: "serum-jeunesse", badge: "Anti-taches" },
-  { productId: "tresor-cacao", badge: "Hydratation" },
-  { productId: "ebony-hair-soin-profond", badge: "Soin capillaire" },
+  { productId: "gs-serum-vitamine-c", badge: "Éclat & taches" },
+  { productId: "gs-creme-barriere-hydra", badge: "Hydratation" },
+  { productId: "gs-gel-nettoyant-sebum", badge: "Anti-acné" },
 ];
 
 type DisplayProduct = {
@@ -351,7 +258,6 @@ const EXPLORER_ITEMS: MenuItem[] = [
   { kind: "link", label: "Analyse des nutriments", desc: "Évaluation de l'impact nutritionnel", path: "/nutriment-scan", icon: <Apple className="w-4 h-4" style={{ color: DS.violetMid }} strokeWidth={1.5} /> },
   { kind: "link", label: "Boutique clinique", desc: "Formulations adaptées à vos indices", path: "/shop", icon: <ShoppingBag className="w-4 h-4" style={{ color: DS.violetMid }} strokeWidth={1.5} /> },
   { kind: "link", label: "Protocole de soin", desc: "Planification d'application matin & soir", path: "/routine", icon: <ListChecks className="w-4 h-4" style={{ color: DS.violetMid }} strokeWidth={1.5} /> },
-  { kind: "link", label: "Base de connaissances", desc: "Documentation scientifique personnalisée", path: "/conseils", icon: <Lightbulb className="w-4 h-4" style={{ color: DS.violetMid }} strokeWidth={1.5} /> },
   { kind: "link", label: "Courbe d'évolution", desc: "Visualisation des variations biométriques", path: "/profile?tab=evolution", icon: <TrendingUp className="w-4 h-4" style={{ color: DS.violetMid }} strokeWidth={1.5} /> },
   { kind: "link", label: "Licence Pro / Premium", desc: "Extension globale des fonctionnalités", path: "/premium", icon: <Crown className="w-4 h-4" style={{ color: DS.violetMid }} strokeWidth={1.5} /> },
   { kind: "logout", label: "Terminer la session", desc: "Déconnexion sécurisée de la console", icon: <LogOut className="w-4 h-4" style={{ color: "#f9a8d4" }} strokeWidth={1.5} /> },
@@ -562,11 +468,6 @@ export default function Home() {
 
   const scanList: any[] = Array.isArray(scans) ? scans : [];
   const lastScan: any = scanList[0];
-  const skinTypeForTip: string | undefined =
-    lastScan?.recommendations?._fullResult?.skinType ||
-    lastScan?.skinType ||
-    undefined;
-  const tip = useMemo(() => getTipForUser(skinTypeForTip), [skinTypeForTip]);
 
   if (isLoading) {
     return (
@@ -859,100 +760,6 @@ export default function Home() {
           </section>
         </SlideLeft>
 
-        {/* ─── Section 3: Daily tip ─── */}
-        <DropTop delay={0.15}>
-          <section data-testid="section-tip">
-            <div className="mb-3 flex items-center gap-2">
-              <div
-                className="w-5 h-5 rounded-full flex items-center justify-center"
-                style={{ background: "rgba(245,158,11,0.1)" }}
-              >
-                <Lightbulb className="w-3 h-3" style={{ color: "#fbbf24" }} strokeWidth={1.5} />
-              </div>
-              <h2 className="text-sm font-bold" style={{ color: DS.textBody }}>Conseil du jour</h2>
-            </div>
-
-            <div
-              className="overflow-hidden"
-              style={{
-                background: "rgba(0,0,0,0.04)",
-                border: "1px solid rgba(0,0,0,0.07)",
-                borderRadius: "24px",
-              }}
-            >
-              <motion.div
-                initial={{ opacity: 0, scale: 1.02 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                viewport={VIEW}
-                transition={{ duration: 0.4, ease: EASE }}
-                className="relative w-full h-40 overflow-hidden"
-                style={{ background: DS.element }}
-              >
-                <img
-                  src={tipPhoto}
-                  alt="Documentation clinique"
-                  className="w-full h-full object-cover opacity-70"
-                  data-testid="img-tip-photo"
-                  loading="lazy"
-                  decoding="async"
-                />
-                <div
-                  className="absolute inset-0"
-                  style={{ background: "linear-gradient(to top, rgba(13,10,14,0.9) 0%, transparent 60%)" }}
-                />
-                <div
-                  className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1"
-                  style={{
-                    background: "rgba(245,158,11,0.1)",
-                    border: "1px solid rgba(245,158,11,0.25)",
-                    borderRadius: "8px",
-                  }}
-                >
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-                  <span
-                    className="text-[9px] font-bold tracking-[0.18em] uppercase"
-                    style={{ color: "#fbbf24" }}
-                  >
-                    Astuce peau
-                  </span>
-                </div>
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, y: 8 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={VIEW}
-                transition={{ duration: 0.4, ease: EASE, delay: 0.15 }}
-                className="p-5 text-left"
-              >
-                {skinTypeForTip && (
-                  <p
-                    className="text-[10px] font-bold mb-1.5 uppercase tracking-[0.15em]"
-                    style={{ color: DS.violetLight }}
-                  >
-                    Pour peau {skinTypeForTip}
-                  </p>
-                )}
-                <p
-                  className="text-xs leading-relaxed font-semibold mb-4"
-                  style={{ color: DS.textBody }}
-                  data-testid="text-tip"
-                >
-                  {tip}
-                </p>
-                <button
-                  onClick={() => setLocation("/conseils")}
-                  data-testid="button-all-tips"
-                  className="inline-flex items-center gap-1 text-xs font-bold"
-                  style={{ color: DS.violetMid }}
-                >
-                  Voir tous les conseils <ArrowRight className="w-3.5 h-3.5" strokeWidth={2} />
-                </button>
-              </motion.div>
-            </div>
-          </section>
-        </DropTop>
-
         {/* ─── Section 4: Knowledge cards ─── */}
         <FadeUp delay={0.22}>
           <section data-testid="section-knowledge">
@@ -1086,90 +893,6 @@ export default function Home() {
                 <ChevronRight className="w-4 h-4 flex-shrink-0" style={{ color: DS.textMuted }} strokeWidth={1.5} />
               </div>
             </button>
-          </section>
-        </FadeUp>
-
-        {/* ─── Section 6: Testimonials ─── */}
-        <FadeUp delay={0.30}>
-          <section data-testid="section-testimonials">
-            <div className="mb-3 px-1 flex items-center gap-2">
-              <div
-                className="w-5 h-5 rounded-full flex items-center justify-center"
-                style={{ background: "rgba(233,30,140,0.1)" }}
-              >
-                <Star className="w-3 h-3" style={{ color: "#f9a8d4" }} strokeWidth={1.5} />
-              </div>
-              <h2 className="text-sm font-bold" style={{ color: DS.textBody }}>Elles ont scanné leur peau</h2>
-            </div>
-
-            <div
-              className="flex gap-3 overflow-x-auto pb-3 -mx-4 px-4 snap-x snap-mandatory"
-              style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}
-            >
-              {TESTIMONIALS.map((t, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, x: 30 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={VIEW}
-                  transition={{ duration: 0.4, delay: i * 0.07, ease: EASE }}
-                  className="min-w-[270px] max-w-[270px] snap-start flex flex-col p-5"
-                  style={{
-                    background: "rgba(0,0,0,0.04)",
-                    border: "1px solid rgba(47,158,110,0.15)",
-                    borderRadius: "24px",
-                    position: "relative",
-                  }}
-                >
-                  {/* Quote icon */}
-                  <div className="absolute top-4 right-4 opacity-10">
-                    <Quote className="w-8 h-8" style={{ color: DS.violetMid }} />
-                  </div>
-
-                  {/* Stars */}
-                  <div className="flex gap-0.5 mb-3">
-                    {[...Array(5)].map((_, j) => (
-                      <Star key={j} className="w-3 h-3 fill-current" style={{ color: "#fbbf24" }} strokeWidth={0} />
-                    ))}
-                  </div>
-
-                  {/* Text */}
-                  <p
-                    className="text-[11px] leading-relaxed font-medium flex-1 mb-4"
-                    style={{ color: DS.textBody }}
-                  >
-                    "{t.text}"
-                  </p>
-
-                  {/* Footer */}
-                  <div className="flex items-end justify-between gap-2 mt-auto">
-                    <div>
-                      <p className="text-xs font-bold" style={{ color: DS.textPrimary }}>{t.name}</p>
-                      <p className="text-[10px] font-medium mt-0.5" style={{ color: DS.textMuted }}>
-                        {t.city} · {t.age} ans
-                      </p>
-                    </div>
-                    <div
-                      className="flex-shrink-0 px-2 py-1"
-                      style={{
-                        background: t.score
-                          ? "rgba(16,185,129,0.1)"
-                          : "rgba(47,158,110,0.1)",
-                        border: `1px solid ${t.score ? "rgba(16,185,129,0.25)" : "rgba(47,158,110,0.25)"}`,
-                        borderRadius: "8px",
-                      }}
-                    >
-                      <span
-                        className="text-[9px] font-extrabold tracking-wide"
-                        style={{ color: t.score ? "#6ee7b7" : DS.violetLight }}
-                      >
-                        {t.tag}
-                      </span>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
           </section>
         </FadeUp>
 

@@ -53,7 +53,6 @@ const ScanProduct = lazyWithRetry(() => import("@/pages/ScanProduct"));
 const ProductScanCamera = lazyWithRetry(() => import("@/pages/ProductScanCamera"));
 const NutrimentScan = lazyWithRetry(() => import("@/pages/NutrimentScan"));
 const Routine = lazyWithRetry(() => import("@/pages/Routine"));
-const Conseils = lazyWithRetry(() => import("@/pages/Conseils"));
 const AuthPage = lazyWithRetry(() => import("@/pages/AuthPage"));
 const Premium = lazyWithRetry(() => import("@/pages/Premium"));
 const Pro = lazyWithRetry(() => import("@/pages/Pro"));
@@ -101,7 +100,6 @@ function Router() {
       <Route path="/product-scan-camera" component={ProductScanCamera} />
       <Route path="/nutriment-scan" component={NutrimentScan} />
       <Route path="/routine" component={Routine} />
-      <Route path="/conseils" component={Conseils} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/premium" component={Premium} />
       <Route path="/consultations" component={MesConsultations} />

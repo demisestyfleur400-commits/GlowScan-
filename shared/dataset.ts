@@ -300,11 +300,11 @@ export type ZoneAnalysisB2C = {
   advice: string;     // conseil adapté à cette zone — actionnable
 };
 
-// Produit B2C — avec marque et prix (Andrea Skincare / Ebony Hair en priorité)
+// Produit B2C — avec marque et prix (GlowScan Dermo, marque maison)
 export type B2CProduct = {
   step: string;       // ex: "Nettoyage", "Traitement", "Hydratation"
   product: string;    // nom exact du produit
-  brand: string;      // ex: "Andrea Skincare" | "Ebony Hair"
+  brand: string;      // ex: "GlowScan Dermo"
   price: string;      // ex: "8 000 FCFA"
   why: string;        // pourquoi ce produit est adapté — court, humain
 };
@@ -392,7 +392,7 @@ export type GlowScanB2C = GlowScanBase & {
   // Zones (langage simple + conseil)
   zones: ZoneAnalysisB2C[];
 
-  // Produits — Andrea Skincare + Ebony Hair en priorité
+  // Produits — GlowScan Dermo (marque maison)
   recommendations: B2CRecommendation[];
   morningProtocol: B2CProduct[];
   eveningProtocol: B2CProduct[];
