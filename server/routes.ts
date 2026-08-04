@@ -56,6 +56,16 @@ const GROQ_MODEL    = process.env.GROQ_MODEL || "qwen/qwen3.6-27b";
 // gemini-2.0-flash (accessible, pas de plafond TPM bloquant). Surchargeable via
 // GEMINI_MODEL dans Railway (ex: gemini-flash-latest) sans redéploiement.
 const GEMINI_MODEL  = process.env.GEMINI_MODEL || "gemini-2.0-flash";
+// Chaîne de secours : si un modèle Gemini sature (429/quota) ou disparaît (404),
+// le code bascule automatiquement sur le suivant. Chaque modèle gratuit a son
+// PROPRE quota journalier → la chaîne multiplie la capacité et évite que
+// l'analyse plante. Surchargeable via GEMINI_FALLBACKS (liste séparée par des
+// virgules) dans Railway. Doublons filtrés, modèle principal en tête.
+const GEMINI_FALLBACKS = [
+  GEMINI_MODEL,
+  ...(process.env.GEMINI_FALLBACKS || "gemini-2.0-flash-lite,gemini-flash-latest,gemini-flash-lite-latest,gemini-2.5-flash-lite")
+    .split(",").map((s) => s.trim()).filter(Boolean),
+].filter((v, i, a) => a.indexOf(v) === i);
 const AI_MODEL      = USE_GROQ ? GROQ_MODEL : USE_GEMINI ? GEMINI_MODEL : "gpt-4o";
 const AI_MODEL_FAST = USE_GROQ ? GROQ_MODEL : USE_GEMINI ? GEMINI_MODEL : "gpt-4o-mini";
 // Modèles de raisonnement (compound, qwen, deepseek, gpt-oss…) : ils ne
@@ -1074,25 +1084,39 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
         const userText = baseUserText + fewShotBlock + extraInstruction + multiAngleNote + areaNote + "\n\nIMPORTANT : Réponds UNIQUEMENT avec le JSON demandé, sans texte avant ni après.";
         let c = "";
         if (USE_GEMINI && gemini) {
-          const m = gemini.getGenerativeModel({
-            model: AI_MODEL,
-            systemInstruction: activeSystemPrompt,
-          });
-          const gemResult = await Promise.race([
-            m.generateContent({
-              contents: [{ role: "user", parts: [
-                { text: userText },
-                ...visionImages.map((vi) => ({ inlineData: { mimeType: vi.mime, data: vi.b64 } })),
-              ]}],
-              generationConfig: {
-                responseMimeType: "application/json",
-                maxOutputTokens: 2500,
-                temperature: 0.2,
-              },
-            }),
-            new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Timeout")), 120000)), // 2min timeout pour Gemini
-          ]);
-          c = gemResult.response.text() || "";
+          // Chaîne de secours : on essaie chaque modèle Gemini jusqu'à succès.
+          // Sur quota/404/surcharge → on passe au suivant (quotas séparés).
+          let lastErr: any = null;
+          for (const modelId of GEMINI_FALLBACKS) {
+            try {
+              const m = gemini.getGenerativeModel({ model: modelId, systemInstruction: activeSystemPrompt });
+              const gemResult = await Promise.race([
+                m.generateContent({
+                  contents: [{ role: "user", parts: [
+                    { text: userText },
+                    ...visionImages.map((vi) => ({ inlineData: { mimeType: vi.mime, data: vi.b64 } })),
+                  ]}],
+                  generationConfig: {
+                    responseMimeType: "application/json",
+                    maxOutputTokens: 2500,
+                    temperature: 0.2,
+                  },
+                }),
+                new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Timeout")), 120000)),
+              ]);
+              c = (gemResult as any).response.text() || "";
+              if (modelId !== GEMINI_FALLBACKS[0]) console.log(`[analyze] ✅ Bascule Gemini réussie sur ${modelId}`);
+              break;
+            } catch (e: any) {
+              lastErr = e;
+              const msg = String(e?.message || e);
+              // Erreurs "réessayables" avec un autre modèle : quota, indispo, surcharge.
+              const retriable = /429|quota|rate.?limit|resource_exhausted|exhausted|404|not found|no longer available|not available|overloaded|unavailable|500|503/i.test(msg);
+              console.warn(`[analyze] Gemini ${modelId} KO (${retriable ? "on bascule" : "erreur bloquante"}): ${msg.slice(0, 140)}`);
+              if (!retriable) throw e; // ex: refus de sécurité, requête invalide → inutile d'essayer les autres
+            }
+          }
+          if (!c) throw (lastErr || new Error("Tous les modèles Gemini sont indisponibles"));
         } else if (openai) {
           // Timeout = client init (180s Groq / 60s OpenAI).
           // maxRetries: 0 → un seul essai, on échoue vite (comportement B2C
