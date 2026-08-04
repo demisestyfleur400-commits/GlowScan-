@@ -1027,12 +1027,26 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
       //  - max_tokens 1200, response_format json_object
       //  - timeout 30s + maxRetries 0 → un seul essai, on échoue vite
       const dataUrl = `data:${mimeForOpenAI};base64,${rawBase64ForOpenAI}`;
-      // Toutes les images (multi-angles) normalisées pour l'IA.
-      const visionImages = imageList.map((img) => {
-        let mime = "image/jpeg", b64 = img;
-        if (img.startsWith("data:")) { const m = img.match(/^data:([^;]+);base64,(.+)$/); if (m) { mime = m[1]; b64 = m[2]; } }
-        return { mime, b64, dataUrl: `data:${mime};base64,${b64}` };
-      });
+      // Toutes les images (multi-angles) COMPRESSÉES pour l'IA.
+      // Une image haute résolution = énormément de tokens vision (10k+), ce qui
+      // fait exploser la limite tokens/minute des fournisseurs (Groq free = 8000
+      // TPM). On redimensionne à 768px max + JPEG q75 → ~1000-1500 tokens/image,
+      // sans perte diagnostique notable sur une peau. Fallback : image d'origine.
+      const downscaleForAI = async (raw: string): Promise<{ mime: string; b64: string }> => {
+        let mime = "image/jpeg", b64 = raw;
+        if (raw.startsWith("data:")) { const m = raw.match(/^data:([^;]+);base64,(.+)$/); if (m) { mime = m[1]; b64 = m[2]; } }
+        try {
+          const sharp = (await import("sharp")).default;
+          const buf = Buffer.from(b64, "base64");
+          const out = await sharp(buf).rotate().resize(768, 768, { fit: "inside", withoutEnlargement: true }).jpeg({ quality: 75 }).toBuffer();
+          return { mime: "image/jpeg", b64: out.toString("base64") };
+        } catch (e) {
+          console.warn("[analyze] compression image IA ignorée:", (e as any)?.message);
+          return { mime, b64 };
+        }
+      };
+      const visionImages = (await Promise.all(imageList.map(downscaleForAI)))
+        .map((vi) => ({ ...vi, dataUrl: `data:${vi.mime};base64,${vi.b64}` }));
       const multiAngleNote = visionImages.length > 1
         ? `\n\nTu reçois ${visionImages.length} photos du MÊME patient sous différents angles (face, profil droit, profil gauche). Analyse-les ENSEMBLE et croise les angles pour un diagnostic plus fiable ; ne te limite pas à une seule vue.`
         : "";
@@ -1063,7 +1077,7 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
               ]}],
               generationConfig: {
                 responseMimeType: "application/json",
-                maxOutputTokens: 4500,
+                maxOutputTokens: 2500,
                 temperature: 0.2,
               },
             }),
@@ -1089,7 +1103,7 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
                 ],
               },
             ],
-            max_tokens: 4500,
+            max_tokens: 2500,
             temperature: 0.2,
           };
           if (!AI_IS_REASONING) req.response_format = { type: "json_object" };
