@@ -25,8 +25,8 @@ let PRO_USE_GROQ = false, PRO_USE_GEMINI = false;
 if (_proForce === "groq" && _proGroqKey) PRO_USE_GROQ = true;
 else if (_proForce === "gemini" && _proGeminiKey) PRO_USE_GEMINI = true;
 else if (_proForce === "openai" && _proOpenaiKey) { /* openai */ }
-else if (_proGroqKey) PRO_USE_GROQ = true;
-else if (_proGeminiKey) PRO_USE_GEMINI = true;
+else if (_proGeminiKey) PRO_USE_GEMINI = true;   // défaut : Gemini (aligné sur routes.ts)
+else if (_proGroqKey) PRO_USE_GROQ = true;       // secours : Groq
 // Questionnaire/aide DERM = TEXTE seul → modèle texte dédié (GROQ_TEXT_MODEL),
 // INDÉPENDANT de GROQ_MODEL (qui porte le modèle VISION qwen). Évite qu'un
 // modèle de raisonnement casse response_format sur les appels texte pro.

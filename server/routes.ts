@@ -34,11 +34,17 @@ const _openaiBase = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || process.env.O
 const _forceProvider = (process.env.AI_PROVIDER || "").toLowerCase();
 const _canGroq = !!_groqKey, _canGemini = !!_geminiKey, _canOpenAI = !!_openaiKey;
 let USE_GROQ = false, USE_GEMINI = false;
+// Défaut : GEMINI prioritaire pour l'analyse. Groq gratuit plafonne à 8000
+// tokens/minute — trop peu pour notre prompt+image (~18k tokens) → il rejette
+// chaque analyse (413). Gemini (contexte 1M, pas de plafond TPM bloquant) est
+// le seul provider gratuit viable pour la vision. Groq reste utilisé pour
+// l'audio (Whisper) via un client dédié, indépendant de ce choix.
+// Override possible : AI_PROVIDER=groq|gemini|openai (si la clé est présente).
 if (_forceProvider === "groq" && _canGroq) USE_GROQ = true;
 else if (_forceProvider === "gemini" && _canGemini) USE_GEMINI = true;
 else if (_forceProvider === "openai" && _canOpenAI) { /* openai */ }
-else if (_canGroq) USE_GROQ = true;          // défaut : Groq prioritaire (vision de retour)
-else if (_canGemini) USE_GEMINI = true;      // secours : Gemini
+else if (_canGemini) USE_GEMINI = true;      // défaut : Gemini (vision viable)
+else if (_canGroq) USE_GROQ = true;          // secours : Groq (échoue si payload > 8k TPM)
 const AI_PROVIDER   = USE_GROQ ? "Groq" : USE_GEMINI ? "Gemini" : "OpenAI";
 // Modèle Groq VISION — Qwen 3.6 27B (qwen/qwen3.6-27b). Configurable via
 // GROQ_MODEL dans Railway sans redéploiement.
