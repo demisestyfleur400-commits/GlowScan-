@@ -1146,6 +1146,7 @@ export function ResultCard({ result, scanId, savedScanId, area, imageUrl, userFi
   const { isPremium } = useSubscription();
   const [showShareCard, setShowShareCard] = useState(false);
   const [showRoutineCard, setShowRoutineCard] = useState(false);
+  const [showFullRoutine, setShowFullRoutine] = useState(false); // Niveau 2 — routine complète
   const [j7ReminderSet, setJ7ReminderSet] = useState(false);
   const [showOrderModal, setShowOrderModal] = useState(false);
   const [orderModalItems, setOrderModalItems] = useState<OrderItem[]>([]);
@@ -2420,6 +2421,114 @@ ${medicalSections}
               >
                 Partager mon ordonnance
               </button>
+            </div>
+          );
+        })()}
+
+        {/* ═══ NIVEAU 2 — Routine complète (accordéon, B2C uniquement) ═══ */}
+        {!isPro && (() => {
+          // Pool de produits filtré par profil : marque maison uniquement en B2C,
+          // zone analysée, hors kits. Score par condition + type de peau détectés.
+          const INTL_PHARMA = new Set(["Bioderma", "Uriage", "La Roche-Posay", "The Ordinary", "CeraVe", "Nubiance", "Topicrem"]);
+          const pool = catalog.filter((p) => {
+            if (p.id.startsWith("kit-")) return false;
+            if (p.brand && INTL_PHARMA.has(p.brand)) return false;
+            if (currentArea === "cheveux") return p.category === "cheveux";
+            if (currentArea === "corps") return p.category === "corps" || p.category === "visage";
+            return p.category === "visage";
+          });
+          const searchText = ((result.condition || "") + " " + (result.details || "") + " " + (result.skinType || "")).toLowerCase();
+          const score = (p: typeof catalog[0]) =>
+            p.targets.reduce((s, t) => s + (searchText.includes(t.toLowerCase()) ? 3 : 0), 0);
+          const isSpf = (p: typeof catalog[0]) => /spf|solaire/i.test(p.name);
+          const byScore = (a: typeof catalog[0], b: typeof catalog[0]) => score(b) - score(a) || (a.price || 0) - (b.price || 0);
+          const pick = (pred: (p: typeof catalog[0]) => boolean) => pool.filter(pred).sort(byScore)[0] || null;
+
+          const nettoyant = pick((p) => getProductRole(p) === "nettoyant");
+          const spf = pick((p) => isSpf(p));
+          const traitementMatin = pick((p) => getProductRole(p) === "serum" && !isSpf(p));
+          const traitementSoir =
+            pool.filter((p) => !isSpf(p) && p.id !== traitementMatin?.id &&
+              (getProductRole(p) === "serum" || /nuit|rétinol|retinol|azéla|azela|anti[- ]?tache/i.test(p.name)))
+              .sort(byScore)[0] || traitementMatin;
+          const hydratant = pick((p) => getProductRole(p) === "creme" && !isSpf(p) && p.id !== traitementSoir?.id && p.id !== traitementMatin?.id);
+
+          const matin = [
+            { step: "Nettoyant", product: nettoyant },
+            { step: "Traitement", product: traitementMatin },
+            { step: "SPF", product: spf },
+          ];
+          const soir = [
+            { step: "Nettoyant", product: nettoyant },
+            { step: "Traitement", product: traitementSoir },
+            { step: "Hydratant", product: hydratant },
+          ];
+          const waNumber = "237674377959";
+          const orderLink = (p: typeof catalog[0]) =>
+            `https://wa.me/${waNumber}?text=${encodeURIComponent(`Bonjour GlowScan 👋\n\nJe veux commander :\n• ${p.name}${p.brand ? ` · ${p.brand}` : ""}\n  Prix : ${p.price?.toLocaleString("fr-FR")} FCFA\n\nLivraison à Douala SVP 🙏`)}`;
+
+          const StepRow = ({ step, product }: { step: string; product: typeof catalog[0] | null }) => {
+            const img = product ? getProductImage(product) : undefined;
+            return (
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "8px 0", borderBottom: `1px solid rgba(0,0,0,0.08)` }}>
+                <span style={{ fontSize: "9px", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.06em", color: DS.violetMid, minWidth: "68px", flexShrink: 0 }}>{step}</span>
+                {product ? (
+                  <>
+                    {img ? (
+                      <img src={img} alt={product.name} style={{ width: "34px", height: "34px", borderRadius: "8px", objectFit: "cover", flexShrink: 0 }} />
+                    ) : (
+                      <div style={{ width: "34px", height: "34px", borderRadius: "8px", background: "rgba(124,58,237,0.12)", flexShrink: 0 }} />
+                    )}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: "11px", fontWeight: 700, color: DS.textPrimary, lineHeight: 1.25, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{product.name}</p>
+                      <p style={{ fontSize: "10px", color: DS.textMuted }}>{typeof product.price === "number" ? formatPrice(product.price) : "—"}</p>
+                    </div>
+                    <a href={orderLink(product)} target="_blank" rel="noopener noreferrer"
+                      style={{ fontSize: "10px", fontWeight: 800, color: "#fff", background: "#2f9e6e", padding: "6px 10px", borderRadius: "9999px", textDecoration: "none", flexShrink: 0 }}>
+                      Commander
+                    </a>
+                  </>
+                ) : (
+                  <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "8px", opacity: 0.7 }}>
+                    <div style={{ width: "34px", height: "34px", borderRadius: "8px", background: "rgba(0,0,0,0.05)", flexShrink: 0 }} />
+                    <span style={{ fontSize: "11px", fontStyle: "italic", color: DS.textMuted }}>Bientôt disponible</span>
+                  </div>
+                )}
+              </div>
+            );
+          };
+
+          const Ritual = ({ title, emoji, steps }: { title: string; emoji: string; steps: { step: string; product: typeof catalog[0] | null }[] }) => (
+            <div style={{ marginTop: "10px" }}>
+              <p style={{ fontSize: "11px", fontWeight: 800, color: DS.textPrimary, marginBottom: "2px" }}>{emoji} {title}</p>
+              {steps.map((s, i) => <StepRow key={i} step={s.step} product={s.product} />)}
+            </div>
+          );
+
+          return (
+            <div data-testid="block-full-routine" style={{ marginTop: "4px" }}>
+              <button
+                onClick={() => setShowFullRoutine((v) => !v)}
+                data-testid="button-toggle-full-routine"
+                style={{
+                  width: "100%", padding: "12px 14px", display: "flex", alignItems: "center", justifyContent: "space-between",
+                  background: "rgba(124,58,237,0.06)", border: "1px solid rgba(124,58,237,0.18)", borderRadius: "14px",
+                  cursor: "pointer", color: DS.textPrimary, fontSize: "13px", fontWeight: 800,
+                }}
+              >
+                <span>🧴 Voir ta routine complète</span>
+                <span style={{ transition: "transform 0.2s", transform: showFullRoutine ? "rotate(180deg)" : "none" }}>↓</span>
+              </button>
+
+              {showFullRoutine && (
+                <div style={{ marginTop: "8px", padding: "12px 14px", background: DS.element, border: `1px solid rgba(0,0,0,0.08)`, borderRadius: "14px" }}>
+                  <p style={{ fontSize: "10px", color: DS.textMuted, lineHeight: 1.5, marginBottom: "4px" }}>
+                    Routine filtrée automatiquement selon ton type de peau et ton diagnostic. Tous les produits sont disponibles en pharmacie.
+                  </p>
+                  <Ritual title="Rituel Matin" emoji="🌅" steps={matin} />
+                  <Ritual title="Rituel Soir" emoji="🌙" steps={soir} />
+                </div>
+              )}
             </div>
           );
         })()}
