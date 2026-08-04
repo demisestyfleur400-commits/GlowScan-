@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useScans } from "@/hooks/use-scans";
 import { useProAccount } from "@/hooks/use-pro";
 import { useQuery } from "@tanstack/react-query";
-import { User, Sparkles, ScanLine, Bot, Apple, ListChecks, TrendingUp, ChevronRight, X, Compass, ShoppingBag, ArrowRight, Menu, Crown, LogOut, Lightbulb, Terminal, Target, ShieldAlert, Loader2, Star, Quote } from "lucide-react";
+import { User, ScanLine, Bot, ListChecks, TrendingUp, ChevronRight, X, ShoppingBag, ArrowRight, Menu, Crown, LogOut, Lightbulb, Terminal, Target, ShieldAlert, Loader2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { trackPageVisit } from "@/lib/analytics";
 import Landing from "@/pages/Landing";
@@ -892,41 +892,6 @@ export default function Home() {
           </FadeUp>
         )}
       </main>
-
-      {/* ─── Bottom navigation ─── */}
-      <nav
-        className="fixed bottom-0 left-0 right-0 z-50"
-        style={{
-          background: `${DS.surface}f0`,
-          borderTop: "1px solid rgba(47,158,110,0.12)",
-          backdropFilter: "blur(20px)",
-          paddingBottom: "env(safe-area-inset-bottom, 8px)",
-        }}
-        data-testid="nav-bottom"
-      >
-        <div className="px-5 pt-3 pb-2 flex justify-center">
-          <motion.button
-            onClick={() => setExplorerOpen(true)}
-            data-testid="nav-explorer"
-            whileTap={{ scale: 0.95 }}
-            className="relative flex items-center gap-2 px-8 py-3.5 font-extrabold text-xs overflow-hidden"
-            style={{
-              background: "#2f9e6e",
-              borderRadius: "9999px",
-              color: "#f3f0ff",
-              letterSpacing: "0.06em",
-            }}
-          >
-            {/* Glow orb inside button */}
-            <div
-              className="absolute inset-0"
-              style={{ background: "radial-gradient(circle at 30% 50%, rgba(196,181,253,0.15), transparent 70%)" }}
-            />
-            <Compass className="w-4 h-4 relative z-10" strokeWidth={1.5} />
-            <span className="relative z-10 uppercase tracking-widest">Ouvrir la console</span>
-          </motion.button>
-        </div>
-      </nav>
 
       <ExplorerSheet open={explorerOpen} onClose={() => setExplorerOpen(false)} />
     </div>
