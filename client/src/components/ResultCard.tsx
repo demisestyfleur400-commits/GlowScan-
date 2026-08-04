@@ -2427,12 +2427,11 @@ ${medicalSections}
 
         {/* ═══ NIVEAU 2 — Routine complète (accordéon, B2C uniquement) ═══ */}
         {!isPro && (() => {
-          // Pool de produits filtré par profil : marque maison uniquement en B2C,
-          // zone analysée, hors kits. Score par condition + type de peau détectés.
-          const INTL_PHARMA = new Set(["Bioderma", "Uriage", "La Roche-Posay", "The Ordinary", "CeraVe", "Nubiance", "Topicrem"]);
+          // Pool de produits filtré par profil : TOUT le catalogue (GlowScan Dermo
+          // + marques internationales avec leurs photos), zone analysée, hors kits.
+          // Score par condition + type de peau détectés → répond au besoin client.
           const pool = catalog.filter((p) => {
             if (p.id.startsWith("kit-")) return false;
-            if (p.brand && INTL_PHARMA.has(p.brand)) return false;
             if (currentArea === "cheveux") return p.category === "cheveux";
             if (currentArea === "corps") return p.category === "corps" || p.category === "visage";
             return p.category === "visage";
