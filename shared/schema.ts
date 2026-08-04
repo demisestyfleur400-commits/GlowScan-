@@ -444,8 +444,10 @@ export const trainingData = pgTable("training_data", {
 
   // ── Labels 4-6 — Lésions & conditions ──────────────────────────
   lesionTypes: jsonb("lesion_types"),                           // LesionType[]
-  primaryCondition: varchar("primary_condition", { length: 60 }),
-  secondaryCondition: varchar("secondary_condition", { length: 60 }),
+  // TEXT (et non varchar) : les libellés de condition sont des phrases longues
+  // (ex "Acné Rétentionnelle et Inflammatoire Légère (…)") qui dépassaient 60.
+  primaryCondition: text("primary_condition"),
+  secondaryCondition: text("secondary_condition"),
 
   // ── Labels 7-9 — Niveaux cliniques ──────────────────────────────
   inflammationLevel: varchar("inflammation_level", { length: 15 }), // 'none'|'low'|'moderate'|'high'

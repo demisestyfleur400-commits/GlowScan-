@@ -1649,25 +1649,31 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
           // Zone anatomique analysée (face / body / hair).
           const bodyAreaVal: string | null = (area || null) as string | null;
 
+          // Filet de sécurité : tronque toute valeur à la longueur de sa colonne
+          // varchar pour qu'un libellé IA trop long ne fasse JAMAIS échouer l'insert
+          // en silence (ex: severity "Modérée à sévère"). Les conditions longues
+          // vont dans primary/secondary_condition, élargies en TEXT côté base.
+          const vc = (s: any, n: number): string | null => (s == null || s === "" ? null : String(s).slice(0, n));
+          const scoreNum = ((): number | null => { const v = parseInt(String(r.score), 10); return Number.isFinite(v) ? v : null; })();
           await db.insert(trainingData).values({
             scanId: savedScanId,
             mode: isProMode ? "B2B" : "B2C",
             source: "user_upload",
             promptVersion: isProMode ? "b2b-v2" : "b2c-v3",
-            aiModelVersion: AI_MODEL,
+            aiModelVersion: vc(AI_MODEL, 50),
             aiDiagnosis: finalResult,
-            imageQuality: r.photo_quality || null,
+            imageQuality: vc(r.photo_quality, 20),
             primaryCondition: r.condition || null,
             secondaryCondition: r.conditionSecondaire || null,
-            score: r.score || null,
-            severity: r.severity || null,
-            confidence: r.confidence || null,
-            skinState: r.skinState || null,
-            skinPhototype: skinPhototypeVal,
-            ageRange: ageRangeVal,
-            patientSex: patientSexVal,
-            country: countryVal,
-            bodyArea: bodyAreaVal,
+            score: scoreNum,
+            severity: vc(r.severity, 15),
+            confidence: vc(r.confidence, 10),
+            skinState: vc(r.skinState, 30),
+            skinPhototype: vc(skinPhototypeVal, 10),
+            ageRange: vc(ageRangeVal, 20),
+            patientSex: vc(patientSexVal, 10),
+            country: vc(countryVal, 50),
+            bodyArea: vc(bodyAreaVal, 30),
             balance: r.balance || null,
             redFlags: r.redFlags || null,
             details: r.details || null,
