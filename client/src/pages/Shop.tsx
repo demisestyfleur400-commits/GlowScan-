@@ -3,7 +3,7 @@ import { Navbar } from "@/components/Navbar";
 import { useSEO } from "@/hooks/useSEO";
 import { catalog, type Product, formatPrice, getProductBrand } from "@shared/catalog";
 import { Sparkles, X, Check, MessageCircle, Star, ChevronLeft, ShieldCheck, Truck } from "lucide-react";
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useScans } from "@/hooks/use-scans";
 import { trackPageVisit } from "@/lib/analytics";
@@ -86,6 +86,21 @@ function extractUserProfile(scans: any[]): UserProfile {
     condition: full?.condition || last.condition || undefined,
     scanDate: last.createdAt ? new Date(last.createdAt) : undefined,
   };
+}
+
+// Mappe le problème détecté par l'analyse (condition + type de peau) vers le
+// filtre boutique correspondant. Permet d'ouvrir la boutique directement filtrée
+// sur le besoin de l'utilisateur. Retourne "tous" si rien de net (→ pas de filtre).
+function mapConditionToProblemKey(profile: UserProfile): ProblemKey {
+  const t = `${profile.condition || ""} ${profile.skinType || ""}`.toLowerCase();
+  if (!t.trim()) return "tous";
+  // Taches / hyperpigmentation (prioritaire sur acné si les deux : besoin ciblé)
+  if (/tache|hyperpigment|m[ée]lasma|\bpih\b|post.?inflammatoire|dyschromie|teint terne|teint irr[ée]gulier/.test(t)) return "taches";
+  // Acné / séborrhée / peau grasse → soins anti-imperfections
+  if (/acn[eé]|bouton|imperfection|com[ée]don|point.{0,3}noir|s[ée]borrh|peau grasse|peau mixte|pores?/.test(t)) return "acne";
+  // Sécheresse / déshydratation / eczéma / sensibilité / barrière → hydratation
+  if (/s[eè]che|s[ée]cheresse|d[ée]shydrat|ecz[ée]ma|atopi|sensible|r[ée]active|rougeur|barri[eè]re|tiraill/.test(t)) return "hydratation";
+  return "tous";
 }
 
 function isRecommendedForUser(product: Product, profile: UserProfile): boolean {
@@ -782,6 +797,17 @@ export default function Shop() {
   );
   const hasProfile = !!(profile.skinType || profile.condition);
 
+  // Auto-filtrage : si l'utilisateur a une analyse, ouvrir la boutique filtrée
+  // sur son problème détecté (une seule fois). Sans analyse → "tous" (tout voir).
+  // L'utilisateur peut ensuite cliquer "Tous" ou un autre filtre librement.
+  const autoSelectedRef = useRef(false);
+  useEffect(() => {
+    if (autoSelectedRef.current || !hasProfile) return;
+    const key = mapConditionToProblemKey(profile);
+    if (key !== "tous") setProblemFilter(key);
+    autoSelectedRef.current = true;
+  }, [hasProfile, profile]);
+
   const openOrderForProduct = (product: Product) => {
     setOrderItems([{
       productId: product.id,
@@ -796,6 +822,14 @@ export default function Shop() {
   const filtered = useMemo(() => {
     const matcher = PROBLEMS.find((p) => p.key === problemFilter)!.matcher;
     let products = catalog.filter(matcher);
+    // Fallback : un filtre ciblé sans résultat → nettoyants universels + SPF
+    // (conviennent à tous), plutôt qu'une boutique vide.
+    if (problemFilter !== "tous" && products.length === 0) {
+      products = catalog.filter((p) =>
+        p.category !== "cheveux" &&
+        /nettoyant|gel moussant|gel douche|micellaire|d[ée]maquill|spf\s?\d|solaire|sunscreen/i.test(searchableText(p))
+      );
+    }
     if (hasProfile) {
       products = [...products].sort((a, b) => {
         const aRec = isRecommendedForUser(a, profile) ? 1 : 0;
