@@ -32,7 +32,7 @@ else if (_proGroqKey) PRO_USE_GROQ = true;       // secours : Groq
 // modèle de raisonnement casse response_format sur les appels texte pro.
 const PRO_GROQ_MODEL = process.env.GROQ_TEXT_MODEL || "llama-3.3-70b-versatile";
 const PRO_AI_MODEL   = PRO_USE_GROQ ? PRO_GROQ_MODEL
-                     : PRO_USE_GEMINI ? (process.env.GEMINI_MODEL || "gemini-2.5-flash") : "gpt-4o-mini";
+                     : PRO_USE_GEMINI ? (process.env.GEMINI_MODEL || "gemini-2.0-flash") : "gpt-4o-mini";
 
 // Gemini native SDK (uniquement sans clé Groq)
 const proGemini = PRO_USE_GEMINI ? new GoogleGenerativeAI(_proGeminiKey) : null;

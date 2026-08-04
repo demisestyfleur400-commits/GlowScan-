@@ -52,7 +52,10 @@ const GROQ_MODEL    = process.env.GROQ_MODEL || "qwen/qwen3.6-27b";
 // Modèle Gemini configurable via Railway (GEMINI_MODEL) sans redéploiement.
 // Défaut : gemini-2.5-flash — quota gratuit journalier SÉPARÉ de la 2.0-flash,
 // donc si la 2.0 est saturée (429), basculer la variable débloque l'analyse.
-const GEMINI_MODEL  = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+// gemini-2.5-flash n'est plus ouvert aux nouveaux projets (404) → défaut sur
+// gemini-2.0-flash (accessible, pas de plafond TPM bloquant). Surchargeable via
+// GEMINI_MODEL dans Railway (ex: gemini-flash-latest) sans redéploiement.
+const GEMINI_MODEL  = process.env.GEMINI_MODEL || "gemini-2.0-flash";
 const AI_MODEL      = USE_GROQ ? GROQ_MODEL : USE_GEMINI ? GEMINI_MODEL : "gpt-4o";
 const AI_MODEL_FAST = USE_GROQ ? GROQ_MODEL : USE_GEMINI ? GEMINI_MODEL : "gpt-4o-mini";
 // Modèles de raisonnement (compound, qwen, deepseek, gpt-oss…) : ils ne
