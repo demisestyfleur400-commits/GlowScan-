@@ -2346,8 +2346,113 @@ ${medicalSections}
           </div>
         </div>
 
-        {/* ═══ BLOC 7 — 1 seul produit recommandé (masqué en mode Pro) ═══ */}
+        {/* ═══ BLOC 2 — Que faire maintenant (logique Glow Score · B2C) ═══ */}
         {!isPro && (() => {
+          const gscore = result.score || 0;
+          const cond = (result.condition || "").toLowerCase();
+          const freeGesture = getHygieneAdvice()[0] || null;
+          const premium = _bestProduct;
+          const waNumber = "237674377959";
+          const premiumMsg = premium ? encodeURIComponent(`Bonjour GlowScan 👋\n\nMon analyse : *${result.condition}*\n\nJe commande :\n• ${premium.name}${premium.brand ? ` · ${premium.brand}` : ""}\n  ${premium.price?.toLocaleString("fr-FR")} FCFA\n\nLivraison à Douala SVP 🙏`) : "";
+
+          // Tier accessible (1500–3500 FCFA) filtré par problème — masqué si aucun.
+          const matchProblem = (p: typeof catalog[0]) => p.targets.some((t) => cond.includes(t.toLowerCase()));
+          const accessible = catalog
+            .filter((p) => !p.id.startsWith("kit-") && p.category !== "cheveux" && typeof p.price === "number" && p.price >= 1000 && p.price <= 3500 && matchProblem(p))
+            .sort((a, b) => (a.price || 0) - (b.price || 0))[0] || null;
+
+          const activeIngredient = premium ? (() => {
+            const n = premium.name.toLowerCase();
+            if (/niacinamide/.test(n)) return "de la Niacinamide";
+            if (/vitamine c|vitamin c/.test(n)) return "de la Vitamine C";
+            if (/rétinol|retinol/.test(n)) return "du Rétinol";
+            if (/azéla|azela/.test(n)) return "de l'Acide azélaïque";
+            if (/bha|salicyl/.test(n)) return "de l'Acide salicylique (BHA)";
+            if (/céramide|ceramide/.test(n)) return "des Céramides";
+            if (/spf|solaire/.test(n)) return "des filtres SPF 50+";
+            if (/karité|beurre/.test(n)) return "du Beurre de karité";
+            return "des actifs ciblés";
+          })() : "";
+
+          const FreeGesture = () => freeGesture ? (
+            <div style={{ borderRadius: "14px", padding: "14px 16px", background: "rgba(16,185,129,0.07)", border: "1px solid rgba(16,185,129,0.22)" }}>
+              <p style={{ fontSize: "12px", fontWeight: 800, color: "#059669", marginBottom: "4px" }}>🟢 Geste gratuit immédiat</p>
+              <p style={{ fontSize: "12px", fontWeight: 500, lineHeight: 1.55, color: DS.textBody }}>{freeGesture}</p>
+            </div>
+          ) : null;
+
+          const AccessibleTier = () => accessible ? (
+            <div style={{ borderRadius: "14px", padding: "14px 16px", background: "rgba(245,158,11,0.07)", border: "1px solid rgba(245,158,11,0.22)" }}>
+              <p style={{ fontSize: "12px", fontWeight: 800, color: "#d97706", marginBottom: "6px" }}>🟡 Produit accessible</p>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                {getProductImage(accessible) && <img src={getProductImage(accessible)} alt={accessible.name} style={{ width: "40px", height: "40px", borderRadius: "8px", objectFit: "cover", flexShrink: 0 }} />}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: "12px", fontWeight: 700, color: DS.textPrimary, lineHeight: 1.25 }}>{accessible.name}</p>
+                  <p style={{ fontSize: "10px", color: DS.textMuted }}>{formatPrice(accessible.price!)} · disponible en pharmacie</p>
+                </div>
+              </div>
+              <a href={`https://www.google.com/maps/search/${encodeURIComponent("pharmacie " + accessible.name)}`} target="_blank" rel="noopener noreferrer"
+                style={{ display: "block", marginTop: "8px", textAlign: "center", fontSize: "11px", fontWeight: 700, color: "#d97706", textDecoration: "underline" }}>
+                Trouver en pharmacie
+              </a>
+            </div>
+          ) : null;
+
+          const PremiumTier = ({ discreet = false }: { discreet?: boolean }) => premium ? (
+            <div style={{ borderRadius: "14px", padding: "14px 16px", background: discreet ? "rgba(124,58,237,0.05)" : "rgba(233,30,140,0.06)", border: `1px solid ${discreet ? "rgba(124,58,237,0.15)" : "rgba(233,30,140,0.2)"}` }}>
+              <p style={{ fontSize: "12px", fontWeight: 800, color: discreet ? DS.textMuted : "#E91E8C", marginBottom: "6px" }}>
+                {discreet ? "✨ Pour accélérer les résultats (optionnel)" : "🔴 Solution optimale"}
+              </p>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
+                {getProductImage(premium) && <img src={getProductImage(premium)} alt={premium.name} style={{ width: "44px", height: "44px", borderRadius: "8px", objectFit: "cover", flexShrink: 0 }} />}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: "12px", fontWeight: 700, color: DS.textPrimary, lineHeight: 1.25 }}>{premium.name}</p>
+                  <p style={{ fontSize: "11px", fontWeight: 800, color: "#E91E8C" }}>{premium.price ? formatPrice(premium.price) : "—"}</p>
+                </div>
+              </div>
+              <p style={{ fontSize: "11px", color: DS.textBody, lineHeight: 1.5, marginBottom: "10px" }}>
+                Contient {activeIngredient} — reconnu pour {cond ? cond.split("(")[0].trim() : "ta problématique"} sur peaux mélanisées.
+              </p>
+              <a href={`https://wa.me/${waNumber}?text=${premiumMsg}`} target="_blank" rel="noopener noreferrer"
+                style={{ display: "block", textAlign: "center", padding: "11px", borderRadius: "12px", background: "linear-gradient(135deg, #E91E8C, #f43f5e)", color: "#fff", fontSize: "12px", fontWeight: 800, textDecoration: "none" }}>
+                Commander maintenant →
+              </a>
+              <p style={{ fontSize: "9px", color: DS.textMuted, lineHeight: 1.5, marginTop: "6px", textAlign: "center" }}>
+                GlowScan perçoit une commission sur cette commande. Ça nous permet de garder l'analyse gratuite.
+              </p>
+            </div>
+          ) : null;
+
+          return (
+            <div data-testid="block-what-now" style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              <p style={{ fontSize: "13px", fontWeight: 800, color: DS.textPrimary }}>Que faire maintenant</p>
+              {gscore < 60 ? (
+                <>
+                  <div style={{ borderRadius: "14px", padding: "14px 16px", background: "rgba(37,99,235,0.06)", border: "1px solid rgba(37,99,235,0.22)" }}>
+                    <p style={{ fontSize: "13px", fontWeight: 800, color: DS.textPrimary, marginBottom: "4px" }}>👨‍⚕️ Consulter un dermatologue GlowScan</p>
+                    <p style={{ fontSize: "11px", color: DS.textBody, lineHeight: 1.5, marginBottom: "8px" }}>Ton score indique un cas qui mérite un avis médical. À partir de 2 000 FCFA.</p>
+                    <ConsultationLauncher scanId={savedScanId || scanId || undefined} condition={result.condition || ""} imageUrl={imageUrl || undefined} />
+                  </div>
+                  <FreeGesture />
+                </>
+              ) : gscore >= 80 ? (
+                <>
+                  <FreeGesture />
+                  <PremiumTier discreet />
+                </>
+              ) : (
+                <>
+                  <FreeGesture />
+                  <AccessibleTier />
+                  <PremiumTier />
+                </>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* ═══ BLOC 7 (legacy) — ordonnance unique, remplacée par le BLOC 2 ci-dessus ═══ */}
+        {false && (() => {
           const bestProduct = _bestProduct;
           if (!bestProduct) return null;
 
@@ -3222,9 +3327,10 @@ ${medicalSections}
         </div>
       </motion.div>
 
-      {/* Consultation IN-APP (B2C) — circuit fermé : plus de WhatsApp, la
-          conversation se fait directement dans GlowScan. */}
-      {!isPro && (
+      {/* Consultation IN-APP (B2C) — circuit fermé. Pour un score < 60 elle est
+          déjà mise en avant dans le BLOC 2, donc ici uniquement en option
+          discrète pour les scores ≥ 60. */}
+      {!isPro && (result.score || 0) >= 60 && (
         <ConsultationLauncher
           scanId={savedScanId || scanId || undefined}
           condition={result.condition || ""}
