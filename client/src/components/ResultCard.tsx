@@ -521,7 +521,28 @@ function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
 }
 
-function deriveAgeCutane(result: AnalysisResult): number {
+// Milieu de la tranche d'âge saisie ("20-25 ans", "moins de 15 ans", "plus de 50 ans"…).
+function parseIntakeAgeMid(raw?: string): number | null {
+  if (!raw) return null;
+  const nums = (String(raw).match(/\d{1,3}/g) || []).map(Number).filter((n) => n > 0 && n < 120);
+  if (nums.length === 0) return null;
+  if (/moins/i.test(raw)) return Math.max(12, nums[0] - 2);   // "moins de 15 ans" → ~13
+  if (/plus|\+/i.test(raw)) return nums[0] + 3;                // "plus de 50 ans" → ~53
+  if (nums.length >= 2) return Math.round((nums[0] + nums[1]) / 2); // milieu de tranche
+  return nums[0];
+}
+
+function deriveAgeCutane(result: AnalysisResult, intakeAge?: string): number {
+  const base = parseIntakeAgeMid(intakeAge);
+  if (base != null) {
+    // Âge cutané ancré sur l'âge RÉEL saisi + petit écart selon l'état de la peau.
+    // Bonne peau (score haut) → léger rajeunissement ; peau abîmée → quelques années
+    // de plus. Écart borné pour rester crédible (jamais un chiffre qui fait douter).
+    const score = result.score || 60;
+    const delta = clamp(Math.round((62 - score) * 0.14), -2, 7);
+    return clamp(base + delta, Math.max(14, base - 2), base + 8);
+  }
+  // Fallback (mode DERM ou aucun âge saisi) : ancienne heuristique.
   const score = result.score || 50;
   const scars = result.balance?.scars || 0;
   return clamp(Math.round(22 + (100 - score) * 0.25 + scars * 1.2), 18, 65);
@@ -1155,7 +1176,7 @@ export function ResultCard({ result, scanId, savedScanId, area, imageUrl, userFi
   const [orderModalTitle, setOrderModalTitle] = useState("");
   const [pdfGenerating, setPdfGenerating] = useState(false);
 
-  const ageCutane = deriveAgeCutane(result);
+  const ageCutane = deriveAgeCutane(result, isPro ? undefined : patientIntake?.age);
   const indiceAcne = deriveIndiceAcne(result);
   const hydratation = deriveHydratation(result);
   const rides = deriveRides(result);
