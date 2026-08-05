@@ -20,7 +20,7 @@ export function ConsultationLauncher({ scanId, condition, imageUrl }: { scanId?:
   const [ref, setRef] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-  const [payProvider, setPayProvider] = useState<"cinetpay" | "simulated">("simulated");
+  const [payProvider, setPayProvider] = useState<"monetbil" | "cinetpay" | "simulated">("simulated");
   const [paidConfirmed, setPaidConfirmed] = useState(false);
 
   useEffect(() => {
@@ -31,7 +31,7 @@ export function ConsultationLauncher({ scanId, condition, imageUrl }: { scanId?:
       .finally(() => setLoading(false));
     fetch("/api/payments/config")
       .then((r) => r.json())
-      .then((d) => setPayProvider(d.provider === "cinetpay" ? "cinetpay" : "simulated"))
+      .then((d) => setPayProvider(d.provider === "monetbil" ? "monetbil" : d.provider === "cinetpay" ? "cinetpay" : "simulated"))
       .catch(() => setPayProvider("simulated"));
   }, []);
 
@@ -153,7 +153,7 @@ export function ConsultationLauncher({ scanId, condition, imageUrl }: { scanId?:
             <p style={{ fontSize: 12, color: "#6b7280", margin: "0 0 12px", lineHeight: 1.6 }}>
               Consultation avec <strong>Dr {selected.fullName}</strong> — <strong>{selected.price.toLocaleString("fr-FR")} FCFA</strong>.
             </p>
-            {payProvider === "cinetpay" ? (
+            {payProvider !== "simulated" ? (
               <>
                 <div style={{ background: "#fff", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 12, padding: 12, marginBottom: 12 }}>
                   <p style={{ fontSize: 12, color: "#374151", margin: 0, lineHeight: 1.7 }}>

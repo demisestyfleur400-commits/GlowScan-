@@ -493,15 +493,20 @@ export async function registerRoutes(
   });
 
   // ════════════════════════════════════════════════════════════════════
-  // PAIEMENT MOBILE MONEY — CinetPay (MTN + Orange). Activé UNIQUEMENT si les
-  // clés sont présentes dans Railway ; sinon on garde le flux simulé (admin
-  // confirme à la main). Aucune régression : le simulé reste le fallback.
-  //   Variables Railway : CINETPAY_API_KEY, CINETPAY_SITE_ID
+  // PAIEMENT MOBILE MONEY (MTN + Orange). Provider choisi selon les clés
+  // présentes dans Railway. Priorité : Monetbil > CinetPay > simulé (admin).
+  // Aucune régression : le simulé reste le fallback si aucune clé.
+  //   Monetbil : MONETBIL_SERVICE_KEY, MONETBIL_SERVICE_SECRET
+  //   CinetPay : CINETPAY_API_KEY, CINETPAY_SITE_ID
   //   (optionnel) PUBLIC_BASE_URL (défaut https://glow-scan.com)
   // ════════════════════════════════════════════════════════════════════
+  const MONETBIL_SERVICE_KEY = process.env.MONETBIL_SERVICE_KEY || "";
+  const MONETBIL_SERVICE_SECRET = process.env.MONETBIL_SERVICE_SECRET || "";
+  const MONETBIL_ON = !!(MONETBIL_SERVICE_KEY && MONETBIL_SERVICE_SECRET);
   const CINETPAY_API_KEY = process.env.CINETPAY_API_KEY || "";
   const CINETPAY_SITE_ID = process.env.CINETPAY_SITE_ID || "";
-  const CINETPAY_ON = !!(CINETPAY_API_KEY && CINETPAY_SITE_ID);
+  const CINETPAY_ON = !MONETBIL_ON && !!(CINETPAY_API_KEY && CINETPAY_SITE_ID);
+  const PAYMENT_PROVIDER = MONETBIL_ON ? "monetbil" : CINETPAY_ON ? "cinetpay" : "simulated";
   const PUBLIC_BASE_URL = (process.env.PUBLIC_BASE_URL || "https://glow-scan.com").replace(/\/$/, "");
 
   // Passe une consultation à "payée + ouverte" et notifie le dermatologue.
@@ -520,16 +525,16 @@ export async function registerRoutes(
     return c;
   };
 
-  // Indique au client si le vrai paiement est actif (sinon → flux simulé).
+  // Indique au client quel provider de paiement est actif (sinon → flux simulé).
   app.get("/api/payments/config", (_req, res) => {
-    res.json({ provider: CINETPAY_ON ? "cinetpay" : "simulated" });
+    res.json({ provider: PAYMENT_PROVIDER });
   });
 
   // Initie un paiement CinetPay pour une consultation → renvoie l'URL de paiement.
   app.post("/api/consultations/:id/pay/init", async (req: any, res) => {
     const userId = getUID(req);
     if (!userId) return res.status(401).json({ message: "Connexion requise" });
-    if (!CINETPAY_ON) return res.status(503).json({ code: "PAYMENT_SIMULATED", message: "Paiement en ligne non configuré." });
+    if (PAYMENT_PROVIDER === "simulated") return res.status(503).json({ code: "PAYMENT_SIMULATED", message: "Paiement en ligne non configuré." });
     try {
       const id = parseInt(req.params.id);
       const [c] = await db.select().from(consultations).where(eq(consultations.id, id));
@@ -539,6 +544,24 @@ export async function registerRoutes(
       const transactionId = `GSCONS-${id}-${Date.now()}`;
       await db.update(consultations).set({ paymentRef: transactionId }).where(eq(consultations.id, id));
 
+      // ── Monetbil : URL widget v2.1 (la page hébergée gère MTN + Orange) ──
+      if (MONETBIL_ON) {
+        const params = new URLSearchParams({
+          amount: String(amount),
+          item_ref: transactionId,
+          payment_ref: transactionId,
+          currency: "XAF",
+          country: "CM",
+          locale: "fr",
+          user: userId,
+          return_url: `${PUBLIC_BASE_URL}/consultations?paid=${id}`,
+          notify_url: `${PUBLIC_BASE_URL}/api/payments/monetbil/notify`,
+        });
+        const paymentUrl = `https://www.monetbil.com/widget/v2.1/${MONETBIL_SERVICE_KEY}?${params.toString()}`;
+        return res.json({ paymentUrl, transactionId });
+      }
+
+      // ── CinetPay ──
       const payload = {
         apikey: CINETPAY_API_KEY,
         site_id: CINETPAY_SITE_ID,
@@ -547,7 +570,7 @@ export async function registerRoutes(
         currency: "XAF",
         description: `Consultation dermatologue GlowScan #${id}`,
         notify_url: `${PUBLIC_BASE_URL}/api/payments/cinetpay/webhook`,
-        return_url: `${PUBLIC_BASE_URL}/mes-consultations?paid=${id}`,
+        return_url: `${PUBLIC_BASE_URL}/consultations?paid=${id}`,
         channels: "MOBILE_MONEY",
         lang: "fr",
       };
@@ -562,7 +585,7 @@ export async function registerRoutes(
         res.status(502).json({ message: j?.description || "Échec initialisation paiement." });
       }
     } catch (err) {
-      console.error("[cinetpay init] error:", err);
+      console.error("[pay init] error:", err);
       res.status(500).json({ message: "Erreur serveur paiement" });
     }
   });
@@ -613,6 +636,38 @@ export async function registerRoutes(
       res.status(200).send("ok");
     } catch (err) {
       console.error("[cinetpay webhook] error:", err);
+      res.status(200).send("error-logged");
+    }
+  });
+
+  // Webhook Monetbil (notify_url) — source de vérité. Revérif serveur-à-serveur
+  // via checkPayment (on ne fait jamais confiance au POST brut). status 1 = succès.
+  app.post("/api/payments/monetbil/notify", async (req: any, res) => {
+    try {
+      if (!MONETBIL_ON) return res.status(200).send("ignored");
+      const b = req.body || {};
+      const itemRef = String(b.item_ref || b.payment_ref || "");
+      const paymentId = String(b.paymentId || b.payment_id || "");
+      let confirmed = false;
+      if (paymentId) {
+        const r = await fetch("https://api.monetbil.com/payment/v1/checkPayment", {
+          method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({ paymentId }).toString(),
+        });
+        const j: any = await r.json().catch(() => ({}));
+        const st = j?.transaction?.status ?? j?.status;
+        confirmed = String(st) === "1";
+      } else {
+        // Fallback moins sûr si pas de paymentId : accepte uniquement "success".
+        confirmed = String(b.status || "").toLowerCase() === "success";
+      }
+      if (confirmed) {
+        const m = itemRef.match(/^GSCONS-(\d+)-/);
+        if (m) await markConsultationPaid(parseInt(m[1]));
+      }
+      res.status(200).send("ok");
+    } catch (err) {
+      console.error("[monetbil notify] error:", err);
       res.status(200).send("error-logged");
     }
   });
