@@ -1147,6 +1147,8 @@ export function ResultCard({ result, scanId, savedScanId, area, imageUrl, userFi
   const [showShareCard, setShowShareCard] = useState(false);
   const [showRoutineCard, setShowRoutineCard] = useState(false);
   const [showFullRoutine, setShowFullRoutine] = useState(false); // Niveau 2 — routine complète
+  const [showConclusions, setShowConclusions] = useState(false); // BLOC 3 accordéon
+  const [showIngredients, setShowIngredients] = useState(false); // BLOC 3 accordéon
   const [j7ReminderSet, setJ7ReminderSet] = useState(false);
   const [showOrderModal, setShowOrderModal] = useState(false);
   const [orderModalItems, setOrderModalItems] = useState<OrderItem[]>([]);
@@ -2690,7 +2692,19 @@ ${medicalSections}
           </div>
         )}
 
+        {/* ═══ BLOC 3 (accordéon B2C) — Conclusions du Dr GlowScan ═══ */}
+        {!isPro && (
+          <button
+            onClick={() => setShowConclusions((v) => !v)}
+            data-testid="acc-conclusions"
+            style={{ width: "100%", padding: "12px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(124,58,237,0.06)", border: "1px solid rgba(124,58,237,0.18)", borderRadius: "14px", cursor: "pointer", color: DS.textPrimary, fontSize: "13px", fontWeight: 800 }}
+          >
+            <span>✨ Conclusions du Dr. GlowScan</span>
+            <span style={{ transition: "transform 0.2s", transform: showConclusions ? "rotate(180deg)" : "none" }}>▼</span>
+          </button>
+        )}
         {/* ═══ BLOC 4 — Conclusions cliniques ═══ */}
+        {(isPro || showConclusions) && (
         <div
           data-testid="block-expert"
           style={{ ...DS.violetCard, padding: "20px", position: "relative", overflow: "hidden" }}
@@ -2802,6 +2816,7 @@ ${medicalSections}
             Vos données d'analyse clinique restent 100% confidentielles.
           </p>
         </div>
+        )}
 
         {/* ═══ BLOC 5 — Cartographie des zones ═══ */}
         {result.zones && result.zones.length > 0 && (
@@ -3192,8 +3207,19 @@ ${medicalSections}
           </div>
         )}
 
+        {/* ═══ BLOC 3 (accordéon B2C) — Ingrédients à bannir ═══ */}
+        {!isPro && getToxicIngredients().length > 0 && (
+          <button
+            onClick={() => setShowIngredients((v) => !v)}
+            data-testid="acc-ingredients"
+            style={{ width: "100%", padding: "12px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(220,38,38,0.05)", border: "1px solid rgba(220,38,38,0.18)", borderRadius: "14px", cursor: "pointer", color: DS.textPrimary, fontSize: "13px", fontWeight: 800 }}
+          >
+            <span>🚫 Ingrédients à bannir absolument</span>
+            <span style={{ transition: "transform 0.2s", transform: showIngredients ? "rotate(180deg)" : "none" }}>▼</span>
+          </button>
+        )}
         {/* ═══ BLOC 7bis — 🚫 Ingrédients toxiques à bannir ═══ */}
-        {(() => {
+        {(isPro || showIngredients) && (() => {
           const toxics = getToxicIngredients();
           if (toxics.length === 0) return null; // peau saine / rien de spécifique → pas de section générique
           const levelColor = (l: string) => l === "CRITIQUE" ? "#dc2626" : l === "Élevé" ? "#E91E8C" : "#f59e0b";
@@ -3233,6 +3259,18 @@ ${medicalSections}
             </div>
           );
         })()}
+
+        {/* ═══ BLOC 3 (accordéon B2C) — Partager mon ordonnance ═══ */}
+        {!isPro && (
+          <button
+            onClick={() => setShowRoutineCard(true)}
+            data-testid="acc-share"
+            style={{ width: "100%", padding: "12px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(47,158,110,0.06)", border: "1px solid rgba(47,158,110,0.2)", borderRadius: "14px", cursor: "pointer", color: DS.textPrimary, fontSize: "13px", fontWeight: 800 }}
+          >
+            <span>📤 Partager mon ordonnance</span>
+            <span>→</span>
+          </button>
+        )}
 
         {/* ═══ BLOC 7ter — 💡 Conseils d'hygiène personnalisés ═══ */}
         {(() => {
