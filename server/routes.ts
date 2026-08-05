@@ -462,6 +462,131 @@ export async function registerRoutes(
     }
   });
 
+  // ════════════════════════════════════════════════════════════════════
+  // PAIEMENT MOBILE MONEY — CinetPay (MTN + Orange). Activé UNIQUEMENT si les
+  // clés sont présentes dans Railway ; sinon on garde le flux simulé (admin
+  // confirme à la main). Aucune régression : le simulé reste le fallback.
+  //   Variables Railway : CINETPAY_API_KEY, CINETPAY_SITE_ID
+  //   (optionnel) PUBLIC_BASE_URL (défaut https://glow-scan.com)
+  // ════════════════════════════════════════════════════════════════════
+  const CINETPAY_API_KEY = process.env.CINETPAY_API_KEY || "";
+  const CINETPAY_SITE_ID = process.env.CINETPAY_SITE_ID || "";
+  const CINETPAY_ON = !!(CINETPAY_API_KEY && CINETPAY_SITE_ID);
+  const PUBLIC_BASE_URL = (process.env.PUBLIC_BASE_URL || "https://glow-scan.com").replace(/\/$/, "");
+
+  // Passe une consultation à "payée + ouverte" et notifie le dermatologue.
+  const markConsultationPaid = async (id: number) => {
+    const [c] = await db.update(consultations)
+      .set({ paymentStatus: "paid", status: "open" })
+      .where(eq(consultations.id, id)).returning();
+    if (!c) return null;
+    try {
+      const pr = Rows(await db.execute(sql`SELECT user_id FROM pro_accounts WHERE id = ${c.proAccountId}`));
+      if (pr[0]?.user_id) {
+        emitToUser(pr[0].user_id, "consultation:opened", { consultationId: c.id });
+        pushToUser(pr[0].user_id, "Nouvelle consultation 🩺", "Un patient vous consulte en ligne sur GlowScan.", "/derm/consultations");
+      }
+    } catch {}
+    return c;
+  };
+
+  // Indique au client si le vrai paiement est actif (sinon → flux simulé).
+  app.get("/api/payments/config", (_req, res) => {
+    res.json({ provider: CINETPAY_ON ? "cinetpay" : "simulated" });
+  });
+
+  // Initie un paiement CinetPay pour une consultation → renvoie l'URL de paiement.
+  app.post("/api/consultations/:id/pay/init", async (req: any, res) => {
+    const userId = getUID(req);
+    if (!userId) return res.status(401).json({ message: "Connexion requise" });
+    if (!CINETPAY_ON) return res.status(503).json({ code: "PAYMENT_SIMULATED", message: "Paiement en ligne non configuré." });
+    try {
+      const id = parseInt(req.params.id);
+      const [c] = await db.select().from(consultations).where(eq(consultations.id, id));
+      if (!c || c.userId !== userId) return res.status(404).json({ message: "Consultation introuvable" });
+      if (c.paymentStatus === "paid") return res.json({ alreadyPaid: true });
+      const amount = Math.max(100, Number(c.priceFcfa) || 2000);
+      const transactionId = `GSCONS-${id}-${Date.now()}`;
+      await db.update(consultations).set({ paymentRef: transactionId }).where(eq(consultations.id, id));
+
+      const payload = {
+        apikey: CINETPAY_API_KEY,
+        site_id: CINETPAY_SITE_ID,
+        transaction_id: transactionId,
+        amount,
+        currency: "XAF",
+        description: `Consultation dermatologue GlowScan #${id}`,
+        notify_url: `${PUBLIC_BASE_URL}/api/payments/cinetpay/webhook`,
+        return_url: `${PUBLIC_BASE_URL}/mes-consultations?paid=${id}`,
+        channels: "MOBILE_MONEY",
+        lang: "fr",
+      };
+      const r = await fetch("https://api-checkout.cinetpay.com/v2/payment", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
+      });
+      const j: any = await r.json();
+      if (j?.code === "201" && j?.data?.payment_url) {
+        res.json({ paymentUrl: j.data.payment_url, transactionId });
+      } else {
+        console.error("[cinetpay init] réponse inattendue:", JSON.stringify(j).slice(0, 300));
+        res.status(502).json({ message: j?.description || "Échec initialisation paiement." });
+      }
+    } catch (err) {
+      console.error("[cinetpay init] error:", err);
+      res.status(500).json({ message: "Erreur serveur paiement" });
+    }
+  });
+
+  // Vérifie le statut d'un paiement (polling client toutes les 3s) via CinetPay check.
+  app.get("/api/consultations/:id/pay/status", async (req: any, res) => {
+    const userId = getUID(req);
+    if (!userId) return res.status(401).json({ message: "Connexion requise" });
+    try {
+      const id = parseInt(req.params.id);
+      const [c] = await db.select().from(consultations).where(eq(consultations.id, id));
+      if (!c || c.userId !== userId) return res.status(404).json({ message: "Consultation introuvable" });
+      if (c.paymentStatus === "paid") return res.json({ status: "paid" });
+      if (!CINETPAY_ON || !c.paymentRef) return res.json({ status: c.paymentStatus === "paid" ? "paid" : "pending" });
+      const r = await fetch("https://api-checkout.cinetpay.com/v2/payment/check", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ apikey: CINETPAY_API_KEY, site_id: CINETPAY_SITE_ID, transaction_id: c.paymentRef }),
+      });
+      const j: any = await r.json();
+      const st = String(j?.data?.status || "").toUpperCase();
+      if (j?.code === "00" && st === "ACCEPTED") {
+        await markConsultationPaid(id);
+        return res.json({ status: "paid" });
+      }
+      if (st === "REFUSED") return res.json({ status: "failed" });
+      res.json({ status: "pending" });
+    } catch (err) {
+      console.error("[cinetpay status] error:", err);
+      res.json({ status: "pending" });
+    }
+  });
+
+  // Webhook CinetPay (notify_url) — source de vérité. On revérifie via check API.
+  app.post("/api/payments/cinetpay/webhook", async (req: any, res) => {
+    try {
+      const transactionId = String(req.body?.cpm_trans_id || req.body?.transaction_id || "");
+      if (!CINETPAY_ON || !transactionId) return res.status(200).send("ignored");
+      // Revérification serveur-à-serveur (ne jamais faire confiance au POST brut).
+      const r = await fetch("https://api-checkout.cinetpay.com/v2/payment/check", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ apikey: CINETPAY_API_KEY, site_id: CINETPAY_SITE_ID, transaction_id: transactionId }),
+      });
+      const j: any = await r.json();
+      if (j?.code === "00" && String(j?.data?.status || "").toUpperCase() === "ACCEPTED") {
+        const m = transactionId.match(/^GSCONS-(\d+)-/);
+        if (m) await markConsultationPaid(parseInt(m[1]));
+      }
+      res.status(200).send("ok");
+    } catch (err) {
+      console.error("[cinetpay webhook] error:", err);
+      res.status(200).send("error-logged");
+    }
+  });
+
   // Admin : liste des consultations en attente de confirmation de paiement.
   app.get("/api/admin/consultations", async (req: any, res) => {
     if (!checkDatasetKey(req)) return res.status(403).json({ message: "Accès refusé" });

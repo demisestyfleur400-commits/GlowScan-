@@ -20,6 +20,8 @@ export function ConsultationLauncher({ scanId, condition, imageUrl }: { scanId?:
   const [ref, setRef] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [payProvider, setPayProvider] = useState<"cinetpay" | "simulated">("simulated");
+  const [paidConfirmed, setPaidConfirmed] = useState(false);
 
   useEffect(() => {
     fetch("/api/b2c/dermatologists")
@@ -27,7 +29,36 @@ export function ConsultationLauncher({ scanId, condition, imageUrl }: { scanId?:
       .then((d) => setDerms(d.dermatologists || []))
       .catch(() => setDerms([]))
       .finally(() => setLoading(false));
+    fetch("/api/payments/config")
+      .then((r) => r.json())
+      .then((d) => setPayProvider(d.provider === "cinetpay" ? "cinetpay" : "simulated"))
+      .catch(() => setPayProvider("simulated"));
   }, []);
+
+  // Paiement réel CinetPay : init → ouverture page paiement → polling statut (3s, max 60s).
+  const startCinetPay = async () => {
+    if (!consultationId) return;
+    setBusy(true); setErr("");
+    try {
+      const res = await fetch(`/api/consultations/${consultationId}/pay/init`, { method: "POST", credentials: "include" });
+      const data = await res.json();
+      if (data.alreadyPaid) { setPaidConfirmed(true); setBusy(false); setStep("done"); return; }
+      if (!res.ok || !data.paymentUrl) { setErr(data.message || "Impossible de démarrer le paiement."); setBusy(false); return; }
+      window.open(data.paymentUrl, "_blank", "noopener,noreferrer");
+      // Polling du statut
+      let elapsed = 0;
+      const poll = setInterval(async () => {
+        elapsed += 3;
+        try {
+          const s = await fetch(`/api/consultations/${consultationId}/pay/status`, { credentials: "include" });
+          const sd = await s.json();
+          if (sd.status === "paid") { clearInterval(poll); setPaidConfirmed(true); setBusy(false); setStep("done"); }
+          else if (sd.status === "failed") { clearInterval(poll); setBusy(false); setErr("Paiement échoué. Vérifie ton solde et réessaie."); }
+        } catch {}
+        if (elapsed >= 120) { clearInterval(poll); setBusy(false); setErr("Paiement non confirmé. S'il a été débité, il sera validé automatiquement — vérifie « Mes consultations »."); }
+      }, 3000);
+    } catch { setErr("Erreur réseau. Réessaie."); setBusy(false); }
+  };
 
   const openConsultation = async (d: Derm) => {
     setBusy(true); setErr("");
@@ -122,18 +153,34 @@ export function ConsultationLauncher({ scanId, condition, imageUrl }: { scanId?:
             <p style={{ fontSize: 12, color: "#6b7280", margin: "0 0 12px", lineHeight: 1.6 }}>
               Consultation avec <strong>Dr {selected.fullName}</strong> — <strong>{selected.price.toLocaleString("fr-FR")} FCFA</strong>.
             </p>
-            <div style={{ background: "#fff", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 12, padding: 12, marginBottom: 12 }}>
-              <p style={{ fontSize: 12, color: "#374151", margin: 0, lineHeight: 1.7 }}>
-                1. Envoie <strong>{selected.price.toLocaleString("fr-FR")} FCFA</strong> par Mobile Money au <strong>{PAYMENT_NUMBER}</strong>.<br />
-                2. Copie la <strong>référence de la transaction</strong> reçue par SMS et colle-la ci-dessous.
-              </p>
-            </div>
-            <input value={ref} onChange={(e) => setRef(e.target.value)} placeholder="Référence du paiement (SMS)"
-              style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: "1px solid rgba(0,0,0,0.15)", fontSize: 13, marginBottom: 10 }} />
-            <button onClick={submitRef} disabled={busy || !ref.trim()}
-              style={{ width: "100%", background: VIOLET, color: "#fff", border: "none", borderRadius: 9999, padding: "12px", fontSize: 13, fontWeight: 800, cursor: "pointer", opacity: busy || !ref.trim() ? 0.5 : 1 }}>
-              {busy ? "Envoi…" : "J'ai payé — valider"}
-            </button>
+            {payProvider === "cinetpay" ? (
+              <>
+                <div style={{ background: "#fff", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 12, padding: 12, marginBottom: 12 }}>
+                  <p style={{ fontSize: 12, color: "#374151", margin: 0, lineHeight: 1.7 }}>
+                    Paie en toute sécurité par <strong>MTN Mobile Money</strong> ou <strong>Orange Money</strong>. Une page de paiement s'ouvre — confirme sur ton téléphone, puis reviens ici.
+                  </p>
+                </div>
+                <button onClick={startCinetPay} disabled={busy}
+                  style={{ width: "100%", background: VIOLET, color: "#fff", border: "none", borderRadius: 9999, padding: "12px", fontSize: 13, fontWeight: 800, cursor: "pointer", opacity: busy ? 0.6 : 1 }}>
+                  {busy ? "Paiement en cours… garde cette page ouverte" : `Payer ${selected.price.toLocaleString("fr-FR")} FCFA →`}
+                </button>
+              </>
+            ) : (
+              <>
+                <div style={{ background: "#fff", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 12, padding: 12, marginBottom: 12 }}>
+                  <p style={{ fontSize: 12, color: "#374151", margin: 0, lineHeight: 1.7 }}>
+                    1. Envoie <strong>{selected.price.toLocaleString("fr-FR")} FCFA</strong> par Mobile Money au <strong>{PAYMENT_NUMBER}</strong>.<br />
+                    2. Copie la <strong>référence de la transaction</strong> reçue par SMS et colle-la ci-dessous.
+                  </p>
+                </div>
+                <input value={ref} onChange={(e) => setRef(e.target.value)} placeholder="Référence du paiement (SMS)"
+                  style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: "1px solid rgba(0,0,0,0.15)", fontSize: 13, marginBottom: 10 }} />
+                <button onClick={submitRef} disabled={busy || !ref.trim()}
+                  style={{ width: "100%", background: VIOLET, color: "#fff", border: "none", borderRadius: 9999, padding: "12px", fontSize: 13, fontWeight: 800, cursor: "pointer", opacity: busy || !ref.trim() ? 0.5 : 1 }}>
+                  {busy ? "Envoi…" : "J'ai payé — valider"}
+                </button>
+              </>
+            )}
           </div>
         )}
 
@@ -141,9 +188,15 @@ export function ConsultationLauncher({ scanId, condition, imageUrl }: { scanId?:
         {step === "done" && (
           <div style={{ textAlign: "center", padding: "8px 0" }}>
             <div style={{ fontSize: 34, marginBottom: 6 }}>✅</div>
-            <p style={{ fontSize: 13.5, fontWeight: 800, color: "#1a1a2e", margin: "0 0 4px" }}>Paiement enregistré</p>
+            <p style={{ fontSize: 13.5, fontWeight: 800, color: "#1a1a2e", margin: "0 0 4px" }}>
+              {paidConfirmed ? "Paiement reçu ✅" : "Paiement enregistré"}
+            </p>
             <p style={{ fontSize: 12, color: "#6b7280", margin: "0 0 12px", lineHeight: 1.6 }}>
-              Dès que ton paiement est confirmé, la conversation s'ouvre dans <strong>« Mes consultations »</strong>. Tu seras notifié(e).
+              {paidConfirmed ? (
+                <>Dr {selected?.fullName} a été notifié. La conversation est ouverte dans <strong>« Mes consultations »</strong>.</>
+              ) : (
+                <>Dès que ton paiement est confirmé, la conversation s'ouvre dans <strong>« Mes consultations »</strong>. Tu seras notifié(e).</>
+              )}
             </p>
             <a href="/consultations" style={{ display: "inline-block", background: VIOLET, color: "#fff", borderRadius: 9999, padding: "10px 20px", fontSize: 12.5, fontWeight: 800, textDecoration: "none" }}>
               Voir mes consultations
