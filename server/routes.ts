@@ -400,6 +400,11 @@ export async function registerRoutes(
         paymentStatus: "unpaid",
         priceFcfa: price,
       }).returning();
+      // Modèle éco : 20% plateforme, le reste au dermatologue (SQL brut résilient).
+      try {
+        const commission = Math.round(price * 0.20);
+        await db.execute(sql`UPDATE consultations SET platform_commission = ${commission}, dermatologue_payout = ${price - commission} WHERE id = ${c.id}`);
+      } catch (e) { console.warn("[consultations] commission non enregistrée (ALTER v2 appliqué ?):", (e as any)?.message); }
       res.json({ consultation: c });
     } catch (err) {
       console.error("[consultations create] error:", err);
@@ -432,9 +437,34 @@ export async function registerRoutes(
       const list = await db.select().from(consultations)
         .where(eq(consultations.userId, userId))
         .orderBy(desc(consultations.createdAt));
+      // Enrichit avec la note (colonne ajoutée via ALTER v2, hors schéma Drizzle).
+      try {
+        const rows = Rows(await db.execute(sql`SELECT id, rating FROM consultations WHERE user_id = ${userId}`));
+        const rmap = new Map(rows.map((r: any) => [Number(r.id), r.rating]));
+        list.forEach((c: any) => { c.rating = rmap.get(c.id) ?? null; });
+      } catch {}
       res.json({ consultations: list });
     } catch (e) {
       res.json({ consultations: [] });
+    }
+  });
+
+  // Patient : note sa consultation (1-5 étoiles + commentaire). Note ≤2 → flag admin.
+  app.post("/api/consultations/:id/rate", async (req: any, res) => {
+    const userId = getUID(req);
+    if (!userId) return res.status(401).json({ message: "Connexion requise" });
+    try {
+      const id = parseInt(req.params.id);
+      const rating = Math.max(1, Math.min(5, parseInt(String(req.body?.rating), 10) || 0));
+      if (!rating) return res.status(400).json({ message: "Note invalide (1 à 5)." });
+      const comment = String(req.body?.comment || "").slice(0, 500);
+      const [c] = await db.select().from(consultations).where(eq(consultations.id, id));
+      if (!c || c.userId !== userId) return res.status(404).json({ message: "Consultation introuvable" });
+      await db.execute(sql`UPDATE consultations SET rating = ${rating}, rating_comment = ${comment || null}, rated_at = NOW(), flagged_review = ${rating <= 2} WHERE id = ${id}`);
+      res.json({ ok: true });
+    } catch (err) {
+      console.error("[consultations rate] error:", err);
+      res.status(500).json({ message: "Erreur serveur" });
     }
   });
 

@@ -147,6 +147,20 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
             + Dossier patient
           </button>
         )}
+        {side === "doctor" && ctx?.status !== "closed" && (
+          <button
+            onClick={async () => {
+              if (!confirm("Terminer cette consultation ? Le patient pourra la noter.")) return;
+              try {
+                const res = await fetch(`/api/pro/consultations/${consultationId}/close`, { method: "POST", credentials: "include" });
+                if (res.ok) load();
+              } catch {}
+            }}
+            style={{ flexShrink: 0, background: "rgba(16,185,129,0.2)", color: "#6ee7b7", border: "1px solid rgba(16,185,129,0.4)", borderRadius: 9999, padding: "6px 12px", fontSize: 11, fontWeight: 800, cursor: "pointer" }}
+          >
+            ✓ Terminer
+          </button>
+        )}
       </div>
 
       {/* Contexte : photo + diagnostic */}

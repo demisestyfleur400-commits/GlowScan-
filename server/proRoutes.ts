@@ -824,6 +824,25 @@ export function registerProRoutes(app: Express) {
     }
   });
 
+  // POST /api/pro/consultations/:id/close — le dermatologue clôture la consultation.
+  // Le paiement lui est dû sous 24h (payout_status reste 'pending' jusqu'au virement).
+  app.post("/api/pro/consultations/:id/close", requireProAccess, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const [c] = await db.select().from(consultations)
+        .where(and(eq(consultations.id, id), eq(consultations.proAccountId, req.proAccount.id)));
+      if (!c) return res.status(404).json({ message: "Consultation introuvable" });
+      await db.update(consultations).set({ status: "closed" }).where(eq(consultations.id, id));
+      try { await db.execute(sql`UPDATE consultations SET closed_at = NOW() WHERE id = ${id}`); } catch {}
+      // Notifier le patient (WS + push) : consultation terminée, invitation à noter.
+      try { emitToUser(c.userId, "consultation:closed", { consultationId: id }); } catch {}
+      res.json({ ok: true });
+    } catch (err) {
+      console.error("[pro/consultations close] error:", err);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
   // ───────────────────────────────────────────
   // GET /api/pro/partners-count — nombre de dermatologues (public, pour la landing)
   // ───────────────────────────────────────────
