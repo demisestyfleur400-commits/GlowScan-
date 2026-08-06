@@ -33,6 +33,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
   const [ctx, setCtx] = useState<any>(null);
   const [otherOnline, setOtherOnline] = useState(false);
   const [otherUserId, setOtherUserId] = useState<string | null>(null);
+  const [doctor, setDoctor] = useState<{ fullName?: string; city?: string; photoUrl?: string | null; certified?: boolean } | null>(null);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -49,6 +50,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
         setCtx(d.consultation);
         setOtherUserId(d.otherUserId || null);
         setOtherOnline(!!d.otherOnline);
+        setDoctor(d.doctor || null);
       }
     } catch {} finally { setLoading(false); }
   };
@@ -156,10 +158,23 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", borderBottom: `1px solid ${BORDER}`, background: CARD }}>
         {onBack && (
-          <button onClick={onBack} style={{ background: "transparent", border: "none", color: INK, fontSize: 18, cursor: "pointer" }}>←</button>
+          <button onClick={onBack} style={{ background: "transparent", border: "none", color: INK, fontSize: 18, cursor: "pointer", flexShrink: 0 }}>←</button>
+        )}
+        {/* Avatar dermatologue (côté patient) — visage + confiance */}
+        {side === "patient" && (
+          doctor?.photoUrl ? (
+            <img src={doctor.photoUrl} alt="" style={{ width: 38, height: 38, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+          ) : (
+            <div style={{ width: 38, height: 38, borderRadius: "50%", background: "linear-gradient(135deg,#a78bfa,#7c3aed)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>👩🏾‍⚕️</div>
+          )
         )}
         <div style={{ minWidth: 0, flex: 1 }}>
-          <p style={{ fontSize: 13, fontWeight: 800, color: INK, margin: 0 }}>Consultation</p>
+          <p style={{ fontSize: 13, fontWeight: 800, color: INK, margin: 0, display: "flex", alignItems: "center", gap: 5 }}>
+            {side === "patient" ? (doctor?.fullName ? `Dr ${doctor.fullName.replace(/^dr\.?\s*/i, "")}` : "Consultation") : "Patient"}
+            {side === "patient" && doctor?.certified && (
+              <span title="Dermatologue Certifié GlowScan" style={{ color: "#7c3aed", fontSize: 12 }}>✦</span>
+            )}
+          </p>
           <p style={{ fontSize: 11, margin: 0, display: "flex", alignItems: "center", gap: 5, color: otherOnline ? "#10b981" : MUTED }}>
             <span style={{ width: 7, height: 7, borderRadius: "50%", background: otherOnline ? "#10b981" : "#9ca3af", display: "inline-block", flexShrink: 0 }} />
             {otherOnline ? "En ligne" : "Hors ligne"}

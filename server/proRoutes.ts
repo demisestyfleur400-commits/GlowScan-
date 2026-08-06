@@ -843,6 +843,50 @@ export function registerProRoutes(app: Express) {
     }
   });
 
+  // POST /api/pro/profile/update — profil public : bio, spécialités, photo, dispo.
+  app.post("/api/pro/profile/update", requireProAccess, async (req: any, res) => {
+    try {
+      const id = req.proAccount.id;
+      const b = req.body || {};
+      const bio = typeof b.bio === "string" ? b.bio.slice(0, 200) : undefined;
+      const specialties = Array.isArray(b.specialties) ? b.specialties.slice(0, 20).map((s: any) => String(s).slice(0, 30)) : undefined;
+      const photoUrl = typeof b.photoUrl === "string" ? b.photoUrl.slice(0, 500) : undefined;
+      const whatsapp = typeof b.whatsapp === "string" ? b.whatsapp.replace(/[^0-9+]/g, "").slice(0, 20) : undefined;
+      const publicEnabled = typeof b.publicProfileEnabled === "boolean" ? b.publicProfileEnabled : undefined;
+
+      // Génère un slug unique si absent (dr-nom-prenom, suffixe -N si pris).
+      const cur = Rows(await db.execute(sql`SELECT slug, full_name FROM pro_accounts WHERE id = ${id}`));
+      if (!cur[0]?.slug && cur[0]?.full_name) {
+        const base = "dr-" + String(cur[0].full_name).toLowerCase()
+          .normalize("NFD").replace(/[̀-ͯ]/g, "")
+          .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 90);
+        let slug = base, n = 1;
+        while (Rows(await db.execute(sql`SELECT 1 FROM pro_accounts WHERE slug = ${slug} AND id <> ${id}`)).length) { slug = `${base}-${++n}`; }
+        await db.execute(sql`UPDATE pro_accounts SET slug = ${slug} WHERE id = ${id}`);
+      }
+
+      // Mises à jour ciblées (chaque champ optionnel).
+      if (bio !== undefined) await db.execute(sql`UPDATE pro_accounts SET bio = ${bio} WHERE id = ${id}`);
+      if (specialties !== undefined) await db.execute(sql`UPDATE pro_accounts SET specialties = ${specialties as any} WHERE id = ${id}`);
+      if (photoUrl !== undefined) await db.execute(sql`UPDATE pro_accounts SET photo_url = ${photoUrl} WHERE id = ${id}`);
+      if (whatsapp !== undefined) await db.execute(sql`UPDATE pro_accounts SET whatsapp_number = ${whatsapp} WHERE id = ${id}`);
+      if (publicEnabled !== undefined) await db.execute(sql`UPDATE pro_accounts SET public_profile_enabled = ${publicEnabled} WHERE id = ${id}`);
+
+      // Profil complété (photo + bio + ≥1 spécialité) → horodatage (critère certif).
+      try {
+        const p = Rows(await db.execute(sql`SELECT photo_url, bio, specialties, profile_completed_at FROM pro_accounts WHERE id = ${id}`))[0] as any;
+        const complete = !!(p?.photo_url && p?.bio && Array.isArray(p?.specialties) && p.specialties.length > 0);
+        if (complete && !p.profile_completed_at) await db.execute(sql`UPDATE pro_accounts SET profile_completed_at = NOW() WHERE id = ${id}`);
+      } catch {}
+
+      const out = Rows(await db.execute(sql`SELECT slug, bio, specialties, photo_url, whatsapp_number, COALESCE(public_profile_enabled,true) AS enabled, COALESCE(is_certified,false) AS certified FROM pro_accounts WHERE id = ${id}`))[0];
+      res.json({ ok: true, profile: out });
+    } catch (err) {
+      console.error("[pro/profile/update] error:", err);
+      res.status(500).json({ message: "Erreur serveur (migration profil appliquée ?)" });
+    }
+  });
+
   // ───────────────────────────────────────────
   // GET /api/pro/partners-count — nombre de dermatologues (public, pour la landing)
   // ───────────────────────────────────────────

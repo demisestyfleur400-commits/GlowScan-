@@ -364,19 +364,124 @@ export async function registerRoutes(
   // Liste des dermatologues consultables en B2C (opt-in b2c_available).
   app.get("/api/b2c/dermatologists", async (_req: any, res) => {
     try {
+      // SELECT de base (colonnes toujours présentes) — ne casse jamais.
       const rows = Rows(await db.execute(sql`
         SELECT id, full_name, cabinet_name, city, license_number,
                COALESCE(consult_price_fcfa, 3000) AS price
         FROM pro_accounts
         WHERE b2c_available = true
         ORDER BY full_name`));
-      res.json({ dermatologists: rows.map((r) => ({
-        id: r.id, fullName: r.full_name, cabinet: r.cabinet_name, city: r.city,
-        licenseNumber: r.license_number, price: Number(r.price) || 3000,
-      })) });
+      // Enrichissement profil (colonnes ajoutées via ALTER) — best-effort.
+      const extra = new Map<number, any>();
+      try {
+        const ex = Rows(await db.execute(sql`SELECT id, slug, COALESCE(is_certified,false) AS is_certified, photo_url, specialties FROM pro_accounts WHERE b2c_available = true`));
+        ex.forEach((r: any) => extra.set(Number(r.id), r));
+      } catch {}
+      const ratings = new Map<number, { avg: number; n: number }>();
+      try {
+        const rr = Rows(await db.execute(sql`SELECT pro_account_id AS id, ROUND(AVG(rating)::numeric,1) AS avg, COUNT(rating) AS n FROM consultations WHERE rating IS NOT NULL GROUP BY pro_account_id`));
+        rr.forEach((r: any) => ratings.set(Number(r.id), { avg: Number(r.avg) || 0, n: Number(r.n) || 0 }));
+      } catch {}
+      res.json({ dermatologists: rows.map((r) => {
+        const e = extra.get(Number(r.id)) || {};
+        const rt = ratings.get(Number(r.id)) || { avg: 0, n: 0 };
+        return {
+          id: r.id, fullName: r.full_name, cabinet: r.cabinet_name, city: r.city,
+          licenseNumber: r.license_number, price: Number(r.price) || 3000,
+          slug: e.slug || null, certified: e.is_certified === true, photoUrl: e.photo_url || null,
+          specialties: Array.isArray(e.specialties) ? e.specialties : [],
+          rating: rt.avg, ratingsCount: rt.n,
+        };
+      }) });
     } catch (e) {
-      // Table/colonnes pas encore migrées → liste vide (pas d'erreur bloquante)
       res.json({ dermatologists: [] });
+    }
+  });
+
+  // ── Profil public dermatologue (sans auth, indexable Google) ──────────────
+  app.get("/api/public/dermatologues/:slug", async (req: any, res) => {
+    try {
+      const slug = String(req.params.slug || "").slice(0, 120);
+      const rows = Rows(await db.execute(sql`
+        SELECT id, full_name, cabinet_name, city, license_number, slug, bio, specialties,
+               photo_url, whatsapp_number, phone, COALESCE(is_certified,false) AS is_certified,
+               certified_at, COALESCE(public_profile_enabled,true) AS enabled,
+               COALESCE(b2c_available,false) AS available,
+               COALESCE(consult_price_fcfa,2000) AS price, created_at
+        FROM pro_accounts WHERE slug = ${slug} LIMIT 1`));
+      const p: any = rows[0];
+      if (!p || p.enabled !== true) return res.status(404).json({ message: "Profil introuvable" });
+      const st = Rows(await db.execute(sql`
+        SELECT COUNT(*) FILTER (WHERE payment_status = 'paid') AS consults,
+               ROUND(AVG(rating)::numeric,1) AS avg_rating, COUNT(rating) AS n_ratings
+        FROM consultations WHERE pro_account_id = ${Number(p.id)}`));
+      const s: any = st[0] || {};
+      res.json({ dermatologue: {
+        id: p.id, slug: p.slug, fullName: p.full_name, cabinet: p.cabinet_name, city: p.city,
+        bio: p.bio || null, specialties: Array.isArray(p.specialties) ? p.specialties : [],
+        photoUrl: p.photo_url || null, whatsapp: p.whatsapp_number || p.phone || null,
+        certified: p.is_certified === true, certifiedAt: p.certified_at || null,
+        available: p.available === true, price: Number(p.price) || 2000, memberSince: p.created_at,
+        totalConsultations: Number(s.consults) || 0,
+        rating: Number(s.avg_rating) || 0, ratingsCount: Number(s.n_ratings) || 0,
+      } });
+    } catch (e) {
+      console.error("[public dermatologue] error:", e);
+      res.status(404).json({ message: "Profil introuvable" });
+    }
+  });
+
+  // ── Avis publics paginés (prénom + note + commentaire + date) ─────────────
+  app.get("/api/public/dermatologues/:slug/ratings", async (req: any, res) => {
+    try {
+      const slug = String(req.params.slug || "").slice(0, 120);
+      const page = Math.max(0, parseInt(String(req.query.page)) || 0);
+      const pr = Rows(await db.execute(sql`SELECT id FROM pro_accounts WHERE slug = ${slug} LIMIT 1`));
+      const proId = pr[0]?.id; if (!proId) return res.json({ ratings: [], hasMore: false });
+      const rows = Rows(await db.execute(sql`
+        SELECT c.rating, c.rating_comment, c.rated_at, u.first_name
+        FROM consultations c LEFT JOIN users u ON u.id = c.user_id
+        WHERE c.pro_account_id = ${Number(proId)} AND c.rating IS NOT NULL
+        ORDER BY c.rated_at DESC LIMIT 6 OFFSET ${page * 5}`));
+      res.json({
+        ratings: rows.slice(0, 5).map((r: any) => ({
+          rating: Number(r.rating), comment: r.rating_comment || null,
+          date: r.rated_at, firstName: r.first_name || "Patient",
+        })),
+        hasMore: rows.length > 5,
+      });
+    } catch (e) { res.json({ ratings: [], hasMore: false }); }
+  });
+
+  // ── Liste publique des dermatologues certifiés (filtrable) ────────────────
+  app.get("/api/public/dermatologues", async (req: any, res) => {
+    try {
+      const rows = Rows(await db.execute(sql`
+        SELECT id, slug, full_name, city, photo_url, specialties,
+               COALESCE(is_certified,false) AS is_certified, COALESCE(b2c_available,false) AS available,
+               COALESCE(consult_price_fcfa,2000) AS price
+        FROM pro_accounts
+        WHERE COALESCE(is_certified,false) = true AND COALESCE(public_profile_enabled,true) = true AND slug IS NOT NULL
+        ORDER BY full_name`));
+      res.json({ dermatologues: rows.map((r: any) => ({
+        slug: r.slug, fullName: r.full_name, city: r.city, photoUrl: r.photo_url || null,
+        specialties: Array.isArray(r.specialties) ? r.specialties : [],
+        certified: true, available: r.available === true, price: Number(r.price) || 2000,
+      })) });
+    } catch (e) { res.json({ dermatologues: [] }); }
+  });
+
+  // ── Admin : certifier un dermatologue (badge GlowScan) ────────────────────
+  app.put("/api/admin/dermatologues/:id/certify", async (req: any, res) => {
+    if (!checkDatasetKey(req)) return res.status(403).json({ message: "Accès refusé" });
+    try {
+      const id = parseInt(req.params.id);
+      const on = req.body?.certified !== false;
+      await db.execute(sql`UPDATE pro_accounts SET is_certified = ${on}, certified_at = ${on ? sql`NOW()` : sql`NULL`} WHERE id = ${id}`);
+      res.json({ ok: true, certified: on });
+    } catch (e) {
+      console.error("[admin certify] error:", e);
+      res.status(500).json({ message: "Erreur serveur" });
     }
   });
 
@@ -731,7 +836,13 @@ export async function registerRoutes(
         .where(eq(consultationMessages.consultationId, id))
         .orderBy(consultationMessages.createdAt);
       const otherUserId = side === "patient" ? doctorUserId : c.userId;
-      res.json({ consultation: c, messages: msgs, side, otherUserId, otherOnline: otherUserId ? isUserOnline(otherUserId) : false });
+      // BLOC B : infos dermatologue pour l'entête (nom + photo + badge certifié).
+      let doctor: any = null;
+      try {
+        const d = Rows(await db.execute(sql`SELECT full_name, cabinet_name, city, photo_url, COALESCE(is_certified,false) AS certified, slug FROM pro_accounts WHERE id = ${c.proAccountId}`))[0] as any;
+        if (d) doctor = { fullName: d.full_name, cabinet: d.cabinet_name, city: d.city, photoUrl: d.photo_url || null, certified: d.certified === true, slug: d.slug || null };
+      } catch {}
+      res.json({ consultation: c, messages: msgs, side, otherUserId, doctor, otherOnline: otherUserId ? isUserOnline(otherUserId) : false });
     } catch (err) {
       console.error("[consultations get] error:", err);
       res.status(500).json({ message: "Erreur serveur" });
