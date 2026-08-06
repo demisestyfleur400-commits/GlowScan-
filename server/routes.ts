@@ -411,11 +411,19 @@ export async function registerRoutes(
         FROM pro_accounts WHERE slug = ${slug} LIMIT 1`));
       const p: any = rows[0];
       if (!p || p.enabled !== true) return res.status(404).json({ message: "Profil introuvable" });
-      const st = Rows(await db.execute(sql`
-        SELECT COUNT(*) FILTER (WHERE payment_status = 'paid') AS consults,
-               ROUND(AVG(rating)::numeric,1) AS avg_rating, COUNT(rating) AS n_ratings
-        FROM consultations WHERE pro_account_id = ${Number(p.id)}`));
-      const s: any = st[0] || {};
+      // Stats live — résilient : si les colonnes rating (migration consultations v2)
+      // ne sont pas encore là, on renvoie 0 au lieu de casser tout le profil.
+      let s: any = {};
+      try {
+        s = Rows(await db.execute(sql`
+          SELECT COUNT(*) FILTER (WHERE payment_status = 'paid') AS consults,
+                 ROUND(AVG(rating)::numeric,1) AS avg_rating, COUNT(rating) AS n_ratings
+          FROM consultations WHERE pro_account_id = ${Number(p.id)}`))[0] || {};
+      } catch {
+        try {
+          s = Rows(await db.execute(sql`SELECT COUNT(*) FILTER (WHERE payment_status = 'paid') AS consults FROM consultations WHERE pro_account_id = ${Number(p.id)}`))[0] || {};
+        } catch {}
+      }
       res.json({ dermatologue: {
         id: p.id, slug: p.slug, fullName: p.full_name, cabinet: p.cabinet_name, city: p.city,
         bio: p.bio || null, specialties: Array.isArray(p.specialties) ? p.specialties : [],
