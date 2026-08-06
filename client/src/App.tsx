@@ -64,6 +64,7 @@ const ProPatient = lazyWithRetry(() => import("@/pages/pro/ProPatient"));
 const ProAnalyze = lazyWithRetry(() => import("@/pages/pro/ProAnalyze"));
 const ProStats = lazyWithRetry(() => import("@/pages/pro/ProStats"));
 const ProCabinet = lazyWithRetry(() => import("@/pages/pro/ProCabinet"));
+const ProPublicProfile = lazyWithRetry(() => import("@/pages/pro/ProPublicProfile"));
 const DermOnboarding = lazyWithRetry(() => import("@/pages/pro/DermOnboarding"));
 const DermConditions = lazyWithRetry(() => import("@/pages/pro/DermConditions"));
 const MesConsultations = lazyWithRetry(() => import("@/pages/MesConsultations"));
@@ -116,6 +117,7 @@ function Router() {
       <Route path="/derm/analyse" component={ProAnalyze} />
       <Route path="/derm/statistiques" component={ProStats} />
       <Route path="/derm/cabinet" component={ProCabinet} />
+      <Route path="/derm/profil-public" component={ProPublicProfile} />
       <Route path="/derm/consultations" component={ProConsultations} />
 
       {/* Redirects from old /pro paths to new /derm paths */}

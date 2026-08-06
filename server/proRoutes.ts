@@ -371,11 +371,11 @@ export function registerProRoutes(app: Express) {
     const isAdmin = (req.session as any)?.isAdmin === true;
 
     // Opt-in consultation B2C (colonnes hors schéma Drizzle → lues en SQL brut).
-    let b2cAvailable = false, consultPriceFcfa = 3000;
+    let b2cAvailable = false, consultPriceFcfa = 2000;
     try {
       const r: any = await db.execute(sql`SELECT b2c_available, consult_price_fcfa FROM pro_accounts WHERE id = ${acc.id}`);
       const row = (r?.rows ?? r ?? [])[0];
-      if (row) { b2cAvailable = row.b2c_available === true; consultPriceFcfa = Number(row.consult_price_fcfa) || 3000; }
+      if (row) { b2cAvailable = row.b2c_available === true; consultPriceFcfa = Number(row.consult_price_fcfa) || 2000; }
     } catch {}
 
     res.json({
@@ -843,6 +843,31 @@ export function registerProRoutes(app: Express) {
     }
   });
 
+  // GET /api/pro/profile — profil public actuel du dermatologue connecté.
+  app.get("/api/pro/profile", requireProAccess, async (req: any, res) => {
+    try {
+      const id = req.proAccount.id;
+      const r = Rows(await db.execute(sql`
+        SELECT slug, full_name, city, bio, specialties, photo_url, whatsapp_number, phone,
+               COALESCE(public_profile_enabled,true) AS public_enabled,
+               COALESCE(b2c_available,false) AS b2c_available,
+               COALESCE(consult_price_fcfa,2000) AS price,
+               COALESCE(is_certified,false) AS is_certified, certified_at, profile_completed_at
+        FROM pro_accounts WHERE id = ${id}`))[0] as any;
+      res.json({ profile: {
+        slug: r?.slug || null, fullName: r?.full_name || null, city: r?.city || null,
+        bio: r?.bio || "", specialties: Array.isArray(r?.specialties) ? r.specialties : [],
+        photoUrl: r?.photo_url || null, whatsapp: r?.whatsapp_number || r?.phone || "",
+        publicProfileEnabled: r?.public_enabled === true, b2cAvailable: r?.b2c_available === true,
+        price: Number(r?.price) || 2000, certified: r?.is_certified === true,
+        certifiedAt: r?.certified_at || null, profileCompletedAt: r?.profile_completed_at || null,
+      } });
+    } catch (err) {
+      console.error("[pro/profile get] error:", err);
+      res.json({ profile: null });
+    }
+  });
+
   // POST /api/pro/profile/update — profil public : bio, spécialités, photo, dispo.
   app.post("/api/pro/profile/update", requireProAccess, async (req: any, res) => {
     try {
@@ -871,6 +896,11 @@ export function registerProRoutes(app: Express) {
       if (photoUrl !== undefined) await db.execute(sql`UPDATE pro_accounts SET photo_url = ${photoUrl} WHERE id = ${id}`);
       if (whatsapp !== undefined) await db.execute(sql`UPDATE pro_accounts SET whatsapp_number = ${whatsapp} WHERE id = ${id}`);
       if (publicEnabled !== undefined) await db.execute(sql`UPDATE pro_accounts SET public_profile_enabled = ${publicEnabled} WHERE id = ${id}`);
+      if (typeof b.b2cAvailable === "boolean") await db.execute(sql`UPDATE pro_accounts SET b2c_available = ${b.b2cAvailable} WHERE id = ${id}`);
+      if (b.consultPriceFcfa !== undefined) {
+        const price = Math.max(500, Math.min(50000, parseInt(String(b.consultPriceFcfa), 10) || 2000));
+        await db.execute(sql`UPDATE pro_accounts SET consult_price_fcfa = ${price} WHERE id = ${id}`);
+      }
 
       // Profil complété (photo + bio + ≥1 spécialité) → horodatage (critère certif).
       try {

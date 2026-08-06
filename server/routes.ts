@@ -367,7 +367,7 @@ export async function registerRoutes(
       // SELECT de base (colonnes toujours présentes) — ne casse jamais.
       const rows = Rows(await db.execute(sql`
         SELECT id, full_name, cabinet_name, city, license_number,
-               COALESCE(consult_price_fcfa, 3000) AS price
+               COALESCE(consult_price_fcfa, 2000) AS price
         FROM pro_accounts
         WHERE b2c_available = true
         ORDER BY full_name`));
@@ -387,7 +387,7 @@ export async function registerRoutes(
         const rt = ratings.get(Number(r.id)) || { avg: 0, n: 0 };
         return {
           id: r.id, fullName: r.full_name, cabinet: r.cabinet_name, city: r.city,
-          licenseNumber: r.license_number, price: Number(r.price) || 3000,
+          licenseNumber: r.license_number, price: Number(r.price) || 2000,
           slug: e.slug || null, certified: e.is_certified === true, photoUrl: e.photo_url || null,
           specialties: Array.isArray(e.specialties) ? e.specialties : [],
           rating: rt.avg, ratingsCount: rt.n,
@@ -500,9 +500,9 @@ export async function registerRoutes(
     try {
       const { proAccountId, scanId, condition, imageUrl } = req.body || {};
       if (!proAccountId) return res.status(400).json({ message: "Dermatologue requis" });
-      const pr = Rows(await db.execute(sql`SELECT COALESCE(consult_price_fcfa,3000) AS p, b2c_available FROM pro_accounts WHERE id = ${Number(proAccountId)}`));
+      const pr = Rows(await db.execute(sql`SELECT COALESCE(consult_price_fcfa,2000) AS p, b2c_available FROM pro_accounts WHERE id = ${Number(proAccountId)}`));
       if (!pr[0] || pr[0].b2c_available !== true) return res.status(400).json({ message: "Ce dermatologue n'est pas disponible en consultation." });
-      const price = Number(pr[0].p) || 3000;
+      const price = Number(pr[0].p) || 2000;
       const [c] = await db.insert(consultations).values({
         userId,
         proAccountId: Number(proAccountId),

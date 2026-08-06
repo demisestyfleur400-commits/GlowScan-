@@ -347,6 +347,18 @@ export default function ProDashboard() {
         <KpiCard to="/derm/patients" icon={<Activity style={{ width: 16, height: 16, color: "#f87171" }} />} value={statusCounts.priority} label="Priorité haute" testid="kpi-urgent" />
       </motion.div>
 
+      {/* Profil public — vitrine à partager */}
+      <Link href="/derm/profil-public" data-testid="link-public-profile"
+        style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 16, padding: "14px 16px", borderRadius: 16, textDecoration: "none",
+          background: "linear-gradient(135deg, rgba(124,58,237,0.18), rgba(167,139,250,0.08))", border: "1px solid rgba(167,139,250,0.25)" }}>
+        <span style={{ fontSize: 22, flexShrink: 0 }}>✦</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ fontSize: 13.5, fontWeight: 800, color: DS.textPrimary, margin: 0 }}>Mon profil public</p>
+          <p style={{ fontSize: 11.5, color: DS.textBody, margin: "2px 0 0" }}>Photo, bio, spécialités + ton lien à partager pour attirer des patients.</p>
+        </div>
+        <span style={{ color: DS.violetMid, fontSize: 18 }}>→</span>
+      </Link>
+
       {/* 2-col grid */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 16, marginTop: 16 }}>
         {/* Recent patients */}
