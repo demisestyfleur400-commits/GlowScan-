@@ -107,6 +107,39 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
     } catch {} finally { setSending(false); }
   };
 
+  // Rapport PDF de la consultation (print-to-PDF, comme la result card).
+  const downloadConsultationPdf = () => {
+    const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] as string));
+    const dateStr = new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" });
+    const rows = messages.map((m) => {
+      const who = m.senderType === "doctor" ? "Dermatologue" : "Patient";
+      const t = m.createdAt ? new Date(m.createdAt).toLocaleString("fr-FR") : "";
+      const body = m.body ? esc(m.body) : (m.imageUrl ? "<em>[photo partagée]</em>" : "");
+      const align = m.senderType === "doctor" ? "left" : "right";
+      const bg = m.senderType === "doctor" ? "#f3f0ff" : "#eafaf1";
+      return `<div style="text-align:${align};margin:8px 0"><div style="display:inline-block;max-width:80%;background:${bg};border-radius:12px;padding:8px 12px;text-align:left"><div style="font-size:10px;color:#7c3aed;font-weight:700">${who} · ${t}</div><div style="font-size:12px;color:#1a1a2e;margin-top:2px;white-space:pre-wrap">${body}</div></div></div>`;
+    }).join("");
+    const html = `<!doctype html><html><head><meta charset="utf-8"><title>Rapport consultation GlowScan</title></head>
+      <body style="font-family:-apple-system,system-ui,sans-serif;max-width:640px;margin:0 auto;padding:24px;color:#1a1a2e">
+        <div style="display:flex;align-items:center;gap:10px;border-bottom:2px solid #7c3aed;padding-bottom:12px;margin-bottom:16px">
+          <div style="font-size:22px">✨</div>
+          <div><div style="font-size:18px;font-weight:900">GlowScan</div><div style="font-size:11px;color:#6b7280">Rapport de consultation dermatologique</div></div>
+          <div style="margin-left:auto;font-size:11px;color:#6b7280">${dateStr}</div>
+        </div>
+        ${ctx?.condition ? `<p style="font-size:13px"><strong>Motif / diagnostic IA :</strong> ${esc(String(ctx.condition))}</p>` : ""}
+        ${ctx?.imageUrl ? `<img src="${ctx.imageUrl}" style="width:120px;height:120px;object-fit:cover;border-radius:12px;margin:8px 0"/>` : ""}
+        <h3 style="font-size:14px;margin:18px 0 6px;color:#7c3aed">Échange de la consultation</h3>
+        ${rows || "<p style='font-size:12px;color:#6b7280'>Aucun message.</p>"}
+        <p style="font-size:10px;color:#9ca3af;margin-top:24px;border-top:1px solid #eee;padding-top:10px">
+          Ce rapport résume une consultation en ligne réalisée via GlowScan. Il ne remplace pas un examen clinique en présentiel.
+        </p>
+      </body></html>`;
+    const w = window.open("", "_blank");
+    if (!w) return;
+    w.document.write(html); w.document.close();
+    setTimeout(() => { try { w.print(); } catch {} }, 500);
+  };
+
   const BG = dark ? "#0d0a0e" : "#f6f7fb";
   const CARD = dark ? "rgba(255,255,255,0.04)" : "#fff";
   const INK = dark ? "#f3f0ff" : "#1a1a2e";
@@ -132,6 +165,15 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
             {otherOnline ? "En ligne" : "Hors ligne"}
           </p>
         </div>
+        {/* Rapport PDF — consultation terminée (patient + dermatologue) */}
+        {ctx?.status === "closed" && (
+          <button
+            onClick={downloadConsultationPdf}
+            style={{ flexShrink: 0, background: dark ? "rgba(255,255,255,0.08)" : "rgba(124,58,237,0.08)", color: dark ? "#c4b5fd" : "#7c3aed", border: `1px solid ${dark ? "rgba(255,255,255,0.15)" : "rgba(124,58,237,0.2)"}`, borderRadius: 9999, padding: "6px 12px", fontSize: 11, fontWeight: 800, cursor: "pointer" }}
+          >
+            📄 Rapport
+          </button>
+        )}
         {/* Dermatologue : convertir en dossier patient DERM */}
         {side === "doctor" && (
           <button
