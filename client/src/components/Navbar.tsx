@@ -1,15 +1,31 @@
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import { User, LogOut, Menu, X, Crown, ScanLine } from "lucide-react";
-import { useState } from "react";
+import { User, LogOut, Menu, X, Crown, ScanLine, MessageCircle } from "lucide-react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export function Navbar() {
   const [location] = useLocation();
   const { user, logout } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
+  const [unreadTotal, setUnreadTotal] = useState(0);
 
-  const navLinks = [
+  // Badge global "Messages" : total de réponses dermato non lues. Rafraîchi au
+  // montage + polling 20s + au retour sur l'onglet (connexions africaines).
+  useEffect(() => {
+    if (!user) { setUnreadTotal(0); return; }
+    let alive = true;
+    const load = () => fetch("/api/consultations/unread-total", { credentials: "include" })
+      .then((r) => r.json()).then((d) => { if (alive) setUnreadTotal(Number(d.total) || 0); })
+      .catch(() => {});
+    load();
+    const iv = setInterval(load, 20000);
+    const onFocus = () => load();
+    window.addEventListener("focus", onFocus);
+    return () => { alive = false; clearInterval(iv); window.removeEventListener("focus", onFocus); };
+  }, [user, location]);
+
+  const navLinks: { href: string; label: string; highlight?: boolean; premium?: boolean; badge?: boolean }[] = [
     { href: "/", label: "Accueil" },
     { href: "/analyze", label: "Analyse IA" },
     { href: "/product-scan-camera", label: "Scan Produit", highlight: true, premium: true },
@@ -19,6 +35,7 @@ export function Navbar() {
   ];
 
   if (user) {
+    navLinks.push({ href: "/consultations", label: "Messages", badge: true });
     navLinks.push({ href: "/profile", label: "Mon Profil" });
   }
 
@@ -108,9 +125,15 @@ export function Navbar() {
                     }}
                   >
                     {link.highlight && <ScanLine style={{ width: "12px", height: "12px", color: "#E91E8C" }} />}
+                    {link.badge && <MessageCircle style={{ width: "13px", height: "13px", color: isActive ? "#c4b5fd" : "#6ee7b7" }} />}
                     {link.label}
                     {link.premium && (
                       <Crown style={{ width: "12px", height: "12px", color: isActive ? "#a78bfa" : "#fbbf24" }} />
+                    )}
+                    {link.badge && unreadTotal > 0 && (
+                      <span style={{ marginLeft: 2, minWidth: 16, height: 16, padding: "0 4px", background: "#ef4444", color: "#fff", borderRadius: 9999, fontSize: 10, fontWeight: 800, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                        {unreadTotal > 9 ? "9+" : unreadTotal}
+                      </span>
                     )}
                   </Link>
                 );
@@ -203,9 +226,15 @@ export function Navbar() {
               color: "#f3f0ff",
               cursor: "pointer",
               transition: "transform 0.1s",
+              position: "relative",
             }}
           >
             {isOpen ? <X style={{ width: "20px", height: "20px", color: "rgba(200,185,255,0.65)" }} /> : <Menu style={{ width: "20px", height: "20px" }} />}
+            {!isOpen && unreadTotal > 0 && (
+              <span style={{ position: "absolute", top: -4, right: -4, minWidth: 18, height: 18, padding: "0 4px", background: "#ef4444", color: "#fff", borderRadius: 9999, fontSize: 10, fontWeight: 800, display: "inline-flex", alignItems: "center", justifyContent: "center", border: "2px solid #0d0a0e" }}>
+                {unreadTotal > 9 ? "9+" : unreadTotal}
+              </span>
+            )}
           </button>
         </div>
       </div>
@@ -264,9 +293,14 @@ export function Navbar() {
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                       {link.highlight && <ScanLine style={{ width: "14px", height: "14px", color: "#E91E8C" }} />}
+                      {link.badge && <MessageCircle style={{ width: "15px", height: "15px", color: isActive ? "#c4b5fd" : "#6ee7b7" }} />}
                       <span>{link.label}</span>
                     </div>
-                    {link.premium && <Crown style={{ width: "14px", height: "14px", color: "#fbbf24" }} />}
+                    {link.badge && unreadTotal > 0 ? (
+                      <span style={{ minWidth: 18, height: 18, padding: "0 5px", background: "#ef4444", color: "#fff", borderRadius: 9999, fontSize: 11, fontWeight: 800, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                        {unreadTotal > 9 ? "9+" : unreadTotal}
+                      </span>
+                    ) : link.premium ? <Crown style={{ width: "14px", height: "14px", color: "#fbbf24" }} /> : null}
                   </Link>
                 );
               })}

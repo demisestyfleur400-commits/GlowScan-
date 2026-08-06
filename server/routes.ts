@@ -449,6 +449,16 @@ export async function registerRoutes(
     }
   });
 
+  // Badge global : total de messages non lus du patient (toutes consultations).
+  app.get("/api/consultations/unread-total", async (req: any, res) => {
+    const userId = getUID(req);
+    if (!userId) return res.json({ total: 0 });
+    try {
+      const rows = Rows(await db.execute(sql`SELECT COALESCE(SUM(unread_patient),0) AS t FROM consultations WHERE user_id = ${userId}`));
+      res.json({ total: Number(rows[0]?.t) || 0 });
+    } catch { res.json({ total: 0 }); }
+  });
+
   // Patient : note sa consultation (1-5 étoiles + commentaire). Note ≤2 → flag admin.
   app.post("/api/consultations/:id/rate", async (req: any, res) => {
     const userId = getUID(req);
