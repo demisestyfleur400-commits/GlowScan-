@@ -479,6 +479,36 @@ export async function registerRoutes(
     } catch (e) { res.json({ dermatologues: [] }); }
   });
 
+  // ── Admin : liste des dermatologues + critères de certification ───────────
+  app.get("/api/admin/dermatologues", async (req: any, res) => {
+    if (!checkDatasetKey(req)) return res.status(403).json({ message: "Accès refusé" });
+    try {
+      const rows = Rows(await db.execute(sql`
+        SELECT p.id, p.full_name, p.slug, p.city, p.license_number, p.created_at,
+               COALESCE(p.is_certified,false) AS is_certified, p.certified_at,
+               (p.photo_url IS NOT NULL) AS has_photo,
+               (p.bio IS NOT NULL AND p.bio <> '') AS has_bio,
+               (p.specialties IS NOT NULL AND array_length(p.specialties,1) > 0) AS has_specialties,
+               (SELECT COUNT(*) FROM patients pt WHERE pt.dermatologist_id = p.id) AS patients,
+               (p.created_at < NOW() - INTERVAL '7 days') AS account_7d
+        FROM pro_accounts p ORDER BY p.created_at DESC`));
+      res.json({ dermatologues: rows.map((r: any) => ({
+        id: r.id, fullName: r.full_name, slug: r.slug, city: r.city, licenseNumber: r.license_number,
+        isCertified: r.is_certified === true, certifiedAt: r.certified_at,
+        criteria: {
+          license: !!r.license_number,
+          patients: Number(r.patients) > 0,
+          profile: r.has_photo === true && r.has_bio === true && r.has_specialties === true,
+          account7d: r.account_7d === true,
+        },
+        patientsCount: Number(r.patients) || 0,
+      })) });
+    } catch (e) {
+      console.error("[admin dermatologues] error:", e);
+      res.json({ dermatologues: [] });
+    }
+  });
+
   // ── Admin : certifier un dermatologue (badge GlowScan) ────────────────────
   app.put("/api/admin/dermatologues/:id/certify", async (req: any, res) => {
     if (!checkDatasetKey(req)) return res.status(403).json({ message: "Accès refusé" });

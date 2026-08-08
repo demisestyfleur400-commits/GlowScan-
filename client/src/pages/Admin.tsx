@@ -66,6 +66,7 @@ export default function Admin() {
   const [consultsBusy, setConsultsBusy] = useState<number | null>(null);
   // ── Activité dermatologues ──
   const [dermActivity, setDermActivity] = useState<any[]>([]);
+  const [dermCert, setDermCert] = useState<any[]>([]);
   const [dermLoading, setDermLoading] = useState(false);
   const [dermFilter, setDermFilter] = useState<"all" | "trial" | "paid" | "blocked">("all");
   const [dermSort, setDermSort] = useState<"created" | "activity">("created");
@@ -146,7 +147,7 @@ export default function Admin() {
     if (adminTab === "dataset") { fetchDataset(adminKey); fetchDatasetStats(adminKey); }
     if (adminTab === "vedettes") fetchFeatured();
     if (adminTab === "retention") fetchRetention(adminKey);
-    if (adminTab === "dermatologues") fetchDermActivity(adminKey);
+    if (adminTab === "dermatologues") { fetchDermActivity(adminKey); fetchDermCert(adminKey); }
     if (adminTab === "iavsdoc") fetchIaVsDoc(adminKey);
     if (adminTab === "consults") fetchConsults(adminKey);
   }, [adminTab]);
@@ -184,6 +185,24 @@ export default function Admin() {
     } finally {
       setDermLoading(false);
     }
+  };
+
+  const fetchDermCert = async (key: string) => {
+    try {
+      const res = await fetch("/api/admin/dermatologues", { headers: { "x-admin-key": key } });
+      const body = await res.json();
+      if (res.ok) setDermCert(body.dermatologues || []);
+    } catch (e) { console.error("[derm-cert] fetch err", e); }
+  };
+
+  const toggleCertify = async (id: number, certified: boolean) => {
+    try {
+      const res = await fetch(`/api/admin/dermatologues/${id}/certify`, {
+        method: "PUT", headers: { "Content-Type": "application/json", "x-admin-key": adminKey },
+        body: JSON.stringify({ certified }),
+      });
+      if (res.ok) fetchDermCert(adminKey);
+    } catch (e) { console.error("[certify] err", e); }
   };
 
   const fetchFeatured = async () => {
@@ -1040,8 +1059,52 @@ export default function Admin() {
           };
           const fmtDate = (v: any) => (v ? new Date(v).toLocaleDateString("fr-FR") : "—");
 
+          const Crit = ({ ok, label }: { ok: boolean; label: string }) => (
+            <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 9999, background: ok ? "rgba(16,185,129,0.14)" : "rgba(244,63,94,0.12)", color: ok ? "#6ee7b7" : "#f9a8d4" }}>{ok ? "✓" : "✗"} {label}</span>
+          );
+
           return (
             <div className="space-y-3">
+              {/* ── Certification GlowScan ── */}
+              <div style={{ background: DS.surface, border: `1px solid ${DS.border}`, borderRadius: 14, padding: 14 }}>
+                <div className="flex items-center justify-between" style={{ marginBottom: 10 }}>
+                  <p style={{ fontSize: 13, fontWeight: 800, color: DS.text }}>✦ Certification dermatologues</p>
+                  <button onClick={() => fetchDermCert(adminKey)} style={{ fontSize: 11, fontWeight: 700, color: DS.violetMid, background: "transparent", border: "none", cursor: "pointer" }}>↻ Rafraîchir</button>
+                </div>
+                {dermCert.length === 0 && <p style={{ fontSize: 12, color: DS.muted }}>Aucun dermatologue.</p>}
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {dermCert.map((d: any) => {
+                    const allOk = d.criteria.license && d.criteria.patients && d.criteria.profile && d.criteria.account7d;
+                    return (
+                      <div key={d.id} style={{ borderBottom: `1px solid ${DS.border}`, paddingBottom: 10 }}>
+                        <div className="flex items-center justify-between" style={{ gap: 8 }}>
+                          <div style={{ minWidth: 0 }}>
+                            <p style={{ fontSize: 13, fontWeight: 800, color: DS.text, margin: 0 }}>
+                              {d.isCertified && <span style={{ color: DS.violetMid }}>✦ </span>}Dr {(d.fullName || "").replace(/^dr\.?\s*/i, "")}
+                            </p>
+                            <p style={{ fontSize: 10.5, color: DS.muted, margin: "1px 0 0" }}>
+                              N° ordre : {d.licenseNumber || "—"} · {d.patientsCount} patient(s){d.slug ? ` · /dr/${d.slug}` : ""}
+                            </p>
+                          </div>
+                          <button onClick={() => toggleCertify(d.id, !d.isCertified)}
+                            style={{ flexShrink: 0, fontSize: 11, fontWeight: 800, padding: "7px 12px", borderRadius: 9999, cursor: "pointer", border: "none",
+                              background: d.isCertified ? "rgba(244,63,94,0.15)" : DS.violet, color: d.isCertified ? "#f9a8d4" : "#fff" }}>
+                            {d.isCertified ? "Retirer" : "Certifier"}
+                          </button>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5" style={{ marginTop: 7 }}>
+                          <Crit ok={d.criteria.license} label="N° ordre" />
+                          <Crit ok={d.criteria.patients} label="≥1 patient" />
+                          <Crit ok={d.criteria.profile} label="Profil complet" />
+                          <Crit ok={d.criteria.account7d} label=">7 jours" />
+                          {allOk && !d.isCertified && <span style={{ fontSize: 10, fontWeight: 700, color: "#6ee7b7" }}>→ prêt à certifier</span>}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
               {/* Filtres + tri */}
               <div className="flex flex-wrap items-center gap-2">
                 {([["all", "Tous"], ["trial", "Essai"], ["paid", "Payant"], ["blocked", "Bloqué"]] as const).map(([v, label]) => (
