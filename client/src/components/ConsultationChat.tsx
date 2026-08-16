@@ -34,6 +34,9 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
   const [otherOnline, setOtherOnline] = useState(false);
   const [otherUserId, setOtherUserId] = useState<string | null>(null);
   const [doctor, setDoctor] = useState<{ fullName?: string; city?: string; photoUrl?: string | null; certified?: boolean } | null>(null);
+  const [otherTyping, setOtherTyping] = useState(false);
+  const typingClearRef = useRef<any>(null);
+  const lastTypingSentRef = useRef(0);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -68,8 +71,23 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
       if (data.consultationId === consultationId && data.readerSide !== side) {
         setMessages((prev) => prev.map((m) => m.senderType === side ? { ...m, readAt: m.readAt || new Date().toISOString() } : m));
       }
+    } else if (evt === "consultation:typing") {
+      // L'autre partie est en train d'écrire → affiche l'indicateur ~3,5s.
+      if (data.consultationId === consultationId && data.side !== side) {
+        setOtherTyping(true);
+        clearTimeout(typingClearRef.current);
+        typingClearRef.current = setTimeout(() => setOtherTyping(false), 3500);
+      }
     }
   });
+
+  // Émet "en train d'écrire" à l'autre partie, au max une fois toutes les 2,5s.
+  const notifyTyping = () => {
+    const now = Date.now();
+    if (now - lastTypingSentRef.current < 2500) return;
+    lastTypingSentRef.current = now;
+    fetch(`/api/consultations/${consultationId}/typing`, { method: "POST", credentials: "include" }).catch(() => {});
+  };
 
   useEffect(() => { scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" }); }, [messages]);
 
@@ -250,12 +268,21 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
                 {m.imageUrl && <img src={m.imageUrl} alt="" style={{ maxWidth: "100%", borderRadius: 8, marginBottom: m.body ? 6 : 0 }} />}
                 {m.body}
               </div>
-              {showSeen && (
-                <p style={{ fontSize: 10, color: MUTED, textAlign: "right", margin: "2px 4px 0" }}>Vu ✓✓</p>
-              )}
+              <p style={{ fontSize: 10, color: MUTED, textAlign: mine ? "right" : "left", margin: "2px 4px 0" }}>
+                {m.createdAt ? new Date(m.createdAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : ""}
+                {showSeen ? " · Vu ✓✓" : ""}
+              </p>
             </div>
           );
         })}
+        {/* Indicateur "en train d'écrire" */}
+        {otherTyping && (
+          <div style={{ alignSelf: "flex-start", maxWidth: "78%" }}>
+            <div style={{ background: THEIRS, color: MUTED, padding: "9px 14px", borderRadius: 14, borderBottomLeftRadius: 4, fontSize: 12, fontStyle: "italic" }}>
+              {side === "patient" ? `${doctor?.fullName ? "Dr " + doctor.fullName.replace(/^dr\.?\s*/i, "") : "Le dermatologue"} écrit…` : "Le patient écrit…"}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Saisie */}
@@ -277,7 +304,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
         </button>
         <input
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          onChange={(e) => { setText(e.target.value); if (e.target.value.trim()) notifyTyping(); }}
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
           placeholder="Écris un message…"
           style={{ flex: 1, padding: "10px 14px", borderRadius: 9999, border: `1px solid ${BORDER}`, background: dark ? "rgba(255,255,255,0.05)" : "#fff", color: INK, fontSize: 13, outline: "none" }}

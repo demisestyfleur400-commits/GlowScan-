@@ -933,6 +933,22 @@ export async function registerRoutes(
   });
 
   // Envoyer un message dans une consultation (temps réel via WebSocket).
+  // Signal "en train d'écrire" — émis à l'autre partie (léger, best-effort).
+  app.post("/api/consultations/:id/typing", async (req: any, res) => {
+    const userId = getUID(req);
+    if (!userId) return res.json({ ok: false });
+    try {
+      const id = parseInt(req.params.id);
+      const [c] = await db.select().from(consultations).where(eq(consultations.id, id));
+      if (!c) return res.json({ ok: false });
+      const { side, doctorUserId } = await consultAccess(c, userId);
+      if (!side) return res.json({ ok: false });
+      const otherUserId = side === "patient" ? doctorUserId : c.userId;
+      if (otherUserId) emitToUser(otherUserId, "consultation:typing", { consultationId: id, side });
+      res.json({ ok: true });
+    } catch { res.json({ ok: false }); }
+  });
+
   app.post("/api/consultations/:id/messages", async (req: any, res) => {
     const userId = getUID(req);
     if (!userId) return res.status(401).json({ message: "Connexion requise" });

@@ -5,7 +5,7 @@ import { useEffect, useRef } from "react";
 // onMessage à chaque nouveau message ("consultation:message").
 // ════════════════════════════════════════════════════════════════════════
 
-const CONSULT_EVENTS = ["consultation:message", "presence:changed", "consultation:read"];
+const CONSULT_EVENTS = ["consultation:message", "presence:changed", "consultation:read", "consultation:typing"];
 
 export function useConsultationSocket(userId: string | null | undefined, onEvent: (event: string, data: any) => void) {
   const cbRef = useRef(onEvent);
