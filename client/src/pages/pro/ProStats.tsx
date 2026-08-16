@@ -27,6 +27,11 @@ export default function ProStats() {
     );
   }
 
+  const phototypeDist = (data as any).phototypeDist || [];
+  const onlineConsultations = (data as any).onlineConsultations || 0;
+  const onlineRevenue = (data as any).onlineRevenue || 0;
+  const onlineRevenueMonthly = (data as any).onlineRevenueMonthly || [];
+
   return (
     <ProLayout title="Performances" back="/derm/dashboard">
       <div className="space-y-4">
@@ -126,6 +131,54 @@ export default function ProStats() {
             </div>
           )}
         </Section>
+
+        {/* Consultations en ligne : revenus + phototype */}
+        <div className="grid lg:grid-cols-2 gap-4">
+          <Section title="Répartition par phototype" icon={<Users className="w-4 h-4" />} accent="#a78bfa">
+            {(!phototypeDist || phototypeDist.length === 0) && <p className="text-xs" style={{ color: "rgba(200,185,255,0.75)" }}>Aucune donnée encore.</p>}
+            {phototypeDist.map((p: any) => {
+              const max = phototypeDist[0]?.count || 1;
+              return (
+                <div key={p.name} className="mb-3 last:mb-0">
+                  <div className="flex items-center justify-between text-xs mb-1.5">
+                    <span className="font-bold" style={{ color: "rgba(200,185,255,0.75)" }}>Fitzpatrick {p.name}</span>
+                    <span className="font-extrabold" style={{ color: "#a78bfa" }}>{p.count}</span>
+                  </div>
+                  <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
+                    <div className="h-full rounded-full" style={{ width: `${(p.count / max) * 100}%`, background: "linear-gradient(90deg,#7c3aed,#c4b5fd)" }} />
+                  </div>
+                </div>
+              );
+            })}
+          </Section>
+
+          <Section title="Consultations en ligne" icon={<TrendingUp className="w-4 h-4" />} accent={GREEN}>
+            <div className="flex gap-4 mb-4">
+              <div>
+                <p className="text-2xl font-extrabold" style={{ color: INK }}>{onlineConsultations}</p>
+                <p className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "rgba(200,185,255,0.75)" }}>Consultations</p>
+              </div>
+              <div>
+                <p className="text-2xl font-extrabold" style={{ color: "#6ee7b7" }}>{onlineRevenue.toLocaleString("fr-FR")}</p>
+                <p className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "rgba(200,185,255,0.75)" }}>FCFA reçus</p>
+              </div>
+            </div>
+            {onlineRevenueMonthly.length > 0 && (
+              <div className="flex items-end gap-1.5 h-20">
+                {onlineRevenueMonthly.slice(-6).map((m: any) => {
+                  const max = Math.max(...onlineRevenueMonthly.map((x: any) => x.revenue), 1);
+                  return (
+                    <div key={m.month} className="flex-1 flex flex-col items-center gap-1 group">
+                      <span className="text-[9px] font-extrabold opacity-0 group-hover:opacity-100" style={{ color: "#6ee7b7" }}>{m.revenue.toLocaleString("fr-FR")}</span>
+                      <div className="w-full rounded-t-md min-h-[4px]" style={{ height: `${(m.revenue / max) * 100}%`, background: `linear-gradient(to top,${GREEN},#6ee7b7)` }} />
+                      <span className="text-[9px]" style={{ color: "rgba(255,255,255,0.6)" }}>{m.month.slice(5)}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </Section>
+        </div>
       </div>
     </ProLayout>
   );

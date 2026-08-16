@@ -9,6 +9,15 @@ import { useEffect, useState } from "react";
 // Numéro Mobile Money où le patient envoie le paiement (modifiable).
 const PAYMENT_NUMBER = "674 377 959";
 
+function urlBase64ToUint8Array(base64: string) {
+  const padding = "=".repeat((4 - (base64.length % 4)) % 4);
+  const b64 = (base64 + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const raw = atob(b64);
+  const arr = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
+  return arr;
+}
+
 interface Derm { id: number; fullName: string; cabinet?: string; city?: string; price: number; }
 
 export function ConsultationLauncher({ scanId, condition, imageUrl }: { scanId?: number | null; condition?: string; imageUrl?: string | null }) {
@@ -22,6 +31,25 @@ export function ConsultationLauncher({ scanId, condition, imageUrl }: { scanId?:
   const [err, setErr] = useState("");
   const [payProvider, setPayProvider] = useState<"monetbil" | "cinetpay" | "simulated">("simulated");
   const [paidConfirmed, setPaidConfirmed] = useState(false);
+  const [pushState, setPushState] = useState<"idle" | "on" | "denied">("idle");
+
+  // Abonne le patient aux notifs push (pour être prévenu quand le dermato répond).
+  const enablePush = async () => {
+    try {
+      if (!("Notification" in window) || !navigator.serviceWorker) { setPushState("denied"); return; }
+      const perm = await Notification.requestPermission();
+      if (perm !== "granted") { setPushState("denied"); return; }
+      const reg = await navigator.serviceWorker.ready;
+      const { publicKey } = await (await fetch("/api/push/vapid-key")).json();
+      if (!publicKey) return;
+      const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(publicKey) });
+      await fetch("/api/push/subscribe", {
+        method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subscription: sub.toJSON() }),
+      });
+      setPushState("on");
+    } catch { setPushState("denied"); }
+  };
 
   useEffect(() => {
     fetch("/api/b2c/dermatologists")
@@ -198,6 +226,19 @@ export function ConsultationLauncher({ scanId, condition, imageUrl }: { scanId?:
                 <>Dès que ton paiement est confirmé, la conversation s'ouvre dans <strong>« Mes consultations »</strong>. Tu seras notifié(e).</>
               )}
             </p>
+            {/* Prompt push — le moment clé : être notifié quand le dermato répond */}
+            {pushState !== "on" ? (
+              <div style={{ background: "rgba(124,58,237,0.06)", border: "1px solid rgba(124,58,237,0.2)", borderRadius: 12, padding: 12, marginBottom: 12, textAlign: "left" }}>
+                <p style={{ fontSize: 12, fontWeight: 700, color: "#1a1a2e", margin: "0 0 8px" }}>🔔 Sois prévenu(e) dès que le dermatologue répond</p>
+                <button onClick={enablePush}
+                  style={{ width: "100%", background: VIOLET, color: "#fff", border: "none", borderRadius: 9999, padding: "10px", fontSize: 12.5, fontWeight: 800, cursor: "pointer" }}>
+                  Activer les notifications
+                </button>
+                {pushState === "denied" && <p style={{ fontSize: 10.5, color: "#dc2626", margin: "6px 0 0" }}>Notifications bloquées — active-les dans les réglages de ton navigateur pour ne rien manquer.</p>}
+              </div>
+            ) : (
+              <p style={{ fontSize: 11.5, color: "#059669", fontWeight: 700, marginBottom: 12 }}>✅ Notifications activées</p>
+            )}
             <a href="/consultations" style={{ display: "inline-block", background: VIOLET, color: "#fff", borderRadius: 9999, padding: "10px 20px", fontSize: 12.5, fontWeight: 800, textDecoration: "none" }}>
               Voir mes consultations
             </a>

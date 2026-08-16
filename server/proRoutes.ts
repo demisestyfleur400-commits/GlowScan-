@@ -975,6 +975,32 @@ export function registerProRoutes(app: Express) {
       }
       const monthlyArr = Object.entries(monthly).sort().slice(-12).map(([month, count]) => ({ month, count }));
 
+      // Répartition par phototype (Fitzpatrick IV/V/VI) — extrait du skinType.
+      const phototype: Record<string, number> = { IV: 0, V: 0, VI: 0, Autre: 0 };
+      for (const s of allScans) {
+        const t = String(s.skinType || "").toLowerCase();
+        if (/\bvi\b|phototype\s*6|type\s*vi/.test(t)) phototype.VI++;
+        else if (/\biv\b|phototype\s*4|type\s*iv/.test(t)) phototype.IV++;
+        else if (/\bv\b|phototype\s*5|type\s*v/.test(t)) phototype.V++;
+        else phototype.Autre++;
+      }
+      const phototypeDist = Object.entries(phototype).filter(([, n]) => n > 0).map(([name, count]) => ({ name, count }));
+
+      // Consultations en ligne : nb + revenus (payout dermato) par mois. Résilient.
+      let onlineConsultations = 0, onlineRevenue = 0;
+      let onlineRevenueMonthly: { month: string; revenue: number }[] = [];
+      try {
+        const rows = Rows(await db.execute(sql`
+          SELECT to_char(created_at,'YYYY-MM') AS month, COUNT(*) AS n,
+                 COALESCE(SUM(COALESCE(dermatologue_payout, price_fcfa - COALESCE(platform_commission,0), price_fcfa)),0) AS revenue
+          FROM consultations
+          WHERE pro_account_id = ${dermatoId} AND payment_status = 'paid'
+          GROUP BY 1 ORDER BY 1`));
+        onlineRevenueMonthly = rows.map((r: any) => ({ month: r.month, revenue: Number(r.revenue) || 0 }));
+        onlineConsultations = rows.reduce((s: number, r: any) => s + Number(r.n || 0), 0);
+        onlineRevenue = onlineRevenueMonthly.reduce((s, r) => s + r.revenue, 0);
+      } catch {}
+
       res.json({
         totalPatients: allPatients.length,
         totalScans: allScans.length,
@@ -982,6 +1008,10 @@ export function registerProRoutes(app: Express) {
         topConditions,
         topProducts,
         monthly: monthlyArr,
+        phototypeDist,
+        onlineConsultations,
+        onlineRevenue,
+        onlineRevenueMonthly,
         // Schéma de statut unifié : priority/monitoring/stable/resolved.
         // On mappe l'ancien schéma (red/yellow/green) pour rétro-compat.
         statusBreakdown: (() => {
