@@ -69,6 +69,7 @@ const DermOnboarding = lazyWithRetry(() => import("@/pages/pro/DermOnboarding"))
 const DermConditions = lazyWithRetry(() => import("@/pages/pro/DermConditions"));
 const MesConsultations = lazyWithRetry(() => import("@/pages/MesConsultations"));
 const DermPublicProfile = lazyWithRetry(() => import("@/pages/DermPublicProfile"));
+const DermPublicList = lazyWithRetry(() => import("@/pages/DermPublicList"));
 const ProConsultations = lazyWithRetry(() => import("@/pages/pro/ProConsultations"));
 const Privacy = lazyWithRetry(() => import("@/pages/Privacy"));
 const DermatoPortal = lazyWithRetry(() => import("@/pages/DermatoPortal"));
@@ -103,6 +104,7 @@ function Router() {
       <Route path="/auth" component={AuthPage} />
       <Route path="/premium" component={Premium} />
       <Route path="/consultations" component={MesConsultations} />
+      <Route path="/dermatologues" component={DermPublicList} />
       <Route path="/dr/:slug" component={DermPublicProfile} />
       {/* GlowScan DERM routes (formerly /pro) */}
       <Route path="/derm" component={DermLanding} />
