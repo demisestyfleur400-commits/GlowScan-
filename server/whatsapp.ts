@@ -111,23 +111,30 @@ async function pushReport(userId: string, dermatologistName: string, url: string
 // (rien livré), 'pending' (état initial). Met à jour la base.
 export async function deliverConsultationReport(consultationId: number): Promise<void> {
   try {
-    const c = Rows(await db.execute(sql`
-      SELECT c.id, c.user_id, c.pro_account_id,
-             u.first_name AS patient_first, p.full_name AS derm_name,
-             COALESCE(p.whatsapp_number, p.phone) AS derm_phone
-      FROM consultations c
-      LEFT JOIN users u ON u.id = c.user_id
-      LEFT JOIN pro_accounts p ON p.id = c.pro_account_id
-      WHERE c.id = ${consultationId}`))[0] as any;
+    // patient_phone : colonne ajoutée (peut ne pas exister sur base non migrée).
+    let c: any;
+    try {
+      c = Rows(await db.execute(sql`
+        SELECT c.id, c.user_id, c.pro_account_id, c.patient_phone,
+               u.first_name AS patient_first, p.full_name AS derm_name
+        FROM consultations c
+        LEFT JOIN users u ON u.id = c.user_id
+        LEFT JOIN pro_accounts p ON p.id = c.pro_account_id
+        WHERE c.id = ${consultationId}`))[0];
+    } catch {
+      c = Rows(await db.execute(sql`
+        SELECT c.id, c.user_id, c.pro_account_id, u.first_name AS patient_first, p.full_name AS derm_name
+        FROM consultations c
+        LEFT JOIN users u ON u.id = c.user_id
+        LEFT JOIN pro_accounts p ON p.id = c.pro_account_id
+        WHERE c.id = ${consultationId}`))[0];
+    }
     if (!c) return;
 
     const patientName = c.patient_first || "cher patient";
     const dermName = String(c.derm_name || "GlowScan").replace(/^dr\.?\s*/i, "");
     const url = reportUrl(consultationId);
-
-    // Le numéro du patient n'est pas stocké (users n'a pas de phone) → WhatsApp
-    // Twilio restera inactif tant qu'on ne capture pas le téléphone patient.
-    const patientPhone: string | null = null;
+    const patientPhone: string | null = c.patient_phone || null;
 
     const wa = await sendConsultationReport({ consultationId, patientPhone, patientName, dermatologistName: dermName, pdfUrl: url });
     const pushed = await pushReport(c.user_id, dermName, url);

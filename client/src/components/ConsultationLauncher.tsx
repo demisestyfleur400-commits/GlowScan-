@@ -32,6 +32,18 @@ export function ConsultationLauncher({ scanId, condition, imageUrl }: { scanId?:
   const [payProvider, setPayProvider] = useState<"monetbil" | "cinetpay" | "simulated">("simulated");
   const [paidConfirmed, setPaidConfirmed] = useState(false);
   const [pushState, setPushState] = useState<"idle" | "on" | "denied">("idle");
+  const [patientPhone, setPatientPhone] = useState("");
+
+  // Enregistre le numéro WhatsApp du patient (pour recevoir le rapport).
+  const savePhone = async () => {
+    if (!consultationId || !patientPhone.trim()) return;
+    try {
+      await fetch(`/api/consultations/${consultationId}/patient-phone`, {
+        method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: patientPhone.trim() }),
+      });
+    } catch {}
+  };
 
   // Abonne le patient aux notifs push (pour être prévenu quand le dermato répond).
   const enablePush = async () => {
@@ -66,6 +78,7 @@ export function ConsultationLauncher({ scanId, condition, imageUrl }: { scanId?:
   // Paiement réel CinetPay : init → ouverture page paiement → polling statut (3s, max 60s).
   const startCinetPay = async () => {
     if (!consultationId) return;
+    savePhone();
     setBusy(true); setErr("");
     try {
       const res = await fetch(`/api/consultations/${consultationId}/pay/init`, { method: "POST", credentials: "include" });
@@ -110,6 +123,7 @@ export function ConsultationLauncher({ scanId, condition, imageUrl }: { scanId?:
 
   const submitRef = async () => {
     if (!consultationId || !ref.trim()) return;
+    savePhone();
     setBusy(true);
     try {
       await fetch(`/api/consultations/${consultationId}/payment-ref`, {
@@ -181,6 +195,10 @@ export function ConsultationLauncher({ scanId, condition, imageUrl }: { scanId?:
             <p style={{ fontSize: 12, color: "#6b7280", margin: "0 0 12px", lineHeight: 1.6 }}>
               Consultation avec <strong>Dr {selected.fullName}</strong> — <strong>{selected.price.toLocaleString("fr-FR")} FCFA</strong>.
             </p>
+            {/* Numéro WhatsApp — pour recevoir le rapport après la consultation */}
+            <label style={{ fontSize: 11, fontWeight: 700, color: "#374151", display: "block", marginBottom: 4 }}>📱 Ton numéro WhatsApp (pour recevoir le rapport)</label>
+            <input value={patientPhone} onChange={(e) => setPatientPhone(e.target.value)} onBlur={savePhone} placeholder="Ex : 6XX XXX XXX" inputMode="tel"
+              style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: "1px solid rgba(0,0,0,0.15)", fontSize: 13, marginBottom: 12 }} />
             {payProvider !== "simulated" ? (
               <>
                 <div style={{ background: "#fff", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 12, padding: 12, marginBottom: 12 }}>

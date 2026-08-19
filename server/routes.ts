@@ -618,6 +618,23 @@ export async function registerRoutes(
     }
   });
 
+  // Le patient enregistre son numéro WhatsApp (pour recevoir le rapport).
+  app.post("/api/consultations/:id/patient-phone", async (req: any, res) => {
+    const userId = getUID(req);
+    if (!userId) return res.status(401).json({ message: "Connexion requise" });
+    try {
+      const id = parseInt(req.params.id);
+      const phone = String(req.body?.phone || "").replace(/[^0-9+]/g, "").slice(0, 20);
+      const [c] = await db.select().from(consultations).where(eq(consultations.id, id));
+      if (!c || c.userId !== userId) return res.status(404).json({ message: "Consultation introuvable" });
+      try { await db.execute(sql`UPDATE consultations SET patient_phone = ${phone || null} WHERE id = ${id}`); } catch {}
+      res.json({ ok: true });
+    } catch (err) {
+      console.error("[consultations patient-phone] error:", err);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
   // Consultations du patient connecté.
   app.get("/api/consultations/mine", async (req: any, res) => {
     const userId = getUID(req);
