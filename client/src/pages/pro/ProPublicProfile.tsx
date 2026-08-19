@@ -37,7 +37,7 @@ export default function ProPublicProfile() {
   const [bio, setBio] = useState("");
   const [specialties, setSpecialties] = useState<string[]>([]);
   const [whatsapp, setWhatsapp] = useState("");
-  const [price, setPrice] = useState(2000);
+  const [price, setPrice] = useState(3500);
   const [available, setAvailable] = useState(false);
   const [publicEnabled, setPublicEnabled] = useState(true);
   const [certified, setCertified] = useState(false);
@@ -48,7 +48,7 @@ export default function ProPublicProfile() {
       const p = d.profile; if (!p) return;
       setSlug(p.slug); setFullName(p.fullName || ""); setPhotoUrl(p.photoUrl || null);
       setBio(p.bio || ""); setSpecialties(p.specialties || []); setWhatsapp(p.whatsapp || "");
-      setPrice(p.price || 2000); setAvailable(!!p.b2cAvailable); setPublicEnabled(p.publicProfileEnabled !== false);
+      setPrice(p.price || 3500); setAvailable(!!p.b2cAvailable); setPublicEnabled(p.publicProfileEnabled !== false);
       setCertified(!!p.certified); setCertifiedAt(p.certifiedAt || null);
     }).catch(() => {}).finally(() => setLoading(false));
   };
@@ -160,7 +160,7 @@ export default function ProPublicProfile() {
             </button>
           </div>
           <label style={lbl}>Prix de la consultation (FCFA)</label>
-          <input type="number" value={price} onChange={(e) => setPrice(parseInt(e.target.value) || 2000)} style={inputStyle} />
+          <input type="number" value={price} onChange={(e) => setPrice(parseInt(e.target.value) || 3500)} style={inputStyle} />
           <label style={{ ...lbl, marginTop: 12 }}>Numéro WhatsApp (pour "Prendre contact")</label>
           <input value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} placeholder="2376XXXXXXXX" style={inputStyle} />
         </ProCard>

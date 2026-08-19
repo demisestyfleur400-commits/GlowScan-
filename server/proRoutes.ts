@@ -372,11 +372,11 @@ export function registerProRoutes(app: Express) {
     const isAdmin = (req.session as any)?.isAdmin === true;
 
     // Opt-in consultation B2C (colonnes hors schéma Drizzle → lues en SQL brut).
-    let b2cAvailable = false, consultPriceFcfa = 2000;
+    let b2cAvailable = false, consultPriceFcfa = 3500;
     try {
       const r: any = await db.execute(sql`SELECT b2c_available, consult_price_fcfa FROM pro_accounts WHERE id = ${acc.id}`);
       const row = (r?.rows ?? r ?? [])[0];
-      if (row) { b2cAvailable = row.b2c_available === true; consultPriceFcfa = Number(row.consult_price_fcfa) || 2000; }
+      if (row) { b2cAvailable = row.b2c_available === true; consultPriceFcfa = Number(row.consult_price_fcfa) || 3500; }
     } catch {}
 
     res.json({
@@ -855,7 +855,7 @@ export function registerProRoutes(app: Express) {
         SELECT slug, full_name, city, bio, specialties, photo_url, whatsapp_number, phone,
                COALESCE(public_profile_enabled,true) AS public_enabled,
                COALESCE(b2c_available,false) AS b2c_available,
-               COALESCE(consult_price_fcfa,2000) AS price,
+               COALESCE(consult_price_fcfa,3500) AS price,
                COALESCE(is_certified,false) AS is_certified, certified_at, profile_completed_at
         FROM pro_accounts WHERE id = ${id}`))[0] as any;
       res.json({ profile: {
@@ -863,7 +863,7 @@ export function registerProRoutes(app: Express) {
         bio: r?.bio || "", specialties: Array.isArray(r?.specialties) ? r.specialties : [],
         photoUrl: r?.photo_url || null, whatsapp: r?.whatsapp_number || r?.phone || "",
         publicProfileEnabled: r?.public_enabled === true, b2cAvailable: r?.b2c_available === true,
-        price: Number(r?.price) || 2000, certified: r?.is_certified === true,
+        price: Number(r?.price) || 3500, certified: r?.is_certified === true,
         certifiedAt: r?.certified_at || null, profileCompletedAt: r?.profile_completed_at || null,
       } });
     } catch (err) {
@@ -902,7 +902,7 @@ export function registerProRoutes(app: Express) {
       if (publicEnabled !== undefined) await db.execute(sql`UPDATE pro_accounts SET public_profile_enabled = ${publicEnabled} WHERE id = ${id}`);
       if (typeof b.b2cAvailable === "boolean") await db.execute(sql`UPDATE pro_accounts SET b2c_available = ${b.b2cAvailable} WHERE id = ${id}`);
       if (b.consultPriceFcfa !== undefined) {
-        const price = Math.max(500, Math.min(50000, parseInt(String(b.consultPriceFcfa), 10) || 2000));
+        const price = Math.max(500, Math.min(50000, parseInt(String(b.consultPriceFcfa), 10) || 3500));
         await db.execute(sql`UPDATE pro_accounts SET consult_price_fcfa = ${price} WHERE id = ${id}`);
       }
 
