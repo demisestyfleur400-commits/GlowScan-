@@ -8,6 +8,7 @@ import OpenAI from "openai";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import QRCode from "qrcode";
 import { emitToPatient, emitToUser } from "./ws";
+import { deliverConsultationReport } from "./whatsapp";
 
 // Version des Conditions d'utilisation & Politique de confidentialité DERM en vigueur.
 // Le dermatologue (responsable de la plateforme) les accepte à l'inscription.
@@ -836,6 +837,9 @@ export function registerProRoutes(app: Express) {
       try { await db.execute(sql`UPDATE consultations SET closed_at = NOW() WHERE id = ${id}`); } catch {}
       // Notifier le patient (WS + push) : consultation terminée, invitation à noter.
       try { emitToUser(c.userId, "consultation:closed", { consultationId: id }); } catch {}
+      // Livraison auto du rapport (push + WhatsApp si configuré). Ne bloque JAMAIS
+      // la clôture : fire-and-forget, la consultation reste "closed" quoi qu'il arrive.
+      setImmediate(() => { deliverConsultationReport(id).catch((e) => console.error("[close] deliver report:", e)); });
       res.json({ ok: true });
     } catch (err) {
       console.error("[pro/consultations close] error:", err);

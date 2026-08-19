@@ -18,6 +18,7 @@ import { users } from "@shared/models/auth";
 import { eq, and, sql, gte, count, lte, desc, avg, inArray, isNull } from "drizzle-orm";
 import { whatsappClicks, orders, pageVisits } from "@shared/schema";
 import { emitToUser, isUserOnline } from "./ws";
+import { verifyReportToken, buildReportHtml } from "./whatsapp";
 
 // ── Sélection automatique du provider IA ────────────────────────────────
 // Priorité : GROQ_API_KEY (free, global, vision) → GEMINI_API_KEY → OPENAI_API_KEY
@@ -625,11 +626,11 @@ export async function registerRoutes(
       const list = await db.select().from(consultations)
         .where(eq(consultations.userId, userId))
         .orderBy(desc(consultations.createdAt));
-      // Enrichit avec la note (colonne ajoutée via ALTER v2, hors schéma Drizzle).
+      // Enrichit avec la note + le statut d'envoi du rapport (colonnes via ALTER).
       try {
-        const rows = Rows(await db.execute(sql`SELECT id, rating FROM consultations WHERE user_id = ${userId}`));
-        const rmap = new Map(rows.map((r: any) => [Number(r.id), r.rating]));
-        list.forEach((c: any) => { c.rating = rmap.get(c.id) ?? null; });
+        const rows = Rows(await db.execute(sql`SELECT id, rating, whatsapp_send_status FROM consultations WHERE user_id = ${userId}`));
+        const m = new Map(rows.map((r: any) => [Number(r.id), r]));
+        list.forEach((c: any) => { const r = m.get(c.id); c.rating = r?.rating ?? null; c.reportStatus = r?.whatsapp_send_status ?? null; });
       } catch {}
       res.json({ consultations: list });
     } catch (e) {
@@ -947,6 +948,38 @@ export async function registerRoutes(
       if (otherUserId) emitToUser(otherUserId, "consultation:typing", { consultationId: id, side });
       res.json({ ok: true });
     } catch { res.json({ ok: false }); }
+  });
+
+  // Téléchargement du rapport de consultation (HTML imprimable → PDF).
+  // Autorisé si : token signé valide (lien WhatsApp/push) OU participant connecté.
+  app.get("/api/consultations/:id/report/download", async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const token = String(req.query.token || "");
+      const [c] = await db.select().from(consultations).where(eq(consultations.id, id));
+      if (!c) return res.status(404).send("Rapport introuvable");
+      let allowed = false;
+      if (token && verifyReportToken(token, id)) allowed = true;
+      else {
+        const userId = getUID(req);
+        if (userId) { const { side } = await consultAccess(c, userId); allowed = !!side; }
+      }
+      if (!allowed) return res.status(403).send("Accès refusé");
+      const msgs = await db.select().from(consultationMessages)
+        .where(eq(consultationMessages.consultationId, id)).orderBy(consultationMessages.createdAt);
+      let doctorName = "GlowScan", patientName = "Patient";
+      try {
+        const d = Rows(await db.execute(sql`SELECT full_name FROM pro_accounts WHERE id = ${c.proAccountId}`))[0] as any;
+        if (d?.full_name) doctorName = d.full_name;
+        const u = Rows(await db.execute(sql`SELECT first_name FROM users WHERE id = ${c.userId}`))[0] as any;
+        if (u?.first_name) patientName = u.first_name;
+      } catch {}
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.send(buildReportHtml(c, msgs, doctorName, patientName));
+    } catch (err) {
+      console.error("[report download] error:", err);
+      res.status(500).send("Erreur serveur");
+    }
   });
 
   app.post("/api/consultations/:id/messages", async (req: any, res) => {

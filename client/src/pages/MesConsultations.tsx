@@ -3,7 +3,7 @@ import { Navbar } from "@/components/Navbar";
 import { useAuth } from "@/hooks/use-auth";
 import { ConsultationChat } from "@/components/ConsultationChat";
 
-interface Consult { id: number; condition?: string; status?: string; paymentStatus?: string; unreadPatient?: number; lastMessageAt?: string; createdAt?: string; rating?: number | null; }
+interface Consult { id: number; condition?: string; status?: string; paymentStatus?: string; unreadPatient?: number; lastMessageAt?: string; createdAt?: string; rating?: number | null; reportStatus?: string | null; }
 
 export default function MesConsultations() {
   const { user } = useAuth();
@@ -70,6 +70,18 @@ export default function MesConsultations() {
                   <span style={{ background: "#ef4444", color: "#fff", borderRadius: 9999, minWidth: 20, height: 20, fontSize: 11, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 6px" }}>{c.unreadPatient}</span>
                 )}
               </button>
+              {/* Rapport — consultation terminée */}
+              {c.status === "closed" && (
+                <div style={{ borderTop: "1px solid rgba(0,0,0,0.05)", padding: "10px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                  <span style={{ fontSize: 11.5, color: c.reportStatus === "sent" ? "#059669" : "#6b7280" }}>
+                    {c.reportStatus === "sent" ? "✅ Rapport envoyé" : "📄 Rapport disponible"}
+                  </span>
+                  <a href={`/api/consultations/${c.id}/report/download`} target="_blank" rel="noopener noreferrer"
+                    style={{ fontSize: 11.5, fontWeight: 800, color: "#fff", background: "#7c3aed", borderRadius: 9999, padding: "6px 12px", textDecoration: "none" }}>
+                    📥 Télécharger
+                  </a>
+                </div>
+              )}
               {/* Notation — consultation terminée */}
               {c.status === "closed" && (
                 <div style={{ borderTop: "1px solid rgba(0,0,0,0.05)", padding: "10px 14px", display: "flex", alignItems: "center", gap: 8 }}>
