@@ -1726,7 +1726,7 @@ ${(patientIntake?.fullName || patientIntake?.phone || patientIntake?.age) ? `
 
 <!-- ══ 2. DIAGNOSTIC ZONE PAR ZONE ══ -->
 ${zones.length > 0 ? `
-<div class="section">
+<div class="section page-break">
   <div class="section-title"><span class="section-icon">📍</span> Diagnostic Zone par Zone</div>
   <div class="zones-grid">
     ${zones.slice(0, 8).map((z: any) => `
@@ -1791,7 +1791,7 @@ ${result.details ? `
 
 <!-- ══ 6. ORDONNANCE PERSONNALISÉE ══ -->
 ${_bestProduct ? `
-<div class="section">
+<div class="section page-break">
   <div class="section-title"><span class="section-icon">📋</span> Ordonnance Personnalisée</div>
   <div class="ordonnance-header">
     <div class="ordonnance-icon">🏥</div>
@@ -1861,7 +1861,7 @@ ${morning.length > 0 || evening.length > 0 ? `
 ` : ""}
 
 <!-- ══ 🚫 INGRÉDIENTS TOXIQUES À BANNIR ══ -->
-<div class="section">
+<div class="section page-break">
   <div class="section-title"><span class="section-icon">🚫</span> Ingrédients Toxiques à Bannir Absolument</div>
   ${patientIntake?.allergies && patientIntake.allergies.toLowerCase() !== "aucune"
     ? `<div style="background:#fef2f2;border:1px solid #fecdd3;border-radius:8px;padding:8px 12px;margin-bottom:8px;font-size:9px;color:#b91c1c;font-weight:700">
@@ -3325,25 +3325,17 @@ ${medicalSections}
         })()}
 
 
-        {/* ── Bouton export PDF (B2C uniquement — en DERM le rapport passe par le
-             flux dédié "Voir le rapport" + sélecteur de mode dans ProAnalyze). ── */}
-        {!isPro && <button
+        {/* ── Rapport PDF (B2C). Score ≥ 60 : rapport complet 6 pages téléchargeable.
+             Score < 60 : bloqué — le rapport complet passe par la consultation. ── */}
+        {!isPro && (result.score || 0) >= 60 && <button
           onClick={handleDownloadPDF}
           disabled={pdfGenerating}
           data-testid="button-download-pdf"
           style={{
-            width: "100%",
-            padding: "14px",
-            borderRadius: "14px",
-            border: "none",
-            cursor: pdfGenerating ? "not-allowed" : "pointer",
-            opacity: pdfGenerating ? 0.7 : 1,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: "3px",
-            background: DS.violet,
-            transition: "opacity 0.15s, transform 0.1s",
+            width: "100%", padding: "14px", borderRadius: "14px", border: "none",
+            cursor: pdfGenerating ? "not-allowed" : "pointer", opacity: pdfGenerating ? 0.7 : 1,
+            display: "flex", flexDirection: "column", alignItems: "center", gap: "3px",
+            background: DS.violet, transition: "opacity 0.15s, transform 0.1s",
           }}
         >
           <span style={{ fontSize: "14px", fontWeight: 800, color: "#fff", display: "flex", alignItems: "center", gap: "8px" }}>
@@ -3353,18 +3345,25 @@ ${medicalSections}
                 Génération en cours...
               </>
             ) : (
-              <>
-                <span>📄</span>
-                {isPro ? "Télécharger le rapport complet" : "Télécharger mon rapport"}
-              </>
+              <><span>📄</span>Télécharger mon rapport complet</>
             )}
           </span>
           {!pdfGenerating && (
             <span style={{ fontSize: "10px", color: "rgba(255,255,255,0.6)", fontWeight: 500 }}>
-              {isPro ? "Pages patient + section médicale dermatologue" : "Partageable avec votre dermatologue"}
+              6 pages · diagnostic, routine, produits · partageable avec ton dermatologue
             </span>
           )}
         </button>}
+
+        {/* Score < 60 : rapport bloqué → consultation requise */}
+        {!isPro && (result.score || 0) < 60 && (
+          <div style={{ width: "100%", padding: "16px", borderRadius: "14px", background: "rgba(37,99,235,0.06)", border: "1px solid rgba(37,99,235,0.22)", textAlign: "center" }}>
+            <p style={{ fontSize: "13px", fontWeight: 800, color: DS.textPrimary, margin: "0 0 4px" }}>🔒 Ton rapport complet t'attend après consultation</p>
+            <p style={{ fontSize: "11.5px", color: DS.textBody, lineHeight: 1.5, margin: 0 }}>
+              Ton score indique un cas qui mérite un avis médical. Consulte un dermatologue (voir plus haut) : il valide ton diagnostic et t'envoie ton rapport complet personnalisé.
+            </p>
+          </div>
+        )}
 
         {/* Footer avertissement */}
         <div

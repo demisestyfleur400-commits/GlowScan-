@@ -770,7 +770,7 @@ export async function registerRoutes(
           country: "CM",
           locale: "fr",
           user: userId,
-          return_url: `${PUBLIC_BASE_URL}/consultations?paid=${id}`,
+          return_url: `${PUBLIC_BASE_URL}/consultation/confirmee?id=${id}`,
           notify_url: `${PUBLIC_BASE_URL}/api/payments/monetbil/notify`,
         });
         const paymentUrl = `https://www.monetbil.com/widget/v2.1/${MONETBIL_SERVICE_KEY}?${params.toString()}`;
@@ -786,7 +786,7 @@ export async function registerRoutes(
         currency: "XAF",
         description: `Consultation dermatologue GlowScan #${id}`,
         notify_url: `${PUBLIC_BASE_URL}/api/payments/cinetpay/webhook`,
-        return_url: `${PUBLIC_BASE_URL}/consultations?paid=${id}`,
+        return_url: `${PUBLIC_BASE_URL}/consultation/confirmee?id=${id}`,
         channels: "MOBILE_MONEY",
         lang: "fr",
       };
