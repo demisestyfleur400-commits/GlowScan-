@@ -86,6 +86,26 @@ export function useAddFollowUpPhoto(patientId: number | null) {
   });
 }
 
+// ── Rappel de contrôle WhatsApp (suivi évolution) ────────────────────────
+export function useFollowUpReminder(patientId: number | null) {
+  const qc = useQueryClient();
+  const schedule = useMutation({
+    mutationFn: async (vars: { date?: string; message?: string; sendNow?: boolean }) => {
+      const res = await apiRequest("POST", `/api/pro/patients/${patientId}/follow-up-reminder`, vars);
+      return res.json() as Promise<{ success: boolean; sent?: boolean; method?: string; waLink?: string | null; scheduledAt?: string; error?: string }>;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["/api/pro/patients", patientId] }),
+  });
+  const cancel = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("DELETE", `/api/pro/patients/${patientId}/follow-up-reminder`, undefined);
+      return res.json();
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["/api/pro/patients", patientId] }),
+  });
+  return { schedule, cancel };
+}
+
 export function useCreatePatient() {
   const qc = useQueryClient();
   return useMutation({

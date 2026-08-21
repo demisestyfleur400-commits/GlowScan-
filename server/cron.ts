@@ -1,6 +1,41 @@
 import cron from "node-cron";
 import webpush from "web-push";
 import { storage } from "./storage";
+import { db } from "./db";
+import { sql } from "drizzle-orm";
+import { sendWhatsAppText, buildFollowUpReminderMessage } from "./whatsapp";
+
+// ── Rappels de contrôle (suivi évolution) : envoie un WhatsApp au patient quand
+// la date programmée (follow_up_at) est atteinte. Marque comme envoyé (anti-doublon).
+async function sendFollowUpReminders() {
+  log("🔔 Envoi rappels de contrôle (suivi évolution)...");
+  try {
+    const r: any = await db.execute(sql`
+      SELECT p."id", p."first_name", p."last_name", p."whatsapp_number", p."follow_up_message",
+             a."full_name" AS dermato_name
+      FROM "patients" p
+      LEFT JOIN "pro_accounts" a ON a."id" = p."dermatologist_id"
+      WHERE p."follow_up_at" IS NOT NULL
+        AND p."follow_up_at" <= NOW()
+        AND COALESCE(p."follow_up_reminder_sent", FALSE) = FALSE
+      LIMIT 200
+    `);
+    const rows = (r?.rows ?? r ?? []) as any[];
+    let sent = 0;
+    for (const row of rows) {
+      const name = [row.first_name, row.last_name].filter(Boolean).join(" ") || "cher patient";
+      const msg = buildFollowUpReminderMessage(name, row.dermato_name || "votre dermatologue", row.follow_up_message);
+      const out = await sendWhatsAppText(row.whatsapp_number, msg);
+      // Marqué envoyé même si Twilio absent (évite le spam de tentatives) — le
+      // dermato garde le bouton "Envoyer maintenant / lien WhatsApp" côté dossier.
+      await db.execute(sql`UPDATE "patients" SET "follow_up_reminder_sent" = TRUE WHERE "id" = ${row.id}`).catch(() => {});
+      if (out.ok) sent++;
+    }
+    log(`✅ Rappels de contrôle : ${sent}/${rows.length} envoyés (WhatsApp)`);
+  } catch (err) {
+    log(`❌ Erreur rappels de contrôle : ${err instanceof Error ? err.message : String(err)}`);
+  }
+}
 
 function log(msg: string) {
   const t = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
@@ -258,4 +293,8 @@ export function startCronJobs() {
 
   //cron.schedule("30 10 * * *", sendProductReminders, { timezone: "Africa/Douala" });
   //log("✅ Cron rappels produits 72h actif — tous les jours à 10h30 (Douala)");
+
+  // ✅ Rappels de contrôle DERM (suivi évolution) — tous les jours à 9h00 (Douala)
+  cron.schedule("0 9 * * *", sendFollowUpReminders, { timezone: "Africa/Douala" });
+  log("✅ Cron rappels de contrôle DERM actif — 9h00 (Douala)");
 }

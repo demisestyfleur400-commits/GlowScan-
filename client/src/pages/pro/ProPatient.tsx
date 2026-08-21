@@ -16,6 +16,10 @@ import {
   TrendingUp,
   TrendingDown,
   Minus,
+  Bell,
+  BellRing,
+  Send,
+  X as XIcon,
 } from "lucide-react";
 import {
   usePatientDossier,
@@ -24,6 +28,7 @@ import {
   useProAccount,
   useUpdatePatientStatus,
   useAddFollowUpPhoto,
+  useFollowUpReminder,
 } from "@/hooks/use-pro";
 import { ProLayout, ProCard, ProInput, StatusBadge } from "@/components/ProLayout";
 import { CaseAuditTrail } from "@/components/pro/CaseAuditTrail";
@@ -447,6 +452,11 @@ export default function ProPatient() {
       {/* Suivi évolution — photos de contrôle comparées par l'IA */}
       {lastScan && (
         <EvolutionSection scan={lastScan as any} patientId={p.id} />
+      )}
+
+      {/* Rappel de contrôle WhatsApp */}
+      {scans.length > 0 && (
+        <FollowUpReminderCard patient={p as any} patientId={p.id} />
       )}
 
       {/* Timeline */}
@@ -877,6 +887,103 @@ function EvolutionSection({ scan, patientId }: { scan: any; patientId: number })
           </div>
         </>
       )}
+    </ProCard>
+  );
+}
+
+// ── Rappel de contrôle WhatsApp : programmer ou envoyer maintenant ──────────
+function FollowUpReminderCard({ patient, patientId }: { patient: any; patientId: number }) {
+  const { toast } = useToast();
+  const { schedule, cancel } = useFollowUpReminder(patientId);
+  const scheduledAt: string | null = patient.followUpAt || null;
+  const hasPhone = !!patient.whatsappNumber;
+  // date par défaut = J+30
+  const defaultDate = (() => { const d = new Date(); d.setDate(d.getDate() + 30); return d.toISOString().slice(0, 10); })();
+  const [date, setDate] = useState(defaultDate);
+  const [message, setMessage] = useState("");
+  const [open, setOpen] = useState(false);
+
+  const sendNow = async () => {
+    try {
+      const r = await schedule.mutateAsync({ sendNow: true, message: message || undefined });
+      if (r.sent) toast({ title: "Rappel envoyé ✅", description: "Le patient a reçu le message WhatsApp." });
+      else if (r.waLink) { window.open(r.waLink, "_blank"); toast({ title: "WhatsApp ouvert", description: "Envoi manuel (Twilio non configuré)." }); }
+      else toast({ title: "Envoi impossible", description: r.error || "Numéro WhatsApp manquant.", variant: "destructive" });
+    } catch (e: any) { toast({ title: "Erreur", description: e?.message, variant: "destructive" }); }
+  };
+
+  const scheduleIt = async () => {
+    try {
+      await schedule.mutateAsync({ date: new Date(date).toISOString(), message: message || undefined });
+      toast({ title: "Rappel programmé ✅", description: `Le patient sera relancé le ${new Date(date).toLocaleDateString("fr-FR")}.` });
+      setOpen(false);
+    } catch (e: any) { toast({ title: "Erreur", description: e?.message, variant: "destructive" }); }
+  };
+
+  return (
+    <ProCard className="p-5 mb-4">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <BellRing className="w-4 h-4" style={{ color: NAVY }} />
+          <p className="text-[11px] font-extrabold uppercase tracking-wider" style={{ color: DS.muted }}>
+            Rappel de contrôle
+          </p>
+        </div>
+        {scheduledAt && (
+          <button onClick={() => cancel.mutate()} className="inline-flex items-center gap-1 text-[11px] font-extrabold" style={{ color: "#dc2626" }} data-testid="button-cancel-reminder">
+            <XIcon className="w-3 h-3" /> Annuler
+          </button>
+        )}
+      </div>
+
+      {!hasPhone && (
+        <div className="mb-3 p-2.5 rounded-lg text-[11px]" style={{ background: "rgba(217,119,6,0.08)", border: "1px solid rgba(217,119,6,0.25)", color: "#b45309" }}>
+          Ce patient n'a pas de numéro WhatsApp. Ajoutez-en un pour activer les rappels.
+        </div>
+      )}
+
+      {scheduledAt ? (
+        <p className="text-xs mb-3" style={{ color: DS.body }}>
+          📅 Prochain rappel programmé le{" "}
+          <strong style={{ color: INK }}>{new Date(scheduledAt).toLocaleDateString("fr-FR")}</strong>
+          {patient.followUpReminderSent ? " · déjà envoyé" : ""}
+        </p>
+      ) : (
+        <p className="text-xs mb-3" style={{ color: DS.body }}>
+          Relancez le patient pour une photo de contrôle : à une date programmée, ou tout de suite.
+        </p>
+      )}
+
+      {open && (
+        <div className="mb-3 space-y-2 p-3 rounded-xl" style={{ background: "#F1F5F9", border: `1px solid ${DS.border}` }}>
+          <label className="block text-[10px] font-extrabold uppercase tracking-wider" style={{ color: DS.muted }}>Date du rappel</label>
+          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} data-testid="input-reminder-date"
+            className="w-full px-3 py-2 rounded-lg text-sm outline-none" style={{ background: "#fff", border: `1px solid ${DS.border}`, color: INK }} />
+          <label className="block text-[10px] font-extrabold uppercase tracking-wider mt-2" style={{ color: DS.muted }}>Message (optionnel)</label>
+          <textarea value={message} onChange={(e) => setMessage(e.target.value)} rows={2} placeholder="Laisser vide = message par défaut"
+            data-testid="input-reminder-message"
+            className="w-full px-3 py-2 rounded-lg text-sm outline-none resize-none" style={{ background: "#fff", border: `1px solid ${DS.border}`, color: INK }} />
+          <button onClick={scheduleIt} disabled={schedule.isPending}
+            className="w-full py-2.5 rounded-full text-white text-sm font-extrabold disabled:opacity-50" style={{ background: NAVY }} data-testid="button-confirm-schedule">
+            {schedule.isPending ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Programmer le rappel"}
+          </button>
+        </div>
+      )}
+
+      <div className="flex gap-2">
+        {!open && (
+          <button onClick={() => setOpen(true)}
+            className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 rounded-full text-sm font-extrabold active:scale-[0.98] transition-all"
+            style={{ background: "#F1F5F9", border: `1px solid ${DS.border}`, color: INK }} data-testid="button-schedule-reminder">
+            <Bell className="w-4 h-4" /> {scheduledAt ? "Modifier la date" : "Programmer"}
+          </button>
+        )}
+        <button onClick={sendNow} disabled={schedule.isPending || !hasPhone}
+          className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 rounded-full text-white text-sm font-extrabold active:scale-[0.98] transition-all disabled:opacity-50"
+          style={{ background: "#25d366" }} data-testid="button-send-now">
+          <Send className="w-4 h-4" /> Envoyer maintenant
+        </button>
+      </div>
     </ProCard>
   );
 }

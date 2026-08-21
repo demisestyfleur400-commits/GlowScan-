@@ -8,7 +8,7 @@ import OpenAI from "openai";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import QRCode from "qrcode";
 import { emitToPatient, emitToUser } from "./ws";
-import { deliverConsultationReport } from "./whatsapp";
+import { deliverConsultationReport, sendWhatsAppText, buildFollowUpReminderMessage, whatsappDeepLink } from "./whatsapp";
 import { uploadScanImageToStorage } from "./routes";
 
 // Version des Conditions d'utilisation & Politique de confidentialité DERM en vigueur.
@@ -610,10 +610,16 @@ export function registerProRoutes(app: Express) {
     // Dossier clinique (colonne hors schéma Drizzle) → lu en SQL brut et attaché.
     // Permet au médecin de REPRENDRE le dossier saisi par la secrétaire sans re-saisir.
     let clinicalRecord: any = null;
+    let followUp: { followUpAt: string | null; followUpMessage: string | null; followUpReminderSent: boolean } = { followUpAt: null, followUpMessage: null, followUpReminderSent: false };
     try {
-      const r: any = await db.execute(sql`SELECT "clinical_record" FROM "patients" WHERE "id" = ${id}`);
+      const r: any = await db.execute(sql`SELECT "clinical_record", "follow_up_at", "follow_up_message", "follow_up_reminder_sent" FROM "patients" WHERE "id" = ${id}`);
       const row = (r?.rows ?? r ?? [])[0];
       clinicalRecord = row?.clinical_record ?? null;
+      if (row) followUp = {
+        followUpAt: row.follow_up_at ? new Date(row.follow_up_at).toISOString() : null,
+        followUpMessage: row.follow_up_message ?? null,
+        followUpReminderSent: row.follow_up_reminder_sent === true,
+      };
     } catch {}
     const patientScans = await db.select().from(scans)
       .where(eq(scans.patientId, id))
@@ -629,7 +635,74 @@ export function registerProRoutes(app: Express) {
         scansWithFollowUp = patientScans.map((s) => ({ ...s, followUpPhotos: map.get(s.id) ?? [] }));
       }
     } catch { /* colonne pas encore migrée → followUpPhotos absent, non bloquant */ }
-    res.json({ patient: { ...p, clinicalRecord }, scans: scansWithFollowUp });
+    res.json({ patient: { ...p, clinicalRecord, ...followUp }, scans: scansWithFollowUp });
+  });
+
+  // ───────────────────────────────────────────
+  // POST /api/pro/patients/:id/follow-up-reminder — programmer (ou envoyer tout de
+  // suite) un rappel WhatsApp au patient pour une photo de contrôle (suivi évolution).
+  // body: { date?: ISO, message?: string, sendNow?: boolean }
+  // ───────────────────────────────────────────
+  app.post("/api/pro/patients/:id/follow-up-reminder", requireActivePro, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const schema = z.object({
+        date: z.string().optional().nullable(),
+        message: z.string().max(500).optional().nullable(),
+        sendNow: z.boolean().optional(),
+      });
+      const data = schema.parse(req.body);
+
+      const [p] = await db.select().from(patients)
+        .where(and(eq(patients.id, id), eq(patients.dermatologistId, req.proAccount.id)));
+      if (!p) return res.status(404).json({ message: "Patient introuvable" });
+
+      const msg = buildFollowUpReminderMessage(
+        [p.firstName, p.lastName].filter(Boolean).join(" ") || "cher patient",
+        req.proAccount.fullName,
+        data.message,
+      );
+
+      // Envoi immédiat
+      if (data.sendNow) {
+        const r = await sendWhatsAppText(p.whatsappNumber, msg);
+        // Trace : rappel considéré envoyé, plus de re-programmation en attente.
+        await db.execute(sql`UPDATE "patients" SET "follow_up_reminder_sent" = TRUE, "follow_up_message" = ${data.message || null} WHERE "id" = ${id}`).catch(() => {});
+        return res.json({
+          success: true,
+          sent: r.ok,
+          method: r.method,
+          // Fallback manuel : lien wa.me si Twilio non configuré.
+          waLink: r.ok ? null : (p.whatsappNumber ? whatsappDeepLink(p.whatsappNumber, msg) : null),
+          error: r.ok ? undefined : r.error,
+        });
+      }
+
+      // Programmation : le cron enverra à la date voulue.
+      if (!data.date) return res.status(400).json({ message: "Date requise" });
+      const when = new Date(data.date);
+      if (isNaN(when.getTime())) return res.status(400).json({ message: "Date invalide" });
+      await db.execute(sql`UPDATE "patients" SET "follow_up_at" = ${when.toISOString()}, "follow_up_message" = ${data.message || null}, "follow_up_reminder_sent" = FALSE WHERE "id" = ${id}`);
+      res.json({ success: true, scheduledAt: when.toISOString() });
+    } catch (err: any) {
+      if (err?.issues) return res.status(400).json({ message: "Données invalides" });
+      console.error("[pro/follow-up-reminder] error:", err);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // DELETE le rappel programmé
+  app.delete("/api/pro/patients/:id/follow-up-reminder", requireActivePro, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const [p] = await db.select().from(patients)
+        .where(and(eq(patients.id, id), eq(patients.dermatologistId, req.proAccount.id)));
+      if (!p) return res.status(404).json({ message: "Patient introuvable" });
+      await db.execute(sql`UPDATE "patients" SET "follow_up_at" = NULL, "follow_up_reminder_sent" = FALSE WHERE "id" = ${id}`).catch(() => {});
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ message: "Erreur serveur" });
+    }
   });
 
   // ───────────────────────────────────────────

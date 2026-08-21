@@ -86,6 +86,41 @@ export async function sendConsultationReport(opts: {
   return { method: "none", ok: false, error: "WhatsApp API (Twilio) non configurée ou numéro patient absent" };
 }
 
+// ── Envoi WhatsApp générique (texte libre) — réutilisé pour les rappels de suivi ──
+export async function sendWhatsAppText(phone: string | null | undefined, body: string): Promise<{ ok: boolean; method: "twilio" | "none"; error?: string }> {
+  const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
+  const from = process.env.TWILIO_WHATSAPP_FROM;
+  const to = normalizePhone(phone || "");
+  if (!(sid && tok && from && to)) {
+    return { ok: false, method: "none", error: "WhatsApp API (Twilio) non configurée ou numéro absent" };
+  }
+  try {
+    const twilio = (await import("twilio")).default(sid, tok);
+    await twilio.messages.create({ from, to: "whatsapp:" + to, body });
+    return { ok: true, method: "twilio" };
+  } catch (e: any) {
+    return { ok: false, method: "twilio", error: e?.message || String(e) };
+  }
+}
+
+// Construit un lien "cliquer pour ouvrir WhatsApp" (fallback manuel si Twilio absent).
+export function whatsappDeepLink(phone: string, text: string): string {
+  const d = (phone || "").replace(/[^0-9]/g, "");
+  const num = d.startsWith("237") ? d : (d.length === 9 ? "237" + d : d);
+  return `https://wa.me/${num}?text=${encodeURIComponent(text)}`;
+}
+
+// Message de rappel de contrôle (suivi évolution).
+export function buildFollowUpReminderMessage(patientName: string, dermatologistName: string, customMsg?: string | null): string {
+  if (customMsg && customMsg.trim()) return customMsg.trim();
+  return (
+    `Bonjour ${patientName || ""},\n\n` +
+    `Dr ${dermatologistName} vous invite a envoyer une nouvelle photo de la zone traitee ` +
+    `pour suivre l'evolution de votre traitement.\n\n` +
+    `Repondez simplement a ce message avec votre photo, ou prenez rendez-vous.\n\nGlowScan`
+  ).trim();
+}
+
 // Notification push au patient avec le lien du rapport. Renvoie le nb de devices notifiés.
 async function pushReport(userId: string, dermatologistName: string, url: string): Promise<number> {
   let ok = 0;
