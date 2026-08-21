@@ -12,15 +12,15 @@ import { useAnalyze } from "@/hooks/use-scans";
 import { useToast } from "@/hooks/use-toast";
 
 const DS = {
-  bg: "#0d0a0e",
-  surface: "#13101f",
+  bg: "#F6FAFD",
+  surface: "#FFFFFF",
   violet: "#7c3aed",
-  violetMid: "#a78bfa",
+  violetMid: "#0369A1",
   border: "rgba(167,139,250,0.18)",
-  text: "#f3f0ff",
-  muted: "rgba(200,185,255,0.65)",
-  subtle: "rgba(255,255,255,0.35)",
-  inputBg: "rgba(255,255,255,0.04)",
+  text: "#0F172A",
+  muted: "#64748B",
+  subtle: "#94A3B8",
+  inputBg: "#F1F5F9",
   inputBorder: "rgba(167,139,250,0.2)",
 };
 
@@ -38,7 +38,7 @@ function StepDot({ n, current }: { n: number; current: number }) {
       <div style={{
         width: 32, height: 32, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
         fontWeight: 800, fontSize: 13,
-        background: done ? "#10b981" : active ? DS.violet : "rgba(255,255,255,0.06)",
+        background: done ? "#10b981" : active ? DS.violet : "#F1F5F9",
         color: (done || active) ? "#fff" : DS.subtle,
         border: active ? `2px solid ${DS.violetMid}` : "none",
       }}>
@@ -161,7 +161,7 @@ export default function DermOnboarding() {
                 <label style={{ fontSize: 11, fontWeight: 700, color: DS.muted, display: "block", marginBottom: 5, textTransform: "uppercase", letterSpacing: ".4px" }}>
                   Nom complet
                 </label>
-                <input style={{ ...inp, background: "rgba(255,255,255,0.02)", cursor: "not-allowed", color: DS.subtle }} readOnly
+                <input style={{ ...inp, background: "#F8FAFC", cursor: "not-allowed", color: DS.subtle }} readOnly
                   value={acc?.fullName || "—"} />
               </div>
               <div>
@@ -281,7 +281,7 @@ export default function DermOnboarding() {
                 </a>
               )}
               <button onClick={finish}
-                style={{ background: "rgba(255,255,255,0.06)", border: `1px solid ${DS.border}`, color: DS.muted, borderRadius: 9999, padding: "13px 0", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
+                style={{ background: "#F1F5F9", border: `1px solid ${DS.border}`, color: DS.muted, borderRadius: 9999, padding: "13px 0", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
                 Accéder au tableau de bord →
               </button>
             </div>

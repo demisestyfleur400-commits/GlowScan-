@@ -6,16 +6,16 @@ import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 
 const DS = {
-  bg: "#0d0a0e",
-  surface: "#13101f",
+  bg: "#F6FAFD",
+  surface: "#FFFFFF",
   violet: "#7c3aed",
-  violetMid: "#a78bfa",
-  violetLight: "#c4b5fd",
-  textPrimary: "#f3f0ff",
-  textBody: "rgba(200,185,255,0.75)",
-  textMuted: "rgba(255,255,255,0.6)",
+  violetMid: "#0369A1",
+  violetLight: "#0891B2",
+  textPrimary: "#0F172A",
+  textBody: "#475569",
+  textMuted: "#64748B",
   inputBorder: "rgba(167,139,250,0.2)",
-  cardBorder: "rgba(255,255,255,0.07)",
+  cardBorder: "#E2E8F0",
   cardVioletBorder: "rgba(167,139,250,0.18)",
   font: `-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif`,
 };
@@ -324,7 +324,7 @@ export default function ProConnexion() {
 
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
-        input::placeholder { color: rgba(200,185,255,0.3); }
+        input::placeholder { color: #94A3B8; }
       `}</style>
     </div>
   );

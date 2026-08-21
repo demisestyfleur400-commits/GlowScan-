@@ -9,13 +9,19 @@ import { ProLayout, ProCard, ProInput, LogoutButton  } from "@/components/ProLay
 import { LoadingScreen } from "./ProDashboard";
 import { DERM } from "@/lib/design-tokens";
 
-const NAVY = "#7c3aed";
-const INK = "#f3f0ff";
-const GREEN = "#10b981";
+const NAVY = "#7c3aed";        // CTA violet
+const BLUE = "#0369A1";        // accent bleu
+const INK = "#0F172A";         // texte principal (foncé sur fond clair)
+const GREEN = "#059669";
 
 const MTN_NUMBER = "674377959";
 const ORANGE_NUMBER = "690501392";
 const PRO_PRICE = 10000;
+
+// Prix consultation en ligne — FIXÉ par GlowScan (non éditable par le dermato)
+const CONSULT_PRICE = 3500;
+const DERM_SHARE = 2100;
+const PLATFORM_SHARE = 1400;
 
 const DS = {
   surface: DERM.surface,
@@ -23,6 +29,10 @@ const DS = {
   body: DERM.textBody,
   muted: DERM.textMuted,
 };
+
+// Fonds/bordures légers réutilisés (remplacent les anciens rgba(255,255,255,…) du thème sombre)
+const SOFT_BG = "#F1F5F9";
+const SOFT_BORDER = DERM.border;
 
 export default function ProCabinet() {
   const { data: accData } = useProAccount();
@@ -195,7 +205,7 @@ export default function ProCabinet() {
   if (accData?.user?.role === "secretary") {
     return (
       <ProLayout title="Mon cabinet" back="/derm/patients">
-        <div style={{ textAlign: "center", padding: "40px 24px", color: "rgba(200,185,255,0.75)" }}>
+        <div style={{ textAlign: "center", padding: "40px 24px", color: "#475569" }}>
           <p>Les secrétaires n'ont pas accès aux paramètres cabinet.</p>
         </div>
       </ProLayout>
@@ -254,7 +264,7 @@ export default function ProCabinet() {
                 <button
                   onClick={() => setEditing(false)}
                   className="px-4 py-2.5 rounded-full text-sm font-extrabold transition-all"
-                  style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", color: DS.body }}
+                  style={{ background: SOFT_BG, border: `1px solid ${SOFT_BORDER}`, color: INK }}
                 >
                   Annuler
                 </button>
@@ -279,28 +289,35 @@ export default function ProCabinet() {
               data-testid="toggle-b2c"
               style={{
                 width: 48, height: 28, borderRadius: 9999, border: "none", cursor: "pointer",
-                background: b2cAvailable ? "#10b981" : "rgba(255,255,255,0.15)", position: "relative", transition: "background .2s",
+                background: b2cAvailable ? "#10b981" : "#CBD5E1", position: "relative", transition: "background .2s",
               }}
             >
               <span style={{ position: "absolute", top: 3, left: b2cAvailable ? 23 : 3, width: 22, height: 22, borderRadius: "50%", background: "#fff", transition: "left .2s" }} />
             </button>
           </div>
           {b2cAvailable && (
-            <div className="mb-4">
-              <label className="text-[11px] font-extrabold uppercase tracking-wider" style={{ color: DS.muted }}>Prix de la consultation (FCFA)</label>
-              <input
-                type="number" value={consultPrice} onChange={(e) => setConsultPrice(e.target.value)}
-                data-testid="input-consult-price"
-                className="w-full mt-1.5 px-3.5 py-2.5 rounded-xl text-sm outline-none"
-                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(167,139,250,0.2)", color: INK }}
-              />
+            <div className="mb-4 rounded-xl p-4" style={{ background: "rgba(3,105,161,0.06)", border: "1px solid rgba(3,105,161,0.18)" }}>
+              <div className="flex items-center gap-2 mb-2">
+                <span style={{ fontSize: 15 }}>💬</span>
+                <p className="text-sm font-extrabold" style={{ color: INK }}>
+                  Consultations en ligne : {CONSULT_PRICE.toLocaleString("fr-FR")} FCFA
+                </p>
+              </div>
+              <p className="text-xs leading-relaxed" style={{ color: DS.body }}>
+                Prix <strong style={{ color: BLUE }}>fixé par GlowScan</strong> — vous recevez{" "}
+                <strong style={{ color: GREEN }}>{DERM_SHARE.toLocaleString("fr-FR")} FCFA</strong> par consultation.
+                GlowScan prend {PLATFORM_SHARE.toLocaleString("fr-FR")} FCFA.
+              </p>
+              <p className="text-[11px] mt-2" style={{ color: DS.muted }}>
+                Un tarif unique pour tous : pas de négociation, plus de confiance côté patient.
+              </p>
             </div>
           )}
           <button
             onClick={async () => {
               setSavingB2c(true);
               try {
-                await updateAcc.mutateAsync({ b2cAvailable, consultPriceFcfa: parseInt(consultPrice) || 3000 });
+                await updateAcc.mutateAsync({ b2cAvailable, consultPriceFcfa: CONSULT_PRICE });
                 toast({ title: b2cAvailable ? "Consultation en ligne activée ✅" : "Consultation en ligne désactivée" });
               } catch { toast({ title: "Erreur", variant: "destructive" }); }
               finally { setSavingB2c(false); }
@@ -400,7 +417,7 @@ export default function ProCabinet() {
 
           {/* Formulaire ajout */}
           {showSecretaryForm && (
-            <div className="rounded-xl p-4 mb-4 space-y-3" style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${DS.border}` }}>
+            <div className="rounded-xl p-4 mb-4 space-y-3" style={{ background: SOFT_BG, border: `1px solid ${DS.border}` }}>
               <ProInput label="Nom complet" value={secFullName} onChange={(e) => setSecFullName(e.target.value)} placeholder="Marie Mbarga" testid="input-secretary-name" />
               <ProInput label="Email" type="email" value={secEmail} onChange={(e) => setSecEmail(e.target.value)} placeholder="secretaire@cabinet.com" testid="input-secretary-email" />
               <p className="text-[11px]" style={{ color: DS.muted }}>🔑 Un mot de passe sécurisé sera généré automatiquement et affiché après création.</p>
@@ -417,7 +434,7 @@ export default function ProCabinet() {
                 <button
                   onClick={() => { setShowSecretaryForm(false); setSecFullName(""); setSecEmail(""); }}
                   className="px-4 py-2.5 rounded-full text-sm font-extrabold"
-                  style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", color: DS.body }}
+                  style={{ background: SOFT_BG, border: `1px solid ${SOFT_BORDER}`, color: INK }}
                 >
                   Annuler
                 </button>
@@ -467,7 +484,7 @@ export default function ProCabinet() {
               disabled={patients.length === 0}
               data-testid="button-export"
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-extrabold disabled:opacity-50 transition-all active:scale-95"
-              style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)", color: DS.body }}
+              style={{ background: SOFT_BG, border: `1px solid ${SOFT_BORDER}`, color: INK }}
             >
               <Download className="w-3 h-3" />
               Exporter CSV
@@ -484,7 +501,7 @@ export default function ProCabinet() {
                   data-testid={`link-cabinet-patient-${p.id}`}
                   className="flex items-center justify-between py-2.5 px-1 rounded-lg transition-colors"
                   style={{ borderBottom: i < patients.length - 1 ? `1px solid ${DS.border}` : "none" }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.03)")}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = SOFT_BG)}
                   onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                 >
                   <span className="text-sm font-extrabold" style={{ color: INK }}>
@@ -541,7 +558,7 @@ export default function ProCabinet() {
                         style={
                           method === m.id
                             ? { borderColor: NAVY, background: "rgba(124,58,237,0.15)" }
-                            : { borderColor: DS.border, background: "rgba(255,255,255,0.04)" }
+                            : { borderColor: DS.border, background: SOFT_BG }
                         }
                       >
                         <div className="w-5 h-5 rounded-full mx-auto mb-1.5" style={{ background: m.color }} />
@@ -551,7 +568,7 @@ export default function ProCabinet() {
                   </div>
                   <div
                     className="rounded-xl p-3 mb-4"
-                    style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${DS.border}` }}
+                    style={{ background: SOFT_BG, border: `1px solid ${DS.border}` }}
                   >
                     <p className="text-xs font-extrabold" style={{ color: DS.body }}>Envoyer {PRO_PRICE} FCFA au :</p>
                     <p className="text-lg font-extrabold mt-1" style={{ color: NAVY }}>{paymentNumber}</p>
@@ -560,7 +577,7 @@ export default function ProCabinet() {
                     <label className="text-xs font-extrabold mb-1.5 block" style={{ color: DS.body }}>Votre numéro de paiement</label>
                     <div
                       className="flex items-center gap-2 rounded-xl px-3 py-2.5"
-                      style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(167,139,250,0.2)" }}
+                      style={{ background: SOFT_BG, border: "1px solid rgba(167,139,250,0.2)" }}
                     >
                       <Phone className="w-4 h-4 flex-shrink-0" style={{ color: DS.muted }} />
                       <input
@@ -599,7 +616,7 @@ export default function ProCabinet() {
                   <p className="text-xs text-center mb-4" style={{ color: DS.muted }}>Activation sous 24 h après vérification du paiement.</p>
                   <div
                     className="rounded-xl p-3 mb-3 text-center"
-                    style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${DS.border}` }}
+                    style={{ background: SOFT_BG, border: `1px solid ${DS.border}` }}
                   >
                     <p className="text-[10px] uppercase tracking-wider font-extrabold" style={{ color: DS.muted }}>Référence</p>
                     <p className="text-lg font-extrabold mt-1" style={{ color: NAVY }}>{subRef}</p>
@@ -641,13 +658,13 @@ function IdLine({ label, value, onCopy }: { label: string; value: string; onCopy
   return (
     <div className="flex items-center justify-between gap-2">
       <div className="min-w-0">
-        <span className="text-[10px] uppercase tracking-wider font-extrabold" style={{ color: "rgba(255,255,255,0.6)" }}>{label} : </span>
-        <span className="text-sm font-extrabold" style={{ color: "#f3f0ff" }}>{value}</span>
+        <span className="text-[10px] uppercase tracking-wider font-extrabold" style={{ color: DERM.textMuted }}>{label} : </span>
+        <span className="text-sm font-extrabold" style={{ color: INK }}>{value}</span>
       </div>
       <button
         onClick={onCopy}
         className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-extrabold flex-shrink-0"
-        style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", color: "rgba(200,185,255,0.75)" }}
+        style={{ background: SOFT_BG, border: `1px solid ${SOFT_BORDER}`, color: BLUE }}
       >
         <Copy className="w-3 h-3" /> Copier
       </button>
@@ -657,9 +674,9 @@ function IdLine({ label, value, onCopy }: { label: string; value: string; onCopy
 
 function Row({ label, value, testid }: any) {
   return (
-    <div className="flex items-center justify-between py-1.5" style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
-      <span className="text-[11px] uppercase tracking-wider font-extrabold" style={{ color: "rgba(255,255,255,0.6)" }}>{label}</span>
-      <span className="text-sm font-extrabold" style={{ color: "#f3f0ff" }} data-testid={testid}>{value}</span>
+    <div className="flex items-center justify-between py-1.5" style={{ borderBottom: `1px solid ${DERM.border}` }}>
+      <span className="text-[11px] uppercase tracking-wider font-extrabold" style={{ color: DERM.textMuted }}>{label}</span>
+      <span className="text-sm font-extrabold" style={{ color: INK }} data-testid={testid}>{value}</span>
     </div>
   );
 }

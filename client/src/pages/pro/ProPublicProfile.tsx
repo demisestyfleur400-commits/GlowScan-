@@ -81,7 +81,7 @@ export default function ProPublicProfile() {
   if (loading) return <ProLayout title="Mon profil public" back="/derm/dashboard"><div style={{ display: "flex", justifyContent: "center", padding: 40 }}><Loader2 className="animate-spin" style={{ color: DERM.violetMid }} /></div></ProLayout>;
 
   const lbl = { fontSize: 12, fontWeight: 700, color: DERM.textMuted, marginBottom: 6, display: "block" } as const;
-  const inputStyle = { width: "100%", boxSizing: "border-box" as const, background: "rgba(255,255,255,0.04)", border: `1px solid ${DERM.border}`, borderRadius: 10, padding: "10px 12px", color: DERM.text, fontSize: 13 };
+  const inputStyle = { width: "100%", boxSizing: "border-box" as const, background: "#F1F5F9", border: `1px solid ${DERM.border}`, borderRadius: 10, padding: "10px 12px", color: DERM.text, fontSize: 13 };
 
   return (
     <ProLayout title="Mon profil public" back="/derm/dashboard">
@@ -140,7 +140,7 @@ export default function ProPublicProfile() {
               return (
                 <button key={s.key} onClick={() => toggleSpec(s.key)}
                   style={{ fontSize: 12, fontWeight: 700, padding: "7px 12px", borderRadius: 9999, cursor: "pointer",
-                    background: on ? "rgba(124,58,237,0.25)" : "rgba(255,255,255,0.04)",
+                    background: on ? "rgba(124,58,237,0.25)" : "#F1F5F9",
                     border: `1px solid ${on ? DERM.violet : DERM.border}`, color: on ? DERM.violetLight : DERM.textMuted }}>
                   {on ? "✓ " : ""}{s.label}
                 </button>
@@ -155,7 +155,7 @@ export default function ProPublicProfile() {
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
             <span style={{ fontSize: 13, color: DERM.textBody }}>Disponible pour consulter des patients</span>
             <button onClick={() => setAvailable((v) => !v)}
-              style={{ width: 46, height: 26, borderRadius: 9999, border: "none", cursor: "pointer", background: available ? DERM.violet : "rgba(255,255,255,0.15)", position: "relative", transition: "background .2s" }}>
+              style={{ width: 46, height: 26, borderRadius: 9999, border: "none", cursor: "pointer", background: available ? DERM.violet : "#E2E8F0", position: "relative", transition: "background .2s" }}>
               <span style={{ position: "absolute", top: 3, left: available ? 23 : 3, width: 20, height: 20, borderRadius: "50%", background: "#fff", transition: "left .2s" }} />
             </button>
           </div>
@@ -170,7 +170,7 @@ export default function ProPublicProfile() {
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
             <span style={{ fontSize: 13, color: DERM.textBody }}>Profil public visible</span>
             <button onClick={() => setPublicEnabled((v) => !v)}
-              style={{ width: 46, height: 26, borderRadius: 9999, border: "none", cursor: "pointer", background: publicEnabled ? DERM.violet : "rgba(255,255,255,0.15)", position: "relative" }}>
+              style={{ width: 46, height: 26, borderRadius: 9999, border: "none", cursor: "pointer", background: publicEnabled ? DERM.violet : "#E2E8F0", position: "relative" }}>
               <span style={{ position: "absolute", top: 3, left: publicEnabled ? 23 : 3, width: 20, height: 20, borderRadius: "50%", background: "#fff", transition: "left .2s" }} />
             </button>
           </div>

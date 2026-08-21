@@ -9,20 +9,20 @@ import { useQueryClient } from "@tanstack/react-query";
 const DERM_TERMS_VERSION = "v1-2026-07";
 
 const DS = {
-  bg: "#0d0a0e",
-  surface: "#13101f",
+  bg: "#F6FAFD",
+  surface: "#FFFFFF",
   violet: "#7c3aed",
-  violetMid: "#a78bfa",
-  violetLight: "#c4b5fd",
-  textPrimary: "#f3f0ff",
-  textBody: "rgba(200,185,255,0.75)",
-  textMuted: "rgba(255,255,255,0.6)",
+  violetMid: "#0369A1",
+  violetLight: "#0891B2",
+  textPrimary: "#0F172A",
+  textBody: "#475569",
+  textMuted: "#64748B",
   inputBorder: "rgba(167,139,250,0.2)",
-  cardBorder: "rgba(255,255,255,0.07)",
+  cardBorder: "#E2E8F0",
   cardVioletBg: "rgba(167,139,250,0.06)",
   cardVioletBorder: "rgba(167,139,250,0.18)",
-  subtleBg: "rgba(255,255,255,0.04)",
-  subtleBorder: "rgba(255,255,255,0.07)",
+  subtleBg: "#F1F5F9",
+  subtleBorder: "#E2E8F0",
   font: `-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif`,
 };
 
@@ -219,7 +219,7 @@ export default function ProInscription() {
                   <div style={{ marginTop: 8 }}>
                     <div style={{ display: "flex", gap: 4 }}>
                       {[1, 2, 3].map((i) => (
-                        <div key={i} style={{ flex: 1, height: 4, borderRadius: 9999, background: i <= pwStrength.level ? pwStrength.color : "rgba(255,255,255,0.1)", transition: "background 0.2s" }} />
+                        <div key={i} style={{ flex: 1, height: 4, borderRadius: 9999, background: i <= pwStrength.level ? pwStrength.color : "#E2E8F0", transition: "background 0.2s" }} />
                       ))}
                     </div>
                     <p style={{ fontSize: 11, fontWeight: 700, color: pwStrength.color, marginTop: 4 }}>Force : {pwStrength.label}</p>
@@ -360,7 +360,7 @@ export default function ProInscription() {
 
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
-        input::placeholder { color: rgba(200,185,255,0.3); }
+        input::placeholder { color: #94A3B8; }
       `}</style>
     </div>
   );
@@ -373,7 +373,7 @@ function Field({
   placeholder?: string; required?: boolean; minLength?: number; testid?: string;
 }) {
   const inputBorder = "rgba(167,139,250,0.2)";
-  const violetMid = "#a78bfa";
+  const violetMid = "#0369A1";
   const isPassword = type === "password";
   const [reveal, setReveal] = useState(false);
   const effectiveType = isPassword && reveal ? "text" : type;
@@ -384,7 +384,7 @@ function Field({
           display: "block",
           fontSize: 12,
           fontWeight: 700,
-          color: "rgba(200,185,255,0.65)",
+          color: "#64748B",
           marginBottom: 7,
           letterSpacing: "0.02em",
         }}
@@ -404,9 +404,9 @@ function Field({
             width: "100%",
             padding: isPassword ? "11px 42px 11px 14px" : "11px 14px",
             borderRadius: 12,
-            background: "#0d0a0e",
+            background: "#F6FAFD",
             border: `1px solid ${inputBorder}`,
-            color: "#f3f0ff",
+            color: "#0F172A",
             fontSize: 14,
             outline: "none",
             boxSizing: "border-box",
@@ -421,7 +421,7 @@ function Field({
             onClick={() => setReveal(!reveal)}
             aria-label={reveal ? "Masquer le mot de passe" : "Afficher le mot de passe"}
             data-testid="button-toggle-password"
-            style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.35)", display: "flex", alignItems: "center", padding: 4 }}
+            style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#94A3B8", display: "flex", alignItems: "center", padding: 4 }}
           >
             {reveal ? <EyeOff style={{ width: 16, height: 16 }} /> : <Eye style={{ width: 16, height: 16 }} />}
           </button>

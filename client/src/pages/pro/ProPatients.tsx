@@ -23,7 +23,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string; bg: string; 
   priority: { label: "Priorité haute", color: "#ef4444", bg: "rgba(239,68,68,0.1)", border: "rgba(239,68,68,0.3)" },
   monitoring: { label: "En suivi", color: NAVY, bg: "rgba(124,58,237,0.1)", border: "rgba(124,58,237,0.3)" },
   stable: { label: "Stable", color: "#10b981", bg: "rgba(16,185,129,0.1)", border: "rgba(16,185,129,0.3)" },
-  resolved: { label: "Résolu", color: "#6b7280", bg: "rgba(255,255,255,0.06)", border: "rgba(255,255,255,0.12)" },
+  resolved: { label: "Résolu", color: "#6b7280", bg: "#F1F5F9", border: "#E2E8F0" },
 };
 
 export default function ProPatients() {
@@ -89,11 +89,11 @@ export default function ProPatients() {
             className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-extrabold transition-all active:scale-95 flex items-center gap-2 ${
               viewTab === "pending"
                 ? "bg-violet-600 text-white"
-                : "bg-rgba(255,255,255,0.04) border border-rgba(255,255,255,0.1) text-muted-foreground hover:border-violet-300"
+                : "bg-#F1F5F9 border border-#E2E8F0 text-muted-foreground hover:border-violet-300"
             }`}
             style={viewTab === "pending"
               ? { background: NAVY }
-              : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" }
+              : { background: "#F1F5F9", border: "1px solid #E2E8F0" }
             }
           >
             <Clock size={14} />
@@ -109,7 +109,7 @@ export default function ProPatients() {
             className="flex-shrink-0 px-4 py-2 rounded-full text-xs font-extrabold transition-all active:scale-95"
             style={viewTab === "all"
               ? { background: NAVY, color: "#fff" }
-              : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(200,185,255,0.75)" }
+              : { background: "#F1F5F9", border: "1px solid #E2E8F0", color: "#475569" }
             }
           >
             Tous les patients
@@ -128,7 +128,7 @@ export default function ProPatients() {
               className="flex-shrink-0 px-4 py-2 rounded-full text-xs font-extrabold transition-all active:scale-95"
               style={secView === v
                 ? { background: NAVY, color: "#fff" }
-                : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(200,185,255,0.75)" }
+                : { background: "#F1F5F9", border: "1px solid #E2E8F0", color: "#475569" }
               }
             >
               {label}
@@ -141,7 +141,7 @@ export default function ProPatients() {
       {viewTab === "all" && (
         <ProCard className="p-2 mb-3">
           <div className="flex items-center gap-2 px-2.5 py-1">
-            <Search className="w-4 h-4 flex-shrink-0" style={{ color: "rgba(255,255,255,0.6)" }} />
+            <Search className="w-4 h-4 flex-shrink-0" style={{ color: "#64748B" }} />
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}
@@ -166,7 +166,7 @@ export default function ProPatients() {
                 className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-extrabold transition-all active:scale-95"
                 style={on
                   ? { background: f.v === "all" ? NAVY : `${(f as any).color}22`, border: `1.5px solid ${f.v === "all" ? NAVY : (f as any).color}`, color: f.v === "all" ? "#fff" : (f as any).color }
-                  : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(200,185,255,0.75)" }
+                  : { background: "#F1F5F9", border: "1px solid #E2E8F0", color: "#475569" }
                 }
               >
                 {f.label}
@@ -183,52 +183,54 @@ export default function ProPatients() {
 
       {/* Liste */}
       {(viewTab === "all" ? isLoading : isPendingLoading) && (
-        <p className="text-center text-sm py-12" style={{ color: "rgba(200,185,255,0.75)" }}>Chargement…</p>
+        <p className="text-center text-sm py-12" style={{ color: "#475569" }}>Chargement…</p>
       )}
 
       {!(viewTab === "all" ? isLoading : isPendingLoading) && displayPatients.length === 0 && (
-        <ProCard className="p-10 text-center">
-          <Users className="w-10 h-10 mx-auto mb-3" style={{ color: "rgba(255,255,255,0.6)" }} />
-          <p className="mb-4 text-sm font-medium" style={{ color: "rgba(200,185,255,0.75)" }}>
-            {viewTab === "pending"
-              ? "✅ Aucun dossier en attente"
-              : (q
-                ? "Aucun patient trouvé"
-                : (isDoctor
-                  ? "Aucun patient encore enregistré"
-                  : (secView === "today" ? "Aucun patient créé aujourd'hui" : "Aucun patient enregistré")))}
-          </p>
-          {viewTab === "all" && (
-            <Link
-              href="/derm/analyse?nouveau=1"
-              data-testid="link-add-first"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-white font-extrabold text-sm active:scale-95 transition-all"
-              style={{ background: NAVY }}
-            >
-              <ScanLine className="w-4 h-4" />
-              Analyser un nouveau patient
-            </Link>
-          )}
-        </ProCard>
+        (isDoctor && viewTab === "all" && !q) ? (
+          <OnboardingChecklist acc={accountData?.account as any} hasPatient={allPatients.length > 0} />
+        ) : (
+          <ProCard className="p-10 text-center">
+            <Users className="w-10 h-10 mx-auto mb-3" style={{ color: "#64748B" }} />
+            <p className="mb-4 text-sm font-medium" style={{ color: "#475569" }}>
+              {viewTab === "pending"
+                ? "✅ Aucun dossier en attente"
+                : (q
+                  ? "Aucun patient trouvé"
+                  : (secView === "today" ? "Aucun patient créé aujourd'hui" : "Aucun patient enregistré"))}
+            </p>
+            {viewTab === "all" && (
+              <Link
+                href="/derm/analyse?nouveau=1"
+                data-testid="link-add-first"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-white font-extrabold text-sm active:scale-95 transition-all"
+                style={{ background: NAVY }}
+              >
+                <ScanLine className="w-4 h-4" />
+                Analyser un nouveau patient
+              </Link>
+            )}
+          </ProCard>
+        )
       )}
 
       {displayPatients.length > 0 && (
         <ProCard className="overflow-hidden">
-          <div style={{ borderColor: "rgba(255,255,255,0.07)" }}>
+          <div style={{ borderColor: "#E2E8F0" }}>
             {displayPatients.map((p, i) => (
               <motion.div
                 key={p.id}
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.02 }}
-                style={{ borderBottom: i < displayPatients.length - 1 ? "1px solid rgba(255,255,255,0.07)" : "none" }}
+                style={{ borderBottom: i < displayPatients.length - 1 ? "1px solid #E2E8F0" : "none" }}
               >
                 <Link
                   href={`/derm/patient/${p.id}`}
                   data-testid={`card-patient-${p.id}`}
                   className="flex items-center gap-3 p-4 transition-colors"
                   style={{ background: "transparent" }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.03)")}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "#F1F5F9")}
                   onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                 >
                   <div
@@ -242,7 +244,7 @@ export default function ProPatients() {
                     <p className="text-sm font-extrabold truncate" style={{ color: INK }} data-testid={`text-name-${p.id}`}>
                       {p.firstName} {p.lastName}
                     </p>
-                    <p className="text-[11px] truncate mt-0.5" style={{ color: "rgba(255,255,255,0.6)" }}>
+                    <p className="text-[11px] truncate mt-0.5" style={{ color: "#64748B" }}>
                       {p.age ? `${p.age} ans · ` : ""}
                       {p.sex || ""}
                       {p.lastScanAt
@@ -262,7 +264,7 @@ export default function ProPatients() {
                       {STATUS_LABELS[p.status].label}
                     </span>
                   )}
-                  <ChevronRight className="w-4 h-4 flex-shrink-0" style={{ color: "rgba(255,255,255,0.25)" }} />
+                  <ChevronRight className="w-4 h-4 flex-shrink-0" style={{ color: "#CBD5E1" }} />
                 </Link>
               </motion.div>
             ))}
@@ -270,5 +272,39 @@ export default function ProPatients() {
         </ProCard>
       )}
     </ProLayout>
+  );
+}
+
+// Checklist onboarding — remplace l'état vide "0 patient" (change #4)
+function OnboardingChecklist({ acc, hasPatient }: { acc: any; hasPatient: boolean }) {
+  const steps = [
+    { key: "cabinet", label: "Complétez votre profil cabinet", hint: "2 min", to: "/derm/cabinet", done: !!(acc?.cabinetName && acc?.phone && acc?.city) },
+    { key: "public", label: "Activez votre profil public", hint: "recevez des patients GlowScan", to: "/derm/profil-public", done: acc?.b2cAvailable === true },
+    { key: "patient", label: "Analysez votre premier patient", hint: "3 min", to: "/derm/analyse?nouveau=1", done: hasPatient },
+  ];
+  const doneCount = steps.filter((s) => s.done).length;
+  return (
+    <ProCard className="p-6">
+      <p className="text-sm font-extrabold mb-1" style={{ color: DERM.text }}>Pour recevoir vos premiers patients :</p>
+      <p className="text-[11px] mb-4" style={{ color: DERM.textMuted }}>{doneCount}/{steps.length} étapes complétées</p>
+      <div className="space-y-2">
+        {steps.map((s) => (
+          <Link key={s.key} href={s.to} data-testid={`onboarding-${s.key}`}
+            className="flex items-center gap-3 p-3 rounded-xl transition-all active:scale-[0.99]"
+            style={{ background: "#F1F5F9", border: `1px solid ${s.done ? "rgba(5,150,105,0.25)" : DERM.border}` }}>
+            <span className="flex-shrink-0 flex items-center justify-center rounded-full text-xs font-black"
+              style={{ width: 22, height: 22, background: s.done ? DERM.green : "#fff",
+                border: `1px solid ${s.done ? DERM.green : DERM.border}`, color: s.done ? "#fff" : DERM.textMuted }}>
+              {s.done ? "✓" : ""}
+            </span>
+            <div className="flex-1 min-w-0">
+              <p className="text-[13px] font-bold" style={{ color: s.done ? DERM.textMuted : DERM.text, textDecoration: s.done ? "line-through" : "none" }}>{s.label}</p>
+              <p className="text-[10.5px]" style={{ color: DERM.textMuted }}>{s.hint}</p>
+            </div>
+            {!s.done && <ChevronRight className="w-4 h-4 flex-shrink-0" style={{ color: DERM.violet }} />}
+          </Link>
+        ))}
+      </div>
+    </ProCard>
   );
 }

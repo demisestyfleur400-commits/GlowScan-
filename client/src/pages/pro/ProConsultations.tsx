@@ -5,8 +5,8 @@ import { ConsultationChat } from "@/components/ConsultationChat";
 
 interface Consult { id: number; condition?: string; status?: string; unreadDoctor?: number; patientFirstName?: string; patientEmail?: string; lastMessageAt?: string; createdAt?: string; }
 
-const INK = "#f3f0ff";
-const MUTED = "rgba(255,255,255,0.45)";
+const INK = "#0F172A";
+const MUTED = "#64748B";
 
 export default function ProConsultations() {
   const { data: accData } = useProAccount();
@@ -37,14 +37,14 @@ export default function ProConsultations() {
 
         {loading && <p style={{ color: MUTED, fontSize: 13 }}>Chargement…</p>}
         {!loading && list.length === 0 && (
-          <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: 20, textAlign: "center" }}>
+          <div style={{ background: "#F1F5F9", border: "1px solid #F1F5F9", borderRadius: 16, padding: 20, textAlign: "center" }}>
             <p style={{ fontSize: 13, color: MUTED, margin: 0 }}>Aucune consultation pour l'instant. Activez « consultable en B2C » dans votre profil pour en recevoir.</p>
           </div>
         )}
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {list.map((c) => (
             <button key={c.id} onClick={() => setOpenId(c.id)}
-              style={{ textAlign: "left", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14, padding: "12px 14px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12 }}>
+              style={{ textAlign: "left", background: "#F1F5F9", border: "1px solid #F1F5F9", borderRadius: 14, padding: "12px 14px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12 }}>
               <div style={{ width: 40, height: 40, borderRadius: 12, background: "rgba(124,58,237,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>🧑🏾</div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <p style={{ fontSize: 13.5, fontWeight: 800, color: INK, margin: 0 }}>{c.patientFirstName || "Patient"}</p>

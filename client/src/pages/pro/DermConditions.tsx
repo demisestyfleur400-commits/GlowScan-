@@ -11,11 +11,11 @@ import { useLocation } from "wouter";
 
 export const DERM_TERMS_VERSION = "v1-2026-07";
 
-const INK = "#f3f0ff";
+const INK = "#0F172A";
 const BODY = "rgba(243,240,255,0.82)";
-const MUTED = "rgba(255,255,255,0.45)";
-const VIOLET = "#a78bfa";
-const CARD = "rgba(255,255,255,0.03)";
+const MUTED = "#64748B";
+const VIOLET = "#0369A1";
+const CARD = "#F1F5F9";
 const BORDER = "rgba(167,139,250,0.18)";
 
 function Section({ n, title, children }: { n: string; title: string; children: React.ReactNode }) {
@@ -34,11 +34,11 @@ export default function DermConditions() {
   useEffect(() => { window.scrollTo(0, 0); }, []);
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0d0a0e", color: INK, padding: "0 0 60px" }}>
+    <div style={{ minHeight: "100vh", background: "#F6FAFD", color: INK, padding: "0 0 60px" }}>
       {/* Header */}
       <div style={{ position: "sticky", top: 0, zIndex: 10, background: "rgba(13,10,14,0.92)", backdropFilter: "blur(8px)", borderBottom: `1px solid ${BORDER}`, padding: "14px 18px", display: "flex", alignItems: "center", gap: 12 }}>
         <button onClick={() => history.length > 1 ? history.back() : setLocation("/derm")}
-          style={{ background: "rgba(255,255,255,0.06)", border: "none", color: INK, borderRadius: 10, width: 34, height: 34, cursor: "pointer", fontSize: 16 }}>←</button>
+          style={{ background: "#F1F5F9", border: "none", color: INK, borderRadius: 10, width: 34, height: 34, cursor: "pointer", fontSize: 16 }}>←</button>
         <div>
           <p style={{ fontSize: 14, fontWeight: 800, margin: 0 }}>Conditions & Confidentialité</p>
           <p style={{ fontSize: 10, color: MUTED, margin: 0 }}>GlowScan DERM · {DERM_TERMS_VERSION}</p>

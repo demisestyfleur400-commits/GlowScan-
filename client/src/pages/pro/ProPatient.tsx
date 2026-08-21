@@ -27,13 +27,13 @@ import { useToast } from "@/hooks/use-toast";
 import { LoadingScreen } from "./ProDashboard";
 
 const NAVY = "#7c3aed";
-const INK = "#f3f0ff";
+const INK = "#0F172A";
 const GREEN = "#10b981";
 
 const DS = {
-  body: "rgba(200,185,255,0.65)",
-  muted: "rgba(255,255,255,0.35)",
-  border: "rgba(255,255,255,0.07)",
+  body: "#64748B",
+  muted: "#94A3B8",
+  border: "#E2E8F0",
 };
 
 export default function ProPatient() {
@@ -108,23 +108,23 @@ export default function ProPatient() {
 <style>
 *{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif;color:#1f2937;background:#fff;font-size:12px}
 @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}.no-print{display:none!important}@page{margin:0}}
-.header{background:#0d0a0e;padding:18px 24px;display:flex;justify-content:space-between}
-.brand{font-size:20px;font-weight:900;color:#7c3aed}.pro-badge{font-size:9px;font-weight:700;color:#a78bfa;background:rgba(124,58,237,.2);padding:2px 8px;border-radius:4px;margin-top:3px;display:inline-block}
-.h-title{font-size:13px;font-weight:700;color:#f3f0ff;margin:4px 0 2px}.h-sub{font-size:8px;color:#a78bfa;margin-bottom:8px}.h-meta{font-size:8px;color:#6b7280}
+.header{background:#F6FAFD;padding:18px 24px;display:flex;justify-content:space-between}
+.brand{font-size:20px;font-weight:900;color:#7c3aed}.pro-badge{font-size:9px;font-weight:700;color:#0369A1;background:rgba(124,58,237,.2);padding:2px 8px;border-radius:4px;margin-top:3px;display:inline-block}
+.h-title{font-size:13px;font-weight:700;color:#0F172A;margin:4px 0 2px}.h-sub{font-size:8px;color:#0369A1;margin-bottom:8px}.h-meta{font-size:8px;color:#6b7280}
 .stamp{border:2px solid #7c3aed;border-radius:8px;padding:8px 12px;text-align:center;min-width:90px}
-.stamp-t{font-size:8px;font-weight:700;color:#a78bfa;text-transform:uppercase}.stamp-v{font-size:16px;font-weight:900;color:#7c3aed}
+.stamp-t{font-size:8px;font-weight:700;color:#0369A1;text-transform:uppercase}.stamp-v{font-size:16px;font-weight:900;color:#7c3aed}
 .body{padding:16px 24px}.section{margin-top:14px}
 .sec-title{font-size:10px;font-weight:800;color:#7c3aed;letter-spacing:.7px;text-transform:uppercase;padding-bottom:4px;border-bottom:2px solid #e8e3ff;margin-bottom:8px}
 .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;background:#f8f7ff;border:1px solid #e8e3ff;border-radius:8px;padding:12px}
-.lbl{font-size:8px;color:#7c3aed;font-weight:700;text-transform:uppercase;letter-spacing:.05em}.val{font-size:12px;font-weight:700;color:#0d0a0e}
+.lbl{font-size:8px;color:#7c3aed;font-weight:700;text-transform:uppercase;letter-spacing:.05em}.val{font-size:12px;font-weight:700;color:#F6FAFD}
 .scan-row{display:grid;grid-template-columns:90px 60px 1fr auto;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;border:1px solid #e8e3ff;margin-bottom:4px}
 .scan-date{font-size:9px;color:#6b7280}.scan-score{font-size:18px;font-weight:900;color:#7c3aed;text-align:center}
 .scan-cond{font-size:10px;font-weight:700;color:#1f2937}.scan-sev{font-size:8px;padding:1px 6px;border-radius:4px}
 .evol-box{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px;display:flex;align-items:center;gap:12px}
 .clin-box{background:#f3f4f6;border:1px solid #d1d5db;border-radius:8px;padding:10px;font-size:10px;line-height:1.7;color:#374151}
 .protocol-lbl{font-size:9px;font-weight:700;padding:5px 8px;border-radius:5px;margin-bottom:6px}
-.footer{background:#0d0a0e;padding:12px 24px;display:flex;align-items:center;gap:12px;margin-top:16px}
-.f-text{flex:1;font-size:7px;color:#a78bfa;line-height:1.5}.f-brand{font-size:13px;font-weight:900;color:#7c3aed}
+.footer{background:#F6FAFD;padding:12px 24px;display:flex;align-items:center;gap:12px;margin-top:16px}
+.f-text{flex:1;font-size:7px;color:#0369A1;line-height:1.5}.f-brand{font-size:13px;font-weight:900;color:#7c3aed}
 .cta-btn{display:block;text-align:center;background:#7c3aed;color:#fff;padding:10px;border-radius:8px;font-weight:800;font-size:13px;border:none;cursor:pointer;width:100%;margin:12px 0 4px}
 .validity{background:#fffbeb;border:1px solid #fef3c7;border-radius:8px;padding:8px 12px;font-size:9px;color:#92400e;margin-top:12px}
 </style></head><body>
@@ -134,7 +134,7 @@ export default function ProPatient() {
     <div class="pro-badge">PRO — Dossier Patient</div>
     <div class="h-title">Dossier de Consultation — ${p.firstName} ${p.lastName}</div>
     <div class="h-sub">Cabinet ${dermato?.cabinetName || "GlowScan DERM"} · ${dermato?.fullName || "Dermatologue"}</div>
-    <div class="h-meta">Généré le : <b style="color:#a78bfa">${date}</b> &nbsp;|&nbsp; Réf : <b style="color:#a78bfa">${refNum}</b></div>
+    <div class="h-meta">Généré le : <b style="color:#0369A1">${date}</b> &nbsp;|&nbsp; Réf : <b style="color:#0369A1">${refNum}</b></div>
   </div>
   <div class="stamp"><div class="stamp-t">Dossier</div><div class="stamp-v">Pro</div><div class="stamp-t">GlowScan</div></div>
 </div>
@@ -184,7 +184,7 @@ export default function ProPatient() {
     <div style="display:flex;gap:12px;margin-bottom:10px">
       <div style="flex:1;background:#f8f7ff;border:1px solid #e8e3ff;border-radius:8px;padding:10px">
         <div class="lbl">Condition</div>
-        <div style="font-size:14px;font-weight:800;color:#0d0a0e;margin-top:2px"><span data-edit="diagnostic">${dxOf(lastScan)}</span></div>
+        <div style="font-size:14px;font-weight:800;color:#F6FAFD;margin-top:2px"><span data-edit="diagnostic">${dxOf(lastScan)}</span></div>
         <div style="font-size:10px;color:#6b7280;margin-top:2px">${lastScan.skinType||""}</div>
       </div>
       <div style="background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.3);border-radius:8px;padding:10px;text-align:center;min-width:80px">
@@ -216,7 +216,7 @@ export default function ProPatient() {
       if (rows.length === 0) return "";
       return `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px;margin-bottom:8px">
         <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:#059669;margin-bottom:6px">👨‍⚕️ Examen du médecin</div>
-        ${rows.map(([k, v]) => `<div style="display:flex;gap:8px;font-size:11px;margin-bottom:3px"><span style="font-weight:800;color:#6b7280;min-width:110px">${k}</span><span style="color:#0d0a0e">${v}</span></div>`).join("")}
+        ${rows.map(([k, v]) => `<div style="display:flex;gap:8px;font-size:11px;margin-bottom:3px"><span style="font-weight:800;color:#6b7280;min-width:110px">${k}</span><span style="color:#F6FAFD">${v}</span></div>`).join("")}
       </div>`;
     })()}
     ${lastScan.details ? `<div class="clin-box"><span data-edit="observations">${lastScan.details}</span></div>` : `<span data-edit="observations" style="display:none"></span>`}
@@ -323,7 +323,7 @@ export default function ProPatient() {
                 { v: "priority", label: "Priorité haute", color: "#ef4444", bg: "rgba(239,68,68,0.1)", border: "rgba(239,68,68,0.3)" },
                 { v: "monitoring", label: "En suivi", color: NAVY, bg: "rgba(124,58,237,0.1)", border: "rgba(124,58,237,0.3)" },
                 { v: "stable", label: "Stable", color: GREEN, bg: "rgba(16,185,129,0.1)", border: "rgba(16,185,129,0.3)" },
-                { v: "resolved", label: "Résolu", color: DS.muted, bg: "rgba(255,255,255,0.04)", border: DS.border },
+                { v: "resolved", label: "Résolu", color: DS.muted, bg: "#F1F5F9", border: DS.border },
               ] as { v: string; label: string; color: string; bg: string; border: string }[]).map(opt => {
                 const on = p.status === opt.v;
                 return (
@@ -333,7 +333,7 @@ export default function ProPatient() {
                     className="text-[10px] font-extrabold px-2.5 py-1 rounded-full transition-all active:scale-95"
                     style={on
                       ? { background: opt.bg, border: `1.5px solid ${opt.border}`, color: opt.color }
-                      : { background: "rgba(255,255,255,0.03)", border: `1px solid ${DS.border}`, color: DS.muted }
+                      : { background: "#F1F5F9", border: `1px solid ${DS.border}`, color: DS.muted }
                     }
                   >
                     {opt.label}
@@ -367,7 +367,7 @@ export default function ProPatient() {
             onClick={openPdfViewer}
             data-testid="button-pdf"
             className="flex items-center justify-center gap-1.5 py-2.5 rounded-full text-xs font-extrabold transition-all active:scale-[0.97]"
-            style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)", color: DS.body }}
+            style={{ background: "#E2E8F0", border: "1px solid #E2E8F0", color: DS.body }}
           >
             <FileText className="w-3.5 h-3.5" />
             Voir rapport
@@ -405,7 +405,7 @@ export default function ProPatient() {
           <div className="grid grid-cols-2 gap-3">
             <div
               className="text-center p-3 rounded-xl"
-              style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${DS.border}` }}
+              style={{ background: "#F1F5F9", border: `1px solid ${DS.border}` }}
             >
               <p className="text-[10px]" style={{ color: DS.muted }}>{new Date(previousScan.createdAt!).toLocaleDateString("fr-FR")}</p>
               <p className="text-2xl font-extrabold mt-1" style={{ color: INK }}>
@@ -557,18 +557,18 @@ export default function ProPatient() {
                   >
                     <summary
                       className="cursor-pointer text-[11px] font-extrabold px-3 py-2 transition-colors"
-                      style={{ color: DS.body, background: "rgba(255,255,255,0.03)" }}
+                      style={{ color: DS.body, background: "#F1F5F9" }}
                     >
                       Anamnèse ({Object.keys(answers).length} réponses)
                     </summary>
-                    <div className="p-3 pt-0 space-y-1.5" style={{ background: "rgba(255,255,255,0.02)" }}>
+                    <div className="p-3 pt-0 space-y-1.5" style={{ background: "#F8FAFC" }}>
                       {items.map((q) => {
                         const a = answers[q.id];
                         if (!a) return null;
                         const colorMap: any = {
                           oui: { bg: "rgba(16,185,129,0.1)", border: "rgba(16,185,129,0.25)", text: "#6ee7b7", label: "Oui" },
                           non: { bg: "rgba(248,113,113,0.1)", border: "rgba(248,113,113,0.25)", text: "#f87171", label: "Non" },
-                          nsp: { bg: "rgba(255,255,255,0.05)", border: "rgba(255,255,255,0.1)", text: DS.muted, label: "NSP" },
+                          nsp: { bg: "#F1F5F9", border: "#E2E8F0", text: DS.muted, label: "NSP" },
                         };
                         const c = colorMap[a] || colorMap.nsp;
                         return (
@@ -603,11 +603,11 @@ export default function ProPatient() {
                   >
                     <summary
                       className="cursor-pointer text-[11px] font-extrabold px-3 py-2"
-                      style={{ color: DS.muted, background: "rgba(255,255,255,0.03)" }}
+                      style={{ color: DS.muted, background: "#F1F5F9" }}
                     >
                       🤖 Analyse IA (indicative)
                     </summary>
-                    <div className="p-3 pt-0 space-y-2" style={{ background: "rgba(255,255,255,0.02)" }}>
+                    <div className="p-3 pt-0 space-y-2" style={{ background: "#F8FAFC" }}>
                       {s.analysis && (
                         <p className="text-[11px] leading-relaxed pt-2" style={{ color: DS.body }}>{s.analysis}</p>
                       )}
@@ -683,7 +683,7 @@ export default function ProPatient() {
                     rows={2}
                     className="w-full px-3 py-2 rounded-xl text-xs outline-none resize-none"
                     style={{
-                      background: "rgba(255,255,255,0.05)",
+                      background: "#F1F5F9",
                       border: "1px solid rgba(167,139,250,0.2)",
                       color: INK,
                     }}
@@ -718,7 +718,7 @@ export default function ProPatient() {
                     <button
                       onClick={() => setValidatingId(null)}
                       className="px-3 py-2 rounded-full text-xs font-extrabold"
-                      style={{ background: "rgba(255,255,255,0.06)", color: DS.muted }}
+                      style={{ background: "#F1F5F9", color: DS.muted }}
                     >
                       Annuler
                     </button>

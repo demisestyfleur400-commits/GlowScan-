@@ -5,15 +5,15 @@ import { ArrowLeft, ArrowRight, Loader2, KeyRound, Stethoscope, Eye, EyeOff, Che
 import { useToast } from "@/hooks/use-toast";
 
 const DS = {
-  bg: "#0d0a0e",
-  surface: "#13101f",
+  bg: "#F6FAFD",
+  surface: "#FFFFFF",
   violet: "#7c3aed",
-  violetMid: "#a78bfa",
-  textPrimary: "#f3f0ff",
-  textBody: "rgba(200,185,255,0.75)",
-  textMuted: "rgba(255,255,255,0.6)",
+  violetMid: "#0369A1",
+  textPrimary: "#0F172A",
+  textBody: "#475569",
+  textMuted: "#64748B",
   inputBorder: "rgba(167,139,250,0.2)",
-  cardBorder: "rgba(255,255,255,0.07)",
+  cardBorder: "#E2E8F0",
   cardVioletBorder: "rgba(167,139,250,0.18)",
   font: `-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif`,
 };
@@ -197,7 +197,7 @@ export default function ProMotDePasseOublie() {
 
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
-        input::placeholder { color: rgba(200,185,255,0.3); }
+        input::placeholder { color: #94A3B8; }
       `}</style>
     </div>
   );
@@ -215,6 +215,6 @@ function btnStyle(loading: boolean): React.CSSProperties {
 
 const eyeStyle: React.CSSProperties = {
   position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)",
-  background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.35)",
+  background: "none", border: "none", cursor: "pointer", color: "#94A3B8",
   display: "flex", alignItems: "center", padding: 4,
 };
