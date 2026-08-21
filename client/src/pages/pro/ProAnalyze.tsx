@@ -71,11 +71,14 @@ type Step = 1 | 2 | 3 | 4 | 5;
 type PatientStatus = "priority" | "monitoring" | "stable" | "resolved";
 type AnswerValue = "oui" | "non" | "nsp";
 
+// Ordre RÉEL du flux clinique : le contexte (anamnèse + examen) est saisi AVANT
+// l'analyse IA, qui le reçoit dans son payload (cf. launchAnalysis > intake).
+// L'IA n'analyse donc jamais une image « aveugle ».
 const STEPS = [
-  { n: 1, label: "Patient" },
-  { n: 2, label: "Examen" },
+  { n: 1, label: "Patient & Anamnèse" },
+  { n: 2, label: "Examen + Photo" },
   { n: 3, label: "Analyse IA" },
-  { n: 4, label: "Anamnèse" },
+  { n: 4, label: "Questionnaire" },
   { n: 5, label: "Dossier" },
 ];
 

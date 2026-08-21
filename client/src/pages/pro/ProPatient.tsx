@@ -12,6 +12,10 @@ import {
   AlertCircle,
   Sparkles,
   Loader2,
+  Camera,
+  TrendingUp,
+  TrendingDown,
+  Minus,
 } from "lucide-react";
 import {
   usePatientDossier,
@@ -19,6 +23,7 @@ import {
   useDeletePatient,
   useProAccount,
   useUpdatePatientStatus,
+  useAddFollowUpPhoto,
 } from "@/hooks/use-pro";
 import { ProLayout, ProCard, ProInput, StatusBadge } from "@/components/ProLayout";
 import { CaseAuditTrail } from "@/components/pro/CaseAuditTrail";
@@ -439,6 +444,11 @@ export default function ProPatient() {
         </ProCard>
       )}
 
+      {/* Suivi évolution — photos de contrôle comparées par l'IA */}
+      {lastScan && (
+        <EvolutionSection scan={lastScan as any} patientId={p.id} />
+      )}
+
       {/* Timeline */}
       <p className="text-[11px] font-extrabold uppercase tracking-wider mb-2 px-1" style={{ color: DS.muted }}>
         Historique ({scans.length})
@@ -740,5 +750,142 @@ export default function ProPatient() {
         dermatologue={dermato?.fullName || undefined}
       />
     </ProLayout>
+  );
+}
+
+// ── Compression légère (canvas) pour les photos de contrôle ────────────────
+async function compressForFollowUp(file: File, maxDim = 1280, quality = 0.82): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > height && width > maxDim) { height = (height * maxDim) / width; width = maxDim; }
+        else if (height > maxDim) { width = (width * maxDim) / height; height = maxDim; }
+        const canvas = document.createElement("canvas");
+        canvas.width = width; canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return reject(new Error("Canvas indisponible"));
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.onerror = () => reject(new Error("Image illisible"));
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = () => reject(new Error("Lecture échouée"));
+    reader.readAsDataURL(file);
+  });
+}
+
+// ── Section Suivi évolution : J0 (scan) vs photos de contrôle, comparées par IA ──
+function EvolutionSection({ scan, patientId }: { scan: any; patientId: number }) {
+  const { toast } = useToast();
+  const addPhoto = useAddFollowUpPhoto(patientId);
+  const followUps: any[] = Array.isArray(scan.followUpPhotos) ? scan.followUpPhotos : [];
+  const j0Url: string = scan.imageUrl || "";
+  const latest = followUps[followUps.length - 1] || null;
+  // slider comparaison (0 = tout J0, 100 = tout Jx)
+  const [slider, setSlider] = useState(50);
+  const [busy, setBusy] = useState(false);
+
+  const handleAdd = async (file?: File | null) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { toast({ title: "Image uniquement", variant: "destructive" }); return; }
+    setBusy(true);
+    try {
+      const image = await compressForFollowUp(file);
+      await addPhoto.mutateAsync({ scanId: scan.id, image });
+      toast({ title: "Photo de contrôle ajoutée ✅", description: "Comparaison IA générée." });
+    } catch (err: any) {
+      toast({ title: "Erreur", description: err?.message || "Ajout impossible", variant: "destructive" });
+    } finally { setBusy(false); }
+  };
+
+  const evoColor = (s: number) => (s > 8 ? GREEN : s < -8 ? "#dc2626" : "#d97706");
+  const EvoIcon = latest ? (latest.evolutionScore > 8 ? TrendingUp : latest.evolutionScore < -8 ? TrendingDown : Minus) : Minus;
+
+  return (
+    <ProCard className="p-5 mb-4">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <TrendingUp className="w-4 h-4" style={{ color: NAVY }} />
+          <p className="text-[11px] font-extrabold uppercase tracking-wider" style={{ color: DS.muted }}>
+            Suivi évolution
+          </p>
+        </div>
+        <label
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-extrabold cursor-pointer active:scale-95 transition-all"
+          style={{ background: busy ? "#E2E8F0" : NAVY, color: busy ? DS.muted : "#fff" }}
+        >
+          {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Camera className="w-3.5 h-3.5" />}
+          {busy ? "Analyse…" : "+ Photo de contrôle"}
+          <input type="file" accept="image/*" capture="environment" className="hidden" disabled={busy}
+            onChange={(e) => handleAdd(e.target.files?.[0])} data-testid="input-followup-photo" />
+        </label>
+      </div>
+
+      {followUps.length === 0 ? (
+        <div className="text-center py-6 px-2 rounded-xl" style={{ background: "#F1F5F9", border: `1px solid ${DS.border}` }}>
+          <p className="text-sm font-bold mb-1" style={{ color: INK }}>Suivez l'évolution dans le temps</p>
+          <p className="text-xs" style={{ color: DS.body }}>
+            Ajoutez une photo de la même zone à J+30, J+60… GlowScan la compare à la photo initiale
+            et mesure l'évolution.
+          </p>
+        </div>
+      ) : (
+        <>
+          {/* Comparateur J0 | Jx avec slider */}
+          <div className="relative rounded-xl overflow-hidden select-none" style={{ border: `1px solid ${DS.border}`, aspectRatio: "4/3", background: "#0F172A" }}>
+            {j0Url && <img src={j0Url} alt="J0" className="absolute inset-0 w-full h-full object-cover" draggable={false} />}
+            {latest?.photoUrl && (
+              <img src={latest.photoUrl} alt="Jx" className="absolute inset-0 w-full h-full object-cover" draggable={false}
+                style={{ clipPath: `inset(0 0 0 ${slider}%)` }} />
+            )}
+            {/* poignée */}
+            <div className="absolute top-0 bottom-0" style={{ left: `${slider}%`, width: 2, background: "#fff", boxShadow: "0 0 0 1px rgba(0,0,0,0.3)" }} />
+            <span className="absolute top-2 left-2 text-[9px] font-extrabold px-1.5 py-0.5 rounded" style={{ background: "rgba(15,23,42,0.7)", color: "#fff" }}>J0</span>
+            <span className="absolute top-2 right-2 text-[9px] font-extrabold px-1.5 py-0.5 rounded" style={{ background: "rgba(124,58,237,0.85)", color: "#fff" }}>J+{latest?.dayOffset ?? 0}</span>
+            <input type="range" min={0} max={100} value={slider} onChange={(e) => setSlider(Number(e.target.value))}
+              className="absolute bottom-2 left-1/2 -translate-x-1/2 w-[85%]" data-testid="slider-evolution" />
+          </div>
+
+          {/* Verdict IA */}
+          {latest && (
+            <div className="mt-3 p-3 rounded-xl" style={{ background: "#F1F5F9", border: `1px solid ${DS.border}` }}>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="inline-flex items-center gap-1.5 text-sm font-extrabold" style={{ color: evoColor(latest.evolutionScore) }}>
+                  <EvoIcon className="w-4 h-4" />
+                  {latest.evolutionScore > 0 ? "+" : ""}{latest.evolutionScore}% d'évolution
+                </span>
+                <span className="text-[10px]" style={{ color: DS.muted }}>{new Date(latest.date).toLocaleDateString("fr-FR")}</span>
+              </div>
+              <p className="text-xs mb-2" style={{ color: DS.body }}>{latest.aiComparison}</p>
+              <p className="text-[11px] font-extrabold" style={{ color: NAVY }}>→ {latest.recommendation}</p>
+            </div>
+          )}
+
+          {/* Timeline J0 · J+x */}
+          <div className="flex items-center gap-1.5 mt-3 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
+            <TimelineDot label="J0" active />
+            {followUps.map((f, i) => (
+              <div key={i} className="flex items-center gap-1.5 flex-shrink-0">
+                <span className="w-4 h-px" style={{ background: DS.border }} />
+                <TimelineDot label={`J+${f.dayOffset}`} active={i === followUps.length - 1} />
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </ProCard>
+  );
+}
+
+function TimelineDot({ label, active }: { label: string; active?: boolean }) {
+  return (
+    <span className="inline-flex flex-col items-center gap-1 flex-shrink-0">
+      <span className="w-2.5 h-2.5 rounded-full" style={{ background: active ? NAVY : "#CBD5E1" }} />
+      <span className="text-[9px] font-extrabold" style={{ color: active ? NAVY : "#94A3B8" }}>{label}</span>
+    </span>
   );
 }

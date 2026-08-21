@@ -9,6 +9,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import QRCode from "qrcode";
 import { emitToPatient, emitToUser } from "./ws";
 import { deliverConsultationReport } from "./whatsapp";
+import { uploadScanImageToStorage } from "./routes";
 
 // Version des Conditions d'utilisation & Politique de confidentialité DERM en vigueur.
 // Le dermatologue (responsable de la plateforme) les accepte à l'inscription.
@@ -59,6 +60,74 @@ setInterval(() => {
 }, 60 * 60 * 1000);
 function cacheKey(condition: string, area: string) {
   return `${(condition || "").toLowerCase().trim().slice(0, 80)}|${(area || "face").toLowerCase()}`;
+}
+
+// ── Suivi évolution : comparaison IA J0 ↔ photo de contrôle ────────────────
+function extractInlineImage(src: string): { mime: string; b64: string } | null {
+  const m = (src || "").match(/^data:(image\/[a-z+]+);base64,(.+)$/i);
+  if (!m) return null;
+  return { mime: m[1].toLowerCase(), b64: m[2] };
+}
+
+const EVOLUTION_MODELS = Array.from(new Set([
+  process.env.GEMINI_MODEL || "gemini-2.0-flash",
+  "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-flash-8b",
+]));
+
+async function compareEvolutionAI(opts: {
+  condition: string;
+  j0: { mime: string; b64: string } | null;
+  jx: { mime: string; b64: string } | null;
+  dayOffset: number;
+}): Promise<{ evolutionScore: number; observation: string; recommendation: string }> {
+  const fallback = {
+    evolutionScore: 0,
+    observation: "Comparaison automatique indisponible — évaluation clinique requise.",
+    recommendation: "Poursuivre le suivi",
+  };
+  // Il faut au moins la photo de contrôle. Sans Gemini → fallback neutre.
+  if (!proGemini || !opts.jx) return fallback;
+  const prompt =
+    `Tu es dermatologue. Compare l'évolution d'une lésion cutanée entre J0 (première photo) et ` +
+    `J+${opts.dayOffset} (seconde photo). Diagnostic initial : "${opts.condition}". ` +
+    `Réponds UNIQUEMENT en JSON : {"evolutionScore": number, "observation": string, "recommendation": string}. ` +
+    `evolutionScore : -100 = nette aggravation, 0 = stable, +100 = guérison quasi complète. ` +
+    `observation : une phrase factuelle en français (étendue, rougeur, desquamation, pigmentation, taille). ` +
+    `recommendation : "continuer le traitement" | "ajuster le traitement" | "consulter en urgence" | courte phrase.`;
+  const parts: any[] = [{ text: prompt }];
+  if (opts.j0) {
+    parts.push({ text: "PHOTO J0 :" }, { inlineData: { mimeType: opts.j0.mime, data: opts.j0.b64 } });
+  } else {
+    parts.push({ text: "(Photo J0 indisponible — évalue la photo de contrôle et l'aspect résiduel.)" });
+  }
+  parts.push({ text: `PHOTO J+${opts.dayOffset} :` }, { inlineData: { mimeType: opts.jx.mime, data: opts.jx.b64 } });
+
+  for (const model of EVOLUTION_MODELS) {
+    try {
+      const m = proGemini.getGenerativeModel({ model });
+      const r = await Promise.race([
+        m.generateContent({
+          contents: [{ role: "user", parts }],
+          generationConfig: { responseMimeType: "application/json", maxOutputTokens: 500, temperature: 0.2 },
+        }),
+        new Promise<never>((_, rej) => setTimeout(() => rej(new Error("Timeout")), 60000)),
+      ]);
+      const txt = (r as any).response.text() || "";
+      const parsed = JSON.parse(txt);
+      let score = Number(parsed.evolutionScore);
+      if (!isFinite(score)) score = 0;
+      score = Math.max(-100, Math.min(100, Math.round(score)));
+      return {
+        evolutionScore: score,
+        observation: String(parsed.observation || fallback.observation).slice(0, 300),
+        recommendation: String(parsed.recommendation || fallback.recommendation).slice(0, 120),
+      };
+    } catch (e: any) {
+      const retriable = /429|quota|exhausted|404|not found|unavailable|overloaded|500|503|Timeout/i.test(String(e?.message || e));
+      if (!retriable) break; // refus sécurité / requête invalide → inutile d'insister
+    }
+  }
+  return fallback;
 }
 
 const OWNER_WHATSAPP = "237674377959";
@@ -549,7 +618,18 @@ export function registerProRoutes(app: Express) {
     const patientScans = await db.select().from(scans)
       .where(eq(scans.patientId, id))
       .orderBy(desc(scans.createdAt));
-    res.json({ patient: { ...p, clinicalRecord }, scans: patientScans });
+    // follow_up_photos hors schéma Drizzle → lu en SQL brut et fusionné par scan.
+    let scansWithFollowUp = patientScans as any[];
+    try {
+      const ids = patientScans.map((s) => s.id);
+      if (ids.length) {
+        const r: any = await db.execute(sql`SELECT "id", "follow_up_photos" FROM "scans" WHERE "patient_id" = ${id}`);
+        const rows = (r?.rows ?? r ?? []) as any[];
+        const map = new Map<number, any>(rows.map((row) => [Number(row.id), row.follow_up_photos ?? []]));
+        scansWithFollowUp = patientScans.map((s) => ({ ...s, followUpPhotos: map.get(s.id) ?? [] }));
+      }
+    } catch { /* colonne pas encore migrée → followUpPhotos absent, non bloquant */ }
+    res.json({ patient: { ...p, clinicalRecord }, scans: scansWithFollowUp });
   });
 
   // ───────────────────────────────────────────
@@ -722,6 +802,71 @@ export function registerProRoutes(app: Express) {
       res.json({ scan: updated });
     } catch (err) {
       console.error("[pro/scans/validate] error:", err);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // ───────────────────────────────────────────
+  // POST /api/pro/scans/:id/follow-up — Suivi évolution : ajouter une photo de
+  // contrôle à un scan (J0 = scan.imageUrl). L'IA compare J0 ↔ nouvelle photo et
+  // renvoie score d'évolution + observation + recommandation. Stocké en JSONB.
+  // ───────────────────────────────────────────
+  app.post("/api/pro/scans/:id/follow-up", requireActivePro, async (req: any, res) => {
+    try {
+      const scanId = parseInt(req.params.id);
+      const schema = z.object({
+        image: z.string().min(10),          // data URL base64 de la photo de contrôle
+        date: z.string().optional(),         // ISO date (défaut: maintenant)
+        note: z.string().max(500).optional().nullable(),
+      });
+      const data = schema.parse(req.body);
+
+      // Sécurité multi-tenant : le scan doit appartenir à un patient de ce dermato.
+      const [scan] = await db.select().from(scans).where(eq(scans.id, scanId));
+      if (!scan || !scan.patientId) return res.status(404).json({ message: "Scan introuvable" });
+      const [p] = await db.select().from(patients)
+        .where(and(eq(patients.id, scan.patientId), eq(patients.dermatologistId, req.proAccount.id)));
+      if (!p) return res.status(403).json({ message: "Ce dossier ne vous appartient pas" });
+
+      // Upload de la photo (EXIF nettoyé, anonymisée) → URL/data-url stockable.
+      const photoUrl = await uploadScanImageToStorage(data.image);
+      if (!photoUrl) return res.status(400).json({ message: "Image invalide" });
+
+      // Historique existant + repère temporel J0 vs Jx.
+      let existing: any[] = [];
+      try {
+        const r: any = await db.execute(sql`SELECT "follow_up_photos" FROM "scans" WHERE "id" = ${scanId}`);
+        existing = (r?.rows ?? r ?? [])[0]?.follow_up_photos ?? [];
+      } catch {}
+      const when = data.date ? new Date(data.date) : new Date();
+      const baseDate = scan.createdAt ? new Date(scan.createdAt) : when;
+      const dayOffset = Math.max(0, Math.round((when.getTime() - baseDate.getTime()) / 86400000));
+
+      // Comparaison IA J0 ↔ nouvelle photo (les deux en base64 si dispo).
+      const j0b64 = extractInlineImage(scan.imageUrl || "");
+      const jxb64 = extractInlineImage(data.image);
+      const comparison = await compareEvolutionAI({
+        condition: (scan.expertCorrectedCondition || scan.condition || "affection cutanée") as string,
+        j0: j0b64, jx: jxb64, dayOffset,
+      });
+
+      const entry = {
+        date: when.toISOString(),
+        dayOffset,
+        photoUrl,
+        note: data.note || null,
+        evolutionScore: comparison.evolutionScore,
+        aiComparison: comparison.observation,
+        recommendation: comparison.recommendation,
+        createdAt: new Date().toISOString(),
+      };
+      const updated = [...(Array.isArray(existing) ? existing : []), entry];
+      await db.execute(sql`UPDATE "scans" SET "follow_up_photos" = ${JSON.stringify(updated)}::jsonb WHERE "id" = ${scanId}`);
+
+      res.json({ success: true, entry, followUpPhotos: updated });
+    } catch (err: any) {
+      if (err?.issues) return res.status(400).json({ message: "Données invalides" });
+      console.error("[pro/scans/follow-up] error:", err);
       res.status(500).json({ message: "Erreur serveur" });
     }
   });

@@ -59,6 +59,33 @@ export function usePatientDossier(id: number | null) {
   });
 }
 
+// ── Suivi évolution : ajouter une photo de contrôle à un scan ────────────
+export interface FollowUpEntry {
+  date: string;
+  dayOffset: number;
+  photoUrl: string;
+  note?: string | null;
+  evolutionScore: number;
+  aiComparison: string;
+  recommendation: string;
+  createdAt?: string;
+}
+
+export function useAddFollowUpPhoto(patientId: number | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (vars: { scanId: number; image: string; date?: string; note?: string }) => {
+      const res = await apiRequest("POST", `/api/pro/scans/${vars.scanId}/follow-up`, {
+        image: vars.image, date: vars.date, note: vars.note,
+      });
+      return res.json() as Promise<{ success: boolean; entry: FollowUpEntry; followUpPhotos: FollowUpEntry[] }>;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/pro/patients", patientId] });
+    },
+  });
+}
+
 export function useCreatePatient() {
   const qc = useQueryClient();
   return useMutation({

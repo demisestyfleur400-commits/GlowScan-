@@ -225,7 +225,7 @@ setInterval(() => {
 // Stratégie "zero data loss" PHOTO : chaque image envoyée à /api/analyze est
 // archivée dans le bucket privé pour bâtir le dataset dermato africain.
 // Retourne un chemin /objects/scans/<uuid>.<ext> exploitable via la route GET /objects/*.
-async function uploadScanImageToStorage(base64DataUrl: string): Promise<string | null> {
+export async function uploadScanImageToStorage(base64DataUrl: string): Promise<string | null> {
   try {
     const match = base64DataUrl.match(/^data:(image\/[a-z+]+);base64,(.+)$/i);
     let mime = "image/jpeg";
