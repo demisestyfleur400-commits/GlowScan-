@@ -6,31 +6,33 @@
 // ════════════════════════════════════════════════════════════════════════
 
 export const DERM = {
+  // Thème CLAIR médical (blanc + bleu). Violet réservé aux CTA.
   // Fonds
-  bg: "#0d0a0e",
-  surface: "#13101f",
+  bg: "#F6FAFD",       // page (très clair)
+  surface: "#FFFFFF",  // cartes
 
-  // Accent violet
-  violet: "#7c3aed",
-  violetMid: "#a78bfa",
-  violetLight: "#c4b5fd",
+  // Accent principal = BLEU (violet* repointés en bleu pour le thème clair ;
+  // les CTA utilisent explicitement le violet ci-dessous).
+  violet: "#7c3aed",     // CTA / accent violet (boutons principaux)
+  violetMid: "#0369A1",  // accent principal BLEU (labels, icônes, titres)
+  violetLight: "#0891B2",// bleu vif secondaire
 
-  // Santé / positif (à utiliser pour les indicateurs favorables)
-  green: "#10b981",
-  greenSoft: "#6ee7b7",
-  amber: "#fbbf24",
-  red: "#f43f5e",
+  // Santé / statuts
+  green: "#059669",
+  greenSoft: "#10b981",
+  amber: "#d97706",
+  red: "#dc2626",
   pink: "#E91E8C",
 
-  // Texte — opacités relevées pour l'accessibilité (≥ 60% sur fond sombre)
-  text: "#f3f0ff",
-  textBody: "rgba(200,185,255,0.75)",   // était 0.65
-  textMuted: "rgba(255,255,255,0.6)",   // était 0.35 — contraste insuffisant avant
+  // Texte (sur fond clair)
+  text: "#0F172A",
+  textBody: "#475569",
+  textMuted: "#64748B",
 
   // Bordures / surfaces
-  border: "rgba(255,255,255,0.08)",
-  borderViolet: "rgba(167,139,250,0.18)",
-  inputBorder: "rgba(167,139,250,0.2)",
+  border: "#E2E8F0",
+  borderViolet: "rgba(3,105,161,0.22)",
+  inputBorder: "#CBD5E1",
 
   // Typographie
   font: `-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif`,
