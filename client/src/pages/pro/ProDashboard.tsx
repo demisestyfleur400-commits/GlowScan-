@@ -293,6 +293,22 @@ export default function ProDashboard() {
         </motion.div>
       )}
 
+      {/* ══ Réseau confrères — second avis ══ */}
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} style={{ marginBottom: 16 }}>
+        <Link href="/derm/confreres" data-testid="link-peer-reviews"
+          style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", borderRadius: 20, textDecoration: "none",
+            background: DS.surface, border: `1px solid ${DS.border}` }}>
+          <span style={{ flexShrink: 0, width: 40, height: 40, borderRadius: 12, background: "rgba(3,105,161,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Users style={{ width: 18, height: 18, color: DS.blue }} />
+          </span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontSize: 13.5, fontWeight: 800, color: DS.textPrimary, margin: 0 }}>Second avis entre confrères</p>
+            <p style={{ fontSize: 11.5, color: DS.textBody, margin: "2px 0 0" }}>Un cas difficile ? Demandez l'avis d'un confrère (anonymisé).</p>
+          </div>
+          <span style={{ color: DS.blue, fontSize: 18 }}>→</span>
+        </Link>
+      </motion.div>
+
       {/* ══ 4 · ONBOARDING — checklist 3 étapes (disparaît quand tout est fait) ══ */}
       {!onboarding.allDone && (
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }} style={{ marginBottom: 16 }}>

@@ -705,6 +705,161 @@ export function registerProRoutes(app: Express) {
     }
   });
 
+  // ═══════════════════════════════════════════════════════════════════════
+  // SECOND AVIS ENTRE CONFRÈRES — réseau clinique DERM (cas anonymisés)
+  // Tables peer_reviews / peer_review_replies (create_peer_reviews.sql).
+  // Tout en SQL brut (résilient : si tables absentes → réponses vides, pas de crash).
+  // ═══════════════════════════════════════════════════════════════════════
+
+  // POST /api/pro/peer-reviews — publier un cas pour second avis
+  app.post("/api/pro/peer-reviews", requireActivePro, async (req: any, res) => {
+    try {
+      const schema = z.object({
+        scanId: z.number().int().optional().nullable(),
+        question: z.string().min(3).max(1000),
+        targetAccountId: z.number().int().optional().nullable(),
+      });
+      const data = schema.parse(req.body);
+
+      // Contexte ANONYMISÉ tiré du scan si fourni : photo + diagnostic + âge/sexe.
+      // JAMAIS de nom/téléphone patient.
+      let imageUrl: string | null = null, condition: string | null = null, ageSex: string | null = null;
+      if (data.scanId) {
+        const [scan] = await db.select().from(scans).where(eq(scans.id, data.scanId));
+        if (scan) {
+          // vérifie que le scan appartient à un patient de ce dermato
+          if (scan.patientId) {
+            const [p] = await db.select().from(patients)
+              .where(and(eq(patients.id, scan.patientId), eq(patients.dermatologistId, req.proAccount.id)));
+            if (p) {
+              ageSex = [p.sex === "F" ? "F" : p.sex === "M" ? "M" : null, p.age ? `${p.age} ans` : null].filter(Boolean).join(" · ") || null;
+            }
+          }
+          imageUrl = scan.imageUrl || null;
+          condition = (scan.expertCorrectedCondition || scan.condition || null) as string | null;
+        }
+      }
+
+      const r: any = await db.execute(sql`
+        INSERT INTO "peer_reviews" ("requester_account_id","target_account_id","scan_id","image_url","condition","age_sex","question")
+        VALUES (${req.proAccount.id}, ${data.targetAccountId ?? null}, ${data.scanId ?? null}, ${imageUrl}, ${condition}, ${ageSex}, ${data.question})
+        RETURNING "id"
+      `);
+      const id = (r?.rows ?? r ?? [])[0]?.id;
+      res.json({ success: true, id });
+    } catch (err: any) {
+      if (err?.issues) return res.status(400).json({ message: "Données invalides" });
+      console.error("[pro/peer-reviews:create] error:", err);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // GET /api/pro/peer-reviews — mes demandes + cas qui me sont adressés + réseau ouvert
+  app.get("/api/pro/peer-reviews", requireActivePro, async (req: any, res) => {
+    try {
+      const me = req.proAccount.id;
+      const r: any = await db.execute(sql`
+        SELECT pr.*, a."full_name" AS requester_name, a."city" AS requester_city
+        FROM "peer_reviews" pr
+        LEFT JOIN "pro_accounts" a ON a."id" = pr."requester_account_id"
+        WHERE pr."requester_account_id" = ${me}
+           OR pr."target_account_id" = ${me}
+           OR (pr."target_account_id" IS NULL AND pr."status" = 'open' AND pr."requester_account_id" <> ${me})
+        ORDER BY pr."created_at" DESC
+        LIMIT 100
+      `);
+      const rows = (r?.rows ?? r ?? []) as any[];
+      const items = rows.map((row) => ({
+        id: row.id,
+        mine: row.requester_account_id === me,
+        requesterName: row.requester_account_id === me ? "Vous" : (row.requester_name || "Confrère"),
+        requesterCity: row.requester_city || null,
+        condition: row.condition, ageSex: row.age_sex, question: row.question,
+        imageUrl: row.image_url, status: row.status, replyCount: row.reply_count,
+        createdAt: row.created_at,
+      }));
+      res.json({ items });
+    } catch (err) {
+      // tables pas encore migrées → liste vide, non bloquant
+      res.json({ items: [] });
+    }
+  });
+
+  // GET /api/pro/peer-reviews/:id — détail + fil de réponses
+  app.get("/api/pro/peer-reviews/:id", requireActivePro, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const me = req.proAccount.id;
+      const r: any = await db.execute(sql`
+        SELECT pr.*, a."full_name" AS requester_name, a."city" AS requester_city
+        FROM "peer_reviews" pr LEFT JOIN "pro_accounts" a ON a."id" = pr."requester_account_id"
+        WHERE pr."id" = ${id}
+      `);
+      const row = (r?.rows ?? r ?? [])[0];
+      if (!row) return res.status(404).json({ message: "Cas introuvable" });
+      const rr: any = await db.execute(sql`
+        SELECT * FROM "peer_review_replies" WHERE "review_id" = ${id} ORDER BY "created_at" ASC
+      `);
+      const replies = ((rr?.rows ?? rr ?? []) as any[]).map((x) => ({
+        id: x.id, mine: x.account_id === me, authorName: x.account_id === me ? "Vous" : (x.author_name || "Confrère"),
+        message: x.message, createdAt: x.created_at,
+      }));
+      res.json({
+        review: {
+          id: row.id, mine: row.requester_account_id === me,
+          requesterName: row.requester_account_id === me ? "Vous" : (row.requester_name || "Confrère"),
+          requesterCity: row.requester_city || null,
+          condition: row.condition, ageSex: row.age_sex, question: row.question,
+          imageUrl: row.image_url, status: row.status, replyCount: row.reply_count, createdAt: row.created_at,
+        },
+        replies,
+      });
+    } catch (err) {
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // POST /api/pro/peer-reviews/:id/reply — répondre à un cas
+  app.post("/api/pro/peer-reviews/:id/reply", requireActivePro, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const schema = z.object({ message: z.string().min(1).max(2000) });
+      const { message } = schema.parse(req.body);
+      const r: any = await db.execute(sql`SELECT "requester_account_id","status" FROM "peer_reviews" WHERE "id" = ${id}`);
+      const row = (r?.rows ?? r ?? [])[0];
+      if (!row) return res.status(404).json({ message: "Cas introuvable" });
+      if (row.status === "closed") return res.status(400).json({ message: "Ce cas est clôturé" });
+
+      await db.execute(sql`
+        INSERT INTO "peer_review_replies" ("review_id","account_id","author_name","message")
+        VALUES (${id}, ${req.proAccount.id}, ${req.proAccount.fullName}, ${message})
+      `);
+      // incrémente le compteur ; si un confrère répond, le cas passe "answered"
+      const newStatus = row.requester_account_id === req.proAccount.id ? row.status : "answered";
+      await db.execute(sql`UPDATE "peer_reviews" SET "reply_count" = "reply_count" + 1, "status" = ${newStatus} WHERE "id" = ${id}`);
+      res.json({ success: true });
+    } catch (err: any) {
+      if (err?.issues) return res.status(400).json({ message: "Message requis" });
+      console.error("[pro/peer-reviews:reply] error:", err);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // POST /api/pro/peer-reviews/:id/close — le demandeur clôture
+  app.post("/api/pro/peer-reviews/:id/close", requireActivePro, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const r: any = await db.execute(sql`SELECT "requester_account_id" FROM "peer_reviews" WHERE "id" = ${id}`);
+      const row = (r?.rows ?? r ?? [])[0];
+      if (!row) return res.status(404).json({ message: "Cas introuvable" });
+      if (row.requester_account_id !== req.proAccount.id) return res.status(403).json({ message: "Seul l'auteur peut clôturer" });
+      await db.execute(sql`UPDATE "peer_reviews" SET "status" = 'closed' WHERE "id" = ${id}`);
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
   // ───────────────────────────────────────────
   // PATCH /api/pro/patients/:id — modifier patient
   // ───────────────────────────────────────────

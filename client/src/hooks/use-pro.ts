@@ -106,6 +106,76 @@ export function useFollowUpReminder(patientId: number | null) {
   return { schedule, cancel };
 }
 
+// ── Second avis entre confrères (réseau clinique) ────────────────────────
+export interface PeerReview {
+  id: number; mine: boolean; requesterName: string; requesterCity?: string | null;
+  condition?: string | null; ageSex?: string | null; question: string;
+  imageUrl?: string | null; status: "open" | "answered" | "closed"; replyCount: number; createdAt: string;
+}
+export interface PeerReviewReply { id: number; mine: boolean; authorName: string; message: string; createdAt: string; }
+
+export function usePeerReviews() {
+  return useQuery<{ items: PeerReview[] }>({
+    queryKey: ["/api/pro/peer-reviews"],
+    queryFn: async () => {
+      const res = await fetch("/api/pro/peer-reviews", { credentials: "include" });
+      if (!res.ok) throw new Error("Erreur chargement");
+      return res.json();
+    },
+  });
+}
+
+export function usePeerReview(id: number | null) {
+  return useQuery<{ review: PeerReview; replies: PeerReviewReply[] }>({
+    queryKey: ["/api/pro/peer-reviews", id],
+    queryFn: async () => {
+      const res = await fetch(`/api/pro/peer-reviews/${id}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Erreur chargement");
+      return res.json();
+    },
+    enabled: !!id,
+  });
+}
+
+export function useCreatePeerReview() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (vars: { scanId?: number | null; question: string; targetAccountId?: number | null }) => {
+      const res = await apiRequest("POST", "/api/pro/peer-reviews", vars);
+      return res.json() as Promise<{ success: boolean; id: number }>;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["/api/pro/peer-reviews"] }),
+  });
+}
+
+export function useReplyPeerReview(reviewId: number | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (message: string) => {
+      const res = await apiRequest("POST", `/api/pro/peer-reviews/${reviewId}/reply`, { message });
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/pro/peer-reviews", reviewId] });
+      qc.invalidateQueries({ queryKey: ["/api/pro/peer-reviews"] });
+    },
+  });
+}
+
+export function useClosePeerReview() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (reviewId: number) => {
+      const res = await apiRequest("POST", `/api/pro/peer-reviews/${reviewId}/close`, undefined);
+      return res.json();
+    },
+    onSuccess: (_d, reviewId) => {
+      qc.invalidateQueries({ queryKey: ["/api/pro/peer-reviews", reviewId] });
+      qc.invalidateQueries({ queryKey: ["/api/pro/peer-reviews"] });
+    },
+  });
+}
+
 export function useCreatePatient() {
   const qc = useQueryClient();
   return useMutation({

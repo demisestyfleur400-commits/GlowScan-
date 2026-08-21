@@ -87,12 +87,14 @@ const FEATURES = [
   { icon: "doc", title: "Rapport PDF automatique", text: "Rapport professionnel généré en 1 clic, à votre nom." },
   { icon: "chat", title: "Envoi WhatsApp", text: "Le patient reçoit son rapport automatiquement." },
   { icon: "globe", title: "Profil public sur Google", text: "Vos patients vous trouvent. Vos confrères vous rejoignent." },
+  { icon: "users", title: "Second avis entre confrères", text: "Un cas difficile ? Envoyez-le, anonymisé, à un confrère du réseau." },
 ];
 
 const FAQS = [
   { q: "L'IA va-t-elle remplacer mon diagnostic ?", a: "Non. Le diagnostic IA est marqué « indicatif » dans GlowScan. Seule votre validation apparaît dans le rapport final signé de votre nom. Vous êtes et restez le médecin décisionnaire." },
   { q: "Comment mes patients me trouvent-ils ?", a: "Via votre profil public GlowScan visible sur Google, et via les patients B2C dont le score est faible — GlowScan les oriente automatiquement vers un dermatologue disponible dans leur région." },
   { q: "Est-ce que je peux consulter des patients hors de ma ville ?", a: "Oui. Les consultations en ligne vous permettent de recevoir des patients de Douala, Yaoundé, Cotonou, Kinshasa — partout où GlowScan est actif. Vous consultez, vous signez, vous êtes payé directement sur Mobile Money." },
+  { q: "Le « second avis entre confrères », c'est quoi exactement ?", a: "Quand un cas vous laisse un doute, vous l'envoyez à un confrère dermatologue du réseau GlowScan pour avoir son avis. Vous partagez seulement la photo, l'âge et le sexe du patient — jamais son nom ni son téléphone. Le confrère vous répond dans l'application. Vous restez le médecin traitant : c'est un deuxième regard entre spécialistes, pas une délégation. Rien n'est visible du patient." },
   { q: "Que se passe-t-il après les 14 jours gratuits ?", a: "Vous choisissez de continuer à 10 000 FCFA/mois. Aucun prélèvement automatique. Aucune carte bancaire. Vous payez quand vous voulez, par Mobile Money." },
 ];
 
@@ -241,7 +243,8 @@ export default function DermLanding() {
           {[
             { i: "clock", t: "Gagner du temps", d: "Vous passez 30 minutes à rédiger chaque compte-rendu. GlowScan DERM le génère en 3 minutes. Avec votre nom. Avec votre signature. Professionnel." },
             { i: "users", t: "Recevoir des patients via GlowScan", d: "Des patients africains font leur analyse sur GlowScan chaque jour. Quand leur score est faible, GlowScan leur propose de consulter un dermatologue. Ce dermatologue, c'est vous." },
-            { i: "globe", t: "Consulter dans toute l'Afrique", d: "Votre expertise ne s'arrête pas à votre ville. Avec les consultations en ligne, vous consultez un patient à Douala, Cotonou, Kinshasa ou Dakar — depuis votre cabinet. 2 000 FCFA par consultation, payé via Mobile Money." },
+            { i: "globe", t: "Consulter dans toute l'Afrique", d: "Votre expertise ne s'arrête pas à votre ville. Avec les consultations en ligne, vous consultez un patient à Douala, Cotonou, Kinshasa ou Dakar — depuis votre cabinet. 3 500 FCFA par consultation, payé via Mobile Money." },
+            { i: "users", t: "Ne plus jamais rester seul devant un cas difficile", d: "Un doute sur un diagnostic ? En un geste, vous envoyez le cas — la photo, l'âge et le sexe du patient, jamais son nom — à un confrère dermatologue du réseau GlowScan. Il vous répond directement dans l'application. C'est comme demander l'avis d'un collègue dans le couloir, sauf qu'il peut être à Yaoundé ou à Kinshasa. Vous restez le médecin traitant : c'est un deuxième regard, pas une délégation." },
           ].map((r, k) => (
             <motion.div key={k} {...fade(k * 0.08)} style={{ display: "flex", gap: 16, alignItems: "flex-start", background: "#fff", border: `1px solid ${C.border}`, borderRadius: 18, padding: 20, marginBottom: 12 }}>
               <IcoBox name={r.i} tone={k === 2 ? "violet" : "blue"} />
@@ -262,7 +265,7 @@ export default function DermLanding() {
             {[
               { n: "1", i: "phone", t: "Le patient fait son analyse (gratuit)", d: "Photo de peau + Glow Score sur son téléphone." },
               { n: "2", i: "shield", t: "GlowScan détecte un cas sérieux", d: "Score faible → recommandation de consulter un dermatologue." },
-              { n: "3", i: "pin", t: "Le patient consulte VOTRE profil et paie", d: "Il vous trouve, voit vos avis, et réserve — 2 000 FCFA." },
+              { n: "3", i: "pin", t: "Le patient consulte VOTRE profil et paie", d: "Il vous trouve, voit vos avis, et réserve — 3 500 FCFA." },
               { n: "4", i: "chat", t: "Vous consultez, le PDF part sur WhatsApp", d: "Vous documentez, signez, le patient reçoit son rapport." },
             ].map((s, k) => (
               <motion.div key={k} {...fade(k * 0.07)} style={{ display: "flex", gap: 14, alignItems: "center", background: C.lightBlue, borderRadius: 16, padding: 16 }}>
@@ -307,7 +310,7 @@ export default function DermLanding() {
                 <span style={{ color: "#f59e0b", letterSpacing: 1 }}>★★★★★</span>
                 <span style={{ fontSize: 11, color: C.inkMuted }}>4,9 · 37 avis</span>
               </div>
-              <div style={{ marginTop: 12, background: C.violet, color: "#fff", textAlign: "center", borderRadius: 10, padding: "11px", fontSize: 13, fontWeight: 800 }}>Consulter en ligne — 2 000 FCFA</div>
+              <div style={{ marginTop: 12, background: C.violet, color: "#fff", textAlign: "center", borderRadius: 10, padding: "11px", fontSize: 13, fontWeight: 800 }}>Consulter en ligne — 3 500 FCFA</div>
             </div>
           </motion.div>
 
