@@ -10,6 +10,29 @@ import QRCode from "qrcode";
 import { emitToPatient, emitToUser } from "./ws";
 import { deliverConsultationReport, sendWhatsAppText, buildFollowUpReminderMessage, whatsappDeepLink } from "./whatsapp";
 import { uploadScanImageToStorage } from "./routes";
+import { storage } from "./storage";
+import webpush from "web-push";
+
+// Notifie un dermatologue (par proAccount.id) : WebSocket temps réel + push web.
+// Résilient : ne throw jamais. VAPID déjà configuré par le module whatsapp.
+async function notifyProAccount(accountId: number, n: { title: string; body: string; url: string }) {
+  try {
+    const [acc] = await db.select().from(proAccounts).where(eq(proAccounts.id, accountId));
+    if (!acc?.userId) return;
+    try { emitToUser(acc.userId, "pro:notification", n); } catch {}
+    const subs = await storage.getPushSubscriptionsByUser(acc.userId);
+    for (const sub of subs) {
+      try {
+        await webpush.sendNotification(
+          { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+          JSON.stringify({ title: n.title, body: n.body, url: n.url }),
+        );
+      } catch (e: any) {
+        if (e?.statusCode === 410 || e?.statusCode === 404) await storage.deletePushSubscription(sub.endpoint);
+      }
+    }
+  } catch { /* notification best-effort */ }
+}
 
 // Version des Conditions d'utilisation & Politique de confidentialité DERM en vigueur.
 // Le dermatologue (responsable de la plateforme) les accepte à l'inscription.
@@ -746,6 +769,14 @@ export function registerProRoutes(app: Express) {
         RETURNING "id"
       `);
       const id = (r?.rows ?? r ?? [])[0]?.id;
+      // Cas adressé nommément à un confrère → on le notifie.
+      if (data.targetAccountId) {
+        notifyProAccount(data.targetAccountId, {
+          title: "Un confrère demande votre avis 🩺",
+          body: `${req.proAccount.fullName} : ${condition || "cas clinique"} — ${data.question.slice(0, 80)}`,
+          url: "/derm/confreres",
+        });
+      }
       res.json({ success: true, id });
     } catch (err: any) {
       if (err?.issues) return res.status(400).json({ message: "Données invalides" });
@@ -835,8 +866,17 @@ export function registerProRoutes(app: Express) {
         VALUES (${id}, ${req.proAccount.id}, ${req.proAccount.fullName}, ${message})
       `);
       // incrémente le compteur ; si un confrère répond, le cas passe "answered"
-      const newStatus = row.requester_account_id === req.proAccount.id ? row.status : "answered";
+      const isConfrere = row.requester_account_id !== req.proAccount.id;
+      const newStatus = isConfrere ? "answered" : row.status;
       await db.execute(sql`UPDATE "peer_reviews" SET "reply_count" = "reply_count" + 1, "status" = ${newStatus} WHERE "id" = ${id}`);
+      // Notifie l'auteur qu'un confrère a donné son avis.
+      if (isConfrere) {
+        notifyProAccount(row.requester_account_id, {
+          title: "Un confrère a répondu à votre cas 💬",
+          body: `${req.proAccount.fullName} : ${message.slice(0, 90)}`,
+          url: "/derm/confreres",
+        });
+      }
       res.json({ success: true });
     } catch (err: any) {
       if (err?.issues) return res.status(400).json({ message: "Message requis" });

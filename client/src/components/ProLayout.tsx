@@ -3,6 +3,7 @@ import { ReactNode } from "react";
 import { Stethoscope, Home, Users, ScanLine, BarChart3, Settings, ArrowLeft, LogOut, Clock, MessageCircle } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useProAccount } from "@/hooks/use-pro";
+import { useProNotifications } from "@/hooks/use-realtime";
 
 // Thème CLAIR médical (blanc + bleu #0369A1). Violet #7C3AED réservé aux CTA.
 const BLUE = "#0369A1";
@@ -36,6 +37,8 @@ export function ProLayout({ children, title, back, hideBottomNav, rightAction }:
   const { data: accData } = useProAccount();
   const acc = accData?.account;
   const isTrial = acc?.subscriptionStatus === "trial";
+  // Notifications temps réel (second avis confrères, etc.)
+  useProNotifications((accData?.user as any)?.id);
 
   const isSecretary = accData?.user?.role === "secretary";
   const navItems = isSecretary

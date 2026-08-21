@@ -78,6 +78,41 @@ export function useRealtimeScans(patientId?: number) {
   return wsRef.current;
 }
 
+// Notifications temps réel du dermatologue (second avis, etc.) : rejoint la room
+// utilisateur et affiche un toast + rafraîchit les listes à la réception.
+export function useProNotifications(userId?: string | null) {
+  const queryClient = useQueryClient();
+  const wsRef = useRef<WebSocket | null>(null);
+
+  useEffect(() => {
+    if (!userId) return;
+    const wsUrl = `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/api/ws`;
+    let ws: WebSocket;
+    try { ws = new WebSocket(wsUrl); } catch { return; }
+
+    ws.onopen = () => { try { ws.send(JSON.stringify({ type: "join", userId })); } catch {} };
+    ws.onmessage = (event) => {
+      try {
+        const message: WsMessage = JSON.parse(event.data);
+        if (message.event === "pro:notification") {
+          const n = message.data || {};
+          // toast léger (import dynamique pour éviter un cycle de dépendances)
+          import("@/hooks/use-toast").then(({ toast }) => {
+            toast({ title: n.title || "Nouvelle notification", description: n.body || "" });
+          }).catch(() => {});
+          queryClient.invalidateQueries({ queryKey: ["/api/pro/peer-reviews"] });
+        }
+      } catch {}
+    };
+    ws.onerror = () => {};
+    wsRef.current = ws;
+
+    return () => { try { if (ws.readyState === WebSocket.OPEN) ws.close(); } catch {} };
+  }, [userId, queryClient]);
+
+  return wsRef.current;
+}
+
 export function useRealtimePatient(patientId?: number) {
   const wsRef = useRef<WebSocket | null>(null);
   const queryClient = useQueryClient();
