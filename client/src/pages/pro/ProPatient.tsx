@@ -904,12 +904,24 @@ function FollowUpReminderCard({ patient, patientId }: { patient: any; patientId:
   const [open, setOpen] = useState(false);
 
   const sendNow = async () => {
+    // Pré-ouvre l'onglet DANS le geste de clic → évite le blocage popup après l'await.
+    const holder = hasPhone ? window.open("", "_blank") : null;
     try {
       const r = await schedule.mutateAsync({ sendNow: true, message: message || undefined });
-      if (r.sent) toast({ title: "Rappel envoyé ✅", description: "Le patient a reçu le message WhatsApp." });
-      else if (r.waLink) { window.open(r.waLink, "_blank"); toast({ title: "WhatsApp ouvert", description: "Envoi manuel (Twilio non configuré)." }); }
-      else toast({ title: "Envoi impossible", description: r.error || "Numéro WhatsApp manquant.", variant: "destructive" });
-    } catch (e: any) { toast({ title: "Erreur", description: e?.message, variant: "destructive" }); }
+      if (r.sent) {
+        if (holder) holder.close();
+        toast({ title: "Rappel envoyé ✅", description: "Le patient a reçu le message WhatsApp." });
+      } else if (r.waLink) {
+        if (holder) holder.location.href = r.waLink; else window.open(r.waLink, "_blank");
+        toast({ title: "WhatsApp ouvert", description: "Vérifiez le message puis appuyez sur Envoyer." });
+      } else {
+        if (holder) holder.close();
+        toast({ title: "Envoi impossible", description: r.error || "Numéro WhatsApp manquant.", variant: "destructive" });
+      }
+    } catch (e: any) {
+      if (holder) holder.close();
+      toast({ title: "Erreur", description: e?.message, variant: "destructive" });
+    }
   };
 
   const scheduleIt = async () => {
