@@ -152,7 +152,9 @@ app.use((req, res, next) => {
     {
       port,
       host: "0.0.0.0",
-      reusePort: true,
+      // reusePort (SO_REUSEPORT) n'est supporté que sous Linux (prod Railway).
+      // Sous Windows/macOS il lève ENOTSUP → désactivé hors Linux (dev local).
+      reusePort: process.platform === "linux",
     },
     () => {
       log(`serving on port ${port}`);

@@ -1,147 +1,105 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Link, useLocation } from "wouter";
-import {
-  Clock, FileText, Users, CheckCircle2, MessageCircle, ArrowRight,
-  Sparkles, Brain, Shield, TrendingUp, Star,
-} from "lucide-react";
+import { useLocation, Link } from "wouter";
 import { useSEO } from "@/hooks/useSEO";
 import { useProAccount } from "@/hooks/use-pro";
 
-const DS = {
-  bg: "#0d0a0e",
-  surface: "#13101f",
-  violet: "#7c3aed",
-  violetMid: "#a78bfa",
-  violetLight: "#c4b5fd",
-  border: "rgba(167,139,250,0.18)",
-  text: "#f3f0ff",
-  muted: "rgba(200,185,255,0.75)",
-  subtle: "rgba(255,255,255,0.6)",
-  green: "#10b981",
-  amber: "#fbbf24",
-  red: "#f43f5e",
+// ════════════════════════════════════════════════════════════════════════════
+// Landing GlowScan DERM — glow-scan.com/derm
+// Style : professionnel & crédible (ePresc) + visuel simple & lisible (Monetbil).
+// Cible : dermatologue africain, travaille sur papier, veut être respecté.
+// ════════════════════════════════════════════════════════════════════════════
+
+const C = {
+  bg: "#0F0A1E", violet: "#7C3AED", violetL: "#A78BFA", violetX: "#C4B5FD",
+  green: "#10B981", greenL: "#6EE7B7", white: "#FFFFFF",
+  ink: "#1a1a2e", inkMuted: "#5b6472", inkSoft: "#8a93a3",
+  onDark: "#F3F0FF", onDarkMuted: "rgba(200,185,255,0.72)",
+  yellow: "#FFFBEB", yellowBorder: "#FCD34D",
 };
 
-const features = [
-  "Analyse IA zone par zone (antécédents intégrés)",
-  "Clinical Override — modifiez ou remplacez le diagnostic IA",
-  "Notes cliniques incluses dans le PDF",
-  "Classification patients colorée (Priorité / Suivi / Stable / Résolu)",
-  "Suivi évolution GlowScore dans le temps",
-  "Consultation en ligne en moins de 30 minutes",
-  "Signature & cachet dermatologue sur le PDF",
-  "Tableau de bord multi-patients",
-];
+const fade = (delay = 0) => ({
+  initial: { opacity: 0, y: 22 },
+  whileInView: { opacity: 1, y: 0 },
+  viewport: { once: true, margin: "-60px" },
+  transition: { duration: 0.5, delay },
+});
 
-const benefits = [
-  {
-    icon: <Clock size={24} color={DS.violet} />,
-    title: "Gagnez 30min par consultation",
-    desc: "L'IA prépare le pré-diagnostic avant même que le patient arrive. Vous validez, corrigez, et signez.",
-  },
-  {
-    icon: <FileText size={24} color={DS.violet} />,
-    title: "Rapport PDF à votre nom",
-    desc: "Document médical professionnel avec votre signature et cachet, exportable en 1 clic.",
-  },
-  {
-    icon: <Users size={24} color={DS.violet} />,
-    title: "Nouveaux patients qualifiés",
-    desc: "Votre profil visible sur toutes les analyses GlowScan. Les patients viennent à vous pré-diagnostiqués.",
-  },
-];
-
-const pricingTiers = [
-  {
-    name: "Partenaire Référencé",
-    price: "Gratuit",
-    period: "",
-    accent: DS.violet,
-    features: [
-      "Profil visible sur toutes les analyses",
-      "Patients redirigés vers votre WhatsApp",
-      "Commission 2 000 FCFA / consultation",
-    ],
-    cta: "Devenir partenaire",
-    href: "/derm/inscription",
-    highlight: false,
-  },
-  {
-    name: "GlowScan DERM",
-    price: "30 000",
-    period: " FCFA/mois",
-    accent: DS.violet,
-    features: [
-      "Tout le partenariat gratuit inclus",
-      "Tableau de bord médical complet",
-      "PDF cliniques exportables à votre nom",
-      "Clinical Override (correction IA)",
-      "Notes praticien dans le PDF",
-      "14 jours d'essai gratuit",
-    ],
-    cta: "Essayer 14 jours gratuit",
-    href: "/derm/inscription",
-    highlight: true,
-  },
-  {
-    name: "Clinique",
-    price: "50 000 – 100 000",
-    period: " FCFA/mois",
-    accent: "#10b981",
-    features: [
-      "Tous les dermatologues de la clinique inclus",
-      "Tableau de bord directeur médical",
-      "Rapport agrégé mensuel automatique",
-      "Branding clinique sur les PDFs",
-      "1-3 dermatologues : 50 000 FCFA",
-      "4-7 dermatologues : 75 000 FCFA",
-      "8+ dermatologues : 100 000 FCFA",
-    ],
-    cta: "Contacter le commercial",
-    href: "https://wa.me/237674377959?text=Bonjour%2C+je+suis+int%C3%A9ress%C3%A9+par+GlowScan+DERM+Clinique",
-    highlight: false,
-    external: true,
-  },
-];
-
-function Nav() {
+// ── Illustration héro (vectorielle, style Monetbil : lignes simples) ──────────
+function HeroArt() {
   return (
-    <nav style={{
-      position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
-      background: "rgba(13,10,14,0.85)", backdropFilter: "blur(20px)",
-      borderBottom: `1px solid ${DS.border}`,
-      display: "flex", alignItems: "center", justifyContent: "space-between",
-      padding: "12px 24px",
-    }}>
-      <span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 18, fontWeight: 900, color: DS.text }}>
-        <img src="/logo-glowscan-square.jpeg" alt="GlowScan" width={28} height={28} style={{ borderRadius: 8, objectFit: "cover" }} />
-        GlowScan <span style={{ color: DS.violet }}>DERM</span>
-      </span>
-      <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-        <Link href="/derm/connexion">
-          <span style={{ fontSize: 13, color: DS.muted, cursor: "pointer", fontWeight: 600 }}>Connexion</span>
-        </Link>
-        <Link href="/derm/inscription">
-          <span style={{
-            fontSize: 13, fontWeight: 800, color: "#fff", cursor: "pointer",
-            background: DS.violet, padding: "8px 16px", borderRadius: 9999,
-          }}>Essai gratuit</span>
-        </Link>
-      </div>
-    </nav>
+    <svg viewBox="0 0 260 220" width="100%" style={{ maxWidth: 320, height: "auto" }} aria-hidden>
+      {/* halo */}
+      <circle cx="130" cy="105" r="98" fill="#7C3AED" opacity="0.10" />
+      {/* dossier / rapport */}
+      <rect x="34" y="52" width="104" height="128" rx="12" fill="#1A1030" stroke="#7C3AED" strokeWidth="2.5" />
+      <rect x="52" y="40" width="68" height="20" rx="6" fill="#7C3AED" />
+      <line x1="50" y1="86" x2="122" y2="86" stroke="#A78BFA" strokeWidth="3" strokeLinecap="round" />
+      <line x1="50" y1="104" x2="112" y2="104" stroke="#4b3f66" strokeWidth="3" strokeLinecap="round" />
+      <line x1="50" y1="120" x2="122" y2="120" stroke="#4b3f66" strokeWidth="3" strokeLinecap="round" />
+      <line x1="50" y1="136" x2="98" y2="136" stroke="#4b3f66" strokeWidth="3" strokeLinecap="round" />
+      {/* pastille check vert */}
+      <circle cx="112" cy="158" r="15" fill="#10B981" />
+      <path d="M105 158 l5 5 l9 -10" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+      {/* téléphone (WhatsApp) */}
+      <rect x="150" y="70" width="78" height="128" rx="16" fill="#0F0A1E" stroke="#10B981" strokeWidth="2.5" />
+      <rect x="160" y="86" width="58" height="88" rx="8" fill="#1A1030" />
+      <circle cx="189" cy="188" r="4" fill="#10B981" />
+      {/* bulle message */}
+      <rect x="167" y="98" width="44" height="20" rx="8" fill="#10B981" opacity="0.9" />
+      <rect x="167" y="126" width="34" height="16" rx="7" fill="#7C3AED" opacity="0.85" />
+      <rect x="177" y="148" width="34" height="16" rx="7" fill="#7C3AED" opacity="0.5" />
+      {/* sparkles */}
+      <path d="M212 52 l3 8 l8 3 l-8 3 l-3 8 l-3 -8 l-8 -3 l8 -3 z" fill="#C4B5FD" />
+    </svg>
+  );
+}
+
+// ── Petit pictogramme rond (problème / feature) ───────────────────────────────
+function Bubble({ emoji, tone = "violet" }: { emoji: string; tone?: "violet" | "green" | "light" }) {
+  const bg = tone === "green" ? "rgba(16,185,129,0.12)" : tone === "light" ? "#f1eefb" : "rgba(124,58,237,0.12)";
+  const bd = tone === "green" ? "rgba(16,185,129,0.3)" : tone === "light" ? "#e4dcfa" : "rgba(124,58,237,0.28)";
+  return (
+    <div style={{ width: 54, height: 54, borderRadius: 16, background: bg, border: `1px solid ${bd}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, flexShrink: 0 }}>{emoji}</div>
+  );
+}
+
+const FEATURES = [
+  { icon: "📁", title: "Dossier patient numérisé", text: "Créez et retrouvez chaque dossier en 10 secondes." },
+  { icon: "🎙️", title: "Dictée vocale", text: "Parlez, GlowScan transcrit vos notes cliniques." },
+  { icon: "🤖", title: "Aide au diagnostic", text: "Suggestion indicative — vous restez décisionnaire." },
+  { icon: "📄", title: "Rapport PDF automatique", text: "Rapport professionnel généré en 1 clic, à votre nom." },
+  { icon: "📱", title: "Envoi WhatsApp", text: "Le patient reçoit son rapport automatiquement." },
+  { icon: "👥", title: "Dashboard patients", text: "Suivez l'évolution de chaque patient dans le temps." },
+];
+
+const FAQS = [
+  { q: "L'IA va-t-elle remplacer mon diagnostic ?", a: "Non. La suggestion IA est marquée « indicative ». Seule votre validation apparaît dans le rapport final. GlowScan vous assiste, il ne décide jamais à votre place." },
+  { q: "Comment mes patients reçoivent-ils le rapport ?", a: "Automatiquement sur WhatsApp dès que vous clôturez la consultation." },
+  { q: "Est-ce que mes données patients sont sécurisées ?", a: "Oui. Chaque dossier est chiffré et accessible uniquement depuis votre compte." },
+  { q: "Puis-je utiliser GlowScan sans connexion internet ?", a: "Une connexion est nécessaire. La plateforme fonctionne sur tout smartphone avec une connexion 3G minimum." },
+];
+
+function Faq({ q, a }: { q: string; a: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{ borderBottom: "1px solid #ececf2" }}>
+      <button onClick={() => setOpen((v) => !v)} style={{ width: "100%", background: "transparent", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "16px 2px", textAlign: "left" }}>
+        <span style={{ fontSize: 14.5, fontWeight: 700, color: C.ink }}>{q}</span>
+        <span style={{ fontSize: 18, color: C.violet, transform: open ? "rotate(180deg)" : "none", transition: "transform .2s", flexShrink: 0 }}>⌄</span>
+      </button>
+      {open && <p style={{ fontSize: 13.5, color: C.inkMuted, lineHeight: 1.6, margin: "0 2px 16px" }}>{a}</p>}
+    </div>
   );
 }
 
 export default function DermLanding() {
   useSEO({
-    title: "GlowScan Derm — Outil IA pour Dermatologues et Professionnels de Santé",
-    description: "Plateforme IA de diagnostic dermatologique pour professionnels. Analysez vos patients, générez des rapports cliniques et suivez vos dossiers — expertise dédiée aux peaux africaines.",
+    title: "GlowScan DERM — Votre cabinet de dermatologie numérisé",
+    description: "GlowScan DERM génère votre rapport PDF médical en 3 minutes et l'envoie automatiquement à votre patient sur WhatsApp. Dossier patient, dictée vocale, aide au diagnostic. 14 jours gratuits.",
     canonical: "https://glow-scan.com/derm",
   });
 
-  // Déjà connecté ? → on ne montre PAS la landing marketing, on renvoie direct
-  // vers l'espace (le médecin reste connecté 30 jours, plus besoin de re-login).
   const [, setLocation] = useLocation();
   const { data: accData } = useProAccount();
   useEffect(() => {
@@ -149,221 +107,228 @@ export default function DermLanding() {
     else if (accData?.user?.role === "secretary") setLocation("/derm/patients");
   }, [accData]);
 
-  // Preuve sociale dynamique : nombre réel de dermatologues inscrits
-  const [partnerCount, setPartnerCount] = useState<number | null>(null);
+  const [dermCount, setDermCount] = useState<number>(4);
   useEffect(() => {
-    fetch("/api/pro/partners-count")
-      .then((r) => r.json())
-      .then((d) => setPartnerCount(typeof d?.count === "number" ? d.count : null))
-      .catch(() => setPartnerCount(null));
+    fetch("/api/pro/partners-count").then((r) => r.json()).then((d) => { if (typeof d.count === "number" && d.count > 0) setDermCount(d.count); }).catch(() => {});
   }, []);
-  // Plancher d'amorçage pour ne jamais afficher un chiffre décourageant
-  const displayedPartners = Math.max(partnerCount ?? 0, 3);
+
+  const wrap: React.CSSProperties = { maxWidth: 960, margin: "0 auto", padding: "0 20px" };
+  const btnPrimary: React.CSSProperties = { display: "inline-block", background: C.violet, color: "#fff", fontWeight: 800, fontSize: 15, padding: "14px 24px", borderRadius: 9999, textDecoration: "none", textAlign: "center" };
+  const btnGhost: React.CSSProperties = { display: "inline-block", background: "transparent", color: "#fff", fontWeight: 800, fontSize: 15, padding: "14px 24px", borderRadius: 9999, border: "1.5px solid rgba(255,255,255,0.5)", textDecoration: "none", textAlign: "center" };
+  const kicker = (t: string, color = C.violet): React.CSSProperties => ({ fontSize: 11, fontWeight: 800, letterSpacing: "0.14em", textTransform: "uppercase", color });
 
   return (
-    <div style={{ background: DS.bg, minHeight: "100vh", color: DS.text, fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif" }}>
-      <Nav />
+    <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif', background: C.bg, overflowX: "hidden" }}>
 
-      {/* ── HERO ── */}
-      <section style={{ paddingTop: 120, paddingBottom: 80, textAlign: "center", maxWidth: 700, margin: "0 auto", padding: "120px 24px 80px" }}>
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(124,58,237,0.12)", border: `1px solid ${DS.border}`, borderRadius: 9999, padding: "4px 14px", marginBottom: 20 }}>
-            <Sparkles size={12} color={DS.violetMid} />
-            <span style={{ fontSize: 11, fontWeight: 700, color: DS.violetMid, letterSpacing: ".5px" }}>PLATEFORME DERMATOLOGIQUE IA</span>
+      {/* ══════ 1. HERO ══════ */}
+      <section style={{ background: C.bg, position: "relative", paddingTop: 22, paddingBottom: 44 }}>
+        <div style={{ ...wrap, display: "flex", alignItems: "center", justifyContent: "space-between", height: 56 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 20 }}>✨</span>
+            <span style={{ fontSize: 16, fontWeight: 900, color: "#fff" }}>GlowScan <span style={{ color: C.violetL }}>DERM</span></span>
           </div>
+          <Link href="/derm/connexion"><span style={{ fontSize: 13, fontWeight: 700, color: C.onDarkMuted, cursor: "pointer" }}>Connexion</span></Link>
+        </div>
 
-          <h1 style={{ fontSize: 48, fontWeight: 900, lineHeight: 1.1, marginBottom: 16, letterSpacing: "-1px" }}>
-            GlowScan <span style={{ color: DS.violet }}>DERM</span>
-          </h1>
-          <p style={{ fontSize: 20, fontWeight: 700, color: DS.muted, marginBottom: 12 }}>
-            L'IA dermatologique faite pour vous.
-          </p>
-          <p style={{ fontSize: 16, color: DS.subtle, lineHeight: 1.7, marginBottom: 40, maxWidth: 560, margin: "0 auto 40px" }}>
-            Analysez vos patients en 30 minutes. Générez des rapports PDF cliniques à votre nom.
-            Recevez des patients qualifiés directement sur WhatsApp.
-          </p>
-
-          <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
-            <Link href="/derm/inscription">
-              <motion.button
-                whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                style={{ background: DS.violet, color: "#fff", border: "none", borderRadius: 9999, padding: "14px 28px", fontSize: 15, fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}
-              >
-                Essayer gratuitement 14 jours <ArrowRight size={16} />
-              </motion.button>
-            </Link>
-            <Link href="/derm/demo">
-              <button style={{ background: "transparent", color: DS.muted, border: `1px solid ${DS.border}`, borderRadius: 9999, padding: "14px 28px", fontSize: 15, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}>
-                ▶ Voir la démo interactive
-              </button>
-            </Link>
-          </div>
-        </motion.div>
-      </section>
-
-      {/* ── APERÇU PRODUIT ── */}
-      <section style={{ maxWidth: 980, margin: "0 auto", padding: "20px 24px 40px" }}>
-        <p style={{ textAlign: "center", fontSize: 12, fontWeight: 800, letterSpacing: ".5px", textTransform: "uppercase", color: DS.violetMid, marginBottom: 6 }}>
-          À quoi ça ressemble
-        </p>
-        <h2 style={{ fontSize: 26, fontWeight: 900, textAlign: "center", marginBottom: 28 }}>
-          Une interface clinique, pas un gadget
-        </h2>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(280px,1fr))", gap: 18 }}>
-          {/* Mockup 1 — Tableau de bord */}
-          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-            style={{ background: DS.surface, border: `1px solid ${DS.border}`, borderRadius: 20, padding: 16 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-              <span style={{ fontSize: 11, fontWeight: 800, color: DS.muted }}>Tableau de bord</span>
-              <span style={{ fontSize: 10, fontWeight: 800, color: DS.violetMid, background: "rgba(124,58,237,0.12)", padding: "3px 8px", borderRadius: 9999 }}>Essai · 14 j</span>
-            </div>
-            <p style={{ fontSize: 15, fontWeight: 900, marginBottom: 12 }}>Bonjour, Dr Mbarga 👋</p>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8, marginBottom: 12 }}>
-              {[["Patients", "48", DS.violetMid], ["Priorité", "5", DS.red], ["En suivi", "12", DS.amber]].map(([l, v, c]) => (
-                <div key={l} style={{ background: "rgba(255,255,255,0.04)", borderRadius: 10, padding: "8px 10px" }}>
-                  <p style={{ fontSize: 18, fontWeight: 900, color: c as string, margin: 0 }}>{v}</p>
-                  <p style={{ fontSize: 9, color: DS.subtle, margin: 0 }}>{l}</p>
-                </div>
-              ))}
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(124,58,237,0.10)", border: `1px solid ${DS.border}`, borderRadius: 12, padding: "10px 12px" }}>
-              <div style={{ width: 28, height: 28, borderRadius: 8, background: DS.violet }} />
-              <div>
-                <p style={{ fontSize: 11, fontWeight: 800, margin: 0 }}>Analyser un patient</p>
-                <p style={{ fontSize: 9, color: DS.subtle, margin: 0 }}>Patient → photo → IA → dossier</p>
-              </div>
-            </div>
+        <div style={{ ...wrap, display: "flex", flexDirection: "column", gap: 26, alignItems: "center", textAlign: "center", paddingTop: 28 }}>
+          <motion.div {...fade()} style={{ maxWidth: 640 }}>
+            <p style={kicker(C.violetL)}>Outil pour dermatologues · Afrique</p>
+            <h1 style={{ fontSize: 34, lineHeight: 1.15, fontWeight: 900, color: "#fff", margin: "12px 0 14px", letterSpacing: "-0.5px" }}>
+              Votre cabinet numérisé.<br /><span style={{ color: C.violetL }}>Vos patients connectés.</span>
+            </h1>
+            <p style={{ fontSize: 15, lineHeight: 1.65, color: C.onDarkMuted, maxWidth: 560, margin: "0 auto" }}>
+              GlowScan DERM génère votre rapport PDF médical en 3 minutes et l'envoie automatiquement à votre patient sur WhatsApp. Pendant que vous consultez.
+            </p>
           </motion.div>
 
-          {/* Mockup 2 — Rapport clinique */}
-          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.08 }}
-            style={{ background: DS.surface, border: `1px solid ${DS.border}`, borderRadius: 20, padding: 16 }}>
-            <span style={{ fontSize: 11, fontWeight: 800, color: DS.muted }}>Rapport clinique IA</span>
-            <div style={{ marginTop: 10, marginBottom: 12, padding: 12, borderRadius: 12, background: "rgba(124,58,237,0.08)", border: `1px solid ${DS.border}` }}>
-              <p style={{ fontSize: 13, fontWeight: 900, margin: 0 }}>Acné inflammatoire modérée</p>
-              <p style={{ fontSize: 10, color: DS.muted, margin: "2px 0 0" }}>Fitzpatrick V · Glow Score 52/100 · Confiance élevée</p>
-            </div>
-            {[["Zone T", DS.red], ["Joues", DS.amber], ["Front", DS.green]].map(([z, c]) => (
-              <div key={z} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                <span style={{ width: 6, height: 6, borderRadius: 9999, background: c as string }} />
-                <span style={{ fontSize: 10, color: DS.subtle }}>{z} — analyse zone par zone</span>
-              </div>
+          <motion.div {...fade(0.1)} style={{ display: "flex", flexWrap: "wrap", gap: 12, justifyContent: "center" }}>
+            <Link href="/derm/inscription"><span style={btnPrimary}>Commencer 14 jours gratuits</span></Link>
+            <Link href="/derm/demo"><span style={btnGhost}>Voir la démo</span></Link>
+          </motion.div>
+
+          <motion.div {...fade(0.2)} style={{ marginTop: 6 }}><HeroArt /></motion.div>
+        </div>
+      </section>
+
+      {/* ══════ 2. BARRE DE CONFIANCE ══════ */}
+      <section style={{ background: C.white, padding: "22px 0" }}>
+        <div style={{ ...wrap, display: "flex", flexWrap: "wrap", gap: 14, alignItems: "center", justifyContent: "center", textAlign: "center" }}>
+          <span style={{ fontSize: 13, fontWeight: 800, color: C.ink }}>{dermCount} dermatologues actifs</span>
+          <span style={{ color: "#d5d5df" }}>·</span>
+          <span style={{ fontSize: 13, fontWeight: 800, color: C.ink }}>3 pays</span>
+          <span style={{ color: "#d5d5df" }}>·</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: C.violet }}>Présenté au Congrès SODAF — Ouagadougou 2026</span>
+          <span style={{ color: "#d5d5df" }}>·</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: C.inkMuted }}>Validé par Dr Chiago Tietche Sonia, Dermatologue</span>
+        </div>
+      </section>
+
+      {/* ══════ 3. LE PROBLÈME ══════ */}
+      <section style={{ background: C.white, padding: "48px 0 8px" }}>
+        <div style={wrap}>
+          <motion.h2 {...fade()} style={{ fontSize: 24, fontWeight: 900, color: C.ink, textAlign: "center", margin: "0 0 8px" }}>Combien de temps perdez-vous chaque jour ?</motion.h2>
+          <div style={{ display: "grid", gap: 14, gridTemplateColumns: "1fr", marginTop: 28 }}>
+            {[
+              { e: "📝", t: "Rédiger vos comptes-rendus à la main", s: "30 minutes par dossier en moyenne." },
+              { e: "📞", t: "Répondre aux questions WhatsApp de vos patients", s: "Après 20h, gratuitement, sans structure." },
+              { e: "🗂️", t: "Retrouver un ancien dossier patient", s: "Dans des carnets illisibles depuis 5 ans." },
+            ].map((b, i) => (
+              <motion.div key={i} {...fade(i * 0.08)} style={{ display: "flex", gap: 14, alignItems: "center", background: "#faf9fe", border: "1px solid #efeaf9", borderRadius: 16, padding: 16 }}>
+                <Bubble emoji={b.e} tone="light" />
+                <div>
+                  <p style={{ fontSize: 15, fontWeight: 800, color: C.ink, margin: 0 }}>{b.t}</p>
+                  <p style={{ fontSize: 13, color: C.inkMuted, margin: "3px 0 0" }}>{b.s}</p>
+                </div>
+              </motion.div>
             ))}
-            <div style={{ marginTop: 10, display: "flex", gap: 6, flexWrap: "wrap" }}>
-              <span style={{ fontSize: 9, fontWeight: 800, background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.25)", padding: "3px 8px", borderRadius: 9999, color: "#6ee7b7" }}>Protocole matin/soir</span>
-              <span style={{ fontSize: 9, fontWeight: 800, background: "rgba(124,58,237,0.12)", color: DS.violetMid, padding: "3px 8px", borderRadius: 9999 }}>PDF signé</span>
-            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ══════ 4. LA SOLUTION ══════ */}
+      <section style={{ background: C.bg, padding: "52px 0" }}>
+        <div style={wrap}>
+          <motion.div {...fade()} style={{ textAlign: "center", marginBottom: 30 }}>
+            <p style={kicker(C.violetL)}>La solution</p>
+            <h2 style={{ fontSize: 30, fontWeight: 900, color: "#fff", margin: "10px 0 0", letterSpacing: "-0.5px" }}>
+              Simple. <span style={{ color: C.violetL }}>Rapide.</span> <span style={{ color: C.greenL }}>Médical.</span>
+            </h2>
           </motion.div>
-        </div>
-        <p style={{ textAlign: "center", fontSize: 11, color: DS.subtle, marginTop: 14 }}>
-          Aperçu illustratif de l'interface GlowScan DERM.
-        </p>
-      </section>
-
-      {/* ── BÉNÉFICES ── */}
-      <section style={{ maxWidth: 900, margin: "0 auto", padding: "60px 24px" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(260px,1fr))", gap: 20 }}>
-          {benefits.map((b, i) => (
-            <motion.div key={i} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }} viewport={{ once: true }}
-              style={{ background: DS.surface, border: `1px solid ${DS.border}`, borderRadius: 20, padding: "24px" }}>
-              <div style={{ marginBottom: 12 }}>{b.icon}</div>
-              <h3 style={{ fontSize: 16, fontWeight: 800, marginBottom: 8, color: DS.text }}>{b.title}</h3>
-              <p style={{ fontSize: 13, color: DS.muted, lineHeight: 1.6 }}>{b.desc}</p>
-            </motion.div>
-          ))}
-        </div>
-      </section>
-
-      {/* ── FONCTIONNALITÉS ── */}
-      <section style={{ maxWidth: 700, margin: "0 auto", padding: "40px 24px 60px" }}>
-        <h2 style={{ fontSize: 28, fontWeight: 900, textAlign: "center", marginBottom: 32 }}>
-          Tout ce dont vous avez besoin
-        </h2>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(280px,1fr))", gap: 12 }}>
-          {features.map((f, i) => (
-            <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-              <CheckCircle2 size={16} color={DS.violet} style={{ marginTop: 2, flexShrink: 0 }} />
-              <span style={{ fontSize: 14, color: DS.muted }}>{f}</span>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ── TARIFS ── */}
-      <section style={{ maxWidth: 1000, margin: "0 auto", padding: "40px 24px 80px" }}>
-        <h2 style={{ fontSize: 28, fontWeight: 900, textAlign: "center", marginBottom: 8 }}>Tarifs simples et transparents</h2>
-        <p style={{ textAlign: "center", color: DS.muted, fontSize: 14, marginBottom: 40 }}>14 jours d'essai gratuit — aucune carte bancaire requise</p>
-
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(280px,1fr))", gap: 20 }}>
-          {pricingTiers.map((tier, i) => (
-            <motion.div key={i} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }} viewport={{ once: true }}
-              style={{
-                background: tier.highlight ? "rgba(124,58,237,0.08)" : DS.surface,
-                border: `${tier.highlight ? 2 : 1}px solid ${tier.highlight ? tier.accent : DS.border}`,
-                borderRadius: 20, padding: "28px 24px", position: "relative",
-              }}>
-              {tier.highlight && (
-                <div style={{ position: "absolute", top: -12, left: "50%", transform: "translateX(-50%)", background: DS.violet, color: "#fff", fontSize: 10, fontWeight: 800, padding: "3px 12px", borderRadius: 9999, letterSpacing: ".5px" }}>
-                  RECOMMANDÉ
+          <div style={{ display: "grid", gap: 12, gridTemplateColumns: "1fr" }}>
+            {FEATURES.map((f, i) => (
+              <motion.div key={i} {...fade((i % 3) * 0.06)} style={{ display: "flex", gap: 14, alignItems: "flex-start", background: "#1A1030", border: "1px solid rgba(167,139,250,0.18)", borderRadius: 16, padding: 16 }}>
+                <Bubble emoji={f.icon} tone={i === 4 ? "green" : "violet"} />
+                <div>
+                  <p style={{ fontSize: 15, fontWeight: 800, color: C.onDark, margin: 0 }}>{f.title}</p>
+                  <p style={{ fontSize: 13, color: C.onDarkMuted, margin: "3px 0 0", lineHeight: 1.5 }}>{f.text}</p>
                 </div>
-              )}
-              <p style={{ fontSize: 13, fontWeight: 700, color: DS.muted, marginBottom: 6, textTransform: "uppercase", letterSpacing: ".5px" }}>{tier.name}</p>
-              <div style={{ marginBottom: 20 }}>
-                <span style={{ fontSize: tier.price === "Gratuit" ? 32 : 26, fontWeight: 900, color: tier.highlight ? DS.violet : DS.text }}>{tier.price}</span>
-                <span style={{ fontSize: 13, color: DS.muted }}>{tier.period}</span>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ══════ 5. SCREENSHOT PRODUIT ══════ */}
+      <section style={{ background: C.white, padding: "48px 0" }}>
+        <div style={{ ...wrap, textAlign: "center" }}>
+          <motion.div {...fade()}>
+            {/* maquette dashboard (mockup vectoriel — pas de photo) */}
+            <div style={{ maxWidth: 560, margin: "0 auto", background: C.bg, borderRadius: 20, padding: 14, border: "1px solid #ece7f8", boxShadow: "0 20px 50px rgba(124,58,237,0.12)" }}>
+              <div style={{ display: "flex", gap: 6, marginBottom: 10, paddingLeft: 4 }}>
+                {["#f87171", "#fbbf24", "#34d399"].map((c) => <span key={c} style={{ width: 10, height: 10, borderRadius: "50%", background: c, display: "inline-block" }} />)}
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 24 }}>
-                {tier.features.map((f, j) => (
-                  <div key={j} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
-                    <CheckCircle2 size={14} color={tier.accent} style={{ marginTop: 2, flexShrink: 0 }} />
-                    <span style={{ fontSize: 13, color: DS.muted }}>{f}</span>
+              <div style={{ background: "#140d24", borderRadius: 14, padding: 16, textAlign: "left" }}>
+                <p style={{ fontSize: 11, fontWeight: 800, letterSpacing: ".1em", color: C.violetL, margin: "0 0 10px" }}>TABLEAU DE BORD DERM</p>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 12 }}>
+                  {[["Patients", "128"], ["Cette semaine", "12"], ["Priorité", "3"]].map(([l, v]) => (
+                    <div key={l} style={{ background: "#1A1030", borderRadius: 10, padding: "10px 8px" }}>
+                      <p style={{ fontSize: 18, fontWeight: 900, color: "#fff", margin: 0 }}>{v}</p>
+                      <p style={{ fontSize: 9, color: C.onDarkMuted, margin: 0 }}>{l}</p>
+                    </div>
+                  ))}
+                </div>
+                {[["👩🏾‍⚕️", "Aminata K. · Acné rétentionnelle", "#10B981"], ["🧑🏾", "Prince T. · Hyperpigmentation", "#fbbf24"], ["👩🏾", "Reine N. · Dermatite", "#f87171"]].map(([e, t, c], i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, background: "#1A1030", borderRadius: 10, padding: "9px 10px", marginBottom: 6 }}>
+                    <span style={{ fontSize: 16 }}>{e}</span>
+                    <span style={{ flex: 1, fontSize: 11.5, color: C.onDark }}>{t}</span>
+                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: c as string }} />
                   </div>
                 ))}
               </div>
-              {(tier as any).external ? (
-                <a href={tier.href} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
-                  <button style={{ width: "100%", padding: "12px 0", borderRadius: 12, background: tier.highlight ? DS.violet : "rgba(255,255,255,0.06)", border: tier.highlight ? "none" : `1px solid ${DS.border}`, color: tier.highlight ? "#fff" : DS.muted, fontSize: 14, fontWeight: 800, cursor: "pointer" }}>
-                    {tier.cta}
-                  </button>
-                </a>
-              ) : (
-                <Link href={tier.href}>
-                  <button style={{ width: "100%", padding: "12px 0", borderRadius: 12, background: tier.highlight ? DS.violet : "rgba(255,255,255,0.06)", border: tier.highlight ? "none" : `1px solid ${DS.border}`, color: tier.highlight ? "#fff" : DS.muted, fontSize: 14, fontWeight: 800, cursor: "pointer" }}>
-                    {tier.cta}
-                  </button>
-                </Link>
-              )}
-            </motion.div>
-          ))}
+            </div>
+            <p style={{ fontSize: 13, fontWeight: 700, color: C.inkMuted, marginTop: 16 }}>Interface conçue pour les dermatologues africains.</p>
+          </motion.div>
         </div>
       </section>
 
-      {/* ── CTA FINAL ── */}
-      <section style={{ textAlign: "center", padding: "60px 24px 100px" }}>
-        <div style={{ background: DS.surface, border: `1px solid ${DS.border}`, borderRadius: 24, maxWidth: 560, margin: "0 auto", padding: "40px 32px" }}>
-          <div style={{ display: "flex", justifyContent: "center", gap: 4, marginBottom: 16 }}>
-            {[1, 2, 3].map(i => <Star key={i} size={16} color="#fbbf24" fill="#fbbf24" />)}
+      {/* ══════ 6. LIMITE MÉDICALE ══════ */}
+      <section style={{ background: C.yellow, padding: "36px 0" }}>
+        <div style={wrap}>
+          <motion.div {...fade()} style={{ maxWidth: 620, margin: "0 auto", background: "#fff", border: `1.5px solid ${C.yellowBorder}`, borderRadius: 18, padding: "20px 22px", textAlign: "center" }}>
+            <p style={{ fontSize: 15.5, fontWeight: 800, color: "#92400e", lineHeight: 1.6, margin: 0 }}>
+              ⚠️ GlowScan DERM <span style={{ color: C.violet }}>assiste</span> le dermatologue. Il ne remplace jamais votre diagnostic.
+            </p>
+            <p style={{ fontSize: 13.5, color: "#a16207", margin: "6px 0 0", fontWeight: 700 }}>Vous êtes et restez le médecin.</p>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ══════ 7. PREUVE SOCIALE ══════ */}
+      <section style={{ background: C.bg, padding: "48px 0" }}>
+        <div style={wrap}>
+          <motion.div {...fade()} style={{ maxWidth: 620, margin: "0 auto", background: "#1A1030", border: "1px solid rgba(167,139,250,0.2)", borderRadius: 20, padding: 24, textAlign: "center" }}>
+            <div style={{ width: 64, height: 64, borderRadius: "50%", background: "linear-gradient(135deg,#a78bfa,#7c3aed)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 30, margin: "0 auto 12px" }}>👩🏾‍⚕️</div>
+            <p style={{ fontSize: 16, fontWeight: 600, fontStyle: "italic", color: C.onDark, lineHeight: 1.6, margin: "0 0 14px" }}>
+              « GlowScan m'a permis de me concentrer sur mes patients plutôt que sur la paperasse. »
+            </p>
+            <p style={{ fontSize: 14, fontWeight: 800, color: "#fff", margin: 0 }}>Dr Chiago Tietche Sonia</p>
+            <p style={{ fontSize: 11.5, color: C.violetL, fontWeight: 700, margin: "3px 0 12px" }}>Medical Advisor GlowScan · Yaoundé, Cameroun</p>
+            <div style={{ display: "flex", gap: 8, justifyContent: "center", fontSize: 22 }}><span>🇨🇲</span><span>🇧🇯</span><span>🇨🇩</span></div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ══════ 8. TARIFICATION ══════ */}
+      <section style={{ background: C.white, padding: "52px 0" }}>
+        <div style={wrap}>
+          <motion.div {...fade()} style={{ maxWidth: 460, margin: "0 auto", background: "#faf9fe", border: `2px solid ${C.violet}`, borderRadius: 22, padding: 26, textAlign: "center" }}>
+            <p style={kicker(C.violet)}>Une offre, tout inclus</p>
+            <p style={{ fontSize: 40, fontWeight: 900, color: C.ink, margin: "10px 0 0", letterSpacing: "-1px" }}>10 000 <span style={{ fontSize: 18, color: C.inkMuted }}>FCFA / mois</span></p>
+            <p style={{ fontSize: 13.5, fontWeight: 800, color: C.green, margin: "6px 0 18px" }}>14 jours d'essai gratuit — sans carte bancaire</p>
+            <div style={{ textAlign: "left", display: "flex", flexDirection: "column", gap: 9, marginBottom: 20 }}>
+              {FEATURES.map((f) => (
+                <div key={f.title} style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                  <span style={{ color: C.green, fontWeight: 900 }}>✓</span>
+                  <span style={{ fontSize: 13.5, color: C.ink, fontWeight: 600 }}>{f.title}</span>
+                </div>
+              ))}
+            </div>
+            <Link href="/derm/inscription"><span style={{ ...btnPrimary, width: "100%", boxSizing: "border-box" }}>Commencer gratuitement</span></Link>
+            <p style={{ fontSize: 11.5, color: C.inkSoft, margin: "12px 0 0" }}>Paiement par Mobile Money MTN ou Orange.</p>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ══════ 9. FAQ ══════ */}
+      <section style={{ background: C.white, padding: "8px 0 52px" }}>
+        <div style={{ ...wrap, maxWidth: 640 }}>
+          <motion.h2 {...fade()} style={{ fontSize: 22, fontWeight: 900, color: C.ink, textAlign: "center", margin: "0 0 18px" }}>Questions fréquentes</motion.h2>
+          <motion.div {...fade(0.05)}>
+            {FAQS.map((f, i) => <Faq key={i} q={f.q} a={f.a} />)}
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ══════ 10. CTA FINAL ══════ */}
+      <section style={{ background: C.violet, padding: "48px 0", textAlign: "center" }}>
+        <div style={wrap}>
+          <motion.div {...fade()}>
+            <h2 style={{ fontSize: 26, fontWeight: 900, color: "#fff", margin: "0 0 10px", letterSpacing: "-0.5px" }}>Commencez à gagner du temps dès aujourd'hui</h2>
+            <p style={{ fontSize: 15, color: "rgba(255,255,255,0.9)", margin: "0 0 22px", lineHeight: 1.55 }}>
+              14 jours gratuits. Sans engagement. Paiement Mobile Money.
+            </p>
+            <Link href="/derm/inscription"><span style={{ display: "inline-block", background: "#fff", color: C.violet, fontWeight: 900, fontSize: 15, padding: "15px 30px", borderRadius: 9999, textDecoration: "none" }}>Créer mon compte gratuitement</span></Link>
+            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.75)", margin: "16px 0 0" }}>glow-scan.com/derm</p>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ══════ FOOTER ══════ */}
+      <footer style={{ background: C.bg, padding: "32px 0", borderTop: "1px solid rgba(255,255,255,0.07)" }}>
+        <div style={{ ...wrap, textAlign: "center" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 12 }}>
+            <span style={{ fontSize: 18 }}>✨</span>
+            <span style={{ fontSize: 15, fontWeight: 900, color: "#fff" }}>GlowScan <span style={{ color: C.violetL }}>DERM</span></span>
           </div>
-          <h2 style={{ fontSize: 24, fontWeight: 900, marginBottom: 10 }}>
-            {displayedPartners} dermatologues partenaires déjà actifs.
-          </h2>
-          <p style={{ color: DS.muted, fontSize: 15, marginBottom: 28 }}>
-            Rejoignez le réseau GlowScan DERM.
+          <div style={{ display: "flex", gap: 16, justifyContent: "center", flexWrap: "wrap", marginBottom: 14 }}>
+            <Link href="/derm/connexion"><span style={{ fontSize: 12.5, color: C.onDarkMuted, cursor: "pointer" }}>Connexion</span></Link>
+            <a href="https://wa.me/237674377959" target="_blank" rel="noopener noreferrer" style={{ fontSize: 12.5, color: C.onDarkMuted, textDecoration: "none" }}>Support</a>
+            <a href="https://glow-scan.com" style={{ fontSize: 12.5, color: C.onDarkMuted, textDecoration: "none" }}>glow-scan.com</a>
+          </div>
+          <p style={{ fontSize: 11, color: "rgba(200,185,255,0.45)", lineHeight: 1.6, maxWidth: 560, margin: "0 auto" }}>
+            GlowScan DERM est un outil d'aide à la pratique médicale. Il ne se substitue pas au diagnostic médical et à la responsabilité du praticien.
           </p>
-          <Link href="/derm/inscription">
-            <motion.button
-              whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-              style={{ background: DS.violet, color: "#fff", border: "none", borderRadius: 9999, padding: "14px 32px", fontSize: 15, fontWeight: 800, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 8 }}
-            >
-              Commencer l'essai gratuit <ArrowRight size={16} />
-            </motion.button>
-          </Link>
         </div>
-      </section>
-
-      {/* Footer */}
-      <footer style={{ borderTop: `1px solid ${DS.border}`, padding: "20px 24px", textAlign: "center" }}>
-        <p style={{ fontSize: 12, color: DS.subtle }}>GlowScan DERM © 2026 · Spécialisé Peaux Africaines · <Link href="/confidentialite"><span style={{ color: DS.muted, cursor: "pointer" }}>Confidentialité</span></Link></p>
       </footer>
     </div>
   );
