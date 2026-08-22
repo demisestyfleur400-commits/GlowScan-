@@ -7,7 +7,7 @@ import { storage } from "../../storage";
 import { users } from "@shared/models/auth";
 import { eq, or, sql } from "drizzle-orm";
 import twilio from "twilio";
-import { sendEmail, buildResetEmail, buildSecurityAlertEmail, buildB2CWelcomeEmail, buildMagicLinkEmail } from "../../email";
+import { sendEmail, buildResetEmail, buildSecurityAlertEmail, buildB2CWelcomeEmail, buildMagicLinkEmail, verifyUnsubToken } from "../../email";
 import { is2faEmailEnabled, issueEmailOtp, verifyEmailOtp, verifyBackupCode, generateAndStoreBackupCodes, countBackupCodes, maskEmail as maskEmailAddr, securityAlert } from "../../proRoutes";
 import crypto from "crypto";
 
@@ -365,6 +365,20 @@ export function registerAuthRoutes(app: Express): void {
         res.json({ success: true, user: { id: user.id, email: user.email, firstName: user.firstName } });
       });
     } catch { res.status(500).json({ message: "Erreur serveur" }); }
+  });
+
+  // ── GET /api/email/unsubscribe ── Désabonnement des emails marketing (lien signé) ──
+  app.get("/api/email/unsubscribe", async (req: any, res) => {
+    const token = String(req.query?.token || "");
+    const userId = verifyUnsubToken(token);
+    const page = (title: string, msg: string) => `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><body style="font-family:system-ui,sans-serif;background:#f7faf8;color:#1f2a26;display:flex;min-height:100vh;align-items:center;justify-content:center;margin:0"><div style="max-width:420px;text-align:center;padding:32px"><div style="font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#2f9e6e;margin-bottom:12px">GlowScan</div><h1 style="font-size:20px;margin:0 0 10px">${title}</h1><p style="color:#4a5a52;font-size:14px;line-height:1.6">${msg}</p></div></body>`;
+    if (!userId) { res.status(400).type("html").send(page("Lien invalide", "Ce lien de désabonnement est invalide ou incomplet.")); return; }
+    try {
+      await db.execute(sql`UPDATE "users" SET "email_opt_out" = TRUE WHERE "id" = ${userId}`);
+      res.type("html").send(page("Désabonnement confirmé", "Vous ne recevrez plus d'emails de rappel. Les emails de sécurité et de compte (connexion, reçu) continuent d'arriver."));
+    } catch {
+      res.status(500).type("html").send(page("Erreur", "Réessayez dans un instant."));
+    }
   });
 
   // ── POST /api/auth/forgot-password ─────────────────────────────────────────

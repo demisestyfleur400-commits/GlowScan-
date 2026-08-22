@@ -3131,6 +3131,27 @@ Réponds en 2-4 phrases max, sois direct et utile.`;
     }
   });
 
+  // POST /api/scans/:id/email-result — envoyer le résultat d'une analyse par email
+  // (transactionnel, à la demande de l'utilisateur connecté).
+  app.post("/api/scans/:id/email-result", async (req: any, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) return res.status(401).json({ message: "Connexion requise" });
+      const scanId = parseInt(req.params.id);
+      const [scan] = await db.select().from(scans).where(eq(scans.id, scanId));
+      if (!scan || scan.userId !== userId) return res.status(404).json({ message: "Analyse introuvable" });
+      const [u] = await db.select().from(users).where(eq(users.id, userId));
+      if (!u?.email || u.email.endsWith("@phone.glowscan.cm")) return res.status(400).json({ message: "Aucun email sur votre compte" });
+      const { sendEmail, buildB2CResultEmail } = await import("./email");
+      const base = (process.env.PUBLIC_BASE_URL || "https://glow-scan.com").replace(/\/$/, "");
+      const e = buildB2CResultEmail((u as any).firstName || "", scan.condition || "Analyse cutanée", scan.score || 0, `${base}/profile`);
+      const r = await sendEmail(u.email, e.subject, e.html, e.text);
+      res.json({ success: r.ok, sent: r.ok });
+    } catch (err) {
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
   // GET /api/admin/premium/requests — liste toutes les demandes en attente
   app.get("/api/admin/premium/requests", async (req: any, res) => {
     const adminKey = req.headers["x-admin-key"];
@@ -3217,6 +3238,16 @@ Réponds en 2-4 phrases max, sois direct et utile.`;
           const [pa] = await db.select().from(proAccounts).where(eq(proAccounts.userId, pr.userId));
           if (u?.email && !u.email.endsWith("@phone.glowscan.cm")) {
             const r = buildReceiptEmail((pa?.fullName || (u as any).firstName || "").split(" ")[0] || "", pr.amount || 10000, pr.reference, proExpiresAt);
+            sendEmail(u.email, r.subject, r.html, r.text).catch(() => {});
+          }
+        } catch {}
+      } else {
+        // Reçu abonnement B2C (grand public — réf non "PRO-").
+        try {
+          const { sendEmail, buildReceiptEmail } = await import("./email");
+          const [u] = await db.select().from(users).where(eq(users.id, pr.userId));
+          if (u?.email && !u.email.endsWith("@phone.glowscan.cm")) {
+            const r = buildReceiptEmail((u as any).firstName || "", pr.amount || 0, pr.reference, expiresAt);
             sendEmail(u.email, r.subject, r.html, r.text).catch(() => {});
           }
         } catch {}

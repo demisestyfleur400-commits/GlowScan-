@@ -4,8 +4,29 @@
 // Pour la prod : créer une clé sur resend.com, vérifier le domaine glow-scan.com,
 // puis définir RESEND_API_KEY et EMAIL_FROM (ex: "GlowScan <securite@glow-scan.com>").
 
+import crypto from "crypto";
+
 const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
 const EMAIL_FROM = process.env.EMAIL_FROM || "GlowScan <onboarding@resend.dev>";
+const UNSUB_SECRET = process.env.SESSION_SECRET || "glowscan-unsub-fallback";
+
+// Jeton de désabonnement signé (HMAC) — permet un lien sans authentification.
+export function makeUnsubToken(userId: string): string {
+  const sig = crypto.createHmac("sha256", UNSUB_SECRET).update("unsub:" + userId).digest("hex").slice(0, 32);
+  return `${userId}.${sig}`;
+}
+export function verifyUnsubToken(token: string): string | null {
+  const i = (token || "").lastIndexOf(".");
+  if (i < 0) return null;
+  const uid = token.slice(0, i), sig = token.slice(i + 1);
+  const good = crypto.createHmac("sha256", UNSUB_SECRET).update("unsub:" + uid).digest("hex").slice(0, 32);
+  return sig === good ? uid : null;
+}
+function unsubUrlFor(userId?: string): string | null {
+  if (!userId) return null;
+  const base = (process.env.PUBLIC_BASE_URL || "https://glow-scan.com").replace(/\/$/, "");
+  return `${base}/api/email/unsubscribe?token=${makeUnsubToken(userId)}`;
+}
 
 export interface SendEmailResult { ok: boolean; provider: "resend" | "dev" | "none"; error?: string }
 
@@ -98,13 +119,24 @@ export function buildB2CResultEmail(name: string, condition: string, score: numb
   return { subject, html, text: strip(body) };
 }
 
-// B2C · Ré-engagement patient.
-export function buildB2CReengageEmail(name: string) {
+// Ajoute un pied de page de désabonnement (emails marketing uniquement).
+function withUnsub(out: { subject: string; html: string; text: string }, userId?: string) {
+  const u = unsubUrlFor(userId);
+  if (!u) return out;
+  return {
+    subject: out.subject,
+    html: out.html + `<p style="font-size:11px;color:#94A3B8;text-align:center;margin-top:14px">Vous ne souhaitez plus recevoir ces emails ? <a href="${u}" style="color:#94A3B8">Se désabonner</a>.</p>`,
+    text: out.text + `\n\nSe désabonner : ${u}`,
+  };
+}
+
+// B2C · Ré-engagement patient (marketing → avec désabonnement).
+export function buildB2CReengageEmail(name: string, userId?: string) {
   const subject = `Reprenez votre suivi peau, ${name || ""}`.trim();
   const body = `
     <p style="font-size:14px;color:#475569;margin:0 0 12px">Votre peau évolue. Une nouvelle analyse en 30 secondes vous montre les changements et met à jour votre Glow Score.</p>`;
   const html = wrap("Votre peau a peut-être changé", body, { label: "Refaire mon analyse", url: `${APP_URL}/analyze` });
-  return { subject, html, text: strip(body) };
+  return withUnsub({ subject, html, text: strip(body) }, userId);
 }
 
 // 4 · Rappel de fin d'essai.
@@ -121,7 +153,7 @@ export function buildTrialReminderEmail(name: string, daysLeft: number) {
 export function buildReceiptEmail(name: string, amountFcfa: number, reference: string, expiresAt: Date) {
   const subject = `Reçu GlowScan — abonnement activé ✅`;
   const body = `
-    <p style="font-size:14px;color:#475569;margin:0 0 12px">Merci Dr ${name}, votre abonnement GlowScan DERM est actif.</p>
+    <p style="font-size:14px;color:#475569;margin:0 0 12px">Merci ${name}, votre abonnement GlowScan est actif.</p>
     <div style="background:#F1F5F9;border:1px solid #E2E8F0;border-radius:12px;padding:14px;margin:0 0 12px;font-size:13px;color:#0F172A">
       <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="color:#64748B">Montant</span><strong>${amountFcfa.toLocaleString("fr-FR")} FCFA</strong></div>
       <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="color:#64748B">Référence</span><strong>${reference}</strong></div>
@@ -132,7 +164,7 @@ export function buildReceiptEmail(name: string, amountFcfa: number, reference: s
 }
 
 // 6 · Digest mensuel.
-export function buildDigestEmail(name: string, stats: { patients: number; analyses: number; onlineConsults?: number; revenue?: number }, monthLabel: string) {
+export function buildDigestEmail(name: string, stats: { patients: number; analyses: number; onlineConsults?: number; revenue?: number }, monthLabel: string, userId?: string) {
   const subject = `Votre activité GlowScan — ${monthLabel}`;
   const row = (label: string, val: string) => `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #E2E8F0;font-size:14px"><span style="color:#64748B">${label}</span><strong style="color:#0F172A">${val}</strong></div>`;
   const body = `
@@ -144,7 +176,7 @@ export function buildDigestEmail(name: string, stats: { patients: number; analys
       ${stats.revenue != null ? row("Revenus en ligne", `${stats.revenue.toLocaleString("fr-FR")} FCFA`) : ""}
     </div>`;
   const html = wrap(`Votre mois en un coup d'œil`, body, { label: "Voir mes statistiques", url: `${APP_URL}/derm/statistiques` });
-  return { subject, html, text: strip(body) };
+  return withUnsub({ subject, html, text: strip(body) }, userId);
 }
 
 // 7 · Notification confrère (fallback email pour ceux sans push).
@@ -157,13 +189,13 @@ export function buildPeerNotifEmail(name: string, title: string, message: string
   return { subject, html, text: strip(body) };
 }
 
-// 8 · Ré-engagement (inactivité).
-export function buildReengageEmail(name: string, daysInactive: number) {
+// 8 · Ré-engagement (inactivité) — marketing → avec désabonnement.
+export function buildReengageEmail(name: string, daysInactive: number, userId?: string) {
   const subject = `On ne vous a pas vu depuis ${daysInactive} jours, Dr ${name}`;
   const body = `
     <p style="font-size:14px;color:#475569;margin:0 0 12px">Vos patients continuent de faire leurs analyses sur GlowScan. Reconnectez-vous pour ne rien manquer — nouveaux patients, avis de confrères, suivis à relancer.</p>`;
   const html = wrap("Vos patients vous attendent", body, { label: "Revenir sur GlowScan", url: `${APP_URL}/derm/dashboard` });
-  return { subject, html, text: strip(body) };
+  return withUnsub({ subject, html, text: strip(body) }, userId);
 }
 
 // 9 · Copie email du rapport de consultation.

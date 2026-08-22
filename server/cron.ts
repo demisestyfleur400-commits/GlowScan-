@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { db } from "./db";
 import { sql } from "drizzle-orm";
 import { sendWhatsAppText, buildFollowUpReminderMessage } from "./whatsapp";
-import { sendEmail, buildTrialReminderEmail, buildDigestEmail, buildReengageEmail } from "./email";
+import { sendEmail, buildTrialReminderEmail, buildDigestEmail, buildReengageEmail, buildB2CReengageEmail } from "./email";
 
 const fn = (s: string) => (s || "").split(" ")[0];
 
@@ -34,30 +34,57 @@ async function sendTrialReminders() {
 async function sendReengagement() {
   try {
     const r: any = await db.execute(sql`
-      SELECT u."email", u."first_name", p."full_name"
+      SELECT u."id", u."email", u."first_name", p."full_name"
       FROM "pro_accounts" p JOIN "users" u ON u."id" = p."user_id"
       WHERE u."last_login" IS NOT NULL
         AND u."last_login" < NOW() - INTERVAL '15 days'
-        AND u."last_login" > NOW() - INTERVAL '16 days'`);
+        AND u."last_login" > NOW() - INTERVAL '16 days'
+        AND COALESCE(u."email_opt_out", FALSE) = FALSE`);
     const rows = (r?.rows ?? r ?? []) as any[];
     let sent = 0;
     for (const row of rows) {
       if (!row.email || String(row.email).endsWith("@phone.glowscan.cm")) continue;
-      const e = buildReengageEmail(fn(row.full_name || row.first_name), 15);
+      const e = buildReengageEmail(fn(row.full_name || row.first_name), 15, row.id);
       const out = await sendEmail(row.email, e.subject, e.html, e.text);
       if (out.ok) sent++;
     }
-    log(`✅ Ré-engagement : ${sent} envoyés`);
+    log(`✅ Ré-engagement dermato : ${sent} envoyés`);
   } catch (err) { log(`❌ Erreur ré-engagement : ${err instanceof Error ? err.message : String(err)}`); }
+}
+
+// B2C · Ré-engagement patients inactifs (~15j). Plafonné (délivrabilité + volume).
+// Exclut les dermatos (pro_accounts), les téléphones, et les désabonnés.
+async function sendB2CReengagement() {
+  try {
+    const r: any = await db.execute(sql`
+      SELECT u."id", u."email", u."first_name"
+      FROM "users" u
+      WHERE u."last_login" IS NOT NULL
+        AND u."last_login" < NOW() - INTERVAL '15 days'
+        AND u."last_login" > NOW() - INTERVAL '16 days'
+        AND u."email" IS NOT NULL AND u."email" NOT LIKE '%@phone.glowscan.cm'
+        AND COALESCE(u."email_opt_out", FALSE) = FALSE
+        AND NOT EXISTS (SELECT 1 FROM "pro_accounts" p WHERE p."user_id" = u."id")
+      LIMIT 60`);
+    const rows = (r?.rows ?? r ?? []) as any[];
+    let sent = 0;
+    for (const row of rows) {
+      const e = buildB2CReengageEmail(fn(row.first_name), row.id);
+      const out = await sendEmail(row.email, e.subject, e.html, e.text);
+      if (out.ok) sent++;
+    }
+    log(`✅ Ré-engagement B2C : ${sent}/${rows.length} envoyés`);
+  } catch (err) { log(`❌ Erreur ré-engagement B2C : ${err instanceof Error ? err.message : String(err)}`); }
 }
 
 // 6 · Digest mensuel d'activité. Le 1er du mois.
 async function sendMonthlyDigest() {
   try {
     const accs: any = await db.execute(sql`
-      SELECT p."id", p."full_name", u."email", u."first_name"
+      SELECT p."id", p."full_name", u."id" AS uid, u."email", u."first_name"
       FROM "pro_accounts" p JOIN "users" u ON u."id" = p."user_id"
-      WHERE u."email" IS NOT NULL AND u."email" NOT LIKE '%@phone.glowscan.cm'`);
+      WHERE u."email" IS NOT NULL AND u."email" NOT LIKE '%@phone.glowscan.cm'
+        AND COALESCE(u."email_opt_out", FALSE) = FALSE`);
     const rows = (accs?.rows ?? accs ?? []) as any[];
     const now = new Date();
     const monthLabel = new Date(now.getFullYear(), now.getMonth() - 1, 1).toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
@@ -72,7 +99,7 @@ async function sendMonthlyDigest() {
           AND s."created_at" < date_trunc('month', NOW())`);
       const analyses = (ac?.rows ?? ac ?? [])[0]?.n || 0;
       if (patients === 0 && analyses === 0) continue; // pas de digest vide
-      const e = buildDigestEmail(fn(row.full_name || row.first_name), { patients, analyses }, monthLabel);
+      const e = buildDigestEmail(fn(row.full_name || row.first_name), { patients, analyses }, monthLabel, row.uid);
       const out = await sendEmail(row.email, e.subject, e.html, e.text);
       if (out.ok) sent++;
     }
@@ -375,7 +402,8 @@ export function startCronJobs() {
 
   // ✅ Emails DERM automatiques
   cron.schedule("0 8 * * *", sendTrialReminders, { timezone: "Africa/Douala" });   // fin d'essai J-3/J-1
-  cron.schedule("30 10 * * *", sendReengagement, { timezone: "Africa/Douala" });   // inactifs ~15j
+  cron.schedule("30 10 * * *", sendReengagement, { timezone: "Africa/Douala" });   // dermatos inactifs ~15j
+  cron.schedule("0 11 * * *", sendB2CReengagement, { timezone: "Africa/Douala" });  // patients B2C inactifs ~15j (plafonné 60/j)
   cron.schedule("0 9 1 * *", sendMonthlyDigest, { timezone: "Africa/Douala" });    // digest le 1er du mois
   log("✅ Crons emails DERM actifs — essai (8h), ré-engagement (10h30), digest (1er du mois 9h)");
 }
