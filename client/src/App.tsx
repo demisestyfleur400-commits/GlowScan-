@@ -53,6 +53,7 @@ const ScanProduct = lazyWithRetry(() => import("@/pages/ScanProduct"));
 const ProductScanCamera = lazyWithRetry(() => import("@/pages/ProductScanCamera"));
 const Routine = lazyWithRetry(() => import("@/pages/Routine"));
 const AuthPage = lazyWithRetry(() => import("@/pages/AuthPage"));
+const MagicLink = lazyWithRetry(() => import("@/pages/MagicLink"));
 const Premium = lazyWithRetry(() => import("@/pages/Premium"));
 const Pro = lazyWithRetry(() => import("@/pages/Pro"));
 const ProInscription = lazyWithRetry(() => import("@/pages/pro/ProInscription"));
@@ -105,6 +106,7 @@ function Router() {
       <Route path="/product-scan-camera" component={ProductScanCamera} />
       <Route path="/routine" component={Routine} />
       <Route path="/auth" component={AuthPage} />
+      <Route path="/magic" component={MagicLink} />
       <Route path="/premium" component={Premium} />
       <Route path="/consultations" component={MesConsultations} />
       <Route path="/consultation/confirmee" component={ConsultationConfirmee} />

@@ -5,6 +5,7 @@ import { UpgradeModal } from "@/components/UpgradeModal";
 import { Navbar } from "@/components/Navbar";
 import { ResultCard } from "@/components/ResultCard";
 import { PrivacySettings } from "@/components/PrivacySettings";
+import { TwoFASettings } from "@/components/TwoFASettings";
 import {
   Loader2, Calendar, ChevronRight, Star, Gift, Trophy, Share2,
   ScanFace, Sparkles, Check, Copy, Bell, Flame, Target, Bot,
@@ -1392,6 +1393,9 @@ export default function Profile() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Sécurité — 2FA optionnelle */}
+        <TwoFASettings />
 
         {/* GDPR privacy settings */}
         <PrivacySettings />

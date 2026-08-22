@@ -7,7 +7,12 @@ import { storage } from "../../storage";
 import { users } from "@shared/models/auth";
 import { eq, or, sql } from "drizzle-orm";
 import twilio from "twilio";
-import { sendEmail, buildResetEmail, buildSecurityAlertEmail } from "../../email";
+import { sendEmail, buildResetEmail, buildSecurityAlertEmail, buildB2CWelcomeEmail, buildMagicLinkEmail } from "../../email";
+import { is2faEmailEnabled, issueEmailOtp, verifyEmailOtp, verifyBackupCode, generateAndStoreBackupCodes, countBackupCodes, maskEmail as maskEmailAddr, securityAlert } from "../../proRoutes";
+import crypto from "crypto";
+
+// Tokens de lien magique B2C (usage unique, 15 min).
+const b2cMagicTokens = new Map<string, { userId: string; expiresAt: number }>();
 
 // ── Rate limiter simple en mémoire ───────────────────────────────────────────
 // Map<ip, { count, resetAt }>
@@ -143,6 +148,12 @@ export function registerAuthRoutes(app: Express): void {
 
       console.log(`[register] ✅ Nouveau compte créé — id=${user.id} email=${emailLower}`);
 
+      // Email de bienvenue (best-effort, ne bloque pas l'inscription).
+      try {
+        const w = buildB2CWelcomeEmail(user.firstName || "");
+        sendEmail(emailLower, w.subject, w.html, w.text).catch(() => {});
+      } catch {}
+
       const previousSessionId = req.session?.id;
       req.session.userId = user.id;
       req.session.save(async (err: any) => {
@@ -189,6 +200,16 @@ export function registerAuthRoutes(app: Express): void {
         return res.status(401).json({ message: "Email ou mot de passe incorrect" });
       }
 
+      // 2FA OPTIONNELLE côté B2C : seulement si l'utilisateur l'a activée.
+      // (L'analyse anonyme reste totalement libre, sans compte ni 2FA.)
+      if (await is2faEmailEnabled(user.id)) {
+        (req.session as any).pending2faUserId = user.id;
+        const otp = await issueEmailOtp(user.id, user.email, user.firstName);
+        return req.session.save(() => {
+          res.json({ requires2fa: true, method: "email", emailSent: otp.ok, emailHint: maskEmailAddr(user.email), devFallback: otp.provider === "dev" });
+        });
+      }
+
       const previousSessionId = req.session?.id;
       req.session.userId = user.id;
       req.session.save(async (err: any) => {
@@ -211,6 +232,139 @@ export function registerAuthRoutes(app: Express): void {
       console.error("Login error:", error);
       res.status(500).json({ message: "Erreur lors de la connexion" });
     }
+  });
+
+  // ── 2FA email B2C (OPTIONNELLE) : vérification à la connexion ──
+  app.post("/api/auth/login/2fa", authLimiter, async (req: any, res) => {
+    try {
+      const pendingId = (req.session as any)?.pending2faUserId;
+      if (!pendingId) return res.status(440).json({ message: "Session de connexion expirée. Reconnecte-toi." });
+      const raw = String(req.body?.code || "");
+      const digits = raw.replace(/\D/g, "");
+      let ok = false;
+      if (digits.length === 6) {
+        const v = await verifyEmailOtp(pendingId, digits);
+        ok = v.ok;
+        if (!ok && v.reason === "locked") return res.status(429).json({ message: "Trop de tentatives — demande un nouveau code." });
+      }
+      if (!ok) ok = await verifyBackupCode(pendingId, raw);
+      if (!ok) return res.status(401).json({ message: "Code incorrect ou expiré." });
+
+      const [user] = await db.select().from(users).where(eq(users.id, pendingId));
+      if (!user) return res.status(401).json({ message: "Utilisateur introuvable" });
+      const previousSessionId = req.session?.id;
+      delete (req.session as any).pending2faUserId;
+      req.session.userId = user.id;
+      req.session.save(async (err: any) => {
+        if (err) return res.status(500).json({ message: "Erreur session" });
+        try { if (previousSessionId) await storage.linkAnonymousScansToUser(previousSessionId, user.id); } catch {}
+        res.json({ success: true, user: { id: user.id, email: user.email, firstName: user.firstName } });
+      });
+    } catch (err) {
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  app.post("/api/auth/login/2fa/resend", authLimiter, async (req: any, res) => {
+    try {
+      const pendingId = (req.session as any)?.pending2faUserId;
+      if (!pendingId) return res.status(440).json({ message: "Session expirée." });
+      const [user] = await db.select().from(users).where(eq(users.id, pendingId));
+      if (!user) return res.status(401).json({ message: "Introuvable" });
+      const otp = await issueEmailOtp(user.id, user.email, user.firstName);
+      res.json({ success: true, emailSent: otp.ok, emailHint: maskEmailAddr(user.email), devFallback: otp.provider === "dev" });
+    } catch { res.status(500).json({ message: "Erreur serveur" }); }
+  });
+
+  // Statut + activation/désactivation (utilisateur connecté)
+  app.get("/api/auth/2fa/status", async (req: any, res) => {
+    const userId = req.session?.userId;
+    if (!userId) return res.status(401).json({ message: "Non connecté" });
+    res.json({ enabled: await is2faEmailEnabled(userId), backupCodesRemaining: await countBackupCodes(userId) });
+  });
+
+  app.post("/api/auth/2fa/email/request", async (req: any, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) return res.status(401).json({ message: "Non connecté" });
+      const [user] = await db.select().from(users).where(eq(users.id, userId));
+      if (!user?.email || user.email.endsWith("@phone.glowscan.cm")) return res.status(400).json({ message: "Un email valide est requis pour la 2FA" });
+      const otp = await issueEmailOtp(user.id, user.email, user.firstName);
+      res.json({ success: true, emailSent: otp.ok, emailHint: maskEmailAddr(user.email), devFallback: otp.provider === "dev" });
+    } catch { res.status(500).json({ message: "Erreur serveur" }); }
+  });
+
+  app.post("/api/auth/2fa/email/confirm", async (req: any, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) return res.status(401).json({ message: "Non connecté" });
+      const code = String(req.body?.code || "").replace(/\D/g, "");
+      const v = await verifyEmailOtp(userId, code);
+      if (!v.ok) return res.status(v.reason === "locked" ? 429 : 401).json({ message: v.reason === "expired" ? "Code expiré" : "Code incorrect" });
+      await db.execute(sql`UPDATE "users" SET "twofa_email_enabled" = TRUE WHERE "id" = ${userId}`);
+      securityAlert(userId, "twofa_changed", "La vérification en 2 étapes a été activée sur votre compte GlowScan.");
+      let backupCodes: string[] = [];
+      try { if ((await countBackupCodes(userId)) === 0) backupCodes = await generateAndStoreBackupCodes(userId); } catch {}
+      res.json({ success: true, enabled: true, backupCodes });
+    } catch { res.status(500).json({ message: "Erreur serveur" }); }
+  });
+
+  app.post("/api/auth/2fa/email/disable", async (req: any, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) return res.status(401).json({ message: "Non connecté" });
+      const [user] = await db.select().from(users).where(eq(users.id, userId));
+      const password = String(req.body?.password || "");
+      if (!user?.passwordHash || !(await bcrypt.compare(password, user.passwordHash))) return res.status(401).json({ message: "Mot de passe incorrect" });
+      await db.execute(sql`UPDATE "users" SET "twofa_email_enabled" = FALSE, "twofa_code_hash" = NULL, "twofa_code_expires" = NULL, "twofa_attempts" = 0 WHERE "id" = ${userId}`);
+      securityAlert(userId, "twofa_changed", "La vérification en 2 étapes a été désactivée sur votre compte GlowScan.");
+      res.json({ success: true, enabled: false });
+    } catch { res.status(500).json({ message: "Erreur serveur" }); }
+  });
+
+  app.post("/api/auth/2fa/backup-codes/generate", async (req: any, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) return res.status(401).json({ message: "Non connecté" });
+      const codes = await generateAndStoreBackupCodes(userId);
+      res.json({ success: true, codes });
+    } catch { res.status(500).json({ message: "Erreur serveur" }); }
+  });
+
+  // Lien magique B2C (connexion sans mot de passe)
+  app.post("/api/auth/login/magic/request", authLimiter, async (req: any, res) => {
+    try {
+      const email = String(req.body?.email || "").toLowerCase().trim();
+      if (email.includes("@")) {
+        const [user] = await db.select().from(users).where(eq(users.email, email));
+        if (user) {
+          const token = crypto.randomBytes(24).toString("hex");
+          b2cMagicTokens.set(token, { userId: user.id, expiresAt: Date.now() + 15 * 60 * 1000 });
+          const base = (process.env.PUBLIC_BASE_URL || "https://glow-scan.com").replace(/\/$/, "");
+          const m = buildMagicLinkEmail(user.firstName || "", `${base}/magic?token=${token}`);
+          await sendEmail(email, m.subject, m.html, m.text);
+        }
+      }
+      res.json({ success: true, sent: true });
+    } catch { res.status(500).json({ message: "Erreur serveur" }); }
+  });
+
+  app.post("/api/auth/login/magic/consume", async (req: any, res) => {
+    try {
+      const token = String(req.body?.token || "");
+      const entry = b2cMagicTokens.get(token);
+      if (!entry || entry.expiresAt < Date.now()) { b2cMagicTokens.delete(token); return res.status(400).json({ message: "Lien invalide ou expiré." }); }
+      b2cMagicTokens.delete(token);
+      const [user] = await db.select().from(users).where(eq(users.id, entry.userId));
+      if (!user) return res.status(401).json({ message: "Introuvable" });
+      const previousSessionId = req.session?.id;
+      req.session.userId = user.id;
+      req.session.save(async (err: any) => {
+        if (err) return res.status(500).json({ message: "Erreur session" });
+        try { if (previousSessionId) await storage.linkAnonymousScansToUser(previousSessionId, user.id); } catch {}
+        res.json({ success: true, user: { id: user.id, email: user.email, firstName: user.firstName } });
+      });
+    } catch { res.status(500).json({ message: "Erreur serveur" }); }
   });
 
   // ── POST /api/auth/forgot-password ─────────────────────────────────────────

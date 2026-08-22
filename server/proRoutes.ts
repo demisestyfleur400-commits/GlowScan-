@@ -19,9 +19,9 @@ import crypto from "crypto";
 const OTP_TTL_MS = 10 * 60 * 1000;   // 10 min
 const OTP_MAX_ATTEMPTS = 5;
 
-function gen6(): string { return String(Math.floor(100000 + Math.random() * 900000)); }
+export function gen6(): string { return String(Math.floor(100000 + Math.random() * 900000)); }
 
-function maskEmail(email: string): string {
+export function maskEmail(email: string): string {
   const [u, d] = (email || "").split("@");
   if (!d) return email || "";
   const head = u.length <= 2 ? u[0] || "" : u.slice(0, 2);
@@ -29,7 +29,7 @@ function maskEmail(email: string): string {
 }
 
 // Lit le flag 2FA d'un user (colonne hors schéma Drizzle). Résilient.
-async function is2faEmailEnabled(userId: string): Promise<boolean> {
+export async function is2faEmailEnabled(userId: string): Promise<boolean> {
   try {
     const r: any = await db.execute(sql`SELECT "twofa_email_enabled" FROM "users" WHERE "id" = ${userId}`);
     return (r?.rows ?? r ?? [])[0]?.twofa_email_enabled === true;
@@ -47,7 +47,7 @@ const pendingEmailChanges = new Map<string, { newEmail: string; codeHash: string
 // Génère un code, le stocke haché + expiration, et l'envoie par email.
 // Si un code a été envoyé il y a moins de 45s, on NE régénère PAS (le code
 // précédent reste valide) → empêche le spam d'emails / l'email bombing.
-async function issueEmailOtp(userId: string, email: string, name?: string): Promise<{ ok: boolean; provider: string; error?: string; throttled?: boolean }> {
+export async function issueEmailOtp(userId: string, email: string, name?: string): Promise<{ ok: boolean; provider: string; error?: string; throttled?: boolean }> {
   const last = lastOtpSentAt.get(userId) || 0;
   if (Date.now() - last < OTP_SEND_COOLDOWN_MS) {
     return { ok: true, provider: "throttled", throttled: true };
@@ -74,7 +74,7 @@ function genBackupCode(): string {
 const normBackup = (s: string) => String(s || "").replace(/[^a-z0-9]/gi, "").toUpperCase();
 
 // Génère 8 nouveaux codes, stocke leurs hachés (invalide les anciens), renvoie le clair (à afficher une seule fois).
-async function generateAndStoreBackupCodes(userId: string): Promise<string[]> {
+export async function generateAndStoreBackupCodes(userId: string): Promise<string[]> {
   const plain = Array.from({ length: BACKUP_CODE_COUNT }, genBackupCode);
   const hashed = await Promise.all(plain.map((c) => bcrypt.hash(normBackup(c), 10)));
   const arr = hashed.map((h) => ({ h, used: false }));
@@ -83,7 +83,7 @@ async function generateAndStoreBackupCodes(userId: string): Promise<string[]> {
 }
 
 // Vérifie et CONSOMME un code de secours. True si un code non utilisé correspond.
-async function verifyBackupCode(userId: string, input: string): Promise<boolean> {
+export async function verifyBackupCode(userId: string, input: string): Promise<boolean> {
   const norm = normBackup(input);
   if (norm.length < 8) return false;
   let arr: any[] = [];
@@ -103,7 +103,7 @@ async function verifyBackupCode(userId: string, input: string): Promise<boolean>
   return false;
 }
 
-async function countBackupCodes(userId: string): Promise<number> {
+export async function countBackupCodes(userId: string): Promise<number> {
   try {
     const r: any = await db.execute(sql`SELECT "twofa_backup_codes" FROM "users" WHERE "id" = ${userId}`);
     const arr = (r?.rows ?? r ?? [])[0]?.twofa_backup_codes || [];
@@ -112,7 +112,7 @@ async function countBackupCodes(userId: string): Promise<number> {
 }
 
 // Vérifie un code OTP saisi. Gère expiration + limite de tentatives. Consomme le code si OK.
-async function verifyEmailOtp(userId: string, code: string): Promise<{ ok: boolean; reason?: "expired" | "locked" | "invalid" | "nocode" }> {
+export async function verifyEmailOtp(userId: string, code: string): Promise<{ ok: boolean; reason?: "expired" | "locked" | "invalid" | "nocode" }> {
   let row: any;
   try {
     const r: any = await db.execute(sql`SELECT "twofa_code_hash","twofa_code_expires","twofa_attempts" FROM "users" WHERE "id" = ${userId}`);
@@ -132,7 +132,7 @@ async function verifyEmailOtp(userId: string, code: string): Promise<{ ok: boole
 }
 
 // Alerte de sécurité par email (best-effort) : mot de passe / 2FA modifiés.
-async function securityAlert(userId: string, kind: "login" | "password_changed" | "twofa_changed", detail?: string) {
+export async function securityAlert(userId: string, kind: "login" | "password_changed" | "twofa_changed", detail?: string) {
   try {
     const [u] = await db.select().from(users).where(eq(users.id, userId));
     if (u?.email && !u.email.endsWith("@phone.glowscan.cm")) {

@@ -6,7 +6,7 @@ import { Eye, EyeOff, Mail, Lock, User, ArrowLeft, Phone, ShieldAlert, Sparkles,
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
-type Mode = "register" | "login" | "forgot" | "reset";
+type Mode = "register" | "login" | "forgot" | "reset" | "twofa";
 
 export default function AuthPage() {
   useSEO({
@@ -45,6 +45,10 @@ export default function AuthPage() {
   const [resetDone, setResetDone] = useState(false);
 
   // ── LOGIN ──────────────────────────────────────────────
+  // 2FA optionnelle
+  const [twofaCode, setTwofaCode] = useState("");
+  const [twofaHint, setTwofaHint] = useState("");
+
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
@@ -54,10 +58,18 @@ export default function AuthPage() {
       const emailToSend = isPhone
         ? `tel-${trimmed.replace(/\D/g, "")}@phone.glowscan.cm`
         : trimmed.toLowerCase();
-      await apiRequest("POST", "/api/auth/login", {
+      const res = await apiRequest("POST", "/api/auth/login", {
         email: emailToSend,
         password: loginPwd,
       });
+      const data = await res.json().catch(() => ({}));
+      if (data?.requires2fa) {
+        setTwofaHint(data.emailHint || emailToSend);
+        setTwofaCode("");
+        setMode("twofa");
+        toast({ title: "Code envoyé 📧", description: data.devFallback ? "Mode dev : voir les logs serveur." : `Entrez le code reçu sur ${data.emailHint || "votre email"}.` });
+        return;
+      }
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       setLocation("/");
     } catch (err: any) {
@@ -68,6 +80,31 @@ export default function AuthPage() {
       });
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleVerify2fa(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await apiRequest("POST", "/api/auth/login/2fa", { code: twofaCode });
+      await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      setLocation("/");
+    } catch (err: any) {
+      toast({ title: "Code incorrect", description: parseError(err) || "Réessaie ou renvoie un code.", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function requestMagicLink() {
+    const trimmed = loginEmail.trim();
+    if (!trimmed.includes("@")) { toast({ title: "Entre ton email d'abord", variant: "destructive" }); return; }
+    try {
+      await apiRequest("POST", "/api/auth/login/magic/request", { email: trimmed.toLowerCase() });
+      toast({ title: "Lien envoyé 📧", description: `Si un compte existe, un lien de connexion a été envoyé à ${trimmed} (15 min).` });
+    } catch (err: any) {
+      toast({ title: "Erreur", description: parseError(err), variant: "destructive" });
     }
   }
 
@@ -317,12 +354,48 @@ export default function AuthPage() {
               {loading ? "Connexion..." : "Se connecter"}
             </button>
 
+            <button type="button" onClick={requestMagicLink} data-testid="button-magic-link"
+              className="w-full text-center text-[12px] font-semibold" style={{ color: "#a78bfa" }}>
+              Se connecter par lien email (sans mot de passe)
+            </button>
+
             <p className="text-center text-xs font-medium pt-1" style={{ color: "#4a5a52" }}>
               Première visite ?{" "}
               <button type="button" onClick={() => setMode("register")} className="font-bold" style={{ color: "#a78bfa" }}>
                 Créer un profil gratuit
               </button>
             </p>
+          </motion.form>
+        )}
+
+        {/* ────── 2FA (optionnelle) ────── */}
+        {mode === "twofa" && (
+          <motion.form key="twofa" onSubmit={handleVerify2fa}
+            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.3 }}
+            className="flex-1 flex flex-col justify-center relative z-10 space-y-4 max-w-sm mx-auto w-full">
+            <div className="text-center mb-2">
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: "rgba(167,139,250,0.12)", border: "1px solid rgba(167,139,250,0.25)" }}>
+                <KeyRound className="w-7 h-7" style={{ color: "#a78bfa" }} />
+              </div>
+              <h1 className="text-2xl font-bold" style={{ color: "#1f2a26" }}>Vérification en 2 étapes</h1>
+              <p className="text-xs font-medium mt-1" style={{ color: "#4a5a52" }}>
+                Entrez le code envoyé à {twofaHint}
+              </p>
+            </div>
+            <input value={twofaCode} onChange={(e) => setTwofaCode(e.target.value.replace(/[^0-9a-zA-Z-]/g, "").toUpperCase())} maxLength={9} autoFocus
+              placeholder="000000" data-testid="input-2fa-code"
+              className="w-full py-4 text-center text-2xl font-bold tracking-widest outline-none"
+              style={{ background: "#f4f7f5", border: "1px solid #dbe5df", borderRadius: "14px", color: "#1f2a26" }} />
+            <p className="text-center text-[11px]" style={{ color: "#4a5a52" }}>Pas accès à votre email ? Entrez un <strong>code de secours</strong>.</p>
+            <button type="submit" disabled={loading || twofaCode.length < 6} data-testid="button-verify-2fa"
+              className="w-full py-4 text-sm font-bold transition-all active:scale-[0.98] disabled:opacity-50"
+              style={{ background: "#2f9e6e", borderRadius: "14px", color: "#fff" }}>
+              {loading ? "Vérification..." : "Vérifier"}
+            </button>
+            <div className="flex justify-between text-[12px] font-semibold">
+              <button type="button" onClick={() => setMode("login")} style={{ color: "#4a5a52" }}>← Retour</button>
+              <button type="button" onClick={async () => { try { await apiRequest("POST", "/api/auth/login/2fa/resend", {}); toast({ title: "Nouveau code envoyé" }); } catch {} }} style={{ color: "#a78bfa" }}>Renvoyer le code</button>
+            </div>
           </motion.form>
         )}
 

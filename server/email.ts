@@ -75,6 +75,38 @@ export function buildWelcomeEmail(name: string, publicProfileUrl?: string) {
   return { subject, html, text: strip(body) };
 }
 
+// B2C · Email de bienvenue patient (grand public).
+export function buildB2CWelcomeEmail(name: string) {
+  const subject = `Bienvenue sur GlowScan 👋`;
+  const body = `
+    <p style="font-size:14px;color:#475569;margin:0 0 12px">Bonjour ${name || ""}, votre compte GlowScan est prêt.</p>
+    <p style="font-size:14px;color:#475569;margin:0 0 12px">Analysez votre peau en une photo, suivez votre Glow Score, et si besoin, consultez un dermatologue certifié — directement depuis votre téléphone.</p>`;
+  const html = wrap("Bienvenue sur GlowScan", body, { label: "Faire mon analyse", url: `${APP_URL}/analyze` });
+  return { subject, html, text: strip(body) };
+}
+
+// B2C · Résultat d'analyse par email.
+export function buildB2CResultEmail(name: string, condition: string, score: number, url: string) {
+  const subject = `Votre analyse GlowScan — Glow Score ${score}/100`;
+  const body = `
+    <p style="font-size:14px;color:#475569;margin:0 0 12px">Bonjour ${name || ""}, votre analyse est prête.</p>
+    <div style="background:#F1F5F9;border:1px solid #E2E8F0;border-radius:12px;padding:14px;margin:0 0 12px;font-size:14px;color:#0F172A">
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="color:#64748B">Constat principal</span><strong>${condition || "—"}</strong></div>
+      <div style="display:flex;justify-content:space-between"><span style="color:#64748B">Glow Score</span><strong>${score}/100</strong></div>
+    </div>`;
+  const html = wrap("Votre analyse est prête", body, { label: "Voir mon résultat complet", url });
+  return { subject, html, text: strip(body) };
+}
+
+// B2C · Ré-engagement patient.
+export function buildB2CReengageEmail(name: string) {
+  const subject = `Reprenez votre suivi peau, ${name || ""}`.trim();
+  const body = `
+    <p style="font-size:14px;color:#475569;margin:0 0 12px">Votre peau évolue. Une nouvelle analyse en 30 secondes vous montre les changements et met à jour votre Glow Score.</p>`;
+  const html = wrap("Votre peau a peut-être changé", body, { label: "Refaire mon analyse", url: `${APP_URL}/analyze` });
+  return { subject, html, text: strip(body) };
+}
+
 // 4 · Rappel de fin d'essai.
 export function buildTrialReminderEmail(name: string, daysLeft: number) {
   const subject = daysLeft <= 1 ? `Votre essai GlowScan se termine demain` : `Il vous reste ${daysLeft} jours d'essai GlowScan`;
