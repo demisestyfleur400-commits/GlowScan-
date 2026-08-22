@@ -194,7 +194,7 @@ export default function ProInscription() {
           <form onSubmit={handleSubmit} noValidate style={{ display: "flex", flexDirection: "column" }}>
             <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: "-.02em", margin: "0 0 6px", color: C.ink }}>Commencez en 2 minutes</h1>
             <p style={{ fontSize: 13.5, color: C.body, margin: "0 0 5px", fontWeight: 600 }}>14 jours gratuits · Sans carte bancaire · 10 000 FCFA/mois ensuite</p>
-            <p style={{ ...microGray, textAlign: "left", marginBottom: 20 }}>Conçu pour fonctionner avec WhatsApp, Mobile Money et une connexion 3G. Sans paperasse.</p>
+            <p style={{ ...microGray, fontSize: 12, marginBottom: 20 }}>Conçu pour fonctionner avec WhatsApp, Mobile Money et une connexion 3G. Sans paperasse.</p>
 
             {/* Email */}
             <div style={{ marginBottom: 14 }}>

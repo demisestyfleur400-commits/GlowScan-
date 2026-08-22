@@ -226,6 +226,14 @@ export default function ProDashboard() {
         </motion.div>
       )}
 
+      {/* Badge vert "Profil certifié" quand 100% (brief étape 5) */}
+      {profileScore >= 100 && (
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 7, marginBottom: 14, padding: "7px 14px", borderRadius: 9999, background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.3)" }}>
+          <span style={{ width: 8, height: 8, borderRadius: "50%", background: DERM.green }} />
+          <span style={{ fontSize: 12, fontWeight: 800, color: "#047857" }}>✓ Profil certifié</span>
+        </div>
+      )}
+
       {/* ══ WELCOME WIDGET ══ */}
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: 16 }}>
         <div style={{
