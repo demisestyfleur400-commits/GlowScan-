@@ -235,12 +235,15 @@ export default function ProConnexion() {
                 Nous avons envoyé un code à 6 chiffres à <strong style={{ color: DS.textPrimary }}>{emailHint}</strong>.
               </p>
               <input
-                type="text" inputMode="numeric" autoComplete="one-time-code" maxLength={6} autoFocus
-                value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+                type="text" autoComplete="one-time-code" maxLength={9} autoFocus
+                value={code} onChange={(e) => setCode(e.target.value.replace(/[^0-9a-zA-Z-]/g, "").toUpperCase())}
                 placeholder="000000" data-testid="input-2fa-code"
                 style={{ width: "100%", padding: "13px 14px", borderRadius: 12, background: DS.bg, border: `1px solid ${DS.inputBorder}`,
-                  color: DS.textPrimary, fontSize: 24, fontWeight: 800, letterSpacing: 8, textAlign: "center", marginBottom: 16 }}
+                  color: DS.textPrimary, fontSize: 24, fontWeight: 800, letterSpacing: 6, textAlign: "center", marginBottom: 8 }}
               />
+              <p style={{ fontSize: 12, color: DS.textMuted, textAlign: "center", margin: "0 0 14px" }}>
+                Pas accès à votre email ? Entrez un de vos <strong style={{ color: DS.textBody }}>codes de secours</strong>.
+              </p>
               <button type="submit" disabled={loading || code.length < 6} data-testid="button-verify-2fa"
                 style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "13px 24px",
                   borderRadius: 9999, background: DS.violet, color: "#fff", fontWeight: 800, fontSize: 14, border: "none",

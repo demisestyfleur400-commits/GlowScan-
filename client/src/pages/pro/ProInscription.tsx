@@ -46,6 +46,8 @@ export default function ProInscription() {
   const [twofa, setTwofa] = useState(false);
   const [code, setCode] = useState("");
   const [emailHint, setEmailHint] = useState("");
+  const [backupCodes, setBackupCodes] = useState<string[]>([]);
+  const [codesSaved, setCodesSaved] = useState(false);
 
   // Force du mot de passe : longueur + variété de caractères
   const pwStrength = (() => {
@@ -99,6 +101,7 @@ export default function ProInscription() {
       // 2FA obligatoire : on vérifie l'email avant d'entrer dans l'app.
       if (data.requires2fa) {
         setEmailHint(data.emailHint || email);
+        setBackupCodes(Array.isArray(data.backupCodes) ? data.backupCodes : []);
         setTwofa(true);
         toast({
           title: "Vérifiez votre email 📧",
@@ -256,17 +259,43 @@ export default function ProInscription() {
               <p style={{ fontSize: 13, color: DS.textBody, margin: "0 0 18px" }}>
                 Un code à 6 chiffres a été envoyé à <strong style={{ color: DS.textPrimary }}>{emailHint}</strong>. Cette étape sécurise votre compte et sera demandée à chaque connexion.
               </p>
+
+              {backupCodes.length > 0 && (
+                <div style={{ background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: 12, padding: 14, marginBottom: 16 }}>
+                  <p style={{ fontSize: 12.5, fontWeight: 800, color: "#92400E", margin: "0 0 4px" }}>🔑 Vos codes de secours — notez-les MAINTENANT</p>
+                  <p style={{ fontSize: 11.5, color: "#92400E", margin: "0 0 10px" }}>
+                    Si un jour vous perdez l'accès à votre email, un de ces codes vous permet de vous connecter. Ils ne seront <strong>plus jamais affichés</strong>.
+                  </p>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, fontFamily: "monospace", marginBottom: 10 }}>
+                    {backupCodes.map((c, i) => (
+                      <div key={i} style={{ background: "#fff", border: "1px solid #FDE68A", borderRadius: 8, padding: "7px 8px", fontSize: 14, fontWeight: 700, letterSpacing: 1, textAlign: "center", color: "#0F172A" }}>{c}</div>
+                    ))}
+                  </div>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    <button type="button" onClick={() => { navigator.clipboard.writeText(backupCodes.join("\n")); toast({ title: "Codes copiés" }); }}
+                      style={{ fontSize: 12, fontWeight: 700, color: "#0369A1", background: "none", border: "none", cursor: "pointer" }} data-testid="button-copy-backup">
+                      Copier les 8 codes
+                    </button>
+                    <label style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#92400E", cursor: "pointer" }}>
+                      <input type="checkbox" checked={codesSaved} onChange={(e) => setCodesSaved(e.target.checked)} data-testid="checkbox-codes-saved" />
+                      Je les ai notés
+                    </label>
+                  </div>
+                </div>
+              )}
               <input type="text" inputMode="numeric" autoComplete="one-time-code" maxLength={6} autoFocus
                 value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
                 placeholder="000000" data-testid="input-signup-2fa"
                 style={{ width: "100%", padding: "13px 14px", borderRadius: 12, background: DS.bg, border: `1px solid ${DS.inputBorder}`,
                   color: DS.textPrimary, fontSize: 24, fontWeight: 800, letterSpacing: 8, textAlign: "center", marginBottom: 16 }} />
-              <button type="submit" disabled={loading || code.length < 6} data-testid="button-verify-signup-2fa"
+              {(() => { const dis = loading || code.length < 6 || (backupCodes.length > 0 && !codesSaved); return (
+              <button type="submit" disabled={dis} data-testid="button-verify-signup-2fa"
                 style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "13px 24px",
                   borderRadius: 9999, background: DS.violet, color: "#fff", fontWeight: 800, fontSize: 14, border: "none",
-                  cursor: loading || code.length < 6 ? "not-allowed" : "pointer", opacity: loading || code.length < 6 ? 0.6 : 1, fontFamily: DS.font }}>
+                  cursor: dis ? "not-allowed" : "pointer", opacity: dis ? 0.6 : 1, fontFamily: DS.font }}>
                 {loading ? <Loader2 style={{ width: 16, height: 16, animation: "spin 1s linear infinite" }} /> : <>Vérifier et continuer <ArrowRight style={{ width: 16, height: 16 }} /></>}
               </button>
+              ); })()}
               <div style={{ textAlign: "center", marginTop: 16 }}>
                 <button type="button" onClick={resend2fa}
                   style={{ background: "none", border: "none", fontSize: 13, color: DS.violetMid, fontWeight: 700, cursor: "pointer" }} data-testid="button-resend-signup-2fa">

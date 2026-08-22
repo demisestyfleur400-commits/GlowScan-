@@ -683,13 +683,28 @@ function SecuritySection() {
   const [pwd, setPwd] = useState("");
   const [busy, setBusy] = useState(false);
   const [hint, setHint] = useState("");
+  const [remaining, setRemaining] = useState<number | null>(null);
+  const [newCodes, setNewCodes] = useState<string[]>([]);
 
-  useEffect(() => {
+  const refreshStatus = () => {
     fetch("/api/pro/2fa/status", { credentials: "include" })
       .then((r) => r.ok ? r.json() : { enabled: false })
-      .then((d) => setEnabled(!!d.enabled))
+      .then((d) => { setEnabled(!!d.enabled); setRemaining(typeof d.backupCodesRemaining === "number" ? d.backupCodesRemaining : null); })
       .catch(() => setEnabled(false));
-  }, []);
+  };
+  useEffect(() => { refreshStatus(); }, []);
+
+  const regenerateCodes = async () => {
+    if (!window.confirm("Générer de nouveaux codes ? Les anciens ne fonctionneront plus.")) return;
+    setBusy(true);
+    try {
+      const r = await fetch("/api/pro/2fa/backup-codes/generate", { method: "POST", credentials: "include" });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.message);
+      setNewCodes(d.codes || []); refreshStatus();
+    } catch (e: any) { toast({ title: "Erreur", description: e?.message, variant: "destructive" }); }
+    finally { setBusy(false); }
+  };
 
   const requestCode = async () => {
     setBusy(true);
@@ -710,6 +725,8 @@ function SecuritySection() {
       const d = await r.json();
       if (!r.ok) throw new Error(d.message);
       setEnabled(true); setStep("idle"); setCode("");
+      if (Array.isArray(d.backupCodes) && d.backupCodes.length) setNewCodes(d.backupCodes);
+      refreshStatus();
       toast({ title: "2FA activée ✅", description: "Un code vous sera demandé à chaque connexion." });
     } catch (e: any) { toast({ title: "Code incorrect", description: e?.message, variant: "destructive" }); }
     finally { setBusy(false); }
@@ -787,6 +804,35 @@ function SecuritySection() {
                 </button>
                 <button onClick={() => { setStep("idle"); setPwd(""); }} className="px-4 py-2.5 rounded-full text-sm font-extrabold" style={{ background: SOFT_BG, border: `1px solid ${SOFT_BORDER}`, color: DS.body }}>Annuler</button>
               </div>
+            </div>
+          )}
+
+          {/* Codes de secours affichés une fois (après activation / régénération) */}
+          {newCodes.length > 0 && (
+            <div className="mt-3 rounded-xl p-3" style={{ background: "#FFFBEB", border: "1px solid #FDE68A" }}>
+              <p className="text-[12px] font-extrabold mb-1" style={{ color: "#92400E" }}>🔑 Notez ces codes — ils ne seront plus affichés</p>
+              <div className="grid grid-cols-2 gap-1.5 mb-2" style={{ fontFamily: "monospace" }}>
+                {newCodes.map((c, i) => (
+                  <div key={i} className="text-center text-sm font-bold rounded" style={{ background: "#fff", border: "1px solid #FDE68A", padding: "6px 4px", letterSpacing: 1, color: INK }}>{c}</div>
+                ))}
+              </div>
+              <div className="flex items-center gap-3">
+                <button onClick={() => { navigator.clipboard.writeText(newCodes.join("\n")); toast({ title: "Codes copiés" }); }}
+                  className="text-[12px] font-extrabold" style={{ color: BLUE }}>Copier</button>
+                <button onClick={() => setNewCodes([])} className="text-[12px] font-extrabold" style={{ color: "#92400E" }}>J'ai noté, masquer</button>
+              </div>
+            </div>
+          )}
+
+          {/* Statut des codes de secours + régénération */}
+          {enabled && newCodes.length === 0 && (
+            <div className="mt-3 flex items-center justify-between">
+              <span className="text-[11px]" style={{ color: remaining !== null && remaining <= 2 ? "#dc2626" : DS.muted }}>
+                Codes de secours restants : <strong>{remaining ?? "…"}</strong>
+              </span>
+              <button onClick={regenerateCodes} disabled={busy} className="text-[11px] font-extrabold" style={{ color: BLUE }} data-testid="button-regen-backup">
+                Régénérer
+              </button>
             </div>
           )}
         </>

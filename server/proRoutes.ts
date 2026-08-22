@@ -60,6 +60,55 @@ async function issueEmailOtp(userId: string, email: string, name?: string): Prom
   return { ok: r.ok, provider: r.provider, error: r.error };
 }
 
+// ── Codes de secours 2FA (usage unique) ────────────────────────────────────
+const BACKUP_CODE_COUNT = 8;
+// Alphabet sans caractères ambigus (pas de 0/O/1/I). Format XXXX-XXXX.
+function genBackupCode(): string {
+  const A = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let s = "";
+  for (let i = 0; i < 8; i++) { if (i === 4) s += "-"; s += A[crypto.randomInt(A.length)]; }
+  return s;
+}
+const normBackup = (s: string) => String(s || "").replace(/[^a-z0-9]/gi, "").toUpperCase();
+
+// Génère 8 nouveaux codes, stocke leurs hachés (invalide les anciens), renvoie le clair (à afficher une seule fois).
+async function generateAndStoreBackupCodes(userId: string): Promise<string[]> {
+  const plain = Array.from({ length: BACKUP_CODE_COUNT }, genBackupCode);
+  const hashed = await Promise.all(plain.map((c) => bcrypt.hash(normBackup(c), 10)));
+  const arr = hashed.map((h) => ({ h, used: false }));
+  await db.execute(sql`UPDATE "users" SET "twofa_backup_codes" = ${JSON.stringify(arr)}::jsonb WHERE "id" = ${userId}`);
+  return plain;
+}
+
+// Vérifie et CONSOMME un code de secours. True si un code non utilisé correspond.
+async function verifyBackupCode(userId: string, input: string): Promise<boolean> {
+  const norm = normBackup(input);
+  if (norm.length < 8) return false;
+  let arr: any[] = [];
+  try {
+    const r: any = await db.execute(sql`SELECT "twofa_backup_codes" FROM "users" WHERE "id" = ${userId}`);
+    arr = (r?.rows ?? r ?? [])[0]?.twofa_backup_codes || [];
+  } catch { return false; }
+  if (!Array.isArray(arr)) return false;
+  for (const entry of arr) {
+    if (entry?.used) continue;
+    if (await bcrypt.compare(norm, entry.h)) {
+      entry.used = true;
+      await db.execute(sql`UPDATE "users" SET "twofa_backup_codes" = ${JSON.stringify(arr)}::jsonb WHERE "id" = ${userId}`).catch(() => {});
+      return true;
+    }
+  }
+  return false;
+}
+
+async function countBackupCodes(userId: string): Promise<number> {
+  try {
+    const r: any = await db.execute(sql`SELECT "twofa_backup_codes" FROM "users" WHERE "id" = ${userId}`);
+    const arr = (r?.rows ?? r ?? [])[0]?.twofa_backup_codes || [];
+    return Array.isArray(arr) ? arr.filter((e: any) => !e?.used).length : 0;
+  } catch { return 0; }
+}
+
 // Vérifie un code OTP saisi. Gère expiration + limite de tentatives. Consomme le code si OK.
 async function verifyEmailOtp(userId: string, code: string): Promise<{ ok: boolean; reason?: "expired" | "locked" | "invalid" | "nocode" }> {
   let row: any;
@@ -471,6 +520,9 @@ export function registerProRoutes(app: Express) {
       // suite. On active la 2FA email et on envoie un code — ce qui VÉRIFIE en même
       // temps que l'email est réel (sinon le dermato serait enfermé dehors à vie).
       await db.execute(sql`UPDATE "users" SET "twofa_email_enabled" = TRUE WHERE "id" = ${userId}`).catch(() => {});
+      // Codes de secours : générés à l'inscription, affichés UNE fois (anti-lockout).
+      let backupCodes: string[] = [];
+      try { backupCodes = await generateAndStoreBackupCodes(userId); } catch {}
       (req.session as any).pending2faUserId = userId;
       const otp = await issueEmailOtp(userId, emailLower, data.fullName);
       // Email de bienvenue (best-effort, séparé du code 2FA).
@@ -493,6 +545,7 @@ export function registerProRoutes(app: Express) {
           emailSent: otp.ok,
           emailHint: maskEmail(emailLower),
           devFallback: otp.provider === "dev",
+          backupCodes,
           account: acc,
         });
       });
@@ -575,17 +628,19 @@ export function registerProRoutes(app: Express) {
     try {
       const pendingId = (req.session as any)?.pending2faUserId;
       if (!pendingId) return res.status(440).json({ message: "Session de connexion expirée. Reconnecte-toi." });
-      const code = String(req.body?.code || "").replace(/\D/g, "");
-      if (code.length < 6) return res.status(400).json({ message: "Code à 6 chiffres requis" });
+      const raw = String(req.body?.code || "");
+      const digits = raw.replace(/\D/g, "");
 
-      const v = await verifyEmailOtp(pendingId, code);
-      if (!v.ok) {
-        const msg = v.reason === "expired" ? "Code expiré — demande un nouveau code."
-          : v.reason === "locked" ? "Trop de tentatives — demande un nouveau code."
-          : v.reason === "nocode" ? "Aucun code en attente — demande un nouveau code."
-          : "Code incorrect.";
-        const status = v.reason === "locked" ? 429 : 401;
-        return res.status(status).json({ message: msg });
+      // Accepte le code email (6 chiffres) OU un code de secours (XXXX-XXXX).
+      let ok = false;
+      if (digits.length === 6) {
+        const v = await verifyEmailOtp(pendingId, digits);
+        ok = v.ok;
+        if (!ok && v.reason === "locked") return res.status(429).json({ message: "Trop de tentatives — demande un nouveau code." });
+      }
+      if (!ok) ok = await verifyBackupCode(pendingId, raw); // fallback code de secours
+      if (!ok) {
+        return res.status(401).json({ message: "Code incorrect ou expiré. Utilisez le dernier code email, un code de secours, ou demandez-en un nouveau." });
       }
 
       // Code OK → on ouvre la session
@@ -666,11 +721,24 @@ export function registerProRoutes(app: Express) {
   });
 
   // ── Activation/désactivation de la 2FA email (utilisateur connecté) ──
-  // GET statut
+  // GET statut (+ nb de codes de secours restants)
   app.get("/api/pro/2fa/status", async (req: any, res) => {
     const userId = req.session?.userId;
     if (!userId) return res.status(401).json({ message: "Non connecté" });
-    res.json({ enabled: await is2faEmailEnabled(userId) });
+    res.json({ enabled: await is2faEmailEnabled(userId), backupCodesRemaining: await countBackupCodes(userId) });
+  });
+
+  // POST — (re)génère les codes de secours (invalide les anciens). Renvoie le clair une fois.
+  app.post("/api/pro/2fa/backup-codes/generate", async (req: any, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) return res.status(401).json({ message: "Non connecté" });
+      const codes = await generateAndStoreBackupCodes(userId);
+      securityAlert(userId, "twofa_changed", "De nouveaux codes de secours ont été générés (les anciens ne fonctionnent plus).");
+      res.json({ success: true, codes });
+    } catch (err) {
+      res.status(500).json({ message: "Erreur serveur" });
+    }
   });
 
   // POST request — envoie un code de vérification à l'email du compte pour ACTIVER
@@ -697,7 +765,10 @@ export function registerProRoutes(app: Express) {
       if (!v.ok) return res.status(v.reason === "locked" ? 429 : 401).json({ message: v.reason === "expired" ? "Code expiré" : "Code incorrect" });
       await db.execute(sql`UPDATE "users" SET "twofa_email_enabled" = TRUE WHERE "id" = ${userId}`);
       securityAlert(userId, "twofa_changed", "La vérification en 2 étapes par email a été activée.");
-      res.json({ success: true, enabled: true });
+      // Génère des codes de secours si le compte n'en a aucun d'actif.
+      let backupCodes: string[] = [];
+      try { if ((await countBackupCodes(userId)) === 0) backupCodes = await generateAndStoreBackupCodes(userId); } catch {}
+      res.json({ success: true, enabled: true, backupCodes });
     } catch (err) {
       res.status(500).json({ message: "Erreur serveur" });
     }
