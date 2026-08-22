@@ -41,6 +41,8 @@ const OTP_SEND_COOLDOWN_MS = 45 * 1000;
 const lastOtpSentAt = new Map<string, number>();
 // Tokens de lien magique (usage unique, 15 min). En mémoire (comme resetTokens).
 const magicTokens = new Map<string, { userId: string; expiresAt: number }>();
+// Changements d'email en attente de confirmation (code envoyé au NOUVEL email).
+const pendingEmailChanges = new Map<string, { newEmail: string; codeHash: string; expiresAt: number }>();
 
 // Génère un code, le stocke haché + expiration, et l'envoie par email.
 // Si un code a été envoyé il y a moins de 45s, on NE régénère PAS (le code
@@ -787,6 +789,60 @@ export function registerProRoutes(app: Express) {
       await db.execute(sql`UPDATE "users" SET "twofa_email_enabled" = FALSE, "twofa_code_hash" = NULL, "twofa_code_expires" = NULL, "twofa_attempts" = 0 WHERE "id" = ${userId}`);
       securityAlert(userId, "twofa_changed", "La vérification en 2 étapes par email a été désactivée.");
       res.json({ success: true, enabled: false });
+    } catch (err) {
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // ── Changement d'email (utilisateur connecté) — vérifie le NOUVEL email ──
+  app.post("/api/pro/account/email/request", async (req: any, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) return res.status(401).json({ message: "Non connecté" });
+      const newEmail = String(req.body?.newEmail || "").toLowerCase().trim();
+      if (!newEmail.includes("@") || newEmail.length < 5) return res.status(400).json({ message: "Email invalide" });
+      const [self] = await db.select().from(users).where(eq(users.id, userId));
+      if (self?.email === newEmail) return res.status(400).json({ message: "C'est déjà votre email actuel" });
+      // Email déjà pris par un autre compte ?
+      const [taken] = await db.select().from(users).where(eq(users.email, newEmail));
+      if (taken && taken.id !== userId) return res.status(409).json({ message: "Cet email est déjà utilisé" });
+
+      const code = gen6();
+      const codeHash = await bcrypt.hash(code, 10);
+      pendingEmailChanges.set(userId, { newEmail, codeHash, expiresAt: Date.now() + 15 * 60 * 1000 });
+      // On envoie le code au NOUVEL email (preuve qu'il le contrôle).
+      const { subject, html, text } = buildOtpEmail(code, (self as any)?.firstName);
+      const r = await sendEmail(newEmail, subject, html, text);
+      res.json({ success: true, emailSent: r.ok, emailHint: maskEmail(newEmail), devFallback: r.provider === "dev" });
+    } catch (err) {
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  app.post("/api/pro/account/email/confirm", async (req: any, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) return res.status(401).json({ message: "Non connecté" });
+      const code = String(req.body?.code || "").replace(/\D/g, "");
+      const entry = pendingEmailChanges.get(userId);
+      if (!entry) return res.status(400).json({ message: "Aucun changement en attente. Recommencez." });
+      if (entry.expiresAt < Date.now()) { pendingEmailChanges.delete(userId); return res.status(400).json({ message: "Code expiré. Recommencez." }); }
+      if (!(await bcrypt.compare(code, entry.codeHash))) return res.status(401).json({ message: "Code incorrect" });
+
+      const [self] = await db.select().from(users).where(eq(users.id, userId));
+      const oldEmail = self?.email || null;
+      // Dernière vérif anti-collision (course).
+      const [taken] = await db.select().from(users).where(eq(users.email, entry.newEmail));
+      if (taken && taken.id !== userId) { pendingEmailChanges.delete(userId); return res.status(409).json({ message: "Cet email vient d'être pris" }); }
+
+      await db.update(users).set({ email: entry.newEmail }).where(eq(users.id, userId));
+      pendingEmailChanges.delete(userId);
+      // Alerte de sécurité à l'ANCIEN email (au cas où ce n'est pas le titulaire).
+      if (oldEmail && !oldEmail.endsWith("@phone.glowscan.cm")) {
+        const a = buildSecurityAlertEmail("password_changed", (self as any)?.firstName, `Votre email de connexion a été changé pour ${maskEmail(entry.newEmail)}. Si ce n'est pas vous, contactez le support immédiatement.`);
+        sendEmail(oldEmail, `GlowScan — Votre email a été modifié`, a.html, a.text).catch(() => {});
+      }
+      res.json({ success: true, email: entry.newEmail });
     } catch (err) {
       res.status(500).json({ message: "Erreur serveur" });
     }

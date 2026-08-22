@@ -5,7 +5,7 @@ import bcrypt from "bcryptjs";
 import { db } from "../../db";
 import { storage } from "../../storage";
 import { users } from "@shared/models/auth";
-import { eq, or } from "drizzle-orm";
+import { eq, or, sql } from "drizzle-orm";
 import twilio from "twilio";
 import { sendEmail, buildResetEmail, buildSecurityAlertEmail } from "../../email";
 
@@ -305,6 +305,13 @@ export function registerAuthRoutes(app: Express): void {
       const passwordHash = await bcrypt.hash(newPassword, 10);
       await db.update(users).set({ passwordHash }).where(eq(users.id, entry.userId));
       resetTokens.delete(code); // usage unique
+
+      // 🔒 Invalider TOUTES les sessions de l'utilisateur : quiconque avait un accès
+      // (session volée, appareil oublié) est déconnecté. connect-pg-simple stocke le
+      // userId dans sessions.sess->>'userId'.
+      try {
+        await db.execute(sql`DELETE FROM "sessions" WHERE "sess"->>'userId' = ${entry.userId}`);
+      } catch (e) { console.warn("[reset-pwd] purge sessions:", (e as any)?.message); }
 
       // 🔔 Exploiter l'email : alerte de sécurité "mot de passe changé" (best-effort).
       try {

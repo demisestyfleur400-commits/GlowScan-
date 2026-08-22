@@ -516,7 +516,7 @@ export default function ProCabinet() {
           )}
         </ProCard>
 
-        <SecuritySection />
+        <SecuritySection currentEmail={(accData?.user as any)?.email} />
 
         <LogoutButton />
       </div>
@@ -675,8 +675,39 @@ function IdLine({ label, value, onCopy }: { label: string; value: string; onCopy
 }
 
 // ── Sécurité : 2FA par email (activation/désactivation) ────────────────────
-function SecuritySection() {
+function SecuritySection({ currentEmail }: { currentEmail?: string }) {
   const { toast } = useToast();
+  // Changement d'email
+  const [emailStep, setEmailStep] = useState<"idle" | "confirm">("idle");
+  const [newEmail, setNewEmail] = useState("");
+  const [emailCode, setEmailCode] = useState("");
+  const [emailBusy, setEmailBusy] = useState(false);
+  const [changedEmail, setChangedEmail] = useState<string | null>(null);
+
+  const requestEmailChange = async () => {
+    if (!newEmail.includes("@")) { toast({ title: "Email invalide", variant: "destructive" }); return; }
+    setEmailBusy(true);
+    try {
+      const r = await fetch("/api/pro/account/email/request", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify({ newEmail }) });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.message);
+      setEmailStep("confirm");
+      toast({ title: "Code envoyé au nouvel email 📧", description: d.devFallback ? "Mode dev : voir les logs." : `Vérifiez ${d.emailHint}.` });
+    } catch (e: any) { toast({ title: "Erreur", description: e?.message, variant: "destructive" }); }
+    finally { setEmailBusy(false); }
+  };
+  const confirmEmailChange = async () => {
+    setEmailBusy(true);
+    try {
+      const r = await fetch("/api/pro/account/email/confirm", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify({ code: emailCode }) });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.message);
+      setChangedEmail(d.email); setEmailStep("idle"); setNewEmail(""); setEmailCode("");
+      toast({ title: "Email modifié ✅", description: `Votre email de connexion est maintenant ${d.email}.` });
+    } catch (e: any) { toast({ title: "Code incorrect", description: e?.message, variant: "destructive" }); }
+    finally { setEmailBusy(false); }
+  };
+
   const [enabled, setEnabled] = useState<boolean | null>(null);
   const [step, setStep] = useState<"idle" | "confirm" | "disable">("idle");
   const [code, setCode] = useState("");
@@ -837,6 +868,36 @@ function SecuritySection() {
           )}
         </>
       )}
+
+      {/* ── Changer d'email de connexion ── */}
+      <div className="mt-5 pt-4" style={{ borderTop: `1px solid ${DS.border}` }}>
+        <p className="text-sm font-extrabold mb-1" style={{ color: INK }}>Email de connexion</p>
+        <p className="text-xs mb-3" style={{ color: DS.muted }}>
+          Actuel : <strong style={{ color: INK }}>{changedEmail || currentEmail || "—"}</strong>
+          {enabled ? " · c'est aussi votre email de vérification 2FA." : ""}
+        </p>
+        {emailStep === "idle" ? (
+          <div className="flex gap-2">
+            <input type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder="nouvel@email.com" data-testid="input-new-email"
+              className="flex-1 px-3 py-2.5 rounded-xl text-sm outline-none" style={{ background: SOFT_BG, border: `1px solid ${SOFT_BORDER}`, color: INK }} />
+            <button onClick={requestEmailChange} disabled={emailBusy || !newEmail} className="px-4 py-2.5 rounded-full text-white text-sm font-extrabold disabled:opacity-50" style={{ background: BLUE }} data-testid="button-request-email-change">
+              {emailBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : "Changer"}
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <p className="text-xs" style={{ color: DS.body }}>Entrez le code envoyé à <strong style={{ color: INK }}>{newEmail}</strong> :</p>
+            <input value={emailCode} onChange={(e) => setEmailCode(e.target.value.replace(/\D/g, ""))} maxLength={6} inputMode="numeric" placeholder="000000" data-testid="input-email-change-code"
+              className="w-full px-3 py-2.5 rounded-xl text-lg font-extrabold text-center outline-none" style={{ background: SOFT_BG, border: `1px solid ${SOFT_BORDER}`, color: INK, letterSpacing: 6 }} />
+            <div className="flex gap-2">
+              <button onClick={confirmEmailChange} disabled={emailBusy || emailCode.length < 6} className="flex-1 py-2.5 rounded-full text-white text-sm font-extrabold disabled:opacity-50" style={{ background: BLUE }} data-testid="button-confirm-email-change">
+                {emailBusy ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Confirmer le nouvel email"}
+              </button>
+              <button onClick={() => { setEmailStep("idle"); setEmailCode(""); }} className="px-4 py-2.5 rounded-full text-sm font-extrabold" style={{ background: SOFT_BG, border: `1px solid ${SOFT_BORDER}`, color: DS.body }}>Annuler</button>
+            </div>
+          </div>
+        )}
+      </div>
     </ProCard>
   );
 }
