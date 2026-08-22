@@ -3145,8 +3145,12 @@ Réponds en 2-4 phrases max, sois direct et utile.`;
       const { sendEmail, buildB2CResultEmail } = await import("./email");
       const base = (process.env.PUBLIC_BASE_URL || "https://glow-scan.com").replace(/\/$/, "");
       const e = buildB2CResultEmail((u as any).firstName || "", scan.condition || "Analyse cutanée", scan.score || 0, `${base}/profile`);
-      const r = await sendEmail(u.email, e.subject, e.html, e.text);
-      res.json({ success: r.ok, sent: r.ok });
+      // Le client peut fournir le PDF du rapport (base64) → on l'attache.
+      let pdf = String(req.body?.pdfBase64 || "");
+      if (pdf.startsWith("data:")) pdf = pdf.split(",")[1] || "";
+      const attachments = pdf.length > 100 ? [{ filename: `analyse-glowscan-${scanId}.pdf`, content: pdf }] : undefined;
+      const r = await sendEmail(u.email, e.subject, e.html, e.text, attachments);
+      res.json({ success: r.ok, sent: r.ok, attached: !!attachments });
     } catch (err) {
       res.status(500).json({ message: "Erreur serveur" });
     }

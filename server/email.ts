@@ -29,8 +29,9 @@ function unsubUrlFor(userId?: string): string | null {
 }
 
 export interface SendEmailResult { ok: boolean; provider: "resend" | "dev" | "none"; error?: string }
+export interface EmailAttachment { filename: string; content: string } // content = base64
 
-export async function sendEmail(to: string, subject: string, html: string, text?: string): Promise<SendEmailResult> {
+export async function sendEmail(to: string, subject: string, html: string, text?: string, attachments?: EmailAttachment[]): Promise<SendEmailResult> {
   if (!to) return { ok: false, provider: "none", error: "Destinataire manquant" };
 
   if (RESEND_API_KEY) {
@@ -38,7 +39,7 @@ export async function sendEmail(to: string, subject: string, html: string, text?
       const r = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ from: EMAIL_FROM, to, subject, html, text: text || undefined }),
+        body: JSON.stringify({ from: EMAIL_FROM, to, subject, html, text: text || undefined, attachments: attachments?.length ? attachments : undefined }),
       });
       if (!r.ok) {
         const body = await r.text().catch(() => "");

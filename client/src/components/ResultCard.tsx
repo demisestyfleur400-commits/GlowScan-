@@ -317,6 +317,7 @@ import { catalog, getProductBrand, formatPrice } from "@shared/catalog";
 import { productImages as centralProductImages } from "@/lib/productImages";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
+import { apiRequest } from "@/lib/queryClient";
 import { useSubscription } from "@/hooks/use-subscription";
 import { ConsultationLauncher } from "@/components/ConsultationLauncher";
 import { buildObservationSections, type ObservationData } from "@/lib/observationPdf";
@@ -1380,7 +1381,7 @@ export function ResultCard({ result, scanId, savedScanId, area, imageUrl, userFi
   };
 
   // ── Téléchargement PDF via print window (zéro dépendance, 100% mobile) ──
-  const handleDownloadPDF = async () => {
+  const handleDownloadPDF = async (mode: "print" | "email" = "print") => {
     if (pdfGenerating) return;
     setPdfGenerating(true);
 
@@ -1965,20 +1966,37 @@ ${medicalSections}
 </body>
 </html>`;
 
-      const win = window.open("", "_blank");
-      if (!win) {
-        // Si le popup est bloqué, fallback : ouvre dans le même onglet
-        const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.target = "_blank";
-        a.click();
-        URL.revokeObjectURL(url);
+      if (mode === "email") {
+        // ── Génère le PDF et l'envoie par email en pièce jointe ──
+        const sid = savedScanId || scanId;
+        if (!sid) { toast({ title: "Enregistrez d'abord votre analyse", variant: "destructive" }); return; }
+        const html2pdf = (await import("html2pdf.js")).default;
+        // On retire le bouton d'impression du rendu PDF.
+        const cleaned = html.replace(/<button class="print-btn"[\s\S]*?<\/button>/g, "");
+        const dataUri: string = await (html2pdf() as any)
+          .set({ margin: 0, image: { type: "jpeg", quality: 0.95 }, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: "mm", format: "a4", orientation: "portrait" } })
+          .from(cleaned).outputPdf("datauristring");
+        const base64 = dataUri.split(",")[1] || "";
+        const res = await apiRequest("POST", `/api/scans/${sid}/email-result`, { pdfBase64: base64 });
+        const data = await res.json().catch(() => ({}));
+        if (data?.sent) toast({ title: "Envoyé 📧", description: "Votre rapport PDF est dans votre boîte mail." });
+        else toast({ title: "Envoi impossible", description: data?.message || "Ajoutez un email à votre compte.", variant: "destructive" });
       } else {
-        win.document.write(html);
-        win.document.close();
-        win.focus();
+        const win = window.open("", "_blank");
+        if (!win) {
+          // Si le popup est bloqué, fallback : ouvre dans le même onglet
+          const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.target = "_blank";
+          a.click();
+          URL.revokeObjectURL(url);
+        } else {
+          win.document.write(html);
+          win.document.close();
+          win.focus();
+        }
       }
 
     } catch (err) {
@@ -3354,6 +3372,24 @@ ${medicalSections}
             </span>
           )}
         </button>}
+
+        {/* Recevoir le PDF par email (utilisateur connecté) */}
+        {!isPro && (result.score || 0) >= 60 && user && (
+          <button
+            onClick={() => handleDownloadPDF("email")}
+            disabled={pdfGenerating}
+            data-testid="button-email-pdf"
+            style={{
+              width: "100%", padding: "12px", borderRadius: "14px",
+              border: `1px solid ${DS.violet}`, background: "transparent",
+              cursor: pdfGenerating ? "not-allowed" : "pointer", opacity: pdfGenerating ? 0.6 : 1,
+              display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
+              fontSize: "13px", fontWeight: 800, color: DS.violet,
+            }}
+          >
+            📧 Recevoir mon rapport PDF par email
+          </button>
+        )}
 
         {/* Score < 60 : rapport bloqué → consultation requise */}
         {!isPro && (result.score || 0) < 60 && (
