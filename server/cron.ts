@@ -4,6 +4,81 @@ import { storage } from "./storage";
 import { db } from "./db";
 import { sql } from "drizzle-orm";
 import { sendWhatsAppText, buildFollowUpReminderMessage } from "./whatsapp";
+import { sendEmail, buildTrialReminderEmail, buildDigestEmail, buildReengageEmail } from "./email";
+
+const fn = (s: string) => (s || "").split(" ")[0];
+
+// 4 · Rappels de fin d'essai (J-3 et J-1). Quotidien.
+async function sendTrialReminders() {
+  try {
+    const r: any = await db.execute(sql`
+      SELECT p."full_name", p."trial_ends_at", u."email", u."first_name"
+      FROM "pro_accounts" p JOIN "users" u ON u."id" = p."user_id"
+      WHERE p."subscription_status" = 'trial' AND p."trial_ends_at" > NOW()
+        AND p."trial_ends_at" < NOW() + INTERVAL '4 days'`);
+    const rows = (r?.rows ?? r ?? []) as any[];
+    let sent = 0;
+    for (const row of rows) {
+      if (!row.email || String(row.email).endsWith("@phone.glowscan.cm")) continue;
+      const daysLeft = Math.ceil((new Date(row.trial_ends_at).getTime() - Date.now()) / 86400000);
+      if (daysLeft !== 3 && daysLeft !== 1) continue; // 2 rappels max
+      const e = buildTrialReminderEmail(fn(row.full_name || row.first_name), daysLeft);
+      const out = await sendEmail(row.email, e.subject, e.html, e.text);
+      if (out.ok) sent++;
+    }
+    log(`✅ Rappels fin d'essai : ${sent} envoyés`);
+  } catch (err) { log(`❌ Erreur rappels essai : ${err instanceof Error ? err.message : String(err)}`); }
+}
+
+// 8 · Ré-engagement des inactifs (~15 jours sans connexion). Quotidien.
+async function sendReengagement() {
+  try {
+    const r: any = await db.execute(sql`
+      SELECT u."email", u."first_name", p."full_name"
+      FROM "pro_accounts" p JOIN "users" u ON u."id" = p."user_id"
+      WHERE u."last_login" IS NOT NULL
+        AND u."last_login" < NOW() - INTERVAL '15 days'
+        AND u."last_login" > NOW() - INTERVAL '16 days'`);
+    const rows = (r?.rows ?? r ?? []) as any[];
+    let sent = 0;
+    for (const row of rows) {
+      if (!row.email || String(row.email).endsWith("@phone.glowscan.cm")) continue;
+      const e = buildReengageEmail(fn(row.full_name || row.first_name), 15);
+      const out = await sendEmail(row.email, e.subject, e.html, e.text);
+      if (out.ok) sent++;
+    }
+    log(`✅ Ré-engagement : ${sent} envoyés`);
+  } catch (err) { log(`❌ Erreur ré-engagement : ${err instanceof Error ? err.message : String(err)}`); }
+}
+
+// 6 · Digest mensuel d'activité. Le 1er du mois.
+async function sendMonthlyDigest() {
+  try {
+    const accs: any = await db.execute(sql`
+      SELECT p."id", p."full_name", u."email", u."first_name"
+      FROM "pro_accounts" p JOIN "users" u ON u."id" = p."user_id"
+      WHERE u."email" IS NOT NULL AND u."email" NOT LIKE '%@phone.glowscan.cm'`);
+    const rows = (accs?.rows ?? accs ?? []) as any[];
+    const now = new Date();
+    const monthLabel = new Date(now.getFullYear(), now.getMonth() - 1, 1).toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+    let sent = 0;
+    for (const row of rows) {
+      const pc: any = await db.execute(sql`SELECT COUNT(*)::int AS n FROM "patients" WHERE "dermatologist_id" = ${row.id}`);
+      const patients = (pc?.rows ?? pc ?? [])[0]?.n || 0;
+      const ac: any = await db.execute(sql`
+        SELECT COUNT(*)::int AS n FROM "scans" s JOIN "patients" pt ON pt."id" = s."patient_id"
+        WHERE pt."dermatologist_id" = ${row.id}
+          AND s."created_at" >= date_trunc('month', NOW() - INTERVAL '1 month')
+          AND s."created_at" < date_trunc('month', NOW())`);
+      const analyses = (ac?.rows ?? ac ?? [])[0]?.n || 0;
+      if (patients === 0 && analyses === 0) continue; // pas de digest vide
+      const e = buildDigestEmail(fn(row.full_name || row.first_name), { patients, analyses }, monthLabel);
+      const out = await sendEmail(row.email, e.subject, e.html, e.text);
+      if (out.ok) sent++;
+    }
+    log(`✅ Digest mensuel : ${sent} envoyés`);
+  } catch (err) { log(`❌ Erreur digest mensuel : ${err instanceof Error ? err.message : String(err)}`); }
+}
 
 // ── Rappels de contrôle (suivi évolution) : envoie un WhatsApp au patient quand
 // la date programmée (follow_up_at) est atteinte. Marque comme envoyé (anti-doublon).
@@ -297,4 +372,10 @@ export function startCronJobs() {
   // ✅ Rappels de contrôle DERM (suivi évolution) — tous les jours à 9h00 (Douala)
   cron.schedule("0 9 * * *", sendFollowUpReminders, { timezone: "Africa/Douala" });
   log("✅ Cron rappels de contrôle DERM actif — 9h00 (Douala)");
+
+  // ✅ Emails DERM automatiques
+  cron.schedule("0 8 * * *", sendTrialReminders, { timezone: "Africa/Douala" });   // fin d'essai J-3/J-1
+  cron.schedule("30 10 * * *", sendReengagement, { timezone: "Africa/Douala" });   // inactifs ~15j
+  cron.schedule("0 9 1 * *", sendMonthlyDigest, { timezone: "Africa/Douala" });    // digest le 1er du mois
+  log("✅ Crons emails DERM actifs — essai (8h), ré-engagement (10h30), digest (1er du mois 9h)");
 }

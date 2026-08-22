@@ -3210,6 +3210,16 @@ Réponds en 2-4 phrases max, sois direct et utile.`;
           subscriptionExpiresAt: proExpiresAt,
         }).where(eq(proAccounts.userId, pr.userId));
         console.log(`[admin] ✅ Compte Pro activé pour user=${pr.userId} jusqu'au ${proExpiresAt.toISOString()}`);
+        // 5 · Reçu d'abonnement par email (best-effort)
+        try {
+          const { sendEmail, buildReceiptEmail } = await import("./email");
+          const [u] = await db.select().from(users).where(eq(users.id, pr.userId));
+          const [pa] = await db.select().from(proAccounts).where(eq(proAccounts.userId, pr.userId));
+          if (u?.email && !u.email.endsWith("@phone.glowscan.cm")) {
+            const r = buildReceiptEmail((pa?.fullName || (u as any).firstName || "").split(" ")[0] || "", pr.amount || 10000, pr.reference, proExpiresAt);
+            sendEmail(u.email, r.subject, r.html, r.text).catch(() => {});
+          }
+        } catch {}
       }
 
       res.json({ success: true, subscription: sub });

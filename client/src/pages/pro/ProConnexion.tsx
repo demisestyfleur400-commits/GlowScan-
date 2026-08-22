@@ -89,6 +89,19 @@ export default function ProConnexion() {
     }
   };
 
+  const requestMagicLink = async () => {
+    if (!email.includes("@")) { toast({ title: "Entrez votre email d'abord", variant: "destructive" }); return; }
+    try {
+      await fetch("/api/pro/login/magic/request", {
+        method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include",
+        body: JSON.stringify({ email }),
+      });
+      toast({ title: "Lien envoyé 📧", description: `Si un compte existe, un lien de connexion a été envoyé à ${email} (valable 15 min).` });
+    } catch (err: any) {
+      toast({ title: "Erreur", description: err.message, variant: "destructive" });
+    }
+  };
+
   const resend2fa = async () => {
     try {
       const res = await fetch("/api/pro/login/2fa/resend", { method: "POST", credentials: "include" });
@@ -392,6 +405,10 @@ export default function ProConnexion() {
                 marginTop: 16,
               }}
             >
+              <button type="button" onClick={requestMagicLink} data-testid="button-magic-link"
+                style={{ display: "block", width: "100%", background: "none", border: "none", cursor: "pointer", fontSize: 13, color: DS.violetMid, fontWeight: 700, marginBottom: 12 }}>
+                Se connecter par lien email (sans mot de passe)
+              </button>
               Pas encore de compte ?{" "}
               <Link
                 href="/derm/inscription"

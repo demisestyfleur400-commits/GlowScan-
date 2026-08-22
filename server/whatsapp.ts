@@ -151,14 +151,14 @@ export async function deliverConsultationReport(consultationId: number): Promise
     try {
       c = Rows(await db.execute(sql`
         SELECT c.id, c.user_id, c.pro_account_id, c.patient_phone,
-               u.first_name AS patient_first, p.full_name AS derm_name
+               u.first_name AS patient_first, u.email AS patient_email, p.full_name AS derm_name
         FROM consultations c
         LEFT JOIN users u ON u.id = c.user_id
         LEFT JOIN pro_accounts p ON p.id = c.pro_account_id
         WHERE c.id = ${consultationId}`))[0];
     } catch {
       c = Rows(await db.execute(sql`
-        SELECT c.id, c.user_id, c.pro_account_id, u.first_name AS patient_first, p.full_name AS derm_name
+        SELECT c.id, c.user_id, c.pro_account_id, u.first_name AS patient_first, u.email AS patient_email, p.full_name AS derm_name
         FROM consultations c
         LEFT JOIN users u ON u.id = c.user_id
         LEFT JOIN pro_accounts p ON p.id = c.pro_account_id
@@ -174,7 +174,19 @@ export async function deliverConsultationReport(consultationId: number): Promise
     const wa = await sendConsultationReport({ consultationId, patientPhone, patientName, dermatologistName: dermName, pdfUrl: url });
     const pushed = await pushReport(c.user_id, dermName, url);
 
-    const status = wa.ok || pushed > 0 ? "sent" : "failed";
+    // 9 · Copie email du rapport (best-effort) pour les patients sans WhatsApp/push.
+    let emailed = false;
+    try {
+      const patientEmail: string | null = c.patient_email || null;
+      if (patientEmail && !patientEmail.endsWith("@phone.glowscan.cm")) {
+        const { sendEmail, buildConsultationCopyEmail } = await import("./email");
+        const m = buildConsultationCopyEmail(dermName, url);
+        const r = await sendEmail(patientEmail, m.subject, m.html, m.text);
+        emailed = r.ok;
+      }
+    } catch {}
+
+    const status = wa.ok || pushed > 0 || emailed ? "sent" : "failed";
     try {
       await db.execute(sql`UPDATE consultations SET whatsapp_send_status = ${status}, whatsapp_sent_at = ${status === "sent" ? sql`NOW()` : sql`NULL`} WHERE id = ${consultationId}`);
     } catch (e) { console.warn("[report] statut non enregistré (migration appliquée ?):", (e as any)?.message); }

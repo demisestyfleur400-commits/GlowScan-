@@ -12,7 +12,8 @@ import { deliverConsultationReport, sendWhatsAppText, buildFollowUpReminderMessa
 import { uploadScanImageToStorage } from "./routes";
 import { storage } from "./storage";
 import webpush from "web-push";
-import { sendEmail, buildOtpEmail } from "./email";
+import { sendEmail, buildOtpEmail, buildWelcomeEmail, buildSecurityAlertEmail, buildPeerNotifEmail, buildMagicLinkEmail } from "./email";
+import crypto from "crypto";
 
 // ── 2FA email (dermatologues) ──────────────────────────────────────────────
 const OTP_TTL_MS = 10 * 60 * 1000;   // 10 min
@@ -38,6 +39,8 @@ async function is2faEmailEnabled(userId: string): Promise<boolean> {
 // Anti-bombardement : intervalle minimum entre deux envois de code par compte.
 const OTP_SEND_COOLDOWN_MS = 45 * 1000;
 const lastOtpSentAt = new Map<string, number>();
+// Tokens de lien magique (usage unique, 15 min). En mémoire (comme resetTokens).
+const magicTokens = new Map<string, { userId: string; expiresAt: number }>();
 
 // Génère un code, le stocke haché + expiration, et l'envoie par email.
 // Si un code a été envoyé il y a moins de 45s, on NE régénère PAS (le code
@@ -77,23 +80,51 @@ async function verifyEmailOtp(userId: string, code: string): Promise<{ ok: boole
   return { ok: true };
 }
 
-// Notifie un dermatologue (par proAccount.id) : WebSocket temps réel + push web.
+// Alerte de sécurité par email (best-effort) : mot de passe / 2FA modifiés.
+async function securityAlert(userId: string, kind: "login" | "password_changed" | "twofa_changed", detail?: string) {
+  try {
+    const [u] = await db.select().from(users).where(eq(users.id, userId));
+    if (u?.email && !u.email.endsWith("@phone.glowscan.cm")) {
+      const { subject, html, text } = buildSecurityAlertEmail(kind, (u as any).firstName, detail);
+      sendEmail(u.email, subject, html, text).catch(() => {});
+    }
+  } catch {}
+}
+
+// Notifie un dermatologue (par proAccount.id) : WebSocket temps réel + push web,
+// ET email en secours quand le compte n'a AUCUN abonnement push (ou emailAlways).
 // Résilient : ne throw jamais. VAPID déjà configuré par le module whatsapp.
-async function notifyProAccount(accountId: number, n: { title: string; body: string; url: string }) {
+async function notifyProAccount(
+  accountId: number,
+  n: { title: string; body: string; url: string },
+  opts?: { emailAlways?: boolean },
+) {
   try {
     const [acc] = await db.select().from(proAccounts).where(eq(proAccounts.id, accountId));
     if (!acc?.userId) return;
     try { emitToUser(acc.userId, "pro:notification", n); } catch {}
     const subs = await storage.getPushSubscriptionsByUser(acc.userId);
+    let pushDelivered = 0;
     for (const sub of subs) {
       try {
         await webpush.sendNotification(
           { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
           JSON.stringify({ title: n.title, body: n.body, url: n.url }),
         );
+        pushDelivered++;
       } catch (e: any) {
         if (e?.statusCode === 410 || e?.statusCode === 404) await storage.deletePushSubscription(sub.endpoint);
       }
+    }
+    // Fallback email : si aucun push livré (pas d'appareil abonné) → on envoie l'info par email.
+    if (opts?.emailAlways || pushDelivered === 0) {
+      try {
+        const [u] = await db.select().from(users).where(eq(users.id, acc.userId));
+        if (u?.email && !u.email.endsWith("@phone.glowscan.cm")) {
+          const { subject, html, text } = buildPeerNotifEmail((acc.fullName || (u as any).firstName || "").split(" ")[0], n.title, n.body);
+          sendEmail(u.email, subject, html, text).catch(() => {});
+        }
+      } catch {}
     }
   } catch { /* notification best-effort */ }
 }
@@ -442,6 +473,12 @@ export function registerProRoutes(app: Express) {
       await db.execute(sql`UPDATE "users" SET "twofa_email_enabled" = TRUE WHERE "id" = ${userId}`).catch(() => {});
       (req.session as any).pending2faUserId = userId;
       const otp = await issueEmailOtp(userId, emailLower, data.fullName);
+      // Email de bienvenue (best-effort, séparé du code 2FA).
+      try {
+        const base = (process.env.PUBLIC_BASE_URL || "https://glow-scan.com").replace(/\/$/, "");
+        const w = buildWelcomeEmail(data.fullName, `${base}/derm/profil-public`);
+        sendEmail(emailLower, w.subject, w.html, w.text).catch(() => {});
+      } catch {}
       req.session.save((err: any) => {
         if (err) {
           console.error("[pro/register] session save:", err);
@@ -480,8 +517,12 @@ export function registerProRoutes(app: Express) {
       }
 
       // ── 2FA email : mot de passe OK mais on n'ouvre PAS encore la session.
-      // On met l'utilisateur "en attente de 2FA" et on envoie un code par email.
-      if (await is2faEmailEnabled(user.id)) {
+      // OBLIGATOIRE pour tous les médecins (les comptes existants sont migrés à la
+      // volée : le flag est activé à la première connexion). On met l'utilisateur
+      // "en attente de 2FA" et on envoie un code par email.
+      const force2fa = user.role === "doctor";
+      if (force2fa || await is2faEmailEnabled(user.id)) {
+        if (force2fa) await db.execute(sql`UPDATE "users" SET "twofa_email_enabled" = TRUE WHERE "id" = ${user.id}`).catch(() => {});
         (req.session as any).pending2faUserId = user.id;
         const otp = await issueEmailOtp(user.id, user.email, (user as any).firstName);
         return req.session.save(() => {
@@ -578,6 +619,52 @@ export function registerProRoutes(app: Express) {
     }
   });
 
+  // ── Connexion par LIEN MAGIQUE (sans mot de passe) ──
+  // Le contrôle de l'email fait office de facteur unique (== la 2FA email).
+  app.post("/api/pro/login/magic/request", async (req: any, res) => {
+    try {
+      const email = String(req.body?.email || "").toLowerCase().trim();
+      // Réponse identique que le compte existe ou non (anti-énumération).
+      if (email && email.includes("@")) {
+        const [user] = await db.select().from(users).where(eq(users.email, email));
+        if (user) {
+          const token = crypto.randomBytes(24).toString("hex");
+          magicTokens.set(token, { userId: user.id, expiresAt: Date.now() + 15 * 60 * 1000 });
+          const base = (process.env.PUBLIC_BASE_URL || "https://glow-scan.com").replace(/\/$/, "");
+          const link = `${base}/derm/magic?token=${token}`;
+          const m = buildMagicLinkEmail((user as any).firstName || "", link);
+          await sendEmail(email, m.subject, m.html, m.text);
+        }
+      }
+      res.json({ success: true, sent: true });
+    } catch (err) {
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  app.post("/api/pro/login/magic/consume", async (req: any, res) => {
+    try {
+      const token = String(req.body?.token || "");
+      const entry = magicTokens.get(token);
+      if (!entry || entry.expiresAt < Date.now()) {
+        magicTokens.delete(token);
+        return res.status(400).json({ message: "Lien invalide ou expiré. Redemandez un lien." });
+      }
+      magicTokens.delete(token); // usage unique
+      const [user] = await db.select().from(users).where(eq(users.id, entry.userId));
+      if (!user) return res.status(401).json({ message: "Utilisateur introuvable" });
+      req.session.userId = user.id; touchLastLogin(user.id);
+      const acc = await getProAccountForUser(user.id);
+      req.session.save((err: any) => {
+        if (err) return res.status(500).json({ message: "Erreur session" });
+        if (!acc) return res.json({ success: true, role: user.role === "secretary" ? "secretary" : "doctor" });
+        res.json({ success: true, account: acc, role: "doctor" });
+      });
+    } catch (err) {
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
   // ── Activation/désactivation de la 2FA email (utilisateur connecté) ──
   // GET statut
   app.get("/api/pro/2fa/status", async (req: any, res) => {
@@ -609,6 +696,7 @@ export function registerProRoutes(app: Express) {
       const v = await verifyEmailOtp(userId, code);
       if (!v.ok) return res.status(v.reason === "locked" ? 429 : 401).json({ message: v.reason === "expired" ? "Code expiré" : "Code incorrect" });
       await db.execute(sql`UPDATE "users" SET "twofa_email_enabled" = TRUE WHERE "id" = ${userId}`);
+      securityAlert(userId, "twofa_changed", "La vérification en 2 étapes par email a été activée.");
       res.json({ success: true, enabled: true });
     } catch (err) {
       res.status(500).json({ message: "Erreur serveur" });
@@ -626,6 +714,7 @@ export function registerProRoutes(app: Express) {
         return res.status(401).json({ message: "Mot de passe incorrect" });
       }
       await db.execute(sql`UPDATE "users" SET "twofa_email_enabled" = FALSE, "twofa_code_hash" = NULL, "twofa_code_expires" = NULL, "twofa_attempts" = 0 WHERE "id" = ${userId}`);
+      securityAlert(userId, "twofa_changed", "La vérification en 2 étapes par email a été désactivée.");
       res.json({ success: true, enabled: false });
     } catch (err) {
       res.status(500).json({ message: "Erreur serveur" });
