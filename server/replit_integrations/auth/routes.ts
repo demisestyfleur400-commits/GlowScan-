@@ -7,6 +7,7 @@ import { storage } from "../../storage";
 import { users } from "@shared/models/auth";
 import { eq, or } from "drizzle-orm";
 import twilio from "twilio";
+import { sendEmail, buildResetEmail, buildSecurityAlertEmail } from "../../email";
 
 // ── Rate limiter simple en mémoire ───────────────────────────────────────────
 // Map<ip, { count, resetAt }>
@@ -247,32 +248,33 @@ export function registerAuthRoutes(app: Express): void {
       const code = generateCode();
       const phone = isPhone ? trimmed.replace(/\D/g, "") : null;
 
-      // Essayer d'envoyer le SMS
-      let smsSent = false;
+      // Canal : téléphone → SMS ; email → email (Resend).
+      let smsSent = false, emailSent = false;
       if (phone) {
         smsSent = await sendSmsCode(`+${phone}`, code);
-      }
-
-      if (smsSent || !phone) {
-        // Si SMS envoyé OU pas de téléphone, stocker le token pour réinitialisation
-        resetTokens.set(code, {
-          userId: user.id,
-          phone: phone || "",
-          expiresAt: Date.now() + 15 * 60 * 1000,
-        });
-
-        const maskedContact = isPhone ? maskPhone(trimmed) : maskEmail(emailInDb);
-        res.json({
-          sent: true,
-          maskedContact,
-          viaSms: smsSent,
-          // Dev/fallback: retourner le code si Twilio n'est pas utilisé
-          code: !smsSent ? code : undefined,
-        });
       } else {
-        // SMS échoué et pas d'email fallback
-        res.status(500).json({ message: "Impossible d'envoyer le SMS. Réessaie plus tard." });
+        const { subject, html, text } = buildResetEmail(code, (user as any).firstName);
+        const r = await sendEmail(emailInDb, subject, html, text);
+        emailSent = r.ok;
       }
+
+      // Stocker le token (usage unique, 15 min)
+      resetTokens.set(code, {
+        userId: user.id,
+        phone: phone || "",
+        expiresAt: Date.now() + 15 * 60 * 1000,
+      });
+
+      const maskedContact = isPhone ? maskPhone(trimmed) : maskEmail(emailInDb);
+      res.json({
+        sent: true,
+        maskedContact,
+        viaSms: smsSent,
+        viaEmail: emailSent,
+        // 🔒 SÉCURITÉ : on ne renvoie JAMAIS le code si un canal réel a envoyé.
+        // Fallback dev uniquement (ni SMS ni email configuré) → code affiché.
+        code: (!smsSent && !emailSent) ? code : undefined,
+      });
     } catch (err) {
       console.error("[forgot-pwd] error:", err);
       res.status(500).json({ message: "Erreur serveur" });
@@ -303,6 +305,15 @@ export function registerAuthRoutes(app: Express): void {
       const passwordHash = await bcrypt.hash(newPassword, 10);
       await db.update(users).set({ passwordHash }).where(eq(users.id, entry.userId));
       resetTokens.delete(code); // usage unique
+
+      // 🔔 Exploiter l'email : alerte de sécurité "mot de passe changé" (best-effort).
+      try {
+        const [u] = await db.select().from(users).where(eq(users.id, entry.userId));
+        if (u?.email && !u.email.endsWith("@phone.glowscan.cm")) {
+          const { subject, html, text } = buildSecurityAlertEmail("password_changed", (u as any).firstName);
+          sendEmail(u.email, subject, html, text).catch(() => {});
+        }
+      } catch {}
 
       console.log(`[reset-pwd] ✅ Mot de passe réinitialisé pour userId=${entry.userId}`);
       res.json({ success: true });

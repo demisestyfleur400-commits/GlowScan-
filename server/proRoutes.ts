@@ -35,14 +35,25 @@ async function is2faEmailEnabled(userId: string): Promise<boolean> {
   } catch { return false; }
 }
 
+// Anti-bombardement : intervalle minimum entre deux envois de code par compte.
+const OTP_SEND_COOLDOWN_MS = 45 * 1000;
+const lastOtpSentAt = new Map<string, number>();
+
 // Génère un code, le stocke haché + expiration, et l'envoie par email.
-async function issueEmailOtp(userId: string, email: string, name?: string): Promise<{ ok: boolean; provider: string; error?: string }> {
+// Si un code a été envoyé il y a moins de 45s, on NE régénère PAS (le code
+// précédent reste valide) → empêche le spam d'emails / l'email bombing.
+async function issueEmailOtp(userId: string, email: string, name?: string): Promise<{ ok: boolean; provider: string; error?: string; throttled?: boolean }> {
+  const last = lastOtpSentAt.get(userId) || 0;
+  if (Date.now() - last < OTP_SEND_COOLDOWN_MS) {
+    return { ok: true, provider: "throttled", throttled: true };
+  }
   const code = gen6();
   const hash = await bcrypt.hash(code, 10);
   const expires = new Date(Date.now() + OTP_TTL_MS);
   await db.execute(sql`UPDATE "users" SET "twofa_code_hash" = ${hash}, "twofa_code_expires" = ${expires.toISOString()}, "twofa_attempts" = 0 WHERE "id" = ${userId}`);
   const { subject, html, text } = buildOtpEmail(code, name);
   const r = await sendEmail(email, subject, html, text);
+  lastOtpSentAt.set(userId, Date.now());
   return { ok: r.ok, provider: r.provider, error: r.error };
 }
 
@@ -425,22 +436,28 @@ export function registerProRoutes(app: Express) {
       // Version des Conditions & Confidentialité acceptée (preuve opposable, SQL brut)
       db.execute(sql`UPDATE "pro_accounts" SET "consent_version" = ${data.consentVersion || TERMS_VERSION} WHERE "id" = ${acc.id}`).catch(() => {});
 
-      // 3. Login session
-      req.session.userId = userId; touchLastLogin(userId);
+      // 3. 2FA OBLIGATOIRE dès la création : on n'ouvre PAS la session tout de
+      // suite. On active la 2FA email et on envoie un code — ce qui VÉRIFIE en même
+      // temps que l'email est réel (sinon le dermato serait enfermé dehors à vie).
+      await db.execute(sql`UPDATE "users" SET "twofa_email_enabled" = TRUE WHERE "id" = ${userId}`).catch(() => {});
+      (req.session as any).pending2faUserId = userId;
+      const otp = await issueEmailOtp(userId, emailLower, data.fullName);
       req.session.save((err: any) => {
         if (err) {
           console.error("[pro/register] session save:", err);
           return res.status(500).json({ message: "Erreur connexion" });
         }
-        console.log(`[pro] ✅ Nouveau dermato Pro #${acc.id} — ${data.fullName} (${emailLower})`);
-        // ── Tracking inscription DERM (non-bloquant) ──
-        db.insert(pageVisits).values({
-          page: "pro_register",
-          sessionId: req.session?.id || null,
-          country: null,
-          city: null,
-        }).catch(() => {});
-        res.json({ success: true, account: acc });
+        console.log(`[pro] ✅ Nouveau dermato Pro #${acc.id} — ${data.fullName} (${emailLower}) — 2FA email obligatoire, code envoyé (${otp.provider})`);
+        db.insert(pageVisits).values({ page: "pro_register", sessionId: req.session?.id || null, country: null, city: null }).catch(() => {});
+        res.json({
+          success: true,
+          requires2fa: true,
+          method: "email",
+          emailSent: otp.ok,
+          emailHint: maskEmail(emailLower),
+          devFallback: otp.provider === "dev",
+          account: acc,
+        });
       });
     } catch (err: any) {
       if (err?.issues) return res.status(400).json({ message: "Données invalides", issues: err.issues });

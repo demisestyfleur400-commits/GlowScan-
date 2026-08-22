@@ -42,6 +42,10 @@ export default function ProInscription() {
   const [licenseNumber, setLicenseNumber] = useState("");
   const [consent, setConsent] = useState(false);
   const [loading, setLoading] = useState(false);
+  // 2FA email obligatoire après inscription
+  const [twofa, setTwofa] = useState(false);
+  const [code, setCode] = useState("");
+  const [emailHint, setEmailHint] = useState("");
 
   // Force du mot de passe : longueur + variété de caractères
   const pwStrength = (() => {
@@ -92,6 +96,18 @@ export default function ProInscription() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Erreur lors de l'inscription");
+      // 2FA obligatoire : on vérifie l'email avant d'entrer dans l'app.
+      if (data.requires2fa) {
+        setEmailHint(data.emailHint || email);
+        setTwofa(true);
+        toast({
+          title: "Vérifiez votre email 📧",
+          description: data.devFallback
+            ? "Mode dev : le code est dans les logs serveur."
+            : `Un code à 6 chiffres a été envoyé à ${data.emailHint || email}.`,
+        });
+        return;
+      }
       toast({ title: `Bienvenue Dr ${fullName} 👋`, description: "14 jours d'essai gratuit — découvrons GlowScan DERM ensemble." });
       await qc.invalidateQueries({ queryKey: ["/api/pro/account"] });
       await qc.invalidateQueries({ queryKey: ["/api/auth/user"] });
@@ -101,6 +117,35 @@ export default function ProInscription() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // ── Étape 2FA obligatoire (vérification email) ──
+  const verify2fa = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const res = await fetch("/api/pro/login/2fa", {
+        method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include",
+        body: JSON.stringify({ code }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Code incorrect");
+      toast({ title: `Bienvenue Dr ${fullName} 👋`, description: "Email vérifié. Découvrons GlowScan ensemble." });
+      await qc.invalidateQueries({ queryKey: ["/api/pro/account"] });
+      await qc.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      setLocation("/derm/onboarding");
+    } catch (err: any) {
+      toast({ title: "Vérification échouée", description: err.message, variant: "destructive" });
+    } finally { setLoading(false); }
+  };
+
+  const resend2fa = async () => {
+    try {
+      const res = await fetch("/api/pro/login/2fa/resend", { method: "POST", credentials: "include" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+      toast({ title: "Nouveau code envoyé", description: data.devFallback ? "Mode dev : voir les logs." : `Envoyé à ${data.emailHint || email}.` });
+    } catch (err: any) { toast({ title: "Erreur", description: err.message, variant: "destructive" }); }
   };
 
   return (
@@ -200,7 +245,39 @@ export default function ProInscription() {
             </p>
           </div>
 
+          {/* Étape 2FA obligatoire — vérification email */}
+          {twofa && (
+            <form onSubmit={verify2fa}
+              style={{ background: DS.surface, border: `1px solid ${DS.cardBorder}`, borderRadius: 24, padding: "28px 24px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                <ShieldCheck style={{ width: 18, height: 18, color: DS.violetMid }} />
+                <p style={{ fontSize: 15, fontWeight: 800, color: DS.textPrimary, margin: 0 }}>Vérifiez votre email</p>
+              </div>
+              <p style={{ fontSize: 13, color: DS.textBody, margin: "0 0 18px" }}>
+                Un code à 6 chiffres a été envoyé à <strong style={{ color: DS.textPrimary }}>{emailHint}</strong>. Cette étape sécurise votre compte et sera demandée à chaque connexion.
+              </p>
+              <input type="text" inputMode="numeric" autoComplete="one-time-code" maxLength={6} autoFocus
+                value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+                placeholder="000000" data-testid="input-signup-2fa"
+                style={{ width: "100%", padding: "13px 14px", borderRadius: 12, background: DS.bg, border: `1px solid ${DS.inputBorder}`,
+                  color: DS.textPrimary, fontSize: 24, fontWeight: 800, letterSpacing: 8, textAlign: "center", marginBottom: 16 }} />
+              <button type="submit" disabled={loading || code.length < 6} data-testid="button-verify-signup-2fa"
+                style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "13px 24px",
+                  borderRadius: 9999, background: DS.violet, color: "#fff", fontWeight: 800, fontSize: 14, border: "none",
+                  cursor: loading || code.length < 6 ? "not-allowed" : "pointer", opacity: loading || code.length < 6 ? 0.6 : 1, fontFamily: DS.font }}>
+                {loading ? <Loader2 style={{ width: 16, height: 16, animation: "spin 1s linear infinite" }} /> : <>Vérifier et continuer <ArrowRight style={{ width: 16, height: 16 }} /></>}
+              </button>
+              <div style={{ textAlign: "center", marginTop: 16 }}>
+                <button type="button" onClick={resend2fa}
+                  style={{ background: "none", border: "none", fontSize: 13, color: DS.violetMid, fontWeight: 700, cursor: "pointer" }} data-testid="button-resend-signup-2fa">
+                  Je n'ai rien reçu — renvoyer le code
+                </button>
+              </div>
+            </form>
+          )}
+
           {/* Form */}
+          {!twofa && (
           <form
             onSubmit={handleSubmit}
             style={{
@@ -355,6 +432,7 @@ export default function ProInscription() {
               </Link>
             </p>
           </form>
+          )}
         </motion.div>
       </main>
 

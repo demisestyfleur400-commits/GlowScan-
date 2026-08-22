@@ -49,3 +49,39 @@ export function buildOtpEmail(code: string, name?: string): { subject: string; h
   </div>`;
   return { subject, html, text };
 }
+
+// Gabarit du code de réinitialisation de mot de passe.
+export function buildResetEmail(code: string, name?: string): { subject: string; html: string; text: string } {
+  const subject = `Réinitialisation de votre mot de passe GlowScan : ${code}`;
+  const text = `Bonjour ${name || ""},\n\nVotre code pour réinitialiser votre mot de passe GlowScan DERM est : ${code}\nIl expire dans 15 minutes.\n\nSi vous n'avez pas demandé cette réinitialisation, ignorez cet email — votre mot de passe reste inchangé.\n\nGlowScan`;
+  const html = `
+  <div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:440px;margin:0 auto;padding:24px;color:#0F172A">
+    <p style="font-size:13px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#0369A1;margin:0 0 8px">GlowScan DERM</p>
+    <h1 style="font-size:18px;margin:0 0 12px">Réinitialisation du mot de passe</h1>
+    <p style="font-size:14px;color:#475569;margin:0 0 16px">Bonjour ${name || ""}, voici votre code pour définir un nouveau mot de passe :</p>
+    <div style="font-size:34px;font-weight:900;letter-spacing:8px;color:#0F172A;background:#F1F5F9;border:1px solid #E2E8F0;border-radius:12px;padding:16px;text-align:center;margin:0 0 16px">${code}</div>
+    <p style="font-size:12px;color:#64748B;margin:0 0 4px">Ce code expire dans <strong>15 minutes</strong>.</p>
+    <p style="font-size:12px;color:#64748B;margin:0">Si vous n'êtes pas à l'origine de cette demande, ignorez cet email — votre mot de passe reste inchangé.</p>
+  </div>`;
+  return { subject, html, text };
+}
+
+// Alerte de sécurité (nouvelle connexion, mot de passe changé, 2FA modifiée).
+export function buildSecurityAlertEmail(kind: "login" | "password_changed" | "twofa_changed", name?: string, detail?: string): { subject: string; html: string; text: string } {
+  const map = {
+    login: { t: "Nouvelle connexion à votre compte", d: "Une connexion vient d'avoir lieu sur votre compte GlowScan DERM." },
+    password_changed: { t: "Votre mot de passe a été modifié", d: "Le mot de passe de votre compte GlowScan DERM vient d'être changé." },
+    twofa_changed: { t: "Vos paramètres de sécurité ont changé", d: "La vérification en 2 étapes de votre compte a été modifiée." },
+  }[kind];
+  const subject = `GlowScan — ${map.t}`;
+  const text = `Bonjour ${name || ""},\n\n${map.d}${detail ? `\n${detail}` : ""}\n\nSi ce n'est pas vous, changez immédiatement votre mot de passe et contactez le support.\n\nGlowScan`;
+  const html = `
+  <div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:440px;margin:0 auto;padding:24px;color:#0F172A">
+    <p style="font-size:13px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#0369A1;margin:0 0 8px">GlowScan DERM · Sécurité</p>
+    <h1 style="font-size:17px;margin:0 0 12px">${map.t}</h1>
+    <p style="font-size:14px;color:#475569;margin:0 0 8px">Bonjour ${name || ""}, ${map.d}</p>
+    ${detail ? `<p style="font-size:13px;color:#64748B;margin:0 0 12px">${detail}</p>` : ""}
+    <p style="font-size:12px;color:#64748B;margin:0">Si ce n'est pas vous, changez immédiatement votre mot de passe et contactez le support.</p>
+  </div>`;
+  return { subject, html, text };
+}

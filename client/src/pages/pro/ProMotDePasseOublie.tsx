@@ -52,8 +52,10 @@ export default function ProMotDePasseOublie() {
       if (data.code) setCode(data.code);
       setStep(2);
       toast({
-        title: data.viaSms ? "Code envoyé par SMS" : "Code généré",
-        description: data.viaSms ? `Vérifiez vos messages (${data.maskedContact}).` : "Saisissez le code affiché ci-dessous.",
+        title: data.viaSms ? "Code envoyé par SMS" : data.viaEmail ? "Code envoyé par email 📧" : "Code généré",
+        description: data.viaSms ? `Vérifiez vos messages (${data.maskedContact}).`
+          : data.viaEmail ? `Vérifiez votre email (${data.maskedContact}) — pensez aux spams.`
+          : "Saisissez le code affiché ci-dessous.",
       });
     } catch (err: any) {
       toast({ title: "Erreur", description: err.message, variant: "destructive" });
