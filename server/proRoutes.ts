@@ -454,7 +454,9 @@ export function registerProRoutes(app: Express) {
   app.post("/api/pro/register", async (req: any, res) => {
     try {
       const schema = z.object({
-        fullName: z.string().min(2),
+        // Inscription simplifiée (2 étapes) : nom NON requis ici, complété à l'étape 2.
+        // fullName reste accepté (rétro-compat) mais optionnel.
+        fullName: z.string().optional().nullable(),
         email: z.string().email(),
         password: z.string().min(8), // 8 car. min pour des données médicales
         cabinetName: z.string().optional().nullable(),
@@ -469,6 +471,10 @@ export function registerProRoutes(app: Express) {
       });
       const data = schema.parse(req.body);
       const emailLower = data.email.toLowerCase().trim();
+      // pro_accounts.full_name est NOT NULL → si le nom n'est pas fourni (inscription
+      // simplifiée), on met un libellé provisoire (partie locale de l'email), que le
+      // médecin remplace à l'étape 2 (page de complétion du profil).
+      const displayName = (data.fullName && data.fullName.trim()) || emailLower.split("@")[0] || "Praticien";
       if (data.licenseNumber) {
         console.log(`[pro/register] 🪪 Numéro d'ordre déclaré par ${emailLower} : ${data.licenseNumber} (à vérifier manuellement)`);
       }
@@ -490,7 +496,7 @@ export function registerProRoutes(app: Express) {
         const passwordHash = await bcrypt.hash(data.password, 10);
         const [u] = await db.insert(users).values({
           email: emailLower,
-          firstName: data.fullName,
+          firstName: displayName,
           passwordHash,
           role: "doctor", // 🔑 Explicite : les dermatologues ont le rôle "doctor"
         }).returning();
@@ -501,7 +507,7 @@ export function registerProRoutes(app: Express) {
       const trialEndsAt = new Date(Date.now() + TRIAL_DAYS * 24 * 60 * 60 * 1000);
       const [acc] = await db.insert(proAccounts).values({
         userId,
-        fullName: data.fullName,
+        fullName: displayName,
         cabinetName: data.cabinetName || null,
         phone: data.phone || null,
         city: data.city || null,
@@ -526,11 +532,11 @@ export function registerProRoutes(app: Express) {
       let backupCodes: string[] = [];
       try { backupCodes = await generateAndStoreBackupCodes(userId); } catch {}
       (req.session as any).pending2faUserId = userId;
-      const otp = await issueEmailOtp(userId, emailLower, data.fullName);
+      const otp = await issueEmailOtp(userId, emailLower, displayName);
       // Email de bienvenue (best-effort, séparé du code 2FA).
       try {
         const base = (process.env.PUBLIC_BASE_URL || "https://glow-scan.com").replace(/\/$/, "");
-        const w = buildWelcomeEmail(data.fullName, `${base}/derm/profil-public`);
+        const w = buildWelcomeEmail(displayName, `${base}/derm/profil-public`);
         sendEmail(emailLower, w.subject, w.html, w.text).catch(() => {});
       } catch {}
       req.session.save((err: any) => {
@@ -538,7 +544,7 @@ export function registerProRoutes(app: Express) {
           console.error("[pro/register] session save:", err);
           return res.status(500).json({ message: "Erreur connexion" });
         }
-        console.log(`[pro] ✅ Nouveau dermato Pro #${acc.id} — ${data.fullName} (${emailLower}) — 2FA email obligatoire, code envoyé (${otp.provider})`);
+        console.log(`[pro] ✅ Nouveau dermato Pro #${acc.id} — ${displayName} (${emailLower}) — 2FA email obligatoire, code envoyé (${otp.provider})`);
         db.insert(pageVisits).values({ page: "pro_register", sessionId: req.session?.id || null, country: null, city: null }).catch(() => {});
         res.json({
           success: true,
@@ -872,16 +878,16 @@ export function registerProRoutes(app: Express) {
       : null;
     const isAdmin = (req.session as any)?.isAdmin === true;
 
-    // Opt-in consultation B2C (colonnes hors schéma Drizzle → lues en SQL brut).
-    let b2cAvailable = false, consultPriceFcfa = 3500;
+    // Colonnes hors schéma Drizzle → lues en SQL brut.
+    let b2cAvailable = false, consultPriceFcfa = 3500, country: string | null = null;
     try {
-      const r: any = await db.execute(sql`SELECT b2c_available, consult_price_fcfa FROM pro_accounts WHERE id = ${acc.id}`);
+      const r: any = await db.execute(sql`SELECT b2c_available, consult_price_fcfa, country FROM pro_accounts WHERE id = ${acc.id}`);
       const row = (r?.rows ?? r ?? [])[0];
-      if (row) { b2cAvailable = row.b2c_available === true; consultPriceFcfa = Number(row.consult_price_fcfa) || 3500; }
+      if (row) { b2cAvailable = row.b2c_available === true; consultPriceFcfa = Number(row.consult_price_fcfa) || 3500; country = row.country ?? null; }
     } catch {}
 
     res.json({
-      account: { ...acc, b2cAvailable, consultPriceFcfa },
+      account: { ...acc, b2cAvailable, consultPriceFcfa, country },
       active,
       daysLeftTrial: daysLeft,
       isAdmin,

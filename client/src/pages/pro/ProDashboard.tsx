@@ -18,6 +18,7 @@ import { useProAccount, useProPatients, useUpdateProAccount, useProStats, usePro
 import { ProLayout, ProCard } from "@/components/ProLayout";
 import { DermNotifPrompt } from "@/components/DermNotifPrompt";
 import { DERM, DERM_LOGO } from "@/lib/design-tokens";
+import { computeProfileScore, profileLabel } from "@/lib/profile-score";
 
 const DS = {
   bg: DERM.bg,
@@ -198,8 +199,33 @@ export default function ProDashboard() {
     await updateAcc.mutateAsync({ onboardingDone: true });
   };
 
+  const profileScore = computeProfileScore({
+    email: (accData?.user as any)?.email,
+    fullName: (acc as any).fullName, city: (acc as any).city, phone: (acc as any).phone,
+    country: (acc as any).country, licenseNumber: (acc as any).licenseNumber, cabinetName: (acc as any).cabinetName,
+  });
+
   return (
     <ProLayout>
+      {/* ══ BANNIÈRE COMPLÉTION PROFIL (priorité absolue — disparaît à 100%) ══ */}
+      {profileScore < 100 && (
+        <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: 16 }}>
+          <div style={{ borderRadius: 18, padding: "16px 18px", background: "linear-gradient(135deg, rgba(8,145,178,0.08), rgba(124,58,237,0.06))", border: "1px solid rgba(8,145,178,0.22)" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 10 }}>
+              <p style={{ fontSize: 13, fontWeight: 800, color: DS.textPrimary, margin: 0 }}>{profileLabel(profileScore)}</p>
+              <span style={{ fontSize: 13, fontWeight: 900, color: "#0891B2", fontVariantNumeric: "tabular-nums" }}>{profileScore}%</span>
+            </div>
+            <div style={{ height: 8, borderRadius: 9999, background: "#E2E8F0", overflow: "hidden", marginBottom: 12 }}>
+              <div style={{ height: "100%", width: `${profileScore}%`, borderRadius: 9999, background: "linear-gradient(90deg,#0891B2,#7C3AED)", transition: "width .4s" }} />
+            </div>
+            <Link href="/derm/profil" data-testid="link-complete-profile"
+              style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#7C3AED", color: "#fff", borderRadius: 9999, padding: "9px 18px", fontSize: 13, fontWeight: 800, textDecoration: "none" }}>
+              Compléter maintenant <ArrowRight size={14} />
+            </Link>
+          </div>
+        </motion.div>
+      )}
+
       {/* ══ WELCOME WIDGET ══ */}
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: 16 }}>
         <div style={{
