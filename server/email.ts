@@ -234,11 +234,12 @@ export function buildResetEmail(code: string, name?: string): { subject: string;
 }
 
 // Alerte de sécurité (nouvelle connexion, mot de passe changé, 2FA modifiée).
-export function buildSecurityAlertEmail(kind: "login" | "password_changed" | "twofa_changed", name?: string, detail?: string): { subject: string; html: string; text: string } {
+export function buildSecurityAlertEmail(kind: "login" | "password_changed" | "twofa_changed" | "email_changed", name?: string, detail?: string): { subject: string; html: string; text: string } {
   const map = {
-    login: { t: "Nouvelle connexion à votre compte", d: "Une connexion vient d'avoir lieu sur votre compte GlowScan DERM." },
-    password_changed: { t: "Votre mot de passe a été modifié", d: "Le mot de passe de votre compte GlowScan DERM vient d'être changé." },
+    login: { t: "Nouvelle connexion à votre compte", d: "Une connexion vient d'avoir lieu sur votre compte GlowScan." },
+    password_changed: { t: "Votre mot de passe a été modifié", d: "Le mot de passe de votre compte GlowScan vient d'être changé." },
     twofa_changed: { t: "Vos paramètres de sécurité ont changé", d: "La vérification en 2 étapes de votre compte a été modifiée." },
+    email_changed: { t: "Votre email de connexion a été modifié", d: "L'adresse email de connexion de votre compte GlowScan vient d'être changée." },
   }[kind];
   const subject = `GlowScan — ${map.t}`;
   const text = `Bonjour ${name || ""},\n\n${map.d}${detail ? `\n${detail}` : ""}\n\nSi ce n'est pas vous, changez immédiatement votre mot de passe et contactez le support.\n\nGlowScan`;

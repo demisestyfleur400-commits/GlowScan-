@@ -839,8 +839,8 @@ export function registerProRoutes(app: Express) {
       pendingEmailChanges.delete(userId);
       // Alerte de sécurité à l'ANCIEN email (au cas où ce n'est pas le titulaire).
       if (oldEmail && !oldEmail.endsWith("@phone.glowscan.cm")) {
-        const a = buildSecurityAlertEmail("password_changed", (self as any)?.firstName, `Votre email de connexion a été changé pour ${maskEmail(entry.newEmail)}. Si ce n'est pas vous, contactez le support immédiatement.`);
-        sendEmail(oldEmail, `GlowScan — Votre email a été modifié`, a.html, a.text).catch(() => {});
+        const a = buildSecurityAlertEmail("email_changed", (self as any)?.firstName, `Nouvelle adresse : ${maskEmail(entry.newEmail)}. Si ce n'est pas vous, contactez le support immédiatement.`);
+        sendEmail(oldEmail, a.subject, a.html, a.text).catch(() => {});
       }
       res.json({ success: true, email: entry.newEmail });
     } catch (err) {
