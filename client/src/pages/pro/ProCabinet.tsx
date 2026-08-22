@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { Settings, Download, Crown, CheckCircle2, Loader2, Phone, Clock, UserPlus, Users, Copy, Trash2 } from "lucide-react";
+import { Settings, Download, Crown, CheckCircle2, Loader2, Phone, Clock, UserPlus, Users, Copy, Trash2, ShieldCheck, Lock } from "lucide-react";
 import { useProAccount, useProPatients, useUpdateProAccount, useSecretaries, useCreateSecretary, useDeleteSecretary } from "@/hooks/use-pro";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
@@ -516,6 +516,8 @@ export default function ProCabinet() {
           )}
         </ProCard>
 
+        <SecuritySection />
+
         <LogoutButton />
       </div>
 
@@ -669,6 +671,127 @@ function IdLine({ label, value, onCopy }: { label: string; value: string; onCopy
         <Copy className="w-3 h-3" /> Copier
       </button>
     </div>
+  );
+}
+
+// ── Sécurité : 2FA par email (activation/désactivation) ────────────────────
+function SecuritySection() {
+  const { toast } = useToast();
+  const [enabled, setEnabled] = useState<boolean | null>(null);
+  const [step, setStep] = useState<"idle" | "confirm" | "disable">("idle");
+  const [code, setCode] = useState("");
+  const [pwd, setPwd] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [hint, setHint] = useState("");
+
+  useEffect(() => {
+    fetch("/api/pro/2fa/status", { credentials: "include" })
+      .then((r) => r.ok ? r.json() : { enabled: false })
+      .then((d) => setEnabled(!!d.enabled))
+      .catch(() => setEnabled(false));
+  }, []);
+
+  const requestCode = async () => {
+    setBusy(true);
+    try {
+      const r = await fetch("/api/pro/2fa/email/request", { method: "POST", credentials: "include" });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.message);
+      setHint(d.emailHint || ""); setStep("confirm");
+      toast({ title: "Code envoyé 📧", description: d.devFallback ? "Mode dev : voir les logs serveur." : `Envoyé sur ${d.emailHint}.` });
+    } catch (e: any) { toast({ title: "Erreur", description: e?.message, variant: "destructive" }); }
+    finally { setBusy(false); }
+  };
+
+  const confirmEnable = async () => {
+    setBusy(true);
+    try {
+      const r = await fetch("/api/pro/2fa/email/confirm", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify({ code }) });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.message);
+      setEnabled(true); setStep("idle"); setCode("");
+      toast({ title: "2FA activée ✅", description: "Un code vous sera demandé à chaque connexion." });
+    } catch (e: any) { toast({ title: "Code incorrect", description: e?.message, variant: "destructive" }); }
+    finally { setBusy(false); }
+  };
+
+  const disable = async () => {
+    setBusy(true);
+    try {
+      const r = await fetch("/api/pro/2fa/email/disable", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify({ password: pwd }) });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.message);
+      setEnabled(false); setStep("idle"); setPwd("");
+      toast({ title: "2FA désactivée" });
+    } catch (e: any) { toast({ title: "Erreur", description: e?.message, variant: "destructive" }); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <ProCard className="p-5">
+      <div className="flex items-center gap-2 mb-1">
+        <ShieldCheck className="w-4 h-4" style={{ color: BLUE }} />
+        <h2 className="font-extrabold text-base" style={{ color: INK }}>Sécurité — Vérification en 2 étapes</h2>
+      </div>
+      <p className="text-xs mb-4" style={{ color: DS.muted }}>
+        Un code à 6 chiffres vous est envoyé par email à chaque connexion. Recommandé : vous manipulez des données patients.
+      </p>
+
+      {enabled === null ? (
+        <Loader2 className="w-4 h-4 animate-spin" style={{ color: BLUE }} />
+      ) : (
+        <>
+          <div className="flex items-center justify-between mb-3">
+            <span className="inline-flex items-center gap-1.5 text-sm font-extrabold" style={{ color: enabled ? GREEN : DS.muted }}>
+              {enabled ? <><CheckCircle2 className="w-4 h-4" /> Activée</> : <><Lock className="w-4 h-4" /> Désactivée</>}
+            </span>
+          </div>
+
+          {step === "idle" && (
+            enabled ? (
+              <button onClick={() => setStep("disable")} className="w-full py-2.5 rounded-full text-sm font-extrabold"
+                style={{ background: SOFT_BG, border: `1px solid ${SOFT_BORDER}`, color: "#dc2626" }} data-testid="button-2fa-disable">
+                Désactiver la 2FA
+              </button>
+            ) : (
+              <button onClick={requestCode} disabled={busy} className="w-full py-2.5 rounded-full text-white text-sm font-extrabold disabled:opacity-50"
+                style={{ background: BLUE }} data-testid="button-2fa-enable">
+                {busy ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Activer la 2FA par email"}
+              </button>
+            )
+          )}
+
+          {step === "confirm" && (
+            <div className="space-y-2">
+              <p className="text-xs" style={{ color: DS.body }}>Entrez le code envoyé à {hint} :</p>
+              <input value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} maxLength={6} inputMode="numeric"
+                placeholder="000000" data-testid="input-2fa-confirm"
+                className="w-full px-3 py-2.5 rounded-xl text-lg font-extrabold text-center outline-none" style={{ background: SOFT_BG, border: `1px solid ${SOFT_BORDER}`, color: INK, letterSpacing: 6 }} />
+              <div className="flex gap-2">
+                <button onClick={confirmEnable} disabled={busy || code.length < 6} className="flex-1 py-2.5 rounded-full text-white text-sm font-extrabold disabled:opacity-50" style={{ background: BLUE }} data-testid="button-2fa-confirm">
+                  {busy ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Confirmer"}
+                </button>
+                <button onClick={() => { setStep("idle"); setCode(""); }} className="px-4 py-2.5 rounded-full text-sm font-extrabold" style={{ background: SOFT_BG, border: `1px solid ${SOFT_BORDER}`, color: DS.body }}>Annuler</button>
+              </div>
+            </div>
+          )}
+
+          {step === "disable" && (
+            <div className="space-y-2">
+              <p className="text-xs" style={{ color: DS.body }}>Confirmez avec votre mot de passe :</p>
+              <input type="password" value={pwd} onChange={(e) => setPwd(e.target.value)} placeholder="Mot de passe" data-testid="input-2fa-pwd"
+                className="w-full px-3 py-2.5 rounded-xl text-sm outline-none" style={{ background: SOFT_BG, border: `1px solid ${SOFT_BORDER}`, color: INK }} />
+              <div className="flex gap-2">
+                <button onClick={disable} disabled={busy || !pwd} className="flex-1 py-2.5 rounded-full text-white text-sm font-extrabold disabled:opacity-50" style={{ background: "#dc2626" }} data-testid="button-2fa-disable-confirm">
+                  {busy ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Désactiver"}
+                </button>
+                <button onClick={() => { setStep("idle"); setPwd(""); }} className="px-4 py-2.5 rounded-full text-sm font-extrabold" style={{ background: SOFT_BG, border: `1px solid ${SOFT_BORDER}`, color: DS.body }}>Annuler</button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+    </ProCard>
   );
 }
 

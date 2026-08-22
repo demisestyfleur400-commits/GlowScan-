@@ -28,6 +28,16 @@ export default function ProConnexion() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  // ── 2FA email ──
+  const [twofa, setTwofa] = useState(false);
+  const [code, setCode] = useState("");
+  const [emailHint, setEmailHint] = useState("");
+
+  const goAfterLogin = async (role?: string) => {
+    await qc.invalidateQueries({ queryKey: ["/api/pro/account"] });
+    await qc.invalidateQueries({ queryKey: ["/api/auth/user"] });
+    setLocation(role === "secretary" ? "/derm/patients" : "/derm/dashboard");
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,14 +51,52 @@ export default function ProConnexion() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Erreur");
-      await qc.invalidateQueries({ queryKey: ["/api/pro/account"] });
-      await qc.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      // Secrétaire → ses patients ; médecin → tableau de bord
-      setLocation(data.role === "secretary" ? "/derm/patients" : "/derm/dashboard");
+      // Étape 2FA requise : on n'est pas encore connecté.
+      if (data.requires2fa) {
+        setEmailHint(data.emailHint || email);
+        setTwofa(true);
+        toast({
+          title: "Code envoyé 📧",
+          description: data.devFallback
+            ? "Mode dev : le code est dans les logs serveur (RESEND_API_KEY absente)."
+            : `Entrez le code reçu sur ${data.emailHint || "votre email"}.`,
+        });
+        return;
+      }
+      await goAfterLogin(data.role);
     } catch (err: any) {
       toast({ title: "Connexion échouée", description: err.message, variant: "destructive" });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleVerify2fa = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const res = await fetch("/api/pro/login/2fa", {
+        method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include",
+        body: JSON.stringify({ code }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Code incorrect");
+      await goAfterLogin(data.role);
+    } catch (err: any) {
+      toast({ title: "Vérification échouée", description: err.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resend2fa = async () => {
+    try {
+      const res = await fetch("/api/pro/login/2fa/resend", { method: "POST", credentials: "include" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+      toast({ title: "Nouveau code envoyé", description: data.devFallback ? "Mode dev : voir les logs serveur." : `Envoyé sur ${data.emailHint || "votre email"}.` });
+    } catch (err: any) {
+      toast({ title: "Erreur", description: err.message, variant: "destructive" });
     }
   };
 
@@ -165,7 +213,42 @@ export default function ProConnexion() {
             </p>
           </div>
 
+          {/* Étape 2FA — code email */}
+          {twofa && (
+            <form onSubmit={handleVerify2fa}
+              style={{ background: DS.surface, border: `1px solid ${DS.cardBorder}`, borderRadius: 24, padding: "28px 24px" }}>
+              <p style={{ fontSize: 15, fontWeight: 800, color: DS.textPrimary, margin: "0 0 6px" }}>Vérification en 2 étapes</p>
+              <p style={{ fontSize: 13, color: DS.textBody, margin: "0 0 18px" }}>
+                Nous avons envoyé un code à 6 chiffres à <strong style={{ color: DS.textPrimary }}>{emailHint}</strong>.
+              </p>
+              <input
+                type="text" inputMode="numeric" autoComplete="one-time-code" maxLength={6} autoFocus
+                value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+                placeholder="000000" data-testid="input-2fa-code"
+                style={{ width: "100%", padding: "13px 14px", borderRadius: 12, background: DS.bg, border: `1px solid ${DS.inputBorder}`,
+                  color: DS.textPrimary, fontSize: 24, fontWeight: 800, letterSpacing: 8, textAlign: "center", marginBottom: 16 }}
+              />
+              <button type="submit" disabled={loading || code.length < 6} data-testid="button-verify-2fa"
+                style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "13px 24px",
+                  borderRadius: 9999, background: DS.violet, color: "#fff", fontWeight: 800, fontSize: 14, border: "none",
+                  cursor: loading || code.length < 6 ? "not-allowed" : "pointer", opacity: loading || code.length < 6 ? 0.6 : 1, fontFamily: DS.font }}>
+                {loading ? <Loader2 style={{ width: 16, height: 16, animation: "spin 1s linear infinite" }} /> : <>Vérifier <ArrowRight style={{ width: 16, height: 16 }} /></>}
+              </button>
+              <div style={{ display: "flex", justifyContent: "space-between", marginTop: 16 }}>
+                <button type="button" onClick={() => { setTwofa(false); setCode(""); }}
+                  style={{ background: "none", border: "none", fontSize: 13, color: DS.textMuted, fontWeight: 700, cursor: "pointer" }}>
+                  ← Retour
+                </button>
+                <button type="button" onClick={resend2fa}
+                  style={{ background: "none", border: "none", fontSize: 13, color: DS.violetMid, fontWeight: 700, cursor: "pointer" }} data-testid="button-resend-2fa">
+                  Renvoyer le code
+                </button>
+              </div>
+            </form>
+          )}
+
           {/* Form card */}
+          {!twofa && (
           <form
             onSubmit={handleSubmit}
             style={{
@@ -319,6 +402,7 @@ export default function ProConnexion() {
               </Link>
             </p>
           </form>
+          )}
         </motion.div>
       </main>
 

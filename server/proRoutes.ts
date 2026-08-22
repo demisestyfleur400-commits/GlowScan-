@@ -12,6 +12,59 @@ import { deliverConsultationReport, sendWhatsAppText, buildFollowUpReminderMessa
 import { uploadScanImageToStorage } from "./routes";
 import { storage } from "./storage";
 import webpush from "web-push";
+import { sendEmail, buildOtpEmail } from "./email";
+
+// ── 2FA email (dermatologues) ──────────────────────────────────────────────
+const OTP_TTL_MS = 10 * 60 * 1000;   // 10 min
+const OTP_MAX_ATTEMPTS = 5;
+
+function gen6(): string { return String(Math.floor(100000 + Math.random() * 900000)); }
+
+function maskEmail(email: string): string {
+  const [u, d] = (email || "").split("@");
+  if (!d) return email || "";
+  const head = u.length <= 2 ? u[0] || "" : u.slice(0, 2);
+  return `${head}${"*".repeat(Math.max(2, u.length - 2))}@${d}`;
+}
+
+// Lit le flag 2FA d'un user (colonne hors schéma Drizzle). Résilient.
+async function is2faEmailEnabled(userId: string): Promise<boolean> {
+  try {
+    const r: any = await db.execute(sql`SELECT "twofa_email_enabled" FROM "users" WHERE "id" = ${userId}`);
+    return (r?.rows ?? r ?? [])[0]?.twofa_email_enabled === true;
+  } catch { return false; }
+}
+
+// Génère un code, le stocke haché + expiration, et l'envoie par email.
+async function issueEmailOtp(userId: string, email: string, name?: string): Promise<{ ok: boolean; provider: string; error?: string }> {
+  const code = gen6();
+  const hash = await bcrypt.hash(code, 10);
+  const expires = new Date(Date.now() + OTP_TTL_MS);
+  await db.execute(sql`UPDATE "users" SET "twofa_code_hash" = ${hash}, "twofa_code_expires" = ${expires.toISOString()}, "twofa_attempts" = 0 WHERE "id" = ${userId}`);
+  const { subject, html, text } = buildOtpEmail(code, name);
+  const r = await sendEmail(email, subject, html, text);
+  return { ok: r.ok, provider: r.provider, error: r.error };
+}
+
+// Vérifie un code OTP saisi. Gère expiration + limite de tentatives. Consomme le code si OK.
+async function verifyEmailOtp(userId: string, code: string): Promise<{ ok: boolean; reason?: "expired" | "locked" | "invalid" | "nocode" }> {
+  let row: any;
+  try {
+    const r: any = await db.execute(sql`SELECT "twofa_code_hash","twofa_code_expires","twofa_attempts" FROM "users" WHERE "id" = ${userId}`);
+    row = (r?.rows ?? r ?? [])[0];
+  } catch { return { ok: false, reason: "nocode" }; }
+  if (!row?.twofa_code_hash) return { ok: false, reason: "nocode" };
+  if ((row.twofa_attempts ?? 0) >= OTP_MAX_ATTEMPTS) return { ok: false, reason: "locked" };
+  if (row.twofa_code_expires && new Date(row.twofa_code_expires).getTime() < Date.now()) return { ok: false, reason: "expired" };
+  const match = await bcrypt.compare(String(code || ""), row.twofa_code_hash);
+  if (!match) {
+    await db.execute(sql`UPDATE "users" SET "twofa_attempts" = COALESCE("twofa_attempts",0) + 1 WHERE "id" = ${userId}`).catch(() => {});
+    return { ok: false, reason: "invalid" };
+  }
+  // succès → on consomme le code
+  await db.execute(sql`UPDATE "users" SET "twofa_code_hash" = NULL, "twofa_code_expires" = NULL, "twofa_attempts" = 0 WHERE "id" = ${userId}`).catch(() => {});
+  return { ok: true };
+}
 
 // Notifie un dermatologue (par proAccount.id) : WebSocket temps réel + push web.
 // Résilient : ne throw jamais. VAPID déjà configuré par le module whatsapp.
@@ -408,6 +461,24 @@ export function registerProRoutes(app: Express) {
       if (!user || !user.passwordHash || !(await bcrypt.compare(password, user.passwordHash))) {
         return res.status(401).json({ message: "Email ou mot de passe incorrect" });
       }
+
+      // ── 2FA email : mot de passe OK mais on n'ouvre PAS encore la session.
+      // On met l'utilisateur "en attente de 2FA" et on envoie un code par email.
+      if (await is2faEmailEnabled(user.id)) {
+        (req.session as any).pending2faUserId = user.id;
+        const otp = await issueEmailOtp(user.id, user.email, (user as any).firstName);
+        return req.session.save(() => {
+          res.json({
+            requires2fa: true,
+            method: "email",
+            emailSent: otp.ok,
+            emailHint: maskEmail(user.email),
+            // en dev (RESEND absent) le code est dans les logs serveur
+            devFallback: otp.provider === "dev",
+          });
+        });
+      }
+
       const acc = await getProAccountForUser(user.id);
       if (!acc) {
         // Secrétaire : pas de compte pro propre, mais accès autorisé si liée à un cabinet
@@ -435,6 +506,111 @@ export function registerProRoutes(app: Express) {
       });
     } catch (err) {
       console.error("[pro/login] error:", err);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // ───────────────────────────────────────────
+  // POST /api/pro/login/2fa — 2e facteur : vérifie le code email et ouvre la session
+  // ───────────────────────────────────────────
+  app.post("/api/pro/login/2fa", async (req: any, res) => {
+    try {
+      const pendingId = (req.session as any)?.pending2faUserId;
+      if (!pendingId) return res.status(440).json({ message: "Session de connexion expirée. Reconnecte-toi." });
+      const code = String(req.body?.code || "").replace(/\D/g, "");
+      if (code.length < 6) return res.status(400).json({ message: "Code à 6 chiffres requis" });
+
+      const v = await verifyEmailOtp(pendingId, code);
+      if (!v.ok) {
+        const msg = v.reason === "expired" ? "Code expiré — demande un nouveau code."
+          : v.reason === "locked" ? "Trop de tentatives — demande un nouveau code."
+          : v.reason === "nocode" ? "Aucun code en attente — demande un nouveau code."
+          : "Code incorrect.";
+        const status = v.reason === "locked" ? 429 : 401;
+        return res.status(status).json({ message: msg });
+      }
+
+      // Code OK → on ouvre la session
+      const [user] = await db.select().from(users).where(eq(users.id, pendingId));
+      if (!user) return res.status(401).json({ message: "Utilisateur introuvable" });
+      delete (req.session as any).pending2faUserId;
+      req.session.userId = user.id; touchLastLogin(user.id);
+      const acc = await getProAccountForUser(user.id);
+      req.session.save((err: any) => {
+        if (err) return res.status(500).json({ message: "Erreur session" });
+        if (!acc) return res.json({ success: true, role: user.role === "secretary" ? "secretary" : "doctor" });
+        res.json({ success: true, account: acc, role: "doctor" });
+      });
+    } catch (err) {
+      console.error("[pro/login/2fa] error:", err);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // POST /api/pro/login/2fa/resend — renvoyer un code (utilisateur en attente de 2FA)
+  app.post("/api/pro/login/2fa/resend", async (req: any, res) => {
+    try {
+      const pendingId = (req.session as any)?.pending2faUserId;
+      if (!pendingId) return res.status(440).json({ message: "Session de connexion expirée." });
+      const [user] = await db.select().from(users).where(eq(users.id, pendingId));
+      if (!user) return res.status(401).json({ message: "Utilisateur introuvable" });
+      const otp = await issueEmailOtp(user.id, user.email, (user as any).firstName);
+      res.json({ success: true, emailSent: otp.ok, emailHint: maskEmail(user.email), devFallback: otp.provider === "dev" });
+    } catch (err) {
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // ── Activation/désactivation de la 2FA email (utilisateur connecté) ──
+  // GET statut
+  app.get("/api/pro/2fa/status", async (req: any, res) => {
+    const userId = req.session?.userId;
+    if (!userId) return res.status(401).json({ message: "Non connecté" });
+    res.json({ enabled: await is2faEmailEnabled(userId) });
+  });
+
+  // POST request — envoie un code de vérification à l'email du compte pour ACTIVER
+  app.post("/api/pro/2fa/email/request", async (req: any, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) return res.status(401).json({ message: "Non connecté" });
+      const [user] = await db.select().from(users).where(eq(users.id, userId));
+      if (!user?.email) return res.status(400).json({ message: "Aucun email sur ce compte" });
+      const otp = await issueEmailOtp(user.id, user.email, (user as any).firstName);
+      res.json({ success: true, emailSent: otp.ok, emailHint: maskEmail(user.email), devFallback: otp.provider === "dev" });
+    } catch (err) {
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // POST confirm — vérifie le code et ACTIVE la 2FA
+  app.post("/api/pro/2fa/email/confirm", async (req: any, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) return res.status(401).json({ message: "Non connecté" });
+      const code = String(req.body?.code || "").replace(/\D/g, "");
+      const v = await verifyEmailOtp(userId, code);
+      if (!v.ok) return res.status(v.reason === "locked" ? 429 : 401).json({ message: v.reason === "expired" ? "Code expiré" : "Code incorrect" });
+      await db.execute(sql`UPDATE "users" SET "twofa_email_enabled" = TRUE WHERE "id" = ${userId}`);
+      res.json({ success: true, enabled: true });
+    } catch (err) {
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // POST disable — désactive la 2FA (re-vérifie le mot de passe par sécurité)
+  app.post("/api/pro/2fa/email/disable", async (req: any, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) return res.status(401).json({ message: "Non connecté" });
+      const [user] = await db.select().from(users).where(eq(users.id, userId));
+      const password = String(req.body?.password || "");
+      if (!user?.passwordHash || !(await bcrypt.compare(password, user.passwordHash))) {
+        return res.status(401).json({ message: "Mot de passe incorrect" });
+      }
+      await db.execute(sql`UPDATE "users" SET "twofa_email_enabled" = FALSE, "twofa_code_hash" = NULL, "twofa_code_expires" = NULL, "twofa_attempts" = 0 WHERE "id" = ${userId}`);
+      res.json({ success: true, enabled: false });
+    } catch (err) {
       res.status(500).json({ message: "Erreur serveur" });
     }
   });
