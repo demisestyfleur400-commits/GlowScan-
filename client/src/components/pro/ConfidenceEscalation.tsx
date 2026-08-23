@@ -44,7 +44,7 @@ export function ConfidenceEscalation({ result }: { result: any }) {
       {escalate && (
         <div className="rounded-2xl p-3.5" style={{ background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.3)" }}>
           <p className="text-[12.5px] font-extrabold mb-1" style={{ color: "#fbbf24" }}>⚠️ Escalade recommandée — ne pas conclure seul sur l'IA</p>
-          <ul className="text-[11.5px] leading-relaxed" style={{ color: "rgba(200,185,255,0.75)", margin: 0, paddingLeft: 16 }}>
+          <ul className="text-[11.5px] leading-relaxed" style={{ color: "#475569", margin: 0, paddingLeft: 16 }}>
             {level === "low" && <li>Confiance de l'IA <strong>faible</strong> sur ce cas → confirmez cliniquement ou demandez un second avis.</li>}
             {photoLimited && <li>Qualité de photo <strong>limitée</strong> → reprenez une image nette et bien éclairée si possible.</li>}
             {referral && <li>Le protocole indique une <strong>orientation spécialisée</strong> → adressez le patient.</li>}

@@ -809,27 +809,28 @@ function normalizeStep(s: any, i: number): ProtocolStep {
 }
 
 // ─── DS tokens (inline) ─────────────────────────────────────────────
-// Thème SOMBRE — utilisé en mode DERM (isPro), page noire.
+// Thème CLAIR DERM (isPro) — blanc + bleu, cohérent avec l'app DERM.
+// (Anciennement sombre ; converti pour le thème blanc/bleu. B2C = DS_LIGHT, intact.)
 const DS_DARK = {
   font: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
-  bg: "#0d0a0e",
-  surface: "#13101f",
-  element: "#0e0b1a",
-  textPrimary: "#f3f0ff",
-  textBody: "rgba(200,185,255,0.65)",
-  textMuted: "rgba(255,255,255,0.35)",
+  bg: "#F6FAFD",
+  surface: "#FFFFFF",
+  element: "#F1F5F9",
+  textPrimary: "#0F172A",
+  textBody: "#475569",
+  textMuted: "#64748B",
   violet: "#7c3aed",
-  violetMid: "#a78bfa",
-  violetLight: "#c4b5fd",
+  violetMid: "#0369A1",
+  violetLight: "#0891B2",
   pink: "#E91E8C",
   subtleCard: {
-    background: "rgba(255,255,255,0.04)",
-    border: "1px solid rgba(255,255,255,0.07)",
+    background: "#F1F5F9",
+    border: "1px solid #E2E8F0",
     borderRadius: "24px",
   } as React.CSSProperties,
   violetCard: {
-    background: "rgba(167,139,250,0.06)",
-    border: "1px solid rgba(167,139,250,0.18)",
+    background: "rgba(124,58,237,0.06)",
+    border: "1px solid rgba(124,58,237,0.18)",
     borderRadius: "24px",
   } as React.CSSProperties,
 };
@@ -929,9 +930,9 @@ function GlowGauge({ score, observationsVisuelles }: { score: number; observatio
             strokeLinecap="round"
             strokeDasharray={`${filled},${remaining}`}
           />
-          <text x={cx} y={cy - radius - 6} textAnchor="middle" fill="rgba(200,185,255,0.35)" fontSize="10" fontWeight="bold">50</text>
-          <text x={cx - radius} y={cy + 22} textAnchor="middle" fill="rgba(200,185,255,0.35)" fontSize="10" fontWeight="bold">0</text>
-          <text x={cx + radius} y={cy + 22} textAnchor="middle" fill="rgba(200,185,255,0.35)" fontSize="10" fontWeight="bold">100</text>
+          <text x={cx} y={cy - radius - 6} textAnchor="middle" fill="#94A3B8" fontSize="10" fontWeight="bold">50</text>
+          <text x={cx - radius} y={cy + 22} textAnchor="middle" fill="#94A3B8" fontSize="10" fontWeight="bold">0</text>
+          <text x={cx + radius} y={cy + 22} textAnchor="middle" fill="#94A3B8" fontSize="10" fontWeight="bold">100</text>
         </svg>
         <div
           style={{
@@ -1080,7 +1081,7 @@ function RadarChart({ balance }: { balance: AnalysisResult["balance"] }) {
       <path d={dataPath} fill="rgba(124,58,237,0.18)" stroke="#7c3aed" strokeWidth="2" />
       {dataPoints.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="4" fill="#a78bfa" stroke="rgba(13,10,14,0.8)" strokeWidth="2" />)}
       {labels.map((l, i) => (
-        <text key={i} x={getPoint(i, 12.5).x} y={getPoint(i, 12.5).y} textAnchor="middle" dominantBaseline="middle" fill="rgba(200,185,255,0.45)" fontSize="8" fontWeight="bold">
+        <text key={i} x={getPoint(i, 12.5).x} y={getPoint(i, 12.5).y} textAnchor="middle" dominantBaseline="middle" fill="#64748B" fontSize="8" fontWeight="bold">
           {l.label}
         </text>
       ))}
@@ -2189,11 +2190,11 @@ ${medicalSections}
             }}>
               <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                 <span style={{ fontSize: "12px", fontWeight: 800, color: "#7c3aed" }}>✦ GlowScan</span>
-                <span style={{ fontSize: "9px", padding: "1px 7px", borderRadius: "4px", background: "rgba(124,58,237,0.2)", color: "#a78bfa", fontWeight: 700 }}>
+                <span style={{ fontSize: "9px", padding: "1px 7px", borderRadius: "4px", background: "rgba(124,58,237,0.2)", color: "#7c3aed", fontWeight: 700 }}>
                   Carte Analyse
                 </span>
               </div>
-              <span style={{ fontSize: "8px", color: "rgba(255,255,255,0.3)", fontWeight: 600 }}>
+              <span style={{ fontSize: "8px", color: "#94A3B8", fontWeight: 600 }}>
                 {new Date().toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
               </span>
             </div>
@@ -2276,7 +2277,7 @@ ${medicalSections}
               }}>
                 <p style={{ fontSize: "24px", fontWeight: 900, color: "#7c3aed", lineHeight: 1 }}>{result.score}</p>
                 <p style={{ fontSize: "8px", color: DS.textMuted, fontWeight: 700 }}>/100</p>
-                <p style={{ fontSize: "7px", color: "#a78bfa", fontWeight: 700, marginTop: "2px" }}>GLOW</p>
+                <p style={{ fontSize: "7px", color: "#7c3aed", fontWeight: 700, marginTop: "2px" }}>GLOW</p>
               </div>
             </div>
           </div>
@@ -3075,7 +3076,7 @@ ${medicalSections}
                                 alignItems: "center",
                                 justifyContent: "center",
                                 background: "rgba(255,255,255,0.06)",
-                                border: "1px solid rgba(255,255,255,0.1)",
+                                border: "1px solid #E2E8F0",
                               }}
                             >
                               <img
@@ -3105,7 +3106,7 @@ ${medicalSections}
                       padding: "2px",
                     }}
                   >
-                    <Moon style={{ width: "12px", height: "12px", color: "#f3f0ff" }} />
+                    <Moon style={{ width: "12px", height: "12px", color: "#475569" }} />
                   </div>
                   <h3 style={{ fontSize: "12px", fontWeight: 700, letterSpacing: "0.08em", marginBottom: "12px", display: "flex", alignItems: "center", gap: "6px", color: DS.violetLight }}>
                     Rituel du Soir
@@ -3175,7 +3176,7 @@ ${medicalSections}
                                 alignItems: "center",
                                 justifyContent: "center",
                                 background: "rgba(255,255,255,0.06)",
-                                border: "1px solid rgba(255,255,255,0.1)",
+                                border: "1px solid #E2E8F0",
                               }}
                             >
                               <img

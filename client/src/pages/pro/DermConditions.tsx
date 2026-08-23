@@ -12,7 +12,7 @@ import { useLocation } from "wouter";
 export const DERM_TERMS_VERSION = "v1-2026-07";
 
 const INK = "#0F172A";
-const BODY = "rgba(243,240,255,0.82)";
+const BODY = "#475569";
 const MUTED = "#64748B";
 const VIOLET = "#0369A1";
 const CARD = "#F1F5F9";

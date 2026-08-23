@@ -11,9 +11,9 @@ import { VoiceButton } from "@/components/VoiceButton";
 export type ClinicalRecord = Record<string, string>;
 
 const NAVY = "#7c3aed";
-const INK = "#f3f0ff";
-const MUTED = "rgba(255,255,255,0.55)";
-const fieldBg = "rgba(255,255,255,0.04)";
+const INK = "#0F172A";
+const MUTED = "#64748B";
+const fieldBg = "#F1F5F9";
 const fieldBorder = "1px solid rgba(167,139,250,0.2)";
 
 type FieldDef = { key: string; label: string; ml?: boolean; ph?: string };
@@ -166,13 +166,13 @@ export function ClinicalDossierForm({ value, onChange }: { value: ClinicalRecord
                     <div key={q.key}>
                       <p style={{ fontSize: 12, fontWeight: 700, color: INK, margin: "0 0 5px" }}>{q.label}</p>
                       <div style={{ display: "flex", gap: 6 }}>
-                        {[["oui", "Oui", "#6ee7b7", "rgba(16,185,129,0.15)"], ["non", "Non", "#f87171", "rgba(248,113,113,0.15)"], ["nsp", "NSP", "#9ca3af", "rgba(255,255,255,0.06)"]].map(([v, lab, col, bg]) => {
+                        {[["oui", "Oui", "#047857", "rgba(16,185,129,0.15)"], ["non", "Non", "#dc2626", "rgba(248,113,113,0.15)"], ["nsp", "NSP", "#64748B", "#F1F5F9"]].map(([v, lab, col, bg]) => {
                           const on = cur === v;
                           return (
                             <button key={v} type="button" onClick={() => set(`anam_${q.key}`, on ? "" : (v as string))}
                               style={{ flex: 1, padding: "8px 0", borderRadius: 10, fontSize: 12, fontWeight: 800, cursor: "pointer",
-                                background: on ? (bg as string) : "rgba(255,255,255,0.03)", color: on ? (col as string) : "#6b7280",
-                                border: on ? `1px solid ${col}` : "1px solid rgba(255,255,255,0.08)" }}>
+                                background: on ? (bg as string) : "#F8FAFC", color: on ? (col as string) : "#64748B",
+                                border: on ? `1px solid ${col}` : "1px solid #E2E8F0" }}>
                               {lab}
                             </button>
                           );

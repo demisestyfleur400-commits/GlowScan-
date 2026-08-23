@@ -53,18 +53,18 @@ export function CaseAuditTrail({ scan, modelLabel }: { scan: ScanLike; modelLabe
   if (scan.expertReviewer) {
     steps.push({
       icon: isCorrection ? "✍️" : "✅",
-      color: isCorrection ? "#f87171" : "#6ee7b7",
+      color: isCorrection ? "#dc2626" : "#047857",
       title: isCorrection ? `Diagnostic corrigé par ${scan.expertReviewer}` : `Diagnostic validé par ${scan.expertReviewer}`,
       detail: isCorrection ? `IA : ${scan.condition} → Médecin : ${corrected}` : (corrected || scan.condition || undefined),
       date: scan.expertReviewedAt || scan.createdAt,
     });
   } else {
-    steps.push({ icon: "⏳", color: "rgba(255,255,255,0.4)", title: "En attente de validation médecin", detail: "le diagnostic IA reste indicatif" });
+    steps.push({ icon: "⏳", color: "#94A3B8", title: "En attente de validation médecin", detail: "le diagnostic IA reste indicatif" });
   }
 
   return (
-    <details className="rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.02)" }}>
-      <summary className="cursor-pointer text-[11px] font-extrabold px-3 py-2.5" style={{ color: "rgba(255,255,255,0.6)" }}>
+    <details className="rounded-xl overflow-hidden" style={{ border: "1px solid #E2E8F0", background: "#F8FAFC" }}>
+      <summary className="cursor-pointer text-[11px] font-extrabold px-3 py-2.5" style={{ color: "#64748B" }}>
         🔒 Journal d'audit du cas
       </summary>
       <div className="px-3 pb-3">
@@ -73,20 +73,20 @@ export function CaseAuditTrail({ scan, modelLabel }: { scan: ScanLike; modelLabe
             <div key={i} style={{ display: "flex", gap: 10, paddingBottom: i < steps.length - 1 ? 12 : 0, position: "relative" }}>
               {/* Ligne verticale */}
               {i < steps.length - 1 && (
-                <span style={{ position: "absolute", left: 9, top: 22, bottom: 0, width: 1, background: "rgba(255,255,255,0.1)" }} />
+                <span style={{ position: "absolute", left: 9, top: 22, bottom: 0, width: 1, background: "#E2E8F0" }} />
               )}
               <span style={{ flexShrink: 0, width: 20, height: 20, borderRadius: "50%", background: `${s.color}22`, border: `1px solid ${s.color}55`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, zIndex: 1 }}>
                 {s.icon}
               </span>
               <div style={{ minWidth: 0 }}>
-                <p style={{ fontSize: 11.5, fontWeight: 700, color: "#f3f0ff", margin: 0 }}>{s.title}</p>
-                {s.detail && <p style={{ fontSize: 10.5, color: "rgba(200,185,255,0.6)", margin: "1px 0 0", lineHeight: 1.5 }}>{s.detail}</p>}
-                {s.date && <p style={{ fontSize: 9.5, color: "rgba(255,255,255,0.35)", margin: "1px 0 0" }}>{fmt(s.date)}</p>}
+                <p style={{ fontSize: 11.5, fontWeight: 700, color: "#0F172A", margin: 0 }}>{s.title}</p>
+                {s.detail && <p style={{ fontSize: 10.5, color: "#475569", margin: "1px 0 0", lineHeight: 1.5 }}>{s.detail}</p>}
+                {s.date && <p style={{ fontSize: 9.5, color: "#94A3B8", margin: "1px 0 0" }}>{fmt(s.date)}</p>}
               </div>
             </div>
           ))}
         </div>
-        <p style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", marginTop: 10, lineHeight: 1.5 }}>
+        <p style={{ fontSize: 9, color: "#94A3B8", marginTop: 10, lineHeight: 1.5 }}>
           Chronologie horodatée à valeur de traçabilité — le diagnostic validé par le médecin fait foi.
         </p>
       </div>

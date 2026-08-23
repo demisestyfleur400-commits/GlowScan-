@@ -56,8 +56,8 @@ export function DermNotifPrompt() {
     <div style={{ background: "rgba(124,58,237,0.10)", border: "1px solid rgba(167,139,250,0.25)", borderRadius: 18, padding: "14px 16px", marginBottom: 16, display: "flex", alignItems: "center", gap: 12 }}>
       <span style={{ fontSize: 22 }}>🔔</span>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ fontSize: 13, fontWeight: 800, color: "#f3f0ff", margin: 0 }}>Activez les notifications</p>
-        <p style={{ fontSize: 11.5, color: "rgba(200,185,255,0.7)", margin: "2px 0 0", lineHeight: 1.5 }}>
+        <p style={{ fontSize: 13, fontWeight: 800, color: "#0F172A", margin: 0 }}>Activez les notifications</p>
+        <p style={{ fontSize: 11.5, color: "#475569", margin: "2px 0 0", lineHeight: 1.5 }}>
           Pour être alerté dès qu'un patient vous consulte ou vous écrit en ligne.
         </p>
       </div>
@@ -67,7 +67,7 @@ export function DermNotifPrompt() {
           {loading ? "…" : "Activer"}
         </button>
         <button onClick={dismiss}
-          style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)", border: "none", borderRadius: 9999, padding: "8px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+          style={{ background: "#F1F5F9", color: "#64748B", border: "none", borderRadius: 9999, padding: "8px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
           ✕
         </button>
       </div>

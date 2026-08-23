@@ -44,9 +44,9 @@ const PHOTOTYPES = [
 const LESION_OPTS = ["Macule", "Papule", "Pustule", "Nodule", "Comédon", "Plaque", "Squame", "Vésicule", "Bulle", "Cicatrice/PIH", "Chéloïde"];
 const ZONE_OPTS = ["Front", "Joue D", "Joue G", "Nez/Zone T", "Menton", "Cou", "Cuir chevelu", "Tronc", "Membres", "Mains", "Pieds"];
 
-const INK = "#f3f0ff";
-const MUTED = "rgba(255,255,255,0.55)";
-const fieldBg = "rgba(255,255,255,0.04)";
+const INK = "#0F172A";
+const MUTED = "#64748B";
+const fieldBg = "#F1F5F9";
 const fieldBorder = "1px solid rgba(167,139,250,0.2)";
 
 export function ExamenPhysiqueForm({ value, onChange }: { value: ExamenData; onChange: (next: ExamenData) => void }) {
@@ -76,10 +76,10 @@ export function ExamenPhysiqueForm({ value, onChange }: { value: ExamenData; onC
     <div>
       <p style={{ fontSize: 10, fontWeight: 700, color: MUTED, marginBottom: 4 }}>{label}</p>
       <div style={{ display: "flex", gap: 4 }}>
-        {[["low", "Faible", "#6ee7b7"], ["medium", "Moyen", "#fcd34d"], ["high", "Élevé", "#f87171"]].map(([v, l, c]) => (
+        {[["low", "Faible", "#047857"], ["medium", "Moyen", "#fcd34d"], ["high", "Élevé", "#dc2626"]].map(([v, l, c]) => (
           <button key={v} type="button" onClick={() => set({ [k]: value[k] === v ? "" : v } as any)}
             style={{ flex: 1, padding: "6px 0", borderRadius: 8, fontSize: 10, fontWeight: 700, cursor: "pointer",
-              background: value[k] === v ? `${c}33` : fieldBg, color: value[k] === v ? (c as string) : "#6b7280", border: "1px solid rgba(255,255,255,0.08)" }}>
+              background: value[k] === v ? `${c}33` : fieldBg, color: value[k] === v ? (c as string) : "#64748B", border: "1px solid #E2E8F0" }}>
             {l}
           </button>
         ))}
@@ -103,8 +103,8 @@ export function ExamenPhysiqueForm({ value, onChange }: { value: ExamenData; onC
               {PHOTOTYPES.map((p) => (
                 <button key={p.id} type="button" title={p.title} onClick={() => set({ phototype: value.phototype === p.id ? "" : p.id })}
                   style={{ flex: 1, padding: "8px 0", borderRadius: 10, fontSize: 12, fontWeight: 800, cursor: "pointer",
-                    background: value.phototype === p.id ? p.bg : "rgba(255,255,255,0.06)", color: value.phototype === p.id ? "#fff" : "#9ca3af",
-                    border: value.phototype === p.id ? `2px solid ${p.bg}` : "1px solid rgba(255,255,255,0.1)" }}>
+                    background: value.phototype === p.id ? p.bg : "#F1F5F9", color: value.phototype === p.id ? "#fff" : "#64748B",
+                    border: value.phototype === p.id ? `2px solid ${p.bg}` : "1px solid #E2E8F0" }}>
                   {p.label}
                 </button>
               ))}
@@ -120,8 +120,8 @@ export function ExamenPhysiqueForm({ value, onChange }: { value: ExamenData; onC
                 return (
                   <button key={l} type="button" onClick={() => set({ lesions: toggle(value.lesions, l) })}
                     style={{ padding: "5px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700, cursor: "pointer",
-                      background: on ? "rgba(139,92,246,0.3)" : "rgba(255,255,255,0.05)", color: on ? "#c4b5fd" : "#6b7280",
-                      border: on ? "1px solid #7c3aed" : "1px solid rgba(255,255,255,0.08)" }}>
+                      background: on ? "rgba(139,92,246,0.3)" : "#F1F5F9", color: on ? "#7c3aed" : "#64748B",
+                      border: on ? "1px solid #7c3aed" : "1px solid #E2E8F0" }}>
                     {l}
                   </button>
                 );
@@ -142,8 +142,8 @@ export function ExamenPhysiqueForm({ value, onChange }: { value: ExamenData; onC
                 return (
                   <button key={z} type="button" onClick={() => set({ zones: toggle(value.zones, z) })}
                     style={{ padding: "5px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700, cursor: "pointer",
-                      background: on ? "rgba(59,130,246,0.3)" : "rgba(255,255,255,0.05)", color: on ? "#93c5fd" : "#6b7280",
-                      border: on ? "1px solid #3b82f6" : "1px solid rgba(255,255,255,0.08)" }}>
+                      background: on ? "rgba(59,130,246,0.3)" : "#F1F5F9", color: on ? "#2563eb" : "#64748B",
+                      border: on ? "1px solid #3b82f6" : "1px solid #E2E8F0" }}>
                     {z}
                   </button>
                 );
@@ -168,7 +168,7 @@ export function ExamenPhysiqueForm({ value, onChange }: { value: ExamenData; onC
               est Moyen/Élevé ou si « Chéloïde » est coché en lésion élémentaire. */}
           {(value.keloidRisk === "medium" || value.keloidRisk === "high" || value.lesions.includes("Chéloïde")) && (
             <div style={{ borderRadius: 12, padding: 12, background: "rgba(248,113,113,0.06)", border: "1px solid rgba(248,113,113,0.25)", display: "flex", flexDirection: "column", gap: 10 }}>
-              <p style={{ fontSize: 11, fontWeight: 800, color: "#f87171", margin: 0 }}>⚠️ Documentation chéloïde</p>
+              <p style={{ fontSize: 11, fontWeight: 800, color: "#dc2626", margin: 0 }}>⚠️ Documentation chéloïde</p>
               <Text k="keloidAntecedents" label="Antécédents (personnels / familiaux)" ph="ex : chéloïde après piercing, antécédents familiaux…" />
               <Text k="keloidLocalisation" label="Localisation des chéloïdes" ph="ex : lobe oreille, thorax, épaules…" />
               <Text k="keloidAnciennete" label="Ancienneté / évolution" ph="ex : apparue il y a 2 ans, extension progressive…" />
