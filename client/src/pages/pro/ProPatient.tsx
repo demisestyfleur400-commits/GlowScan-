@@ -462,6 +462,11 @@ export default function ProPatient() {
         <FollowUpReminderCard patient={p as any} patientId={p.id} />
       )}
 
+      {/* Consentement dataset (RGPD) */}
+      {scans.length > 0 && (
+        <DatasetConsentCard patientId={p.id} initial={(p as any).datasetConsent === true} />
+      )}
+
       {/* Demander un second avis confrère (cas anonymisé) */}
       {lastScan && (
         <PeerReviewButton scanId={(lastScan as any).id} condition={dxOf(lastScan)} />
@@ -895,6 +900,40 @@ function EvolutionSection({ scan, patientId }: { scan: any; patientId: number })
           </div>
         </>
       )}
+    </ProCard>
+  );
+}
+
+// ── Consentement dataset (RGPD) — le dermato atteste l'accord du patient ──
+function DatasetConsentCard({ patientId, initial }: { patientId: number; initial: boolean }) {
+  const { toast } = useToast();
+  const [consent, setConsent] = useState(initial);
+  const toggle = async () => {
+    const next = !consent;
+    setConsent(next);
+    try {
+      await fetch(`/api/pro/patients/${patientId}/dataset-consent`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include",
+        body: JSON.stringify({ consent: next }),
+      });
+      toast({ title: next ? "Consentement enregistré" : "Consentement retiré" });
+    } catch { setConsent(!next); toast({ title: "Erreur", variant: "destructive" }); }
+  };
+  return (
+    <ProCard className="p-4 mb-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-[13px] font-extrabold" style={{ color: INK }}>Contribution au dataset GlowScan</p>
+          <p className="text-[11px] mt-0.5" style={{ color: DS.muted }}>
+            Le patient autorise l'usage de ses images anonymisées pour améliorer l'IA. Facultatif.
+          </p>
+        </div>
+        <button role="switch" aria-checked={consent} onClick={toggle} data-testid="toggle-patient-dataset-consent"
+          style={{ flexShrink: 0, width: 44, height: 26, padding: 3, borderRadius: 9999, border: "none", cursor: "pointer",
+            background: consent ? "#059669" : "#CBD5E1", display: "flex", justifyContent: consent ? "flex-end" : "flex-start" }}>
+          <span style={{ width: 20, height: 20, borderRadius: "50%", background: "#fff", display: "block" }} />
+        </button>
+      </div>
     </ProCard>
   );
 }

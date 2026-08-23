@@ -10,6 +10,24 @@ export function PrivacySettings() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [confirmText, setConfirmText] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
+  // Consentement dataset (séparé du consentement d'usage)
+  const [datasetConsent, setDatasetConsent] = useState<boolean | null>(null);
+  useEffect(() => {
+    fetch("/api/me/dataset-consent", { credentials: "include" })
+      .then((r) => r.ok ? r.json() : { consent: false })
+      .then((d) => setDatasetConsent(!!d.consent))
+      .catch(() => setDatasetConsent(false));
+  }, []);
+  const toggleDatasetConsent = async () => {
+    const next = !datasetConsent;
+    setDatasetConsent(next);
+    try {
+      await fetch("/api/me/dataset-consent", {
+        method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include",
+        body: JSON.stringify({ consent: next }),
+      });
+    } catch { setDatasetConsent(!next); }
+  };
 
   useEffect(() => {
     if (!showDeleteModal) return;
@@ -123,6 +141,39 @@ export function PrivacySettings() {
               <ChevronRight className="w-4 h-4" style={{ color: "rgba(255,255,255,0.35)" }} />
             </button>
           </Link>
+
+          {/* Consentement dataset (opt-in séparé) */}
+          <div
+            className="w-full flex items-center justify-between px-4 py-3 rounded-xl"
+            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}
+          >
+            <span className="flex items-start gap-3 pr-3">
+              <ShieldCheck className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: "#a78bfa" }} />
+              <span>
+                <span className="text-sm font-medium block" style={{ color: "rgba(200,185,255,0.65)" }}>
+                  Aider à améliorer l'IA GlowScan
+                </span>
+                <span className="text-[10px] block mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>
+                  Autoriser l'usage de mes images anonymisées. Facultatif, révocable à tout moment.
+                </span>
+              </span>
+            </span>
+            <button
+              role="switch"
+              aria-checked={datasetConsent === true}
+              onClick={toggleDatasetConsent}
+              data-testid="toggle-dataset-consent"
+              className="flex-shrink-0 rounded-full transition-all"
+              style={{
+                width: 42, height: 24, padding: 3,
+                background: datasetConsent ? "#2f9e6e" : "rgba(255,255,255,0.15)",
+                display: "flex", justifyContent: datasetConsent ? "flex-end" : "flex-start",
+                cursor: "pointer", border: "none",
+              }}
+            >
+              <span style={{ width: 18, height: 18, borderRadius: "50%", background: "#fff", display: "block" }} />
+            </button>
+          </div>
 
           <button
             onClick={handleExport}

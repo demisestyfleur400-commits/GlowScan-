@@ -367,6 +367,26 @@ export function registerAuthRoutes(app: Express): void {
     } catch { res.status(500).json({ message: "Erreur serveur" }); }
   });
 
+  // ── Consentement DATASET (RGPD) — distinct du consentement d'usage ──
+  app.get("/api/me/dataset-consent", async (req: any, res) => {
+    const userId = req.session?.userId;
+    if (!userId) return res.status(401).json({ message: "Non connecté" });
+    try {
+      const r: any = await db.execute(sql`SELECT "dataset_consent" FROM "users" WHERE "id" = ${userId}`);
+      const row = (r?.rows ?? r ?? [])[0];
+      res.json({ consent: row?.dataset_consent === true });
+    } catch { res.json({ consent: false }); }
+  });
+  app.post("/api/me/dataset-consent", async (req: any, res) => {
+    const userId = req.session?.userId;
+    if (!userId) return res.status(401).json({ message: "Non connecté" });
+    const consent = req.body?.consent === true;
+    try {
+      await db.execute(sql`UPDATE "users" SET "dataset_consent" = ${consent}, "dataset_consent_at" = ${consent ? new Date().toISOString() : null} WHERE "id" = ${userId}`);
+      res.json({ success: true, consent });
+    } catch (e) { res.status(500).json({ message: "Erreur serveur" }); }
+  });
+
   // ── GET /api/email/unsubscribe ── Désabonnement des emails marketing (lien signé) ──
   // Deux temps (anti pré-chargement de lien par les clients mail) : le lien de
   // l'email affiche une page avec un bouton ; seul ?confirm=1 modifie l'état.

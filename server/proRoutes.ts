@@ -1049,10 +1049,12 @@ export function registerProRoutes(app: Express) {
     // Permet au médecin de REPRENDRE le dossier saisi par la secrétaire sans re-saisir.
     let clinicalRecord: any = null;
     let followUp: { followUpAt: string | null; followUpMessage: string | null; followUpReminderSent: boolean } = { followUpAt: null, followUpMessage: null, followUpReminderSent: false };
+    let datasetConsent = false;
     try {
-      const r: any = await db.execute(sql`SELECT "clinical_record", "follow_up_at", "follow_up_message", "follow_up_reminder_sent" FROM "patients" WHERE "id" = ${id}`);
+      const r: any = await db.execute(sql`SELECT "clinical_record", "follow_up_at", "follow_up_message", "follow_up_reminder_sent", "dataset_consent" FROM "patients" WHERE "id" = ${id}`);
       const row = (r?.rows ?? r ?? [])[0];
       clinicalRecord = row?.clinical_record ?? null;
+      datasetConsent = row?.dataset_consent === true;
       if (row) followUp = {
         followUpAt: row.follow_up_at ? new Date(row.follow_up_at).toISOString() : null,
         followUpMessage: row.follow_up_message ?? null,
@@ -1073,7 +1075,20 @@ export function registerProRoutes(app: Express) {
         scansWithFollowUp = patientScans.map((s) => ({ ...s, followUpPhotos: map.get(s.id) ?? [] }));
       }
     } catch { /* colonne pas encore migrée → followUpPhotos absent, non bloquant */ }
-    res.json({ patient: { ...p, clinicalRecord, ...followUp }, scans: scansWithFollowUp });
+    res.json({ patient: { ...p, clinicalRecord, ...followUp, datasetConsent }, scans: scansWithFollowUp });
+  });
+
+  // Consentement dataset au niveau patient (le dermato atteste l'accord du patient).
+  app.post("/api/pro/patients/:id/dataset-consent", requireActivePro, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const [p] = await db.select().from(patients)
+        .where(and(eq(patients.id, id), eq(patients.dermatologistId, req.proAccount.id)));
+      if (!p) return res.status(404).json({ message: "Patient introuvable" });
+      const consent = req.body?.consent === true;
+      await db.execute(sql`UPDATE "patients" SET "dataset_consent" = ${consent}, "dataset_consent_at" = ${consent ? new Date().toISOString() : null} WHERE "id" = ${id}`).catch(() => {});
+      res.json({ success: true, consent });
+    } catch (err) { res.status(500).json({ message: "Erreur serveur" }); }
   });
 
   // ───────────────────────────────────────────

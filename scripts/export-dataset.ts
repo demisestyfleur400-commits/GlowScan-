@@ -104,8 +104,12 @@ async function main() {
            t.severity, t.image_quality, t.derm_validation_status
     FROM scans s
     LEFT JOIN training_data t ON t.scan_id = s.id
+    LEFT JOIN users u ON u.id = s.user_id
+    LEFT JOIN patients p ON p.id = s.patient_id
     WHERE s.is_verified = TRUE
       AND ($1 = 0 OR COALESCE(t.image_quality, 100) >= $1)
+      -- RGPD : consentement dataset OBLIGATOIRE (côté utilisateur B2C OU côté patient DERM).
+      AND (COALESCE(u.dataset_consent, FALSE) = TRUE OR COALESCE(p.dataset_consent, FALSE) = TRUE)
     ORDER BY s.id ASC
     `,
     [MIN_QUALITY],
