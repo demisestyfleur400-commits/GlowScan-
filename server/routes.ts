@@ -291,6 +291,15 @@ export async function uploadScanImageToStorage(base64DataUrl: string): Promise<s
   }
 }
 
+// Contrôle d'accès admin (par clé simple) — n'accorde JAMAIS l'accès si ADMIN_KEY
+// n'est pas configuré (évite le piège undefined === undefined). Aucune clé en dur.
+function verifyAdminKey(key?: string | string[] | null): boolean {
+  const expected = process.env.ADMIN_KEY;
+  if (!expected) return false;
+  const provided = Array.isArray(key) ? key[0] : key;
+  return typeof provided === "string" && provided === expected;
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -2595,7 +2604,7 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
 
   app.post("/api/push/send-reminders", async (req, res) => {
     const adminKey = req.query.key || req.headers["x-admin-key"];
-    if (adminKey !== process.env.ADMIN_KEY) {
+    if (!verifyAdminKey(adminKey)) {
       return res.status(403).json({ message: "Accès refusé" });
     }
     try {
@@ -2696,7 +2705,7 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
   // === Push J+7 — Rappel rescan ===
   app.post("/api/push/send-rescan-reminders", async (req, res) => {
     const adminKey = req.headers["x-admin-key"] || req.body?.adminKey;
-    if (adminKey !== process.env.ADMIN_KEY) {
+    if (!verifyAdminKey(adminKey)) {
       return res.status(403).json({ message: "Accès refusé" });
     }
     try {
@@ -2810,7 +2819,7 @@ Réponds en 2-4 phrases max, sois direct et utile.`;
   // POST /api/admin/subscription/activate — admin active un abonnement
   app.post("/api/admin/subscription/activate", async (req: any, res) => {
     const adminKey = req.headers["x-admin-key"];
-    if (adminKey !== process.env.ADMIN_KEY) {
+    if (!verifyAdminKey(adminKey)) {
       return res.status(403).json({ message: "Accès refusé" });
     }
 
@@ -2858,7 +2867,7 @@ Réponds en 2-4 phrases max, sois direct et utile.`;
 
   function checkAdminKey(req: any): boolean {
     const k = (req.query.key as string) || (req.headers["x-admin-key"] as string) || req.body?.adminKey;
-    const ok = k === process.env.ADMIN_KEY;
+    const ok = !!process.env.ADMIN_KEY && k === process.env.ADMIN_KEY;
     if (ok && req.session) (req.session as any).isAdmin = true;
     return ok;
   }
@@ -2866,7 +2875,7 @@ Réponds en 2-4 phrases max, sois direct et utile.`;
   /** Accepte clé admin OU clé dermato (accès lecture dataset uniquement) */
   function checkDatasetKey(req: any): boolean {
     const k = (req.query.key as string) || (req.headers["x-admin-key"] as string) || req.body?.adminKey;
-    return (k === process.env.ADMIN_KEY || k === DERMATO_KEY);
+    return (!!process.env.ADMIN_KEY && k === process.env.ADMIN_KEY) || (!!DERMATO_KEY && k === DERMATO_KEY);
   }
 
   // GET /api/admin/scan-image/:scanId — Proxy image dataset (admin ou dermato key)
@@ -3160,7 +3169,7 @@ Réponds en 2-4 phrases max, sois direct et utile.`;
   // GET /api/admin/premium/requests — liste toutes les demandes en attente
   app.get("/api/admin/premium/requests", async (req: any, res) => {
     const adminKey = req.headers["x-admin-key"];
-    if (adminKey !== "glowscan2024admin" && adminKey !== process.env.ADMIN_KEY) {
+    if (!verifyAdminKey(adminKey)) {
       return res.status(403).json({ message: "Accès refusé" });
     }
     try {
@@ -3192,7 +3201,7 @@ Réponds en 2-4 phrases max, sois direct et utile.`;
   // POST /api/admin/premium/confirm/:id — confirmer et activer le premium
   app.post("/api/admin/premium/confirm/:id", async (req: any, res) => {
     const adminKey = req.headers["x-admin-key"];
-    if (adminKey !== "glowscan2024admin" && adminKey !== process.env.ADMIN_KEY) {
+    if (!verifyAdminKey(adminKey)) {
       return res.status(403).json({ message: "Accès refusé" });
     }
     const requestId = parseInt(req.params.id);
@@ -3268,7 +3277,7 @@ Réponds en 2-4 phrases max, sois direct et utile.`;
   // POST /api/admin/premium/reject/:id — rejeter une demande
   app.post("/api/admin/premium/reject/:id", async (req: any, res) => {
     const adminKey = req.headers["x-admin-key"];
-    if (adminKey !== "glowscan2024admin" && adminKey !== process.env.ADMIN_KEY) {
+    if (!verifyAdminKey(adminKey)) {
       return res.status(403).json({ message: "Accès refusé" });
     }
     const requestId = parseInt(req.params.id);
@@ -3289,7 +3298,7 @@ Réponds en 2-4 phrases max, sois direct et utile.`;
   // POST /api/admin/subscription/deactivate — admin désactive
   app.post("/api/admin/subscription/deactivate", async (req: any, res) => {
     const adminKey = req.headers["x-admin-key"];
-    if (adminKey !== "glowscan2024admin" && adminKey !== process.env.ADMIN_KEY) {
+    if (!verifyAdminKey(adminKey)) {
       return res.status(403).json({ message: "Accès refusé" });
     }
     const { userId } = req.body;
@@ -3308,7 +3317,7 @@ Réponds en 2-4 phrases max, sois direct et utile.`;
   // GET /api/admin/subscriptions — liste tous les abonnements actifs
   app.get("/api/admin/subscriptions", async (req: any, res) => {
     const adminKey = req.headers["x-admin-key"];
-    if (adminKey !== "glowscan2024admin" && adminKey !== process.env.ADMIN_KEY) {
+    if (!verifyAdminKey(adminKey)) {
       return res.status(403).json({ message: "Accès refusé" });
     }
     try {
@@ -3331,7 +3340,7 @@ Réponds en 2-4 phrases max, sois direct et utile.`;
   // GET /api/admin/users — liste tous les utilisateurs avec statut abonnement
   app.get("/api/admin/users", async (req: any, res) => {
     const adminKey = req.headers["x-admin-key"];
-    if (adminKey !== "glowscan2024admin" && adminKey !== process.env.ADMIN_KEY) {
+    if (!verifyAdminKey(adminKey)) {
       return res.status(403).json({ message: "Accès refusé" });
     }
     try {
@@ -3613,7 +3622,7 @@ Réponds en 2-4 phrases max, sois direct et utile.`;
   // GET /api/admin/leads — liste des leads avec stats de conversion
   app.get("/api/admin/leads", async (req: any, res) => {
     const adminKey = req.headers["x-admin-key"];
-    if (adminKey !== "glowscan2024admin" && adminKey !== process.env.ADMIN_KEY) {
+    if (!verifyAdminKey(adminKey)) {
       return res.status(403).json({ message: "Accès refusé" });
     }
     try {
@@ -3637,7 +3646,7 @@ Réponds en 2-4 phrases max, sois direct et utile.`;
   // POST /api/admin/leads/mark-ordered — admin confirme une commande réelle (code soumis par l'entreprise)
   app.post("/api/admin/leads/mark-ordered", async (req: any, res) => {
     const adminKey = req.headers["x-admin-key"];
-    if (adminKey !== "glowscan2024admin" && adminKey !== process.env.ADMIN_KEY) {
+    if (!verifyAdminKey(adminKey)) {
       return res.status(403).json({ message: "Accès refusé" });
     }
     const { referenceCode } = req.body;
@@ -3744,7 +3753,7 @@ Réponds en 2-4 phrases max, sois direct et utile.`;
 
   app.get("/api/admin/analytics", async (req, res) => {
     const adminKey = req.query.key || req.headers["x-admin-key"];
-    if (adminKey !== process.env.ADMIN_KEY && adminKey !== "glowscan2024admin") {
+    if (!verifyAdminKey(adminKey)) {
       return res.status(403).json({ message: "Accès refusé" });
     }
 
@@ -3766,7 +3775,7 @@ Réponds en 2-4 phrases max, sois direct et utile.`;
   // ═══════════════════════════════════════════════════════════════
   app.get("/api/admin/full-stats", async (req: any, res) => {
     const adminKey = req.query.key || req.headers["x-admin-key"];
-    if (adminKey !== process.env.ADMIN_KEY && adminKey !== "glowscan2024admin") {
+    if (!verifyAdminKey(adminKey)) {
       return res.status(403).json({ message: "Accès refusé" });
     }
     try {
@@ -4399,7 +4408,7 @@ Ne mentionne JAMAIS la qualité de l'image.`;
 
   // GET /api/admin/partners — liste admin de tous les partenaires
   app.get("/api/admin/partners", async (req: any, res) => {
-    if (req.headers["x-admin-key"] !== process.env.ADMIN_KEY && req.headers["x-admin-key"] !== "glowscan2024admin") {
+    if (!verifyAdminKey(req.headers["x-admin-key"])) {
       return res.status(401).json({ message: "Non autorisé" });
     }
     const all = await storage.getAllPartners();
@@ -4412,7 +4421,7 @@ Ne mentionne JAMAIS la qualité de l'image.`;
 
   // POST /api/admin/partners — créer un partenaire
   app.post("/api/admin/partners", async (req: any, res) => {
-    if (req.headers["x-admin-key"] !== process.env.ADMIN_KEY && req.headers["x-admin-key"] !== "glowscan2024admin") {
+    if (!verifyAdminKey(req.headers["x-admin-key"])) {
       return res.status(401).json({ message: "Non autorisé" });
     }
     const { name, location, whatsapp, description, category } = req.body;
@@ -4423,7 +4432,7 @@ Ne mentionne JAMAIS la qualité de l'image.`;
 
   // PATCH /api/admin/partners/:id — modifier (active, etc.)
   app.patch("/api/admin/partners/:id", async (req: any, res) => {
-    if (req.headers["x-admin-key"] !== process.env.ADMIN_KEY && req.headers["x-admin-key"] !== "glowscan2024admin") {
+    if (!verifyAdminKey(req.headers["x-admin-key"])) {
       return res.status(401).json({ message: "Non autorisé" });
     }
     const id = parseInt(req.params.id);
@@ -4433,7 +4442,7 @@ Ne mentionne JAMAIS la qualité de l'image.`;
 
   // POST /api/admin/partners/:id/products — ajouter un produit
   app.post("/api/admin/partners/:id/products", async (req: any, res) => {
-    if (req.headers["x-admin-key"] !== process.env.ADMIN_KEY && req.headers["x-admin-key"] !== "glowscan2024admin") {
+    if (!verifyAdminKey(req.headers["x-admin-key"])) {
       return res.status(401).json({ message: "Non autorisé" });
     }
     const partnerId = parseInt(req.params.id);
@@ -4445,7 +4454,7 @@ Ne mentionne JAMAIS la qualité de l'image.`;
 
   // PATCH /api/admin/partners/products/:id — modifier un produit
   app.patch("/api/admin/partners/products/:id", async (req: any, res) => {
-    if (req.headers["x-admin-key"] !== process.env.ADMIN_KEY && req.headers["x-admin-key"] !== "glowscan2024admin") {
+    if (!verifyAdminKey(req.headers["x-admin-key"])) {
       return res.status(401).json({ message: "Non autorisé" });
     }
     const id = parseInt(req.params.id);
@@ -4468,7 +4477,7 @@ Ne mentionne JAMAIS la qualité de l'image.`;
   // PUT /api/admin/featured-products — remplace la liste (body: { items: [{productId, badge?}] })
   app.put("/api/admin/featured-products", async (req: any, res) => {
     const adminKey = req.headers["x-admin-key"];
-    if (adminKey !== process.env.ADMIN_KEY && adminKey !== "glowscan2024admin") {
+    if (!verifyAdminKey(adminKey)) {
       return res.status(401).json({ message: "Non autorisé" });
     }
     const items = Array.isArray(req.body?.items) ? req.body.items : [];
