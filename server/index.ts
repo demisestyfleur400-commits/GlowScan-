@@ -12,19 +12,34 @@ const httpServer = createServer(app);
 // Setup WebSocket server
 setupWebSocket(httpServer);
 
-// ── CORS — n'accepter que les origines connues ────────────────────────────
-const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || "")
+// ── CORS — SEC-001 : credentials UNIQUEMENT depuis les origines autorisées ──
+// Prod : liste ALLOWED_ORIGINS (Railway) sinon défaut sûr glow-scan.com (+ www).
+//        glow-scan.com/derm partage la même origine → couvert.
+// Dev  : permissif (localhost) uniquement si aucune liste fournie.
+const IS_PROD = process.env.NODE_ENV === "production";
+const DEFAULT_PROD_ORIGINS = ["https://glow-scan.com", "https://www.glow-scan.com"];
+const ENV_ORIGINS = (process.env.ALLOWED_ORIGINS || "")
   .split(",")
   .map(s => s.trim())
   .filter(Boolean);
+const ALLOWED_ORIGINS = ENV_ORIGINS.length ? ENV_ORIGINS : (IS_PROD ? DEFAULT_PROD_ORIGINS : []);
+// N'autoriser toutes les origines QU'en dev sans liste (jamais en production).
+const CORS_ALLOW_ALL = !IS_PROD && ALLOWED_ORIGINS.length === 0;
+if (IS_PROD && !ENV_ORIGINS.length) {
+  console.warn(`[cors] ⚠️ ALLOWED_ORIGINS non défini — repli sur ${DEFAULT_PROD_ORIGINS.join(", ")}. Définissez la variable sur Railway.`);
+}
 
 app.use((req: Request, res: Response, next: NextFunction) => {
   const origin = req.headers.origin as string | undefined;
-  if (origin && (ALLOWED_ORIGINS.includes(origin) || ALLOWED_ORIGINS.length === 0)) {
+  if (origin && (CORS_ALLOW_ALL || ALLOWED_ORIGINS.includes(origin))) {
     res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Access-Control-Allow-Credentials", "true");
+    res.setHeader("Vary", "Origin");
     res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
     res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization,x-admin-key");
+  } else if (origin) {
+    // Origine non autorisée qui tente d'accéder avec un Origin cross-site → tracé.
+    console.warn(`[cors] 🚫 Origine refusée : ${origin} ${req.method} ${req.path}`);
   }
   if (req.method === "OPTIONS") return res.sendStatus(204);
   next();

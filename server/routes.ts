@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { setupAuth } from "./replit_integrations/auth";
 import { registerAuthRoutes } from "./replit_integrations/auth/routes";
 import { registerProRoutes } from "./proRoutes";
+import { analyzeLimiter, consultationLimiter, paymentLimiter } from "./rateLimit";
 import { objectStorageClient } from "./replit_integrations/object_storage/objectStorage";
 import { api } from "@shared/routes";
 import { z } from "zod";
@@ -570,7 +571,7 @@ export async function registerRoutes(
   });
 
   // Ouvre une consultation (statut pending_payment). Embarque le contexte (photo + diagnostic).
-  app.post("/api/consultations", async (req: any, res) => {
+  app.post("/api/consultations", consultationLimiter, async (req: any, res) => {
     const userId = getUID(req);
     if (!userId) return res.status(401).json({ message: "Connexion requise" });
     try {
@@ -747,7 +748,7 @@ export async function registerRoutes(
   });
 
   // Initie un paiement CinetPay pour une consultation → renvoie l'URL de paiement.
-  app.post("/api/consultations/:id/pay/init", async (req: any, res) => {
+  app.post("/api/consultations/:id/pay/init", paymentLimiter, async (req: any, res) => {
     const userId = getUID(req);
     if (!userId) return res.status(401).json({ message: "Connexion requise" });
     if (PAYMENT_PROVIDER === "simulated") return res.status(503).json({ code: "PAYMENT_SIMULATED", message: "Paiement en ligne non configuré." });
@@ -1245,7 +1246,7 @@ export async function registerRoutes(
     };
   }
 
-  app.post(api.scans.analyze.path, async (req: any, res) => {
+  app.post(api.scans.analyze.path, analyzeLimiter, async (req: any, res) => {
     try {
       let { image, area } = api.scans.analyze.input.parse(req.body);
 
