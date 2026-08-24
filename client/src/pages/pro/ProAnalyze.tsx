@@ -910,7 +910,7 @@ export default function ProAnalyze() {
       patientName: `${firstName} ${lastName}`.trim() || undefined,
       dateNaissance: cr.dateNaissance, lieuNaissance: cr.lieuNaissance,
       age: age ? `${age} ans` : undefined, sex: sexLabel !== "—" ? sexLabel : undefined,
-      ethnie: cr.ethnie, profession: cr.profession,
+      ethnie: undefined, profession: cr.profession, // Ethnie retirée (donnée sensible RGPD ; le phototype suffit)
       ville: cr.ville || patientRegion || doctorCity, adresse: cr.adresse, phone: phone || undefined,
       email: cr.email, contactUrgence: cr.contactUrgence, religion: cr.religion, statutMarital: cr.statutMarital,
       // 2 · Motif

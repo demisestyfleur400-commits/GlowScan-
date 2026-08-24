@@ -2739,7 +2739,7 @@ ${medicalSections}
             data-testid="acc-conclusions"
             style={{ width: "100%", padding: "12px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(124,58,237,0.06)", border: "1px solid rgba(124,58,237,0.18)", borderRadius: "14px", cursor: "pointer", color: DS.textPrimary, fontSize: "13px", fontWeight: 800 }}
           >
-            <span>✨ Conclusions du Dr. GlowScan</span>
+            <span>✨ Synthèse &amp; recommandations</span>
             <span style={{ transition: "transform 0.2s", transform: showConclusions ? "rotate(180deg)" : "none" }}>▼</span>
           </button>
         )}
@@ -2778,7 +2778,7 @@ ${medicalSections}
               >
                 <Sparkles style={{ width: "16px", height: "16px", color: DS.violetMid }} />
               </div>
-              <h2 style={{ fontSize: "14px", fontWeight: 800, color: DS.textPrimary }}>Conclusions du Dr. GlowScan</h2>
+              <h2 style={{ fontSize: "14px", fontWeight: 800, color: DS.textPrimary }}>{isPro ? "Synthèse de l'analyse" : "Synthèse & recommandations"}</h2>
             </div>
             <span
               style={{
@@ -2792,7 +2792,7 @@ ${medicalSections}
                 color: DS.violetLight,
               }}
             >
-              Approuvé IA
+              Généré par IA
             </span>
           </div>
 

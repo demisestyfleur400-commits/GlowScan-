@@ -486,11 +486,12 @@ export default function PDFViewerModal({
             <ActionBtn
               onClick={handleDownload}
               icon="⬇️"
-              label="Télécharger"
+              label="Télécharger le PDF"
               style={{
-                background: "#f3f4f6",
-                color: "#374151",
-                border: "1px solid #e5e7eb",
+                background: "#7c3aed",
+                color: "#fff",
+                border: "none",
+                boxShadow: "0 4px 12px rgba(124,58,237,0.3)",
               }}
             />
           </>
