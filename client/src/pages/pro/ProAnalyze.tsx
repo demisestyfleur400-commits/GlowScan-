@@ -77,8 +77,8 @@ type AnswerValue = "oui" | "non" | "nsp";
 const STEPS = [
   { n: 1, label: "Patient & Anamnèse" },
   { n: 2, label: "Examen + Photo" },
-  { n: 3, label: "Analyse IA" },
-  { n: 4, label: "Questionnaire" },
+  { n: 3, label: "Questionnaire" },
+  { n: 4, label: "Analyse IA" },
   { n: 5, label: "Dossier" },
 ];
 
@@ -558,12 +558,30 @@ export default function ProAnalyze() {
   };
 
   // ─── Step 2 → 3 : lancer analyse IA ─────────────────────────────────
-  const launchAnalysis = async () => {
+  // ─── Step 2 → 3 : générer le questionnaire (depuis le MOTIF, avant l'IA) ───
+  const goToQuestionnaireStep = () => {
     if (!photoBase64) {
       toast({ title: "Photo manquante", variant: "destructive" });
       return;
     }
     setStep(3);
+    if (questionnaire.length === 0) {
+      genQuestionnaire.mutate({
+        condition: consultMotif || (clinicalRecord as any)?.motif || "Motif de consultation",
+        area: examArea === "hair" ? "hair" : examArea === "body" ? "body" : "face",
+        patientAge: age ? parseInt(age) : null,
+        patientSex: sex,
+      }, { onSuccess: (data) => setQuestionnaire(data.items || []) });
+    }
+  };
+
+  // ─── Step 3 → 4 : lancer l'analyse IA (avec réponses du questionnaire) ───
+  const launchAnalysis = async () => {
+    if (!photoBase64) {
+      toast({ title: "Photo manquante", variant: "destructive" });
+      return;
+    }
+    setStep(4);
     try {
       const r = await analyze.mutateAsync({
         image: photoBase64,
@@ -579,6 +597,11 @@ export default function ProAnalyze() {
           consultMotif: consultMotif || undefined,
           region: patientRegion || undefined,
           motif: consultMotif || undefined,
+          // Réponses au questionnaire (rempli AVANT l'IA) → contexte supplémentaire
+          questionnaireAnswers: (() => {
+            const parts = questionnaire.filter((q) => answers[q.id]).map((q) => `${q.label} : ${answers[q.id]}`);
+            return parts.length ? parts.join(" · ") : undefined;
+          })(),
           // Anamnèse oui/non (signes fonctionnels, saisie à l'intake avant l'examen)
           anamnese: (() => {
             const cr: any = clinicalRecord || {};
@@ -615,39 +638,15 @@ export default function ProAnalyze() {
           body: JSON.stringify({ phototype: examen.phototype, lesionTypes: examen.lesions, zonesAffected: examen.zones, pihRisk: examen.pihRisk, keloidRisk: examen.keloidRisk }),
         }).catch(() => {});
       }
-      genQuestionnaire.mutate({
-        condition: (r as any).condition || "Affection cutanée",
-        area: "face",
-        patientAge: age ? parseInt(age) : null,
-        patientSex: sex,
-      }, {
-        onSuccess: (data) => setQuestionnaire(data.items || []),
-      });
     } catch (err: any) {
       console.warn("[pro] analyse IA indisponible", err?.message);
       toast({
         title: "Erreur de connexion — réessayez",
-        description: "Le service IA est momentanément indisponible. Reprends la photo et relance l'analyse.",
+        description: "Le service IA est momentanément indisponible. Relance l'analyse.",
         variant: "destructive",
       });
-      setStep(2); // retour à la prise de photo
+      setStep(3); // retour au questionnaire (la photo est conservée)
     }
-  };
-
-  // ─── Step 3 → 4 : passer au questionnaire ─────────────────────────
-  const goToQuestionnaire = () => {
-    if (!result) return;
-    if (questionnaire.length === 0) {
-      genQuestionnaire.mutate({
-        condition: result.condition || "Affection cutanée",
-        area: "face",
-        patientAge: age ? parseInt(age) : null,
-        patientSex: sex,
-      }, {
-        onSuccess: (data) => setQuestionnaire(data.items || []),
-      });
-    }
-    setStep(4);
   };
 
   // ─── Step 4 → 5 : sauver dossier (TÂCHE 5 — robuste) ──────────────
@@ -1582,14 +1581,14 @@ export default function ProAnalyze() {
               </button>
               {isDoctor ? (
                 <button
-                  onClick={launchAnalysis}
+                  onClick={goToQuestionnaireStep}
                   disabled={!photoBase64}
                   data-testid="button-launch-analysis"
                   className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-full text-white text-sm font-extrabold disabled:opacity-50 active:scale-[0.98] transition-all"
                   style={{ background: NAVY }}
                 >
-                  Lancer l'analyse IA
-                  <Activity className="w-4 h-4" />
+                  Continuer vers le questionnaire
+                  <ArrowRight className="w-4 h-4" />
                 </button>
               ) : (
                 <button
@@ -1606,8 +1605,8 @@ export default function ProAnalyze() {
           </ProCard>
         )}
 
-        {/* ════════ STEP 3 : Diagnostic IA ════════ */}
-        {step === 3 && (
+        {/* ════════ STEP 4 : Diagnostic IA (après le questionnaire) ════════ */}
+        {step === 4 && (
           <div className="mt-4">
             {analyze.isPending || !result ? (
               <ScanLoader photo={photoBase64} />
@@ -1870,7 +1869,7 @@ export default function ProAnalyze() {
 
                 <div className="flex gap-2 mt-4">
                   <button
-                    onClick={() => setStep(2)}
+                    onClick={() => setStep(3)}
                     className="px-4 py-2.5 rounded-full text-sm font-extrabold inline-flex items-center gap-1 transition-all active:scale-[0.97]"
                     style={{ background: "#E2E8F0", border: "1px solid #E2E8F0", color: DS.body }}
                   >
@@ -1878,12 +1877,12 @@ export default function ProAnalyze() {
                     Retour
                   </button>
                   <button
-                    onClick={goToQuestionnaire}
-                    data-testid="button-to-questionnaire"
+                    onClick={saveDossier}
+                    data-testid="button-to-dossier"
                     className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-full text-white text-sm font-extrabold active:scale-[0.98] transition-all"
                     style={{ background: NAVY }}
                   >
-                    Continuer vers l'anamnèse
+                    Continuer vers le dossier
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
@@ -1892,22 +1891,35 @@ export default function ProAnalyze() {
           </div>
         )}
 
-        {/* ════════ STEP 4 : Questionnaire IA ════════ */}
-        {step === 4 && (
+        {/* ════════ STEP 3 : Questionnaire (avant l'IA) ════════ */}
+        {step === 3 && (
           <ProCard className="p-5 mt-4">
             <StepHeader
-              n={4}
-              title="Questionnaire d'anamnèse"
+              n={3}
+              title="Questionnaire ciblé"
               subtitle={questionnaire.length > 0
-                ? `${Object.keys(answers).length}/${questionnaire.length} questions répondues — généré par IA selon le diagnostic`
-                : "L'IA prépare des questions ciblées..."}
+                ? `${Object.keys(answers).length}/${questionnaire.length} questions répondues — ciblé selon le motif`
+                : "Préparation des questions selon le motif..."}
             />
 
-            {genQuestionnaire.isPending || questionnaire.length === 0 ? (
+            {genQuestionnaire.isPending ? (
               <div className="py-10 text-center">
                 <Loader2 className="w-6 h-6 animate-spin mx-auto mb-3" style={{ color: NAVY }} />
                 <p className="text-sm font-extrabold" style={{ color: INK }}>Préparation du questionnaire</p>
-                <p className="text-xs mt-1" style={{ color: DS.muted }}>L'IA cible les questions selon "{result?.condition}"</p>
+                <p className="text-xs mt-1" style={{ color: DS.muted }}>Questions ciblées selon "{consultMotif || (clinicalRecord as any)?.motif || "le motif"}"</p>
+              </div>
+            ) : questionnaire.length === 0 ? (
+              <div className="py-8 text-center">
+                <p className="text-sm font-extrabold" style={{ color: INK }}>Aucune question générée</p>
+                <p className="text-xs mt-1 mb-4" style={{ color: DS.muted }}>Vous pouvez lancer l'analyse directement.</p>
+                <div className="flex gap-2">
+                  <button onClick={() => setStep(2)} className="px-4 py-2.5 rounded-full text-sm font-extrabold inline-flex items-center gap-1" style={{ background: "#E2E8F0", color: DS.body }}>
+                    <ArrowLeft className="w-3.5 h-3.5" /> Retour
+                  </button>
+                  <button onClick={launchAnalysis} data-testid="button-launch-analysis-skip" className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-full text-white text-sm font-extrabold" style={{ background: NAVY }}>
+                    Lancer l'analyse IA <Activity className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             ) : (
               <>
@@ -1959,7 +1971,7 @@ export default function ProAnalyze() {
 
                 <div className="flex gap-2 mt-4 pt-4" style={{ borderTop: `1px solid ${DS.border}` }}>
                   <button
-                    onClick={() => setStep(3)}
+                    onClick={() => setStep(2)}
                     className="px-4 py-2.5 rounded-full text-sm font-extrabold inline-flex items-center gap-1 transition-all active:scale-[0.97]"
                     style={{ background: "#E2E8F0", border: "1px solid #E2E8F0", color: DS.body }}
                   >
@@ -1967,13 +1979,13 @@ export default function ProAnalyze() {
                     Retour
                   </button>
                   <button
-                    onClick={saveDossier}
-                    disabled={!allAnswered || attach.isPending}
-                    data-testid="button-save-dossier"
+                    onClick={launchAnalysis}
+                    disabled={!allAnswered}
+                    data-testid="button-launch-analysis-2"
                     className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-full text-white text-sm font-extrabold disabled:opacity-50 active:scale-[0.98] transition-all"
                     style={{ background: NAVY }}
                   >
-                    {attach.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Enregistrer le dossier <CheckCircle2 className="w-4 h-4" /></>}
+                    Lancer l'analyse IA <Activity className="w-4 h-4" />
                   </button>
                 </div>
               </>

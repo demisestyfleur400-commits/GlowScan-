@@ -16,7 +16,7 @@ const MUTED = "#64748B";
 const fieldBg = "#F1F5F9";
 const fieldBorder = "1px solid rgba(167,139,250,0.2)";
 
-type FieldDef = { key: string; label: string; ml?: boolean; ph?: string };
+type FieldDef = { key: string; label: string; ml?: boolean; ph?: string; choices?: string[]; multi?: boolean };
 type Section = { id: string; title: string; icon: string; fields: FieldDef[] };
 
 // Le seul champ visible par défaut : le MOTIF. Tout le reste = contexte optionnel.
@@ -30,9 +30,9 @@ const SECTIONS: Section[] = [
   {
     id: "hma", title: "Histoire de la maladie", icon: "📈",
     fields: [
-      { key: "hmaDebut", label: "Date de début / durée", ph: "Ex : il y a 3 semaines" },
-      { key: "hmaSymptomes", label: "Symptômes associés", ml: true, ph: "prurit, douleur, brûlure…" },
-      { key: "hmaEvolution", label: "Évolution", ml: true },
+      { key: "hmaDebut", label: "Depuis quand ?", choices: ["< 1 semaine", "1–4 semaines", "1–3 mois", "> 3 mois"] },
+      { key: "hmaEvolution", label: "Évolution", choices: ["S'aggrave", "Stable", "S'améliore", "Par poussées"] },
+      { key: "hmaSymptomes", label: "Autres symptômes", ml: true, ph: "au-delà de prurit/douleur (déjà dans Signes fonctionnels)…" },
       { key: "hmaTraitements", label: "Traitements déjà entrepris", ml: true },
     ],
   },
@@ -41,9 +41,8 @@ const SECTIONS: Section[] = [
     fields: [
       { key: "atcdCosmeto", label: "Cosmétologiques (produits, habitudes de soins)", ml: true },
       { key: "atcdMedicaux", label: "Médicaux / traitements en cours", ml: true },
-      { key: "allergMedic", label: "Allergies médicamenteuses" },
-      { key: "atopie", label: "Atopie" },
-      { key: "toxicologiques", label: "Toxicologiques (tabac, alcool…)" },
+      { key: "allergMedic", label: "Allergies médicamenteuses", choices: ["Aucune connue", "Oui (préciser ci-dessous)"] },
+      { key: "toxicologiques", label: "Toxicologiques", choices: ["Tabac", "Alcool", "Aucun"], multi: true },
     ],
   },
   {
@@ -68,7 +67,40 @@ const ANAMNESE_YESNO: { key: string; label: string }[] = [
   { key: "familial", label: "Antécédents familiaux cutanés ?" },
 ];
 
+function Chips({ f, value, set }: { f: FieldDef; value: ClinicalRecord; set: (k: string, v: string) => void }) {
+  const cur = value[f.key] || "";
+  const selected = f.multi ? cur.split(",").map((s) => s.trim()).filter(Boolean) : [cur];
+  const toggle = (c: string) => {
+    if (f.multi) {
+      const has = selected.includes(c);
+      const next = has ? selected.filter((x) => x !== c) : [...selected, c];
+      set(f.key, next.join(", "));
+    } else {
+      set(f.key, cur === c ? "" : c);
+    }
+  };
+  return (
+    <div>
+      <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: MUTED, marginBottom: 6 }}>{f.label}</label>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+        {(f.choices || []).map((c) => {
+          const on = selected.includes(c);
+          return (
+            <button key={c} type="button" onClick={() => toggle(c)}
+              style={{ padding: "7px 12px", borderRadius: 9999, fontSize: 12, fontWeight: 700, cursor: "pointer",
+                background: on ? "rgba(124,58,237,0.12)" : "#F1F5F9", color: on ? NAVY : "#64748B",
+                border: on ? `1px solid ${NAVY}` : "1px solid #E2E8F0" }}>
+              {c}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function Field({ f, value, set }: { f: FieldDef; value: ClinicalRecord; set: (k: string, v: string) => void }) {
+  if (f.choices) return <Chips f={f} value={value} set={set} />;
   return (
     <div>
       <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: MUTED, marginBottom: 4 }}>{f.label}</label>
