@@ -353,6 +353,11 @@ export default function PDFViewerModal({
         .output("blob");
 
       const base64 = await blobToBase64(pdfBlob);
+      // Archive : copie du PDF dans la boîte mail du médecin (best-effort, DERM).
+      fetch("/api/pro/dossier/email-me", {
+        method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pdfBase64: base64, patientName: patientFirstName || "Patient" }),
+      }).catch(() => {});
       const res = await fetch("/api/pro/pdf-upload", {
         method: "POST",
         credentials: "include",
@@ -479,9 +484,9 @@ export default function PDFViewerModal({
             <ActionBtn
               onClick={handleSendWhatsApp}
               icon={uploading ? "⏳" : "📤"}
-              label={uploading ? "…" : "Envoyer"}
+              label={uploading ? "Envoi…" : "Envoyer au patient (WhatsApp)"}
               disabled={uploading}
-              style={{ background: "#25d366", color: "#fff", border: "none" }}
+              style={{ background: "#25d366", color: "#fff", border: "none", boxShadow: "0 4px 12px rgba(37,211,102,0.35)" }}
             />
             <ActionBtn
               onClick={handleDownload}

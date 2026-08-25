@@ -854,6 +854,28 @@ export function registerProRoutes(app: Express) {
     }
   });
 
+  // POST /api/pro/dossier/email-me — envoie au MÉDECIN une copie PDF du dossier
+  // (archive médico-légale dans sa boîte mail). Best-effort.
+  app.post("/api/pro/dossier/email-me", requireProAccess, async (req: any, res) => {
+    try {
+      const [u] = await db.select().from(users).where(eq(users.id, req.session.userId));
+      if (!u?.email || u.email.endsWith("@phone.glowscan.cm")) {
+        return res.json({ success: false, reason: "no_email" });
+      }
+      let pdf = String(req.body?.pdfBase64 || "");
+      if (pdf.startsWith("data:")) pdf = pdf.split(",")[1] || "";
+      const patientName = String(req.body?.patientName || "Patient").slice(0, 120);
+      const ref = String(req.body?.ref || "").slice(0, 40) || undefined;
+      const { buildDossierEmail } = await import("./email");
+      const e = buildDossierEmail((req.proAccount.fullName || "").split(" ")[0] || "", patientName, ref);
+      const attachments = pdf.length > 100 ? [{ filename: `dossier-${patientName.replace(/[^a-z0-9]/gi, "-")}.pdf`, content: pdf }] : undefined;
+      const r = await sendEmail(u.email, e.subject, e.html, e.text, attachments);
+      res.json({ success: r.ok, attached: !!attachments });
+    } catch (err) {
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
   // ───────────────────────────────────────────
   // GET /api/pro/account — compte Pro de l'utilisateur connecté
   // ───────────────────────────────────────────

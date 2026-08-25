@@ -140,6 +140,16 @@ export function buildB2CReengageEmail(name: string, userId?: string) {
   return withUnsub({ subject, html, text: strip(body) }, userId);
 }
 
+// DERM · Archive du dossier patient dans la boîte mail du médecin.
+export function buildDossierEmail(dermatologistName: string, patientName: string, ref?: string) {
+  const subject = `Dossier archivé — ${patientName}${ref ? ` (${ref})` : ""}`;
+  const body = `
+    <p style="font-size:14px;color:#475569;margin:0 0 12px">Dr ${dermatologistName}, le dossier de <strong style="color:#0F172A">${patientName}</strong> est archivé.</p>
+    <p style="font-size:14px;color:#475569;margin:0 0 12px">Le rapport PDF complet est en pièce jointe. Vous retrouvez ce patient dans votre patientèle GlowScan DERM. Cet email vous constitue une archive consultable de tous vos dossiers.</p>`;
+  const html = wrap("Votre dossier est archivé", body, { label: "Ouvrir GlowScan DERM", url: `${APP_URL}/derm/patients` });
+  return { subject, html, text: strip(body) };
+}
+
 // 4 · Rappel de fin d'essai.
 export function buildTrialReminderEmail(name: string, daysLeft: number) {
   const subject = daysLeft <= 1 ? `Votre essai GlowScan se termine demain` : `Il vous reste ${daysLeft} jours d'essai GlowScan`;
