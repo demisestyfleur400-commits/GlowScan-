@@ -771,6 +771,7 @@ export default function ProPatient() {
         patientFirstName={p.firstName}
         patientPhone={p.whatsappNumber || undefined}
         dermatologue={dermato?.fullName || undefined}
+        patientId={p.id}
       />
     </ProLayout>
   );

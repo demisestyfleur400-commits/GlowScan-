@@ -854,6 +854,18 @@ export function registerProRoutes(app: Express) {
     }
   });
 
+  // POST /api/pro/patients/:id/mark-report-sent — marque le dossier comme envoyé
+  app.post("/api/pro/patients/:id/mark-report-sent", requireProAccess, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const [p] = await db.select().from(patients)
+        .where(and(eq(patients.id, id), eq(patients.dermatologistId, req.proAccount.id)));
+      if (!p) return res.status(404).json({ message: "Patient introuvable" });
+      await db.execute(sql`UPDATE "patients" SET "report_sent_at" = NOW() WHERE "id" = ${id}`).catch(() => {});
+      res.json({ success: true });
+    } catch (err) { res.status(500).json({ message: "Erreur serveur" }); }
+  });
+
   // POST /api/pro/dossier/email-me — envoie au MÉDECIN une copie PDF du dossier
   // (archive médico-légale dans sa boîte mail). Best-effort.
   app.post("/api/pro/dossier/email-me", requireProAccess, async (req: any, res) => {
@@ -975,7 +987,14 @@ export function registerProRoutes(app: Express) {
             (p.firstName + " " + p.lastName).toLowerCase().includes(q) ||
             (p.whatsappNumber || "").includes(q))
         : list;
-      res.json({ patients: filtered });
+      // Joindre report_sent_at (colonne hors schéma Drizzle) → badge "Dossier envoyé".
+      let sentMap: Record<number, string> = {};
+      try {
+        const r: any = await db.execute(sql`SELECT "id", "report_sent_at" FROM "patients" WHERE "dermatologist_id" = ${req.proAccount.id} AND "report_sent_at" IS NOT NULL`);
+        for (const row of (r?.rows ?? r ?? [])) sentMap[row.id] = new Date(row.report_sent_at).toISOString();
+      } catch {}
+      const withSent = filtered.map((p) => ({ ...p, reportSentAt: sentMap[p.id] || null }));
+      res.json({ patients: withSent });
     } catch (err) {
       console.error("[pro/patients list] error:", err);
       res.status(500).json({ message: "Erreur serveur" });

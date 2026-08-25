@@ -27,6 +27,8 @@ interface PDFViewerModalProps {
   patientFirstName: string;
   patientPhone?: string;
   dermatologue?: string;
+  patientId?: number;
+  onSent?: () => void;
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -181,6 +183,8 @@ export default function PDFViewerModal({
   patientFirstName,
   patientPhone,
   dermatologue,
+  patientId,
+  onSent,
 }: PDFViewerModalProps) {
   const [currentHtml, setCurrentHtml] = useState(htmlContent);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
@@ -358,6 +362,11 @@ export default function PDFViewerModal({
         method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pdfBase64: base64, patientName: patientFirstName || "Patient" }),
       }).catch(() => {});
+      // Marque le dossier comme "envoyé" → badge dans la patientèle.
+      if (patientId) {
+        fetch(`/api/pro/patients/${patientId}/mark-report-sent`, { method: "POST", credentials: "include" })
+          .then(() => onSent?.()).catch(() => {});
+      }
       const res = await fetch("/api/pro/pdf-upload", {
         method: "POST",
         credentials: "include",

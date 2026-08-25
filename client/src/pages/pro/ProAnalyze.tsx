@@ -2144,6 +2144,7 @@ export default function ProAnalyze() {
         patientFirstName={firstName || lastName || "Patient"}
         patientPhone={phone || undefined}
         dermatologue={`Dr. ${lastName} ${firstName}`.trim()}
+        patientId={patientId || undefined}
       />
     </ProLayout>
   );

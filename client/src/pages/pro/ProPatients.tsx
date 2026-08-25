@@ -252,6 +252,15 @@ export default function ProPatients() {
                         : " · jamais analysé"}
                     </p>
                   </div>
+                  {(p as any).reportSentAt && (
+                    <span
+                      className="text-[9px] font-extrabold px-2 py-0.5 rounded-full flex-shrink-0"
+                      style={{ background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.3)", color: "#047857" }}
+                      title={`Dossier envoyé le ${new Date((p as any).reportSentAt).toLocaleDateString("fr-FR")}`}
+                    >
+                      ✓ Envoyé
+                    </span>
+                  )}
                   {p.status && STATUS_LABELS[p.status] && (
                     <span
                       className="text-[9px] font-extrabold px-2 py-0.5 rounded-full flex-shrink-0"
