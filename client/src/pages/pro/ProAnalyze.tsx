@@ -937,8 +937,9 @@ export default function ProAnalyze() {
       hypotheses: effectiveCondition, hypothesesSecondaire: r.conditionSecondaire || undefined,
       // 11 · Différentiels
       differentiels: Array.isArray(r.differentialDiagnosis) ? r.differentialDiagnosis.join("\n") : undefined,
-      // 14 · Traitement
-      traitementHtml: treatHtml,
+      // 14 · Traitement — VIDE : GlowScan ne prescrit pas de produits dans le rapport.
+      // Le médecin renseigne sa conduite via "Notes du praticien". (treatHtml retiré.)
+      traitementHtml: undefined,
       // 15 · Surveillance
       surveillance: joinNZ(followUp, Array.isArray(redFlags) && redFlags.length ? `Signaux d'alarme : ${redFlags.join(" · ")}` : ""),
       // 16 · Évolution / pronostic

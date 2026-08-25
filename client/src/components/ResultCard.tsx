@@ -2246,20 +2246,20 @@ ${medicalSections}
                   padding: "6px 10px", borderRadius: "8px", marginBottom: "5px",
                   background: "rgba(233,30,140,0.08)", border: "1px solid rgba(233,30,140,0.2)",
                 }}>
-                  <p style={{ fontSize: "8px", fontWeight: 700, color: "rgba(249,168,212,0.7)", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: "2px" }}>
+                  <p style={{ fontSize: "8px", fontWeight: 700, color: "#9D174D", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: "2px" }}>
                     Analyse indicative
                   </p>
                   <p style={{ fontSize: "12px", fontWeight: 800, color: DS.textPrimary, lineHeight: 1.3 }}>
                     {result.condition}
                   </p>
                   {result.severity && (
-                    <p style={{ fontSize: "9px", color: "rgba(249,168,212,0.65)", marginTop: "2px" }}>
+                    <p style={{ fontSize: "9px", color: "#9D174D", marginTop: "2px" }}>
                       Sévérité : {result.severity} · {result.skinType?.split("(")[0].trim() || ""}
                     </p>
                   )}
                 </div>
                 {patientIntake?.allergies && patientIntake.allergies.toLowerCase() !== "aucune" && (
-                  <span style={{ display: "inline-block", fontSize: "9px", fontWeight: 700, padding: "2px 7px", borderRadius: "4px", background: "rgba(233,30,140,0.1)", color: "#f9a8d4" }}>
+                  <span style={{ display: "inline-block", fontSize: "9px", fontWeight: 700, padding: "2px 7px", borderRadius: "4px", background: "rgba(233,30,140,0.1)", color: "#be185d" }}>
                     ⚠ Allergie : {patientIntake.allergies}
                   </span>
                 )}
@@ -2306,7 +2306,7 @@ ${medicalSections}
             <p style={{ fontSize: "15px", fontWeight: 800, color: DS.textPrimary, lineHeight: 1.35, marginBottom: "6px" }}>
               {conditionHook.emoji} {conditionHook.accroche}
             </p>
-            <p style={{ fontSize: "12px", fontWeight: 500, lineHeight: 1.6, color: "rgba(249,168,212,0.85)" }}>
+            <p style={{ fontSize: "12px", fontWeight: 500, lineHeight: 1.6, color: "#9D174D" }}>
               {conditionHook.urgence}
             </p>
           </div>
@@ -2331,12 +2331,12 @@ ${medicalSections}
           {/* ── Red Flags ── */}
           {(result as any).redFlags && (result as any).redFlags.length > 0 && (
             <div style={{ marginBottom: "16px", padding: "12px 14px", borderRadius: "12px", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)" }}>
-              <p style={{ fontSize: "10px", fontWeight: 700, color: "#fca5a5", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "8px", display: "flex", alignItems: "center", gap: "6px" }}>
+              <p style={{ fontSize: "10px", fontWeight: 700, color: "#dc2626", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "8px", display: "flex", alignItems: "center", gap: "6px" }}>
                 <AlertTriangle style={{ width: "12px", height: "12px" }} /> Signaux à surveiller
               </p>
               <ul style={{ margin: 0, padding: "0 0 0 14px", display: "flex", flexDirection: "column", gap: "4px" }}>
                 {((result as any).redFlags as string[]).map((flag, i) => (
-                  <li key={i} style={{ fontSize: "11px", color: "#fca5a5", lineHeight: 1.5 }}>{flag}</li>
+                  <li key={i} style={{ fontSize: "11px", color: "#dc2626", lineHeight: 1.5 }}>{flag}</li>
                 ))}
               </ul>
             </div>
@@ -2525,7 +2525,7 @@ ${medicalSections}
                   <span style={{ fontSize: "16px" }}>🛍️</span>
                   <div>
                     <p style={{ fontSize: "13px", fontWeight: 800, color: DS.textPrimary }}>Ton ordonnance personnalisée GlowScan</p>
-                    <p style={{ fontSize: "9px", color: "rgba(249,168,212,0.8)", fontWeight: 600 }}>
+                    <p style={{ fontSize: "9px", color: "#9D174D", fontWeight: 600 }}>
                       {isLocal ? `Marque locale · ${getProductBrand(bestProduct)}` : "Dermocosmétique certifié"} · Résultats en 3–4 semaines
                     </p>
                   </div>
