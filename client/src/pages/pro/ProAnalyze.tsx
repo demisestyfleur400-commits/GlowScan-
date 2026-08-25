@@ -1892,9 +1892,9 @@ export default function ProAnalyze() {
                       <p className="text-[10px] uppercase font-extrabold mb-2" style={{ color: DS.muted }}>{q.axis}</p>
                       <div className="grid grid-cols-3 gap-1.5">
                         {([
-                          { v: "oui" as AnswerValue, label: "Oui", icon: Check, activeBg: "rgba(16,185,129,0.12)", activeBorder: "rgba(16,185,129,0.35)", activeColor: "#6ee7b7" },
-                          { v: "non" as AnswerValue, label: "Non", icon: X, activeBg: "rgba(248,113,113,0.12)", activeBorder: "rgba(248,113,113,0.35)", activeColor: "#f87171" },
-                          { v: "nsp" as AnswerValue, label: "Ne sait pas", icon: HelpCircle, activeBg: "#F1F5F9", activeBorder: "#E2E8F0", activeColor: DS.body },
+                          { v: "oui" as AnswerValue, label: "Oui", icon: Check, activeBg: "rgba(5,150,105,0.12)", activeBorder: "#059669", activeColor: "#047857" },
+                          { v: "non" as AnswerValue, label: "Non", icon: X, activeBg: "rgba(220,38,38,0.10)", activeBorder: "#dc2626", activeColor: "#dc2626" },
+                          { v: "nsp" as AnswerValue, label: "Ne sait pas", icon: HelpCircle, activeBg: "#EEF2F7", activeBorder: "#CBD5E1", activeColor: "#64748B" },
                         ]).map((opt) => {
                           const on = answers[q.id] === opt.v;
                           const Icon = opt.icon;
