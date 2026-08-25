@@ -27,11 +27,12 @@ interface ProLayoutProps {
   children: ReactNode;
   title?: string;
   back?: string;
+  onBack?: () => void; // si fourni, le ← du header appelle ce callback (retour étape par étape)
   hideBottomNav?: boolean;
   rightAction?: ReactNode;
 }
 
-export function ProLayout({ children, title, back, hideBottomNav, rightAction }: ProLayoutProps) {
+export function ProLayout({ children, title, back, onBack, hideBottomNav, rightAction }: ProLayoutProps) {
   const [location] = useLocation();
   const { logout } = useAuth();
   const { data: accData } = useProAccount();
@@ -112,7 +113,11 @@ export function ProLayout({ children, title, back, hideBottomNav, rightAction }:
         <header className="sticky top-0 z-30 h-16 flex items-center px-4 sm:px-6" style={{ background: "rgba(255,255,255,0.92)", backdropFilter: "blur(12px)", borderBottom: `1px solid ${BORDER}` }}>
           <div className="w-full max-w-5xl mx-auto flex items-center justify-between gap-4">
             <div className="flex items-center gap-3 min-w-0">
-              {back ? (
+              {onBack ? (
+                <button onClick={onBack} data-testid="link-back" className="p-2 rounded-xl transition-opacity hover:opacity-70 active:scale-95" style={{ background: "#F1F5F9", border: `1px solid ${BORDER}`, color: BODY }}>
+                  <ArrowLeft className="w-4 h-4" />
+                </button>
+              ) : back ? (
                 <Link href={back} data-testid="link-back" className="p-2 rounded-xl transition-opacity hover:opacity-70 active:scale-95" style={{ background: "#F1F5F9", border: `1px solid ${BORDER}`, color: BODY }}>
                   <ArrowLeft className="w-4 h-4" />
                 </Link>

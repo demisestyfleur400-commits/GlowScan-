@@ -1261,7 +1261,12 @@ export default function ProAnalyze() {
   const patientLabel = `${firstName} ${lastName}`.trim() || "—";
 
   return (
-    <ProLayout title="Analyser un patient" back="/derm/dashboard">
+    <ProLayout title="Analyser un patient" onBack={() => {
+      // Retour ÉTAPE PAR ÉTAPE (ne quitte le wizard que depuis la 1re étape).
+      if (step > 1) { setStep(step - 1); return; }
+      if (patientMode !== "choice") { setPatientMode("choice"); return; }
+      setLocation("/derm/dashboard");
+    }}>
       <div className="max-w-3xl mx-auto print:max-w-full">
         <ProgressBar current={step} />
 
