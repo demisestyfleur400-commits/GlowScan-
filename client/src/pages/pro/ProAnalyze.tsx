@@ -1070,14 +1070,8 @@ export default function ProAnalyze() {
     </div>
   `)}
 
-  <!-- SECTION 3 : REJET -->
-  ${sectionWrap("Protocole de Rejet — Ingrédients Interdits", `
-    <p style="font-size:10px;color:#374151;margin-bottom:10px">Vérifiez impérativement les étiquettes de vos produits actuels et bannissez :</p>
-    ${toxicIngredients.length > 0
-      ? toxicIngredients.map(toxicRow).join("")
-      : "<p style='font-size:10px;color:#6b7280;font-style:italic'>Aucun ingrédient toxique critique identifié pour ce profil.</p>"
-    }
-  `)}
+  <!-- SECTION produits (rejet) retirée en mode DERM : le rapport du médecin ne prescrit
+       ni ne bannit de produits — c'est le rôle du praticien. -->
 
 </div>
 
@@ -1089,47 +1083,8 @@ export default function ProAnalyze() {
     <span style="font-size:8.5px;color:#9ca3af">${firstName} ${lastName} · Réf ${refNum}</span>
   </div>
 
-  <!-- SECTION 4 : PRODUITS PRESCRITS -->
-  ${sectionWrap("Recommandations Produits — Routine Biologique Prescrite", `
-    ${morning.length > 0 ? `
-      <div style="font-size:9px;font-weight:800;color:${TEAL};text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #e5e7eb">🌞 Routine du Matin</div>
-      ${morning.map((s,i) => stepRow(s, i, i)).join("")}` : ""}
-    ${evening.length > 0 ? `
-      <div style="font-size:9px;font-weight:800;color:${TEAL};text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #e5e7eb;margin-top:${morning.length > 0 ? "12px" : "0"}">🌙 Routine du Soir</div>
-      ${evening.map((s,i) => stepRow(s, i, morning.length + i)).join("")}` : ""}
-    ${protocol.weekly ? `
-      <div style="font-size:9px;font-weight:800;color:${TEAL};text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #e5e7eb;margin-top:12px">📅 Soin Hebdomadaire</div>
-      <div style="font-size:10px;color:#374151;line-height:1.7">${protocol.weekly}</div>` : ""}
-    ${morning.length === 0 && evening.length === 0 ? "<p style='font-size:10px;color:#6b7280;font-style:italic'>Protocole en cours de génération.</p>" : ""}
-  `)}
-
-  <!-- SECTION 5 : BON DE COMMANDE -->
-  ${orderLines.length > 0 ? sectionWrap("Bon de Commande — Produits à Commander", `
-    <p style="font-size:9.5px;color:#374151;margin-bottom:10px">Commandez directement via WhatsApp GlowScan. Livraison sécurisée avec guide d'utilisation inclus.</p>
-    <table style="border:1px solid #e5e7eb">
-      <thead>
-        <tr style="background:#f0fafa">
-          <th style="padding:7px 10px;font-size:9px;font-weight:700;color:${TEAL};text-transform:uppercase;border-bottom:1px solid #e5e7eb;text-align:left">Produit</th>
-          <th style="padding:7px 10px;font-size:9px;font-weight:700;color:${TEAL};text-transform:uppercase;border-bottom:1px solid #e5e7eb;text-align:left">Marque</th>
-          <th style="padding:7px 10px;font-size:9px;font-weight:700;color:${TEAL};text-transform:uppercase;border-bottom:1px solid #e5e7eb;text-align:right">Prix</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${orderLines.map((l: OrderLine, i: number) =>
-          "<tr style='border-bottom:1px solid #f3f4f6;background:" + (i%2===0?"#fff":"#f9fafb") + "'>" +
-          "<td style='padding:7px 10px;font-size:9.5px;font-weight:600;color:#1a1a1a'>" + l.name + "</td>" +
-          "<td style='padding:7px 10px;font-size:9px;color:" + TEAL + ";font-weight:700'>" + l.brand + "</td>" +
-          "<td style='padding:7px 10px;font-size:9.5px;font-weight:800;color:#1a1a1a;text-align:right;white-space:nowrap'>" + (l.price ? l.price.toLocaleString("fr-FR") + " FCFA" : "—") + "</td>" +
-          "</tr>"
-        ).join("")}
-        <tr style="background:${TEAL}">
-          <td colspan="2" style="padding:8px 10px;font-size:10px;font-weight:800;color:#fff">TOTAL PROTOCOLE COMPLET</td>
-          <td style="padding:8px 10px;font-size:12px;font-weight:900;color:#fff;text-align:right">${totalEstime > 0 ? totalEstime.toLocaleString("fr-FR") + " FCFA" : "—"}</td>
-        </tr>
-      </tbody>
-    </table>
-    <div style="margin-top:8px;font-size:9px;color:#6b7280">📲 Commander : wa.me/237674377959 · Douala/Yaoundé 24-48h · Autres villes 3-5j via Finexs / General Express</div>
-  `) : ""}
+  <!-- SECTIONS produits & bon de commande retirées en mode DERM (aucune vente
+       dans le rapport du médecin). -->
 
   ${redFlags.length > 0 ? sectionWrap("Signaux d'Alarme Cliniques", `
     ${redFlags.map((f:string) =>
@@ -1137,12 +1092,7 @@ export default function ProAnalyze() {
     ).join("")}
   `) : ""}
 
-  ${logistics && patientRegion && !["Douala","Yaoundé"].includes(patientRegion) ? sectionWrap("Logistique &amp; Expédition", `
-    ${infoRowClin("Zone de livraison", patientRegion)}
-    ${infoRowClin("Agences partenaires", "Finexs / General Express")}
-    ${infoRowClin("Délai estimé", "3 à 5 jours ouvrés")}
-    ${infoRowClin("Conditionnement", "Produits scellés + guide d'utilisation inclus")}
-  `) : ""}
+  <!-- Section logistique/expédition produits retirée en mode DERM. -->
 
   <!-- PRONOSTIC & SUIVI -->
   ${(prognostic || followUp) ? sectionWrap("Pronostic &amp; Suivi Recommandé", `

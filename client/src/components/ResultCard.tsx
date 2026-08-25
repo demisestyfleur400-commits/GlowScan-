@@ -2342,50 +2342,57 @@ ${medicalSections}
             </div>
           )}
 
-          <GlowGauge
-            score={result.score}
-            observationsVisuelles={result.consultationData?.observations_visuelles || (result as any).observationsVisuelles}
-          />
+          {/* Jauge "Glow Score" + métriques beauté (Âge cutané / Indice acné /
+              Hydratation / Rides) → B2C UNIQUEMENT. Sans valeur clinique pour un
+              dermatologue, on les masque en mode DERM (isPro). */}
+          {!isPro && (
+            <>
+              <GlowGauge
+                score={result.score}
+                observationsVisuelles={result.consultationData?.observations_visuelles || (result as any).observationsVisuelles}
+              />
 
-          {/* Progress bar */}
-          <div style={{ marginTop: "16px", height: "3px", borderRadius: "9999px", background: "rgba(167,139,250,0.1)", overflow: "hidden" }}>
-            <div style={{ height: "100%", width: `${clamp(result.score || 0, 0, 100)}%`, background: "linear-gradient(90deg, #7c3aed, #a78bfa)", borderRadius: "9999px" }} />
-          </div>
+              {/* Progress bar */}
+              <div style={{ marginTop: "16px", height: "3px", borderRadius: "9999px", background: "rgba(167,139,250,0.1)", overflow: "hidden" }}>
+                <div style={{ height: "100%", width: `${clamp(result.score || 0, 0, 100)}%`, background: "linear-gradient(90deg, #7c3aed, #a78bfa)", borderRadius: "9999px" }} />
+              </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginTop: "16px" }}>
-            <StatTile
-              icon={<Sun style={{ width: "20px", height: "20px", color: "#fbbf24" }} />}
-              label="Âge cutané"
-              value={`${ageCutane} ans`}
-              sub="estimé"
-              color="amber"
-              explicationContextuelle={(result as any).consultationData?.impact_facteurs?.age || (result as any).facteurAge}
-            />
-            <StatTile
-              icon={<div style={{ width: "12px", height: "12px", borderRadius: "9999px", background: "#f9a8d4" }} />}
-              label="Indice acné"
-              value={`${indiceAcne.value}%`}
-              sub={indiceAcne.label}
-              color="rose"
-              explicationContextuelle={(result as any).consultationData?.impact_facteurs?.inflammation || (result as any).facteurInflammation}
-            />
-            <StatTile
-              icon={<Droplets style={{ width: "20px", height: "20px", color: DS.violetMid }} />}
-              label="Hydratation"
-              value={`${hydratation.value}%`}
-              sub={hydratation.label}
-              color="blue"
-              explicationContextuelle={(result as any).consultationData?.impact_facteurs?.hydratation || (result as any).facteurHydratation}
-            />
-            <StatTile
-              icon={<Leaf style={{ width: "20px", height: "20px", color: "#6ee7b7" }} />}
-              label="Rides"
-              value={rides.value}
-              sub={rides.label}
-              color="emerald"
-              explicationContextuelle={(result as any).consultationData?.impact_facteurs?.rides || (result as any).facteurRides}
-            />
-          </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginTop: "16px" }}>
+                <StatTile
+                  icon={<Sun style={{ width: "20px", height: "20px", color: "#fbbf24" }} />}
+                  label="Âge cutané"
+                  value={`${ageCutane} ans`}
+                  sub="estimé"
+                  color="amber"
+                  explicationContextuelle={(result as any).consultationData?.impact_facteurs?.age || (result as any).facteurAge}
+                />
+                <StatTile
+                  icon={<div style={{ width: "12px", height: "12px", borderRadius: "9999px", background: "#f9a8d4" }} />}
+                  label="Indice acné"
+                  value={`${indiceAcne.value}%`}
+                  sub={indiceAcne.label}
+                  color="rose"
+                  explicationContextuelle={(result as any).consultationData?.impact_facteurs?.inflammation || (result as any).facteurInflammation}
+                />
+                <StatTile
+                  icon={<Droplets style={{ width: "20px", height: "20px", color: DS.violetMid }} />}
+                  label="Hydratation"
+                  value={`${hydratation.value}%`}
+                  sub={hydratation.label}
+                  color="blue"
+                  explicationContextuelle={(result as any).consultationData?.impact_facteurs?.hydratation || (result as any).facteurHydratation}
+                />
+                <StatTile
+                  icon={<Leaf style={{ width: "20px", height: "20px", color: "#6ee7b7" }} />}
+                  label="Rides"
+                  value={rides.value}
+                  sub={rides.label}
+                  color="emerald"
+                  explicationContextuelle={(result as any).consultationData?.impact_facteurs?.rides || (result as any).facteurRides}
+                />
+              </div>
+            </>
+          )}
         </div>
 
         {/* ═══ BLOC 2 — Que faire maintenant (logique Glow Score · B2C) ═══ */}
@@ -3258,8 +3265,10 @@ ${medicalSections}
             <span style={{ transition: "transform 0.2s", transform: showIngredients ? "rotate(180deg)" : "none" }}>▼</span>
           </button>
         )}
-        {/* ═══ BLOC 7bis — 🚫 Ingrédients toxiques à bannir ═══ */}
-        {(isPro || showIngredients) && (() => {
+        {/* ═══ BLOC 7bis — 🚫 Ingrédients toxiques à bannir (B2C uniquement) ═══ */}
+        {/* En mode DERM, GlowScan ne prescrit pas / ne bannit pas de produits :
+            c'est le rôle du médecin. Section masquée pour isPro. */}
+        {(!isPro && showIngredients) && (() => {
           const toxics = getToxicIngredients();
           if (toxics.length === 0) return null; // peau saine / rien de spécifique → pas de section générique
           const levelColor = (l: string) => l === "CRITIQUE" ? "#dc2626" : l === "Élevé" ? "#E91E8C" : "#f59e0b";
@@ -3312,8 +3321,8 @@ ${medicalSections}
           </button>
         )}
 
-        {/* ═══ BLOC 7ter — 💡 Conseils d'hygiène personnalisés ═══ */}
-        {(() => {
+        {/* ═══ BLOC 7ter — 💡 Conseils d'hygiène personnalisés (B2C uniquement) ═══ */}
+        {!isPro && (() => {
           const hygiene = getHygieneAdvice();
           if (hygiene.length === 0) return null; // rien de spécifique au diagnostic → pas de conseils génériques
           return (
