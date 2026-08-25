@@ -1148,7 +1148,16 @@ export default function ProAnalyze() {
       </div>
     </div>
 
-    <div style="margin-top:8px;padding-top:8px;border-top:1px solid #e5e7eb;font-size:8px;color:#9ca3af;line-height:1.7">
+    <!-- SIGNATURE (typée automatiquement — l'e-signature du praticien) -->
+    <div style="margin-top:18px;display:flex;justify-content:flex-end">
+      <div style="text-align:center;min-width:230px">
+        <div style="font-family:'Segoe Script','Brush Script MT',cursive;font-size:22px;color:#0f3d3d;border-bottom:1.5px solid #1a3a3a;padding:0 8px 2px;margin-bottom:5px">Dr ${doctorName}</div>
+        <div style="font-size:8.5px;color:#374151;font-weight:600">Signé électroniquement le ${date}${doctorLicense ? " · N° ordre " + doctorLicense : ""}</div>
+        <div style="font-size:7.5px;color:#9ca3af">Réf ${refNum} · GlowScan DERM</div>
+      </div>
+    </div>
+
+    <div style="margin-top:10px;padding-top:8px;border-top:1px solid #e5e7eb;font-size:8px;color:#9ca3af;line-height:1.7">
       🔒 Document médical confidentiel établi et validé par le praticien soussigné · Réf ${refNum} · À usage strictement professionnel et personnel au patient. GlowScan DERM © ${new Date().getFullYear()}.
     </div>
   </div>

@@ -311,6 +311,48 @@ export default function PDFViewerModal({
       .save();
   }, [getLiveHtml, filename]);
 
+  // Envoi FIABLE du PDF par email : au patient (si email fourni) ET au médecin.
+  const handleSendEmail = useCallback(async () => {
+    const patientEmail = (window.prompt(
+      "Email du patient pour lui envoyer le PDF (laissez vide pour n'envoyer qu'une copie à votre adresse) :",
+      ""
+    ) || "").trim();
+    setUploading(true);
+    setUploadStatus("idle");
+    try {
+      const el = document.createElement("div");
+      el.innerHTML = getLiveHtml();
+      const pdfBlob = await html2pdf()
+        .set({ margin: 0, filename, image: { type: "jpeg", quality: 0.82 }, html2canvas: { scale: 1.5, useCORS: true }, jsPDF: { unit: "mm", format: "a4", orientation: "portrait" } })
+        .from(el).output("blob");
+      const base64 = await blobToBase64(pdfBlob);
+      const res = await fetch("/api/pro/dossier/email-me", {
+        method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pdfBase64: base64, patientName: patientFirstName || "Patient", patientEmail: patientEmail || undefined }),
+      });
+      const data = await res.json().catch(() => ({} as any));
+      if (patientId) {
+        fetch(`/api/pro/patients/${patientId}/mark-report-sent`, { method: "POST", credentials: "include" }).then(() => onSent?.()).catch(() => {});
+      }
+      if (data?.doctorSent || data?.patientSent) {
+        setUploadStatus("ok");
+        window.alert(
+          `Dossier envoyé par email ✅\n` +
+          (data.patientSent ? `• au patient (${patientEmail})\n` : (patientEmail ? "• patient : échec, vérifiez l'adresse\n" : "")) +
+          (data.doctorSent ? "• à votre adresse (archive)" : "")
+        );
+      } else {
+        setUploadStatus("fallback");
+        window.alert("Envoi impossible. Vérifiez que votre compte a un email valide.");
+      }
+    } catch {
+      setUploadStatus("fallback");
+      window.alert("Erreur lors de la génération/envoi du PDF.");
+    } finally {
+      setUploading(false);
+    }
+  }, [getLiveHtml, filename, patientFirstName, patientId, onSent]);
+
   const sendWhatsAppWithLink = (phone: string, pdfUrl: string) => {
     const msg = encodeURIComponent(
       `Bonjour ${patientFirstName || "cher(e) patient(e)"},\n\n` +
@@ -491,11 +533,18 @@ export default function PDFViewerModal({
               }}
             />
             <ActionBtn
-              onClick={handleSendWhatsApp}
-              icon={uploading ? "⏳" : "📤"}
-              label={uploading ? "Envoi…" : "Envoyer au patient (WhatsApp)"}
+              onClick={handleSendEmail}
+              icon={uploading ? "⏳" : "📧"}
+              label={uploading ? "Envoi…" : "Envoyer par email (patient + moi)"}
               disabled={uploading}
-              style={{ background: "#25d366", color: "#fff", border: "none", boxShadow: "0 4px 12px rgba(37,211,102,0.35)" }}
+              style={{ background: "#0891B2", color: "#fff", border: "none", boxShadow: "0 4px 12px rgba(8,145,178,0.35)" }}
+            />
+            <ActionBtn
+              onClick={handleSendWhatsApp}
+              icon="📲"
+              label="Notifier par WhatsApp"
+              disabled={uploading}
+              style={{ background: "#fff", color: "#128c7e", border: "1.5px solid #25d366" }}
             />
             <ActionBtn
               onClick={handleDownload}

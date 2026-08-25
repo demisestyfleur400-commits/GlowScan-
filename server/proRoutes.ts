@@ -878,11 +878,23 @@ export function registerProRoutes(app: Express) {
       if (pdf.startsWith("data:")) pdf = pdf.split(",")[1] || "";
       const patientName = String(req.body?.patientName || "Patient").slice(0, 120);
       const ref = String(req.body?.ref || "").slice(0, 40) || undefined;
-      const { buildDossierEmail } = await import("./email");
-      const e = buildDossierEmail((req.proAccount.fullName || "").split(" ")[0] || "", patientName, ref);
+      const patientEmail = String(req.body?.patientEmail || "").trim().toLowerCase();
+      const dermName = (req.proAccount.fullName || "").replace(/^dr\.?\s*/i, "").trim();
+      const { buildDossierEmail, buildPatientDossierEmail } = await import("./email");
       const attachments = pdf.length > 100 ? [{ filename: `dossier-${patientName.replace(/[^a-z0-9]/gi, "-")}.pdf`, content: pdf }] : undefined;
-      const r = await sendEmail(u.email, e.subject, e.html, e.text, attachments);
-      res.json({ success: r.ok, attached: !!attachments });
+
+      // 1) Copie au MÉDECIN (archive).
+      const eDoc = buildDossierEmail(dermName.split(" ")[0] || "", patientName, ref);
+      const rDoc = await sendEmail(u.email, eDoc.subject, eDoc.html, eDoc.text, attachments);
+
+      // 2) Copie au PATIENT (si un email valide est fourni).
+      let patientSent = false;
+      if (patientEmail.includes("@") && patientEmail.length > 4) {
+        const eP = buildPatientDossierEmail(patientName, dermName || "votre dermatologue");
+        const rP = await sendEmail(patientEmail, eP.subject, eP.html, eP.text, attachments);
+        patientSent = rP.ok;
+      }
+      res.json({ success: rDoc.ok || patientSent, doctorSent: rDoc.ok, patientSent, attached: !!attachments });
     } catch (err) {
       res.status(500).json({ message: "Erreur serveur" });
     }

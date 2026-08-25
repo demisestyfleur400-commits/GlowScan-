@@ -150,6 +150,17 @@ export function buildDossierEmail(dermatologistName: string, patientName: string
   return { subject, html, text: strip(body) };
 }
 
+// Dossier envoyé au PATIENT (PDF en pièce jointe).
+export function buildPatientDossierEmail(patientName: string, dermatologistName: string) {
+  const subject = `Votre dossier de consultation dermatologique`;
+  const body = `
+    <p style="font-size:14px;color:#475569;margin:0 0 12px">Bonjour ${patientName},</p>
+    <p style="font-size:14px;color:#475569;margin:0 0 12px">Votre dossier de consultation avec Dr ${dermatologistName} est en pièce jointe (PDF). Conservez-le et présentez-le lors de vos prochains rendez-vous.</p>
+    <p style="font-size:12px;color:#94A3B8;margin:0">Ce document est établi sous la responsabilité de votre médecin. GlowScan est un outil d'aide et ne remplace pas une consultation.</p>`;
+  const html = wrap("Votre dossier est prêt", body);
+  return { subject, html, text: strip(body) };
+}
+
 // 4 · Rappel de fin d'essai.
 export function buildTrialReminderEmail(name: string, daysLeft: number) {
   const subject = daysLeft <= 1 ? `Votre essai GlowScan se termine demain` : `Il vous reste ${daysLeft} jours d'essai GlowScan`;
