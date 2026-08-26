@@ -1158,9 +1158,11 @@ interface ResultCardProps {
   examen?: any;
   // Expose la génération du PDF (B2C + pages médicales) au parent (ex: bouton de fin de flux DERM)
   onPdfReady?: (downloadPdf: () => void) => void;
+  // B2C : email saisi dans le formulaire → envoi AUTOMATIQUE du rapport PDF à l'affichage (score ≥ 60).
+  autoEmailTo?: string;
 }
 
-export function ResultCard({ result, scanId, savedScanId, area, imageUrl, userFirstName, patientIntake, isPro = false, doctorName, doctorLicense, cabinetName, practitionerNotes, overrideNote, reportMode = "fusionne", clinicalRecord, examen, onPdfReady }: ResultCardProps) {
+export function ResultCard({ result, scanId, savedScanId, area, imageUrl, userFirstName, patientIntake, isPro = false, doctorName, doctorLicense, cabinetName, practitionerNotes, overrideNote, reportMode = "fusionne", clinicalRecord, examen, onPdfReady, autoEmailTo }: ResultCardProps) {
   // 🎨 Thème actif : clair en B2C (page blanche), sombre en DERM (isPro).
   // Réassigne le DS module-level lu par les sous-composants pendant ce rendu.
   DS = isPro ? DS_DARK : DS_LIGHT;
@@ -1382,7 +1384,7 @@ export function ResultCard({ result, scanId, savedScanId, area, imageUrl, userFi
   };
 
   // ── Téléchargement PDF via print window (zéro dépendance, 100% mobile) ──
-  const handleDownloadPDF = async (mode: "print" | "email" = "print") => {
+  const handleDownloadPDF = async (mode: "print" | "email" | "autoemail" = "print") => {
     if (pdfGenerating) return;
     setPdfGenerating(true);
 
@@ -1967,17 +1969,26 @@ ${medicalSections}
 </body>
 </html>`;
 
-      if (mode === "email") {
+      if (mode === "email" || mode === "autoemail") {
         // ── Génère le PDF et l'envoie par email en pièce jointe ──
-        const sid = savedScanId || scanId;
-        if (!sid) { toast({ title: "Enregistrez d'abord votre analyse", variant: "destructive" }); return; }
         const html2pdf = (await import("html2pdf.js")).default;
-        // On retire le bouton d'impression du rendu PDF.
         const cleaned = html.replace(/<button class="print-btn"[\s\S]*?<\/button>/g, "");
         const dataUri: string = await (html2pdf() as any)
           .set({ margin: 0, image: { type: "jpeg", quality: 0.95 }, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: "mm", format: "a4", orientation: "portrait" } })
           .from(cleaned).outputPdf("datauristring");
         const base64 = dataUri.split(",")[1] || "";
+        if (mode === "autoemail") {
+          // Envoi automatique à l'email saisi dans le formulaire (endpoint public rate-limité).
+          const res = await fetch("/api/scans/email-report", {
+            method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include",
+            body: JSON.stringify({ pdfBase64: base64, email: autoEmailTo, name: userFirstName || "", condition: result.condition || "", score: result.score || 0 }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (data?.sent) toast({ title: "Rapport envoyé 📧", description: `Ton analyse est dans ta boîte mail (${autoEmailTo}).` });
+          return;
+        }
+        const sid = savedScanId || scanId;
+        if (!sid) { toast({ title: "Enregistrez d'abord votre analyse", variant: "destructive" }); return; }
         const res = await apiRequest("POST", `/api/scans/${sid}/email-result`, { pdfBase64: base64 });
         const data = await res.json().catch(() => ({}));
         if (data?.sent) toast({ title: "Envoyé 📧", description: "Votre rapport PDF est dans votre boîte mail." });
@@ -2014,6 +2025,17 @@ ${medicalSections}
   React.useEffect(() => {
     if (onPdfReady) onPdfReady(handleDownloadPDF);
   });
+
+  // B2C : envoi AUTOMATIQUE du rapport PDF à l'email saisi, une seule fois, si score ≥ 60.
+  const autoEmailFiredRef = React.useRef(false);
+  React.useEffect(() => {
+    const email = (autoEmailTo || "").trim();
+    if (isPro || autoEmailFiredRef.current) return;
+    if (!email.includes("@") || (result.score || 0) < 60) return;
+    autoEmailFiredRef.current = true;
+    // Laisse la carte s'afficher d'abord, puis génère+envoie en tâche de fond.
+    setTimeout(() => { handleDownloadPDF("autoemail").catch(() => {}); }, 1200);
+  }, [autoEmailTo, isPro, result.score]);
 
   const getProductRole = (p: typeof catalog[0]): "nettoyant" | "serum" | "creme" => {
     const n = p.name.toLowerCase();
@@ -2476,14 +2498,13 @@ ${medicalSections}
             <div data-testid="block-what-now" style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
               <p style={{ fontSize: "13px", fontWeight: 800, color: DS.textPrimary }}>Que faire maintenant</p>
               {gscore < 60 ? (
-                <>
-                  <div style={{ borderRadius: "14px", padding: "14px 16px", background: "rgba(37,99,235,0.06)", border: "1px solid rgba(37,99,235,0.22)" }}>
-                    <p style={{ fontSize: "13px", fontWeight: 800, color: DS.textPrimary, marginBottom: "4px" }}>👨‍⚕️ Consulter un dermatologue GlowScan</p>
-                    <p style={{ fontSize: "11px", color: DS.textBody, lineHeight: 1.5, marginBottom: "8px" }}>Ton score indique un cas qui mérite un avis médical. À partir de 2 000 FCFA.</p>
-                    <ConsultationLauncher scanId={savedScanId || scanId || undefined} condition={result.condition || ""} imageUrl={imageUrl || undefined} />
-                  </div>
-                  <FreeGesture />
-                </>
+                /* Score bas → UNE SEULE action : orientation dermatologue.
+                   Pas de produits, pas de conseils, pas de rapport PDF. */
+                <div style={{ borderRadius: "14px", padding: "16px", background: "rgba(37,99,235,0.06)", border: "1px solid rgba(37,99,235,0.22)" }}>
+                  <p style={{ fontSize: "14px", fontWeight: 800, color: DS.textPrimary, marginBottom: "6px" }}>👨‍⚕️ Consulter un dermatologue</p>
+                  <p style={{ fontSize: "12px", color: DS.textBody, lineHeight: 1.5, marginBottom: "10px" }}>Ton analyse indique un cas qui mérite un avis médical. Un dermatologue GlowScan valide ton diagnostic et t'envoie ton rapport complet. À partir de 2 000 FCFA.</p>
+                  <ConsultationLauncher scanId={savedScanId || scanId || undefined} condition={result.condition || ""} imageUrl={imageUrl || undefined} />
+                </div>
               ) : gscore >= 80 ? (
                 <>
                   <FreeGesture />
@@ -3254,8 +3275,8 @@ ${medicalSections}
           </div>
         )}
 
-        {/* ═══ BLOC 3 (accordéon B2C) — Ingrédients à bannir ═══ */}
-        {!isPro && getToxicIngredients().length > 0 && (
+        {/* ═══ BLOC 3 (accordéon B2C) — Ingrédients à bannir (score ≥ 60 seulement) ═══ */}
+        {!isPro && (result.score || 0) >= 60 && getToxicIngredients().length > 0 && (
           <button
             onClick={() => setShowIngredients((v) => !v)}
             data-testid="acc-ingredients"
@@ -3268,7 +3289,7 @@ ${medicalSections}
         {/* ═══ BLOC 7bis — 🚫 Ingrédients toxiques à bannir (B2C uniquement) ═══ */}
         {/* En mode DERM, GlowScan ne prescrit pas / ne bannit pas de produits :
             c'est le rôle du médecin. Section masquée pour isPro. */}
-        {(!isPro && showIngredients) && (() => {
+        {(!isPro && (result.score || 0) >= 60 && showIngredients) && (() => {
           const toxics = getToxicIngredients();
           if (toxics.length === 0) return null; // peau saine / rien de spécifique → pas de section générique
           const levelColor = (l: string) => l === "CRITIQUE" ? "#dc2626" : l === "Élevé" ? "#E91E8C" : "#f59e0b";
@@ -3309,8 +3330,8 @@ ${medicalSections}
           );
         })()}
 
-        {/* ═══ BLOC 3 (accordéon B2C) — Partager mon ordonnance ═══ */}
-        {!isPro && (
+        {/* ═══ BLOC 3 (accordéon B2C) — Partager mon ordonnance (score ≥ 60) ═══ */}
+        {!isPro && (result.score || 0) >= 60 && (
           <button
             onClick={() => setShowRoutineCard(true)}
             data-testid="acc-share"
@@ -3321,8 +3342,8 @@ ${medicalSections}
           </button>
         )}
 
-        {/* ═══ BLOC 7ter — 💡 Conseils d'hygiène personnalisés (B2C uniquement) ═══ */}
-        {!isPro && (() => {
+        {/* ═══ BLOC 7ter — 💡 Conseils d'hygiène (B2C, score ≥ 60) ═══ */}
+        {!isPro && (result.score || 0) >= 60 && (() => {
           const hygiene = getHygieneAdvice();
           if (hygiene.length === 0) return null; // rien de spécifique au diagnostic → pas de conseils génériques
           return (

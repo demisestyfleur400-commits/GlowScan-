@@ -49,6 +49,7 @@ type AnalysisStep = "select" | "upload" | "intake" | "questionnaire" | "result" 
 interface PatientIntake {
   fullName: string;
   phone: string;
+  email: string;
   age: string;
   sexe: string;
   duration: string;
@@ -105,6 +106,7 @@ export default function Analyze() {
   const [intake, setIntake] = useState<PatientIntake>({
     fullName: user?.firstName || "",
     phone: "",
+    email: (user as any)?.email || "",
     age: "",
     sexe: "",
     duration: "",
@@ -387,7 +389,7 @@ export default function Analyze() {
     setConsultationData(null);
     setAnswers({});
     setUploadedImage(null); setUploadedRight(null); setUploadedLeft(null);
-    setIntake({ fullName: user?.firstName || "", phone: "", age: "", duration: "", previousProducts: "", allergies: "" });
+    setIntake({ fullName: user?.firstName || "", phone: "", email: (user as any)?.email || "", age: "", sexe: "", duration: "", previousProducts: "", allergies: "" });
     setStep("select");
   };
 
@@ -759,6 +761,25 @@ export default function Analyze() {
                     />
                   </div>
 
+                  {/* Email — pour recevoir le rapport automatiquement */}
+                  <div>
+                    <label className="text-xs font-bold block mb-1.5" style={{ color: "#1f2a26" }}>
+                      📧 Email <span style={{ color: "rgba(0,0,0,0.35)", fontWeight: 400 }}>(pour recevoir ton rapport)</span>
+                    </label>
+                    <input
+                      type="email"
+                      inputMode="email"
+                      autoComplete="email"
+                      placeholder="Ex : aminata@email.com"
+                      value={intake.email}
+                      onChange={e => updateIntake("email", e.target.value)}
+                      className="w-full px-3.5 py-2.5 text-xs font-medium outline-none transition-colors"
+                      style={{ background: "#ffffff", border: "1px solid rgba(47,158,110,0.2)", borderRadius: "10px", color: "#1f2a26" }}
+                      onFocus={e => (e.target.style.borderColor = "rgba(47,158,110,0.5)")}
+                      onBlur={e => (e.target.style.borderColor = "rgba(47,158,110,0.2)")}
+                    />
+                  </div>
+
                   {/* Âge */}
                   <div>
                     <label className="text-xs font-bold block mb-1.5" style={{ color: "#1f2a26" }}>
@@ -1054,6 +1075,7 @@ export default function Analyze() {
                   savedScanId={savedScanId}
                   area={selectedArea}
                   imageUrl={uploadedImage}
+                  autoEmailTo={intake.email || undefined}
                   userFirstName={intake.fullName || user?.firstName || null}
                   patientIntake={{
                     fullName: intake.fullName || user?.firstName || undefined,

@@ -29,3 +29,6 @@ export const consultationLimiter = make("consultations", 10 * 60 * 1000, 60);
 
 // Paiements — initialisation. Plus strict : 20 / 10 min. (Webhooks S2S NON limités.)
 export const paymentLimiter = make("payments", 10 * 60 * 1000, 20);
+
+// Envoi de rapport par email (public, anti-spam) : 15 / heure par IP.
+export const emailReportLimiter = make("email-report", 60 * 60 * 1000, 15);

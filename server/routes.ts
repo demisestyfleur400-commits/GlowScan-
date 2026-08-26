@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { setupAuth } from "./replit_integrations/auth";
 import { registerAuthRoutes } from "./replit_integrations/auth/routes";
 import { registerProRoutes } from "./proRoutes";
-import { analyzeLimiter, consultationLimiter, paymentLimiter } from "./rateLimit";
+import { analyzeLimiter, consultationLimiter, paymentLimiter, emailReportLimiter } from "./rateLimit";
 import { objectStorageClient } from "./replit_integrations/object_storage/objectStorage";
 import { api } from "@shared/routes";
 import { z } from "zod";
@@ -3136,6 +3136,29 @@ Réponds en 2-4 phrases max, sois direct et utile.`;
         .orderBy(desc(premiumRequests.createdAt))
         .limit(1);
       res.json({ request: pending || null });
+    } catch (err) {
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // POST /api/scans/email-report — envoi AUTOMATIQUE du rapport PDF à l'email saisi
+  // dans le formulaire B2C (anonyme autorisé). Rate-limité (anti-spam) : l'email
+  // ne part qu'à l'adresse fournie par l'utilisateur lui-même.
+  app.post("/api/scans/email-report", emailReportLimiter, async (req: any, res) => {
+    try {
+      const email = String(req.body?.email || "").trim().toLowerCase();
+      if (!email.includes("@") || email.length < 5) return res.status(400).json({ message: "Email invalide" });
+      let pdf = String(req.body?.pdfBase64 || "");
+      if (pdf.startsWith("data:")) pdf = pdf.split(",")[1] || "";
+      if (pdf.length < 100) return res.status(400).json({ message: "PDF manquant" });
+      const { sendEmail, buildB2CResultEmail } = await import("./email");
+      const base = (process.env.PUBLIC_BASE_URL || "https://glow-scan.com").replace(/\/$/, "");
+      const name = String(req.body?.name || "").trim();
+      const condition = String(req.body?.condition || "Analyse cutanée").trim();
+      const score = parseInt(req.body?.score) || 0;
+      const e = buildB2CResultEmail(name, condition, score, `${base}/analyze`);
+      const r = await sendEmail(email, e.subject, e.html, e.text, [{ filename: "analyse-glowscan.pdf", content: pdf }]);
+      res.json({ success: r.ok, sent: r.ok });
     } catch (err) {
       res.status(500).json({ message: "Erreur serveur" });
     }
