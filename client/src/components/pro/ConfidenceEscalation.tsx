@@ -24,9 +24,9 @@ export function ConfidenceEscalation({ result }: { result: any }) {
   const escalate = level === "low" || photoLimited || referral;
 
   const META: Record<string, { label: string; color: string }> = {
-    high: { label: "Confiance élevée", color: "#6ee7b7" },
-    medium: { label: "Confiance moyenne", color: "#fbbf24" },
-    low: { label: "Confiance faible", color: "#f87171" },
+    high: { label: "Confiance élevée", color: "#047857" },
+    medium: { label: "Confiance moyenne", color: "#b45309" },
+    low: { label: "Confiance faible", color: "#dc2626" },
   };
   const badge = level ? META[level] : null;
 
@@ -43,7 +43,7 @@ export function ConfidenceEscalation({ result }: { result: any }) {
 
       {escalate && (
         <div className="rounded-2xl p-3.5" style={{ background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.3)" }}>
-          <p className="text-[12.5px] font-extrabold mb-1" style={{ color: "#fbbf24" }}>⚠️ Escalade recommandée — ne pas conclure seul sur l'IA</p>
+          <p className="text-[12.5px] font-extrabold mb-1" style={{ color: "#b45309" }}>⚠️ Escalade recommandée — ne pas conclure seul sur l'IA</p>
           <ul className="text-[11.5px] leading-relaxed" style={{ color: "#475569", margin: 0, paddingLeft: 16 }}>
             {level === "low" && <li>Confiance de l'IA <strong>faible</strong> sur ce cas → confirmez cliniquement ou demandez un second avis.</li>}
             {photoLimited && <li>Qualité de photo <strong>limitée</strong> → reprenez une image nette et bien éclairée si possible.</li>}

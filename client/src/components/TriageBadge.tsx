@@ -3,7 +3,7 @@ import type { TriageResult } from "@/lib/clinicalRules";
 // Bandeau de triage — Urgence / À orienter / Suivi standard (Triage Engineering).
 const ICON: Record<string, string> = { urgence: "🚨", orientation: "🩺", routine: "✅" };
 
-export function TriageBadge({ triage, dark = true }: { triage: TriageResult; dark?: boolean }) {
+export function TriageBadge({ triage, dark = false }: { triage: TriageResult; dark?: boolean }) {
   if (!triage) return null;
   const c = triage.color;
   const ink = dark ? "#f3f0ff" : "#1a1a2e";

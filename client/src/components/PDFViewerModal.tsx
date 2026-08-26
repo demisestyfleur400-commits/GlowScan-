@@ -322,14 +322,20 @@ export default function PDFViewerModal({
     try {
       const el = document.createElement("div");
       el.innerHTML = getLiveHtml();
+      // PDF léger pour l'email (rapide + sous la limite de taille) : échelle + qualité réduites, compression jsPDF.
       const pdfBlob = await html2pdf()
-        .set({ margin: 0, filename, image: { type: "jpeg", quality: 0.82 }, html2canvas: { scale: 1.5, useCORS: true }, jsPDF: { unit: "mm", format: "a4", orientation: "portrait" } })
+        .set({ margin: 0, filename, image: { type: "jpeg", quality: 0.7 }, html2canvas: { scale: 1.3, useCORS: true }, jsPDF: { unit: "mm", format: "a4", orientation: "portrait", compress: true } })
         .from(el).output("blob");
       const base64 = await blobToBase64(pdfBlob);
       const res = await fetch("/api/pro/dossier/email-me", {
         method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pdfBase64: base64, patientName: patientFirstName || "Patient", patientEmail: patientEmail || undefined }),
       });
+      if (res.status === 413) {
+        setUploadStatus("fallback");
+        window.alert("Le PDF est trop volumineux pour l'email. Utilisez « Télécharger le PDF » puis joignez-le manuellement.");
+        return;
+      }
       const data = await res.json().catch(() => ({} as any));
       if (patientId) {
         fetch(`/api/pro/patients/${patientId}/mark-report-sent`, { method: "POST", credentials: "include" }).then(() => onSent?.()).catch(() => {});
@@ -535,16 +541,9 @@ export default function PDFViewerModal({
             <ActionBtn
               onClick={handleSendEmail}
               icon={uploading ? "⏳" : "📧"}
-              label={uploading ? "Envoi…" : "Envoyer par email (patient + moi)"}
+              label={uploading ? "Envoi…" : "Envoyer par email"}
               disabled={uploading}
               style={{ background: "#0891B2", color: "#fff", border: "none", boxShadow: "0 4px 12px rgba(8,145,178,0.35)" }}
-            />
-            <ActionBtn
-              onClick={handleSendWhatsApp}
-              icon="📲"
-              label="Notifier par WhatsApp"
-              disabled={uploading}
-              style={{ background: "#fff", color: "#128c7e", border: "1.5px solid #25d366" }}
             />
             <ActionBtn
               onClick={handleDownload}

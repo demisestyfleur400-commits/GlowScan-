@@ -366,10 +366,8 @@ ${rubric("Notes & conclusion du praticien", freeText(d.practitionerNotes))}
  * Document PDF autonome complet (mode « Clinique seul »).
  */
 export function buildObservationDoc(d: ObservationData): string {
-  const modelShort = !d.modelVersion ? "IA GlowScan"
-    : /maverick/i.test(d.modelVersion) ? "IA GlowScan · Llama 4 Maverick"
-    : /scout/i.test(d.modelVersion) ? "IA GlowScan · Llama 4 Scout"
-    : /gemini/i.test(d.modelVersion) ? "IA GlowScan · Gemini" : "IA GlowScan";
+  // On n'expose JAMAIS le fournisseur/modèle externe (Gemini, Llama…) dans le rapport.
+  const modelShort = "IA GlowScan";
 
   const header = `
   <div style="text-align:center;border-bottom:2px solid ${TEAL};padding-bottom:10px;margin-bottom:14px">
@@ -387,10 +385,13 @@ export function buildObservationDoc(d: ObservationData): string {
   const footer = `
   ${trace}
   <div style="margin-top:14px;border-top:1px solid #d1d5db;padding-top:10px;display:flex;justify-content:space-between;align-items:flex-end">
-    <div style="font-size:8.5px;color:#9ca3af;max-width:55%;line-height:1.5">Document médical confidentiel établi et validé par le praticien soussigné · À usage strictement professionnel · À conserver dans le dossier médical du patient.</div>
-    <div style="text-align:center">
-      <div style="font-size:9px;color:#6b7280;margin-bottom:28px">Signature et cachet du médecin</div>
-      <div style="border-top:1px solid #374151;width:150px"></div>
+    <div style="font-size:8.5px;color:#9ca3af;max-width:50%;line-height:1.5">Document médical confidentiel · À usage strictement professionnel · À conserver dans le dossier médical du patient.</div>
+    <div style="text-align:center;min-width:180px">
+      <div style="font-size:8px;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Le praticien</div>
+      <div style="font-size:12px;font-weight:800;color:#111">${esc(d.validatedBy || d.doctorName || "Dr —")}</div>
+      <div style="font-size:8px;color:#6b7280;margin-top:2px">Validé électroniquement${d.validatedAt ? ` le ${esc(d.validatedAt)}` : ""}</div>
+      <div style="border-top:1px solid #374151;width:160px;margin:22px auto 3px"></div>
+      <div style="font-size:8px;color:#9ca3af">Signature &amp; cachet (si impression)</div>
     </div>
   </div>`;
 
