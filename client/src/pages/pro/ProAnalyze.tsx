@@ -904,6 +904,7 @@ export default function ProAnalyze() {
 
     const obs: ObservationData = {
       date, refNum, doctorName, doctorLicense, cabinetName: doctorCabinet, doctorCity, overrideBadge,
+      overrideActive: overrideType !== "none",
       patientPhoto: photoBase64 || undefined,
       // 1 · Identification
       patientName: `${firstName} ${lastName}`.trim() || undefined,

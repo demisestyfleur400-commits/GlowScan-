@@ -19,6 +19,7 @@ export interface ObservationData {
   cabinetName?: string;
   doctorCity?: string;
   overrideBadge?: string; // HTML optionnel (badge « révisé par Dr … »)
+  overrideActive?: boolean; // le médecin a corrigé/établi le diagnostic → bandeau en tête
 
   // Bandeau
   patientPhoto?: string; // data URL de la photo clinique
@@ -346,7 +347,7 @@ ${rubric("Raisonnement clinique assisté (IA)", reasoningHtml(d.reasoningSteps))
 
 ${rubric("Diagnostics différentiels", freeText(d.differentiels))}
 
-${rubric("Protocoles cliniques appliqués", rulesHtml(d.appliedRules))}
+${rubric("Alertes cliniques (protocoles appliqués)", rulesHtml(d.appliedRules))}
 
 ${rubric("Examens paracliniques", freeText(d.paracliniques))}
 
@@ -374,7 +375,15 @@ export function buildObservationDoc(d: ObservationData): string {
     <div style="font-size:17px;font-weight:900;color:${TEAL};letter-spacing:.5px">OBSERVATION MÉDICALE</div>
     <div style="font-size:10px;color:#6b7280;margin-top:3px">${esc(d.cabinetName || "Cabinet de dermatologie")}${d.doctorCity ? " · " + esc(d.doctorCity) : ""}</div>
     <div style="font-size:8px;color:#9ca3af;margin-top:3px;letter-spacing:.3px">Rapport clinique assisté par IA · validation et responsabilité du praticien</div>
-  </div>`;
+  </div>
+  ${d.overrideActive ? `
+  <div style="margin-bottom:14px;background:#e7f6ef;border:1px solid #34a06f;border-left:4px solid #1c7c54;border-radius:6px;padding:10px 14px;display:flex;align-items:center;gap:10px">
+    <span style="font-size:16px">✔</span>
+    <div>
+      <div style="font-size:11px;font-weight:900;color:#0f5132">Diagnostic établi par le médecin</div>
+      <div style="font-size:9px;color:#14663f;line-height:1.5">${esc(d.validatedBy || d.doctorName || "Le praticien")} a révisé l'hypothèse de l'IA. Le diagnostic ci-dessous est celui du praticien et fait foi.</div>
+    </div>
+  </div>` : ""}`;
 
   // Brique 2 — traçabilité : qui a proposé / validé, avec quelle version.
   const trace = `
