@@ -488,7 +488,7 @@ function getConditionHook(condition: string, area: "visage" | "corps" | "cheveux
   if (/tache|hyperpigment|mélasma|pih|dyschromie/.test(c)) return {
     emoji: "🌟",
     accroche: "Ton analyse a révélé des taches d'hyperpigmentation actives.",
-    urgence: "Les taches sur peau noire s'aggravent au soleil sans protection ciblée. Chaque jour sans traitement = 2 jours de retard.",
+    urgence: "Sur peau foncée, l'hyperpigmentation s'entretient sans photoprotection ciblée. Une routine adaptée et un SPF quotidien stabilisent et éclaircissent progressivement.",
   };
   if (/acné|acne|bouton|comédon|imperfection/.test(c)) return {
     emoji: "🔴",
@@ -1518,13 +1518,13 @@ export function ResultCard({ result, scanId, savedScanId, area, imageUrl, userFi
   }
 
   /* ── Header ── */
-  .header{background:#0d0a0e;padding:20px 28px 16px;display:flex;justify-content:space-between;align-items:flex-start}
+  .header{background:#ffffff;border-bottom:3px solid #7c3aed;padding:20px 28px 16px;display:flex;justify-content:space-between;align-items:flex-start}
   .header-left{}
   .brand{font-size:24px;font-weight:900;color:#7c3aed;letter-spacing:-.5px;margin-bottom:2px}
-  .report-title{font-size:15px;font-weight:700;color:#f3f0ff;margin-bottom:2px}
-  .report-sub{font-size:9px;color:#a78bfa;line-height:1.5;margin-bottom:8px}
+  .report-title{font-size:15px;font-weight:700;color:#1f2937;margin-bottom:2px}
+  .report-sub{font-size:9px;color:#6b7280;line-height:1.5;margin-bottom:8px}
   .report-meta{font-size:9px;color:#6b7280}
-  .report-meta b{color:#a78bfa}
+  .report-meta b{color:#7c3aed}
   .stamp{border:2px solid #7c3aed;border-radius:8px;padding:8px 12px;text-align:center;min-width:100px}
   .stamp-top{font-size:8px;font-weight:700;color:#a78bfa;letter-spacing:.05em;text-transform:uppercase}
   .stamp-price{font-size:20px;font-weight:900;color:#7c3aed;line-height:1.2}
@@ -1571,7 +1571,7 @@ export function ResultCard({ result, scanId, savedScanId, area, imageUrl, userFi
 
   /* ── Toxiques ── */
   .toxic-table{width:100%;border-collapse:collapse;margin-top:4px}
-  .toxic-table th{background:#0d0a0e;color:#f3f0ff;font-size:9px;padding:7px 10px;text-align:left;font-weight:700}
+  .toxic-table th{background:#ede9fe;color:#5b21b6;font-size:9px;padding:7px 10px;text-align:left;font-weight:700}
   .toxic-table td{font-size:9.5px;padding:7px 10px;border-bottom:1px solid #f3f4f6;vertical-align:top}
   .toxic-table tr:nth-child(even) td{background:#fafafa}
   .toxic-name{font-weight:700;color:#1f2937;margin-bottom:2px}
@@ -1630,12 +1630,7 @@ export function ResultCard({ result, scanId, savedScanId, area, imageUrl, userFi
     <div class="report-sub">Pré-analyse dermatologique par IA — Spécialisé Peaux Africaines<br>Ce document est votre ordonnance personnalisée GlowScan.</div>
     <div class="report-meta">Date : <b>${date}</b> &nbsp;|&nbsp; Réf. : <b>${reportNumber}</b> &nbsp;|&nbsp; Validité : <b>3 mois</b></div>
   </div>
-  <div class="stamp">
-    <div class="stamp-top">Consultation</div>
-    <div class="stamp-price">5 000</div>
-    <div class="stamp-currency">FCFA</div>
-    <div class="stamp-label">Analyse Premium</div>
-  </div>
+  <!-- Cachet "Consultation 5 000 FCFA" retiré : le rapport n'affiche pas de prix. -->
 </div>
 
 <div class="body">
@@ -1706,7 +1701,7 @@ ${(patientIntake?.fullName || patientIntake?.phone || patientIntake?.age) ? `
 
 <!-- ══ 1. PROFIL CUTANÉ ══ -->
 <div class="section">
-  <div class="section-title"><span class="section-icon">🧬</span> Compréhension Approfondie de Votre Peau</div>
+  <div class="section-title"><span class="section-icon">🧬</span> Profil Cutané</div>
   <div class="profile-card">
     ${imageUrl
       ? `<img src="${imageUrl}" class="profile-photo" alt="Photo analyse" />`
@@ -1864,81 +1859,8 @@ ${morning.length > 0 || evening.length > 0 ? `
 </div>
 ` : ""}
 
-<!-- ══ 🚫 INGRÉDIENTS TOXIQUES À BANNIR ══ -->
-<div class="section page-break">
-  <div class="section-title"><span class="section-icon">🚫</span> Ingrédients Toxiques à Bannir Absolument</div>
-  ${patientIntake?.allergies && patientIntake.allergies.toLowerCase() !== "aucune"
-    ? `<div style="background:#fef2f2;border:1px solid #fecdd3;border-radius:8px;padding:8px 12px;margin-bottom:8px;font-size:9px;color:#b91c1c;font-weight:700">
-      ⚠ Allergie déclarée : ${patientIntake.allergies} — ingrédients marqués CRITIQUE en priorité
-    </div>` : ""}
-  <table style="width:100%;border-collapse:collapse">
-    <thead>
-      <tr style="background:#0d0a0e">
-        <th style="padding:6px 8px;text-align:left;font-size:8px;color:#f3f0ff;font-weight:700;width:32%">Ingrédient</th>
-        <th style="padding:6px 8px;text-align:left;font-size:8px;color:#f3f0ff;font-weight:700;width:13%">Risque</th>
-        <th style="padding:6px 8px;text-align:left;font-size:8px;color:#f3f0ff;font-weight:700">Pourquoi l'éviter</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${toxics.map((t, i) => `
-      <tr style="background:${i%2===0?"#fafafa":"#fff"}">
-        <td style="padding:6px 8px;font-size:9px;font-weight:700;color:#1f2937;border-bottom:1px solid #f3f4f6">${t.name}</td>
-        <td style="padding:6px 8px;border-bottom:1px solid #f3f4f6">
-          <span style="font-size:8px;font-weight:800;padding:2px 6px;border-radius:3px;
-            background:${t.level==="CRITIQUE"?"#fef2f2":t.level==="Élevé"?"#fdf2f8":"#fffbeb"};
-            color:${t.level==="CRITIQUE"?"#dc2626":t.level==="Élevé"?"#E91E8C":"#f59e0b"}">
-            ${t.level}
-          </span>
-        </td>
-        <td style="padding:6px 8px;font-size:9px;color:#6b7280;line-height:1.4;border-bottom:1px solid #f3f4f6">${t.why}</td>
-      </tr>`).join("")}
-    </tbody>
-  </table>
-  <p style="font-size:8px;color:#9ca3af;margin-top:6px;font-style:italic">
-    Vérifiez la liste INCI de vos produits actuels — ces substances sont présentes dans de nombreuses crèmes vendues sans contrôle en Afrique.
-  </p>
-</div>
-
-<!-- ══ 💡 CONSEILS D'HYGIÈNE PERSONNALISÉS ══ -->
-<div class="section">
-  <div class="section-title"><span class="section-icon">💡</span> Conseils d'Hygiène Personnalisés</div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-    ${hygiene.map(h => `
-    <div style="padding:8px 10px;border-radius:8px;font-size:9.5px;line-height:1.5;
-      background:${h.startsWith("🚨")||h.startsWith("⚠️")?"rgba(220,38,38,.06)":"rgba(16,185,129,.06)"};
-      border:1px solid ${h.startsWith("🚨")||h.startsWith("⚠️")?"rgba(220,38,38,.2)":"rgba(16,185,129,.2)"};
-      color:${h.startsWith("🚨")||h.startsWith("⚠️")?"#b91c1c":"#166534"}">
-      ${h}
-    </div>`).join("")}
-  </div>
-</div>
-
-<!-- ══ 🛍️ ORDONNANCE PERSONNALISÉE — VOTRE COLIS ══ -->
-${pdfBestProduct ? `
-<div class="section">
-  <div class="section-title"><span class="section-icon">🛍️</span> Ordonnance Personnalisée — Votre Colis GlowScan</div>
-  <div style="background:linear-gradient(135deg,rgba(124,58,237,.06),rgba(233,30,140,.03));border:1.5px solid rgba(124,58,237,.25);border-radius:12px;padding:14px">
-    <div style="font-size:8px;font-weight:700;color:#a78bfa;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">
-      ${pdfIsLocal ? `Marque locale · ${getProductBrand(pdfBestProduct)}` : "Dermocosmétique certifié"}
-    </div>
-    <div style="font-size:14px;font-weight:800;color:#0d0a0e;margin-bottom:4px">${pdfBenefit}</div>
-    <div style="font-size:16px;font-weight:900;color:#E91E8C;margin-bottom:8px">${pdfBestProduct.price?.toLocaleString("fr-FR")} FCFA</div>
-    ${(pdfBestProduct.usagePoints||[]).slice(0,3).map((p: string) => `
-    <div style="display:flex;gap:6px;margin-bottom:4px;font-size:9px;color:#374151">
-      <span style="color:#7c3aed;font-weight:700">✓</span>${p}
-    </div>`).join("")}
-    <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(124,58,237,.15)">
-      <div style="font-size:9px;color:#6b7280;margin-bottom:4px">
-        Ce produit a été sélectionné selon votre diagnostic, vos antécédents et votre type de peau.
-        ${patientIntake?.allergies && patientIntake.allergies.toLowerCase() !== "aucune" ? `Il ne contient pas les ingrédients auxquels vous êtes allergique(e).` : ""}
-      </div>
-      <div style="display:inline-flex;align-items:center;gap:5px;background:#25D366;color:#fff;font-size:9px;font-weight:700;padding:5px 12px;border-radius:6px">
-        📱 Commander via WhatsApp — Livraison à Douala
-      </div>
-    </div>
-  </div>
-</div>
-` : ""}
+<!-- Sections dupliquées (Ingrédients / Conseils / Ordonnance) retirées :
+     elles figurent déjà plus haut (sections 4, 5, 6). -->
 
 <!-- Validité -->
 <div class="validity-box">
@@ -2502,7 +2424,7 @@ ${medicalSections}
                    Pas de produits, pas de conseils, pas de rapport PDF. */
                 <div style={{ borderRadius: "14px", padding: "16px", background: "rgba(37,99,235,0.06)", border: "1px solid rgba(37,99,235,0.22)" }}>
                   <p style={{ fontSize: "14px", fontWeight: 800, color: DS.textPrimary, marginBottom: "6px" }}>👨‍⚕️ Consulter un dermatologue</p>
-                  <p style={{ fontSize: "12px", color: DS.textBody, lineHeight: 1.5, marginBottom: "10px" }}>Ton analyse indique un cas qui mérite un avis médical. Un dermatologue GlowScan valide ton diagnostic et t'envoie ton rapport complet. À partir de 2 000 FCFA.</p>
+                  <p style={{ fontSize: "12px", color: DS.textBody, lineHeight: 1.5, marginBottom: "10px" }}>Ton analyse indique un cas qui mérite un avis médical. Un dermatologue GlowScan valide ton diagnostic et t'envoie ton rapport complet.</p>
                   <ConsultationLauncher scanId={savedScanId || scanId || undefined} condition={result.condition || ""} imageUrl={imageUrl || undefined} />
                 </div>
               ) : gscore >= 80 ? (
