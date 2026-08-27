@@ -215,10 +215,18 @@ export function ConsultationLauncher({ scanId, condition, imageUrl }: { scanId?:
               <>
                 <div style={{ background: "#fff", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 12, padding: 12, marginBottom: 12 }}>
                   <p style={{ fontSize: 12, color: "#374151", margin: 0, lineHeight: 1.7 }}>
-                    1. Envoie <strong>{selected.price.toLocaleString("fr-FR")} FCFA</strong> par Mobile Money au <strong>{PAYMENT_NUMBER}</strong>.<br />
-                    2. Copie la <strong>référence de la transaction</strong> reçue par SMS et colle-la ci-dessous.
+                    1. Envoie <strong>{selected.price.toLocaleString("fr-FR")} FCFA</strong> par <strong>MTN ou Orange Money</strong> au <strong>{PAYMENT_NUMBER}</strong>.<br />
+                    2. <strong>Envoie ta preuve sur WhatsApp</strong> (capture du paiement) — ta consultation est déverrouillée dès réception.
                   </p>
                 </div>
+                {/* Preuve par WhatsApp — le patient prévient, l'admin confirme et déverrouille */}
+                <a
+                  href={`https://wa.me/237${PAYMENT_NUMBER.replace(/\D/g, "")}?text=${encodeURIComponent(`Bonjour GlowScan 👋\nJ'ai payé ${selected.price.toLocaleString("fr-FR")} FCFA pour ma consultation${selected.fullName ? ` avec Dr ${selected.fullName}` : ""}.\nRéf. consultation : ${consultationId || "—"}\nVoici ma preuve de paiement :`)}`}
+                  target="_blank" rel="noreferrer"
+                  style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", boxSizing: "border-box", background: "#25D366", color: "#fff", borderRadius: 9999, padding: "13px", fontSize: 13.5, fontWeight: 800, textDecoration: "none", marginBottom: 12 }}>
+                  📲 Envoyer ma preuve sur WhatsApp
+                </a>
+                <p style={{ fontSize: 11, color: "#9ca3af", textAlign: "center", margin: "0 0 12px" }}>ou entre la référence reçue par SMS :</p>
                 <input value={ref} onChange={(e) => setRef(e.target.value)} placeholder="Référence du paiement (SMS)"
                   style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: "1px solid rgba(0,0,0,0.15)", fontSize: 13, marginBottom: 10 }} />
                 <button onClick={submitRef} disabled={busy || !ref.trim()}

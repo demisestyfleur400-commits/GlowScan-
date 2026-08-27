@@ -732,7 +732,11 @@ export async function registerRoutes(
   const CINETPAY_API_KEY = process.env.CINETPAY_API_KEY || "";
   const CINETPAY_SITE_ID = process.env.CINETPAY_SITE_ID || "";
   const CINETPAY_ON = !MONETBIL_ON && !!(CINETPAY_API_KEY && CINETPAY_SITE_ID);
-  const PAYMENT_PROVIDER = MONETBIL_ON ? "monetbil" : CINETPAY_ON ? "cinetpay" : "simulated";
+  // Option 3 — paiement manuel WhatsApp : force le flux manuel (patient paie sur le
+  // numéro perso → l'admin confirme → chat déverrouillé), même si des clés passerelle
+  // existent. Mettre PAYMENT_MANUAL_ONLY=1 sur Railway le temps de l'approbation.
+  const PAYMENT_MANUAL_ONLY = process.env.PAYMENT_MANUAL_ONLY === "1" || process.env.PAYMENT_MANUAL_ONLY === "true";
+  const PAYMENT_PROVIDER = PAYMENT_MANUAL_ONLY ? "simulated" : MONETBIL_ON ? "monetbil" : CINETPAY_ON ? "cinetpay" : "simulated";
   const PUBLIC_BASE_URL = (process.env.PUBLIC_BASE_URL || "https://glow-scan.com").replace(/\/$/, "");
 
   // Passe une consultation à "payée + ouverte" et notifie le dermatologue.
