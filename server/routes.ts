@@ -372,6 +372,55 @@ export async function registerRoutes(
     } catch {}
   }
 
+  // Notifie LES DEUX parties qu'une consultation vient d'être activée (payée).
+  // Dermatologue ET patient reçoivent : WebSocket (live) + web-push + email.
+  // Best-effort : aucune erreur ne bloque la confirmation.
+  async function notifyConsultationOpened(c: any) {
+    if (!c) return;
+    const base = (process.env.PUBLIC_BASE_URL || "https://glow-scan.com").replace(/\/$/, "");
+    try {
+      const pr = Rows(await db.execute(sql`SELECT user_id, full_name FROM pro_accounts WHERE id = ${c.proAccountId}`));
+      const dermUserId = pr[0]?.user_id;
+      const dermName = pr[0]?.full_name || "votre dermatologue";
+      // ── Dermatologue ──
+      if (dermUserId) {
+        emitToUser(dermUserId, "consultation:opened", { consultationId: c.id });
+        pushToUser(dermUserId, "Nouvelle consultation 🩺", "Un patient vous consulte en ligne sur GlowScan.", "/derm/consultations");
+        try {
+          const du = Rows(await db.execute(sql`SELECT email, name FROM users WHERE id = ${dermUserId}`));
+          if (du[0]?.email) {
+            const { sendEmail } = await import("./email");
+            sendEmail(
+              du[0].email,
+              "Nouvelle consultation en ligne 🩺",
+              `<p>Bonjour ${du[0].name || ""},</p><p>Un patient vient de régler une consultation en ligne sur GlowScan. La conversation est ouverte dans votre espace.</p><p><a href="${base}/derm/consultations">Ouvrir mes consultations →</a></p>`,
+              `Un patient vous consulte en ligne. Ouvrez ${base}/derm/consultations`,
+            ).catch(() => {});
+          }
+        } catch {}
+      }
+      // ── Patient ──
+      if (c.userId) {
+        emitToUser(c.userId, "consultation:opened", { consultationId: c.id });
+        pushToUser(c.userId, "Consultation activée ✅", "Ton paiement est confirmé — tu peux échanger avec le dermatologue.", "/consultations");
+        try {
+          const pu = Rows(await db.execute(sql`SELECT email, name FROM users WHERE id = ${c.userId}`));
+          if (pu[0]?.email) {
+            const { sendEmail } = await import("./email");
+            sendEmail(
+              pu[0].email,
+              "Ta consultation est activée ✅",
+              `<p>Bonjour ${pu[0].name || ""},</p><p>Ton paiement a bien été confirmé. Tu peux maintenant échanger avec Dr ${dermName} directement dans l'application.</p><p><a href="${base}/consultations">Ouvrir ma consultation →</a></p>`,
+              `Ton paiement est confirmé. Ouvre ${base}/consultations pour échanger avec le dermatologue.`,
+            ).catch(() => {});
+          }
+        } catch {}
+      }
+    } catch (e) {
+      console.error("[notifyConsultationOpened] error:", e);
+    }
+  }
+
   // Liste des dermatologues consultables en B2C (opt-in b2c_available).
   app.get("/api/b2c/dermatologists", async (_req: any, res) => {
     try {
@@ -703,14 +752,8 @@ export async function registerRoutes(
         .set({ paymentStatus: "paid", status: "open" })
         .where(eq(consultations.id, id)).returning();
       if (!c) return res.status(404).json({ message: "Consultation introuvable" });
-      // Notifier le dermatologue (best-effort) : émission WS sur son compte user.
-      try {
-        const pr = Rows(await db.execute(sql`SELECT user_id FROM pro_accounts WHERE id = ${c.proAccountId}`));
-        if (pr[0]?.user_id) {
-          emitToUser(pr[0].user_id, "consultation:opened", { consultationId: c.id });
-          pushToUser(pr[0].user_id, "Nouvelle consultation 🩺", "Un patient vous consulte en ligne sur GlowScan.", "/derm/consultations");
-        }
-      } catch {}
+      // Notifie les DEUX parties (dermatologue + patient) : WS + push + email.
+      await notifyConsultationOpened(c);
       res.json({ consultation: c });
     } catch (err) {
       console.error("[consultations confirm] error:", err);
@@ -745,13 +788,8 @@ export async function registerRoutes(
       .set({ paymentStatus: "paid", status: "open" })
       .where(eq(consultations.id, id)).returning();
     if (!c) return null;
-    try {
-      const pr = Rows(await db.execute(sql`SELECT user_id FROM pro_accounts WHERE id = ${c.proAccountId}`));
-      if (pr[0]?.user_id) {
-        emitToUser(pr[0].user_id, "consultation:opened", { consultationId: c.id });
-        pushToUser(pr[0].user_id, "Nouvelle consultation 🩺", "Un patient vous consulte en ligne sur GlowScan.", "/derm/consultations");
-      }
-    } catch {}
+    // Notifie les DEUX parties (dermatologue + patient) : WS + push + email.
+    await notifyConsultationOpened(c);
     return c;
   };
 
