@@ -1601,7 +1601,7 @@ export function ResultCard({ result, scanId, savedScanId, area, imageUrl, userFi
   .protocol-steps{display:flex;flex-direction:column;gap:6px}
   .step-row{display:flex;gap:10px;align-items:flex-start}
   .step-num{min-width:22px;height:22px;border-radius:50%;background:#7c3aed;color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
-  .step-content{flex:1}
+  .step-content{flex:1 1 auto;min-width:0;width:calc(100% - 34px)}
   .step-name{font-size:11px;font-weight:700;color:#1f2937;line-height:1.4}
   .step-product{font-size:10px;color:#7c3aed;margin-top:1px}
   .step-why{font-size:9px;color:#9ca3af;font-style:italic;margin-top:1px}
@@ -1896,7 +1896,13 @@ ${medicalSections}
         const html2pdf = (await import("html2pdf.js")).default;
         const cleaned = html.replace(/<button class="print-btn"[\s\S]*?<\/button>/g, "");
         const dataUri: string = await (html2pdf() as any)
-          .set({ margin: 0, image: { type: "jpeg", quality: 0.95 }, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: "mm", format: "a4", orientation: "portrait" } })
+          .set({
+            margin: 0,
+            image: { type: "jpeg", quality: 0.95 },
+            html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff", windowWidth: 794 },
+            jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+            pagebreak: { mode: ["css", "legacy"], avoid: [".step-row", ".product-card", ".zone-item", "tr"] },
+          })
           .from(cleaned).outputPdf("datauristring");
         const base64 = dataUri.split(",")[1] || "";
         if (mode === "autoemail") {
