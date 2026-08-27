@@ -1022,7 +1022,7 @@ export default function Admin() {
                       {consultsBusy === c.id ? "…" : "Confirmer le paiement"}
                     </button>
                   ) : (
-                    <span className="flex-shrink-0 text-[11px] font-extrabold px-3 py-1.5 rounded-full" style={{ background: "rgba(16,185,129,0.12)", color: "#6ee7b7" }}>Ouverte</span>
+                    <span className="flex-shrink-0 text-[11px] font-extrabold px-3 py-1.5 rounded-full" style={{ background: "rgba(16,185,129,0.12)", color: "#047857" }}>Ouverte</span>
                   )}
                 </div>
               </div>
