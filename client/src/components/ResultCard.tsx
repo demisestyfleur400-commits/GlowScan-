@@ -1626,8 +1626,8 @@ export function ResultCard({ result, scanId, savedScanId, area, imageUrl, userFi
 <div class="header">
   <div class="header-left">
     <div class="brand">✦ GlowScan</div>
-    <div class="report-title">Rapport de Consultation Cutanée</div>
-    <div class="report-sub">Pré-analyse dermatologique par IA — Spécialisé Peaux Africaines<br>Ce document est votre ordonnance personnalisée GlowScan.</div>
+    <div class="report-title">Analyse Cutanée Indicative</div>
+    <div class="report-sub">Générée par intelligence artificielle — Spécialisée Peaux Africaines<br>Document informatif · ne remplace pas l'avis d'un dermatologue.</div>
     <div class="report-meta">Date : <b>${date}</b> &nbsp;|&nbsp; Réf. : <b>${reportNumber}</b> &nbsp;|&nbsp; Validité : <b>3 mois</b></div>
   </div>
   <!-- Cachet "Consultation 5 000 FCFA" retiré : le rapport n'affiche pas de prix. -->
@@ -1791,12 +1791,12 @@ ${result.details ? `
 <!-- ══ 6. ORDONNANCE PERSONNALISÉE ══ -->
 ${_bestProduct ? `
 <div class="section page-break">
-  <div class="section-title"><span class="section-icon">📋</span> Ordonnance Personnalisée</div>
+  <div class="section-title"><span class="section-icon">🧴</span> Produit conseillé</div>
   <div class="ordonnance-header">
-    <div class="ordonnance-icon">🏥</div>
+    <div class="ordonnance-icon">✨</div>
     <div>
-      <div class="ordonnance-label">Soin prescrit par GlowScan IA — adapté à votre peau</div>
-      <div class="ordonnance-sub">Sélectionné parmi les marques locales de confiance · Résultats visibles en 3–4 semaines</div>
+      <div class="ordonnance-label">Suggéré par GlowScan selon ton profil de peau</div>
+      <div class="ordonnance-sub">Une piste, pas une prescription · demande l'avis d'un professionnel avant tout traitement</div>
     </div>
   </div>
   <div class="product-card">
@@ -1817,7 +1817,7 @@ ${_bestProduct ? `
 <!-- ══ 7. PROTOCOLE MATIN / SOIR ══ -->
 ${morning.length > 0 || evening.length > 0 ? `
 <div class="section page-break">
-  <div class="section-title"><span class="section-icon">🌿</span> Protocole d'Application Personnalisé</div>
+  <div class="section-title"><span class="section-icon">🌿</span> Ta routine conseillée (indicative)</div>
 
   ${morning.length > 0 ? `
   <div class="protocol-block">
@@ -1868,7 +1868,7 @@ ${morning.length > 0 || evening.length > 0 ? `
   <div class="validity-text">
     <b>Ce rapport est valable 3 mois</b> à compter du ${date}.<br>
     Après cette période, refaites une analyse pour suivre l'évolution de votre peau.<br>
-    Réf. consultation : <b>${reportNumber}</b>
+    Réf. : <b>${reportNumber}</b>
   </div>
 </div>
 
