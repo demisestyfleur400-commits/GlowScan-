@@ -29,6 +29,7 @@ export function ConsultationLauncher({ scanId, condition, imageUrl }: { scanId?:
   const [ref, setRef] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [needLogin, setNeedLogin] = useState(false);
   const [payProvider, setPayProvider] = useState<"monetbil" | "cinetpay" | "simulated">("simulated");
   const [paidConfirmed, setPaidConfirmed] = useState(false);
   const [pushState, setPushState] = useState<"idle" | "on" | "denied">("idle");
@@ -111,7 +112,7 @@ export function ConsultationLauncher({ scanId, condition, imageUrl }: { scanId?:
       });
       const data = await res.json();
       if (!res.ok) {
-        if (res.status === 401) { setErr("Connecte-toi pour consulter un dermatologue."); return; }
+        if (res.status === 401) { setNeedLogin(true); return; }
         setErr(data.message || "Impossible d'ouvrir la consultation."); return;
       }
       setSelected(d);
@@ -168,8 +169,29 @@ export function ConsultationLauncher({ scanId, condition, imageUrl }: { scanId?:
       <div style={{ background: "rgba(124,58,237,0.06)", border: "1px solid rgba(124,58,237,0.2)", borderRadius: 20, padding: 16 }}>
         {err && <p style={{ fontSize: 11.5, color: "#b91c1c", marginBottom: 10 }}>{err}</p>}
 
+        {/* ── Non connecté → redirection claire vers la page de connexion ── */}
+        {needLogin && (
+          <div style={{ textAlign: "center", padding: "6px 0" }}>
+            <div style={{ fontSize: 30, marginBottom: 6 }}>🔒</div>
+            <p style={{ fontSize: 13.5, fontWeight: 800, color: "#1a1a2e", margin: "0 0 4px" }}>Crée ton compte pour consulter</p>
+            <p style={{ fontSize: 12, color: "#6b7280", margin: "0 0 14px", lineHeight: 1.6 }}>
+              Un compte protège ta consultation et tes échanges avec le dermatologue. C'est rapide.
+            </p>
+            <a
+              href="/auth"
+              onClick={() => { try { sessionStorage.setItem("postLoginIntent", "consultation"); } catch {} }}
+              style={{ display: "inline-block", background: VIOLET, color: "#fff", borderRadius: 9999, padding: "12px 24px", fontSize: 13.5, fontWeight: 800, textDecoration: "none" }}>
+              Me connecter →
+            </a>
+            <button onClick={() => setNeedLogin(false)}
+              style={{ display: "block", margin: "10px auto 0", background: "none", border: "none", color: "#9ca3af", fontSize: 11.5, fontWeight: 700, cursor: "pointer" }}>
+              Retour
+            </button>
+          </div>
+        )}
+
         {/* ── ÉTAPE : choisir un dermatologue ── */}
-        {step === "list" && (
+        {!needLogin && step === "list" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {derms.map((d) => (
               <div key={d.id} style={{ display: "flex", alignItems: "center", gap: 12, background: "#fff", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 14, padding: "10px 12px" }}>
