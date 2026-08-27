@@ -2139,7 +2139,72 @@ ${medicalSections}
   }
 
   // ═══════════════════════════════════════════════════════════════════
-  //  RENDU — SCORE ≥ 60 (autonome)
+  //  RENDU — SCORE ≥ 60 (B2C) : le miroir intelligent.
+  //  Le Glow Score est le héros. 1 phrase · 1 conseil · 1 produit · 1 rapport.
+  //  Tout le détail médical (métriques, cartographie, synthèse) → dans le PDF.
+  // ═══════════════════════════════════════════════════════════════════
+  if (!isPro) {
+    const freeTip = getHygieneAdvice()[0] || null;
+    const p: any = _bestProduct;
+    const waNumber = "237674377959";
+    const waMsg = p ? encodeURIComponent(`Bonjour GlowScan 👋\n\nJe souhaite en savoir plus sur : ${p.name}${p.brand ? ` · ${p.brand}` : ""}\nLivraison à Douala 🙏`) : "";
+    return (
+      <div data-testid="result-card" style={{ maxWidth: "460px", margin: "0 auto", display: "flex", flexDirection: "column", gap: "20px", padding: "8px 0", fontFamily: DS.font }}>
+        {/* Le Glow Score — héros, grand, fier */}
+        <GlowGauge score={result.score} observationsVisuelles={result.consultationData?.observations_visuelles || (result as any).observationsVisuelles} />
+
+        {/* 1 phrase — ce que ça veut dire, en humain */}
+        <p style={{ textAlign: "center", fontSize: 18, fontWeight: 800, color: DS.textPrimary, lineHeight: 1.35, margin: "0 8px" }}>
+          {conditionHook.emoji} {conditionHook.accroche}
+        </p>
+
+        {/* 1 conseil gratuit — actionnable ce soir */}
+        {freeTip && (
+          <div style={{ borderRadius: 16, padding: "14px 16px", background: "rgba(16,185,129,0.06)", border: "1px solid rgba(16,185,129,0.25)" }}>
+            <p style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", color: "#047857", margin: "0 0 4px" }}>Ton geste ce soir</p>
+            <p style={{ fontSize: 13.5, color: DS.textBody, lineHeight: 1.5, margin: 0 }}>{freeTip}</p>
+          </div>
+        )}
+
+        {/* 1 produit — si tu veux aller plus loin. Sans pression. */}
+        {p && (
+          <div style={{ borderRadius: 16, padding: "14px 16px", background: DS.surface, border: `1px solid ${DS.border || "#E2E8F0"}` }}>
+            <p style={{ fontSize: 10, fontWeight: 700, color: DS.textMuted, margin: "0 0 4px" }}>Si tu veux aller plus loin</p>
+            <p style={{ fontSize: 14, fontWeight: 800, color: DS.textPrimary, margin: "0 0 2px" }}>{p.name}</p>
+            {_benefit && <p style={{ fontSize: 12, color: DS.textBody, margin: "0 0 10px", lineHeight: 1.4 }}>{_benefit}</p>}
+            <a href={`https://wa.me/${waNumber}?text=${waMsg}`} target="_blank" rel="noreferrer"
+              style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12.5, fontWeight: 700, color: "#0f9d58", textDecoration: "none" }}>
+              📱 En savoir plus sur WhatsApp
+            </a>
+          </div>
+        )}
+
+        {/* Le rapport — pour les curieuses */}
+        <button onClick={() => handleDownloadPDF()} disabled={pdfGenerating} data-testid="button-download-pdf"
+          style={{ width: "100%", padding: "14px", borderRadius: 14, border: "none", background: DS.violet, color: "#fff", fontWeight: 800, fontSize: 14, cursor: pdfGenerating ? "wait" : "pointer", opacity: pdfGenerating ? 0.7 : 1 }}>
+          {pdfGenerating ? "Génération…" : "📄 Télécharger mon rapport complet"}
+        </button>
+
+        {/* Consultation — lien discret */}
+        <details style={{ textAlign: "center" }}>
+          <summary style={{ cursor: "pointer", fontSize: 12.5, fontWeight: 600, color: DS.textMuted, listStyle: "none" }}>
+            Envie d'un avis de dermatologue ?
+          </summary>
+          <div style={{ marginTop: 12, textAlign: "left" }}>
+            <ConsultationLauncher scanId={savedScanId || scanId || undefined} condition={result.condition || ""} imageUrl={imageUrl || undefined} />
+          </div>
+        </details>
+
+        {/* Dernière phrase — une invitation, pas un avertissement */}
+        <p style={{ textAlign: "center", fontSize: 11.5, color: DS.textMuted, lineHeight: 1.5, margin: 0 }}>
+          On t'aide à comprendre ta peau. Ce que tu en fais t'appartient. 🌿
+        </p>
+      </div>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  //  RENDU — DERM (isPro) : rapport clinique détaillé
   // ═══════════════════════════════════════════════════════════════════
   return (
     <div
