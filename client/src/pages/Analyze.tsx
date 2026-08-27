@@ -1053,18 +1053,9 @@ export default function Analyze() {
               exit={{ opacity: 0 }}
               className="space-y-5"
             >
-              {/* 🚦 Triage — Urgence / À orienter / Suivi standard */}
-              <TriageBadge dark={false} triage={classifyTriage({
-                condition: (result as any)?.condition,
-                severity: (result as any)?.severity,
-                score: (result as any)?.score,
-                redFlags: (result as any)?.redFlags,
-                products: intake.previousProducts,
-                durationText: intake.duration,
-                phototype: ((result as any)?.skinType || "").match(/\b(IV|V|VI)\b/)?.[1],
-              })} />
-              {/* ⚠️ Alerte produits nocifs — en haut du résultat, additionnelle */}
-              <ToxicAlert products={detectToxicProducts(intake.previousProducts)} />
+              {/* Bandeau "Niveau de triage" retiré du B2C : il contredisait le Glow Score
+                  (ex. "Suivi standard" affiché au-dessus d'un score bas). La page
+                  commence désormais par le Glow Score — le triage clinique reste en DERM. */}
               <Suspense fallback={
                 <div style={{ display: "flex", justifyContent: "center", padding: "48px 0" }}>
                   <div style={{ width: "32px", height: "32px", border: "3px solid rgba(47,158,110,0.3)", borderTopColor: "#a78bfa", borderRadius: "9999px", animation: "spin 0.8s linear infinite" }} />
