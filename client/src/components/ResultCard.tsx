@@ -2100,7 +2100,46 @@ ${medicalSections}
   const intermediateOffer = getIntermediateOffer();
 
   // ═══════════════════════════════════════════════════════════════════
-  //  RENDU
+  //  RENDU — SCORE BAS (B2C) : une seule sortie = le dermatologue.
+  //  Aucun produit, aucune métrique, aucune cartographie, aucun accordéon.
+  // ═══════════════════════════════════════════════════════════════════
+  if (!isPro && (result.score || 0) < 60) {
+    return (
+      <div data-testid="result-card-lowscore" style={{ maxWidth: "460px", margin: "0 auto", display: "flex", flexDirection: "column", gap: "22px", padding: "8px 0", fontFamily: DS.font }}>
+        {/* Glow Score — rouge doux, pas alarmant */}
+        <div style={{ textAlign: "center" }}>
+          <div style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", justifyContent: "center", width: 96, height: 96, borderRadius: "50%", background: "rgba(220,38,38,0.06)", border: "2px solid rgba(220,38,38,0.35)" }}>
+            <span style={{ fontSize: 34, fontWeight: 900, color: "#dc2626", lineHeight: 1 }}>{result.score || 0}</span>
+            <span style={{ fontSize: 9, fontWeight: 700, color: "#b91c1c", letterSpacing: "0.1em", marginTop: 2 }}>GLOW SCORE</span>
+          </div>
+        </div>
+
+        {/* 3 phrases — honnête, sans jargon, sans diagnostic */}
+        <div style={{ textAlign: "center", padding: "0 6px" }}>
+          <p style={{ fontSize: 19, fontWeight: 800, color: DS.textPrimary, lineHeight: 1.35, margin: "0 0 10px" }}>
+            Ta peau envoie un signal. 🩺
+          </p>
+          <p style={{ fontSize: 14, fontWeight: 500, color: DS.textBody, lineHeight: 1.55, margin: 0 }}>
+            GlowScan l'a détecté. Un dermatologue peut t'aider aujourd'hui — mieux qu'une crème achetée au marché.
+          </p>
+        </div>
+
+        {/* Une seule action : le dermatologue (paiement 3 500 · MTN/Orange) */}
+        <ConsultationLauncher scanId={savedScanId || scanId || undefined} condition={result.condition || ""} imageUrl={imageUrl || undefined} />
+
+        {/* Note discrète */}
+        <p style={{ textAlign: "center", fontSize: 11.5, color: DS.textMuted, lineHeight: 1.5, margin: "2px 0 0" }}>
+          GlowScan t'oriente. Le dermatologue te soigne.
+        </p>
+        <p style={{ textAlign: "center", fontSize: 9.5, color: DS.textMuted, lineHeight: 1.5, margin: 0 }}>
+          Analyse indicative — ne remplace pas un diagnostic médical.
+        </p>
+      </div>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  //  RENDU — SCORE ≥ 60 (autonome)
   // ═══════════════════════════════════════════════════════════════════
   return (
     <div
