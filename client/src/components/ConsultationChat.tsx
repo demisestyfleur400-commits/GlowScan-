@@ -41,6 +41,9 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
   const [dossier, setDossier] = useState<any>(null);
+  const [correcting, setCorrecting] = useState(false);
+  const [correctText, setCorrectText] = useState("");
+  const [diagBusy, setDiagBusy] = useState(false);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
 
@@ -203,6 +206,31 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
     w.document.write(html); w.document.close();
   };
 
+  // Valide ou corrige le diagnostic IA de la consultation (côté dermatologue).
+  const submitDiagnosis = async (correctedCondition: string | null) => {
+    if (diagBusy) return;
+    setDiagBusy(true);
+    try {
+      const res = await fetch(`/api/pro/consultations/${consultationId}/validate-diagnosis`, {
+        method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ correctedCondition: correctedCondition || undefined }),
+      });
+      const d = await res.json();
+      if (res.ok && d.ok) {
+        setDossier((prev: any) => prev ? {
+          ...prev,
+          scan: {
+            ...prev.scan,
+            isVerified: true,
+            condition: d.finalCondition || prev.scan?.condition,
+            expertCorrectedCondition: d.isCorrection ? d.finalCondition : null,
+          },
+        } : prev);
+        setCorrecting(false);
+      }
+    } catch {} finally { setDiagBusy(false); }
+  };
+
   const BG = dark ? "#0d0a0e" : "#f6f7fb";
   const CARD = dark ? "rgba(255,255,255,0.04)" : "#fff";
   const INK = dark ? "#f3f0ff" : "#1a1a2e";
@@ -304,6 +332,50 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
                 )}
               </div>
               <p style={{ fontSize: 10.5, color: MUTED, margin: "8px 0 0" }}>Diagnostic IA indicatif — votre appréciation clinique prime.</p>
+
+              {/* ── Valider / Corriger le diagnostic (2 clics max) ── */}
+              {dossier.scan?.isVerified ? (
+                <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 6, background: dark ? "rgba(16,185,129,0.15)" : "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.3)", borderRadius: 10, padding: "7px 10px" }}>
+                  <span style={{ fontSize: 13 }}>✅</span>
+                  <span style={{ fontSize: 11.5, fontWeight: 700, color: dark ? "#6ee7b7" : "#047857" }}>
+                    {dossier.scan?.expertCorrectedCondition
+                      ? `Corrigé par le médecin : ${dossier.scan.expertCorrectedCondition}`
+                      : "Diagnostic validé par le médecin"}
+                  </span>
+                </div>
+              ) : correcting ? (
+                <div style={{ marginTop: 10 }}>
+                  <textarea
+                    value={correctText}
+                    onChange={(e) => setCorrectText(e.target.value)}
+                    autoFocus
+                    rows={2}
+                    placeholder="Diagnostic corrigé…"
+                    style={{ width: "100%", boxSizing: "border-box", padding: "8px 10px", borderRadius: 10, border: `1px solid ${BORDER}`, background: dark ? "rgba(255,255,255,0.05)" : "#fff", color: INK, fontSize: 13, outline: "none", resize: "vertical" }}
+                  />
+                  <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+                    <button onClick={() => submitDiagnosis(correctText.trim() || null)} disabled={diagBusy || !correctText.trim()}
+                      style={{ flex: 1, background: "#7c3aed", color: "#fff", border: "none", borderRadius: 9999, padding: "8px", fontSize: 12, fontWeight: 800, cursor: "pointer", opacity: diagBusy || !correctText.trim() ? 0.5 : 1 }}>
+                      {diagBusy ? "…" : "Enregistrer la correction"}
+                    </button>
+                    <button onClick={() => setCorrecting(false)} disabled={diagBusy}
+                      style={{ background: "transparent", color: MUTED, border: `1px solid ${BORDER}`, borderRadius: 9999, padding: "8px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                      Annuler
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+                  <button onClick={() => submitDiagnosis(null)} disabled={diagBusy}
+                    style={{ flex: 1, background: "rgba(16,185,129,0.18)", color: dark ? "#6ee7b7" : "#047857", border: "1px solid rgba(16,185,129,0.35)", borderRadius: 9999, padding: "8px", fontSize: 12, fontWeight: 800, cursor: "pointer", opacity: diagBusy ? 0.6 : 1 }}>
+                    ✅ Valider
+                  </button>
+                  <button onClick={() => { setCorrectText(dossier.scan?.condition || dossier.consultation?.condition || ""); setCorrecting(true); }} disabled={diagBusy}
+                    style={{ flex: 1, background: dark ? "rgba(255,255,255,0.06)" : "rgba(124,58,237,0.08)", color: "#7c3aed", border: `1px solid ${dark ? "rgba(255,255,255,0.12)" : "rgba(124,58,237,0.2)"}`, borderRadius: 9999, padding: "8px", fontSize: 12, fontWeight: 800, cursor: "pointer" }}>
+                    ✏️ Corriger
+                  </button>
+                </div>
+              )}
             </div>
           </div>
           {/* Carte PDF cliquable — ouvre le rapport dans l'app, zéro navigation externe */}

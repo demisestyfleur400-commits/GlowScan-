@@ -1707,6 +1707,63 @@ export function registerProRoutes(app: Express) {
     }
   });
 
+  // POST /api/pro/consultations/:id/validate-diagnosis — le dermatologue VALIDE ou
+  // CORRIGE le diagnostic IA d'une consultation B2C. Scopé par la consultation (pas
+  // besoin que le scan soit rattaché à un patient du cabinet). Alimente la ground
+  // truth du dataset (boucle prédiction IA ↔ vérité terrain).
+  app.post("/api/pro/consultations/:id/validate-diagnosis", requireProAccess, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const schema = z.object({
+        correctedCondition: z.string().trim().max(200).optional().nullable(),
+        note: z.string().trim().max(2000).optional().nullable(),
+      });
+      const data = schema.parse(req.body || {});
+      const [c] = await db.select().from(consultations)
+        .where(and(eq(consultations.id, id), eq(consultations.proAccountId, req.proAccount.id)));
+      if (!c) return res.status(404).json({ message: "Consultation introuvable" });
+      if (!c.scanId) return res.status(400).json({ message: "Aucune analyse IA rattachée à cette consultation" });
+      const [scan] = await db.select().from(scans).where(eq(scans.id, c.scanId));
+      if (!scan) return res.status(404).json({ message: "Analyse introuvable" });
+
+      const corrected = (data.correctedCondition || "").trim();
+      const isCorrection = !!corrected && corrected.toLowerCase() !== (scan.condition || "").trim().toLowerCase();
+
+      const [updated] = await db.update(scans).set({
+        isVerified: true,
+        expertCorrectedCondition: isCorrection ? corrected : null,
+        expertNote: data.note || null,
+        expertReviewer: req.proAccount.fullName,
+        expertReviewedAt: new Date(),
+      }).where(eq(scans.id, scan.id)).returning();
+
+      // Ground truth dataset (best-effort — ne bloque jamais la validation).
+      try {
+        await db.update(trainingData).set({
+          dermValidationStatus: isCorrection ? "corrected" : "validated",
+          finalStatus: "validated",
+          validatedBy: `doctor_${req.proAccount.id}`,
+          validatedAt: new Date(),
+          trainingWeight: isCorrection ? 4 : 3,
+          overrideReason: data.note || null,
+          groundTruth: { condition: corrected || scan.condition, correctedByDoctor: isCorrection, reviewer: req.proAccount.fullName },
+        }).where(eq(trainingData.scanId, scan.id));
+      } catch (dsErr) {
+        console.error("[pro/consultations validate-diagnosis] synchro dataset non-bloquante:", dsErr instanceof Error ? dsErr.message : String(dsErr));
+      }
+
+      res.json({
+        ok: true,
+        isCorrection,
+        finalCondition: updated.expertCorrectedCondition || updated.condition,
+        reviewer: req.proAccount.fullName,
+      });
+    } catch (err) {
+      console.error("[pro/consultations validate-diagnosis] error:", err);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
   // GET /api/pro/consultations/unread-count — badge nombre de messages non lus
   app.get("/api/pro/consultations/unread-count", requireProAccess, async (req: any, res) => {
     try {
