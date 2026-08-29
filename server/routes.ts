@@ -1222,7 +1222,22 @@ export async function registerRoutes(
       if (!userId) return res.status(401).json({ message: "Unauthorized" });
       const objectPath = `/objects/scans/${req.params.filename}`;
       const userScans = await storage.getScansByUser(userId);
-      const owns = userScans.some((s) => s.imageUrl === objectPath);
+      let owns = userScans.some((s) => s.imageUrl === objectPath);
+      // Autorise aussi le DERMATOLOGUE à voir les photos (principale + angles
+      // supplémentaires) des scans rattachés à SES consultations en ligne.
+      if (!owns) {
+        try {
+          const r = Rows(await db.execute(sql`
+            SELECT 1 FROM consultations c
+            JOIN pro_accounts p ON p.id = c.pro_account_id
+            JOIN scans s ON s.id = c.scan_id
+            WHERE p.user_id = ${userId}
+              AND (s.image_url = ${objectPath}
+                   OR (s.extra_images IS NOT NULL AND s.extra_images @> ${JSON.stringify([objectPath])}::jsonb))
+            LIMIT 1`));
+          owns = r.length > 0;
+        } catch {}
+      }
       if (!owns) return res.status(403).json({ message: "Forbidden" });
     }
 
@@ -2111,6 +2126,14 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
       } else {
         console.error("[analyze] ⚠️ Photo NON archivée — diagnostic sera sauvegardé sans image");
       }
+      // Angles supplémentaires (profil D/G) — persistés pour la galerie du dossier
+      // dermatologue en consultation. Best-effort : n'impacte jamais l'analyse.
+      let extraImagePaths: string[] = [];
+      try {
+        if (imageList.length > 1) {
+          extraImagePaths = ((await Promise.all(imageList.slice(1, 3).map((im) => uploadScanImageToStorage(im).catch(() => null)))).filter(Boolean)) as string[];
+        }
+      } catch {}
 
       try {
         const savedScan = await storage.createScan({
@@ -2125,6 +2148,11 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
           motivation: finalResult.motivation,
         });
         savedScanId = savedScan.id;
+        // Persiste les angles supplémentaires (colonne hors schéma Drizzle, résiliente).
+        if (extraImagePaths.length && savedScanId) {
+          try { await db.execute(sql`ALTER TABLE scans ADD COLUMN IF NOT EXISTS extra_images jsonb`); } catch {}
+          try { await db.execute(sql`UPDATE scans SET extra_images = ${JSON.stringify(extraImagePaths)}::jsonb WHERE id = ${savedScanId}`); } catch {}
+        }
         console.log(
           userId
             ? `[analyze] ✅ Scan #${savedScanId} sauvegardé pour userId=${userId}`

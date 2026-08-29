@@ -1726,11 +1726,24 @@ export function registerProRoutes(app: Express) {
       // Démo (consultation fantôme) ? — badge côté client + clôture sans paiement.
       let isDemo = false;
       try { isDemo = (Rows(await db.execute(sql`SELECT is_demo FROM consultations WHERE id = ${id}`))[0] as any)?.is_demo === true; } catch {}
-      // Photos du patient — galerie. Le B2C ne persiste que la photo principale ;
-      // la démo expose face + profil. Chaque photo a un libellé d'angle.
-      const photos: { url: string; label: string }[] = isDemo
-        ? [{ url: "/demo/aminata-face.jpg", label: "Face · J0" }, { url: "/demo/aminata-profile.jpg", label: "Profil · J0" }]
-        : [scan?.imageUrl || c.imageUrl].filter(Boolean).map((u: any) => ({ url: u, label: "Photo · J0" }));
+      // Photos du patient — galerie (photo principale + angles supplémentaires
+      // persistés dans scans.extra_images). La démo expose face + profil.
+      let photos: { url: string; label: string }[];
+      if (isDemo) {
+        photos = [{ url: "/demo/aminata-face.jpg", label: "Face · J0" }, { url: "/demo/aminata-profile.jpg", label: "Profil · J0" }];
+      } else {
+        let extra: string[] = [];
+        try {
+          if (c.scanId) {
+            const raw = (Rows(await db.execute(sql`SELECT extra_images FROM scans WHERE id = ${c.scanId}`))[0] as any)?.extra_images;
+            if (Array.isArray(raw)) extra = raw;
+            else if (typeof raw === "string") extra = JSON.parse(raw);
+          }
+        } catch {}
+        const labels = ["Face · J0", "Profil droit · J0", "Profil gauche · J0"];
+        const urls = [scan?.imageUrl || c.imageUrl, ...extra].filter(Boolean) as string[];
+        photos = urls.map((u, i) => ({ url: u, label: labels[i] || `Photo ${i + 1} · J0` }));
+      }
       // Contexte patient saisi au lancement (âge, ville, durée, produits, allergies).
       let intake: any = null;
       try {
