@@ -186,6 +186,21 @@ export async function deliverConsultationReport(consultationId: number): Promise
       }
     } catch {}
 
+    // 9b · Copie email AU DERMATOLOGUE (archivage de sa consultation clôturée).
+    try {
+      const derm = Rows(await db.execute(sql`SELECT u.email FROM pro_accounts p JOIN users u ON u.id = p.user_id WHERE p.id = ${c.pro_account_id}`))[0] as any;
+      const dermEmail: string | null = derm?.email || null;
+      if (dermEmail) {
+        const { sendEmail } = await import("./email");
+        await sendEmail(
+          dermEmail,
+          `Consultation clôturée — ${patientName}`,
+          `<p>Bonjour Dr ${dermName},</p><p>Votre consultation avec <strong>${patientName}</strong> est clôturée. Voici une copie du rapport (diagnostic final + ordonnance) transmis au patient.</p><p><a href="${url}">Ouvrir le rapport →</a></p>`,
+          `Consultation clôturée avec ${patientName}. Rapport : ${url}`,
+        ).catch(() => {});
+      }
+    } catch {}
+
     const status = wa.ok || pushed > 0 || emailed ? "sent" : "failed";
     try {
       await db.execute(sql`UPDATE consultations SET whatsapp_send_status = ${status}, whatsapp_sent_at = ${status === "sent" ? sql`NOW()` : sql`NULL`} WHERE id = ${consultationId}`);
