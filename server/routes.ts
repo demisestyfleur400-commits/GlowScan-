@@ -19,7 +19,7 @@ import { users } from "@shared/models/auth";
 import { eq, and, sql, gte, count, lte, desc, avg, inArray, isNull } from "drizzle-orm";
 import { whatsappClicks, orders, pageVisits } from "@shared/schema";
 import { emitToUser, isUserOnline } from "./ws";
-import { verifyReportToken, buildReportHtml } from "./whatsapp";
+import { verifyReportToken, buildReportHtml, sendWhatsAppText } from "./whatsapp";
 
 // ── Sélection automatique du provider IA ────────────────────────────────
 // Priorité : GROQ_API_KEY (free, global, vision) → GEMINI_API_KEY → OPENAI_API_KEY
@@ -379,13 +379,46 @@ export async function registerRoutes(
     if (!c) return;
     const base = (process.env.PUBLIC_BASE_URL || "https://glow-scan.com").replace(/\/$/, "");
     try {
-      const pr = Rows(await db.execute(sql`SELECT user_id, full_name FROM pro_accounts WHERE id = ${c.proAccountId}`));
+      let pr: any[] = [];
+      try { pr = Rows(await db.execute(sql`SELECT user_id, full_name, whatsapp_number, phone, first_real_consultation FROM pro_accounts WHERE id = ${c.proAccountId}`)); }
+      catch { pr = Rows(await db.execute(sql`SELECT user_id, full_name FROM pro_accounts WHERE id = ${c.proAccountId}`)); }
       const dermUserId = pr[0]?.user_id;
       const dermName = pr[0]?.full_name || "votre dermatologue";
       // ── Dermatologue ──
       if (dermUserId) {
         emitToUser(dermUserId, "consultation:opened", { consultationId: c.id });
         pushToUser(dermUserId, "Nouvelle consultation 🩺", "Un patient vous consulte en ligne sur GlowScan.", `/derm/consultations?c=${c.id}`);
+
+        // ── PREMIÈRE vraie consultation : guide WhatsApp en 5 étapes (une seule fois) ──
+        // Marque first_real_consultation pour ne jamais renvoyer le guide ensuite.
+        try {
+          await db.execute(sql`ALTER TABLE pro_accounts ADD COLUMN IF NOT EXISTS first_real_consultation timestamptz`).catch(() => {});
+          const already = pr[0]?.first_real_consultation;
+          const dermWa = pr[0]?.whatsapp_number || pr[0]?.phone || null;
+          if (!already) {
+            // Réserve le créneau atomiquement (ne set que si encore NULL) pour éviter
+            // un double envoi si deux confirmations arrivent en même temps.
+            const claimed = Rows(await db.execute(sql`UPDATE pro_accounts SET first_real_consultation = NOW() WHERE id = ${c.proAccountId} AND first_real_consultation IS NULL RETURNING id`));
+            if (claimed.length && dermWa) {
+              const pName = Rows(await db.execute(sql`SELECT first_name FROM users WHERE id = ${c.userId}`))[0]?.first_name || "Votre patient";
+              const guide =
+                `GlowScan DERM — Nouveau patient 🩺\n\n` +
+                `${pName}${c.condition ? ` · ${c.condition}` : ""}\n\n` +
+                `Le dossier complet est prêt. Vous n'avez rien à demander au patient.\n\n` +
+                `Comment procéder :\n` +
+                `1️⃣ Ouvrez le lien ci-dessous\n` +
+                `2️⃣ Lisez le dossier (2 min)\n` +
+                `3️⃣ Validez ou corrigez le diagnostic\n` +
+                `4️⃣ Prescrivez (dictée vocale possible)\n` +
+                `5️⃣ Cliquez « Terminer »\n\n` +
+                `Le patient reçoit son rapport automatiquement.\n\n` +
+                `👉 ${base}/derm/consultations?c=${c.id}\n\n` +
+                `Une question ? Répondez à ce message.\nGlowScan`;
+              sendWhatsAppText(dermWa, guide).catch(() => {});
+            }
+          }
+        } catch (e) { console.warn("[notify] guide 1re consultation:", (e as any)?.message); }
+
         try {
           const du = Rows(await db.execute(sql`SELECT email, name FROM users WHERE id = ${dermUserId}`));
           if (du[0]?.email) {

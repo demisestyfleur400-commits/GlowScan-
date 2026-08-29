@@ -50,6 +50,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
   const [closing, setClosing] = useState(false);
   const [closedInfo, setClosedInfo] = useState<{ payoutFcfa?: number } | null>(null);
   const [showFull, setShowFull] = useState(false);
+  const [coachStep, setCoachStep] = useState(-1); // -1 = inactif
   const recognitionRef = useRef<any>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
@@ -79,6 +80,35 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
     } catch {} finally { setLoading(false); }
   };
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [consultationId]);
+
+  // Onboarding — tooltips séquentiels à la PREMIÈRE vraie consultation du dermato.
+  // Gate localStorage (par navigateur) : jamais réaffichés ensuite. Non bloquant.
+  useEffect(() => {
+    if (side !== "doctor" || !dossier) return;
+    try {
+      const key = `derm_onboarding_done_${myUserId || "anon"}`;
+      if (localStorage.getItem(key) !== "1") setCoachStep(0);
+    } catch {}
+    // eslint-disable-next-line
+  }, [side, dossier]);
+
+  const COACH: { t: string; b: string }[] = [
+    { t: "📸 Les photos", b: "Ces photos ont été prises par le patient lors de son analyse. Appuyez pour agrandir." },
+    { t: "🤖 Le diagnostic IA", b: "Ceci est une suggestion indicative. Votre diagnostic prime toujours." },
+    { t: "✅ Vos actions", b: "Validez si vous êtes d'accord. Corrigez si vous avez un autre avis." },
+    { t: "💊 La prescription", b: "Dictez ou écrivez votre prescription. Elle apparaîtra dans le rapport final." },
+    { t: "✓ Terminer", b: "Quand vous cliquez ici — le rapport est envoyé au patient sur WhatsApp et vous êtes payé sur Mobile Money." },
+  ];
+  const advanceCoach = () => {
+    setCoachStep((s) => {
+      const next = s + 1;
+      if (next >= COACH.length) {
+        try { localStorage.setItem(`derm_onboarding_done_${myUserId || "anon"}`, "1"); } catch {}
+        return -1;
+      }
+      return next;
+    });
+  };
 
   useConsultationSocket(myUserId, (evt, data) => {
     if (evt === "consultation:message") {
@@ -295,7 +325,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
   const lastMineId = mineMsgs.length ? mineMsgs[mineMsgs.length - 1].id : -1;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", background: BG }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", background: BG, position: "relative" }}>
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", borderBottom: `1px solid ${BORDER}`, background: CARD }}>
         {onBack && (
@@ -635,6 +665,29 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
           ➤
         </button>
       </div>
+
+      {/* ── Onboarding : bulle d'aide séquentielle (1re consultation, non bloquant) ── */}
+      {side === "doctor" && coachStep >= 0 && coachStep < COACH.length && (
+        <div style={{ position: "absolute", left: 0, right: 0, bottom: 78, display: "flex", justifyContent: "center", padding: "0 16px", zIndex: 60, pointerEvents: "none" }}>
+          <div style={{ pointerEvents: "auto", maxWidth: 360, width: "100%", background: "#7c3aed", color: "#fff", borderRadius: 16, padding: "14px 16px", boxShadow: "0 10px 30px rgba(0,0,0,0.35)" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 6 }}>
+              <span style={{ fontSize: 13, fontWeight: 900 }}>{COACH[coachStep].t}</span>
+              <span style={{ fontSize: 10.5, opacity: 0.8, fontWeight: 700 }}>{coachStep + 1}/{COACH.length}</span>
+            </div>
+            <p style={{ fontSize: 12.5, lineHeight: 1.6, margin: "0 0 10px", opacity: 0.95 }}>{COACH[coachStep].b}</p>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <button onClick={() => { try { localStorage.setItem(`derm_onboarding_done_${myUserId || "anon"}`, "1"); } catch {} setCoachStep(-1); }}
+                style={{ background: "transparent", border: "none", color: "rgba(255,255,255,0.7)", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                Passer
+              </button>
+              <button onClick={advanceCoach}
+                style={{ background: "#fff", color: "#7c3aed", border: "none", borderRadius: 9999, padding: "8px 16px", fontSize: 12.5, fontWeight: 800, cursor: "pointer" }}>
+                {coachStep === COACH.length - 1 ? "Compris — Je termine →" : "OK →"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
