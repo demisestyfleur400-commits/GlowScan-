@@ -21,6 +21,14 @@ export default function ProConsultations() {
   };
   useEffect(() => { load(); }, []);
 
+  // Deep-link depuis la notification (push/email) : /derm/consultations?c=<id>
+  // → ouvre DIRECTEMENT le dossier, jamais un nouveau flux d'analyse.
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search);
+    const cid = parseInt(p.get("c") || "");
+    if (cid && !Number.isNaN(cid)) setOpenId(cid);
+  }, []);
+
   if (openId) {
     return (
       <div style={{ position: "fixed", inset: 0, zIndex: 50 }}>

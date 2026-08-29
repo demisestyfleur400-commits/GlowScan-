@@ -1672,6 +1672,41 @@ export function registerProRoutes(app: Express) {
     }
   });
 
+  // GET /api/pro/consultations/:id/dossier — dossier B2C complet d'une consultation.
+  // Le dermatologue « arrive en expert » : photo + patient + diagnostic IA + Glow
+  // Score + analyse, déjà là. Lecture seule, limité à SES propres consultations.
+  app.get("/api/pro/consultations/:id/dossier", requireProAccess, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const [c] = await db.select().from(consultations)
+        .where(and(eq(consultations.id, id), eq(consultations.proAccountId, req.proAccount.id)));
+      if (!c) return res.status(404).json({ message: "Consultation introuvable" });
+      const [u] = c.userId ? await db.select().from(users).where(eq(users.id, c.userId)) : [undefined as any];
+      let scan: any = null;
+      if (c.scanId) {
+        const [s] = await db.select().from(scans).where(eq(scans.id, c.scanId));
+        if (s) scan = s;
+      }
+      res.json({
+        consultation: {
+          id: c.id, status: c.status, paymentStatus: c.paymentStatus,
+          condition: c.condition, imageUrl: c.imageUrl, priceFcfa: c.priceFcfa,
+          createdAt: c.createdAt,
+        },
+        patient: u ? { firstName: u.firstName || null, email: u.email || null } : null,
+        scan: scan ? {
+          id: scan.id, score: scan.score ?? null, condition: scan.condition || c.condition || null,
+          analysis: scan.analysis || null, imageUrl: scan.imageUrl || c.imageUrl || null,
+          area: scan.area || null, isVerified: scan.isVerified === true,
+          expertCorrectedCondition: scan.expertCorrectedCondition || null,
+        } : null,
+      });
+    } catch (err) {
+      console.error("[pro/consultations dossier] error:", err);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
   // GET /api/pro/consultations/unread-count — badge nombre de messages non lus
   app.get("/api/pro/consultations/unread-count", requireProAccess, async (req: any, res) => {
     try {

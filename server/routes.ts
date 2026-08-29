@@ -385,7 +385,7 @@ export async function registerRoutes(
       // ── Dermatologue ──
       if (dermUserId) {
         emitToUser(dermUserId, "consultation:opened", { consultationId: c.id });
-        pushToUser(dermUserId, "Nouvelle consultation 🩺", "Un patient vous consulte en ligne sur GlowScan.", "/derm/consultations");
+        pushToUser(dermUserId, "Nouvelle consultation 🩺", "Un patient vous consulte en ligne sur GlowScan.", `/derm/consultations?c=${c.id}`);
         try {
           const du = Rows(await db.execute(sql`SELECT email, name FROM users WHERE id = ${dermUserId}`));
           if (du[0]?.email) {
@@ -393,8 +393,8 @@ export async function registerRoutes(
             sendEmail(
               du[0].email,
               "Nouvelle consultation en ligne 🩺",
-              `<p>Bonjour ${du[0].name || ""},</p><p>Un patient vient de régler une consultation en ligne sur GlowScan. La conversation est ouverte dans votre espace.</p><p><a href="${base}/derm/consultations">Ouvrir mes consultations →</a></p>`,
-              `Un patient vous consulte en ligne. Ouvrez ${base}/derm/consultations`,
+              `<p>Bonjour ${du[0].name || ""},</p><p>Un patient vient de régler une consultation en ligne sur GlowScan. Son dossier (photo + diagnostic IA + Glow Score) est déjà prêt — vous arrivez en expert.</p><p><a href="${base}/derm/consultations?c=${c.id}">Ouvrir le dossier →</a></p>`,
+              `Un patient vous consulte en ligne. Ouvrez ${base}/derm/consultations?c=${c.id}`,
             ).catch(() => {});
           }
         } catch {}

@@ -40,6 +40,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [dossier, setDossier] = useState<any>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
 
@@ -54,6 +55,11 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
         setOtherUserId(d.otherUserId || null);
         setOtherOnline(!!d.otherOnline);
         setDoctor(d.doctor || null);
+        // Côté dermatologue : charger le dossier B2C complet (photo, IA, Glow Score).
+        if (d.side === "doctor") {
+          fetch(`/api/pro/consultations/${consultationId}/dossier`, { credentials: "include" })
+            .then((r) => (r.ok ? r.json() : null)).then((dd) => dd && setDossier(dd)).catch(() => {});
+        }
       }
     } catch {} finally { setLoading(false); }
   };
@@ -160,6 +166,43 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
     setTimeout(() => { try { w.print(); } catch {} }, 500);
   };
 
+  // Ouvre le rapport d'analyse B2C du patient dans l'app (print-to-PDF, pas de
+  // navigation externe). Construit à partir du dossier (score, diagnostic, photo).
+  const openDossierPdf = () => {
+    const s = dossier?.scan; const p = dossier?.patient; const c = dossier?.consultation;
+    if (!s && !c) return;
+    const esc = (v: any) => String(v ?? "").replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch] as string));
+    const dateStr = new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" });
+    const score = s?.score ?? null;
+    const diag = esc(s?.condition || c?.condition || "—");
+    const img = s?.imageUrl || c?.imageUrl || "";
+    const analysis = esc(s?.analysis || "");
+    const html = `<!doctype html><html><head><meta charset="utf-8"><title>Analyse GlowScan — ${esc(p?.firstName || "Patient")}</title></head>
+      <body style="font-family:-apple-system,system-ui,sans-serif;max-width:640px;margin:0 auto;padding:24px;color:#1f2937">
+        <div style="display:flex;align-items:center;gap:10px;border-bottom:3px solid #7c3aed;padding-bottom:12px;margin-bottom:16px">
+          <div style="font-size:22px">✨</div>
+          <div><div style="font-size:18px;font-weight:900">GlowScan</div><div style="font-size:11px;color:#6b7280">Analyse cutanée indicative · ne remplace pas l'avis d'un dermatologue</div></div>
+          <div style="margin-left:auto;font-size:11px;color:#6b7280">${dateStr}</div>
+        </div>
+        <p style="font-size:14px;margin:0 0 10px"><strong>Patient :</strong> ${esc(p?.firstName || "—")}</p>
+        <div style="display:flex;gap:16px;align-items:center;margin:12px 0">
+          ${img ? `<img src="${img}" style="width:120px;height:120px;object-fit:cover;border-radius:12px"/>` : ""}
+          <div>
+            <div style="font-size:12px;color:#6b7280">Diagnostic IA (indicatif)</div>
+            <div style="font-size:16px;font-weight:800;margin:2px 0 8px">${diag}</div>
+            ${score != null ? `<div style="font-size:12px;color:#6b7280">Glow Score</div><div style="font-size:22px;font-weight:900;color:#7c3aed">${score}<span style="font-size:13px;color:#9ca3af">/100</span></div>` : ""}
+          </div>
+        </div>
+        ${analysis ? `<h3 style="font-size:13px;margin:18px 0 6px;color:#7c3aed">Analyse détaillée</h3><p style="font-size:12.5px;line-height:1.7;white-space:pre-wrap">${analysis}</p>` : ""}
+        <p style="font-size:10px;color:#9ca3af;margin-top:24px;border-top:1px solid #eee;padding-top:10px">
+          Document informatif généré par GlowScan. Indicatif — l'appréciation clinique revient au dermatologue.
+        </p>
+      </body></html>`;
+    const w = window.open("", "_blank");
+    if (!w) return;
+    w.document.write(html); w.document.close();
+  };
+
   const BG = dark ? "#0d0a0e" : "#f6f7fb";
   const CARD = dark ? "rgba(255,255,255,0.04)" : "#fff";
   const INK = dark ? "#f3f0ff" : "#1a1a2e";
@@ -238,8 +281,50 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
         )}
       </div>
 
-      {/* Contexte : photo + diagnostic */}
-      {ctx?.imageUrl && (
+      {/* ── DOSSIER B2C (côté dermatologue) — « il arrive en expert, tout est là » ── */}
+      {side === "doctor" && dossier && (
+        <div style={{ padding: "12px 14px", borderBottom: `1px solid ${BORDER}`, background: CARD }}>
+          <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+            {(dossier.scan?.imageUrl || dossier.consultation?.imageUrl) && (
+              <img src={dossier.scan?.imageUrl || dossier.consultation?.imageUrl} alt="" style={{ width: 60, height: 60, borderRadius: 12, objectFit: "cover", flexShrink: 0 }} />
+            )}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ fontSize: 14, fontWeight: 800, color: INK, margin: 0 }}>{dossier.patient?.firstName || "Patient"}</p>
+              <p style={{ fontSize: 11, color: "#10b981", fontWeight: 700, margin: "2px 0 0" }}>
+                ✅ Payé{dossier.consultation?.priceFcfa ? ` · ${Number(dossier.consultation.priceFcfa).toLocaleString("fr-FR")} FCFA` : ""}
+              </p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", marginTop: 8 }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: INK, background: dark ? "rgba(124,58,237,0.2)" : "rgba(124,58,237,0.08)", borderRadius: 8, padding: "3px 8px" }}>
+                  🤖 {dossier.scan?.condition || dossier.consultation?.condition || "Diagnostic IA"}
+                </span>
+                {dossier.scan?.score != null && (
+                  <span style={{ fontSize: 12, fontWeight: 800, color: "#7c3aed", background: dark ? "rgba(124,58,237,0.2)" : "rgba(124,58,237,0.08)", borderRadius: 8, padding: "3px 8px" }}>
+                    Glow Score {dossier.scan.score}/100
+                  </span>
+                )}
+              </div>
+              <p style={{ fontSize: 10.5, color: MUTED, margin: "8px 0 0" }}>Diagnostic IA indicatif — votre appréciation clinique prime.</p>
+            </div>
+          </div>
+          {/* Carte PDF cliquable — ouvre le rapport dans l'app, zéro navigation externe */}
+          {(dossier.scan || dossier.consultation) && (
+            <button
+              onClick={openDossierPdf}
+              style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", marginTop: 12, background: dark ? "rgba(255,255,255,0.04)" : "#faf9ff", border: `1px solid ${dark ? "rgba(255,255,255,0.1)" : "rgba(124,58,237,0.18)"}`, borderRadius: 12, padding: "10px 12px", cursor: "pointer", textAlign: "left" }}
+            >
+              <span style={{ fontSize: 22, flexShrink: 0 }}>📄</span>
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ display: "block", fontSize: 12.5, fontWeight: 800, color: INK }}>Analyse GlowScan complète</span>
+                <span style={{ display: "block", fontSize: 11, color: MUTED }}>Toucher pour ouvrir le rapport</span>
+              </span>
+              <span style={{ color: "#7c3aed", fontSize: 16, flexShrink: 0 }}>→</span>
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Contexte patient (côté patient uniquement) : photo + diagnostic */}
+      {side === "patient" && ctx?.imageUrl && (
         <div style={{ display: "flex", gap: 10, alignItems: "center", padding: "10px 14px", borderBottom: `1px solid ${BORDER}`, background: CARD }}>
           <img src={ctx.imageUrl} alt="" style={{ width: 46, height: 46, borderRadius: 10, objectFit: "cover" }} />
           <p style={{ fontSize: 11.5, color: MUTED, margin: 0 }}>Photo & diagnostic partagés avec le dermatologue.</p>
