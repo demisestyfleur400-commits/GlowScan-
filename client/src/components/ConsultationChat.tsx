@@ -51,6 +51,8 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
   const [closedInfo, setClosedInfo] = useState<{ payoutFcfa?: number; demo?: boolean } | null>(null);
   const [showFull, setShowFull] = useState(false);
   const [coachStep, setCoachStep] = useState(-1); // -1 = inactif
+  const [dossierCollapsed, setDossierCollapsed] = useState(false);
+  const [lightbox, setLightbox] = useState(-1); // index photo en plein écran, -1 = fermé
   const recognitionRef = useRef<any>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
@@ -394,9 +396,41 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
               <span style={{ fontSize: 11, fontWeight: 800, color: dark ? "#fbbf24" : "#b45309" }}>🎯 DÉMONSTRATION — patient fictif, entraînez-vous librement</span>
             </div>
           )}
+          {/* Barre repliable — libère la conversation quand le dossier est lu */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: dossierCollapsed ? 0 : 10 }}>
+            <span style={{ fontSize: 10.5, fontWeight: 800, color: MUTED, textTransform: "uppercase", letterSpacing: 0.5 }}>Dossier patient</span>
+            <button onClick={() => setDossierCollapsed((v) => !v)}
+              style={{ background: "transparent", border: "none", color: "#7c3aed", fontSize: 11.5, fontWeight: 800, cursor: "pointer", padding: "2px 4px" }}>
+              {dossierCollapsed ? "▼ Déplier le dossier" : "▲ Replier (voir le chat)"}
+            </button>
+          </div>
+
+          {dossierCollapsed ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              {dossier.photos?.[0]?.url && (
+                <img src={dossier.photos[0].url} alt="" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} style={{ width: 34, height: 34, borderRadius: 8, objectFit: "cover" }} />
+              )}
+              <span style={{ fontSize: 12.5, fontWeight: 800, color: INK }}>{dossier.patient?.firstName || "Patient"}</span>
+              <span style={{ fontSize: 12, color: MUTED }}>{dossier.scan?.condition || dossier.consultation?.condition}</span>
+              {dossier.scan?.score != null && <span style={{ fontSize: 12, fontWeight: 800, color: "#7c3aed", marginLeft: "auto" }}>Score {dossier.scan.score}</span>}
+            </div>
+          ) : (
+          <>
           <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-            {(dossier.scan?.imageUrl || dossier.consultation?.imageUrl) && (
-              <img src={dossier.scan?.imageUrl || dossier.consultation?.imageUrl} alt="" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} style={{ width: 60, height: 60, borderRadius: 12, objectFit: "cover", flexShrink: 0 }} />
+            {/* Galerie photos du patient — toucher pour agrandir en plein écran */}
+            {Array.isArray(dossier.photos) && dossier.photos.length > 0 && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 5, flexShrink: 0 }}>
+                <div style={{ display: "flex", gap: 6 }}>
+                  {dossier.photos.slice(0, 3).map((ph: any, i: number) => (
+                    <button key={i} onClick={() => setLightbox(i)} title={ph.label}
+                      style={{ padding: 0, border: "none", background: "transparent", cursor: "pointer", lineHeight: 0 }}>
+                      <img src={ph.url} alt={ph.label} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                        style={{ width: 58, height: 58, borderRadius: 10, objectFit: "cover", display: "block", border: `1px solid ${BORDER}` }} />
+                    </button>
+                  ))}
+                </div>
+                <span style={{ fontSize: 9.5, color: MUTED, textAlign: "center", fontWeight: 700 }}>🔍 Agrandir</span>
+              </div>
             )}
             <div style={{ flex: 1, minWidth: 0 }}>
               <p style={{ fontSize: 14, fontWeight: 800, color: INK, margin: 0 }}>
@@ -580,6 +614,8 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
               <p style={{ fontSize: 10, color: MUTED, margin: "4px 2px 0" }}>Sera incluse dans le rapport envoyé au patient à la clôture.</p>
             </div>
           )}
+          </>
+          )}
         </div>
       )}
 
@@ -701,6 +737,28 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
                 {coachStep === COACH.length - 1 ? "Compris — Je termine →" : "OK →"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Photo en plein écran (lightbox) — voir la peau en gros plan ── */}
+      {lightbox >= 0 && dossier?.photos?.[lightbox] && (
+        <div onClick={() => setLightbox(-1)}
+          style={{ position: "fixed", inset: 0, zIndex: 80, background: "rgba(0,0,0,0.92)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <button onClick={() => setLightbox(-1)}
+            style={{ position: "absolute", top: 14, right: 16, background: "rgba(255,255,255,0.15)", color: "#fff", border: "none", borderRadius: "50%", width: 40, height: 40, fontSize: 20, cursor: "pointer" }}>✕</button>
+          <img src={dossier.photos[lightbox].url} alt={dossier.photos[lightbox].label} onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: "100%", maxHeight: "82vh", borderRadius: 12, objectFit: "contain" }} />
+          <div onClick={(e) => e.stopPropagation()} style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 16 }}>
+            {dossier.photos.length > 1 && (
+              <button onClick={() => setLightbox((i) => (i - 1 + dossier.photos.length) % dossier.photos.length)}
+                style={{ background: "rgba(255,255,255,0.15)", color: "#fff", border: "none", borderRadius: 9999, padding: "8px 16px", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>← Préc.</button>
+            )}
+            <span style={{ color: "#fff", fontSize: 13, fontWeight: 700 }}>{dossier.photos[lightbox].label}{dossier.photos.length > 1 ? ` · ${lightbox + 1}/${dossier.photos.length}` : ""}</span>
+            {dossier.photos.length > 1 && (
+              <button onClick={() => setLightbox((i) => (i + 1) % dossier.photos.length)}
+                style={{ background: "rgba(255,255,255,0.15)", color: "#fff", border: "none", borderRadius: 9999, padding: "8px 16px", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>Suiv. →</button>
+            )}
           </div>
         </div>
       )}

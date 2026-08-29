@@ -1726,6 +1726,11 @@ export function registerProRoutes(app: Express) {
       // Démo (consultation fantôme) ? — badge côté client + clôture sans paiement.
       let isDemo = false;
       try { isDemo = (Rows(await db.execute(sql`SELECT is_demo FROM consultations WHERE id = ${id}`))[0] as any)?.is_demo === true; } catch {}
+      // Photos du patient — galerie. Le B2C ne persiste que la photo principale ;
+      // la démo expose face + profil. Chaque photo a un libellé d'angle.
+      const photos: { url: string; label: string }[] = isDemo
+        ? [{ url: "/demo/aminata-face.jpg", label: "Face · J0" }, { url: "/demo/aminata-profile.jpg", label: "Profil · J0" }]
+        : [scan?.imageUrl || c.imageUrl].filter(Boolean).map((u: any) => ({ url: u, label: "Photo · J0" }));
       // Contexte patient saisi au lancement (âge, ville, durée, produits, allergies).
       let intake: any = null;
       try {
@@ -1748,6 +1753,7 @@ export function registerProRoutes(app: Express) {
         suggestedTreatment,
         rich,
         intake,
+        photos,
         // Volontairement PAS de priceFcfa ici : le dermatologue n'a pas à voir le
         // prix payé par le patient (distraction commerciale — brief Steve Jobs).
         consultation: {
