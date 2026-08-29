@@ -1050,8 +1050,17 @@ export async function registerRoutes(
         const u = Rows(await db.execute(sql`SELECT first_name FROM users WHERE id = ${c.userId}`))[0] as any;
         if (u?.first_name) patientName = u.first_name;
       } catch {}
+      // Prescription (colonne hors schéma Drizzle) + diagnostic retenu (scan corrigé).
+      let prescription: string | null = null, finalCondition: string | null = null;
+      try { prescription = (Rows(await db.execute(sql`SELECT prescription FROM consultations WHERE id = ${id}`))[0] as any)?.prescription || null; } catch {}
+      try {
+        if (c.scanId) {
+          const s = Rows(await db.execute(sql`SELECT COALESCE(expert_corrected_condition, condition) AS fc, is_verified FROM scans WHERE id = ${c.scanId}`))[0] as any;
+          if (s?.is_verified && s?.fc) finalCondition = s.fc;
+        }
+      } catch {}
       res.setHeader("Content-Type", "text/html; charset=utf-8");
-      res.send(buildReportHtml(c, msgs, doctorName, patientName));
+      res.send(buildReportHtml({ ...c, prescription, final_condition: finalCondition }, msgs, doctorName, patientName));
     } catch (err) {
       console.error("[report download] error:", err);
       res.status(500).send("Erreur serveur");

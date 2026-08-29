@@ -44,6 +44,12 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
   const [correcting, setCorrecting] = useState(false);
   const [correctText, setCorrectText] = useState("");
   const [diagBusy, setDiagBusy] = useState(false);
+  const [prescription, setPrescription] = useState("");
+  const [prescriptionTouched, setPrescriptionTouched] = useState(false);
+  const [dictating, setDictating] = useState(false);
+  const [closing, setClosing] = useState(false);
+  const [closedInfo, setClosedInfo] = useState<{ payoutFcfa?: number } | null>(null);
+  const recognitionRef = useRef<any>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
 
@@ -61,7 +67,12 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
         // Côté dermatologue : charger le dossier B2C complet (photo, IA, Glow Score).
         if (d.side === "doctor") {
           fetch(`/api/pro/consultations/${consultationId}/dossier`, { credentials: "include" })
-            .then((r) => (r.ok ? r.json() : null)).then((dd) => dd && setDossier(dd)).catch(() => {});
+            .then((r) => (r.ok ? r.json() : null)).then((dd) => {
+              if (!dd) return;
+              setDossier(dd);
+              // Pré-remplit la prescription : celle déjà saisie, sinon la suggestion IA.
+              setPrescription((prev) => (prescriptionTouched ? prev : (dd.prescription || dd.suggestedTreatment || "")));
+            }).catch(() => {});
         }
       }
     } catch {} finally { setLoading(false); }
@@ -231,6 +242,46 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
     } catch {} finally { setDiagBusy(false); }
   };
 
+  // Dictée vocale (Web Speech API, fr-FR) — sur mobile 3G, dicter > taper.
+  const toggleDictation = () => {
+    const SR: any = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) { alert("La dictée vocale n'est pas disponible sur ce navigateur. Utilisez Chrome sur Android."); return; }
+    if (dictating) { try { recognitionRef.current?.stop(); } catch {} setDictating(false); return; }
+    try {
+      const rec = new SR();
+      rec.lang = "fr-FR"; rec.continuous = true; rec.interimResults = false;
+      rec.onresult = (e: any) => {
+        let add = "";
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+          if (e.results[i].isFinal) add += e.results[i][0].transcript;
+        }
+        if (add) { setPrescriptionTouched(true); setPrescription((prev) => (prev ? prev.trimEnd() + " " : "") + add.trim()); }
+      };
+      rec.onend = () => setDictating(false);
+      rec.onerror = () => setDictating(false);
+      recognitionRef.current = rec;
+      rec.start();
+      setDictating(true);
+    } catch { setDictating(false); }
+  };
+
+  // Clôture : envoie la prescription + le diagnostic final, déclenche la livraison
+  // du rapport au patient (WhatsApp/push/email) et confirme le paiement au médecin.
+  const closeConsultation = async () => {
+    if (closing) return;
+    if (!confirm("Terminer cette consultation ? Le rapport (avec votre ordonnance) sera envoyé au patient.")) return;
+    setClosing(true);
+    try { recognitionRef.current?.stop(); } catch {}
+    try {
+      const res = await fetch(`/api/pro/consultations/${consultationId}/close`, {
+        method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prescription: prescription.trim() || undefined }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (res.ok) { setClosedInfo({ payoutFcfa: d.payoutFcfa }); load(); }
+    } catch {} finally { setClosing(false); }
+  };
+
   const BG = dark ? "#0d0a0e" : "#f6f7fb";
   const CARD = dark ? "rgba(255,255,255,0.04)" : "#fff";
   const INK = dark ? "#f3f0ff" : "#1a1a2e";
@@ -295,16 +346,11 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
         )}
         {side === "doctor" && ctx?.status !== "closed" && (
           <button
-            onClick={async () => {
-              if (!confirm("Terminer cette consultation ? Le patient pourra la noter.")) return;
-              try {
-                const res = await fetch(`/api/pro/consultations/${consultationId}/close`, { method: "POST", credentials: "include" });
-                if (res.ok) load();
-              } catch {}
-            }}
-            style={{ flexShrink: 0, background: "rgba(16,185,129,0.2)", color: "#6ee7b7", border: "1px solid rgba(16,185,129,0.4)", borderRadius: 9999, padding: "6px 12px", fontSize: 11, fontWeight: 800, cursor: "pointer" }}
+            onClick={closeConsultation}
+            disabled={closing}
+            style={{ flexShrink: 0, background: "rgba(16,185,129,0.2)", color: "#6ee7b7", border: "1px solid rgba(16,185,129,0.4)", borderRadius: 9999, padding: "6px 12px", fontSize: 11, fontWeight: 800, cursor: "pointer", opacity: closing ? 0.6 : 1 }}
           >
-            ✓ Terminer
+            {closing ? "…" : "✓ Terminer"}
           </button>
         )}
       </div>
@@ -392,6 +438,38 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
               <span style={{ color: "#7c3aed", fontSize: 16, flexShrink: 0 }}>→</span>
             </button>
           )}
+
+          {/* ── Ordonnance / prescription (pré-remplie IA · dictée vocale) ── */}
+          {ctx?.status !== "closed" && (
+            <div style={{ marginTop: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 6 }}>
+                <span style={{ fontSize: 12, fontWeight: 800, color: INK }}>💊 Ordonnance / conseils</span>
+                <button onClick={toggleDictation}
+                  style={{ display: "flex", alignItems: "center", gap: 5, background: dictating ? "#ef4444" : (dark ? "rgba(124,58,237,0.2)" : "rgba(124,58,237,0.08)"), color: dictating ? "#fff" : "#7c3aed", border: `1px solid ${dictating ? "#ef4444" : "rgba(124,58,237,0.25)"}`, borderRadius: 9999, padding: "5px 11px", fontSize: 11, fontWeight: 800, cursor: "pointer" }}>
+                  {dictating ? "● Écoute…" : "🎙️ Dicter"}
+                </button>
+              </div>
+              <textarea
+                value={prescription}
+                onChange={(e) => { setPrescription(e.target.value); setPrescriptionTouched(true); }}
+                rows={4}
+                placeholder="Traitement, posologie, conseils… (pré-rempli avec la suggestion IA — modifiez ou dictez par-dessus)"
+                style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: `1px solid ${BORDER}`, background: dark ? "rgba(255,255,255,0.05)" : "#fff", color: INK, fontSize: 13, lineHeight: 1.6, outline: "none", resize: "vertical" }}
+              />
+              <p style={{ fontSize: 10, color: MUTED, margin: "4px 2px 0" }}>Sera incluse dans le rapport envoyé au patient à la clôture.</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Confirmation de clôture (côté dermatologue) — rapport envoyé + paiement */}
+      {side === "doctor" && closedInfo && (
+        <div style={{ padding: "12px 14px", borderBottom: `1px solid ${BORDER}`, background: dark ? "rgba(16,185,129,0.12)" : "rgba(16,185,129,0.08)" }}>
+          <p style={{ fontSize: 13, fontWeight: 800, color: dark ? "#6ee7b7" : "#047857", margin: 0 }}>✅ Consultation terminée</p>
+          <p style={{ fontSize: 11.5, color: MUTED, margin: "4px 0 0", lineHeight: 1.6 }}>
+            Le rapport (avec votre ordonnance) est envoyé au patient sur WhatsApp.
+            {closedInfo.payoutFcfa ? ` Paiement de ${closedInfo.payoutFcfa.toLocaleString("fr-FR")} FCFA en cours.` : ""}
+          </p>
         </div>
       )}
 

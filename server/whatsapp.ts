@@ -217,8 +217,10 @@ export function buildReportHtml(c: any, messages: any[], doctorName: string, pat
   </div>
   <p style="font-size:13px"><strong>Patient :</strong> ${esc(patientName)}</p>
   <p style="font-size:13px"><strong>Dermatologue :</strong> Dr ${esc(doctorName)}</p>
-  ${c?.condition ? `<p style="font-size:13px"><strong>Motif / diagnostic IA :</strong> ${esc(c.condition)}</p>` : ""}
+  ${c?.condition ? `<p style="font-size:13px"><strong>Motif / diagnostic IA (indicatif) :</strong> ${esc(c.condition)}</p>` : ""}
+  ${c?.final_condition ? `<p style="font-size:13px"><strong>Diagnostic retenu par le dermatologue :</strong> ${esc(c.final_condition)}</p>` : ""}
   ${c?.image_url || c?.imageUrl ? `<img src="${esc(c.image_url || c.imageUrl)}" style="width:120px;height:120px;object-fit:cover;border-radius:12px;margin:8px 0"/>` : ""}
+  ${c?.prescription ? `<h3 style="font-size:14px;margin:18px 0 6px;color:#7c3aed">💊 Ordonnance / conseils du dermatologue</h3><div style="font-size:12.5px;line-height:1.7;white-space:pre-wrap;background:#f9f7ff;border:1px solid #ede9fe;border-radius:12px;padding:12px">${esc(c.prescription)}</div>` : ""}
   <h3 style="font-size:14px;margin:18px 0 6px;color:#7c3aed">Échange de la consultation</h3>
   ${rows || "<p style='font-size:12px;color:#6b7280'>Aucun message.</p>"}
   <p style="font-size:10px;color:#9ca3af;margin-top:24px;border-top:1px solid #eee;padding-top:10px">

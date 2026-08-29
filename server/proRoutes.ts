@@ -1687,7 +1687,20 @@ export function registerProRoutes(app: Express) {
         const [s] = await db.select().from(scans).where(eq(scans.id, c.scanId));
         if (s) scan = s;
       }
+      // Prescription déjà saisie (colonne hors schéma Drizzle) — reprise à l'édition.
+      let prescription: string | null = null;
+      try { prescription = (Rows(await db.execute(sql`SELECT prescription FROM consultations WHERE id = ${id}`))[0] as any)?.prescription || null; } catch {}
+      // Suggestion de traitement IA (pré-remplissage) — dérivée des recommandations.
+      let suggestedTreatment = "";
+      try {
+        const recs: any = scan?.recommendations;
+        if (Array.isArray(recs)) {
+          suggestedTreatment = recs.map((r: any) => typeof r === "string" ? r : (r?.name || r?.title || r?.product || r?.tip || "")).filter(Boolean).join("\n");
+        }
+      } catch {}
       res.json({
+        prescription,
+        suggestedTreatment,
         consultation: {
           id: c.id, status: c.status, paymentStatus: c.paymentStatus,
           condition: c.condition, imageUrl: c.imageUrl, priceFcfa: c.priceFcfa,
@@ -1821,6 +1834,13 @@ export function registerProRoutes(app: Express) {
       const [c] = await db.select().from(consultations)
         .where(and(eq(consultations.id, id), eq(consultations.proAccountId, req.proAccount.id)));
       if (!c) return res.status(404).json({ message: "Consultation introuvable" });
+      // Prescription dictée/écrite par le dermatologue (facultative) → persistée et
+      // injectée dans le rapport final envoyé au patient.
+      const prescription = typeof req.body?.prescription === "string" ? req.body.prescription.trim().slice(0, 4000) : "";
+      if (prescription) {
+        try { await db.execute(sql`ALTER TABLE consultations ADD COLUMN IF NOT EXISTS prescription text`); } catch {}
+        try { await db.execute(sql`UPDATE consultations SET prescription = ${prescription} WHERE id = ${id}`); } catch {}
+      }
       await db.update(consultations).set({ status: "closed" }).where(eq(consultations.id, id));
       try { await db.execute(sql`UPDATE consultations SET closed_at = NOW() WHERE id = ${id}`); } catch {}
       // Notifier le patient (WS + push) : consultation terminée, invitation à noter.
@@ -1828,7 +1848,9 @@ export function registerProRoutes(app: Express) {
       // Livraison auto du rapport (push + WhatsApp si configuré). Ne bloque JAMAIS
       // la clôture : fire-and-forget, la consultation reste "closed" quoi qu'il arrive.
       setImmediate(() => { deliverConsultationReport(id).catch((e) => console.error("[close] deliver report:", e)); });
-      res.json({ ok: true });
+      // Part dermatologue (memo produit : 3 500 patient → 2 100 dermato / 1 400 plateforme).
+      const payoutFcfa = Math.round((Number(c.priceFcfa) || 3500) * 0.6);
+      res.json({ ok: true, payoutFcfa });
     } catch (err) {
       console.error("[pro/consultations close] error:", err);
       res.status(500).json({ message: "Erreur serveur" });
