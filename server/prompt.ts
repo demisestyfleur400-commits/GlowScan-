@@ -201,7 +201,7 @@ CAS Hyperpigmentation / Taches :
 → Sérum Niacinamide 10% + Zinc PCA (GlowScan Dermo — 11 000 FCFA)
 
 CAS Acné active :
-→ Gel Nettoyant Anti-Sébum Pores Net (GlowScan Dermo — 11 000 FCFA)
+→ Gel Nettoyant Anti-Sébum Pores Net (GlowScan Dermo — 14 000 FCFA)
 → Lotion Exfoliante BHA 2% Anti-Comédons (GlowScan Dermo — 11 500 FCFA)
 
 CAS Déshydratation / Peau sèche / Barrière fragilisée :
