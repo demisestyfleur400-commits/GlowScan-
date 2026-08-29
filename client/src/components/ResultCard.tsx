@@ -2153,7 +2153,18 @@ ${medicalSections}
     const freeTip = getHygieneAdvice()[0] || null;
     const p: any = _bestProduct;
     const waNumber = "237674377959";
-    const waMsg = p ? encodeURIComponent(`Bonjour GlowScan 👋\n\nJe souhaite en savoir plus sur : ${p.name}${p.brand ? ` · ${p.brand}` : ""}\nLivraison à Douala 🙏`) : "";
+    const priceStr = p?.price ? `${p.price.toLocaleString("fr-FR")} FCFA` : "";
+    // Message pré-rempli COMPLET : le client voit le prix (donc tu sais qu'il l'a vu),
+    // et tu reçois son contexte d'analyse (diagnostic + Glow Score) pour répondre juste.
+    const waMsg = p ? encodeURIComponent(
+      `Bonjour GlowScan 👋\n\n` +
+      `Je souhaite en savoir plus sur :\n${p.name}${p.brand ? ` · ${p.brand}` : ""}\n` +
+      (priceStr ? `💰 Prix : ${priceStr}\n` : "") +
+      `\nMon analyse GlowScan :\n` +
+      `• Diagnostic : ${result.condition || "—"}\n` +
+      `• Glow Score : ${result.score}/100\n\n` +
+      `📍 Livraison à Douala 🙏`
+    ) : "";
     return (
       <div data-testid="result-card" style={{ maxWidth: "460px", margin: "0 auto", display: "flex", flexDirection: "column", gap: "20px", padding: "8px 0", fontFamily: DS.font }}>
         {/* Le Glow Score — héros, grand, fier */}
@@ -2177,7 +2188,8 @@ ${medicalSections}
           <div style={{ borderRadius: 16, padding: "14px 16px", background: DS.surface, border: `1px solid ${DS.border || "#E2E8F0"}` }}>
             <p style={{ fontSize: 10, fontWeight: 700, color: DS.textMuted, margin: "0 0 4px" }}>Si tu veux aller plus loin</p>
             <p style={{ fontSize: 14, fontWeight: 800, color: DS.textPrimary, margin: "0 0 2px" }}>{p.name}</p>
-            {_benefit && <p style={{ fontSize: 12, color: DS.textBody, margin: "0 0 10px", lineHeight: 1.4 }}>{_benefit}</p>}
+            {_benefit && <p style={{ fontSize: 12, color: DS.textBody, margin: "0 0 6px", lineHeight: 1.4 }}>{_benefit}</p>}
+            {p.price ? <p style={{ fontSize: 13, fontWeight: 800, color: DS.textPrimary, margin: "0 0 10px" }}>{p.price.toLocaleString("fr-FR")} FCFA</p> : null}
             <a href={`https://wa.me/${waNumber}?text=${waMsg}`} target="_blank" rel="noreferrer"
               style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12.5, fontWeight: 700, color: "#0f9d58", textDecoration: "none" }}>
               📱 En savoir plus sur WhatsApp

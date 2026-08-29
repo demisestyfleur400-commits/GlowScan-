@@ -49,7 +49,7 @@ export const catalog: Product[] = [
     brand: "GlowScan Dermo",
     description: "Gel nettoyant dermatologique adapté aux peaux grasses et à tendance acnéique. Aide à maintenir un équilibre sébacé, nettoie en profondeur, préserve le film hydrolipidique. Sans savon. 200ml.",
     category: "visage",
-    price: 11000,
+    price: 14000,
     targets: ["acné", "peau grasse", "pores dilatés", "points noirs", "excès de sébum", "brillance", "comédons", "impuretés visage"],
     usagePoints: [
       "Purifie les pores sans agresser la barrière cutanée",
