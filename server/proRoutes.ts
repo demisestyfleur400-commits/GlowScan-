@@ -1687,6 +1687,36 @@ export function registerProRoutes(app: Express) {
         const [s] = await db.select().from(scans).where(eq(scans.id, c.scanId));
         if (s) scan = s;
       }
+      // Données cliniques structurées (training_data, keyé par scanId) : phototype,
+      // sévérité, confiance, inflammation, métriques balance, zones, ingrédients à
+      // risque. Best-effort — tout champ absent est simplement omis côté client.
+      let rich: any = null;
+      if (c.scanId) {
+        try {
+          const [t] = await db.select().from(trainingData).where(eq(trainingData.scanId, c.scanId));
+          if (t) {
+            const bal: any = t.balance || null;
+            rich = {
+              fitzpatrick: t.skinPhototype && t.skinPhototype !== "unknown" ? t.skinPhototype : null,
+              severity: t.severity || null,
+              inflammation: t.inflammationLevel || null,
+              confidence: t.confidence || null,
+              zones: Array.isArray(t.zonesB2C) ? (t.zonesB2C as any[]).map((z: any) => z?.zone).filter(Boolean) : [],
+              riskyIngredients: Array.isArray(t.toxicIngredients)
+                ? (t.toxicIngredients as any[]).map((x: any) => typeof x === "string" ? { name: x } : { name: x?.name || x?.ingredient || "", note: x?.reason || x?.risk || x?.note || null }).filter((x: any) => x.name)
+                : [],
+              metrics: bal ? {
+                hydratation: typeof bal.hydration === "number" ? bal.hydration : null,
+                sebum: typeof bal.sebum === "number" ? bal.sebum : null,
+                uniformite: typeof bal.uniformity === "number" ? bal.uniformity : null,
+                eclat: typeof bal.radiance === "number" ? bal.radiance : null,
+              } : null,
+              advice: t.whenToSeeDermatologist || t.details || null,
+              redFlags: Array.isArray(t.redFlags) ? t.redFlags : [],
+            };
+          }
+        } catch {}
+      }
       // Prescription déjà saisie (colonne hors schéma Drizzle) — reprise à l'édition.
       let prescription: string | null = null;
       try { prescription = (Rows(await db.execute(sql`SELECT prescription FROM consultations WHERE id = ${id}`))[0] as any)?.prescription || null; } catch {}
@@ -1701,10 +1731,12 @@ export function registerProRoutes(app: Express) {
       res.json({
         prescription,
         suggestedTreatment,
+        rich,
+        // Volontairement PAS de priceFcfa ici : le dermatologue n'a pas à voir le
+        // prix payé par le patient (distraction commerciale — brief Steve Jobs).
         consultation: {
           id: c.id, status: c.status, paymentStatus: c.paymentStatus,
-          condition: c.condition, imageUrl: c.imageUrl, priceFcfa: c.priceFcfa,
-          createdAt: c.createdAt,
+          condition: c.condition, imageUrl: c.imageUrl, createdAt: c.createdAt,
         },
         patient: u ? { firstName: u.firstName || null, email: u.email || null } : null,
         scan: scan ? {

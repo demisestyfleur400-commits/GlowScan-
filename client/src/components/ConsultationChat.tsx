@@ -49,6 +49,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
   const [dictating, setDictating] = useState(false);
   const [closing, setClosing] = useState(false);
   const [closedInfo, setClosedInfo] = useState<{ payoutFcfa?: number } | null>(null);
+  const [showFull, setShowFull] = useState(false);
   const recognitionRef = useRef<any>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
@@ -364,9 +365,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
             )}
             <div style={{ flex: 1, minWidth: 0 }}>
               <p style={{ fontSize: 14, fontWeight: 800, color: INK, margin: 0 }}>{dossier.patient?.firstName || "Patient"}</p>
-              <p style={{ fontSize: 11, color: "#10b981", fontWeight: 700, margin: "2px 0 0" }}>
-                ✅ Payé{dossier.consultation?.priceFcfa ? ` · ${Number(dossier.consultation.priceFcfa).toLocaleString("fr-FR")} FCFA` : ""}
-              </p>
+              <p style={{ fontSize: 11, color: "#10b981", fontWeight: 700, margin: "2px 0 0" }}>✅ Payé</p>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", marginTop: 8 }}>
                 <span style={{ fontSize: 12, fontWeight: 700, color: INK, background: dark ? "rgba(124,58,237,0.2)" : "rgba(124,58,237,0.08)", borderRadius: 8, padding: "3px 8px" }}>
                   🤖 {dossier.scan?.condition || dossier.consultation?.condition || "Diagnostic IA"}
@@ -376,8 +375,30 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
                     Glow Score {dossier.scan.score}/100
                   </span>
                 )}
+                {dossier.rich?.fitzpatrick && (
+                  <span style={{ fontSize: 12, fontWeight: 700, color: INK, background: dark ? "rgba(255,255,255,0.08)" : "#f1f5f9", borderRadius: 8, padding: "3px 8px" }}>
+                    Fitzpatrick {dossier.rich.fitzpatrick}
+                  </span>
+                )}
+                {dossier.rich?.severity && (
+                  <span style={{ fontSize: 12, fontWeight: 700, color: INK, background: dark ? "rgba(255,255,255,0.08)" : "#f1f5f9", borderRadius: 8, padding: "3px 8px" }}>
+                    Sévérité : {({ mild: "légère", moderate: "modérée", severe: "sévère", critical: "critique" } as any)[dossier.rich.severity] || dossier.rich.severity}
+                  </span>
+                )}
               </div>
-              <p style={{ fontSize: 10.5, color: MUTED, margin: "8px 0 0" }}>Diagnostic IA indicatif — votre appréciation clinique prime.</p>
+              <p style={{ fontSize: 10.5, color: MUTED, margin: "8px 0 0" }}>
+                🤖 Analyse IA — indicative{dossier.rich?.confidence ? ` · confiance ${({ low: "faible", medium: "moyenne", high: "élevée" } as any)[dossier.rich.confidence] || dossier.rich.confidence}` : ""}. Votre appréciation clinique prime.
+              </p>
+
+              {/* ⚠️ Alerte produit / ingrédient à risque — priorité visuelle */}
+              {Array.isArray(dossier.rich?.riskyIngredients) && dossier.rich.riskyIngredients.length > 0 && (
+                <div style={{ marginTop: 8, background: dark ? "rgba(239,68,68,0.12)" : "#fef2f2", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 10, padding: "7px 10px" }}>
+                  <span style={{ fontSize: 11.5, fontWeight: 800, color: dark ? "#fca5a5" : "#b91c1c" }}>⚠️ Produit à risque : </span>
+                  <span style={{ fontSize: 11.5, color: dark ? "#fecaca" : "#991b1b" }}>
+                    {dossier.rich.riskyIngredients.map((x: any) => x.name).filter(Boolean).join(" · ")}
+                  </span>
+                </div>
+              )}
 
               {/* ── Valider / Corriger le diagnostic (2 clics max) ── */}
               {dossier.scan?.isVerified ? (
@@ -437,6 +458,54 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
               </span>
               <span style={{ color: "#7c3aed", fontSize: 16, flexShrink: 0 }}>→</span>
             </button>
+          )}
+
+          {/* ── Dossier complet (1 tap) — métriques, zones, ingrédients, conseil IA ── */}
+          {dossier.rich && (dossier.rich.metrics || (dossier.rich.zones?.length) || (dossier.rich.riskyIngredients?.length) || dossier.rich.advice) && (
+            <div style={{ marginTop: 12 }}>
+              <button onClick={() => setShowFull((v) => !v)}
+                style={{ display: "flex", alignItems: "center", gap: 6, background: "transparent", border: "none", color: "#7c3aed", fontSize: 12, fontWeight: 800, cursor: "pointer", padding: 0 }}>
+                {showFull ? "▲ Masquer le dossier complet" : "▼ Voir le dossier complet"}
+              </button>
+              {showFull && (
+                <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 10 }}>
+                  {dossier.rich.metrics && (
+                    <div>
+                      <p style={{ fontSize: 11, fontWeight: 800, color: MUTED, margin: "0 0 4px", textTransform: "uppercase", letterSpacing: 0.4 }}>Métriques</p>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                        {([["Hydratation", dossier.rich.metrics.hydratation], ["Sébum", dossier.rich.metrics.sebum], ["Uniformité", dossier.rich.metrics.uniformite], ["Éclat", dossier.rich.metrics.eclat]] as [string, number | null][])
+                          .filter(([, v]) => typeof v === "number").map(([k, v]) => (
+                          <span key={k} style={{ fontSize: 11.5, color: INK, background: dark ? "rgba(255,255,255,0.06)" : "#f1f5f9", borderRadius: 8, padding: "3px 8px" }}>{k} : {v}%</span>
+                        ))}
+                        {dossier.rich.inflammation && (
+                          <span style={{ fontSize: 11.5, color: INK, background: dark ? "rgba(255,255,255,0.06)" : "#f1f5f9", borderRadius: 8, padding: "3px 8px" }}>Inflammation : {({ none: "aucune", low: "faible", moderate: "modérée", high: "élevée" } as any)[dossier.rich.inflammation] || dossier.rich.inflammation}</span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  {dossier.rich.zones?.length > 0 && (
+                    <div>
+                      <p style={{ fontSize: 11, fontWeight: 800, color: MUTED, margin: "0 0 4px", textTransform: "uppercase", letterSpacing: 0.4 }}>Zones concernées</p>
+                      <p style={{ fontSize: 12.5, color: INK, margin: 0 }}>{dossier.rich.zones.join(" · ")}</p>
+                    </div>
+                  )}
+                  {dossier.rich.riskyIngredients?.length > 0 && (
+                    <div>
+                      <p style={{ fontSize: 11, fontWeight: 800, color: MUTED, margin: "0 0 4px", textTransform: "uppercase", letterSpacing: 0.4 }}>Ingrédients à risque</p>
+                      {dossier.rich.riskyIngredients.map((x: any, i: number) => (
+                        <p key={i} style={{ fontSize: 12.5, color: INK, margin: "0 0 2px" }}>· {x.name}{x.note ? ` — ${x.note}` : ""}</p>
+                      ))}
+                    </div>
+                  )}
+                  {dossier.rich.advice && (
+                    <div>
+                      <p style={{ fontSize: 11, fontWeight: 800, color: MUTED, margin: "0 0 4px", textTransform: "uppercase", letterSpacing: 0.4 }}>Conseil IA (indicatif)</p>
+                      <p style={{ fontSize: 12.5, color: INK, margin: 0, lineHeight: 1.6 }}>{dossier.rich.advice}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           )}
 
           {/* ── Ordonnance / prescription (pré-remplie IA · dictée vocale) ── */}
