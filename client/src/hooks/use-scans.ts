@@ -42,12 +42,18 @@ export function useAnalyze() {
 
           if (!res.ok) {
             const body = await res.json().catch(() => ({}));
-            throw new Error(body?.message || "Analyse échouée. Réessaie.");
+            const e: any = new Error(body?.message || "Analyse échouée. Réessaie.");
+            e.status = res.status;
+            e.code = body?.code;
+            throw e;
           }
 
           return dermAnalysisResponseSchema.parse(await res.json());
-        } catch (err) {
+        } catch (err: any) {
           lastErr = err;
+          // Abonnement expiré (402) : inutile de réessayer — on remonte tout de suite
+          // pour afficher un message clair (« réabonnez-vous »), pas « réessayez ».
+          if (err?.status === 402 || err?.code === "PRO_SUBSCRIPTION_REQUIRED") throw err;
           if (attempt < 2) {
             await new Promise((r) => setTimeout(r, 400));
             continue;

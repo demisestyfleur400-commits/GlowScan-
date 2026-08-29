@@ -41,6 +41,7 @@ const ResultCard = lazy(() =>
   import("@/components/ResultCard").then((m) => ({ default: m.ResultCard }))
 );
 import { useToast } from "@/hooks/use-toast";
+import { SubscriptionExpiredBanner } from "@/components/pro/SubscriptionExpiredBanner";
 import type { AnalysisResult, Patient } from "@shared/schema";
 import { ProLayout, ProCard, ProInput } from "@/components/ProLayout";
 import { ClinicalDossierForm, type ClinicalRecord } from "@/components/pro/ClinicalDossierForm";
@@ -639,6 +640,18 @@ export default function ProAnalyze() {
         }).catch(() => {});
       }
     } catch (err: any) {
+      // Abonnement expiré (402) → message EXPLICITE, pas « réessayez » (sinon le
+      // dermato croit que l'app est cassée). On le renvoie vers la réactivation.
+      if (err?.status === 402 || err?.code === "PRO_SUBSCRIPTION_REQUIRED") {
+        toast({
+          title: "Abonnement terminé",
+          description: err?.message || "Votre abonnement est arrivé à échéance. Réactivez-le pour lancer des analyses et recevoir des patients.",
+          variant: "destructive",
+        });
+        setStep(1);
+        setLocation("/derm/cabinet");
+        return;
+      }
       console.warn("[pro] analyse IA indisponible", err?.message);
       toast({
         title: "Erreur de connexion — réessayez",
@@ -1279,6 +1292,7 @@ export default function ProAnalyze() {
       setLocation("/derm/dashboard");
     }}>
       <div className="max-w-3xl mx-auto print:max-w-full">
+        <SubscriptionExpiredBanner />
         <ProgressBar current={step} />
 
         {/* ════════ STEP 1 : Patient ════════ */}

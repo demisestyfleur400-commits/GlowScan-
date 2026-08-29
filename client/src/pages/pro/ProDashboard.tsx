@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useProAccount, useProPatients, useUpdateProAccount, useProStats, useProPendingPatients } from "@/hooks/use-pro";
 import { ProLayout, ProCard } from "@/components/ProLayout";
+import { SubscriptionExpiredBanner } from "@/components/pro/SubscriptionExpiredBanner";
 import { DermNotifPrompt } from "@/components/DermNotifPrompt";
 import { DERM, DERM_LOGO } from "@/lib/design-tokens";
 import { computeProfileScore, profileLabel } from "@/lib/profile-score";
@@ -207,6 +208,8 @@ export default function ProDashboard() {
 
   return (
     <ProLayout>
+      {/* ══ BANNIÈRE ABONNEMENT EXPIRÉ (priorité max — explique le blocage) ══ */}
+      <SubscriptionExpiredBanner />
       {/* ══ BANNIÈRE COMPLÉTION PROFIL (priorité absolue — disparaît à 100%) ══ */}
       {profileScore < 100 && (
         <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: 16 }}>

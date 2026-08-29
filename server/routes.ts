@@ -430,6 +430,10 @@ export async function registerRoutes(
                COALESCE(consult_price_fcfa, 3500) AS price
         FROM pro_accounts
         WHERE b2c_available = true
+          AND (
+            (subscription_status = 'active' AND subscription_expires_at > NOW())
+            OR (subscription_status = 'trial' AND trial_ends_at > NOW())
+          )
         ORDER BY full_name`));
       // Enrichissement profil (colonnes ajoutées via ALTER) — best-effort.
       const extra = new Map<number, any>();
