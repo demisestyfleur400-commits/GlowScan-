@@ -48,7 +48,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
   const [prescriptionTouched, setPrescriptionTouched] = useState(false);
   const [dictating, setDictating] = useState(false);
   const [closing, setClosing] = useState(false);
-  const [closedInfo, setClosedInfo] = useState<{ payoutFcfa?: number } | null>(null);
+  const [closedInfo, setClosedInfo] = useState<{ payoutFcfa?: number; demo?: boolean } | null>(null);
   const [showFull, setShowFull] = useState(false);
   const [coachStep, setCoachStep] = useState(-1); // -1 = inactif
   const recognitionRef = useRef<any>(null);
@@ -309,7 +309,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
         body: JSON.stringify({ prescription: prescription.trim() || undefined }),
       });
       const d = await res.json().catch(() => ({}));
-      if (res.ok) { setClosedInfo({ payoutFcfa: d.payoutFcfa }); load(); }
+      if (res.ok) { setClosedInfo({ payoutFcfa: d.payoutFcfa, demo: d.demo }); load(); }
     } catch {} finally { setClosing(false); }
   };
 
@@ -389,9 +389,14 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
       {/* ── DOSSIER B2C (côté dermatologue) — « il arrive en expert, tout est là » ── */}
       {side === "doctor" && dossier && (
         <div style={{ padding: "12px 14px", borderBottom: `1px solid ${BORDER}`, background: CARD }}>
+          {dossier.consultation?.isDemo && (
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(245,158,11,0.15)", border: "1px solid rgba(245,158,11,0.4)", borderRadius: 9999, padding: "3px 10px", marginBottom: 10 }}>
+              <span style={{ fontSize: 11, fontWeight: 800, color: dark ? "#fbbf24" : "#b45309" }}>🎯 DÉMONSTRATION — patient fictif, entraînez-vous librement</span>
+            </div>
+          )}
           <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
             {(dossier.scan?.imageUrl || dossier.consultation?.imageUrl) && (
-              <img src={dossier.scan?.imageUrl || dossier.consultation?.imageUrl} alt="" style={{ width: 60, height: 60, borderRadius: 12, objectFit: "cover", flexShrink: 0 }} />
+              <img src={dossier.scan?.imageUrl || dossier.consultation?.imageUrl} alt="" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} style={{ width: 60, height: 60, borderRadius: 12, objectFit: "cover", flexShrink: 0 }} />
             )}
             <div style={{ flex: 1, minWidth: 0 }}>
               <p style={{ fontSize: 14, fontWeight: 800, color: INK, margin: 0 }}>
@@ -581,11 +586,22 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
       {/* Confirmation de clôture (côté dermatologue) — rapport envoyé + paiement */}
       {side === "doctor" && closedInfo && (
         <div style={{ padding: "12px 14px", borderBottom: `1px solid ${BORDER}`, background: dark ? "rgba(16,185,129,0.12)" : "rgba(16,185,129,0.08)" }}>
-          <p style={{ fontSize: 13, fontWeight: 800, color: dark ? "#6ee7b7" : "#047857", margin: 0 }}>✅ Consultation terminée</p>
-          <p style={{ fontSize: 11.5, color: MUTED, margin: "4px 0 0", lineHeight: 1.6 }}>
-            Le rapport (avec votre ordonnance) est envoyé au patient sur WhatsApp.
-            {closedInfo.payoutFcfa ? ` Paiement de ${closedInfo.payoutFcfa.toLocaleString("fr-FR")} FCFA en cours.` : ""}
-          </p>
+          {closedInfo.demo ? (
+            <>
+              <p style={{ fontSize: 13, fontWeight: 800, color: dark ? "#6ee7b7" : "#047857", margin: 0 }}>🎉 Parfait. Vous êtes prêt.</p>
+              <p style={{ fontSize: 11.5, color: MUTED, margin: "4px 0 0", lineHeight: 1.6 }}>
+                C'était une démonstration. Votre prochain patient sera un vrai patient — vous savez maintenant exactement quoi faire.
+              </p>
+            </>
+          ) : (
+            <>
+              <p style={{ fontSize: 13, fontWeight: 800, color: dark ? "#6ee7b7" : "#047857", margin: 0 }}>✅ Consultation terminée</p>
+              <p style={{ fontSize: 11.5, color: MUTED, margin: "4px 0 0", lineHeight: 1.6 }}>
+                Le rapport (avec votre ordonnance) est envoyé au patient sur WhatsApp.
+                {closedInfo.payoutFcfa ? ` Paiement de ${closedInfo.payoutFcfa.toLocaleString("fr-FR")} FCFA en cours.` : ""}
+              </p>
+            </>
+          )}
         </div>
       )}
 

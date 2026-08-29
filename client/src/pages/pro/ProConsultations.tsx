@@ -3,7 +3,7 @@ import { ProLayout } from "@/components/ProLayout";
 import { useProAccount } from "@/hooks/use-pro";
 import { ConsultationChat } from "@/components/ConsultationChat";
 
-interface Consult { id: number; condition?: string; status?: string; unreadDoctor?: number; patientFirstName?: string; patientEmail?: string; lastMessageAt?: string; createdAt?: string; }
+interface Consult { id: number; condition?: string; status?: string; unreadDoctor?: number; patientFirstName?: string; patientEmail?: string; lastMessageAt?: string; createdAt?: string; isDemo?: boolean; }
 
 const INK = "#0F172A";
 const MUTED = "#64748B";
@@ -55,7 +55,10 @@ export default function ProConsultations() {
               style={{ textAlign: "left", background: "#F1F5F9", border: "1px solid #F1F5F9", borderRadius: 14, padding: "12px 14px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12 }}>
               <div style={{ width: 40, height: 40, borderRadius: 12, background: "rgba(124,58,237,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>🧑🏾</div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontSize: 13.5, fontWeight: 800, color: INK, margin: 0 }}>{c.patientFirstName || "Patient"}</p>
+                <p style={{ fontSize: 13.5, fontWeight: 800, color: INK, margin: 0, display: "flex", alignItems: "center", gap: 6 }}>
+                  {c.patientFirstName || "Patient"}
+                  {c.isDemo && <span style={{ fontSize: 9.5, fontWeight: 800, color: "#b45309", background: "rgba(245,158,11,0.15)", border: "1px solid rgba(245,158,11,0.4)", borderRadius: 9999, padding: "1px 7px" }}>DÉMO</span>}
+                </p>
                 <p style={{ fontSize: 11.5, color: MUTED, margin: "2px 0 0", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.condition || "Consultation"}</p>
               </div>
               {(c.unreadDoctor || 0) > 0 && (

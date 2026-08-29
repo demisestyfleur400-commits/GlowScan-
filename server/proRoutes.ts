@@ -1666,7 +1666,13 @@ export function registerProRoutes(app: Express) {
         .where(and(eq(consultations.proAccountId, req.proAccount.id), eq(consultations.paymentStatus, "paid")))
         .orderBy(desc(consultations.lastMessageAt), desc(consultations.createdAt))
         .limit(100);
-      res.json({ consultations: rows });
+      // Marque les consultations de démo (badge côté client).
+      let demoIds = new Set<number>();
+      try {
+        const dr = Rows(await db.execute(sql`SELECT id FROM consultations WHERE pro_account_id = ${req.proAccount.id} AND is_demo = true`));
+        demoIds = new Set(dr.map((r: any) => Number(r.id)));
+      } catch {}
+      res.json({ consultations: rows.map((r: any) => ({ ...r, isDemo: demoIds.has(Number(r.id)) })) });
     } catch (e) {
       res.json({ consultations: [] });
     }
@@ -1717,6 +1723,9 @@ export function registerProRoutes(app: Express) {
           }
         } catch {}
       }
+      // Démo (consultation fantôme) ? — badge côté client + clôture sans paiement.
+      let isDemo = false;
+      try { isDemo = (Rows(await db.execute(sql`SELECT is_demo FROM consultations WHERE id = ${id}`))[0] as any)?.is_demo === true; } catch {}
       // Contexte patient saisi au lancement (âge, ville, durée, produits, allergies).
       let intake: any = null;
       try {
@@ -1744,6 +1753,7 @@ export function registerProRoutes(app: Express) {
         consultation: {
           id: c.id, status: c.status, paymentStatus: c.paymentStatus,
           condition: c.condition, imageUrl: c.imageUrl, createdAt: c.createdAt,
+          isDemo,
         },
         patient: u ? { firstName: u.firstName || null, email: u.email || null } : null,
         scan: scan ? {
@@ -1816,6 +1826,58 @@ export function registerProRoutes(app: Express) {
     }
   });
 
+  // ── CONSULTATION FANTÔME (démo onboarding) ──────────────────────────────
+  // À l'activation « consultable en B2C », on crée UNE consultation de test avec
+  // un dossier réaliste. Le dermatologue vit le flux complet (valider, prescrire,
+  // clôturer) avant son premier vrai patient. Idempotent : une seule par cabinet.
+  const DEMO_USER_ID = "demo_patient_glowscan";
+  async function ensureDemoConsultation(proAccountId: number): Promise<number | null> {
+    try {
+      await db.execute(sql`ALTER TABLE consultations ADD COLUMN IF NOT EXISTS is_demo boolean DEFAULT false`).catch(() => {});
+      await db.execute(sql`ALTER TABLE consultations ADD COLUMN IF NOT EXISTS patient_context jsonb`).catch(() => {});
+      const existing = Rows(await db.execute(sql`SELECT id FROM consultations WHERE pro_account_id = ${proAccountId} AND is_demo = true LIMIT 1`));
+      if (existing.length) return Number(existing[0].id);
+
+      // 1) Patient démo partagé (ne bloque jamais un vrai email : domaine dédié).
+      await db.execute(sql`INSERT INTO users (id, email, first_name, role) VALUES (${DEMO_USER_ID}, 'aminata.demo@demo.glowscan.cm', 'Aminata', 'patient') ON CONFLICT (id) DO NOTHING`);
+
+      // 2) Scan démo (photos statiques servies depuis /demo/*).
+      const [scan] = await db.insert(scans).values({
+        userId: DEMO_USER_ID,
+        imageUrl: "/demo/aminata-face.jpg",
+        area: "face",
+        condition: "Acné inflammatoire modérée",
+        analysis: "Acné inflammatoire modérée sur phototype V, principalement zone T. Hyperpigmentation post-inflammatoire présente. Barrière cutanée fragilisée.",
+        score: 52,
+      }).returning();
+
+      // 3) Dossier riche (training_data) — best-effort.
+      try {
+        await db.insert(trainingData).values({
+          scanId: scan.id, mode: "B2C", source: "user_upload",
+          skinPhototype: "V", severity: "moderate", confidence: "high", inflammationLevel: "moderate",
+          balance: { hydration: 48, sebum: 62, sensitivity: 40, uniformity: 55, elasticity: 60, radiance: 50 } as any,
+          zonesB2C: [{ zone: "Front" }, { zone: "Tempes" }, { zone: "Zone T" }] as any,
+          toxicIngredients: [{ name: "Huile de coco", reason: "comédogène 4/5" }, { name: "Alcool dénat", reason: "fragilise la barrière" }] as any,
+          whenToSeeDermatologist: "Arrêt du savon noir recommandé. Nettoyant doux non comédogène suggéré. Suivi dans 3-4 semaines.",
+          score: 52,
+        } as any);
+      } catch (e) { console.warn("[demo] training_data:", (e as any)?.message); }
+
+      // 4) Consultation démo (payée + ouverte + is_demo + contexte patient).
+      const [c] = await db.insert(consultations).values({
+        userId: DEMO_USER_ID, proAccountId, scanId: scan.id,
+        condition: "Acné inflammatoire modérée", imageUrl: "/demo/aminata-face.jpg",
+        status: "open", paymentStatus: "paid", priceFcfa: 0,
+      }).returning();
+      await db.execute(sql`UPDATE consultations SET is_demo = true, patient_context = ${JSON.stringify({ age: "24", city: "Douala", duration: "3 semaines", products: "Savon noir (quotidien), Nivea Crème", allergies: "Non" })}::jsonb WHERE id = ${c.id}`);
+      return Number(c.id);
+    } catch (e) {
+      console.error("[demo] ensureDemoConsultation:", e);
+      return null;
+    }
+  }
+
   // GET /api/pro/consultations/unread-count — badge nombre de messages non lus
   app.get("/api/pro/consultations/unread-count", requireProAccess, async (req: any, res) => {
     try {
@@ -1880,8 +1942,17 @@ export function registerProRoutes(app: Express) {
         try { await db.execute(sql`ALTER TABLE consultations ADD COLUMN IF NOT EXISTS prescription text`); } catch {}
         try { await db.execute(sql`UPDATE consultations SET prescription = ${prescription} WHERE id = ${id}`); } catch {}
       }
+      // Démo : on clôture pour l'expérience, mais AUCUNE livraison réelle ni paiement.
+      let isDemo = false;
+      try { isDemo = (Rows(await db.execute(sql`SELECT is_demo FROM consultations WHERE id = ${id}`))[0] as any)?.is_demo === true; } catch {}
       await db.update(consultations).set({ status: "closed" }).where(eq(consultations.id, id));
       try { await db.execute(sql`UPDATE consultations SET closed_at = NOW() WHERE id = ${id}`); } catch {}
+      if (isDemo) {
+        // Marque la démo comme faite (une seule fois) — colonne best-effort.
+        try { await db.execute(sql`ALTER TABLE pro_accounts ADD COLUMN IF NOT EXISTS demo_completed boolean DEFAULT false`).catch(() => {}); } catch {}
+        try { await db.execute(sql`UPDATE pro_accounts SET demo_completed = true WHERE id = ${req.proAccount.id}`); } catch {}
+        return res.json({ ok: true, demo: true });
+      }
       // Notifier le patient (WS + push) : consultation terminée, invitation à noter.
       try { emitToUser(c.userId, "consultation:closed", { consultationId: id }); } catch {}
       // Livraison auto du rapport (push + WhatsApp si configuré). Ne bloque JAMAIS
@@ -1949,7 +2020,31 @@ export function registerProRoutes(app: Express) {
       if (photoUrl !== undefined) await db.execute(sql`UPDATE pro_accounts SET photo_url = ${photoUrl} WHERE id = ${id}`);
       if (whatsapp !== undefined) await db.execute(sql`UPDATE pro_accounts SET whatsapp_number = ${whatsapp} WHERE id = ${id}`);
       if (publicEnabled !== undefined) await db.execute(sql`UPDATE pro_accounts SET public_profile_enabled = ${publicEnabled} WHERE id = ${id}`);
-      if (typeof b.b2cAvailable === "boolean") await db.execute(sql`UPDATE pro_accounts SET b2c_available = ${b.b2cAvailable} WHERE id = ${id}`);
+      if (typeof b.b2cAvailable === "boolean") {
+        await db.execute(sql`UPDATE pro_accounts SET b2c_available = ${b.b2cAvailable} WHERE id = ${id}`);
+        // Activation « consultable en B2C » → consultation fantôme de démonstration.
+        if (b.b2cAvailable === true) {
+          try {
+            const demoId = await ensureDemoConsultation(id);
+            if (demoId) {
+              const uid = req.proAccount?.userId;
+              if (uid) {
+                try { emitToUser(uid, "consultation:opened", { consultationId: demoId }); } catch {}
+                try {
+                  const du = Rows(await db.execute(sql`SELECT email, name FROM users WHERE id = ${uid}`))[0] as any;
+                  if (du?.email) {
+                    const { sendEmail } = await import("./email");
+                    const base = (process.env.PUBLIC_BASE_URL || "https://glow-scan.com").replace(/\/$/, "");
+                    sendEmail(du.email, "🎯 Testez votre premier flux de consultation",
+                      `<p>Bonjour ${du.name || ""},</p><p>Une <strong>consultation de démonstration</strong> vous attend : un dossier patient complet (Aminata · 24 ans · Douala · Acné modérée · Score 52). Testez tout le flux — lire, valider, prescrire, clôturer — avant votre premier vrai patient.</p><p><a href="${base}/derm/consultations?c=${demoId}">Ouvrir la démo →</a></p>`,
+                      `Testez votre premier flux : ${base}/derm/consultations?c=${demoId}`).catch(() => {});
+                  }
+                } catch {}
+              }
+            }
+          } catch (e) { console.warn("[demo] trigger:", (e as any)?.message); }
+        }
+      }
       if (b.consultPriceFcfa !== undefined) {
         const price = Math.max(500, Math.min(50000, parseInt(String(b.consultPriceFcfa), 10) || 3500));
         await db.execute(sql`UPDATE pro_accounts SET consult_price_fcfa = ${price} WHERE id = ${id}`);
