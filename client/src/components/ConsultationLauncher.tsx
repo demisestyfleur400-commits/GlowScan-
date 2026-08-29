@@ -34,6 +34,22 @@ export function ConsultationLauncher({ scanId, condition, imageUrl }: { scanId?:
   const [paidConfirmed, setPaidConfirmed] = useState(false);
   const [pushState, setPushState] = useState<"idle" | "on" | "denied">("idle");
   const [patientPhone, setPatientPhone] = useState("");
+  // Contexte patient (âge, ville, durée, produits, allergies) → dossier médecin.
+  const [ctxAge, setCtxAge] = useState("");
+  const [ctxCity, setCtxCity] = useState("");
+  const [ctxDuration, setCtxDuration] = useState("");
+  const [ctxProducts, setCtxProducts] = useState("");
+  const [ctxAllergies, setCtxAllergies] = useState("");
+
+  const saveContext = async () => {
+    if (!consultationId) return;
+    try {
+      await fetch(`/api/consultations/${consultationId}/context`, {
+        method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ age: ctxAge.trim(), city: ctxCity.trim(), duration: ctxDuration.trim(), products: ctxProducts.trim(), allergies: ctxAllergies.trim() }),
+      });
+    } catch {}
+  };
 
   // Enregistre le numéro WhatsApp du patient (pour recevoir le rapport).
   const savePhone = async () => {
@@ -79,7 +95,7 @@ export function ConsultationLauncher({ scanId, condition, imageUrl }: { scanId?:
   // Paiement réel CinetPay : init → ouverture page paiement → polling statut (3s, max 60s).
   const startCinetPay = async () => {
     if (!consultationId) return;
-    savePhone();
+    savePhone(); saveContext();
     setBusy(true); setErr("");
     try {
       const res = await fetch(`/api/consultations/${consultationId}/pay/init`, { method: "POST", credentials: "include" });
@@ -124,7 +140,7 @@ export function ConsultationLauncher({ scanId, condition, imageUrl }: { scanId?:
 
   const submitRef = async () => {
     if (!consultationId || !ref.trim()) return;
-    savePhone();
+    savePhone(); saveContext();
     setBusy(true);
     try {
       await fetch(`/api/consultations/${consultationId}/payment-ref`, {
@@ -221,6 +237,23 @@ export function ConsultationLauncher({ scanId, condition, imageUrl }: { scanId?:
             <label style={{ fontSize: 11, fontWeight: 700, color: "#374151", display: "block", marginBottom: 4 }}>📱 Ton numéro WhatsApp (pour recevoir le rapport)</label>
             <input value={patientPhone} onChange={(e) => setPatientPhone(e.target.value)} onBlur={savePhone} placeholder="Ex : 6XX XXX XXX" inputMode="tel"
               style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: "1px solid rgba(0,0,0,0.15)", fontSize: 13, marginBottom: 12 }} />
+
+            {/* Contexte pour le dermatologue — le patient fait le travail en amont */}
+            <div style={{ background: "#fff", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 12, padding: 12, marginBottom: 12 }}>
+              <p style={{ fontSize: 11, fontWeight: 800, color: "#374151", margin: "0 0 8px" }}>Aide le dermatologue à mieux te soigner</p>
+              <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                <input value={ctxAge} onChange={(e) => setCtxAge(e.target.value)} onBlur={saveContext} placeholder="Âge" inputMode="numeric"
+                  style={{ width: "40%", boxSizing: "border-box", padding: "9px 10px", borderRadius: 10, border: "1px solid rgba(0,0,0,0.15)", fontSize: 12.5 }} />
+                <input value={ctxCity} onChange={(e) => setCtxCity(e.target.value)} onBlur={saveContext} placeholder="Ville"
+                  style={{ flex: 1, boxSizing: "border-box", padding: "9px 10px", borderRadius: 10, border: "1px solid rgba(0,0,0,0.15)", fontSize: 12.5 }} />
+              </div>
+              <input value={ctxDuration} onChange={(e) => setCtxDuration(e.target.value)} onBlur={saveContext} placeholder="Depuis combien de temps ? (ex : 3 semaines)"
+                style={{ width: "100%", boxSizing: "border-box", padding: "9px 10px", borderRadius: 10, border: "1px solid rgba(0,0,0,0.15)", fontSize: 12.5, marginBottom: 8 }} />
+              <input value={ctxProducts} onChange={(e) => setCtxProducts(e.target.value)} onBlur={saveContext} placeholder="Produits utilisés (ex : savon noir, Nivea)"
+                style={{ width: "100%", boxSizing: "border-box", padding: "9px 10px", borderRadius: 10, border: "1px solid rgba(0,0,0,0.15)", fontSize: 12.5, marginBottom: 8 }} />
+              <input value={ctxAllergies} onChange={(e) => setCtxAllergies(e.target.value)} onBlur={saveContext} placeholder="Allergies connues (sinon laisse vide)"
+                style={{ width: "100%", boxSizing: "border-box", padding: "9px 10px", borderRadius: 10, border: "1px solid rgba(0,0,0,0.15)", fontSize: 12.5 }} />
+            </div>
             {payProvider !== "simulated" ? (
               <>
                 <div style={{ background: "#fff", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 12, padding: 12, marginBottom: 12 }}>

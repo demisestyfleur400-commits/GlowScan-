@@ -364,7 +364,14 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
               <img src={dossier.scan?.imageUrl || dossier.consultation?.imageUrl} alt="" style={{ width: 60, height: 60, borderRadius: 12, objectFit: "cover", flexShrink: 0 }} />
             )}
             <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ fontSize: 14, fontWeight: 800, color: INK, margin: 0 }}>{dossier.patient?.firstName || "Patient"}</p>
+              <p style={{ fontSize: 14, fontWeight: 800, color: INK, margin: 0 }}>
+                {dossier.patient?.firstName || "Patient"}
+                {(dossier.intake?.age || dossier.intake?.city) && (
+                  <span style={{ fontSize: 12, fontWeight: 600, color: MUTED }}>
+                    {" · "}{[dossier.intake?.age ? `${dossier.intake.age} ans` : null, dossier.intake?.city].filter(Boolean).join(" · ")}
+                  </span>
+                )}
+              </p>
               <p style={{ fontSize: 11, color: "#10b981", fontWeight: 700, margin: "2px 0 0" }}>✅ Payé</p>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", marginTop: 8 }}>
                 <span style={{ fontSize: 12, fontWeight: 700, color: INK, background: dark ? "rgba(124,58,237,0.2)" : "rgba(124,58,237,0.08)", borderRadius: 8, padding: "3px 8px" }}>
@@ -398,6 +405,9 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
                     {dossier.rich.riskyIngredients.map((x: any) => x.name).filter(Boolean).join(" · ")}
                   </span>
                 </div>
+              )}
+              {dossier.intake?.duration && (
+                <p style={{ fontSize: 11.5, color: MUTED, margin: "8px 0 0" }}>⏱️ Durée du problème : <strong style={{ color: INK }}>{dossier.intake.duration}</strong></p>
               )}
 
               {/* ── Valider / Corriger le diagnostic (2 clics max) ── */}
@@ -460,8 +470,8 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
             </button>
           )}
 
-          {/* ── Dossier complet (1 tap) — métriques, zones, ingrédients, conseil IA ── */}
-          {dossier.rich && (dossier.rich.metrics || (dossier.rich.zones?.length) || (dossier.rich.riskyIngredients?.length) || dossier.rich.advice) && (
+          {/* ── Dossier complet (1 tap) — contexte, métriques, zones, ingrédients, conseil IA ── */}
+          {((dossier.rich && (dossier.rich.metrics || (dossier.rich.zones?.length) || (dossier.rich.riskyIngredients?.length) || dossier.rich.advice)) || (dossier.intake && (dossier.intake.products || dossier.intake.allergies))) && (
             <div style={{ marginTop: 12 }}>
               <button onClick={() => setShowFull((v) => !v)}
                 style={{ display: "flex", alignItems: "center", gap: 6, background: "transparent", border: "none", color: "#7c3aed", fontSize: 12, fontWeight: 800, cursor: "pointer", padding: 0 }}>
@@ -469,6 +479,13 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
               </button>
               {showFull && (
                 <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 10 }}>
+                  {(dossier.intake?.products || dossier.intake?.allergies) && (
+                    <div>
+                      <p style={{ fontSize: 11, fontWeight: 800, color: MUTED, margin: "0 0 4px", textTransform: "uppercase", letterSpacing: 0.4 }}>Déclaré par le patient</p>
+                      {dossier.intake?.products && <p style={{ fontSize: 12.5, color: INK, margin: "0 0 2px" }}>Produits utilisés : {dossier.intake.products}</p>}
+                      {dossier.intake?.allergies && <p style={{ fontSize: 12.5, color: INK, margin: "0 0 2px" }}>Allergies : {dossier.intake.allergies}</p>}
+                    </div>
+                  )}
                   {dossier.rich.metrics && (
                     <div>
                       <p style={{ fontSize: 11, fontWeight: 800, color: MUTED, margin: "0 0 4px", textTransform: "uppercase", letterSpacing: 0.4 }}>Métriques</p>

@@ -698,6 +698,34 @@ export async function registerRoutes(
     }
   });
 
+  // POST /api/consultations/:id/context — le patient renseigne son contexte (âge,
+  // ville, durée du problème, produits utilisés, allergies) au lancement de la
+  // consultation → alimente le dossier médecin. « Le patient a déjà fait le travail ».
+  app.post("/api/consultations/:id/context", async (req: any, res) => {
+    const userId = getUID(req);
+    if (!userId) return res.status(401).json({ message: "Connexion requise" });
+    try {
+      const id = parseInt(req.params.id);
+      const [c] = await db.select().from(consultations).where(eq(consultations.id, id));
+      if (!c || c.userId !== userId) return res.status(404).json({ message: "Consultation introuvable" });
+      const b = req.body || {};
+      const clean = (v: any, n = 200) => typeof v === "string" ? v.trim().slice(0, n) : null;
+      const ctx = {
+        age: clean(b.age, 20),
+        city: clean(b.city, 80),
+        duration: clean(b.duration, 80),
+        products: clean(b.products, 300),
+        allergies: clean(b.allergies, 300),
+      };
+      try { await db.execute(sql`ALTER TABLE consultations ADD COLUMN IF NOT EXISTS patient_context jsonb`); } catch {}
+      try { await db.execute(sql`UPDATE consultations SET patient_context = ${JSON.stringify(ctx)}::jsonb WHERE id = ${id}`); } catch {}
+      res.json({ ok: true });
+    } catch (err) {
+      console.error("[consultations context] error:", err);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
   // Consultations du patient connecté.
   app.get("/api/consultations/mine", async (req: any, res) => {
     const userId = getUID(req);

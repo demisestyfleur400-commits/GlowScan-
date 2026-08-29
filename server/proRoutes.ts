@@ -1717,6 +1717,12 @@ export function registerProRoutes(app: Express) {
           }
         } catch {}
       }
+      // Contexte patient saisi au lancement (âge, ville, durée, produits, allergies).
+      let intake: any = null;
+      try {
+        const row = (Rows(await db.execute(sql`SELECT patient_context FROM consultations WHERE id = ${id}`))[0] as any)?.patient_context;
+        if (row) intake = typeof row === "string" ? JSON.parse(row) : row;
+      } catch {}
       // Prescription déjà saisie (colonne hors schéma Drizzle) — reprise à l'édition.
       let prescription: string | null = null;
       try { prescription = (Rows(await db.execute(sql`SELECT prescription FROM consultations WHERE id = ${id}`))[0] as any)?.prescription || null; } catch {}
@@ -1732,6 +1738,7 @@ export function registerProRoutes(app: Express) {
         prescription,
         suggestedTreatment,
         rich,
+        intake,
         // Volontairement PAS de priceFcfa ici : le dermatologue n'a pas à voir le
         // prix payé par le patient (distraction commerciale — brief Steve Jobs).
         consultation: {
