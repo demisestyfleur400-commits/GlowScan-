@@ -46,6 +46,7 @@ import type { AnalysisResult, Patient } from "@shared/schema";
 import { ProLayout, ProCard, ProInput } from "@/components/ProLayout";
 import { ClinicalDossierForm, type ClinicalRecord } from "@/components/pro/ClinicalDossierForm";
 import { ExamenPhysiqueForm, EMPTY_EXAMEN, type ExamenData } from "@/components/pro/ExamenPhysiqueForm";
+import { ClinicalAssistant } from "@/components/pro/ClinicalAssistant";
 import PDFViewerModal from "@/components/PDFViewerModal";
 import { PremiumPdfTemplate } from "@/templates/PremiumPdfTemplate";
 import { buildObservationDoc, type ObservationData } from "@/lib/observationPdf";
@@ -1499,6 +1500,23 @@ export default function ProAnalyze() {
             {/* ── Examen physique du médecin — AVANT la photo et l'IA (§2, §3) ── */}
             <div className="mb-4">
               <ExamenPhysiqueForm value={examen} onChange={setExamen} />
+              {/* Assistant IA clinique — raisonne sur les signes saisis (temps réel) */}
+              <ClinicalAssistant
+                signesCliniques={[
+                  examen.lesions.length ? `Lésions : ${examen.lesions.join(", ")}` : "",
+                  examen.zones.length ? `Zones : ${examen.zones.join(", ")}` : "",
+                  examen.lesionMorphologie ? `Morphologie : ${examen.lesionMorphologie}` : "",
+                  examen.lesionDistribution ? `Distribution : ${examen.lesionDistribution}` : "",
+                  examen.examPeau ? `Peau : ${examen.examPeau}` : "",
+                  examen.examPhaneres ? `Phanères : ${examen.examPhaneres}` : "",
+                  examen.examMuqueuses ? `Muqueuses : ${examen.examMuqueuses}` : "",
+                  examen.autresSignes ? `Autres : ${examen.autresSignes}` : "",
+                ].filter(Boolean).join(" · ")}
+                diagnostic={(result as any)?.condition}
+                fitzpatrick={examen.phototype}
+                age={age}
+                historiquePatient={[consultMotif ? `Motif : ${consultMotif}` : "", problemDuration ? `Durée : ${problemDuration}` : "", allergies ? `Allergies : ${allergies}` : ""].filter(Boolean).join(" · ") || undefined}
+              />
             </div>
 
             {/* Rubrique : Visage ou Corps */}
