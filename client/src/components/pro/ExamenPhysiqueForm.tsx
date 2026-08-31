@@ -49,13 +49,12 @@ const MUTED = "#64748B";
 const fieldBg = "#F1F5F9";
 const fieldBorder = "1px solid rgba(167,139,250,0.2)";
 
-export function ExamenPhysiqueForm({ value, onChange }: { value: ExamenData; onChange: (next: ExamenData) => void }) {
-  const [open, setOpen] = useState(true);
-  const set = (patch: Partial<ExamenData>) => onChange({ ...value, ...patch });
-  const toggle = (arr: string[], v: string) => (arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
+// ── Champs définis AU NIVEAU MODULE (jamais dans le render) : sinon React
+// démonte/remonte l'input à chaque frappe → perte de focus après 1 lettre. ──
+type SetFn = (patch: Partial<ExamenData>) => void;
 
-  const Text = ({ k, label, ml, ph }: { k: keyof ExamenData; label: string; ml?: boolean; ph?: string }) => {
-    return (
+function TextField({ k, label, ml, ph, value, set }: { k: keyof ExamenData; label: string; ml?: boolean; ph?: string; value: ExamenData; set: SetFn }) {
+  return (
     <div>
       <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: MUTED, marginBottom: 4 }}>{label}</label>
       <div style={{ display: "flex", alignItems: ml ? "flex-start" : "center", gap: 6 }}>
@@ -69,10 +68,11 @@ export function ExamenPhysiqueForm({ value, onChange }: { value: ExamenData; onC
         <VoiceButton value={(value[k] as string) || ""} onChange={(t) => set({ [k]: t } as any)} />
       </div>
     </div>
-    );
-  };
+  );
+}
 
-  const RiskRow = ({ k, label }: { k: "pihRisk" | "keloidRisk"; label: string }) => (
+function RiskRow({ k, label, value, set }: { k: "pihRisk" | "keloidRisk"; label: string; value: ExamenData; set: SetFn }) {
+  return (
     <div>
       <p style={{ fontSize: 10, fontWeight: 700, color: MUTED, marginBottom: 4 }}>{label}</p>
       <div style={{ display: "flex", gap: 4 }}>
@@ -86,6 +86,12 @@ export function ExamenPhysiqueForm({ value, onChange }: { value: ExamenData; onC
       </div>
     </div>
   );
+}
+
+export function ExamenPhysiqueForm({ value, onChange }: { value: ExamenData; onChange: (next: ExamenData) => void }) {
+  const [open, setOpen] = useState(true);
+  const set = (patch: Partial<ExamenData>) => onChange({ ...value, ...patch });
+  const toggle = (arr: string[], v: string) => (arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
 
   return (
     <div style={{ borderRadius: 16, overflow: "hidden", background: "rgba(124,58,237,0.06)", border: "1px solid rgba(124,58,237,0.2)" }}>
@@ -129,9 +135,9 @@ export function ExamenPhysiqueForm({ value, onChange }: { value: ExamenData; onC
             </div>
           </div>
 
-          <Text k="lesionNombre" label="Nombre" ph="ex : 5-10, multiples…" />
-          <Text k="lesionMorphologie" label="Morphologie" ml ph="taille, couleur, contours, relief…" />
-          <Text k="lesionDistribution" label="Distribution" ph="symétrique, localisée, diffuse…" />
+          <TextField value={value} set={set} k="lesionNombre" label="Nombre" ph="ex : 5-10, multiples…" />
+          <TextField value={value} set={set} k="lesionMorphologie" label="Morphologie" ml ph="taille, couleur, contours, relief…" />
+          <TextField value={value} set={set} k="lesionDistribution" label="Distribution" ph="symétrique, localisée, diffuse…" />
 
           {/* Zones / localisation */}
           <div>
@@ -152,16 +158,16 @@ export function ExamenPhysiqueForm({ value, onChange }: { value: ExamenData; onC
           </div>
 
           {/* Examen dermatologique */}
-          <Text k="examPeau" label="Peau" ml />
-          <Text k="examPhaneres" label="Phanères (ongles, cheveux)" />
-          <Text k="examMuqueuses" label="Muqueuses" />
-          <Text k="examGanglions" label="Aires ganglionnaires" />
-          <Text k="autresSignes" label="Autres signes cliniques pertinents" ml />
+          <TextField value={value} set={set} k="examPeau" label="Peau" ml />
+          <TextField value={value} set={set} k="examPhaneres" label="Phanères (ongles, cheveux)" />
+          <TextField value={value} set={set} k="examMuqueuses" label="Muqueuses" />
+          <TextField value={value} set={set} k="examGanglions" label="Aires ganglionnaires" />
+          <TextField value={value} set={set} k="autresSignes" label="Autres signes cliniques pertinents" ml />
 
           {/* Risques */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-            <RiskRow k="pihRisk" label="Risque PIH" />
-            <RiskRow k="keloidRisk" label="Risque chéloïde" />
+            <RiskRow value={value} set={set} k="pihRisk" label="Risque PIH" />
+            <RiskRow value={value} set={set} k="keloidRisk" label="Risque chéloïde" />
           </div>
 
           {/* §9 — Sous-section chéloïde conditionnelle : n'apparaît que si le risque
@@ -169,10 +175,10 @@ export function ExamenPhysiqueForm({ value, onChange }: { value: ExamenData; onC
           {(value.keloidRisk === "medium" || value.keloidRisk === "high" || value.lesions.includes("Chéloïde")) && (
             <div style={{ borderRadius: 12, padding: 12, background: "rgba(248,113,113,0.06)", border: "1px solid rgba(248,113,113,0.25)", display: "flex", flexDirection: "column", gap: 10 }}>
               <p style={{ fontSize: 11, fontWeight: 800, color: "#dc2626", margin: 0 }}>⚠️ Documentation chéloïde</p>
-              <Text k="keloidAntecedents" label="Antécédents (personnels / familiaux)" ph="ex : chéloïde après piercing, antécédents familiaux…" />
-              <Text k="keloidLocalisation" label="Localisation des chéloïdes" ph="ex : lobe oreille, thorax, épaules…" />
-              <Text k="keloidAnciennete" label="Ancienneté / évolution" ph="ex : apparue il y a 2 ans, extension progressive…" />
-              <Text k="keloidSymptomes" label="Symptômes (prurit, douleur, extension)" ml />
+              <TextField value={value} set={set} k="keloidAntecedents" label="Antécédents (personnels / familiaux)" ph="ex : chéloïde après piercing, antécédents familiaux…" />
+              <TextField value={value} set={set} k="keloidLocalisation" label="Localisation des chéloïdes" ph="ex : lobe oreille, thorax, épaules…" />
+              <TextField value={value} set={set} k="keloidAnciennete" label="Ancienneté / évolution" ph="ex : apparue il y a 2 ans, extension progressive…" />
+              <TextField value={value} set={set} k="keloidSymptomes" label="Symptômes (prurit, douleur, extension)" ml />
             </div>
           )}
         </div>
