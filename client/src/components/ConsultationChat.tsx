@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useConsultationSocket } from "@/hooks/use-consultation-socket";
+import { ClinicalAssistant } from "@/components/pro/ClinicalAssistant";
 
 // ════════════════════════════════════════════════════════════════════════
 // Fil de discussion d'une consultation (temps réel). Utilisé côté patient (clair)
@@ -613,6 +614,19 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
               />
               <p style={{ fontSize: 10, color: MUTED, margin: "4px 2px 0" }}>Sera incluse dans le rapport envoyé au patient à la clôture.</p>
             </div>
+          )}
+
+          {/* Assistant IA clinique — raisonne, recherche, recadre (temps réel) */}
+          {ctx?.status !== "closed" && (
+            <ClinicalAssistant
+              dark={dark}
+              signesCliniques={dossier.scan?.analysis || dossier.scan?.condition || dossier.consultation?.condition}
+              diagnostic={dossier.scan?.expertCorrectedCondition || dossier.scan?.condition || dossier.consultation?.condition}
+              prescription={prescription}
+              fitzpatrick={dossier.rich?.fitzpatrick}
+              age={dossier.intake?.age}
+              historiquePatient={[dossier.intake?.duration ? `Durée : ${dossier.intake.duration}` : "", dossier.intake?.products ? `Produits : ${dossier.intake.products}` : "", dossier.intake?.allergies ? `Allergies : ${dossier.intake.allergies}` : ""].filter(Boolean).join(" · ") || undefined}
+            />
           )}
           </>
           )}
