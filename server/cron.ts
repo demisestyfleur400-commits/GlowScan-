@@ -358,6 +358,76 @@ async function sendEveningMissedReminders() {
   }
 }
 
+// ── SUIVI CONSULTATION — rappel J-1 (la veille) : triple canal GARANTI ──
+// Push + Email + WhatsApp, aux DEUX parties. Le WhatsApp part TOUJOURS (backup).
+const PUBLIC_BASE = (process.env.PUBLIC_BASE_URL || "https://glow-scan.com").replace(/\/$/, "");
+async function sendConsultationFollowUps() {
+  try {
+    await db.execute(sql`CREATE TABLE IF NOT EXISTS follow_up_reminders (
+      id serial PRIMARY KEY, consultation_id integer, patient_id text, dermatologue_id integer,
+      scheduled_date date NOT NULL, option varchar(20), status varchar(20) DEFAULT 'pending',
+      push_sent_at timestamptz, email_sent_at timestamptz, whatsapp_sent_at timestamptz,
+      photo_received_at timestamptz, created_at timestamptz DEFAULT now()
+    )`).catch(() => {});
+    const r: any = await db.execute(sql`
+      SELECT f.id, f.consultation_id, f.patient_id,
+             c.condition, c.patient_phone,
+             u.first_name AS patient_first, u.email AS patient_email,
+             p.full_name AS derm_name, p.user_id AS derm_user_id,
+             du.email AS derm_email
+      FROM follow_up_reminders f
+      JOIN consultations c ON c.id = f.consultation_id
+      LEFT JOIN users u ON u.id = f.patient_id
+      LEFT JOIN pro_accounts p ON p.id = f.dermatologue_id
+      LEFT JOIN users du ON du.id = p.user_id
+      WHERE f.scheduled_date = (CURRENT_DATE + INTERVAL '1 day')::date
+        AND f.status = 'pending'
+      LIMIT 200`);
+    const rows = (r?.rows ?? r ?? []) as any[];
+    if (!rows.length) { log("📅 Suivi J-1 : aucun rappel aujourd'hui"); return; }
+    let done = 0;
+    for (const row of rows) {
+      const pName = fn(row.patient_first || "") || "cher patient";
+      const dName = (row.derm_name || "votre dermatologue").replace(/^dr\.?\s*/i, "");
+      const cond = row.condition || "votre peau";
+      const photoUrl = `${PUBLIC_BASE}/consultations`;
+      // 1) Push dermatologue (reste affiché jusqu'à interaction)
+      if (row.derm_user_id) await sendPushToUsers(new Set([row.derm_user_id]), {
+        title: "Suivi prévu demain", body: `${pName} · ${cond}\nSuivi programmé pour demain.`,
+        url: `/derm/consultations?c=${row.consultation_id}`, requireInteraction: true,
+      } as any);
+      // 2) Push patient
+      if (row.patient_id) await sendPushToUsers(new Set([row.patient_id]), {
+        title: `Dr ${dName} souhaite voir l'évolution`, body: "Prenez une photo de la zone traitée et envoyez-la via GlowScan.",
+        url: "/consultations",
+      } as any);
+      // 3) Email dermatologue
+      if (row.derm_email) {
+        try { await sendEmail(row.derm_email, `Rappel suivi — ${pName} · demain`,
+          `<p>Bonjour Dr ${dName},</p><p>Rappel : le suivi de <strong>${pName}</strong> (${cond}) est prévu <strong>demain</strong>.</p><p><a href="${PUBLIC_BASE}/derm/consultations?c=${row.consultation_id}">Ouvrir le dossier →</a></p>`,
+          `Suivi de ${pName} demain. ${PUBLIC_BASE}/derm/consultations?c=${row.consultation_id}`); } catch {}
+      }
+      // 4) Email patient
+      if (row.patient_email && !String(row.patient_email).endsWith("@phone.glowscan.cm")) {
+        try { await sendEmail(row.patient_email, `Votre suivi avec Dr ${dName} — demain`,
+          `<p>Bonjour ${pName},</p><p>Dr ${dName} souhaite voir l'évolution de votre peau <strong>demain</strong>. Prenez une photo de la zone traitée et envoyez-la via GlowScan.</p><p><a href="${photoUrl}">Envoyer ma photo →</a></p>`,
+          `Suivi demain avec Dr ${dName}. Envoyez votre photo : ${photoUrl}`); } catch {}
+      }
+      // 5) WhatsApp patient — BACKUP OBLIGATOIRE (part toujours)
+      if (row.patient_phone) {
+        const msg = `Bonjour ${pName}, Dr ${dName} souhaite voir l'évolution de votre peau demain.\nPrenez une photo de la zone traitée et envoyez-la ici : ${photoUrl}`;
+        try { await sendWhatsAppText(row.patient_phone, msg); } catch {}
+      }
+      // 6) status = notified
+      try { await db.execute(sql`UPDATE follow_up_reminders SET status = 'notified', push_sent_at = now(), email_sent_at = now(), whatsapp_sent_at = now() WHERE id = ${row.id}`); } catch {}
+      done++;
+    }
+    log(`📅 Suivi J-1 : ${done}/${rows.length} rappels envoyés (push+email+WhatsApp)`);
+  } catch (err) {
+    log(`❌ Erreur suivi J-1 : ${err}`);
+  }
+}
+
 export function startCronJobs() {
   // ✅ CORRECTION 2: Skip en mode test
   if (process.env.NODE_ENV === "test") {
@@ -399,6 +469,10 @@ export function startCronJobs() {
   // ✅ Rappels de contrôle DERM (suivi évolution) — tous les jours à 9h00 (Douala)
   cron.schedule("0 9 * * *", sendFollowUpReminders, { timezone: "Africa/Douala" });
   log("✅ Cron rappels de contrôle DERM actif — 9h00 (Douala)");
+
+  // ✅ Suivi consultation J-1 (triple canal) — tous les jours à 8h00 (Douala)
+  cron.schedule("0 8 * * *", sendConsultationFollowUps, { timezone: "Africa/Douala" });
+  log("✅ Cron suivi consultation J-1 actif — 8h00 (Douala)");
 
   // ✅ Emails DERM automatiques
   cron.schedule("0 8 * * *", sendTrialReminders, { timezone: "Africa/Douala" });   // fin d'essai J-3/J-1

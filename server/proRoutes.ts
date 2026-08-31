@@ -2001,9 +2001,35 @@ export function registerProRoutes(app: Express) {
       // Livraison auto du rapport (push + WhatsApp si configuré). Ne bloque JAMAIS
       // la clôture : fire-and-forget, la consultation reste "closed" quoi qu'il arrive.
       setImmediate(() => { deliverConsultationReport(id).catch((e) => console.error("[close] deliver report:", e)); });
+
+      // ── Suivi programmé (facultatif) — sélectionné par le médecin à la clôture ──
+      let followUpDate: string | null = null;
+      const fu = String(req.body?.followUp || "").trim();
+      const DAYS: Record<string, number> = { "2_weeks": 14, "1_month": 30, "2_months": 60 };
+      if (DAYS[fu]) {
+        try {
+          await db.execute(sql`CREATE TABLE IF NOT EXISTS follow_up_reminders (
+            id serial PRIMARY KEY,
+            consultation_id integer,
+            patient_id text,
+            dermatologue_id integer,
+            scheduled_date date NOT NULL,
+            option varchar(20),
+            status varchar(20) DEFAULT 'pending',
+            push_sent_at timestamptz, email_sent_at timestamptz, whatsapp_sent_at timestamptz,
+            photo_received_at timestamptz, created_at timestamptz DEFAULT now()
+          )`);
+          const rows = Rows(await db.execute(sql`
+            INSERT INTO follow_up_reminders (consultation_id, patient_id, dermatologue_id, scheduled_date, option)
+            VALUES (${id}, ${c.userId}, ${req.proAccount.id}, (CURRENT_DATE + ${DAYS[fu]} * INTERVAL '1 day')::date, ${fu})
+            RETURNING scheduled_date`));
+          followUpDate = rows[0]?.scheduled_date || null;
+        } catch (e) { console.warn("[close] follow-up:", (e as any)?.message); }
+      }
+
       // Part dermatologue (memo produit : 3 500 patient → 2 100 dermato / 1 400 plateforme).
       const payoutFcfa = Math.round((Number(c.priceFcfa) || 3500) * 0.6);
-      res.json({ ok: true, payoutFcfa });
+      res.json({ ok: true, payoutFcfa, followUpDate });
     } catch (err) {
       console.error("[pro/consultations close] error:", err);
       res.status(500).json({ message: "Erreur serveur" });

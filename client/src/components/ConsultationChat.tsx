@@ -49,7 +49,9 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
   const [prescriptionTouched, setPrescriptionTouched] = useState(false);
   const [dictating, setDictating] = useState(false);
   const [closing, setClosing] = useState(false);
-  const [closedInfo, setClosedInfo] = useState<{ payoutFcfa?: number; demo?: boolean } | null>(null);
+  const [closedInfo, setClosedInfo] = useState<{ payoutFcfa?: number; demo?: boolean; followUpDate?: string } | null>(null);
+  const [showFollowUp, setShowFollowUp] = useState(false);
+  const [followUpOpt, setFollowUpOpt] = useState("1_month");
   const [showFull, setShowFull] = useState(false);
   const [coachStep, setCoachStep] = useState(-1); // -1 = inactif
   const [dossierCollapsed, setDossierCollapsed] = useState(false);
@@ -299,20 +301,18 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
     } catch { setDictating(false); }
   };
 
-  // Clôture : envoie la prescription + le diagnostic final, déclenche la livraison
-  // du rapport au patient (WhatsApp/push/email) et confirme le paiement au médecin.
-  const closeConsultation = async () => {
+  // Clôture en 2 temps : d'abord choisir un suivi, puis clôturer réellement.
+  const doClose = async (followUp: string) => {
     if (closing) return;
-    if (!confirm("Terminer cette consultation ? Le rapport (avec votre ordonnance) sera envoyé au patient.")) return;
     setClosing(true);
     try { recognitionRef.current?.stop(); } catch {}
     try {
       const res = await fetch(`/api/pro/consultations/${consultationId}/close`, {
         method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prescription: prescription.trim() || undefined }),
+        body: JSON.stringify({ prescription: prescription.trim() || undefined, followUp: followUp === "none" ? undefined : followUp }),
       });
       const d = await res.json().catch(() => ({}));
-      if (res.ok) { setClosedInfo({ payoutFcfa: d.payoutFcfa, demo: d.demo }); load(); }
+      if (res.ok) { setClosedInfo({ payoutFcfa: d.payoutFcfa, demo: d.demo, followUpDate: d.followUpDate }); setShowFollowUp(false); load(); }
     } catch {} finally { setClosing(false); }
   };
 
@@ -380,7 +380,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
         )}
         {side === "doctor" && ctx?.status !== "closed" && (
           <button
-            onClick={closeConsultation}
+            onClick={() => setShowFollowUp(true)}
             disabled={closing}
             style={{ flexShrink: 0, background: "rgba(16,185,129,0.2)", color: "#6ee7b7", border: "1px solid rgba(16,185,129,0.4)", borderRadius: 9999, padding: "6px 12px", fontSize: 11, fontWeight: 800, cursor: "pointer", opacity: closing ? 0.6 : 1 }}
           >
@@ -649,6 +649,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
               <p style={{ fontSize: 11.5, color: MUTED, margin: "4px 0 0", lineHeight: 1.6 }}>
                 Le rapport (avec votre ordonnance) est envoyé au patient sur WhatsApp.
                 {closedInfo.payoutFcfa ? ` Paiement de ${closedInfo.payoutFcfa.toLocaleString("fr-FR")} FCFA en cours.` : ""}
+                {closedInfo.followUpDate ? ` 📅 Suivi programmé pour le ${new Date(closedInfo.followUpDate).toLocaleDateString("fr-FR")} — rappel automatique la veille.` : ""}
               </p>
             </>
           )}
@@ -751,6 +752,35 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
                 {coachStep === COACH.length - 1 ? "Compris — Je termine →" : "OK →"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Sélecteur de suivi (à la clôture) ── */}
+      {showFollowUp && (
+        <div onClick={() => !closing && setShowFollowUp(false)}
+          style={{ position: "fixed", inset: 0, zIndex: 85, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ maxWidth: 360, width: "100%", background: dark ? "#171226" : "#fff", borderRadius: 20, padding: 20, boxShadow: "0 20px 50px rgba(0,0,0,0.4)" }}>
+            <p style={{ fontSize: 16, fontWeight: 900, color: INK, margin: "0 0 4px" }}>Programmer un suivi ?</p>
+            <p style={{ fontSize: 12, color: MUTED, margin: "0 0 14px", lineHeight: 1.5 }}>Le patient recevra un rappel la veille (photo d'évolution) — vous aussi.</p>
+            {[
+              { v: "2_weeks", l: "Dans 2 semaines" },
+              { v: "1_month", l: "Dans 1 mois" },
+              { v: "2_months", l: "Dans 2 mois" },
+              { v: "none", l: "Pas de suivi" },
+            ].map((o) => (
+              <button key={o.v} onClick={() => setFollowUpOpt(o.v)}
+                style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left", background: followUpOpt === o.v ? (dark ? "rgba(124,58,237,0.2)" : "rgba(124,58,237,0.08)") : "transparent", border: `1px solid ${followUpOpt === o.v ? "#7c3aed" : BORDER}`, borderRadius: 12, padding: "11px 14px", marginBottom: 8, cursor: "pointer" }}>
+                <span style={{ width: 18, height: 18, borderRadius: "50%", border: `2px solid ${followUpOpt === o.v ? "#7c3aed" : MUTED}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  {followUpOpt === o.v && <span style={{ width: 9, height: 9, borderRadius: "50%", background: "#7c3aed" }} />}
+                </span>
+                <span style={{ fontSize: 14, fontWeight: 700, color: INK }}>{o.l}</span>
+              </button>
+            ))}
+            <button onClick={() => doClose(followUpOpt)} disabled={closing}
+              style={{ width: "100%", marginTop: 6, background: "#10b981", color: "#fff", border: "none", borderRadius: 9999, padding: "13px", fontSize: 14, fontWeight: 800, cursor: "pointer", opacity: closing ? 0.6 : 1 }}>
+              {closing ? "Clôture…" : "Confirmer et clôturer →"}
+            </button>
           </div>
         </div>
       )}
