@@ -299,6 +299,30 @@ async function compareEvolutionAI(opts: {
   return fallback;
 }
 
+// Prompt système de l'assistant clinique DERM (raisonnement + recadrage).
+const CLINICAL_ASSISTANT_SYSTEM = `Tu es un assistant clinique expert en dermatologie africaine. Tu assistes un dermatologue qualifié — tu ne le remplaces JAMAIS.
+
+Tes règles :
+1. Toujours proposer 3 diagnostics différentiels classés par probabilité décroissante.
+2. Toujours donner les causes possibles pour le diagnostic principal.
+3. Utiliser les données de recherche web pour les guidelines récentes quand utile.
+4. Détecter et signaler toute contradiction (diagnostic vs prescription, phototype vs traitement, sévérité vs molécule).
+5. Adapter systématiquement aux peaux africaines (Fitzpatrick IV-VI) : risque d'hyperpigmentation post-inflammatoire, chéloïdes, photoprotection.
+6. Terminer par 1 question de clarification UNIQUEMENT si les données sont insuffisantes (sinon null).
+7. Le diagnostic final appartient au médecin.
+
+Langue : français médical clair et précis.
+
+Réponds UNIQUEMENT par un objet JSON valide, sans texte autour, au format EXACT :
+{
+ "diagnosticsDifferentiels": [
+   {"diagnostic": "string", "probabilite": "élevée|moyenne|faible", "causes": ["string"]}
+ ],
+ "questionClarification": "string ou null",
+ "contradiction": {"detectee": boolean, "explication": "string ou null", "suggestion": "string ou null"}
+}
+Donne exactement 3 diagnostics ; le 1er est le principal (renseigne ses "causes"). Les autres peuvent avoir "causes": [].`;
+
 const OWNER_WHATSAPP = "237674377959";
 const PRO_PRICE_FCFA = 10000;
 const TRIAL_DAYS = 14;
@@ -1984,6 +2008,88 @@ export function registerProRoutes(app: Express) {
       console.error("[pro/consultations close] error:", err);
       res.status(500).json({ message: "Erreur serveur" });
     }
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // ASSISTANT IA CLINIQUE — raisonne (3 diagnostics différentiels), recherche
+  // (Gemini + Google Search grounding) et recadre (détecte les incohérences).
+  // N'AFFICHE JAMAIS de diagnostic final : le médecin décide toujours.
+  // ═══════════════════════════════════════════════════════════════════════
+  app.post("/api/pro/ai-assistant/analyze", requireProAccess, async (req: any, res) => {
+    if (!proGemini) return res.status(503).json({ message: "Assistant IA indisponible (clé Gemini absente)." });
+    const b = req.body || {};
+    const signes = String(b.signesCliniques || b.signesCliNiques || "").slice(0, 2000);
+    const diagnostic = String(b.diagnostic || "").slice(0, 500);
+    const prescription = String(b.prescription || "").slice(0, 1000);
+    const fitzpatrick = String(b.fitzpatrick || "").slice(0, 20);
+    const age = b.age ? String(b.age).slice(0, 10) : "";
+    const historique = String(b.historiquePatient || "").slice(0, 1000);
+    if (!signes && !diagnostic && !prescription) {
+      return res.status(400).json({ message: "Renseignez au moins les signes cliniques, le diagnostic ou la prescription." });
+    }
+
+    const userPrompt = `Cas clinique (dermatologie africaine) :
+- Signes cliniques observés : ${signes || "—"}
+- Hypothèse diagnostique du médecin : ${diagnostic || "—"}
+- Phototype Fitzpatrick : ${fitzpatrick || "—"}
+- Âge : ${age || "—"}
+- Prescription envisagée : ${prescription || "—"}
+- Historique / antécédents : ${historique || "—"}
+
+Analyse ce cas selon tes règles. Vérifie particulièrement la cohérence entre le diagnostic, la prescription et le phototype.`;
+
+    // 1er essai AVEC grounding Google Search ; repli sans grounding si échec.
+    const modelId = process.env.GEMINI_MODEL || "gemini-2.0-flash";
+    const run = async (withSearch: boolean) => {
+      const m = proGemini!.getGenerativeModel({ model: modelId, systemInstruction: CLINICAL_ASSISTANT_SYSTEM });
+      const cfg: any = { contents: [{ role: "user", parts: [{ text: userPrompt }] }] };
+      if (withSearch) cfg.tools = [{ googleSearch: {} }];
+      return Promise.race([
+        m.generateContent(cfg),
+        new Promise<never>((_, rej) => setTimeout(() => rej(new Error("Timeout")), 30000)),
+      ]);
+    };
+
+    let resp: any = null, grounded = false;
+    try { resp = (await run(true) as any).response; grounded = true; }
+    catch (e1) {
+      try { resp = (await run(false) as any).response; grounded = false; }
+      catch (e2) {
+        console.error("[ai-assistant] error:", (e2 as any)?.message || e2);
+        return res.status(500).json({ message: "Analyse IA momentanément indisponible. Réessayez." });
+      }
+    }
+
+    const txt = (resp?.text?.() || "").trim();
+    let parsed: any = {};
+    try { const mo = txt.match(/\{[\s\S]*\}/); parsed = mo ? JSON.parse(mo[0]) : {}; } catch {}
+
+    // Source web depuis les métadonnées de grounding.
+    let sourceWeb: any = null;
+    try {
+      const gm = resp?.candidates?.[0]?.groundingMetadata;
+      const chunk = (gm?.groundingChunks || []).find((c: any) => c?.web?.uri);
+      if (chunk?.web) sourceWeb = { url: chunk.web.uri, titre: chunk.web.title || chunk.web.uri, date: new Date().toISOString().slice(0, 10) };
+    } catch {}
+
+    const diffs = Array.isArray(parsed.diagnosticsDifferentiels) ? parsed.diagnosticsDifferentiels.slice(0, 3).map((d: any) => ({
+      diagnostic: String(d?.diagnostic || "").slice(0, 200),
+      probabilite: String(d?.probabilite || "").slice(0, 30),
+      causes: Array.isArray(d?.causes) ? d.causes.map((c: any) => String(c).slice(0, 200)).slice(0, 6) : [],
+    })).filter((d: any) => d.diagnostic) : [];
+
+    const c = parsed.contradiction && typeof parsed.contradiction === "object" ? parsed.contradiction : {};
+    res.json({
+      diagnosticsDifferentiels: diffs,
+      sourceWeb,
+      groundingUsed: grounded && !!sourceWeb,
+      questionClarification: parsed.questionClarification && String(parsed.questionClarification).toLowerCase() !== "null" ? String(parsed.questionClarification).slice(0, 400) : null,
+      contradiction: {
+        detectee: !!c.detectee,
+        explication: c.explication && String(c.explication).toLowerCase() !== "null" ? String(c.explication).slice(0, 400) : null,
+        suggestion: c.suggestion && String(c.suggestion).toLowerCase() !== "null" ? String(c.suggestion).slice(0, 400) : null,
+      },
+    });
   });
 
   // GET /api/pro/profile — profil public actuel du dermatologue connecté.
