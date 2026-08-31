@@ -57,7 +57,10 @@ export default function Admin() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [period, setPeriod] = useState<Period>("all");
-  const [adminTab, setAdminTab] = useState<"traction" | "stats" | "premium" | "leads" | "partenaires" | "vedettes" | "dataset" | "retention" | "dermatologues" | "iavsdoc" | "consults">("traction");
+  const [adminTab, setAdminTab] = useState<"traction" | "stats" | "premium" | "leads" | "partenaires" | "vedettes" | "dataset" | "retention" | "dermatologues" | "iavsdoc" | "consults" | "revenus">("traction");
+  const [revenue, setRevenue] = useState<{ entries: any[]; totals: { encaisse: number; attente: number; global: number } }>({ entries: [], totals: { encaisse: 0, attente: 0, global: 0 } });
+  const [revForm, setRevForm] = useState<{ amount: string; source: string; status: string; note: string }>({ amount: "", source: "consultation", status: "encaisse", note: "" });
+  const [revBusy, setRevBusy] = useState(false);
   // ── IA vs Médecin (concordance) ──
   const [iaVsDoc, setIaVsDoc] = useState<any | null>(null);
   const [iaVsDocLoading, setIaVsDocLoading] = useState(false);
@@ -150,7 +153,30 @@ export default function Admin() {
     if (adminTab === "dermatologues") { fetchDermActivity(adminKey); fetchDermCert(adminKey); }
     if (adminTab === "iavsdoc") fetchIaVsDoc(adminKey);
     if (adminTab === "consults") fetchConsults(adminKey);
+    if (adminTab === "revenus") fetchRevenue(adminKey);
   }, [adminTab]);
+
+  const fetchRevenue = async (key: string) => {
+    try {
+      const res = await fetch("/api/admin/revenue", { headers: { "x-admin-key": key } });
+      if (res.ok) setRevenue(await res.json());
+    } catch {}
+  };
+  const addRevenue = async () => {
+    const amount = parseInt(revForm.amount, 10);
+    if (!amount || revBusy) return;
+    setRevBusy(true);
+    try {
+      const res = await fetch("/api/admin/revenue", {
+        method: "POST", headers: { "Content-Type": "application/json", "x-admin-key": adminKey },
+        body: JSON.stringify({ amount, source: revForm.source, status: revForm.status, note: revForm.note }),
+      });
+      if (res.ok) { setRevForm({ amount: "", source: revForm.source, status: revForm.status, note: "" }); fetchRevenue(adminKey); }
+    } catch {} finally { setRevBusy(false); }
+  };
+  const deleteRevenue = async (id: number) => {
+    try { const res = await fetch(`/api/admin/revenue/${id}`, { method: "DELETE", headers: { "x-admin-key": adminKey } }); if (res.ok) fetchRevenue(adminKey); } catch {}
+  };
 
   const fetchConsults = async (key: string) => {
     try {
@@ -441,6 +467,7 @@ export default function Admin() {
               { key: "dataset", label: "Dataset", icon: Stethoscope, badge: datasetStats?.pending || 0, activeColor: "#10b981" },
               { key: "iavsdoc", label: "IA vs Médecin", icon: BarChart2, badge: 0, activeColor: "#7c3aed" },
               { key: "consults", label: "Consultations", icon: MessageCircle, badge: consults.filter((c) => c.paymentStatus !== "paid").length, activeColor: "#10b981" },
+              { key: "revenus", label: "Revenus", icon: DollarSign, badge: 0, activeColor: "#22c55e" },
               { key: "dermatologues", label: "Dermatologues", icon: Stethoscope, badge: dermActivity.filter((d: any) => (d.blockers?.length || 0) > 0).length, activeColor: "#f43f5e" },
               { key: "traction", label: "Traction", icon: TrendingUp, badge: 0, activeColor: DS.violet },
               { key: "stats", label: "Stats", icon: BarChart2, badge: 0, activeColor: DS.violet },
@@ -991,6 +1018,86 @@ export default function Admin() {
         })()}
 
         {/* ===== CONSULTATIONS — confirmation paiement ===== */}
+        {adminTab === "revenus" && (
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-extrabold" style={{ color: DS.text }}>Mon chiffre d'affaires</h3>
+              <p className="text-[11px]" style={{ color: DS.muted }}>Registre manuel — note toi-même chaque revenu (paiement Mobile Money manuel).</p>
+            </div>
+            {/* Totaux */}
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { k: "Encaissé", v: revenue.totals.encaisse, c: "#22c55e" },
+                { k: "En attente", v: revenue.totals.attente, c: "#fbbf24" },
+                { k: "Total", v: revenue.totals.global, c: DS.violetMid },
+              ].map((t) => (
+                <div key={t.k} className="rounded-2xl p-4" style={{ background: DS.surface, border: `1px solid ${DS.border}` }}>
+                  <p className="text-[10px] font-extrabold uppercase tracking-wider" style={{ color: DS.muted }}>{t.k}</p>
+                  <p className="text-lg font-extrabold mt-1" style={{ color: t.c }}>{t.v.toLocaleString("fr-FR")}<span className="text-[10px] ml-1" style={{ color: DS.muted }}>FCFA</span></p>
+                </div>
+              ))}
+            </div>
+            {/* Formulaire d'ajout */}
+            <div className="rounded-2xl p-4 space-y-3" style={{ background: DS.surface, border: `1px solid ${DS.border}` }}>
+              <div className="grid grid-cols-2 gap-3">
+                <input type="number" inputMode="numeric" placeholder="Montant (FCFA)" value={revForm.amount}
+                  onChange={(e) => setRevForm({ ...revForm, amount: e.target.value })}
+                  className="rounded-xl px-3 py-2.5 text-sm outline-none" style={{ background: DS.base, border: `1px solid ${DS.border}`, color: DS.text }} />
+                <select value={revForm.source} onChange={(e) => setRevForm({ ...revForm, source: e.target.value })}
+                  className="rounded-xl px-3 py-2.5 text-sm outline-none" style={{ background: DS.base, border: `1px solid ${DS.border}`, color: DS.text }}>
+                  <option value="consultation">Consultation en ligne</option>
+                  <option value="commande">Commande produit</option>
+                  <option value="abonnement">Abonnement</option>
+                  <option value="autre">Autre</option>
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <select value={revForm.status} onChange={(e) => setRevForm({ ...revForm, status: e.target.value })}
+                  className="rounded-xl px-3 py-2.5 text-sm outline-none" style={{ background: DS.base, border: `1px solid ${DS.border}`, color: DS.text }}>
+                  <option value="encaisse">Encaissé ✅</option>
+                  <option value="attente">En attente ⏳</option>
+                </select>
+                <input placeholder="Note (ex : Aminata, MTN)" value={revForm.note}
+                  onChange={(e) => setRevForm({ ...revForm, note: e.target.value })}
+                  className="rounded-xl px-3 py-2.5 text-sm outline-none" style={{ background: DS.base, border: `1px solid ${DS.border}`, color: DS.text }} />
+              </div>
+              <button onClick={addRevenue} disabled={revBusy || !revForm.amount}
+                className="w-full px-4 py-2.5 rounded-xl text-sm font-extrabold text-white flex items-center justify-center gap-2"
+                style={{ background: "#22c55e", opacity: revBusy || !revForm.amount ? 0.5 : 1 }}>
+                <Plus size={16} /> Ajouter au chiffre d'affaires
+              </button>
+            </div>
+            {/* Liste des entrées */}
+            <div className="space-y-2">
+              {revenue.entries.length === 0 && (
+                <div className="rounded-2xl p-6 text-center" style={{ background: DS.surface, border: `1px solid ${DS.border}` }}>
+                  <p className="text-sm" style={{ color: DS.muted }}>Aucune entrée. Ajoute ton premier revenu ci-dessus 💰</p>
+                </div>
+              )}
+              {revenue.entries.map((e: any) => (
+                <div key={e.id} className="rounded-2xl p-3 flex items-center justify-between gap-3" style={{ background: DS.surface, border: `1px solid ${DS.border}` }}>
+                  <div className="min-w-0">
+                    <p className="text-sm font-extrabold" style={{ color: DS.text }}>
+                      {Number(e.amount_fcfa).toLocaleString("fr-FR")} FCFA
+                      <span className="text-[10px] ml-2 px-2 py-0.5 rounded-full font-extrabold" style={{ background: e.status === "encaisse" ? "rgba(34,197,94,0.15)" : "rgba(251,191,36,0.15)", color: e.status === "encaisse" ? "#22c55e" : "#fbbf24" }}>
+                        {e.status === "encaisse" ? "encaissé" : "en attente"}
+                      </span>
+                    </p>
+                    <p className="text-[11px] mt-0.5" style={{ color: DS.muted }}>
+                      {({ consultation: "Consultation", commande: "Commande", abonnement: "Abonnement", autre: "Autre" } as any)[e.source] || e.source}
+                      {e.note ? ` · ${e.note}` : ""}
+                      {e.created_at ? ` · ${new Date(e.created_at).toLocaleDateString("fr-FR")}` : ""}
+                    </p>
+                  </div>
+                  <button onClick={() => deleteRevenue(e.id)} className="flex-shrink-0 p-2 rounded-lg" style={{ background: "rgba(244,63,94,0.12)" }} title="Supprimer">
+                    <Trash2 size={15} color="#f43f5e" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {adminTab === "consults" && (
           <div className="space-y-3">
             <div>

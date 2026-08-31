@@ -1019,6 +1019,66 @@ export async function registerRoutes(
     }
   });
 
+  // ════════════════════════════════════════════════════════════════════
+  // REVENUS — registre manuel du chiffre d'affaires (paiement manuel actuel).
+  // Le propriétaire note lui-même ses entrées (consultation, commande, autre).
+  // Table créée à la volée (résiliente). Protégé par la clé admin.
+  // ════════════════════════════════════════════════════════════════════
+  async function ensureRevenueTable() {
+    try {
+      await db.execute(sql`CREATE TABLE IF NOT EXISTS revenue_entries (
+        id serial PRIMARY KEY,
+        amount_fcfa integer NOT NULL,
+        source varchar(30) NOT NULL DEFAULT 'autre',
+        note text,
+        status varchar(20) NOT NULL DEFAULT 'encaisse',
+        created_at timestamptz DEFAULT now()
+      )`);
+    } catch (e) { console.warn("[revenue] create table:", (e as any)?.message); }
+  }
+
+  app.get("/api/admin/revenue", async (req: any, res) => {
+    if (!checkDatasetKey(req)) return res.status(403).json({ message: "Accès refusé" });
+    try {
+      await ensureRevenueTable();
+      const entries = Rows(await db.execute(sql`SELECT id, amount_fcfa, source, note, status, created_at FROM revenue_entries ORDER BY created_at DESC LIMIT 500`));
+      const sum = (st: string) => entries.filter((e: any) => e.status === st).reduce((a: number, e: any) => a + (Number(e.amount_fcfa) || 0), 0);
+      const encaisse = sum("encaisse");
+      const attente = sum("attente");
+      res.json({ entries, totals: { encaisse, attente, global: encaisse + attente } });
+    } catch (e) {
+      res.json({ entries: [], totals: { encaisse: 0, attente: 0, global: 0 } });
+    }
+  });
+
+  app.post("/api/admin/revenue", async (req: any, res) => {
+    if (!checkDatasetKey(req)) return res.status(403).json({ message: "Accès refusé" });
+    try {
+      await ensureRevenueTable();
+      const amount = Math.max(0, Math.min(100000000, parseInt(String(req.body?.amount), 10) || 0));
+      if (!amount) return res.status(400).json({ message: "Montant invalide" });
+      const source = ["consultation", "commande", "abonnement", "autre"].includes(String(req.body?.source)) ? String(req.body.source) : "autre";
+      const status = ["encaisse", "attente"].includes(String(req.body?.status)) ? String(req.body.status) : "encaisse";
+      const note = typeof req.body?.note === "string" ? req.body.note.trim().slice(0, 300) : null;
+      const [row] = Rows(await db.execute(sql`INSERT INTO revenue_entries (amount_fcfa, source, note, status) VALUES (${amount}, ${source}, ${note}, ${status}) RETURNING id`));
+      res.json({ ok: true, id: row?.id });
+    } catch (e) {
+      console.error("[revenue] add:", e);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  app.delete("/api/admin/revenue/:id", async (req: any, res) => {
+    if (!checkDatasetKey(req)) return res.status(403).json({ message: "Accès refusé" });
+    try {
+      const id = parseInt(req.params.id, 10);
+      await db.execute(sql`DELETE FROM revenue_entries WHERE id = ${id}`);
+      res.json({ ok: true });
+    } catch (e) {
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
   // Résout le rôle du user courant sur une consultation (patient / doctor).
   async function consultAccess(c: any, userId: string): Promise<{ side: "patient" | "doctor" | null; doctorUserId: string | null }> {
     let doctorUserId: string | null = null;
