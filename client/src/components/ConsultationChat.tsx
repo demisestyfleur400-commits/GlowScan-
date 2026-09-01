@@ -40,6 +40,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
   const lastTypingSentRef = useRef(0);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
+  const [uploadPct, setUploadPct] = useState(0);
   const [loading, setLoading] = useState(true);
   const [dossier, setDossier] = useState<any>(null);
   const [correcting, setCorrecting] = useState(false);
@@ -174,22 +175,48 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
     } catch { setText(body); } finally { setSending(false); }
   };
 
-  const sendImage = async (file: File | undefined | null) => {
+  const readAsDataUrl = (file: File) => new Promise<string>((resolve, reject) => {
+    const r = new FileReader(); r.onload = () => resolve(String(r.result)); r.onerror = reject; r.readAsDataURL(file);
+  });
+
+  // Envoi d'un FICHIER (image compressée OU PDF) — via /files, avec progression.
+  const sendFile = async (file: File | undefined | null) => {
     if (!file || sending) return;
-    if (!file.type.startsWith("image/")) return;
-    setSending(true);
+    const isImage = file.type.startsWith("image/");
+    const isPdf = file.type === "application/pdf";
+    if (!isImage && !isPdf) { alert("Seuls les images et les PDF sont acceptés."); return; }
+    if (file.size > 10 * 1024 * 1024) { alert("Fichier trop lourd (max 10 Mo)."); return; }
+    setSending(true); setUploadPct(1);
     try {
-      const imageUrl = await compressToBase64(file);
-      const res = await fetch(`/api/consultations/${consultationId}/messages`, {
-        method: "POST", credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageUrl }),
+      const dataUrl = isImage ? await compressToBase64(file, 1400, 0.72) : await readAsDataUrl(file);
+      setUploadPct(40);
+      const res = await fetch(`/api/consultations/${consultationId}/files`, {
+        method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dataUrl, fileName: file.name, fileType: isPdf ? "application/pdf" : (file.type || "image/jpeg"), fileSize: file.size }),
       });
+      setUploadPct(90);
       if (res.ok) {
         const d = await res.json();
         setMessages((prev) => prev.some((m) => m.id === d.message.id) ? prev : [...prev, d.message]);
+      } else {
+        const d = await res.json().catch(() => ({}));
+        alert(d.message || "Échec de l'envoi.");
       }
-    } catch {} finally { setSending(false); }
+    } catch { alert("Erreur réseau."); } finally { setSending(false); setUploadPct(0); }
+  };
+
+  // Démarre un appel vidéo (Jitsi) — envoie l'invitation dans le chat + ouvre la salle.
+  const startCall = async () => {
+    if (sending) return;
+    setSending(true);
+    try {
+      const res = await fetch(`/api/consultations/${consultationId}/call`, { method: "POST", credentials: "include" });
+      const d = await res.json().catch(() => ({}));
+      if (res.ok && d.roomUrl) {
+        if (d.message) setMessages((prev) => prev.some((m) => m.id === d.message.id) ? prev : [...prev, d.message]);
+        window.open(d.roomUrl, "_blank", "noopener,noreferrer");
+      } else alert(d.message || "Impossible de démarrer l'appel.");
+    } catch { alert("Erreur réseau."); } finally { setSending(false); }
   };
 
   // Rapport PDF de la consultation (print-to-PDF, comme la result card).
@@ -199,7 +226,10 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
     const rows = messages.map((m) => {
       const who = m.senderType === "doctor" ? "Dermatologue" : "Patient";
       const t = m.createdAt ? new Date(m.createdAt).toLocaleString("fr-FR") : "";
-      const body = m.body ? esc(m.body) : (m.imageUrl ? "<em>[photo partagée]</em>" : "");
+      const raw = m.body || "";
+      const body = raw.startsWith("§CALL§") ? "<em>[appel vidéo]</em>"
+        : raw.startsWith("§FILE§") ? `<em>[fichier : ${esc(raw.split("§")[2] || "document")}]</em>`
+        : raw ? esc(raw) : (m.imageUrl ? "<em>[photo partagée]</em>" : "");
       const align = m.senderType === "doctor" ? "left" : "right";
       const bg = m.senderType === "doctor" ? "#f3f0ff" : "#eafaf1";
       return `<div style="text-align:${align};margin:8px 0"><div style="display:inline-block;max-width:80%;background:${bg};border-radius:12px;padding:8px 12px;text-align:left"><div style="font-size:10px;color:#7c3aed;font-weight:700">${who} · ${t}</div><div style="font-size:12px;color:#1a1a2e;margin-top:2px;white-space:pre-wrap">${body}</div></div></div>`;
@@ -684,8 +714,31 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
         {messages.map((m) => {
           const mine = m.senderType === side;
           const showSeen = mine && m.id === lastMineId && !!m.readAt;
+          const body = m.body || "";
+          const callMatch = body.startsWith("§CALL§");
+          const fileMatch = body.startsWith("§FILE§") ? body.split("§") : null; // ["", "FILE", name, type, size, ""]
+          const fileName = fileMatch ? fileMatch[2] : "";
+          const fileSize = fileMatch ? Number(fileMatch[4]) || 0 : 0;
+          const kb = fileSize > 1048576 ? `${(fileSize / 1048576).toFixed(1)} Mo` : `${Math.max(1, Math.round(fileSize / 1024))} Ko`;
           return (
-            <div key={m.id} style={{ alignSelf: mine ? "flex-end" : "flex-start", maxWidth: "78%" }}>
+            <div key={m.id} style={{ alignSelf: mine ? "flex-end" : "flex-start", maxWidth: "82%" }}>
+              {callMatch ? (
+                // Carte d'appel vidéo
+                <a href={body.replace("§CALL§", "")} target="_blank" rel="noreferrer"
+                  style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none", background: "#10b981", color: "#fff", padding: "11px 14px", borderRadius: 14, fontWeight: 800, fontSize: 13 }}>
+                  📞 {mine ? "Appel lancé — rejoindre" : "Rejoindre l'appel vidéo"}
+                </a>
+              ) : fileMatch ? (
+                // Carte fichier PDF
+                <a href={m.imageUrl || "#"} target="_blank" rel="noreferrer" download={fileName}
+                  style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none", background: mine ? MINE : THEIRS, color: mine ? "#fff" : INK, padding: "10px 12px", borderRadius: 14 }}>
+                  <span style={{ fontSize: 24 }}>📄</span>
+                  <span style={{ minWidth: 0 }}>
+                    <span style={{ display: "block", fontSize: 12.5, fontWeight: 800, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 190 }}>{fileName}</span>
+                    <span style={{ display: "block", fontSize: 10.5, opacity: 0.85 }}>{kb} · Télécharger</span>
+                  </span>
+                </a>
+              ) : (
               <div style={{
                 background: mine ? MINE : THEIRS, color: mine ? "#fff" : INK,
                 padding: "9px 12px", borderRadius: 14,
@@ -695,6 +748,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
                 {m.imageUrl && <img src={m.imageUrl} alt="" style={{ maxWidth: "100%", borderRadius: 8, marginBottom: m.body ? 6 : 0 }} />}
                 {m.body}
               </div>
+              )}
               <p style={{ fontSize: 10, color: MUTED, textAlign: mine ? "right" : "left", margin: "2px 4px 0" }}>
                 {m.createdAt ? new Date(m.createdAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : ""}
                 {showSeen ? " · Vu ✓✓" : ""}
@@ -712,22 +766,37 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
         )}
       </div>
 
+      {/* Barre de progression d'upload */}
+      {uploadPct > 0 && (
+        <div style={{ height: 3, background: dark ? "rgba(255,255,255,0.08)" : "#eef0f6" }}>
+          <div style={{ height: "100%", width: `${uploadPct}%`, background: MINE, transition: "width .3s" }} />
+        </div>
+      )}
+
       {/* Saisie */}
       <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "10px 12px", borderTop: `1px solid ${BORDER}`, background: CARD }}>
         <input
           ref={fileRef}
           type="file"
-          accept="image/*"
+          accept="image/*,application/pdf"
           style={{ display: "none" }}
-          onChange={(e) => { sendImage(e.target.files?.[0]); e.currentTarget.value = ""; }}
+          onChange={(e) => { sendFile(e.target.files?.[0]); e.currentTarget.value = ""; }}
         />
         <button
           onClick={() => fileRef.current?.click()}
           disabled={sending}
-          title="Envoyer une photo"
+          title="Envoyer un fichier (image ou PDF)"
           style={{ background: "transparent", border: "none", cursor: "pointer", fontSize: 20, flexShrink: 0, opacity: sending ? 0.5 : 1, color: MUTED }}
         >
           📎
+        </button>
+        <button
+          onClick={startCall}
+          disabled={sending}
+          title="Démarrer un appel vidéo"
+          style={{ background: "transparent", border: "none", cursor: "pointer", fontSize: 19, flexShrink: 0, opacity: sending ? 0.5 : 1, color: "#10b981" }}
+        >
+          📞
         </button>
         <input
           value={text}

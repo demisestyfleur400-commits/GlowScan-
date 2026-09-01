@@ -291,6 +291,32 @@ export async function uploadScanImageToStorage(base64DataUrl: string): Promise<s
   }
 }
 
+// Upload générique d'un fichier de consultation (image OU PDF) vers Object
+// Storage (/objects/consult/), fallback base64. Retourne l'URL/chemin.
+export async function uploadConsultationFile(dataUrl: string, mimeHint?: string): Promise<string | null> {
+  try {
+    const match = dataUrl.match(/^data:([a-z0-9.+/-]+);base64,(.+)$/i);
+    let mime = (mimeHint || (match ? match[1] : "application/octet-stream")).toLowerCase();
+    const b64 = match ? match[2] : dataUrl;
+    const buffer = Buffer.from(b64, "base64");
+    if (buffer.length === 0) return null;
+    const privateDir = process.env.PRIVATE_OBJECT_DIR || "";
+    if (privateDir) {
+      try {
+        const ext = mime.includes("pdf") ? "pdf" : (mime.split("/")[1] || "bin").replace("jpeg", "jpg");
+        const objectId = `${randomUUID()}.${ext}`;
+        const fullPath = `${privateDir.startsWith("/") ? "" : "/"}${privateDir}/consult/${objectId}`;
+        const parts = fullPath.split("/").filter(Boolean);
+        const bucket = objectStorageClient.bucket(parts[0]);
+        const file = bucket.file(parts.slice(1).join("/"));
+        await file.save(buffer, { contentType: mime, resumable: false, metadata: { metadata: { "custom:aclPolicy": JSON.stringify({ owner: "system", visibility: "private" }) } } });
+        return `/objects/consult/${objectId}`;
+      } catch (e) { console.error("[consult-file] Object Storage échoué, fallback base64:", e); }
+    }
+    return `data:${mime};base64,${b64}`;
+  } catch (e) { console.error("[consult-file] échec:", e); return null; }
+}
+
 // Contrôle d'accès admin (par clé simple) — n'accorde JAMAIS l'accès si ADMIN_KEY
 // n'est pas configuré (évite le piège undefined === undefined). Aucune clé en dur.
 function verifyAdminKey(key?: string | string[] | null): boolean {
@@ -355,7 +381,7 @@ export async function registerRoutes(
   const Rows = (x: any): any[] => (x?.rows ?? x ?? []) as any[];
 
   // Notification web-push best-effort vers un utilisateur (consultations).
-  async function pushToUser(userId: string | null | undefined, title: string, body: string, url: string) {
+  async function pushToUser(userId: string | null | undefined, title: string, body: string, url: string, requireInteraction = false) {
     if (!userId) return;
     try {
       const subs = await storage.getPushSubscriptionsByUser(userId);
@@ -363,7 +389,7 @@ export async function registerRoutes(
         try {
           await webpush.sendNotification(
             { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-            JSON.stringify({ title, body, url }),
+            JSON.stringify(requireInteraction ? { title, body, url, requireInteraction: true, vibrate: [300, 120, 300, 120, 300] } : { title, body, url }),
           );
         } catch (err: any) {
           if (err?.statusCode === 410 || err?.statusCode === 404) await storage.deletePushSubscription(sub.endpoint);
@@ -1262,6 +1288,89 @@ export async function registerRoutes(
     }
   });
 
+  // Envoi d'un FICHIER (image ou PDF, ≤10 Mo) dans le chat de consultation.
+  // Stocké dans Object Storage ; PDF encodé via marqueur §FILE§ dans le body.
+  app.post("/api/consultations/:id/files", async (req: any, res) => {
+    const userId = getUID(req);
+    if (!userId) return res.status(401).json({ message: "Connexion requise" });
+    try {
+      const id = parseInt(req.params.id);
+      const { dataUrl, fileName, fileType, fileSize } = req.body || {};
+      if (!dataUrl || typeof dataUrl !== "string") return res.status(400).json({ message: "Fichier manquant" });
+      const mime = String(fileType || "").toLowerCase();
+      const isImage = /^image\/(jpe?g|png|webp)$/.test(mime);
+      const isPdf = mime === "application/pdf";
+      if (!isImage && !isPdf) return res.status(400).json({ message: "Type non supporté (image ou PDF uniquement)." });
+      if (Number(fileSize) > 10 * 1024 * 1024) return res.status(413).json({ message: "Fichier trop lourd (max 10 Mo)." });
+      const [c] = await db.select().from(consultations).where(eq(consultations.id, id));
+      if (!c) return res.status(404).json({ message: "Consultation introuvable" });
+      const { side, doctorUserId } = await consultAccess(c, userId);
+      if (!side) return res.status(403).json({ message: "Accès refusé" });
+      if (c.paymentStatus !== "paid") return res.status(402).json({ message: "Consultation non encore confirmée." });
+
+      const url = await uploadConsultationFile(dataUrl, mime);
+      if (!url) return res.status(500).json({ message: "Échec de l'envoi du fichier." });
+
+      // PDF → marqueur §FILE§nom§type§taille§ dans body ; image → body vide.
+      const safeName = String(fileName || "fichier").replace(/[§|\n\r]/g, " ").slice(0, 120);
+      const bodyMarker = isPdf ? `§FILE§${safeName}§${mime}§${Number(fileSize) || 0}§` : null;
+      const [m] = await db.insert(consultationMessages).values({
+        consultationId: id, senderType: side, senderId: userId, body: bodyMarker, imageUrl: url,
+      }).returning();
+
+      const patch: any = { lastMessageAt: new Date() };
+      if (side === "patient") patch.unreadDoctor = (c.unreadDoctor || 0) + 1;
+      else { patch.unreadPatient = (c.unreadPatient || 0) + 1; patch.status = "answered"; }
+      await db.update(consultations).set(patch).where(eq(consultations.id, id));
+
+      const payload = { consultationId: id, message: m };
+      try { if (c.userId) emitToUser(c.userId, "consultation:message", payload); } catch {}
+      try { if (doctorUserId) emitToUser(doctorUserId, "consultation:message", payload); } catch {}
+      const what = isPdf ? "a envoyé un fichier 📎" : "a envoyé une photo 📷";
+      if (side === "patient") pushToUser(doctorUserId, "Nouveau document patient", `Le patient ${what}`, "/derm/consultations?c=" + id);
+      else pushToUser(c.userId, "Votre dermatologue " + what, "Ouvrez la conversation pour le voir.", "/consultations");
+
+      res.json({ message: m });
+    } catch (err) {
+      console.error("[consultations files] error:", err);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // Démarre un APPEL vidéo (Jitsi, sans clé). Crée une salle unique par appel,
+  // l'envoie comme message système §CALL§ et notifie l'autre partie (urgent).
+  app.post("/api/consultations/:id/call", async (req: any, res) => {
+    const userId = getUID(req);
+    if (!userId) return res.status(401).json({ message: "Connexion requise" });
+    try {
+      const id = parseInt(req.params.id);
+      const [c] = await db.select().from(consultations).where(eq(consultations.id, id));
+      if (!c) return res.status(404).json({ message: "Consultation introuvable" });
+      const { side, doctorUserId } = await consultAccess(c, userId);
+      if (!side) return res.status(403).json({ message: "Accès refusé" });
+      if (c.paymentStatus !== "paid") return res.status(402).json({ message: "Consultation non encore confirmée." });
+
+      const room = `glowscan-consult-${id}-${randomUUID().slice(0, 8)}`;
+      const roomUrl = `https://meet.jit.si/${room}`;
+      const [m] = await db.insert(consultationMessages).values({
+        consultationId: id, senderType: side, senderId: userId, body: `§CALL§${roomUrl}`, imageUrl: null,
+      }).returning();
+      await db.update(consultations).set({ lastMessageAt: new Date() }).where(eq(consultations.id, id));
+
+      const payload = { consultationId: id, message: m };
+      try { if (c.userId) emitToUser(c.userId, "consultation:message", payload); } catch {}
+      try { if (doctorUserId) emitToUser(doctorUserId, "consultation:message", payload); } catch {}
+      // Notification URGENTE à l'autre partie (reste affichée, vibration longue).
+      if (side === "doctor") pushToUser(c.userId, "📞 Votre dermatologue vous appelle", "Appuyez pour rejoindre l'appel vidéo.", "/consultations", true);
+      else pushToUser(doctorUserId, "📞 Le patient vous appelle", "Appuyez pour rejoindre l'appel vidéo.", "/derm/consultations?c=" + id, true);
+
+      res.json({ roomUrl, message: m });
+    } catch (err) {
+      console.error("[consultations call] error:", err);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
   // ══ Transcription vocale (Whisper via Groq) — fiable sur TOUS les navigateurs ══
   // Contrairement à l'API Web Speech (qui ne marche pas sur Edge/Safari), on
   // enregistre l'audio côté client puis on le transcrit ici. Auto FR/EN.
@@ -1342,6 +1451,36 @@ export async function registerRoutes(
       await svc.downloadObject(file, res);
     } catch (err) {
       console.error("[objects] erreur lecture photo:", err);
+      return res.status(404).json({ message: "Not found" });
+    }
+  });
+
+  // === Fichiers de consultation (chat) — accès réservé aux PARTICIPANTS ===
+  // Autorisé si le fichier est référencé par un message d'une consultation dont
+  // l'utilisateur est le patient OU le dermatologue.
+  app.get("/objects/consult/:filename", async (req: any, res) => {
+    const userId = getUID(req);
+    const isAdmin = (req.session as any)?.isAdmin === true;
+    if (!userId && !isAdmin) return res.status(401).json({ message: "Unauthorized" });
+    const objectPath = `/objects/consult/${req.params.filename}`;
+    if (!isAdmin) {
+      try {
+        const r = Rows(await db.execute(sql`
+          SELECT 1 FROM consultation_messages m
+          JOIN consultations c ON c.id = m.consultation_id
+          LEFT JOIN pro_accounts p ON p.id = c.pro_account_id
+          WHERE m.image_url = ${objectPath} AND (c.user_id = ${userId} OR p.user_id = ${userId})
+          LIMIT 1`));
+        if (!r.length) return res.status(403).json({ message: "Forbidden" });
+      } catch { return res.status(403).json({ message: "Forbidden" }); }
+    }
+    try {
+      const { ObjectStorageService } = await import("./replit_integrations/object_storage/objectStorage");
+      const svc = new ObjectStorageService();
+      const file = await svc.getObjectEntityFile(objectPath);
+      await svc.downloadObject(file, res);
+    } catch (err) {
+      console.error("[objects] erreur lecture fichier consult:", err);
       return res.status(404).json({ message: "Not found" });
     }
   });
