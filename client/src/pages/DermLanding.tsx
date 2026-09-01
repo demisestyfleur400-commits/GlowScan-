@@ -95,7 +95,7 @@ const FAQS = [
   { q: "Comment mes patients me trouvent-ils ?", a: "Via votre profil public GlowScan visible sur Google, et via les patients B2C dont le score est faible — GlowScan les oriente automatiquement vers un dermatologue disponible dans leur région." },
   { q: "Est-ce que je peux consulter des patients hors de ma ville ?", a: "Oui. Les consultations en ligne vous permettent de recevoir des patients de Douala, Yaoundé, Cotonou, Kinshasa — partout où GlowScan est actif. Vous consultez, vous signez, vous êtes payé directement sur Mobile Money." },
   { q: "Le « second avis entre confrères », c'est quoi exactement ?", a: "Quand un cas vous laisse un doute, vous l'envoyez à un confrère dermatologue du réseau GlowScan pour avoir son avis. Vous partagez seulement la photo, l'âge et le sexe du patient — jamais son nom ni son téléphone. Le confrère vous répond dans l'application. Vous restez le médecin traitant : c'est un deuxième regard entre spécialistes, pas une délégation. Rien n'est visible du patient." },
-  { q: "Que se passe-t-il après les 14 jours gratuits ?", a: "Vous choisissez de continuer à 10 000 FCFA/mois. Aucun prélèvement automatique. Aucune carte bancaire. Vous payez quand vous voulez, par Mobile Money." },
+  { q: "Que se passe-t-il après les 14 jours gratuits ?", a: "Vous choisissez de continuer. Aucun prélèvement automatique. Aucune carte bancaire. Vous payez quand vous voulez, par Mobile Money." },
 ];
 
 function Faq({ q, a }: { q: string; a: string }) {
@@ -325,10 +325,10 @@ export default function DermLanding() {
       <section style={{ background: C.lightBlue, padding: "52px 0" }}>
         <div style={wrap}>
           <motion.div {...fade()} style={{ maxWidth: 460, margin: "0 auto", background: "#fff", border: `2px solid ${C.blue}`, borderRadius: 22, padding: 26, textAlign: "center" }}>
-            <p style={{ fontSize: 40, fontWeight: 900, color: C.ink, margin: 0, letterSpacing: "-1px" }}>10 000 <span style={{ fontSize: 17, color: C.inkMuted }}>FCFA / mois</span></p>
-            <p style={{ fontSize: 13.5, color: C.inkMuted, margin: "4px 0 0" }}>Soit <strong style={{ color: C.ink }}>333 FCFA par jour</strong> — moins cher qu'une consultation physique.</p>
+            <p style={{ fontSize: 30, fontWeight: 900, color: C.ink, margin: 0, letterSpacing: "-0.5px" }}>Tout votre cabinet numérique</p>
+            <p style={{ fontSize: 13.5, color: C.inkMuted, margin: "4px 0 0" }}>Commencez avec <strong style={{ color: C.ink }}>14 jours gratuits</strong>.</p>
             <div style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.25)", borderRadius: 12, padding: "10px 12px", margin: "16px 0" }}>
-              <p style={{ fontSize: 13, fontWeight: 800, color: "#047857", margin: 0 }}>1 seule consultation en ligne par mois = abonnement rentabilisé.</p>
+              <p style={{ fontSize: 13, fontWeight: 800, color: "#047857", margin: 0 }}>Rentabilisé dès votre première consultation en ligne.</p>
             </div>
             <div style={{ textAlign: "left", display: "flex", flexDirection: "column", gap: 8, marginBottom: 18 }}>
               {FEATURES.map((f) => (
