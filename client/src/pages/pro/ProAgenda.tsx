@@ -109,6 +109,7 @@ export default function ProAgenda() {
 function ApptForm({ day, onClose, onCreated }: { day: Date; onClose: () => void; onCreated: () => void }) {
   const [name, setName] = useState("");
   const [contact, setContact] = useState("");
+  const [email, setEmail] = useState("");
   const [date, setDate] = useState(ymd(day));
   const [time, setTime] = useState("09:00");
   const [type, setType] = useState("consultation");
@@ -124,7 +125,7 @@ function ApptForm({ day, onClose, onCreated }: { day: Date; onClose: () => void;
       const appointmentDate = new Date(`${date}T${time}:00`).toISOString();
       const res = await fetch("/api/pro/appointments", {
         method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ patientName: name.trim(), patientContact: contact.trim(), appointmentDate, type, durationMinutes: parseInt(duration, 10), notes: notes.trim(), forceConflict: force }),
+        body: JSON.stringify({ patientName: name.trim(), patientContact: contact.trim(), patientEmail: email.trim(), appointmentDate, type, durationMinutes: parseInt(duration, 10), notes: notes.trim(), forceConflict: force }),
       });
       if (res.status === 409) {
         const d = await res.json();
@@ -156,6 +157,10 @@ function ApptForm({ day, onClose, onCreated }: { day: Date; onClose: () => void;
           <div>
             <label style={{ fontSize: 12, fontWeight: 700, color: MUTED, display: "block", marginBottom: 4 }}>Contact (WhatsApp)</label>
             <input value={contact} onChange={(e) => setContact(e.target.value)} placeholder="6XX XXX XXX" inputMode="tel" style={field} />
+          </div>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 700, color: MUTED, display: "block", marginBottom: 4 }}>Email <span style={{ fontWeight: 500 }}>(secours si le rappel push ne passe pas)</span></label>
+            <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="patient@email.com" inputMode="email" type="email" style={field} />
           </div>
           <div style={{ display: "flex", gap: 10 }}>
             <div style={{ flex: 1 }}>

@@ -2139,6 +2139,8 @@ Analyse ce cas selon tes règles. Vérifie particulièrement la cohérence entre
         reminder_h2_sent boolean DEFAULT false,
         created_at timestamptz DEFAULT now()
       )`);
+      // Email patient (canal de secours si le push ne passe pas) — ajout résilient.
+      await db.execute(sql`ALTER TABLE appointments ADD COLUMN IF NOT EXISTS patient_email varchar(120)`).catch(() => {});
     } catch (e) { console.warn("[agenda] create table:", (e as any)?.message); }
   }
 
@@ -2182,6 +2184,7 @@ Analyse ce cas selon tes règles. Vérifie particulièrement la cohérence entre
       const cls = classifyAppointment(String(b.type || ""), String(b.notes || ""));
       const name = typeof b.patientName === "string" ? b.patientName.trim().slice(0, 100) : null;
       const contact = typeof b.patientContact === "string" ? b.patientContact.replace(/[^0-9+ ]/g, "").slice(0, 50) : null;
+      const email = typeof b.patientEmail === "string" && /.+@.+\..+/.test(b.patientEmail) ? b.patientEmail.trim().slice(0, 120) : null;
       const notes = typeof b.notes === "string" ? b.notes.trim().slice(0, 1000) : null;
       const patientId = typeof b.patientId === "string" ? b.patientId : null;
 
@@ -2196,8 +2199,8 @@ Analyse ce cas selon tes règles. Vérifie particulièrement la cohérence entre
       }
 
       const [row] = Rows(await db.execute(sql`
-        INSERT INTO appointments (dermatologue_id, patient_id, patient_name, patient_contact, appointment_date, duration_minutes, type, priority, notes)
-        VALUES (${req.proAccount.id}, ${patientId}, ${name}, ${contact}, ${when.toISOString()}, ${duration}, ${cls.type}, ${cls.priority}, ${notes})
+        INSERT INTO appointments (dermatologue_id, patient_id, patient_name, patient_contact, patient_email, appointment_date, duration_minutes, type, priority, notes)
+        VALUES (${req.proAccount.id}, ${patientId}, ${name}, ${contact}, ${email}, ${when.toISOString()}, ${duration}, ${cls.type}, ${cls.priority}, ${notes})
         RETURNING *`));
       res.json({ ok: true, appointment: row });
     } catch (e) {
@@ -2221,6 +2224,51 @@ Analyse ce cas selon tes règles. Vérifie particulièrement la cohérence entre
     try {
       const id = parseInt(req.params.id, 10);
       await db.execute(sql`UPDATE appointments SET status = 'cancelled' WHERE id = ${id} AND dermatologue_id = ${req.proAccount.id}`);
+      res.json({ ok: true });
+    } catch (e) { res.status(500).json({ message: "Erreur serveur" }); }
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // ONBOARDING — état du parcours de découverte du nouveau dermatologue.
+  // Non bloquant : toujours un bouton « Passer ». Persisté en base.
+  // ═══════════════════════════════════════════════════════════════════════
+  async function ensureOnboardingColumns() {
+    try {
+      await db.execute(sql`ALTER TABLE pro_accounts ADD COLUMN IF NOT EXISTS onboarding_completed boolean DEFAULT false`).catch(() => {});
+      await db.execute(sql`ALTER TABLE pro_accounts ADD COLUMN IF NOT EXISTS onboarding_step integer DEFAULT 0`).catch(() => {});
+      await db.execute(sql`ALTER TABLE pro_accounts ADD COLUMN IF NOT EXISTS first_login timestamptz`).catch(() => {});
+      await db.execute(sql`ALTER TABLE pro_accounts ADD COLUMN IF NOT EXISTS tooltips_seen jsonb DEFAULT '{}'::jsonb`).catch(() => {});
+    } catch {}
+  }
+
+  app.get("/api/pro/onboarding", requireProAccess, async (req: any, res) => {
+    try {
+      await ensureOnboardingColumns();
+      const row = Rows(await db.execute(sql`SELECT onboarding_completed, onboarding_step, first_login, tooltips_seen FROM pro_accounts WHERE id = ${req.proAccount.id}`))[0] as any;
+      // Marque la première connexion (une seule fois).
+      if (row && !row.first_login) {
+        try { await db.execute(sql`UPDATE pro_accounts SET first_login = NOW() WHERE id = ${req.proAccount.id}`); } catch {}
+      }
+      const ts = row?.tooltips_seen ? (typeof row.tooltips_seen === "string" ? JSON.parse(row.tooltips_seen) : row.tooltips_seen) : {};
+      res.json({
+        completed: row?.onboarding_completed === true,
+        step: row?.onboarding_step || 0,
+        firstLogin: !row?.first_login, // true = c'est sa toute première fois
+        tooltipsSeen: ts || {},
+      });
+    } catch (e) { res.json({ completed: true, step: 0, firstLogin: false, tooltipsSeen: {} }); }
+  });
+
+  app.post("/api/pro/onboarding", requireProAccess, async (req: any, res) => {
+    try {
+      await ensureOnboardingColumns();
+      const b = req.body || {};
+      if (b.completed === true) await db.execute(sql`UPDATE pro_accounts SET onboarding_completed = true WHERE id = ${req.proAccount.id}`);
+      if (typeof b.step === "number") await db.execute(sql`UPDATE pro_accounts SET onboarding_step = ${Math.max(0, Math.min(20, b.step | 0))} WHERE id = ${req.proAccount.id}`);
+      // Marque un tooltip contextuel comme vu (une seule fois).
+      if (typeof b.tooltipSeen === "string" && b.tooltipSeen) {
+        try { await db.execute(sql`UPDATE pro_accounts SET tooltips_seen = COALESCE(tooltips_seen,'{}'::jsonb) || ${JSON.stringify({ [b.tooltipSeen]: true })}::jsonb WHERE id = ${req.proAccount.id}`); } catch {}
+      }
       res.json({ ok: true });
     } catch (e) { res.status(500).json({ message: "Erreur serveur" }); }
   });

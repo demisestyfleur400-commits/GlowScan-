@@ -437,6 +437,7 @@ async function sendAppointmentH2Reminders() {
       type varchar(20) DEFAULT 'consultation', priority varchar(10) DEFAULT 'normal', notes text,
       status varchar(20) DEFAULT 'scheduled', reminder_h2_sent boolean DEFAULT false, created_at timestamptz DEFAULT now()
     )`).catch(() => {});
+    await db.execute(sql`ALTER TABLE appointments ADD COLUMN IF NOT EXISTS patient_email varchar(120)`).catch(() => {});
     const r: any = await db.execute(sql`
       SELECT a.*, p.full_name AS derm_name, p.user_id AS derm_user_id
       FROM appointments a LEFT JOIN pro_accounts p ON p.id = a.dermatologue_id
@@ -463,6 +464,12 @@ async function sendAppointmentH2Reminders() {
       if (a.patient_contact) {
         const msg = `Bonjour ${pName}, rappel : votre RDV avec Dr ${dName} est dans 2 heures.\nÀ ${heure}. ${lieu}.`;
         try { await sendWhatsAppText(a.patient_contact, msg); } catch {}
+      }
+      // 4) Email patient (secours si le push ne passe pas — Android tue les process)
+      if (a.patient_email) {
+        try { await sendEmail(a.patient_email, `Rappel RDV Dr ${dName} — dans 2 heures`,
+          `<p>Bonjour ${pName},</p><p>Rappel : votre rendez-vous avec <strong>Dr ${dName}</strong> est dans 2 heures, à <strong>${heure}</strong> (${lieu}).</p>`,
+          `Rappel RDV avec Dr ${dName} à ${heure} (${lieu}).`); } catch {}
       }
       try { await db.execute(sql`UPDATE appointments SET reminder_h2_sent = true WHERE id = ${a.id}`); } catch {}
       done++;

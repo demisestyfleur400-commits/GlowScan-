@@ -17,6 +17,7 @@ import {
 import { useProAccount, useProPatients, useUpdateProAccount, useProStats, useProPendingPatients } from "@/hooks/use-pro";
 import { ProLayout, ProCard } from "@/components/ProLayout";
 import { SubscriptionExpiredBanner } from "@/components/pro/SubscriptionExpiredBanner";
+import { DermOnboarding } from "@/components/pro/DermOnboarding";
 import { DermNotifPrompt } from "@/components/DermNotifPrompt";
 import { DERM, DERM_LOGO } from "@/lib/design-tokens";
 import { computeProfileScore, profileLabel } from "@/lib/profile-score";
@@ -62,14 +63,6 @@ function computeOnboarding(acc: any, patientCount: number) {
   return { steps, doneCount, allDone: doneCount === steps.length, pct: Math.round((doneCount / steps.length) * 100) };
 }
 
-const TOUR_STEPS = [
-  { title: "Bienvenue sur votre tableau de bord", body: "Retrouvez ici votre vue d'ensemble et le bouton principal pour analyser un patient." },
-  { title: "Mes patients", body: "Tous vos patients sont accessibles depuis l'onglet Patients, avec recherche et statuts cliniques." },
-  { title: "Analyser un patient", body: "Le bouton central lance une analyse en 5 étapes : patient → photo → diagnostic IA → anamnèse → dossier." },
-  { title: "Dossier automatique", body: "L'IA enregistre photo, diagnostic, métriques et produits recommandés sans saisie manuelle." },
-  { title: "Statistiques cabinet", body: "Suivez votre activité : top conditions, top produits, évolution des Glow Scores." },
-  { title: "Mon cabinet", body: "Gérez votre profil, votre liste patients et exportez vos données quand vous voulez." },
-];
 
 export default function ProDashboard() {
   const [, setLocation] = useLocation();
@@ -693,111 +686,13 @@ export default function ProDashboard() {
         </motion.div>
       </div>
 
-      {/* Onboarding tour modal */}
-      <AnimatePresence>
-        {tourOpen && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 50 }}
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              style={{
-                position: "fixed",
-                inset: 0,
-                zIndex: 51,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                padding: 24,
-                pointerEvents: "none",
-              }}
-            >
-              <div
-                style={{
-                  background: DS.surface,
-                  border: `1px solid ${DS.cardVioletBorder}`,
-                  borderRadius: 28,
-                  padding: 28,
-                  maxWidth: 360,
-                  width: "100%",
-                  pointerEvents: "auto",
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <Sparkles style={{ width: 15, height: 15, color: DS.violetMid }} />
-                    <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: DS.violetMid }}>
-                      Étape {tourStep + 1}/{TOUR_STEPS.length}
-                    </span>
-                  </div>
-                  <button
-                    onClick={closeTour}
-                    data-testid="button-skip-tour"
-                    style={{
-                      padding: 6,
-                      borderRadius: 8,
-                      background: "#F1F5F9",
-                      border: "none",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                    }}
-                  >
-                    <X style={{ width: 14, height: 14, color: DS.textMuted }} />
-                  </button>
-                </div>
-                <h3
-                  style={{ fontSize: 17, fontWeight: 800, color: DS.textPrimary, marginBottom: 8 }}
-                  data-testid="text-tour-title"
-                >
-                  {TOUR_STEPS[tourStep].title}
-                </h3>
-                <p style={{ fontSize: 13, color: DS.textBody, marginBottom: 20, lineHeight: 1.6 }}>
-                  {TOUR_STEPS[tourStep].body}
-                </p>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-                  <button
-                    onClick={closeTour}
-                    data-testid="button-skip-tour-bottom"
-                    style={{ fontSize: 12, color: DS.textMuted, fontWeight: 700, background: "none", border: "none", cursor: "pointer" }}
-                  >
-                    Passer
-                  </button>
-                  <button
-                    onClick={() => (tourStep < TOUR_STEPS.length - 1 ? setTourStep(tourStep + 1) : closeTour())}
-                    data-testid="button-next-tour"
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 6,
-                      padding: "9px 18px",
-                      borderRadius: 9999,
-                      background: DS.violet,
-                      color: "#fff",
-                      fontSize: 13,
-                      fontWeight: 800,
-                      border: "none",
-                      cursor: "pointer",
-                    }}
-                  >
-                    {tourStep < TOUR_STEPS.length - 1 ? (
-                      <>Suivant <ArrowRight style={{ width: 13, height: 13 }} /></>
-                    ) : (
-                      "Terminer"
-                    )}
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+      {/* Onboarding — écran de bienvenue + tour guidé 6 étapes (non bloquant) */}
+      {tourOpen && (
+        <DermOnboarding
+          dermName={(acc as any)?.fullName || accData?.user?.firstName}
+          onDone={closeTour}
+        />
+      )}
     </ProLayout>
   );
 }
