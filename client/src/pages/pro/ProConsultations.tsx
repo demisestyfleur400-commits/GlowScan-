@@ -32,7 +32,7 @@ export default function ProConsultations() {
   if (openId) {
     return (
       <div style={{ position: "fixed", inset: 0, zIndex: 50 }}>
-        <ConsultationChat consultationId={openId} myUserId={(accData as any)?.user?.id || null} dark onBack={() => { setOpenId(null); load(); }} />
+        <ConsultationChat key={openId} consultationId={openId} myUserId={(accData as any)?.user?.id || null} dark onBack={() => { setOpenId(null); load(); }} />
       </div>
     );
   }

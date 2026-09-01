@@ -84,7 +84,16 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
       }
     } catch {} finally { setLoading(false); }
   };
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [consultationId]);
+  // À CHAQUE changement de consultation : on VIDE l'état pour ne jamais afficher
+  // les fichiers/dossier/messages d'une AUTRE consultation (bug « anciens fichiers »).
+  useEffect(() => {
+    setMessages([]); setDossier(null); setDoctor(null); setCtx(null);
+    setPrescription(""); setPrescriptionTouched(false); setClosedInfo(null);
+    setShowFull(false); setLightbox(-1); setCorrecting(false); setCoachStep(-1);
+    setLoading(true);
+    load();
+    /* eslint-disable-next-line */
+  }, [consultationId]);
 
   // Onboarding — tooltips séquentiels à la PREMIÈRE vraie consultation du dermato.
   // Gate localStorage (par navigateur) : jamais réaffichés ensuite. Non bloquant.
