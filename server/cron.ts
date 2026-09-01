@@ -428,6 +428,51 @@ async function sendConsultationFollowUps() {
   }
 }
 
+// ── AGENDA — rappel H-2 (2 h avant le RDV) : push + WhatsApp (backup) ──
+async function sendAppointmentH2Reminders() {
+  try {
+    await db.execute(sql`CREATE TABLE IF NOT EXISTS appointments (
+      id serial PRIMARY KEY, dermatologue_id integer, patient_id text, patient_name varchar(100),
+      patient_contact varchar(50), appointment_date timestamptz NOT NULL, duration_minutes integer DEFAULT 30,
+      type varchar(20) DEFAULT 'consultation', priority varchar(10) DEFAULT 'normal', notes text,
+      status varchar(20) DEFAULT 'scheduled', reminder_h2_sent boolean DEFAULT false, created_at timestamptz DEFAULT now()
+    )`).catch(() => {});
+    const r: any = await db.execute(sql`
+      SELECT a.*, p.full_name AS derm_name, p.user_id AS derm_user_id
+      FROM appointments a LEFT JOIN pro_accounts p ON p.id = a.dermatologue_id
+      WHERE a.appointment_date BETWEEN NOW() + INTERVAL '1 hour 50 minutes' AND NOW() + INTERVAL '2 hours 10 minutes'
+        AND a.reminder_h2_sent = false AND a.status IN ('scheduled','confirmed')
+      LIMIT 200`);
+    const rows = (r?.rows ?? r ?? []) as any[];
+    if (!rows.length) return;
+    let done = 0;
+    for (const a of rows) {
+      const heure = new Date(a.appointment_date).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", timeZone: "Africa/Douala" });
+      const dName = (a.derm_name || "votre dermatologue").replace(/^dr\.?\s*/i, "");
+      const pName = fn(a.patient_name || "") || "Patient";
+      const lieu = a.type === "glowscan" ? "Consultation en ligne" : "au cabinet";
+      // 1) Push dermatologue
+      if (a.derm_user_id) await sendPushToUsers(new Set([a.derm_user_id]), {
+        title: "RDV dans 2 heures", body: `${pName} · ${heure} · ${a.type}`, url: "/derm/agenda", requireInteraction: true,
+      } as any);
+      // 2) Push patient (si compte lié)
+      if (a.patient_id) await sendPushToUsers(new Set([a.patient_id]), {
+        title: `Rappel RDV Dr ${dName}`, body: `Votre RDV est dans 2 heures. ${heure} · ${lieu}`, url: "/",
+      } as any);
+      // 3) WhatsApp patient (backup — part toujours si numéro)
+      if (a.patient_contact) {
+        const msg = `Bonjour ${pName}, rappel : votre RDV avec Dr ${dName} est dans 2 heures.\nÀ ${heure}. ${lieu}.`;
+        try { await sendWhatsAppText(a.patient_contact, msg); } catch {}
+      }
+      try { await db.execute(sql`UPDATE appointments SET reminder_h2_sent = true WHERE id = ${a.id}`); } catch {}
+      done++;
+    }
+    log(`⏰ Rappels RDV H-2 : ${done}/${rows.length} envoyés`);
+  } catch (err) {
+    log(`❌ Erreur rappels RDV H-2 : ${err}`);
+  }
+}
+
 export function startCronJobs() {
   // ✅ CORRECTION 2: Skip en mode test
   if (process.env.NODE_ENV === "test") {
@@ -473,6 +518,10 @@ export function startCronJobs() {
   // ✅ Suivi consultation J-1 (triple canal) — tous les jours à 8h00 (Douala)
   cron.schedule("0 8 * * *", sendConsultationFollowUps, { timezone: "Africa/Douala" });
   log("✅ Cron suivi consultation J-1 actif — 8h00 (Douala)");
+
+  // ✅ Rappels RDV agenda H-2 — toutes les 15 minutes
+  cron.schedule("*/15 * * * *", sendAppointmentH2Reminders, { timezone: "Africa/Douala" });
+  log("✅ Cron rappels RDV H-2 actif — toutes les 15 min (Douala)");
 
   // ✅ Emails DERM automatiques
   cron.schedule("0 8 * * *", sendTrialReminders, { timezone: "Africa/Douala" });   // fin d'essai J-3/J-1

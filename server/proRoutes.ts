@@ -2118,6 +2118,113 @@ Analyse ce cas selon tes règles. Vérifie particulièrement la cohérence entre
     });
   });
 
+  // ═══════════════════════════════════════════════════════════════════════
+  // AGENDA — rendez-vous du dermatologue. Classification auto de la priorité,
+  // détection de conflits, rappel H-2 (cron). Mobile-first côté client.
+  // ═══════════════════════════════════════════════════════════════════════
+  async function ensureAppointmentsTable() {
+    try {
+      await db.execute(sql`CREATE TABLE IF NOT EXISTS appointments (
+        id serial PRIMARY KEY,
+        dermatologue_id integer,
+        patient_id text,
+        patient_name varchar(100),
+        patient_contact varchar(50),
+        appointment_date timestamptz NOT NULL,
+        duration_minutes integer DEFAULT 30,
+        type varchar(20) DEFAULT 'consultation',
+        priority varchar(10) DEFAULT 'normal',
+        notes text,
+        status varchar(20) DEFAULT 'scheduled',
+        reminder_h2_sent boolean DEFAULT false,
+        created_at timestamptz DEFAULT now()
+      )`);
+    } catch (e) { console.warn("[agenda] create table:", (e as any)?.message); }
+  }
+
+  // Classification auto (mots-clés) : urgence / suivi / consultation.
+  function classifyAppointment(type: string, notes: string): { type: string; priority: string } {
+    const t = `${type || ""} ${notes || ""}`.toLowerCase();
+    if (/urgent|urgence|rapide|douleur|infection|saigne|aigu|abc[eè]s/.test(t)) return { type: "urgence", priority: "urgent" };
+    if (/suivi|contr[oô]le|suite|revoir|[eé]volution|post-op/.test(t)) return { type: "suivi", priority: "normal" };
+    if (type === "urgence") return { type: "urgence", priority: "urgent" };
+    if (type === "suivi") return { type: "suivi", priority: "normal" };
+    return { type: type || "consultation", priority: "normal" };
+  }
+
+  // GET /api/pro/appointments?date=YYYY-MM-DD (jour) OU ?from=..&to=.. (plage)
+  app.get("/api/pro/appointments", requireProAccess, async (req: any, res) => {
+    try {
+      await ensureAppointmentsTable();
+      const date = String(req.query.date || "");
+      const from = String(req.query.from || "");
+      const to = String(req.query.to || "");
+      let rows: any[];
+      if (from && to) {
+        rows = Rows(await db.execute(sql`SELECT * FROM appointments WHERE dermatologue_id = ${req.proAccount.id} AND appointment_date >= ${from} AND appointment_date < ${to} AND status <> 'cancelled' ORDER BY appointment_date ASC`));
+      } else if (date) {
+        rows = Rows(await db.execute(sql`SELECT * FROM appointments WHERE dermatologue_id = ${req.proAccount.id} AND appointment_date::date = ${date}::date AND status <> 'cancelled' ORDER BY appointment_date ASC`));
+      } else {
+        rows = Rows(await db.execute(sql`SELECT * FROM appointments WHERE dermatologue_id = ${req.proAccount.id} AND appointment_date >= (CURRENT_DATE - INTERVAL '1 day') AND status <> 'cancelled' ORDER BY appointment_date ASC LIMIT 200`));
+      }
+      res.json({ appointments: rows });
+    } catch (e) { res.json({ appointments: [] }); }
+  });
+
+  // POST /api/pro/appointments — créer un RDV (classification auto + conflit).
+  app.post("/api/pro/appointments", requireProAccess, async (req: any, res) => {
+    try {
+      await ensureAppointmentsTable();
+      const b = req.body || {};
+      const when = new Date(b.appointmentDate);
+      if (!b.appointmentDate || isNaN(when.getTime())) return res.status(400).json({ message: "Date/heure invalide" });
+      const duration = Math.max(5, Math.min(240, parseInt(String(b.durationMinutes), 10) || 30));
+      const cls = classifyAppointment(String(b.type || ""), String(b.notes || ""));
+      const name = typeof b.patientName === "string" ? b.patientName.trim().slice(0, 100) : null;
+      const contact = typeof b.patientContact === "string" ? b.patientContact.replace(/[^0-9+ ]/g, "").slice(0, 50) : null;
+      const notes = typeof b.notes === "string" ? b.notes.trim().slice(0, 1000) : null;
+      const patientId = typeof b.patientId === "string" ? b.patientId : null;
+
+      // Détection de conflit : un RDV chevauchant sur ±30 min (sauf si forceConflict).
+      const conflict = Rows(await db.execute(sql`
+        SELECT id, patient_name, appointment_date FROM appointments
+        WHERE dermatologue_id = ${req.proAccount.id} AND status <> 'cancelled'
+          AND appointment_date BETWEEN ${new Date(when.getTime() - 29 * 60000).toISOString()} AND ${new Date(when.getTime() + 29 * 60000).toISOString()}
+        LIMIT 1`));
+      if (conflict.length && !b.forceConflict) {
+        return res.status(409).json({ conflict: true, message: "Un rendez-vous existe déjà à cette heure.", existing: conflict[0] });
+      }
+
+      const [row] = Rows(await db.execute(sql`
+        INSERT INTO appointments (dermatologue_id, patient_id, patient_name, patient_contact, appointment_date, duration_minutes, type, priority, notes)
+        VALUES (${req.proAccount.id}, ${patientId}, ${name}, ${contact}, ${when.toISOString()}, ${duration}, ${cls.type}, ${cls.priority}, ${notes})
+        RETURNING *`));
+      res.json({ ok: true, appointment: row });
+    } catch (e) {
+      console.error("[agenda] create:", e);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // PATCH statut (confirmé / fait / annulé) — DELETE = annulation douce.
+  app.patch("/api/pro/appointments/:id", requireProAccess, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      const status = ["scheduled", "confirmed", "done", "cancelled"].includes(String(req.body?.status)) ? String(req.body.status) : null;
+      if (!status) return res.status(400).json({ message: "Statut invalide" });
+      await db.execute(sql`UPDATE appointments SET status = ${status} WHERE id = ${id} AND dermatologue_id = ${req.proAccount.id}`);
+      res.json({ ok: true });
+    } catch (e) { res.status(500).json({ message: "Erreur serveur" }); }
+  });
+
+  app.delete("/api/pro/appointments/:id", requireProAccess, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      await db.execute(sql`UPDATE appointments SET status = 'cancelled' WHERE id = ${id} AND dermatologue_id = ${req.proAccount.id}`);
+      res.json({ ok: true });
+    } catch (e) { res.status(500).json({ message: "Erreur serveur" }); }
+  });
+
   // GET /api/pro/profile — profil public actuel du dermatologue connecté.
   app.get("/api/pro/profile", requireProAccess, async (req: any, res) => {
     try {

@@ -76,6 +76,7 @@ const ConsultationConfirmee = lazyWithRetry(() => import("@/pages/ConsultationCo
 const DermPublicProfile = lazyWithRetry(() => import("@/pages/DermPublicProfile"));
 const DermPublicList = lazyWithRetry(() => import("@/pages/DermPublicList"));
 const ProConsultations = lazyWithRetry(() => import("@/pages/pro/ProConsultations"));
+const ProAgenda = lazyWithRetry(() => import("@/pages/pro/ProAgenda"));
 const Privacy = lazyWithRetry(() => import("@/pages/Privacy"));
 const DermatoPortal = lazyWithRetry(() => import("@/pages/DermatoPortal"));
 const DermLanding = lazyWithRetry(() => import("@/pages/DermLanding"));
@@ -128,6 +129,7 @@ function Router() {
       <Route path="/derm/cabinet" component={ProCabinet} />
       <Route path="/derm/profil-public" component={ProPublicProfile} />
       <Route path="/derm/consultations" component={ProConsultations} />
+      <Route path="/derm/agenda" component={ProAgenda} />
       <Route path="/derm/confreres" component={ProPeerReviews} />
       <Route path="/derm/profil" component={ProProfil} />
       <Route path="/derm/magic" component={ProMagicLink} />
