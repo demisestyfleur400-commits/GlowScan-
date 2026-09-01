@@ -231,6 +231,20 @@ export default function Admin() {
     } catch (e) { console.error("[certify] err", e); }
   };
 
+  const activateSubscription = async (id: number, name: string) => {
+    const months = parseInt(prompt(`Activer l'abonnement de ${name || "ce dermatologue"} pour combien de mois ?`, "12") || "12", 10);
+    if (!months || months < 1) return;
+    try {
+      const res = await fetch(`/api/admin/dermatologues/${id}/activate-subscription`, {
+        method: "POST", headers: { "Content-Type": "application/json", "x-admin-key": adminKey },
+        body: JSON.stringify({ months }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (res.ok) { alert(`✅ Abonnement actif jusqu'au ${d.expiresAt ? new Date(d.expiresAt).toLocaleDateString("fr-FR") : "—"}`); fetchDermActivity(adminKey); fetchDermCert(adminKey); }
+      else alert(d.message || "Erreur");
+    } catch (e) { console.error("[activate-sub] err", e); }
+  };
+
   const fetchFeatured = async () => {
     setFeaturedLoading(true);
     try {
@@ -1193,11 +1207,17 @@ export default function Admin() {
                               N° ordre : {d.licenseNumber || "—"} · {d.patientsCount} patient(s){d.slug ? ` · /dr/${d.slug}` : ""}
                             </p>
                           </div>
-                          <button onClick={() => toggleCertify(d.id, !d.isCertified)}
-                            style={{ flexShrink: 0, fontSize: 11, fontWeight: 800, padding: "7px 12px", borderRadius: 9999, cursor: "pointer", border: "none",
-                              background: d.isCertified ? "rgba(244,63,94,0.15)" : DS.violet, color: d.isCertified ? "#f9a8d4" : "#fff" }}>
-                            {d.isCertified ? "Retirer" : "Certifier"}
-                          </button>
+                          <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                            <button onClick={() => activateSubscription(d.id, d.fullName)}
+                              style={{ fontSize: 11, fontWeight: 800, padding: "7px 12px", borderRadius: 9999, cursor: "pointer", border: "none", background: "#059669", color: "#fff" }}>
+                              Activer l'abo
+                            </button>
+                            <button onClick={() => toggleCertify(d.id, !d.isCertified)}
+                              style={{ fontSize: 11, fontWeight: 800, padding: "7px 12px", borderRadius: 9999, cursor: "pointer", border: "none",
+                                background: d.isCertified ? "rgba(244,63,94,0.15)" : DS.violet, color: d.isCertified ? "#f9a8d4" : "#fff" }}>
+                              {d.isCertified ? "Retirer" : "Certifier"}
+                            </button>
+                          </div>
                         </div>
                         <div className="flex flex-wrap gap-1.5" style={{ marginTop: 7 }}>
                           <Crit ok={d.criteria.license} label="N° ordre" />

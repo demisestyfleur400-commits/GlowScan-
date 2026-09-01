@@ -665,6 +665,39 @@ export async function registerRoutes(
     }
   });
 
+  // Active / prolonge l'abonnement d'un dermatologue depuis l'admin (paiement reçu
+  // hors plateforme). Corrige le cas « profil activé mais toujours expiré » : la
+  // certification ne suffit pas, il faut poser subscription_status='active'.
+  app.post("/api/admin/dermatologues/:id/activate-subscription", async (req: any, res) => {
+    if (!checkDatasetKey(req)) return res.status(403).json({ message: "Accès refusé" });
+    try {
+      const id = parseInt(req.params.id);
+      const months = Math.max(1, Math.min(36, parseInt(String(req.body?.months), 10) || 12));
+      const [row] = Rows(await db.execute(sql`
+        UPDATE pro_accounts
+        SET subscription_status = 'active',
+            subscription_expires_at = (NOW() + ${months} * INTERVAL '1 month')
+        WHERE id = ${id}
+        RETURNING user_id, subscription_expires_at`));
+      if (!row) return res.status(404).json({ message: "Dermatologue introuvable" });
+      try {
+        if (row.user_id) pushToUser(row.user_id, "Abonnement activé ✅", "Votre abonnement GlowScan DERM est actif. Vous pouvez lancer des analyses et recevoir des patients.", "/derm/dashboard");
+        const du = Rows(await db.execute(sql`SELECT email, name FROM users WHERE id = ${row.user_id}`))[0] as any;
+        if (du?.email) {
+          const { sendEmail } = await import("./email");
+          const base = (process.env.PUBLIC_BASE_URL || "https://glow-scan.com").replace(/\/$/, "");
+          sendEmail(du.email, "Votre abonnement GlowScan DERM est actif ✅",
+            `<p>Bonjour ${du.name || ""},</p><p>Votre abonnement est <strong>actif</strong> jusqu'au ${new Date(row.subscription_expires_at).toLocaleDateString("fr-FR")}. Vous pouvez lancer des analyses et recevoir des patients.</p><p><a href="${base}/derm/dashboard">Ouvrir mon tableau de bord →</a></p>`,
+            `Abonnement actif jusqu'au ${new Date(row.subscription_expires_at).toLocaleDateString("fr-FR")}.`).catch(() => {});
+        }
+      } catch {}
+      res.json({ ok: true, expiresAt: row.subscription_expires_at });
+    } catch (e) {
+      console.error("[admin activate-subscription] error:", e);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
   // Ouvre une consultation (statut pending_payment). Embarque le contexte (photo + diagnostic).
   app.post("/api/consultations", consultationLimiter, async (req: any, res) => {
     const userId = getUID(req);
