@@ -374,6 +374,23 @@ export default function ProCabinet() {
           )}
         </ProCard>
 
+        {/* Revoir la visite guidée (onboarding) */}
+        <ProCard className="p-5">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="font-extrabold text-base" style={{ color: INK }}>Visite guidée</h2>
+              <p className="text-xs mt-0.5" style={{ color: "#64748B" }}>Revoir la présentation de GlowScan DERM en 2 minutes.</p>
+            </div>
+            <button
+              onClick={async () => { try { await updateAcc.mutateAsync({ onboardingDone: false }); } catch {} window.location.href = "/derm/dashboard"; }}
+              className="flex-shrink-0 px-4 py-2 rounded-full text-sm font-extrabold text-white active:scale-95 transition-all"
+              style={{ background: NAVY }}
+            >
+              Revoir →
+            </button>
+          </div>
+        </ProCard>
+
         {/* Mon équipe — secrétaires */}
         <ProCard className="p-5">
           <div className="flex items-center justify-between mb-3">

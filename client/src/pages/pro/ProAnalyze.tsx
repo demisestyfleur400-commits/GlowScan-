@@ -42,6 +42,7 @@ const ResultCard = lazy(() =>
 );
 import { useToast } from "@/hooks/use-toast";
 import { SubscriptionExpiredBanner } from "@/components/pro/SubscriptionExpiredBanner";
+import { ContextualTip } from "@/components/pro/ContextualTip";
 import type { AnalysisResult, Patient } from "@shared/schema";
 import { ProLayout, ProCard, ProInput } from "@/components/ProLayout";
 import { ClinicalDossierForm, type ClinicalRecord } from "@/components/pro/ClinicalDossierForm";
@@ -1612,6 +1613,12 @@ export default function ProAnalyze() {
                 {/* Triage « orienter vers un dermatologue » retiré : ici l'utilisateur
                     EST le dermatologue — cette orientation n'a pas de sens. */}
 
+                {/* Tooltip contextuel — premier diagnostic IA */}
+                <ContextualTip tipKey="analyse_ia"
+                  title="💡 Suggestion indicative"
+                  body="Ceci est une suggestion de l'IA. Votre diagnostic prime toujours — validez ou corrigez en un clic." />
+
+
                 {/* ── Brique 4 : Confiance + escalade ── */}
                 <ConfidenceEscalation result={result} />
 
@@ -2109,6 +2116,11 @@ export default function ProAnalyze() {
                       </p>
                     )}
                   </div>
+
+                  {/* Tooltip contextuel — premier rapport PDF */}
+                  <ContextualTip tipKey="rapport_pdf"
+                    title="📄 Rapport à votre nom"
+                    body="Ce rapport est généré avec votre nom et votre numéro d'ordre. Il part automatiquement sur le WhatsApp de votre patient à la clôture." />
 
                   {/* Actions — Rapport clinique = observation médicale UNIQUEMENT
                       (plus de pages patient B2C collées en haut). */}
