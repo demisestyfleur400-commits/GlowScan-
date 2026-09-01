@@ -169,21 +169,8 @@ export default function DermLanding() {
           </motion.div>
           <motion.div {...fade(0.1)} style={{ display: "flex", flexWrap: "wrap", gap: 12, justifyContent: "center" }}>
             <Link href="/derm/inscription"><span style={btnViolet}>Créer mon profil gratuitement</span></Link>
-            <Link href="/derm/demo"><span style={btnOutline}>Voir comment ça marche</span></Link>
           </motion.div>
           <motion.div {...fade(0.2)}><HeroArt /></motion.div>
-        </div>
-      </section>
-
-      {/* ══ 3 MOTS CLÉS ══ */}
-      <section style={{ background: C.blue, padding: "26px 0" }}>
-        <div style={{ ...wrap, display: "flex", justifyContent: "center", alignItems: "center", gap: 18, flexWrap: "wrap" }}>
-          {["Numérisé", "Connecté", "Africain"].map((w, i) => (
-            <div key={w} style={{ display: "flex", alignItems: "center", gap: 18 }}>
-              <span style={{ fontSize: 26, fontWeight: 900, color: "#fff", letterSpacing: "-0.5px" }}>{w}</span>
-              {i < 2 && <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 22 }}>·</span>}
-            </div>
-          ))}
         </div>
       </section>
 
@@ -236,27 +223,6 @@ export default function DermLanding() {
         </div>
       </section>
 
-      {/* ══ 6. POURQUOI GLOWSCAN DERM ══ */}
-      <section style={{ background: C.lightBlue, padding: "52px 0" }}>
-        <div style={wrap}>
-          <motion.h2 {...fade()} style={{ ...h2, textAlign: "center", margin: "0 0 28px" }}>Pourquoi des dermatologues choisissent GlowScan DERM ?</motion.h2>
-          {[
-            { i: "clock", t: "Gagner du temps", d: "Vous passez 30 minutes à rédiger chaque compte-rendu. GlowScan DERM le génère en 3 minutes. Avec votre nom. Avec votre signature. Professionnel." },
-            { i: "users", t: "Recevoir des patients via GlowScan", d: "Des patients africains font leur analyse sur GlowScan chaque jour. Quand leur score est faible, GlowScan leur propose de consulter un dermatologue. Ce dermatologue, c'est vous." },
-            { i: "globe", t: "Consulter dans toute l'Afrique", d: "Votre expertise ne s'arrête pas à votre ville. Avec les consultations en ligne, vous consultez un patient à Douala, Cotonou, Kinshasa ou Dakar — depuis votre cabinet. 3 500 FCFA par consultation, payé via Mobile Money." },
-            { i: "users", t: "Ne plus jamais rester seul devant un cas difficile", d: "Un doute sur un diagnostic ? En un geste, vous envoyez le cas — la photo, l'âge et le sexe du patient, jamais son nom — à un confrère dermatologue du réseau GlowScan. Il vous répond directement dans l'application. C'est comme demander l'avis d'un collègue dans le couloir, sauf qu'il peut être à Yaoundé ou à Kinshasa. Vous restez le médecin traitant : c'est un deuxième regard, pas une délégation." },
-          ].map((r, k) => (
-            <motion.div key={k} {...fade(k * 0.08)} style={{ display: "flex", gap: 16, alignItems: "flex-start", background: "#fff", border: `1px solid ${C.border}`, borderRadius: 18, padding: 20, marginBottom: 12 }}>
-              <IcoBox name={r.i} tone={k === 2 ? "violet" : "blue"} />
-              <div>
-                <p style={{ fontSize: 16.5, fontWeight: 900, color: C.ink, margin: "0 0 4px" }}>{r.t}</p>
-                <p style={{ fontSize: 14, color: C.inkMuted, lineHeight: 1.6, margin: 0 }}>{r.d}</p>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      </section>
-
       {/* ══ 8. COMMENT ÇA MARCHE — FLUX 4 ÉTAPES ══ */}
       <section style={{ background: C.white, padding: "52px 0" }}>
         <div style={wrap}>
@@ -265,7 +231,7 @@ export default function DermLanding() {
             {[
               { n: "1", i: "phone", t: "Le patient fait son analyse (gratuit)", d: "Photo de peau + Glow Score sur son téléphone." },
               { n: "2", i: "shield", t: "GlowScan détecte un cas sérieux", d: "Score faible → recommandation de consulter un dermatologue." },
-              { n: "3", i: "pin", t: "Le patient consulte VOTRE profil et paie", d: "Il vous trouve, voit vos avis, et réserve — 3 500 FCFA." },
+              { n: "3", i: "pin", t: "Le patient consulte VOTRE profil et paie", d: "Il vous trouve, voit vos avis, et réserve sa consultation." },
               { n: "4", i: "chat", t: "Vous consultez, le PDF part sur WhatsApp", d: "Vous documentez, signez, le patient reçoit son rapport." },
             ].map((s, k) => (
               <motion.div key={k} {...fade(k * 0.07)} style={{ display: "flex", gap: 14, alignItems: "center", background: C.lightBlue, borderRadius: 16, padding: 16 }}>
@@ -310,7 +276,7 @@ export default function DermLanding() {
                 <span style={{ color: "#f59e0b", letterSpacing: 1 }}>★★★★★</span>
                 <span style={{ fontSize: 11, color: C.inkMuted }}>4,9 · 37 avis</span>
               </div>
-              <div style={{ marginTop: 12, background: C.violet, color: "#fff", textAlign: "center", borderRadius: 10, padding: "11px", fontSize: 13, fontWeight: 800 }}>Consulter en ligne — 3 500 FCFA</div>
+              <div style={{ marginTop: 12, background: C.violet, color: "#fff", textAlign: "center", borderRadius: 10, padding: "11px", fontSize: 13, fontWeight: 800 }}>Consulter en ligne</div>
             </div>
           </motion.div>
 

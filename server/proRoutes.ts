@@ -949,11 +949,11 @@ export function registerProRoutes(app: Express) {
     const isAdmin = (req.session as any)?.isAdmin === true;
 
     // Colonnes hors schéma Drizzle → lues en SQL brut.
-    let b2cAvailable = false, consultPriceFcfa = 3500, country: string | null = null;
+    let b2cAvailable = false, consultPriceFcfa = 4800, country: string | null = null;
     try {
       const r: any = await db.execute(sql`SELECT b2c_available, consult_price_fcfa, country FROM pro_accounts WHERE id = ${acc.id}`);
       const row = (r?.rows ?? r ?? [])[0];
-      if (row) { b2cAvailable = row.b2c_available === true; consultPriceFcfa = Number(row.consult_price_fcfa) || 3500; country = row.country ?? null; }
+      if (row) { b2cAvailable = row.b2c_available === true; consultPriceFcfa = Number(row.consult_price_fcfa) || 4800; country = row.country ?? null; }
     } catch {}
 
     res.json({
@@ -2027,8 +2027,10 @@ export function registerProRoutes(app: Express) {
         } catch (e) { console.warn("[close] follow-up:", (e as any)?.message); }
       }
 
-      // Part dermatologue (memo produit : 3 500 patient → 2 100 dermato / 1 400 plateforme).
-      const payoutFcfa = Math.round((Number(c.priceFcfa) || 3500) * 0.6);
+      // Part dermatologue : prix consultation − 1 300 FCFA (commission plateforme fixe).
+      // Ex. défaut 4 800 → 3 500 dermato / 1 300 plateforme. Prix flexible par dermato.
+      const PLATFORM_FEE = 1300;
+      const payoutFcfa = Math.max(0, (Number(c.priceFcfa) || 4800) - PLATFORM_FEE);
       res.json({ ok: true, payoutFcfa, followUpDate });
     } catch (err) {
       console.error("[pro/consultations close] error:", err);
@@ -2281,7 +2283,7 @@ Analyse ce cas selon tes règles. Vérifie particulièrement la cohérence entre
         SELECT slug, full_name, city, bio, specialties, photo_url, whatsapp_number, phone,
                COALESCE(public_profile_enabled,true) AS public_enabled,
                COALESCE(b2c_available,false) AS b2c_available,
-               COALESCE(consult_price_fcfa,3500) AS price,
+               COALESCE(consult_price_fcfa,4800) AS price,
                COALESCE(is_certified,false) AS is_certified, certified_at, profile_completed_at
         FROM pro_accounts WHERE id = ${id}`))[0] as any;
       res.json({ profile: {
@@ -2289,7 +2291,7 @@ Analyse ce cas selon tes règles. Vérifie particulièrement la cohérence entre
         bio: r?.bio || "", specialties: Array.isArray(r?.specialties) ? r.specialties : [],
         photoUrl: r?.photo_url || null, whatsapp: r?.whatsapp_number || r?.phone || "",
         publicProfileEnabled: r?.public_enabled === true, b2cAvailable: r?.b2c_available === true,
-        price: Number(r?.price) || 3500, certified: r?.is_certified === true,
+        price: Number(r?.price) || 4800, certified: r?.is_certified === true,
         certifiedAt: r?.certified_at || null, profileCompletedAt: r?.profile_completed_at || null,
       } });
     } catch (err) {
@@ -2352,7 +2354,7 @@ Analyse ce cas selon tes règles. Vérifie particulièrement la cohérence entre
         }
       }
       if (b.consultPriceFcfa !== undefined) {
-        const price = Math.max(500, Math.min(50000, parseInt(String(b.consultPriceFcfa), 10) || 3500));
+        const price = Math.max(500, Math.min(50000, parseInt(String(b.consultPriceFcfa), 10) || 4800));
         await db.execute(sql`UPDATE pro_accounts SET consult_price_fcfa = ${price} WHERE id = ${id}`);
       }
 

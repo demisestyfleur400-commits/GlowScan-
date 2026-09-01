@@ -18,10 +18,9 @@ const MTN_NUMBER = "674377959";
 const ORANGE_NUMBER = "690501392";
 const PRO_PRICE = 10000;
 
-// Prix consultation en ligne — FIXÉ par GlowScan (non éditable par le dermato)
-const CONSULT_PRICE = 3500;
-const DERM_SHARE = 2100;
-const PLATFORM_SHARE = 1400;
+// Prix consultation en ligne — MODIFIABLE par chaque dermatologue.
+const DEFAULT_CONSULT_PRICE = 4800; // défaut ; chaque dermato peut le modifier
+const PLATFORM_FEE = 1300;          // commission fixe GlowScan par consultation
 
 const DS = {
   surface: DERM.surface,
@@ -49,7 +48,7 @@ export default function ProCabinet() {
   const [licenseNumber, setLicenseNumber] = useState("");
   // Opt-in consultation B2C
   const [b2cAvailable, setB2cAvailable] = useState(false);
-  const [consultPrice, setConsultPrice] = useState("3000");
+  const [consultPrice, setConsultPrice] = useState("4800");
   const [savingB2c, setSavingB2c] = useState(false);
 
   // ── Équipe / secrétaires ──
@@ -122,7 +121,7 @@ export default function ProCabinet() {
       setCountry((accData.account as any).country || "");
       setLicenseNumber((accData.account as any).licenseNumber || "");
       setB2cAvailable((accData.account as any).b2cAvailable === true);
-      setConsultPrice(String((accData.account as any).consultPriceFcfa ?? 3000));
+      setConsultPrice(String((accData.account as any).consultPriceFcfa ?? 4800));
     }
   }, [accData?.account]);
 
@@ -295,29 +294,35 @@ export default function ProCabinet() {
               <span style={{ position: "absolute", top: 3, left: b2cAvailable ? 23 : 3, width: 22, height: 22, borderRadius: "50%", background: "#fff", transition: "left .2s" }} />
             </button>
           </div>
-          {b2cAvailable && (
+          {b2cAvailable && (() => {
+            const priceNum = Math.max(0, parseInt(consultPrice, 10) || 0);
+            const dermShare = Math.max(0, priceNum - PLATFORM_FEE);
+            return (
             <div className="mb-4 rounded-xl p-4" style={{ background: "rgba(3,105,161,0.06)", border: "1px solid rgba(3,105,161,0.18)" }}>
-              <div className="flex items-center gap-2 mb-2">
-                <span style={{ fontSize: 15 }}>💬</span>
-                <p className="text-sm font-extrabold" style={{ color: INK }}>
-                  Consultations en ligne : {CONSULT_PRICE.toLocaleString("fr-FR")} FCFA
-                </p>
-              </div>
-              <p className="text-xs leading-relaxed" style={{ color: DS.body }}>
-                Prix <strong style={{ color: BLUE }}>fixé par GlowScan</strong> — vous recevez{" "}
-                <strong style={{ color: GREEN }}>{DERM_SHARE.toLocaleString("fr-FR")} FCFA</strong> par consultation.
-                GlowScan prend {PLATFORM_SHARE.toLocaleString("fr-FR")} FCFA.
+              <label className="text-xs font-extrabold block mb-1.5" style={{ color: INK }}>💬 Prix de votre consultation en ligne (FCFA)</label>
+              <input
+                type="number" inputMode="numeric" value={consultPrice}
+                onChange={(e) => setConsultPrice(e.target.value)}
+                placeholder="4800"
+                className="w-full rounded-xl px-3 py-2.5 text-sm font-extrabold outline-none"
+                style={{ background: "#fff", border: `1px solid ${SOFT_BORDER}`, color: INK }}
+              />
+              <p className="text-xs leading-relaxed mt-2" style={{ color: DS.body }}>
+                Vous fixez votre prix. Vous recevez{" "}
+                <strong style={{ color: GREEN }}>{dermShare.toLocaleString("fr-FR")} FCFA</strong> par consultation
+                (GlowScan prend {PLATFORM_FEE.toLocaleString("fr-FR")} FCFA de commission).
               </p>
-              <p className="text-[11px] mt-2" style={{ color: DS.muted }}>
-                Un tarif unique pour tous : pas de négociation, plus de confiance côté patient.
+              <p className="text-[11px] mt-1.5" style={{ color: DS.muted }}>
+                Prix conseillé : 4 800 FCFA. Modifiable à tout moment.
               </p>
             </div>
-          )}
+            );
+          })()}
           <button
             onClick={async () => {
               setSavingB2c(true);
               try {
-                await updateAcc.mutateAsync({ b2cAvailable, consultPriceFcfa: CONSULT_PRICE });
+                await updateAcc.mutateAsync({ b2cAvailable, consultPriceFcfa: Math.max(500, parseInt(consultPrice, 10) || DEFAULT_CONSULT_PRICE) });
                 toast({ title: b2cAvailable ? "Consultation en ligne activée ✅" : "Consultation en ligne désactivée" });
               } catch { toast({ title: "Erreur", variant: "destructive" }); }
               finally { setSavingB2c(false); }
