@@ -462,10 +462,8 @@ export default function ProPatient() {
         <FollowUpReminderCard patient={p as any} patientId={p.id} />
       )}
 
-      {/* Consentement dataset (RGPD) */}
-      {scans.length > 0 && (
-        <DatasetConsentCard patientId={p.id} initial={(p as any).datasetConsent === true} />
-      )}
+      {/* Consentement dataset retiré de la vue : le dermatologue consent déjà via
+          les CGU/confidentialité à l'inscription — inutile et anxiogène ici. */}
 
       {/* Demander un second avis confrère (cas anonymisé) */}
       {lastScan && (

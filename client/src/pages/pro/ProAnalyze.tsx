@@ -54,9 +54,8 @@ import { VoiceButton } from "@/components/VoiceButton";
 import { ToxicAlert } from "@/components/ToxicAlert";
 import { detectToxicProducts } from "@/lib/toxic-products";
 import { ClinicalRulesPanel } from "@/components/pro/ClinicalRulesPanel";
-import { evaluateRules, classifyTriage } from "@/lib/clinicalRules";
+import { evaluateRules } from "@/lib/clinicalRules";
 import { ConfidenceEscalation } from "@/components/pro/ConfidenceEscalation";
-import { TriageBadge } from "@/components/TriageBadge";
 
 const NAVY = "#7c3aed";
 const INK = "#0F172A";
@@ -973,14 +972,8 @@ export default function ProAnalyze() {
       validatedBy: doctorName && doctorName !== "—" ? `Dr ${doctorName}` : undefined,
       validatedAt: date,
     };
-    // Triage Engineering — classification en tête du rapport.
-    const tri = classifyTriage({
-      condition: r.condition, severity: r.severity, score: r.score, redFlags,
-      products: [previousProducts, clinicalRecord?.atcdCosmeto].filter(Boolean).join(", "),
-      durationText: problemDuration || clinicalRecord?.hmaDebut,
-      phototype: examen.phototype, keloidRisk: examen.keloidRisk,
-    });
-    obs.triageLabel = tri.label; obs.triageColor = tri.color; obs.triageReason = tri.reason;
+    // Triage « orienter vers un dermatologue » retiré du rapport DERM :
+    // le lecteur EST le dermatologue, cette orientation n'a pas de sens.
     return buildObservationDoc(obs);
 
     // ── (legacy) ancien template, conservé pour référence, désormais inatteignable ──
@@ -1616,17 +1609,8 @@ export default function ProAnalyze() {
                   products={detectToxicProducts([previousProducts, clinicalRecord?.atcdCosmeto].filter(Boolean).join(", "))}
                 />
 
-                {/* ── Triage Engineering : classification du cas ── */}
-                <TriageBadge triage={classifyTriage({
-                  condition: (result as any)?.condition,
-                  severity: (result as any)?.severity,
-                  score: (result as any)?.score,
-                  redFlags: (result as any)?.redFlags,
-                  products: [previousProducts, clinicalRecord?.atcdCosmeto].filter(Boolean).join(", "),
-                  durationText: problemDuration || clinicalRecord?.hmaDebut,
-                  phototype: examen.phototype,
-                  keloidRisk: examen.keloidRisk,
-                })} />
+                {/* Triage « orienter vers un dermatologue » retiré : ici l'utilisateur
+                    EST le dermatologue — cette orientation n'a pas de sens. */}
 
                 {/* ── Brique 4 : Confiance + escalade ── */}
                 <ConfidenceEscalation result={result} />

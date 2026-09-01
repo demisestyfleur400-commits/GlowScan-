@@ -425,7 +425,7 @@ export default function ProDashboard() {
               <p style={{ fontSize: 13, fontWeight: 800, color: DS.textPrimary, margin: 0 }}>
                 🩺 {pending.length} diagnostic{pending.length > 1 ? "s" : ""} à valider
               </p>
-              <span style={{ fontSize: 10, color: DS.textMuted }}>Valider enrichit le dataset GlowScan</span>
+              <span style={{ fontSize: 10, color: DS.textMuted }}>Valider améliore la précision de l'IA</span>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {pending.slice(0, 5).map((s) => (
