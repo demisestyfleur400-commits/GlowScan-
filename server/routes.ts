@@ -1508,6 +1508,7 @@ export async function registerRoutes(
         version: "1.0.0",
         checks: {
           database: dbOk ? "✅ online" : "❌ offline",
+          objectStorage: process.env.PRIVATE_OBJECT_DIR ? "✅ configuré" : "❌ non configuré (fallback base64)",
           responseTime: `${responseTime}ms`,
         },
         environment: process.env.NODE_ENV || "unknown",
