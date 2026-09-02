@@ -379,6 +379,9 @@ export default function DermLanding() {
           <p style={{ fontSize: 11, color: C.inkSoft, lineHeight: 1.6, maxWidth: 560, margin: "0 auto" }}>
             GlowScan DERM est un outil d'aide à la pratique médicale. Il ne se substitue pas au diagnostic médical et à la responsabilité du praticien.
           </p>
+          <p style={{ fontSize: 11, color: C.inkSoft, margin: "12px 0 0" }}>
+            © {new Date().getFullYear()} <strong>GlowScan Africa</strong> · GlowScan DERM est un produit GlowScan Africa.
+          </p>
         </div>
       </footer>
     </div>

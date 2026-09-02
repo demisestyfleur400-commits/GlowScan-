@@ -401,7 +401,7 @@ export default function Pro() {
           </div>
 
           <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] font-medium" style={{ borderTop: `1px solid ${DS.border}`, color: DS.muted }}>
-            <p>© {new Date().getFullYear()} GlowScan. Tous droits réservés.</p>
+            <p>© {new Date().getFullYear()} GlowScan Africa. Tous droits réservés.</p>
             <p className="flex items-center gap-1.5">
               <ShieldCheck className="w-4 h-4" style={{ color: "#6ee7b7" }} />
               Chiffrement de bout en bout conforme MINSANTÉ

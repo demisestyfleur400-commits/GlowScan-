@@ -82,7 +82,7 @@ function wrap(title: string, bodyHtml: string, cta?: { label: string; url: strin
     <h1 style="font-size:19px;margin:0 0 12px">${title}</h1>
     ${bodyHtml}
     ${btn}
-    <p style="font-size:11px;color:#94A3B8;margin:20px 0 0;border-top:1px solid #E2E8F0;padding-top:12px">GlowScan DERM · glow-scan.com — l'outil des dermatologues africains.</p>
+    <p style="font-size:11px;color:#94A3B8;margin:20px 0 0;border-top:1px solid #E2E8F0;padding-top:12px">GlowScan DERM · un produit GlowScan Africa · glow-scan.com — l'outil des dermatologues africains.</p>
   </div>`;
 }
 const strip = (h: string) => h.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
