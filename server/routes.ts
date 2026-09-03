@@ -15,6 +15,7 @@ import { classifyCondition, extractPhototype, calcAnnotationScore } from "./taxo
 import webpush from "web-push";
 import { db } from "./db";
 import { referrals, loyaltyPoints, subscriptions, scans, leads, premiumRequests, wellnessLogs, trainingData, proAccounts, consultations, consultationMessages, type TrainingData } from "@shared/schema";
+import { recommendSpecialty, SPECIALTY_LABEL } from "@shared/dermSpecialties";
 import { users } from "@shared/models/auth";
 import { eq, and, sql, gte, count, lte, desc, avg, inArray, isNull } from "drizzle-orm";
 import { whatsappClicks, orders, pageVisits } from "@shared/schema";
@@ -481,7 +482,9 @@ export async function registerRoutes(
   }
 
   // Liste des dermatologues consultables en B2C (opt-in b2c_available).
-  app.get("/api/b2c/dermatologists", async (_req: any, res) => {
+  app.get("/api/b2c/dermatologists", async (req: any, res) => {
+    // Sous-spécialité recommandée d'après la condition détectée (pour classer).
+    const recoSpec = recommendSpecialty(req.query?.condition ? String(req.query.condition) : null);
     try {
       // SELECT de base (colonnes toujours présentes) — ne casse jamais.
       const rows = Rows(await db.execute(sql`
@@ -505,17 +508,23 @@ export async function registerRoutes(
         const rr = Rows(await db.execute(sql`SELECT pro_account_id AS id, ROUND(AVG(rating)::numeric,1) AS avg, COUNT(rating) AS n FROM consultations WHERE rating IS NOT NULL GROUP BY pro_account_id`));
         rr.forEach((r: any) => ratings.set(Number(r.id), { avg: Number(r.avg) || 0, n: Number(r.n) || 0 }));
       } catch {}
-      res.json({ dermatologists: rows.map((r) => {
+      let list = rows.map((r) => {
         const e = extra.get(Number(r.id)) || {};
         const rt = ratings.get(Number(r.id)) || { avg: 0, n: 0 };
+        const specialties = Array.isArray(e.specialties) ? e.specialties : [];
         return {
           id: r.id, fullName: r.full_name, cabinet: r.cabinet_name, city: r.city,
           licenseNumber: r.license_number, price: Number(r.price) || 4800,
           slug: e.slug || null, certified: e.is_certified === true, photoUrl: e.photo_url || null,
-          specialties: Array.isArray(e.specialties) ? e.specialties : [],
+          specialties,
+          // Recommandé pour le cas du patient si sa spécialité correspond.
+          recommendedFor: !!(recoSpec && specialties.includes(recoSpec)),
           rating: rt.avg, ratingsCount: rt.n,
         };
-      }) });
+      });
+      // Les dermatos recommandés (spécialité adaptée) d'abord.
+      if (recoSpec) list = list.sort((a, b) => Number(b.recommendedFor) - Number(a.recommendedFor));
+      res.json({ dermatologists: list, recommendedSpecialty: recoSpec, recommendedLabel: recoSpec ? SPECIALTY_LABEL[recoSpec] : null });
     } catch (e) {
       res.json({ dermatologists: [] });
     }

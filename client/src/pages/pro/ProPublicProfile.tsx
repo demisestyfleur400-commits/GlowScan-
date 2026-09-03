@@ -4,18 +4,8 @@ import { useToast } from "@/hooks/use-toast";
 import { DERM } from "@/lib/design-tokens";
 import { Loader2, Copy, ExternalLink, Camera, CheckCircle2 } from "lucide-react";
 
-const SPECIALTIES: { key: string; label: string }[] = [
-  { key: "acne", label: "Acné" },
-  { key: "taches", label: "Taches" },
-  { key: "hyperpigmentation", label: "Hyperpigmentation" },
-  { key: "cheloides", label: "Chéloïdes" },
-  { key: "eczema", label: "Eczéma" },
-  { key: "peaux_melanisees", label: "Peaux mélanisées" },
-  { key: "cheveux", label: "Cheveux & cuir chevelu" },
-  { key: "anti_age", label: "Anti-âge" },
-  { key: "pediatrie", label: "Pédiatrie" },
-  { key: "esthetique", label: "Esthétique" },
-];
+import { SUB_SPECIALTIES } from "@shared/dermSpecialties";
+const SPECIALTIES = SUB_SPECIALTIES;
 
 async function compressPhoto(file: File): Promise<string> {
   const dataUrl = await new Promise<string>((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = rej; r.readAsDataURL(file); });

@@ -18,10 +18,11 @@ function urlBase64ToUint8Array(base64: string) {
   return arr;
 }
 
-interface Derm { id: number; fullName: string; cabinet?: string; city?: string; price: number; }
+interface Derm { id: number; fullName: string; cabinet?: string; city?: string; price: number; recommendedFor?: boolean; }
 
 export function ConsultationLauncher({ scanId, condition, imageUrl }: { scanId?: number | null; condition?: string; imageUrl?: string | null }) {
   const [derms, setDerms] = useState<Derm[]>([]);
+  const [recommendedLabel, setRecommendedLabel] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [step, setStep] = useState<"list" | "pay" | "done">("list");
   const [selected, setSelected] = useState<Derm | null>(null);
@@ -81,9 +82,11 @@ export function ConsultationLauncher({ scanId, condition, imageUrl }: { scanId?:
   };
 
   useEffect(() => {
-    fetch("/api/b2c/dermatologists")
+    // On passe la condition détectée → le serveur classe les dermatos par
+    // sous-spécialité adaptée et marque les « recommandés pour votre cas ».
+    fetch(`/api/b2c/dermatologists${condition ? `?condition=${encodeURIComponent(condition)}` : ""}`)
       .then((r) => r.json())
-      .then((d) => setDerms(d.dermatologists || []))
+      .then((d) => { setDerms(d.dermatologists || []); setRecommendedLabel(d.recommendedLabel || null); })
       .catch(() => setDerms([]))
       .finally(() => setLoading(false));
     fetch("/api/payments/config")
@@ -209,11 +212,19 @@ export function ConsultationLauncher({ scanId, condition, imageUrl }: { scanId?:
         {/* ── ÉTAPE : choisir un dermatologue ── */}
         {!needLogin && step === "list" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {recommendedLabel && derms.some((d) => d.recommendedFor) && (
+              <p style={{ fontSize: 11.5, color: "#6b7280", margin: "0 0 2px" }}>
+                Pour ton cas, on te conseille un spécialiste en <strong style={{ color: VIOLET }}>{recommendedLabel}</strong> :
+              </p>
+            )}
             {derms.map((d) => (
-              <div key={d.id} style={{ display: "flex", alignItems: "center", gap: 12, background: "#fff", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 14, padding: "10px 12px" }}>
+              <div key={d.id} style={{ display: "flex", alignItems: "center", gap: 12, background: "#fff", border: d.recommendedFor ? "1.5px solid rgba(124,58,237,0.5)" : "1px solid rgba(0,0,0,0.06)", borderRadius: 14, padding: "10px 12px" }}>
                 <div style={{ width: 44, height: 44, borderRadius: 12, background: "linear-gradient(135deg,rgba(167,139,250,0.25),rgba(124,58,237,0.15))", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>👩🏾‍⚕️</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ fontSize: 13, fontWeight: 800, color: "#1a1a2e", margin: 0 }}>Dr {d.fullName}</p>
+                  {d.recommendedFor && (
+                    <span style={{ display: "inline-block", fontSize: 9.5, fontWeight: 800, color: VIOLET, background: "rgba(124,58,237,0.1)", borderRadius: 9999, padding: "1px 7px", margin: "2px 0" }}>✓ Recommandé pour ton cas</span>
+                  )}
                   <p style={{ fontSize: 11, color: "#6b7280", margin: "1px 0 0" }}>{d.cabinet || "Dermatologue"}{d.city ? ` · ${d.city}` : ""}</p>
                   <p style={{ fontSize: 11, fontWeight: 800, color: VIOLET, margin: "2px 0 0" }}>{d.price.toLocaleString("fr-FR")} FCFA</p>
                 </div>
