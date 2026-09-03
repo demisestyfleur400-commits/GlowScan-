@@ -21,6 +21,8 @@ import { DermOnboarding } from "@/components/pro/DermOnboarding";
 import { DermNotifPrompt } from "@/components/DermNotifPrompt";
 import { DERM, DERM_LOGO } from "@/lib/design-tokens";
 import { computeProfileScore, profileLabel } from "@/lib/profile-score";
+import { SUB_SPECIALTIES } from "@shared/dermSpecialties";
+const SUBSPEC_KEYS = new Set(SUB_SPECIALTIES.map((s) => s.key));
 
 const DS = {
   bg: DERM.bg,
@@ -203,6 +205,16 @@ export default function ProDashboard() {
     <ProLayout>
       {/* ══ BANNIÈRE ABONNEMENT EXPIRÉ (priorité max — explique le blocage) ══ */}
       <SubscriptionExpiredBanner />
+      {/* ══ RAPPEL SOUS-SPÉCIALITÉS (pour être proposé aux bons patients) ══ */}
+      {accData?.account && !((acc as any)?.specialties || []).some((k: string) => SUBSPEC_KEYS.has(k)) && (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, background: "rgba(124,58,237,0.06)", border: "1px solid rgba(124,58,237,0.22)", borderRadius: 16, padding: "12px 14px", marginBottom: 16 }}>
+          <div style={{ minWidth: 0 }}>
+            <p style={{ fontSize: 13, fontWeight: 800, color: DS.textPrimary, margin: 0 }}>Précisez vos sous-spécialités 🩺</p>
+            <p style={{ fontSize: 11.5, color: DS.textMuted, margin: "2px 0 0", lineHeight: 1.5 }}>Indiquez vos domaines (esthétique, pédiatrie, trichologie…) pour être proposé aux patients qui cherchent votre expertise.</p>
+          </div>
+          <Link href="/derm/profil-public" style={{ flexShrink: 0, background: "#7C3AED", color: "#fff", borderRadius: 9999, padding: "9px 16px", fontSize: 12.5, fontWeight: 800, textDecoration: "none" }}>Choisir →</Link>
+        </div>
+      )}
       {/* ══ BANNIÈRE COMPLÉTION PROFIL (priorité absolue — disparaît à 100%) ══ */}
       {profileScore < 100 && (
         <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: 16 }}>
