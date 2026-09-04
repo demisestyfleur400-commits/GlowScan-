@@ -43,6 +43,7 @@ const ResultCard = lazy(() =>
 import { useToast } from "@/hooks/use-toast";
 import { SubscriptionExpiredBanner } from "@/components/pro/SubscriptionExpiredBanner";
 import { ContextualTip } from "@/components/pro/ContextualTip";
+import { LesionArgumentation } from "@/components/pro/LesionArgumentation";
 import type { AnalysisResult, Patient } from "@shared/schema";
 import { ProLayout, ProCard, ProInput } from "@/components/ProLayout";
 import { ClinicalDossierForm, type ClinicalRecord } from "@/components/pro/ClinicalDossierForm";
@@ -2077,6 +2078,16 @@ export default function ProAnalyze() {
                       );
                     })()}
                   </div>
+
+                  {/* ─── Argumentation lésions → IA affine (fondation dataset) ─── */}
+                  <LesionArgumentation
+                    scanId={(result as any)?.savedScanId}
+                    condition={result?.condition}
+                    score={result?.score}
+                    fitzpatrick={examen.phototype}
+                    age={age}
+                    patientContext={[consultMotif ? `Motif : ${consultMotif}` : "", problemDuration ? `Durée : ${problemDuration}` : "", previousProducts ? `Produits : ${previousProducts}` : "", allergies ? `Allergies : ${allergies}` : ""].filter(Boolean).join(" · ") || undefined}
+                  />
 
                   {/* ─── Classification patient (TÂCHE 4) ─── */}
                   <div className="rounded-2xl p-4 mb-4" style={{ background: "#F1F5F9", border: "1px solid rgba(167,139,250,0.15)" }}>

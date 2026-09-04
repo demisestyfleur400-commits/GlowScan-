@@ -2121,6 +2121,87 @@ Analyse ce cas selon tes règles. Vérifie particulièrement la cohérence entre
   });
 
   // ═══════════════════════════════════════════════════════════════════════
+  // AFFINAGE DU DIAGNOSTIC — le dermatologue ajoute ses observations cliniques
+  // (ce que la photo ne montre pas) ; l'IA révise ses différentiels. Le
+  // diagnostic final reste au médecin. Alimente le dataset (ground truth).
+  // ═══════════════════════════════════════════════════════════════════════
+  const REFINE_SYSTEM = `Tu es un assistant clinique expert en dermatologie africaine (Fitzpatrick IV-VI). Tu as déjà analysé une photo et généré un premier diagnostic. Le dermatologue EXPERT a examiné le patient EN PERSONNE et ajoute des observations que la photo ne pouvait pas révéler.
+
+En tenant compte de ces observations supplémentaires, affine ton analyse :
+1. Révise les 3 diagnostics différentiels et ajuste les probabilités.
+2. Complète les causes possibles du diagnostic principal.
+3. Explique ce que l'apport du médecin CHANGE dans ton raisonnement.
+4. Signale toute INCOHÉRENCE entre les observations du médecin (ex. décrit des nodules profonds confluents mais annonce "acné légère" ; ou phototype annoncé incohérent avec les lésions décrites).
+
+Tu ne remplaces JAMAIS le médecin ; le diagnostic final lui appartient.
+
+Réponds UNIQUEMENT par un objet JSON valide, sans texte autour :
+{
+ "diagnostics": [{"diagnostic": "string", "probabilite": "string (ex: 65%)", "causes": ["string"]}],
+ "whatChanged": "string — ce que les observations du médecin ont changé",
+ "contradiction": {"detectee": boolean, "explication": "string|null", "suggestion": "string|null"}
+}
+Donne exactement 3 diagnostics (le 1er = principal avec causes).`;
+
+  app.post("/api/pro/refine-diagnosis", requireProAccess, async (req: any, res) => {
+    if (!proGemini) return res.status(503).json({ message: "IA indisponible (clé Gemini absente)." });
+    const b = req.body || {};
+    const observations = String(b.observations || "").trim().slice(0, 3000);
+    const condition = String(b.condition || "").slice(0, 300);
+    if (!observations) return res.status(400).json({ message: "Ajoutez vos observations cliniques." });
+    const userPrompt = `Diagnostic IA initial (sur photo) : ${condition || "—"}
+Glow Score : ${b.score ?? "—"}/100 · Phototype : ${b.fitzpatrick || "—"} · Âge : ${b.age || "—"}
+Contexte patient : ${String(b.patientContext || "—").slice(0, 800)}
+
+OBSERVATIONS CLINIQUES DU DERMATOLOGUE (examen en personne) :
+"${observations}"
+
+Affine ton analyse selon tes règles.`;
+    const modelId = process.env.GEMINI_MODEL || "gemini-2.0-flash";
+    let txt = "";
+    try {
+      const m = proGemini.getGenerativeModel({ model: modelId, systemInstruction: REFINE_SYSTEM });
+      const r = await Promise.race([
+        m.generateContent({ contents: [{ role: "user", parts: [{ text: userPrompt }] }], generationConfig: { responseMimeType: "application/json", temperature: 0.3, maxOutputTokens: 900 } }),
+        new Promise<never>((_, rej) => setTimeout(() => rej(new Error("Timeout")), 30000)),
+      ]);
+      txt = ((r as any).response?.text?.() || "").trim();
+    } catch (e) {
+      console.error("[refine-diagnosis] error:", (e as any)?.message || e);
+      return res.status(500).json({ message: "Analyse IA momentanément indisponible. Réessayez." });
+    }
+    let parsed: any = {};
+    try { const mo = txt.match(/\{[\s\S]*\}/); parsed = mo ? JSON.parse(mo[0]) : {}; } catch {}
+    const diagnostics = Array.isArray(parsed.diagnostics) ? parsed.diagnostics.slice(0, 3).map((d: any) => ({
+      diagnostic: String(d?.diagnostic || "").slice(0, 200),
+      probabilite: String(d?.probabilite || "").slice(0, 20),
+      causes: Array.isArray(d?.causes) ? d.causes.map((c: any) => String(c).slice(0, 200)).slice(0, 6) : [],
+    })).filter((d: any) => d.diagnostic) : [];
+    const c = parsed.contradiction && typeof parsed.contradiction === "object" ? parsed.contradiction : {};
+    const result = {
+      diagnostics,
+      whatChanged: parsed.whatChanged ? String(parsed.whatChanged).slice(0, 800) : null,
+      contradiction: {
+        detectee: !!c.detectee,
+        explication: c.explication && String(c.explication).toLowerCase() !== "null" ? String(c.explication).slice(0, 400) : null,
+        suggestion: c.suggestion && String(c.suggestion).toLowerCase() !== "null" ? String(c.suggestion).slice(0, 400) : null,
+      },
+    };
+    // Persistance dataset (best-effort) : observations + IA initiale + IA affinée.
+    if (b.scanId) {
+      try {
+        await db.execute(sql`UPDATE scans SET dermato_note = COALESCE(dermato_note,'') || ${(("\n[Observations] " + observations).slice(0, 2000))} WHERE id = ${Number(b.scanId)}`);
+      } catch {}
+      try {
+        await db.execute(sql`UPDATE training_data SET
+          annotation = COALESCE(annotation,'{}'::jsonb) || ${JSON.stringify({ dermatoObservations: observations, aiInitialDiagnosis: condition, aiRefinedDiagnosis: result.diagnostics })}::jsonb
+          WHERE scan_id = ${Number(b.scanId)}`);
+      } catch {}
+    }
+    res.json(result);
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════
   // AGENDA — rendez-vous du dermatologue. Classification auto de la priorité,
   // détection de conflits, rappel H-2 (cron). Mobile-first côté client.
   // ═══════════════════════════════════════════════════════════════════════
