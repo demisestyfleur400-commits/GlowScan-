@@ -2201,6 +2201,56 @@ Affine ton analyse selon tes règles.`;
     res.json(result);
   });
 
+  // POST /api/pro/scans/:id/final-diagnosis — décision finale du dermatologue
+  // (valider / corriger + sévérité + notes) → dataset ground truth. Le diagnostic
+  // final appartient TOUJOURS au médecin.
+  app.post("/api/pro/scans/:id/final-diagnosis", requireProAccess, async (req: any, res) => {
+    try {
+      const scanId = parseInt(req.params.id, 10);
+      const b = req.body || {};
+      const [scan] = await db.select().from(scans).where(eq(scans.id, scanId));
+      if (!scan) return res.status(404).json({ message: "Analyse introuvable" });
+      // Sécurité : le scan a été produit par ce médecin (userId) OU rattaché à un de ses patients.
+      let allowed = scan.userId === req.session?.userId;
+      if (!allowed && scan.patientId) {
+        const [pat] = await db.select().from(patients).where(and(eq(patients.id, scan.patientId), eq(patients.dermatologistId, req.proAccount.id)));
+        allowed = !!pat;
+      }
+      if (!allowed) return res.status(403).json({ message: "Ce scan ne vous appartient pas" });
+
+      const finalDiagnosis = String(b.finalDiagnosis || scan.condition || "").trim().slice(0, 200);
+      const severity = ["legere", "moderee", "severe"].includes(String(b.severity)) ? String(b.severity) : null;
+      const notes = typeof b.notes === "string" ? b.notes.trim().slice(0, 2000) : null;
+      const isCorrection = !!finalDiagnosis && finalDiagnosis.toLowerCase() !== (scan.condition || "").trim().toLowerCase();
+
+      const [updated] = await db.update(scans).set({
+        isVerified: true,
+        expertCorrectedCondition: isCorrection ? finalDiagnosis : null,
+        expertNote: notes || null,
+        expertReviewer: req.proAccount.fullName,
+        expertReviewedAt: new Date(),
+      }).where(eq(scans.id, scanId)).returning();
+
+      // Ground truth dataset (best-effort).
+      try {
+        await db.execute(sql`UPDATE training_data SET
+          derm_validation_status = ${isCorrection ? "corrected" : "validated"},
+          final_status = 'validated',
+          validated_by = ${`doctor_${req.proAccount.id}`},
+          validated_at = NOW(),
+          training_weight = ${isCorrection ? 4 : 3},
+          severity = COALESCE(${severity}, severity),
+          ground_truth = COALESCE(ground_truth,'{}'::jsonb) || ${JSON.stringify({ condition: finalDiagnosis, severity, correctedByDoctor: isCorrection, reviewer: req.proAccount.fullName })}::jsonb
+          WHERE scan_id = ${scanId}`);
+      } catch (e) { console.warn("[final-diagnosis] dataset:", (e as any)?.message); }
+
+      res.json({ ok: true, isCorrection, finalDiagnosis: updated.expertCorrectedCondition || updated.condition, severity });
+    } catch (err) {
+      console.error("[final-diagnosis] error:", err);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
   // ═══════════════════════════════════════════════════════════════════════
   // AGENDA — rendez-vous du dermatologue. Classification auto de la priorité,
   // détection de conflits, rappel H-2 (cron). Mobile-first côté client.
