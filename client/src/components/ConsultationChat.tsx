@@ -41,6 +41,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [uploadPct, setUploadPct] = useState(0);
+  const [fullImg, setFullImg] = useState<string | null>(null); // photo du chat en plein écran
   const [loading, setLoading] = useState(true);
   const [dossier, setDossier] = useState<any>(null);
   const [correcting, setCorrecting] = useState(false);
@@ -91,6 +92,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
     setMessages([]); setDossier(null); setDoctor(null); setCtx(null);
     setPrescription(""); setPrescriptionTouched(false); setClosedInfo(null);
     setShowFull(false); setLightbox(-1); setCorrecting(false); setCoachStep(-1);
+    setFullImg(null); setUploadPct(0);
     setLoading(true);
     load();
     /* eslint-disable-next-line */
@@ -729,15 +731,26 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
                   📞 {mine ? "Appel lancé — rejoindre" : "Rejoindre l'appel vidéo"}
                 </a>
               ) : fileMatch ? (
-                // Carte fichier PDF
-                <a href={m.imageUrl || "#"} target="_blank" rel="noreferrer" download={fileName}
-                  style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none", background: mine ? MINE : THEIRS, color: mine ? "#fff" : INK, padding: "10px 12px", borderRadius: 14 }}>
-                  <span style={{ fontSize: 24 }}>📄</span>
-                  <span style={{ minWidth: 0 }}>
-                    <span style={{ display: "block", fontSize: 12.5, fontWeight: 800, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 190 }}>{fileName}</span>
-                    <span style={{ display: "block", fontSize: 10.5, opacity: 0.85 }}>{kb} · Télécharger</span>
-                  </span>
-                </a>
+                // Carte fichier PDF — style WhatsApp : icône + nom + taille + 2 actions.
+                <div style={{ background: mine ? MINE : THEIRS, color: mine ? "#fff" : INK, padding: "11px 12px", borderRadius: 14, minWidth: 210 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 9 }}>
+                    <span style={{ fontSize: 26, flexShrink: 0 }}>📄</span>
+                    <span style={{ minWidth: 0 }}>
+                      <span style={{ display: "block", fontSize: 12.5, fontWeight: 800, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 180 }}>{fileName || "Document.pdf"}</span>
+                      <span style={{ display: "block", fontSize: 10.5, opacity: 0.85 }}>PDF · {kb}</span>
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <a href={m.imageUrl || "#"} target="_blank" rel="noreferrer"
+                      style={{ flex: 1, textAlign: "center", textDecoration: "none", background: mine ? "rgba(255,255,255,0.2)" : "rgba(124,58,237,0.12)", color: mine ? "#fff" : "#7c3aed", borderRadius: 9999, padding: "6px 0", fontSize: 11.5, fontWeight: 800 }}>Ouvrir</a>
+                    <a href={m.imageUrl || "#"} download={fileName || "document.pdf"}
+                      style={{ flex: 1, textAlign: "center", textDecoration: "none", background: mine ? "rgba(255,255,255,0.2)" : "rgba(124,58,237,0.12)", color: mine ? "#fff" : "#7c3aed", borderRadius: 9999, padding: "6px 0", fontSize: 11.5, fontWeight: 800 }}>Télécharger</a>
+                  </div>
+                </div>
+              ) : (m.imageUrl && !m.body) ? (
+                // Photo seule — bulle image style WhatsApp, tap → plein écran.
+                <img src={m.imageUrl} alt="" onClick={() => setFullImg(m.imageUrl || null)}
+                  style={{ maxWidth: "60vw", maxHeight: 260, width: "auto", borderRadius: 14, display: "block", cursor: "pointer", objectFit: "cover" }} />
               ) : (
               <div style={{
                 background: mine ? MINE : THEIRS, color: mine ? "#fff" : INK,
@@ -745,7 +758,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
                 borderBottomRightRadius: mine ? 4 : 14, borderBottomLeftRadius: mine ? 14 : 4,
                 fontSize: 13, lineHeight: 1.5, whiteSpace: "pre-wrap", wordBreak: "break-word",
               }}>
-                {m.imageUrl && <img src={m.imageUrl} alt="" style={{ maxWidth: "100%", borderRadius: 8, marginBottom: m.body ? 6 : 0 }} />}
+                {m.imageUrl && <img src={m.imageUrl} alt="" onClick={() => setFullImg(m.imageUrl || null)} style={{ maxWidth: "100%", borderRadius: 8, marginBottom: m.body ? 6 : 0, cursor: "pointer" }} />}
                 {m.body}
               </div>
               )}
@@ -860,6 +873,16 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
               {closing ? "Clôture…" : "Confirmer et clôturer →"}
             </button>
           </div>
+        </div>
+      )}
+
+      {/* ── Photo du CHAT en plein écran (fond noir, croix) ── */}
+      {fullImg && (
+        <div onClick={() => setFullImg(null)}
+          style={{ position: "fixed", inset: 0, zIndex: 95, background: "rgba(0,0,0,0.94)", display: "flex", alignItems: "center", justifyContent: "center", padding: 12 }}>
+          <button onClick={() => setFullImg(null)}
+            style={{ position: "absolute", top: 14, right: 16, background: "rgba(255,255,255,0.15)", color: "#fff", border: "none", borderRadius: "50%", width: 40, height: 40, fontSize: 20, cursor: "pointer" }}>✕</button>
+          <img src={fullImg} alt="" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "100%", maxHeight: "92vh", objectFit: "contain", borderRadius: 8 }} />
         </div>
       )}
 

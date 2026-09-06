@@ -48,7 +48,7 @@ export function ClinicalAssistant({ signesCliniques, diagnostic, prescription, f
         });
         if (res.ok) setResult(await res.json());
       } catch {} finally { setLoading(false); }
-    }, 1500); // debounce 1,5 s
+    }, 3000); // debounce 3 s — l'IA n'analyse qu'après l'arrêt de la frappe
     return () => clearTimeout(timerRef.current);
     // eslint-disable-next-line
   }, [signesCliniques, diagnostic, prescription, fitzpatrick, age]);

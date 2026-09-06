@@ -320,7 +320,7 @@ export default function ProDashboard() {
             border: "1px solid rgba(3,105,161,0.20)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
               <span style={{ fontSize: 18 }}>📱</span>
-              <p style={{ fontSize: 14, fontWeight: 800, color: DS.textPrimary, margin: 0 }}>Patients GlowScan B2C</p>
+              <p style={{ fontSize: 14, fontWeight: 800, color: DS.textPrimary, margin: 0 }}>Patients GlowScan</p>
             </div>
             <p style={{ fontSize: 12, color: DS.textBody, margin: "0 0 12px", lineHeight: 1.6 }}>
               Des patients font leur analyse sur glow-scan.com. Quand leur score est bas, GlowScan les oriente

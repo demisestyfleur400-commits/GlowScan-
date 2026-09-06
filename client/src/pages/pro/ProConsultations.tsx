@@ -15,11 +15,21 @@ export default function ProConsultations() {
   const [loading, setLoading] = useState(true);
 
   const load = () => {
+    setLoading(true);
     fetch("/api/pro/consultations", { credentials: "include" })
       .then((r) => r.json()).then((d) => setList(d.consultations || []))
       .catch(() => setList([])).finally(() => setLoading(false));
   };
   useEffect(() => { load(); }, []);
+
+  // Recharge la liste quand la page reprend le focus (retour depuis le chat, un
+  // PDF ouvert, un appel…). Évite l'écran vide au retour.
+  useEffect(() => {
+    const onFocus = () => { if (document.visibilityState === "visible") load(); };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+    return () => { window.removeEventListener("focus", onFocus); document.removeEventListener("visibilitychange", onFocus); };
+  }, []);
 
   // Deep-link depuis la notification (push/email) : /derm/consultations?c=<id>
   // → ouvre DIRECTEMENT le dossier, jamais un nouveau flux d'analyse.
@@ -46,7 +56,7 @@ export default function ProConsultations() {
         {loading && <p style={{ color: MUTED, fontSize: 13 }}>Chargement…</p>}
         {!loading && list.length === 0 && (
           <div style={{ background: "#F1F5F9", border: "1px solid #F1F5F9", borderRadius: 16, padding: 20, textAlign: "center" }}>
-            <p style={{ fontSize: 13, color: MUTED, margin: 0 }}>Aucune consultation pour l'instant. Activez « consultable en B2C » dans votre profil pour en recevoir.</p>
+            <p style={{ fontSize: 13, color: MUTED, margin: 0 }}>Aucune consultation pour l'instant. Activez « Accepter les consultations à distance » dans votre profil pour en recevoir.</p>
           </div>
         )}
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>

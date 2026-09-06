@@ -282,7 +282,7 @@ export default function ProCabinet() {
             Activez-la pour recevoir des patients directement depuis l'app GlowScan (grand public) et discuter en ligne.
           </p>
           <div className="flex items-center justify-between mb-4">
-            <span className="text-sm font-extrabold" style={{ color: INK }}>Je suis consultable en ligne</span>
+            <span className="text-sm font-extrabold" style={{ color: INK }}>Accepter les consultations à distance</span>
             <button
               onClick={() => setB2cAvailable((v) => !v)}
               data-testid="toggle-b2c"
@@ -780,7 +780,7 @@ function SecuritySection({ currentEmail }: { currentEmail?: string }) {
       setEnabled(true); setStep("idle"); setCode("");
       if (Array.isArray(d.backupCodes) && d.backupCodes.length) setNewCodes(d.backupCodes);
       refreshStatus();
-      toast({ title: "2FA activée ✅", description: "Un code vous sera demandé à chaque connexion." });
+      toast({ title: "Vérification en 2 étapes activée ✅", description: "Un code vous sera demandé à chaque connexion." });
     } catch (e: any) { toast({ title: "Code incorrect", description: e?.message, variant: "destructive" }); }
     finally { setBusy(false); }
   };
@@ -792,7 +792,7 @@ function SecuritySection({ currentEmail }: { currentEmail?: string }) {
       const d = await r.json();
       if (!r.ok) throw new Error(d.message);
       setEnabled(false); setStep("idle"); setPwd("");
-      toast({ title: "2FA désactivée" });
+      toast({ title: "Vérification en 2 étapes désactivée" });
     } catch (e: any) { toast({ title: "Erreur", description: e?.message, variant: "destructive" }); }
     finally { setBusy(false); }
   };
@@ -821,12 +821,12 @@ function SecuritySection({ currentEmail }: { currentEmail?: string }) {
             enabled ? (
               <button onClick={() => setStep("disable")} className="w-full py-2.5 rounded-full text-sm font-extrabold"
                 style={{ background: SOFT_BG, border: `1px solid ${SOFT_BORDER}`, color: "#dc2626" }} data-testid="button-2fa-disable">
-                Désactiver la 2FA
+                Désactiver la vérification en 2 étapes
               </button>
             ) : (
               <button onClick={requestCode} disabled={busy} className="w-full py-2.5 rounded-full text-white text-sm font-extrabold disabled:opacity-50"
                 style={{ background: BLUE }} data-testid="button-2fa-enable">
-                {busy ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Activer la 2FA par email"}
+                {busy ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Activer la vérification en 2 étapes"}
               </button>
             )
           )}
@@ -896,7 +896,7 @@ function SecuritySection({ currentEmail }: { currentEmail?: string }) {
         <p className="text-sm font-extrabold mb-1" style={{ color: INK }}>Email de connexion</p>
         <p className="text-xs mb-3" style={{ color: DS.muted }}>
           Actuel : <strong style={{ color: INK }}>{changedEmail || currentEmail || "—"}</strong>
-          {enabled ? " · c'est aussi votre email de vérification 2FA." : ""}
+          {enabled ? " · c’est aussi votre email de vérification de sécurité." : ""}
         </p>
         {emailStep === "idle" ? (
           <div className="flex gap-2">
