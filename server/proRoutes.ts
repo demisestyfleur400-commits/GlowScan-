@@ -324,6 +324,14 @@ Réponds UNIQUEMENT par un objet JSON valide, sans texte autour, au format EXACT
 Donne exactement 3 diagnostics ; le 1er est le principal (renseigne ses "causes"). Les autres peuvent avoir "causes": [].`;
 
 const OWNER_WHATSAPP = "237674377959";
+// Email du propriétaire de la plateforme (notifications d'activité). Surchargeable.
+const OWNER_EMAIL = process.env.OWNER_EMAIL || "demiseessawe12@gmail.com";
+async function notifyOwner(subject: string, html: string, text: string) {
+  try {
+    const { sendEmail } = await import("./email");
+    await sendEmail(OWNER_EMAIL, subject, html, text);
+  } catch (e) { console.warn("[notifyOwner]", (e as any)?.message); }
+}
 const PRO_PRICE_FCFA = 10000;
 const TRIAL_DAYS = 14;
 
@@ -2033,6 +2041,16 @@ export function registerProRoutes(app: Express) {
       // URL du rapport pour que le MÉDECIN le relise avant de l'envoyer.
       let reportUrlStr: string | null = null;
       try { const { reportUrl } = await import("./whatsapp"); reportUrlStr = reportUrl(id); } catch {}
+      // Notification propriétaire : consultation terminée.
+      try {
+        const pName = Rows(await db.execute(sql`SELECT first_name FROM users WHERE id = ${c.userId}`))[0]?.first_name || "Patient";
+        const dName = String(req.proAccount.fullName || "").replace(/^dr\.?\s*/i, "");
+        notifyOwner(
+          `✅ Consultation #${id} terminée — ${pName}`,
+          `<p>Consultation <strong>#${id}</strong> clôturée.</p><p>Patient : <strong>${pName}</strong> · Dermatologue : <strong>Dr ${dName}</strong> · ${c.condition || "—"}</p><p>Le dermatologue va envoyer le rapport au patient.</p>`,
+          `Consultation #${id} terminée — ${pName} → Dr ${dName}`,
+        );
+      } catch {}
       res.json({ ok: true, payoutFcfa, followUpDate, reportUrl: reportUrlStr });
     } catch (err) {
       console.error("[pro/consultations close] error:", err);
@@ -2049,6 +2067,16 @@ export function registerProRoutes(app: Express) {
         .where(and(eq(consultations.id, id), eq(consultations.proAccountId, req.proAccount.id)));
       if (!c) return res.status(404).json({ message: "Consultation introuvable" });
       await deliverConsultationReport(id);
+      // Notification propriétaire : rapport envoyé au patient.
+      try {
+        const pName = Rows(await db.execute(sql`SELECT first_name FROM users WHERE id = ${c.userId}`))[0]?.first_name || "Patient";
+        const dName = String(req.proAccount.fullName || "").replace(/^dr\.?\s*/i, "");
+        notifyOwner(
+          `📄 Rapport envoyé — consultation #${id} (${pName})`,
+          `<p>Le rapport de la consultation <strong>#${id}</strong> a été envoyé au patient <strong>${pName}</strong> par Dr ${dName}.</p>`,
+          `Rapport envoyé — consultation #${id} (${pName}) par Dr ${dName}`,
+        );
+      } catch {}
       res.json({ ok: true });
     } catch (err) {
       console.error("[pro/consultations send-report] error:", err);
