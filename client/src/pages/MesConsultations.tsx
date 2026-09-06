@@ -12,11 +12,20 @@ export default function MesConsultations() {
   const [loading, setLoading] = useState(true);
 
   const load = () => {
+    setLoading(true);
     fetch("/api/consultations/mine", { credentials: "include" })
       .then((r) => r.json()).then((d) => setList(d.consultations || []))
       .catch(() => setList([])).finally(() => setLoading(false));
   };
   useEffect(() => { load(); }, []);
+
+  // Recharge la liste au retour sur la page (fini l'écran vide au retour du chat).
+  useEffect(() => {
+    const onFocus = () => { if (document.visibilityState === "visible") load(); };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+    return () => { window.removeEventListener("focus", onFocus); document.removeEventListener("visibilitychange", onFocus); };
+  }, []);
 
   const statusLabel = (c: Consult) =>
     c.paymentStatus !== "paid" ? "En attente de confirmation du paiement"
@@ -38,7 +47,7 @@ export default function MesConsultations() {
   if (openId) {
     return (
       <div style={{ position: "fixed", inset: 0, zIndex: 50 }}>
-        <ConsultationChat consultationId={openId} myUserId={user?.id || null} onBack={() => { setOpenId(null); load(); }} />
+        <ConsultationChat key={openId} consultationId={openId} myUserId={user?.id || null} onBack={() => { setOpenId(null); load(); }} />
       </div>
     );
   }
