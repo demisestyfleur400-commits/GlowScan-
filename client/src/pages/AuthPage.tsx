@@ -26,6 +26,7 @@ export default function AuthPage() {
   const [contact, setContact] = useState("");
   const [regPwd, setRegPwd] = useState("");
   const [accountExistsHint, setAccountExistsHint] = useState(false);
+  const [hp, setHp] = useState(""); // honeypot anti-bot (reste vide)
 
   // Login fields
   const [loginEmail, setLoginEmail] = useState("");
@@ -116,9 +117,23 @@ export default function AuthPage() {
       toast({ title: "Prénom requis", description: "Entre ton prénom pour continuer.", variant: "destructive" });
       return;
     }
-    if (!contact.trim()) {
-      toast({ title: "Email ou numéro requis", description: "Entre ton email ou ton numéro de téléphone.", variant: "destructive" });
+    if (firstName.trim().length < 2) {
+      toast({ title: "Prénom invalide", description: "Entre un prénom valide (2 lettres minimum).", variant: "destructive" });
       return;
+    }
+    const trimmed = contact.trim();
+    const isEmail = trimmed.includes("@");
+    // Validation stricte : fini « t » partout.
+    if (isEmail) {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(trimmed)) {
+        toast({ title: "Email invalide", description: "Entre une adresse email valide (ex : nom@mail.com).", variant: "destructive" });
+        return;
+      }
+    } else {
+      if (trimmed.replace(/\D/g, "").length < 8) {
+        toast({ title: "Numéro invalide", description: "Entre un numéro de téléphone valide (8 chiffres minimum) ou un email.", variant: "destructive" });
+        return;
+      }
     }
     if (regPwd.length < 6) {
       toast({ title: "Mot de passe trop court", description: "6 caractères minimum.", variant: "destructive" });
@@ -126,17 +141,26 @@ export default function AuthPage() {
     }
     setLoading(true);
     try {
-      const trimmed = contact.trim();
-      const isEmail = trimmed.includes("@");
       const emailToSend = isEmail
         ? trimmed.toLowerCase()
         : `tel-${trimmed.replace(/\D/g, "")}@phone.glowscan.cm`;
 
-      await apiRequest("POST", "/api/auth/register", {
+      const res = await apiRequest("POST", "/api/auth/register", {
         firstName: firstName.trim(),
         email: emailToSend,
         password: regPwd,
+        website: hp, // honeypot (doit rester vide)
       });
+      const data = await res.json().catch(() => ({} as any));
+      // Vrai email → vérification par code (2FA) avant activation.
+      if (data?.requires2fa) {
+        setTwofaHint(data.emailHint || trimmed);
+        setTwofaCode("");
+        setMode("twofa");
+        toast({ title: "Code de vérification envoyé 📧", description: data.devFallback ? "Mode dev : voir les logs serveur." : `Entre le code reçu sur ${data.emailHint || "ton email"} pour activer ton compte.` });
+        setLoading(false);
+        return;
+      }
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       try {
         if (typeof (window as any).fbq === "function") {
@@ -270,6 +294,9 @@ export default function AuthPage() {
               </p>
             </div>
 
+            {/* Honeypot anti-bot : invisible aux humains, rempli par les robots. */}
+            <input type="text" name="website" tabIndex={-1} autoComplete="off" value={hp} onChange={(e) => setHp(e.target.value)}
+              aria-hidden="true" style={{ position: "absolute", left: "-9999px", width: 1, height: 1, opacity: 0 }} />
             <Field icon={<User className="w-4 h-4" />} type="text" placeholder="Ton prénom" value={firstName} onChange={setFirstName} testId="input-firstname" autoFocus />
             <Field icon={contact.includes("@") ? <Mail className="w-4 h-4" /> : <Phone className="w-4 h-4" />} type="text" placeholder="Email ou numéro (+237...)" value={contact} onChange={setContact} testId="input-contact" />
             <PwdField value={regPwd} onChange={setRegPwd} show={showPwd} onToggle={() => setShowPwd(v => !v)} testId="input-register-password" placeholder="Mot de passe (6 caractères min)" />

@@ -118,19 +118,40 @@ export function registerAuthRoutes(app: Express): void {
   app.post("/api/auth/register", authLimiter, async (req: any, res) => {
     const ip = req.headers["x-forwarded-for"] || req.socket?.remoteAddress || "?";
     try {
-      const { firstName, email, password } = req.body;
+      const { firstName, email, password, website } = req.body;
+
+      // ── Anti-bot 1 : honeypot. Un champ caché que seuls les robots remplissent. ──
+      if (typeof website === "string" && website.trim() !== "") {
+        console.log(`[register] 🤖 Honeypot déclenché — ip=${ip}`);
+        return res.status(400).json({ message: "Inscription refusée." });
+      }
 
       if (!firstName || !email || !password) {
         console.log(`[register] ❌ Champs manquants — ip=${ip}`);
         return res.status(400).json({ message: "Tous les champs sont requis" });
       }
 
-      if (password.length < 6) {
-        console.log(`[register] ❌ Mot de passe trop court — email=${email}`);
+      // ── Anti-bot 2 : validation stricte (fini « t » partout) ──
+      const cleanName = String(firstName).trim();
+      if (cleanName.length < 2 || !/[a-zA-ZÀ-ÿ]/.test(cleanName)) {
+        return res.status(400).json({ message: "Entrez un prénom valide (2 lettres minimum)." });
+      }
+      if (String(password).length < 6) {
         return res.status(400).json({ message: "Le mot de passe doit contenir au moins 6 caractères" });
       }
-
-      const emailLower = email.toLowerCase().trim();
+      const emailLower = String(email).toLowerCase().trim();
+      const isPhoneAccount = emailLower.endsWith("@phone.glowscan.cm");
+      if (isPhoneAccount) {
+        // Compte téléphone : exige un vrai numéro (≥ 8 chiffres), pas « tel-@… ».
+        if (!/^tel-\d{8,}@phone\.glowscan\.cm$/.test(emailLower)) {
+          return res.status(400).json({ message: "Entrez un numéro de téléphone valide (8 chiffres minimum)." });
+        }
+      } else {
+        // Vrai email : format valide obligatoire.
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(emailLower)) {
+          return res.status(400).json({ message: "Entrez une adresse email valide." });
+        }
+      }
 
       const [existing] = await db.select().from(users).where(eq(users.email, emailLower));
       if (existing) {
@@ -155,21 +176,28 @@ export function registerAuthRoutes(app: Express): void {
       } catch {}
 
       const previousSessionId = req.session?.id;
+      // Rattache les scans anonymes de la session au nouveau compte (dès la création).
+      try { if (previousSessionId) await storage.linkAnonymousScansToUser(previousSessionId, user.id); }
+      catch (linkErr) { console.error(`[register] ⚠️ Backfill scans anonymes échoué:`, linkErr); }
+
+      // ── Anti-bot 3 : VÉRIFICATION EMAIL (2FA) pour les vrais emails ──
+      // Le compte n'est actif qu'après saisie du code reçu → prouve un email réel
+      // et bloque les inscriptions robotisées. (Comptes téléphone : session directe.)
+      if (!isPhoneAccount) {
+        (req.session as any).pending2faUserId = user.id;
+        const otp = await issueEmailOtp(user.id, emailLower, user.firstName);
+        return req.session.save(() => {
+          console.log(`[register] 📧 Code de vérification envoyé — userId=${user.id}`);
+          res.json({ requires2fa: true, method: "email", emailSent: otp.ok, emailHint: maskEmailAddr(emailLower), devFallback: otp.provider === "dev" });
+        });
+      }
+
+      // Compte téléphone : pas d'email possible → session directe.
       req.session.userId = user.id;
       req.session.save(async (err: any) => {
         if (err) {
           console.error(`[register] ❌ Session save error pour userId=${user.id}:`, err);
           return res.status(500).json({ message: "Erreur lors de la connexion" });
-        }
-        console.log(`[register] ✅ Session créée pour userId=${user.id}`);
-        
-        // Rattacher tous les scans anonymes de cette session au nouveau compte
-        try {
-          if (previousSessionId) {
-            await storage.linkAnonymousScansToUser(previousSessionId, user.id);
-          }
-        } catch (linkErr) {
-          console.error(`[register] ⚠️ Backfill scans anonymes échoué (non bloquant):`, linkErr);
         }
         res.json({ success: true, user: { id: user.id, email: user.email, firstName: user.firstName } });
       });
