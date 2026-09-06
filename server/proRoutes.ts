@@ -1996,11 +1996,10 @@ export function registerProRoutes(app: Express) {
         try { await db.execute(sql`UPDATE pro_accounts SET demo_completed = true WHERE id = ${req.proAccount.id}`); } catch {}
         return res.json({ ok: true, demo: true });
       }
-      // Notifier le patient (WS + push) : consultation terminée, invitation à noter.
+      // NOTE : on N'ENVOIE PLUS le rapport automatiquement. Le médecin le relit
+      // d'abord, puis l'envoie lui-même via le bouton « Envoyer le PDF au patient »
+      // (POST /send-report). On notifie juste que la consultation est clôturée.
       try { emitToUser(c.userId, "consultation:closed", { consultationId: id }); } catch {}
-      // Livraison auto du rapport (push + WhatsApp si configuré). Ne bloque JAMAIS
-      // la clôture : fire-and-forget, la consultation reste "closed" quoi qu'il arrive.
-      setImmediate(() => { deliverConsultationReport(id).catch((e) => console.error("[close] deliver report:", e)); });
 
       // ── Suivi programmé (facultatif) — sélectionné par le médecin à la clôture ──
       let followUpDate: string | null = null;
@@ -2031,9 +2030,28 @@ export function registerProRoutes(app: Express) {
       // Ex. défaut 4 800 → 3 500 dermato / 1 300 plateforme. Prix flexible par dermato.
       const PLATFORM_FEE = 1300;
       const payoutFcfa = Math.max(0, (Number(c.priceFcfa) || 4800) - PLATFORM_FEE);
-      res.json({ ok: true, payoutFcfa, followUpDate });
+      // URL du rapport pour que le MÉDECIN le relise avant de l'envoyer.
+      let reportUrlStr: string | null = null;
+      try { const { reportUrl } = await import("./whatsapp"); reportUrlStr = reportUrl(id); } catch {}
+      res.json({ ok: true, payoutFcfa, followUpDate, reportUrl: reportUrlStr });
     } catch (err) {
       console.error("[pro/consultations close] error:", err);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // POST /api/pro/consultations/:id/send-report — le médecin envoie lui-même le
+  // rapport au patient (WhatsApp + push + email) après l'avoir relu.
+  app.post("/api/pro/consultations/:id/send-report", requireProAccess, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const [c] = await db.select().from(consultations)
+        .where(and(eq(consultations.id, id), eq(consultations.proAccountId, req.proAccount.id)));
+      if (!c) return res.status(404).json({ message: "Consultation introuvable" });
+      await deliverConsultationReport(id);
+      res.json({ ok: true });
+    } catch (err) {
+      console.error("[pro/consultations send-report] error:", err);
       res.status(500).json({ message: "Erreur serveur" });
     }
   });

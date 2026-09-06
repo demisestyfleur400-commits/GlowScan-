@@ -51,7 +51,9 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
   const [prescriptionTouched, setPrescriptionTouched] = useState(false);
   const [dictating, setDictating] = useState(false);
   const [closing, setClosing] = useState(false);
-  const [closedInfo, setClosedInfo] = useState<{ payoutFcfa?: number; demo?: boolean; followUpDate?: string } | null>(null);
+  const [closedInfo, setClosedInfo] = useState<{ payoutFcfa?: number; demo?: boolean; followUpDate?: string; reportUrl?: string } | null>(null);
+  const [reportSending, setReportSending] = useState(false);
+  const [reportSent, setReportSent] = useState(false);
   const [showFollowUp, setShowFollowUp] = useState(false);
   const [followUpOpt, setFollowUpOpt] = useState("1_month");
   const [showFull, setShowFull] = useState(false);
@@ -90,7 +92,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
   // les fichiers/dossier/messages d'une AUTRE consultation (bug « anciens fichiers »).
   useEffect(() => {
     setMessages([]); setDossier(null); setDoctor(null); setCtx(null);
-    setPrescription(""); setPrescriptionTouched(false); setClosedInfo(null);
+    setPrescription(""); setPrescriptionTouched(false); setClosedInfo(null); setReportSent(false); setReportSending(false);
     setShowFull(false); setLightbox(-1); setCorrecting(false); setCoachStep(-1);
     setFullImg(null); setUploadPct(0);
     setLoading(true);
@@ -343,6 +345,17 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
   };
 
   // Clôture en 2 temps : d'abord choisir un suivi, puis clôturer réellement.
+  // Le médecin envoie lui-même le rapport au patient (après relecture).
+  const sendReport = async () => {
+    if (reportSending) return;
+    setReportSending(true);
+    try {
+      const res = await fetch(`/api/pro/consultations/${consultationId}/send-report`, { method: "POST", credentials: "include" });
+      if (res.ok) setReportSent(true);
+      else { const d = await res.json().catch(() => ({})); alert(d.message || "Échec de l'envoi."); }
+    } catch { alert("Erreur réseau."); } finally { setReportSending(false); }
+  };
+
   const doClose = async (followUp: string) => {
     if (closing) return;
     setClosing(true);
@@ -353,7 +366,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
         body: JSON.stringify({ prescription: prescription.trim() || undefined, followUp: followUp === "none" ? undefined : followUp }),
       });
       const d = await res.json().catch(() => ({}));
-      if (res.ok) { setClosedInfo({ payoutFcfa: d.payoutFcfa, demo: d.demo, followUpDate: d.followUpDate }); setShowFollowUp(false); load(); }
+      if (res.ok) { setClosedInfo({ payoutFcfa: d.payoutFcfa, demo: d.demo, followUpDate: d.followUpDate, reportUrl: d.reportUrl }); setReportSent(false); setShowFollowUp(false); load(); }
     } catch {} finally { setClosing(false); }
   };
 
@@ -687,11 +700,27 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
           ) : (
             <>
               <p style={{ fontSize: 13, fontWeight: 800, color: dark ? "#6ee7b7" : "#047857", margin: 0 }}>✅ Consultation terminée</p>
-              <p style={{ fontSize: 11.5, color: MUTED, margin: "4px 0 0", lineHeight: 1.6 }}>
-                Le rapport (avec votre ordonnance) est envoyé au patient sur WhatsApp.
+              <p style={{ fontSize: 11.5, color: MUTED, margin: "4px 0 8px", lineHeight: 1.6 }}>
+                Relisez le rapport, puis envoyez-le au patient.
                 {closedInfo.payoutFcfa ? ` Paiement de ${closedInfo.payoutFcfa.toLocaleString("fr-FR")} FCFA en cours.` : ""}
-                {closedInfo.followUpDate ? ` 📅 Suivi programmé pour le ${new Date(closedInfo.followUpDate).toLocaleDateString("fr-FR")} — rappel automatique la veille.` : ""}
+                {closedInfo.followUpDate ? ` 📅 Suivi programmé pour le ${new Date(closedInfo.followUpDate).toLocaleDateString("fr-FR")}.` : ""}
               </p>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {closedInfo.reportUrl && (
+                  <a href={closedInfo.reportUrl} target="_blank" rel="noreferrer"
+                    style={{ flex: "1 1 auto", textAlign: "center", textDecoration: "none", background: dark ? "rgba(255,255,255,0.1)" : "#fff", color: "#7c3aed", border: "1px solid rgba(124,58,237,0.3)", borderRadius: 9999, padding: "10px 14px", fontSize: 12.5, fontWeight: 800 }}>
+                    📄 Voir le rapport d'abord
+                  </a>
+                )}
+                {reportSent ? (
+                  <span style={{ flex: "1 1 auto", textAlign: "center", color: "#047857", fontSize: 12.5, fontWeight: 800, padding: "10px 14px" }}>✅ Rapport envoyé au patient</span>
+                ) : (
+                  <button onClick={sendReport} disabled={reportSending}
+                    style={{ flex: "1 1 auto", background: "#10b981", color: "#fff", border: "none", borderRadius: 9999, padding: "10px 14px", fontSize: 12.5, fontWeight: 800, cursor: "pointer", opacity: reportSending ? 0.6 : 1 }}>
+                    {reportSending ? "Envoi…" : "📲 Envoyer le PDF à votre patient"}
+                  </button>
+                )}
+              </div>
             </>
           )}
         </div>
