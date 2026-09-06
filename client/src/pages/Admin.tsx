@@ -1116,7 +1116,7 @@ export default function Admin() {
           <div className="space-y-3">
             <div>
               <h3 className="text-lg font-extrabold" style={{ color: DS.text }}>Consultations en ligne</h3>
-              <p className="text-[11px]" style={{ color: DS.muted }}>Confirme le paiement Mobile Money pour ouvrir la conversation patient ↔ dermatologue.</p>
+              <p className="text-[11px]" style={{ color: DS.muted }}>Suivi de chaque consultation : paiement, statut (terminée) et rapport envoyé au patient.</p>
             </div>
             {consults.length === 0 && (
               <div className="rounded-2xl p-6 text-center" style={{ background: DS.surface, border: `1px solid ${DS.border}` }}>
@@ -1127,13 +1127,34 @@ export default function Admin() {
               <div key={c.id} className="rounded-2xl p-4" style={{ background: DS.surface, border: `1px solid ${DS.border}` }}>
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-sm font-extrabold" style={{ color: DS.text }}>#{c.id} · {c.condition || "Consultation"}</p>
-                    <p className="text-[11px] mt-0.5" style={{ color: DS.muted }}>
-                      {(c.priceFcfa || 0).toLocaleString("fr-FR")} FCFA · {c.paymentStatus === "paid" ? "✅ payé" : "en attente"}
-                      {c.paymentRef ? ` · réf : ${c.paymentRef}` : " · pas de réf"}
+                    <p className="text-sm font-extrabold" style={{ color: DS.text }}>
+                      #{c.id} · {c.patientName || "Patient"}{c.dermName ? ` → Dr ${String(c.dermName).replace(/^dr\.?\s*/i, "")}` : ""}
                     </p>
+                    <p className="text-[11px] mt-0.5" style={{ color: DS.muted }}>
+                      {c.condition || "Consultation"} · {(c.priceFcfa || 0).toLocaleString("fr-FR")} FCFA · {c.paymentStatus === "paid" ? "✅ payé" : "⏳ en attente"}
+                      {c.paymentRef ? ` · réf : ${c.paymentRef}` : ""}
+                    </p>
+                    {c.paymentStatus === "paid" && (
+                      <div className="flex flex-wrap gap-1.5 mt-2">
+                        {/* Statut de la consultation */}
+                        <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full" style={{
+                          background: c.status === "closed" ? "rgba(16,185,129,0.15)" : c.status === "answered" ? "rgba(59,130,246,0.15)" : "rgba(245,158,11,0.15)",
+                          color: c.status === "closed" ? "#047857" : c.status === "answered" ? "#2563eb" : "#b45309",
+                        }}>
+                          {c.status === "closed" ? "✅ Terminée" : c.status === "answered" ? "💬 Répondue" : "🟢 Ouverte"}
+                        </span>
+                        {/* Statut du rapport (PDF) */}
+                        {c.reportStatus === "sent" ? (
+                          <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full" style={{ background: "rgba(16,185,129,0.15)", color: "#047857" }}>
+                            📄 Rapport envoyé{c.reportSentAt ? ` · ${new Date(c.reportSentAt).toLocaleDateString("fr-FR")}` : ""}
+                          </span>
+                        ) : c.status === "closed" ? (
+                          <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full" style={{ background: "rgba(244,63,94,0.12)", color: "#f43f5e" }}>📄 Rapport pas encore envoyé</span>
+                        ) : null}
+                      </div>
+                    )}
                   </div>
-                  {c.paymentStatus !== "paid" ? (
+                  {c.paymentStatus !== "paid" && (
                     <button
                       onClick={() => confirmConsult(c.id)}
                       disabled={consultsBusy === c.id}
@@ -1142,8 +1163,6 @@ export default function Admin() {
                     >
                       {consultsBusy === c.id ? "…" : "Confirmer le paiement"}
                     </button>
-                  ) : (
-                    <span className="flex-shrink-0 text-[11px] font-extrabold px-3 py-1.5 rounded-full" style={{ background: "rgba(16,185,129,0.12)", color: "#047857" }}>Ouverte</span>
                   )}
                 </div>
               </div>

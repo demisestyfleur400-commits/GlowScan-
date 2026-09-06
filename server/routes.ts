@@ -1080,10 +1080,21 @@ export async function registerRoutes(
   app.get("/api/admin/consultations", async (req: any, res) => {
     if (!checkDatasetKey(req)) return res.status(403).json({ message: "Accès refusé" });
     try {
-      const list = await db.select().from(consultations).orderBy(desc(consultations.createdAt)).limit(100);
+      // SQL brut pour inclure les colonnes hors schéma Drizzle (statut rapport, dates).
+      const list = Rows(await db.execute(sql`
+        SELECT c.id, c.condition, c.status, c.payment_status AS "paymentStatus",
+               c.price_fcfa AS "priceFcfa", c.payment_ref AS "paymentRef", c.created_at AS "createdAt",
+               c.whatsapp_send_status AS "reportStatus", c.whatsapp_sent_at AS "reportSentAt", c.closed_at AS "closedAt",
+               u.first_name AS "patientName", p.full_name AS "dermName"
+        FROM consultations c
+        LEFT JOIN users u ON u.id = c.user_id
+        LEFT JOIN pro_accounts p ON p.id = c.pro_account_id
+        ORDER BY c.created_at DESC LIMIT 100`));
       res.json({ consultations: list });
     } catch (e) {
-      res.json({ consultations: [] });
+      // Repli : sélection Drizzle simple si une colonne manque.
+      try { const l = await db.select().from(consultations).orderBy(desc(consultations.createdAt)).limit(100); res.json({ consultations: l }); }
+      catch { res.json({ consultations: [] }); }
     }
   });
 
