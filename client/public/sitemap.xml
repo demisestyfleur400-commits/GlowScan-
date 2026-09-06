@@ -45,6 +45,13 @@
     <priority>0.3</priority>
     <lastmod>2026-01-01</lastmod>
   </url>
+  <!-- Fondateur -->
+  <url>
+    <loc>https://glow-scan.com/fondateur</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+    <lastmod>2026-07-03</lastmod>
+  </url>
   <!-- Blog -->
   <url>
     <loc>https://glow-scan.com/blog/</loc>
