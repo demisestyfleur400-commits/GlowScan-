@@ -774,7 +774,22 @@ export async function registerRoutes(
       const { ref } = req.body || {};
       const [c] = await db.select().from(consultations).where(eq(consultations.id, id));
       if (!c || c.userId !== userId) return res.status(404).json({ message: "Consultation introuvable" });
-      await db.update(consultations).set({ paymentRef: (ref || "").toString().slice(0, 120) }).where(eq(consultations.id, id));
+      const cleanRef = (ref || "").toString().slice(0, 120);
+      await db.update(consultations).set({ paymentRef: cleanRef }).where(eq(consultations.id, id));
+      // Notification propriétaire : un patient a payé → consultation À CONFIRMER.
+      try {
+        const ownerEmail = process.env.OWNER_EMAIL || "demiseessawe12@gmail.com";
+        const base = (process.env.PUBLIC_BASE_URL || "https://glow-scan.com").replace(/\/$/, "");
+        const pName = Rows(await db.execute(sql`SELECT first_name FROM users WHERE id = ${c.userId}`))[0]?.first_name || "Patient";
+        const price = (Number(c.priceFcfa) || 0).toLocaleString("fr-FR");
+        const { sendEmail } = await import("./email");
+        sendEmail(
+          ownerEmail,
+          `💰 Paiement à confirmer — consultation #${id} (${pName})`,
+          `<p><strong>${pName}</strong> a déclaré avoir payé <strong>${price} FCFA</strong> pour la consultation #${id}.</p><p>Référence : <strong>${cleanRef || "—"}</strong></p><p>Vérifie la preuve WhatsApp, puis confirme le paiement : <a href="${base}/admin">Ouvrir l'admin →</a></p>`,
+          `Paiement à confirmer — consultation #${id} (${pName}), réf ${cleanRef}. ${base}/admin`,
+        ).catch(() => {});
+      } catch {}
       res.json({ ok: true });
     } catch (err) {
       console.error("[consultations payment-ref] error:", err);
