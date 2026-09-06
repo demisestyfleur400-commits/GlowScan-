@@ -63,6 +63,17 @@ export function serveStatic(app: Express) {
     });
   }
 
+  // Serve fondateur.html explicitly for /fondateur route
+  const fondateurPage = path.resolve(distPath, "fondateur.html");
+  if (fs.existsSync(fondateurPage)) {
+    app.get("/fondateur", (_req, res) => {
+      res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+      res.setHeader("Pragma", "no-cache");
+      res.setHeader("Expires", "0");
+      res.sendFile(fondateurPage);
+    });
+  }
+
   // Fall through to index.html for any unknown route (SPA routing)
   app.use("/{*path}", (_req, res) => {
     res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
