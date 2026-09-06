@@ -1528,9 +1528,9 @@ export async function registerRoutes(
     try {
       const startTime = Date.now();
 
-      // 🔴 VÉRIFIER : Base de données
-      const dbCheck = await db.select(sql`1`).catch(() => null);
-      const dbOk = !!dbCheck;
+      // 🔴 VÉRIFIER : Base de données (sonde SQL brute, ne fait jamais planter le handler)
+      let dbOk = false;
+      try { await db.execute(sql`SELECT 1`); dbOk = true; } catch { dbOk = false; }
 
       const responseTime = Date.now() - startTime;
 

@@ -78,6 +78,8 @@ export default function ProDashboard() {
   // File d'attente de validation (fait croître le volume de données GOLD réelles)
   const [pending, setPending] = useState<any[]>([]);
   const [validatingId, setValidatingId] = useState<number | null>(null);
+  const [referral, setReferral] = useState<{ code: number; count: number } | null>(null);
+  const refLink = referral ? `${window.location.origin}/derm/inscription?ref=${referral.code}` : "";
 
   const loadPending = async () => {
     try {
@@ -86,6 +88,10 @@ export default function ProDashboard() {
     } catch {}
   };
   useEffect(() => { if (accData?.account) loadPending(); }, [accData?.account?.id]);
+  useEffect(() => {
+    if (!accData?.account) return;
+    fetch("/api/pro/referral", { credentials: "include" }).then((r) => r.ok ? r.json() : null).then((d) => d && setReferral(d)).catch(() => {});
+  }, [accData?.account?.id]);
 
   const validatePending = async (scanId: number) => {
     setValidatingId(scanId);
@@ -349,6 +355,26 @@ export default function ProDashboard() {
           </div>
           <span style={{ color: DS.blue, fontSize: 18 }}>→</span>
         </Link>
+
+        {/* ── Parrainage : inviter un confrère ── */}
+        {referral && (
+          <div style={{ marginTop: 12, padding: "14px 16px", borderRadius: 20, background: "rgba(124,58,237,0.06)", border: "1px solid rgba(124,58,237,0.2)" }}>
+            <p style={{ fontSize: 13.5, fontWeight: 800, color: DS.textPrimary, margin: 0 }}>Invitez un confrère 🤝</p>
+            <p style={{ fontSize: 11.5, color: DS.textBody, margin: "2px 0 10px" }}>
+              Partagez GlowScan DERM à un dermatologue.{referral.count > 0 ? ` Déjà ${referral.count} confrère${referral.count > 1 ? "s" : ""} invité${referral.count > 1 ? "s" : ""} 🎉` : ""}
+            </p>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <button onClick={() => { try { navigator.clipboard.writeText(refLink); } catch {} }}
+                style={{ flex: "1 1 auto", background: "#fff", color: "#7C3AED", border: "1px solid rgba(124,58,237,0.3)", borderRadius: 9999, padding: "9px 14px", fontSize: 12.5, fontWeight: 800, cursor: "pointer" }}>
+                📋 Copier mon lien
+              </button>
+              <a href={`https://wa.me/?text=${encodeURIComponent(`Bonjour, je t'invite à rejoindre GlowScan DERM (dossiers patients + rapports IA en 3 min). Inscris-toi ici : ${refLink}`)}`} target="_blank" rel="noreferrer"
+                style={{ flex: "1 1 auto", textAlign: "center", background: "#25D366", color: "#fff", borderRadius: 9999, padding: "9px 14px", fontSize: 12.5, fontWeight: 800, textDecoration: "none" }}>
+                📲 Inviter sur WhatsApp
+              </a>
+            </div>
+          </div>
+        )}
       </motion.div>
 
       {/* ══ 4 · ONBOARDING — checklist 3 étapes (disparaît quand tout est fait) ══ */}

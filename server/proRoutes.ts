@@ -500,6 +500,7 @@ export function registerProRoutes(app: Express) {
         licenseNumber: z.string().optional().nullable(),
         consent: z.literal(true),
         consentVersion: z.string().optional(), // version des CGU/Confidentialité acceptée
+        ref: z.union([z.string(), z.number()]).optional().nullable(), // parrainage confrère
       });
       const data = schema.parse(req.body);
       const emailLower = data.email.toLowerCase().trim();
@@ -555,6 +556,29 @@ export function registerProRoutes(app: Express) {
       }
       // Version des Conditions & Confidentialité acceptée (preuve opposable, SQL brut)
       db.execute(sql`UPDATE "pro_accounts" SET "consent_version" = ${data.consentVersion || TERMS_VERSION} WHERE "id" = ${acc.id}`).catch(() => {});
+
+      // Parrainage confrère : on relie le nouveau compte au parrain (id valide, pas soi-même).
+      const refId = data.ref != null ? parseInt(String(data.ref), 10) : NaN;
+      if (!Number.isNaN(refId) && refId !== acc.id) {
+        try {
+          await db.execute(sql`ALTER TABLE pro_accounts ADD COLUMN IF NOT EXISTS referred_by integer`).catch(() => {});
+          const parrain = Rows(await db.execute(sql`SELECT id, user_id, full_name FROM pro_accounts WHERE id = ${refId}`))[0];
+          if (parrain) {
+            await db.execute(sql`UPDATE pro_accounts SET referred_by = ${refId} WHERE id = ${acc.id}`);
+            // Notifie le parrain (push + email) qu'un confrère l'a rejoint.
+            try {
+              try { emitToUser(parrain.user_id, "referral:joined", { name: displayName }); } catch {}
+              const pe = Rows(await db.execute(sql`SELECT email, name FROM users WHERE id = ${parrain.user_id}`))[0] as any;
+              if (pe?.email) {
+                const { sendEmail } = await import("./email");
+                sendEmail(pe.email, "Un confrère vous a rejoint sur GlowScan DERM 🎉",
+                  `<p>Bonjour Dr ${String(parrain.full_name || "").replace(/^dr\.?\s*/i, "")},</p><p>Bonne nouvelle : <strong>${displayName}</strong> vient de s'inscrire grâce à votre invitation. Merci de faire grandir le réseau GlowScan.</p>`,
+                  `${displayName} s'est inscrit grâce à votre invitation.`).catch(() => {});
+              }
+            } catch {}
+          }
+        } catch (e) { console.warn("[pro/register] parrainage:", (e as any)?.message); }
+      }
 
       // 3. 2FA OBLIGATOIRE dès la création : on n'ouvre PAS la session tout de
       // suite. On active la 2FA email et on envoie un code — ce qui VÉRIFIE en même
@@ -2450,6 +2474,18 @@ Affine ton analyse selon tes règles.`;
       }
       res.json({ ok: true });
     } catch (e) { res.status(500).json({ message: "Erreur serveur" }); }
+  });
+
+  // GET /api/pro/referral — code de parrainage du dermatologue + nombre d'invités.
+  app.get("/api/pro/referral", requireProAccess, async (req: any, res) => {
+    try {
+      let count = 0;
+      try {
+        await db.execute(sql`ALTER TABLE pro_accounts ADD COLUMN IF NOT EXISTS referred_by integer`).catch(() => {});
+        count = Number(Rows(await db.execute(sql`SELECT COUNT(*)::int AS n FROM pro_accounts WHERE referred_by = ${req.proAccount.id}`))[0]?.n || 0);
+      } catch {}
+      res.json({ code: req.proAccount.id, count });
+    } catch (e) { res.json({ code: req.proAccount?.id || null, count: 0 }); }
   });
 
   // GET /api/pro/profile — profil public actuel du dermatologue connecté.

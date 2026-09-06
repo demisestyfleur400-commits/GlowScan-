@@ -70,6 +70,7 @@ export default function ProInscription() {
           city: city.trim() || null,
           consent: true,
           consentVersion: DERM_TERMS_VERSION,
+          ref: new URLSearchParams(window.location.search).get("ref") || undefined, // parrainage confrère
         }),
       });
       const data = await res.json();
