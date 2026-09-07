@@ -151,18 +151,22 @@ app.use((req, res, next) => {
   next();
 });
 
-// ── Garde de démarrage : refuse de booter en production sans SESSION_SECRET fort. ──
-// SESSION_SECRET signe les sessions, les liens HMAC des rapports médicaux et les
-// tokens de désinscription. Pas de fallback faible : mieux vaut ne pas démarrer.
+// ── Garde de démarrage — SESSION_SECRET (signatures sessions + HMAC rapports). ──
+// PRUDENCE : on ne coupe une app médicale live QUE si le secret est TOTALEMENT
+// absent (là où express-session planterait déjà). Un secret présent mais court/
+// faible → AVERTISSEMENT bruyant, jamais un crash. La strictesse (min 32 car.,
+// pas de défaut) est appliquée par `npm run check:secrets` en CI/déploiement.
 function requireSecrets() {
   const WEAK = new Set(["glowscan-unsub-fallback", "glowscan-report-secret-v1", "changeme", "secret", "glowscan-secret"]);
   const s = process.env.SESSION_SECRET || "";
-  const bad = !s || s.trim() === "" || WEAK.has(s.trim().toLowerCase()) || s.length < 32;
-  if (bad) {
-    const msg = `[SECURITY] SESSION_SECRET absent/faible (min 32 car., non par défaut). ` +
-      `L'app REFUSE de démarrer : les sessions et les liens de rapports médicaux seraient falsifiables.`;
-    if (process.env.NODE_ENV === "production") { console.error(msg); process.exit(1); }
-    else console.warn(msg + " (toléré hors production)");
+  if (!s || s.trim() === "") {
+    console.error("[SECURITY] SESSION_SECRET absent — signatures impossibles. Définis-le sur Railway.");
+    if (process.env.NODE_ENV === "production") process.exit(1); // absent = fatal (express-session l'exige de toute façon)
+    return;
+  }
+  if (WEAK.has(s.trim().toLowerCase()) || s.length < 32) {
+    console.warn(`[SECURITY] ⚠️ SESSION_SECRET faible (longueur ${s.length}, min recommandé 32). ` +
+      `L'app démarre, mais renforce-le : npm run check:secrets.`);
   }
 }
 
