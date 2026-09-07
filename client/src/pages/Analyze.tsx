@@ -8,7 +8,7 @@ import { useSubscription } from "@/hooks/use-subscription";
 import { Navbar } from "@/components/Navbar";
 import { FileUpload } from "@/components/FileUpload";
 import { UpgradeModal } from "@/components/UpgradeModal";
-import { ConsentBanner, hasUserConsented } from "@/components/ConsentBanner";
+import { ConsentBanner, hasUserConsented, getDatasetConsent, PRIVACY_POLICY_VERSION } from "@/components/ConsentBanner";
 import { ToxicAlert } from "@/components/ToxicAlert";
 import { PRODUCT_SUGGESTIONS, detectToxicProducts } from "@/lib/toxic-products";
 import { TriageBadge } from "@/components/TriageBadge";
@@ -255,6 +255,9 @@ export default function Analyze() {
             previousProducts: intake.previousProducts.trim() || undefined,
             allergies: intake.allergies.trim() || undefined,
           },
+          // Consentement recherche (choix explicite du patient) + version de la politique.
+          datasetConsent: getDatasetConsent(user?.id),
+          consentPolicyVersion: PRIVACY_POLICY_VERSION,
         }),
         maxRetries: 2,
         baseDelayMs: 800,
@@ -393,7 +396,8 @@ export default function Analyze() {
     setStep("select");
   };
 
-  const onConsentGiven = () => {
+  const onConsentGiven = (_datasetConsent: boolean) => {
+    // Le choix (contribuer ou non à la recherche) est déjà stocké par ConsentBanner.
     setNeedsConsent(false);
     if (pendingImageRef.current) {
       const img = pendingImageRef.current;

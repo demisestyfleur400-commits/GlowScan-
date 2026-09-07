@@ -72,6 +72,28 @@ app.use((_req: Request, res: Response, next: NextFunction) => {
   // same-origin (self) : nécessaires à la capture photo (analyse) et à la dictée
   // vocale (getUserMedia). Sans "self", le navigateur bloque tout (NotAllowedError).
   res.setHeader("Permissions-Policy", "camera=(self), microphone=(self), geolocation=()");
+
+  // ── Content-Security-Policy ──────────────────────────────────────────────
+  // Mode Report-Only par défaut (observe sans bloquer) → passer CSP_ENFORCE=1
+  // après 48h de logs pour activer le blocage. 'unsafe-inline' reste nécessaire
+  // (styles inline React + scripts d'init Sentry/pixel) tant qu'on n'a pas de nonce.
+  const csp = [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://connect.facebook.net https://*.sentry.io https://*.ingest.sentry.io",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "img-src 'self' data: blob: https:",
+    "font-src 'self' data: https://fonts.gstatic.com",
+    // API/analytics/Sentry (https:) + chat temps réel (wss:). Gemini/Groq sont appelés côté serveur.
+    "connect-src 'self' https: wss:",
+    // Paiement (Monetbil/CinetPay) + appel vidéo Jitsi ouverts en page/onglet.
+    "frame-src 'self' https://meet.jit.si https://*.monetbil.com https://*.cinetpay.com",
+    "frame-ancestors 'none'",
+    "base-uri 'self'",
+    "form-action 'self' https:",
+    "object-src 'none'",
+    "report-uri /api/csp-report",
+  ].join("; ");
+  res.setHeader(process.env.CSP_ENFORCE === "1" ? "Content-Security-Policy" : "Content-Security-Policy-Report-Only", csp);
   next();
 });
 
@@ -129,7 +151,23 @@ app.use((req, res, next) => {
   next();
 });
 
+// ── Garde de démarrage : refuse de booter en production sans SESSION_SECRET fort. ──
+// SESSION_SECRET signe les sessions, les liens HMAC des rapports médicaux et les
+// tokens de désinscription. Pas de fallback faible : mieux vaut ne pas démarrer.
+function requireSecrets() {
+  const WEAK = new Set(["glowscan-unsub-fallback", "glowscan-report-secret-v1", "changeme", "secret", "glowscan-secret"]);
+  const s = process.env.SESSION_SECRET || "";
+  const bad = !s || s.trim() === "" || WEAK.has(s.trim().toLowerCase()) || s.length < 32;
+  if (bad) {
+    const msg = `[SECURITY] SESSION_SECRET absent/faible (min 32 car., non par défaut). ` +
+      `L'app REFUSE de démarrer : les sessions et les liens de rapports médicaux seraient falsifiables.`;
+    if (process.env.NODE_ENV === "production") { console.error(msg); process.exit(1); }
+    else console.warn(msg + " (toléré hors production)");
+  }
+}
+
 (async () => {
+  requireSecrets();
   // Serve pitch decks as static HTML files (process.cwd() = project root in all envs)
   app.use("/decks", express.static(path.join(process.cwd(), "decks")));
 

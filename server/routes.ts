@@ -1520,6 +1520,18 @@ export async function registerRoutes(
     }
   });
 
+  // === CSP — réception des rapports de violation (mode Report-Only) ===
+  app.post("/api/csp-report", (req: any, res) => {
+    try {
+      const r = req.body?.["csp-report"] || req.body?.body || req.body;
+      const doc = r?.["document-uri"] || r?.documentURL || "?";
+      const blocked = r?.["blocked-uri"] || r?.blockedURL || "?";
+      const directive = r?.["violated-directive"] || r?.effectiveDirective || "?";
+      if (blocked && blocked !== "?") console.warn(`[CSP] violation · ${directive} · bloqué: ${blocked} · page: ${doc}`);
+    } catch {}
+    res.status(204).end();
+  });
+
   // === Health check IA ===
   // ────────────────────────────────────────────────────
   // GET /api/health — Health check pour monitoring (UptimeRobot, Pingdom, etc.)
@@ -2603,8 +2615,17 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
             finalStatus: "pending",
             trainingWeight: isProMode ? 2 : 1,
             isAnonymized: !userId,
-            gdprConsent: true,
-            annotation: enrichedAnnotation,
+            // Consentement recherche : B2B = couvert par les CGU dermatologue ;
+            // B2C = choix EXPLICITE du patient (accepter/refuser), jamais défaut.
+            gdprConsent: isProMode ? true : (req.body?.datasetConsent === true),
+            annotation: {
+              ...(enrichedAnnotation && typeof enrichedAnnotation === "object" ? enrichedAnnotation : {}),
+              consent: isProMode ? { source: "derm_terms" } : {
+                datasetConsent: req.body?.datasetConsent === true,
+                policyVersion: typeof req.body?.consentPolicyVersion === "string" ? req.body.consentPolicyVersion : null,
+                at: new Date().toISOString(),
+              },
+            },
           });
           console.log(`[training] ✅ Dataset record créé scan #${savedScanId} (${isProMode ? "B2B · pending (gold à la validation médecin)" : "B2C · pending"})`);
         } catch (trainErr) {
@@ -4932,7 +4953,23 @@ Ne mentionne JAMAIS la qualité de l'image.`;
     const userId = getUID(req);
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
     try {
-      const data = await storage.exportUserData(userId);
+      const data: any = await storage.exportUserData(userId);
+      // Sécurité : ne JAMAIS exporter le hash du mot de passe.
+      if (data?.profile) { delete data.profile.passwordHash; delete data.profile.password_hash; }
+      // Consultations du patient (ses propres consultations) — portabilité RGPD.
+      try {
+        data.consultations = Rows(await db.execute(sql`
+          SELECT id, condition, status, payment_status AS "paymentStatus", price_fcfa AS "priceFcfa",
+                 created_at AS "createdAt", closed_at AS "closedAt"
+          FROM consultations WHERE user_id = ${userId} ORDER BY created_at DESC`));
+        // Messages : UNIQUEMENT ceux envoyés par le patient (jamais ceux du dermatologue).
+        data.consultationMessages = Rows(await db.execute(sql`
+          SELECT m.id, m.consultation_id AS "consultationId", m.body, m.image_url AS "imageUrl", m.created_at AS "createdAt"
+          FROM consultation_messages m
+          JOIN consultations c ON c.id = m.consultation_id
+          WHERE c.user_id = ${userId} AND m.sender_id = ${userId}
+          ORDER BY m.created_at ASC`));
+      } catch (e) { console.warn("[GDPR export] consultations non incluses:", (e as any)?.message); }
       const filename = `glowscan-mes-donnees-${new Date().toISOString().slice(0, 10)}.json`;
       res.setHeader("Content-Type", "application/json; charset=utf-8");
       res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);

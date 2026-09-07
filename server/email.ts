@@ -8,7 +8,9 @@ import crypto from "crypto";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
 const EMAIL_FROM = process.env.EMAIL_FROM || "GlowScan <onboarding@resend.dev>";
-const UNSUB_SECRET = process.env.SESSION_SECRET || "glowscan-unsub-fallback";
+// Secret de signature : PAS de fallback faible — SESSION_SECRET est garanti présent
+// par le garde de démarrage (server/index.ts refuse de booter sinon).
+const UNSUB_SECRET = process.env.SESSION_SECRET || process.env.DATASET_EXPORT_SALT || "";
 
 // Jeton de désabonnement signé (HMAC) — permet un lien sans authentification.
 export function makeUnsubToken(userId: string): string {

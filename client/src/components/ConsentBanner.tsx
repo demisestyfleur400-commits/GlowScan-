@@ -4,6 +4,20 @@ import { Link } from "wouter";
 import { ShieldCheck, Globe, Lock } from "lucide-react";
 
 const CONSENT_KEY_BASE = "glowscan_consent_v1";
+// Version de la politique de confidentialité acceptée (à incrémenter si la politique change).
+export const PRIVACY_POLICY_VERSION = "2026-09-07";
+
+// Choix explicite de contribution au dataset de recherche anonymisé (true = accepté).
+export function getDatasetConsent(userId?: string | null): boolean {
+  try { return localStorage.getItem(`${consentKey(userId)}_dataset`) === "yes"; } catch { return false; }
+}
+function setDatasetConsent(accepted: boolean, userId?: string | null) {
+  try {
+    localStorage.setItem(`${consentKey(userId)}_dataset`, accepted ? "yes" : "no");
+    localStorage.setItem(`${consentKey(userId)}_dataset_at`, new Date().toISOString());
+    localStorage.setItem(`${consentKey(userId)}_dataset_ver`, PRIVACY_POLICY_VERSION);
+  } catch {}
+}
 
 /**
  * Clé scopée par utilisateur. Pour les visiteurs anonymes, on utilise "anon"
@@ -29,7 +43,7 @@ export function setUserConsent(value: "accepted" | "declined", userId?: string |
 }
 
 interface ConsentBannerProps {
-  onAccept: () => void;
+  onAccept: (datasetConsent: boolean) => void; // datasetConsent = contribution recherche
   onDecline?: () => void;
   userId?: string | null;
 }
@@ -41,10 +55,14 @@ export function ConsentBanner({ onAccept, onDecline, userId }: ConsentBannerProp
     setVisible(true);
   }, []);
 
-  const handleAccept = () => {
+  // Consentement au traitement (requis pour analyser) + choix explicite de
+  // contribution au dataset de recherche. Le REFUS de contribuer ne bloque PAS
+  // l'analyse : seule la contribution change.
+  const proceed = (datasetConsent: boolean) => {
     setUserConsent("accepted", userId);
+    setDatasetConsent(datasetConsent, userId);
     setVisible(false);
-    setTimeout(() => onAccept(), 200);
+    setTimeout(() => onAccept(datasetConsent), 200);
   };
 
   const handleDecline = () => {
@@ -158,8 +176,17 @@ export function ConsentBanner({ onAccept, onDecline, userId }: ConsentBannerProp
                   className="text-[11px] leading-normal"
                   style={{ color: "#6ee7b7" }}
                 >
-                  Sécurisé &amp; Anonyme : Aucun humain ne consulte ta photo. Elle est immédiatement
-                  supprimée après l'analyse et n'est jamais sauvegardée sans ton accord.
+                  Sécurisé : ta photo est conservée de façon chiffrée et à accès restreint pour ton suivi.
+                  Aucun humain ne la consulte hors d'une consultation que tu demandes. Tu peux la supprimer à tout moment.
+                </p>
+              </div>
+
+              <div
+                className="p-3 rounded-xl"
+                style={{ background: "rgba(167,139,250,0.06)", border: "1px solid rgba(167,139,250,0.18)" }}
+              >
+                <p className="text-[11px] leading-normal" style={{ color: "rgba(200,185,255,0.85)" }}>
+                  <strong style={{ color: "#f3f0ff" }}>Aider la recherche (optionnel).</strong> Ta photo <strong>anonymisée</strong> (sans nom, sans localisation) peut servir à améliorer l'IA pour les peaux africaines. C'est <strong>ton choix</strong> — le refus ne change rien à ton analyse.
                 </p>
               </div>
 
@@ -178,10 +205,10 @@ export function ConsentBanner({ onAccept, onDecline, userId }: ConsentBannerProp
               </p>
             </div>
 
-            {/* Boutons CTA */}
+            {/* Boutons CTA — deux vrais choix, les deux lancent l'analyse */}
             <div className="flex flex-col gap-2">
               <button
-                onClick={handleAccept}
+                onClick={() => proceed(true)}
                 className="w-full py-3.5 text-white font-extrabold text-sm active:scale-[0.98] transition-transform"
                 style={{
                   background: "linear-gradient(135deg, #E91E8C, #f43f5e)",
@@ -189,15 +216,23 @@ export function ConsentBanner({ onAccept, onDecline, userId }: ConsentBannerProp
                 }}
                 data-testid="button-consent-accept"
               >
-                J'accepte, lancer l'analyse
+                J'accepte et j'aide la recherche
+              </button>
+              <button
+                onClick={() => proceed(false)}
+                className="w-full py-3 text-sm font-extrabold active:scale-[0.98] transition-transform"
+                style={{ color: "#f3f0ff", background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 12 }}
+                data-testid="button-consent-analyze-only"
+              >
+                Analyser sans partager pour la recherche
               </button>
               <button
                 onClick={handleDecline}
-                className="w-full py-2.5 text-sm font-bold transition-colors"
-                style={{ color: "rgba(255,255,255,0.35)" }}
+                className="w-full py-2 text-xs font-bold transition-colors"
+                style={{ color: "rgba(255,255,255,0.3)" }}
                 data-testid="button-consent-decline"
               >
-                Plus tard
+                Annuler
               </button>
             </div>
           </motion.div>

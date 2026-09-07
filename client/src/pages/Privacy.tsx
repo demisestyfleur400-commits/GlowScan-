@@ -45,7 +45,7 @@ export default function Privacy() {
             <h1 className="text-xl font-extrabold" style={{ color: DS.text }} data-testid="text-privacy-title">
               Politique de confidentialité
             </h1>
-            <p className="text-xs mt-0.5" style={{ color: DS.muted }}>Dernière mise à jour : 31 mai 2026</p>
+            <p className="text-xs mt-0.5" style={{ color: DS.muted }}>Dernière mise à jour : 7 septembre 2026 · version 2026-09-07</p>
           </div>
         </div>
 
@@ -65,10 +65,13 @@ export default function Privacy() {
 
         <Section icon={<FileText className="w-4 h-4" style={{ color: "#a78bfa" }} />} title="2. Données collectées">
           <ul className="list-disc ml-5 space-y-1.5">
-            <li><strong style={{ color: DS.text }}>Identité</strong> : prénom, email ou numéro de téléphone, mot de passe (chiffré bcrypt — jamais visible).</li>
-            <li><strong style={{ color: DS.text }}>Photos uploadées</strong> : images de visage ou de cheveux envoyées pour l'analyse. Elles sont traitées par l'IA puis <strong style={{ color: DS.text }}>non stockées de façon permanente</strong>.</li>
-            <li><strong style={{ color: DS.text }}>Diagnostics</strong> : type de peau, Glow Score, conditions détectées, recommandations produits.</li>
-            <li><strong style={{ color: DS.text }}>Données d'utilisation</strong> : pages visitées, historique de scans (anonymisé pour améliorer l'app).</li>
+            <li><strong style={{ color: DS.text }}>Identité</strong> : prénom, email ou numéro de téléphone, mot de passe (haché bcrypt — jamais visible).</li>
+            <li><strong style={{ color: DS.text }}>Photos de peau</strong> : images envoyées pour l'analyse. Elles sont <strong style={{ color: DS.text }}>conservées de façon sécurisée et à accès restreint</strong> le temps de ton suivi, et <strong style={{ color: DS.text }}>anonymisées</strong> (métadonnées EXIF/GPS retirées). Tu peux les supprimer à tout moment.</li>
+            <li><strong style={{ color: DS.text }}>Informations médicales (intake)</strong> : âge, sexe, durée du problème, produits utilisés, allergies déclarées.</li>
+            <li><strong style={{ color: DS.text }}>Diagnostics</strong> : type de peau, Glow Score, conditions détectées, recommandations.</li>
+            <li><strong style={{ color: DS.text }}>Localisation approximative</strong> : pays / ville (jamais de position GPS précise).</li>
+            <li><strong style={{ color: DS.text }}>Paiement</strong> : pour les consultations, le paiement passe par Mobile Money (Monetbil/CinetPay). <strong style={{ color: DS.text }}>Nous ne stockons aucun numéro de carte.</strong></li>
+            <li><strong style={{ color: DS.text }}>Données d'utilisation</strong> : pages visitées, historique de scans.</li>
           </ul>
         </Section>
 
@@ -90,17 +93,26 @@ export default function Privacy() {
             className="rounded-xl p-3 mb-3"
             style={{ background: "rgba(251,191,36,0.06)", border: "1px solid rgba(251,191,36,0.2)" }}
           >
-            <p className="text-xs font-bold mb-1" style={{ color: "#fbbf24" }}>⚠ Seule exception — Analyse IA</p>
+            <p className="text-xs font-bold mb-1" style={{ color: "#fbbf24" }}>Prestataires techniques (sous-traitants)</p>
             <p>
-              Les photos que tu uploades sont transmises à <strong style={{ color: DS.text }}>Groq API</strong> (modèle Llama 4)
-              pour générer l'analyse dermatologique. Groq ne conserve pas tes images au-delà du temps nécessaire au traitement.
-              Aucun humain ne consulte tes photos. Elles ne sont <strong style={{ color: DS.text }}>pas stockées de façon permanente</strong> ni partagées avec d'autres tiers.
+              Pour fonctionner, GlowScan s'appuie sur : <strong style={{ color: DS.text }}>Google Gemini</strong> (analyse d'image par IA)
+              et <strong style={{ color: DS.text }}>Groq</strong> (transcription vocale). Ces prestataires traitent la donnée
+              le temps nécessaire au service et ne l'utilisent pas à d'autres fins. Aucun humain ne consulte tes photos hors
+              d'une consultation que tu as toi-même demandée avec un dermatologue.
             </p>
           </div>
-          <p>
-            Infrastructure d'hébergement : <strong style={{ color: DS.text }}>Railway</strong> avec base de données
-            PostgreSQL sécurisée.
-          </p>
+          <div
+            className="rounded-xl p-3"
+            style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}
+          >
+            <p className="text-xs font-bold mb-1" style={{ color: DS.text }}>Hébergement (transparence)</p>
+            <p>
+              Tes données sont hébergées sur <strong style={{ color: DS.text }}>Supabase (PostgreSQL)</strong> et
+              <strong style={{ color: DS.text }}> Railway</strong>. Leurs serveurs peuvent être situés
+              <strong style={{ color: DS.text }}> hors d'Afrique (Union Européenne ou États-Unis)</strong>. Nous te
+              l'indiquons en toute transparence. Les échanges sont chiffrés (HTTPS) et l'accès à la base est restreint.
+            </p>
+          </div>
         </Section>
 
         <Section icon={<Lock className="w-4 h-4" style={{ color: "#a78bfa" }} />} title="5. Sécurité">
@@ -112,7 +124,16 @@ export default function Privacy() {
           </ul>
         </Section>
 
-        <Section icon={<ShieldCheck className="w-4 h-4" style={{ color: "#a78bfa" }} />} title="6. Tes droits">
+        <Section icon={<FileText className="w-4 h-4" style={{ color: "#a78bfa" }} />} title="6. Durée de conservation">
+          <ul className="list-disc ml-5 space-y-1.5">
+            <li><strong style={{ color: DS.text }}>Compte actif</strong> : tes données sont conservées tant que ton compte existe.</li>
+            <li><strong style={{ color: DS.text }}>Analyses anonymes</strong> (sans compte) : conservées au maximum <strong style={{ color: DS.text }}>24 mois</strong>, puis la photo est retirée (anonymisation renforcée).</li>
+            <li><strong style={{ color: DS.text }}>Suppression de compte</strong> : toutes tes données sont effacées définitivement, immédiatement.</li>
+            <li><strong style={{ color: DS.text }}>Données de recherche</strong> : seules les analyses pour lesquelles tu as donné ton accord explicite alimentent, sous forme <strong style={{ color: DS.text }}>anonymisée</strong>, l'amélioration de l'IA.</li>
+          </ul>
+        </Section>
+
+        <Section icon={<ShieldCheck className="w-4 h-4" style={{ color: "#a78bfa" }} />} title="7. Tes droits">
           <p className="mb-3">Tu peux à tout moment :</p>
           <ul className="list-disc ml-5 space-y-1.5 mb-3">
             <li>
@@ -133,9 +154,10 @@ export default function Privacy() {
           </ul>
         </Section>
 
-        <Section icon={<Mail className="w-4 h-4" style={{ color: "#a78bfa" }} />} title="7. Contact">
+        <Section icon={<Mail className="w-4 h-4" style={{ color: "#a78bfa" }} />} title="8. Contact — protection des données">
           <p className="mb-1">
-            Pour toute question sur tes données ou demande de suppression :
+            Responsable de la protection des données : <strong style={{ color: DS.text }}>Démise Essawe</strong> (GlowScan Africa).
+            Pour toute question, demande d'accès, de rectification, d'export ou de suppression :
           </p>
           <p>
             📧{" "}

@@ -15,7 +15,9 @@ import { storage } from "./storage";
 import { sql } from "drizzle-orm";
 
 const BASE = (process.env.PUBLIC_BASE_URL || "https://glow-scan.com").replace(/\/$/, "");
-const SECRET = process.env.SESSION_SECRET || process.env.ADMIN_KEY || process.env.DATASET_EXPORT_SALT || "glowscan-report-secret-v1";
+// Signature HMAC des liens de rapports médicaux : AUCUN fallback en dur.
+// SESSION_SECRET est garanti par le garde de démarrage (server/index.ts).
+const SECRET = process.env.SESSION_SECRET || process.env.DATASET_EXPORT_SALT || "";
 
 // VAPID (idempotent) — nécessaire pour web-push depuis ce module.
 try {

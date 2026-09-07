@@ -9,6 +9,8 @@
     "compress": "tsx scripts/compress-images.ts",
     "start": "NODE_ENV=production node dist/index.cjs",
     "check": "tsc",
+    "check:secrets": "tsx scripts/check-secrets.ts",
+    "retention:dryrun": "tsx scripts/retention-dryrun.ts",
     "db:push": "drizzle-kit push"
   },
   "dependencies": {
