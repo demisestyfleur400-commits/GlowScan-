@@ -1520,6 +1520,27 @@ export async function registerRoutes(
     }
   });
 
+  // === B2C — « Je préfère attendre » : programme un rappel 24 h (score bas) ===
+  app.post("/api/b2c/remind-later", async (req: any, res) => {
+    try {
+      const userId = getUID(req);
+      const scanId = req.body?.scanId ? parseInt(String(req.body.scanId), 10) : null;
+      await db.execute(sql`CREATE TABLE IF NOT EXISTS b2c_reminders (
+        id serial PRIMARY KEY, scan_id integer, user_id text,
+        remind_at timestamptz NOT NULL, sent boolean DEFAULT false, created_at timestamptz DEFAULT now()
+      )`).catch(() => {});
+      // On ne programme un rappel que si on a un canal (compte connecté).
+      if (userId) {
+        await db.execute(sql`INSERT INTO b2c_reminders (scan_id, user_id, remind_at)
+          VALUES (${scanId}, ${userId}, NOW() + INTERVAL '24 hours')`);
+      }
+      res.json({ ok: true, scheduled: !!userId });
+    } catch (e) {
+      console.error("[b2c remind-later] error:", e);
+      res.json({ ok: true, scheduled: false });
+    }
+  });
+
   // === CSP — réception des rapports de violation (mode Report-Only) ===
   app.post("/api/csp-report", (req: any, res) => {
     try {

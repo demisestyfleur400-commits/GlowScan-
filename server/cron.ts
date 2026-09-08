@@ -480,6 +480,69 @@ async function sendAppointmentH2Reminders() {
   }
 }
 
+// ── B2C « Je préfère attendre » : rappel 24 h après (score bas non converti). ──
+async function sendB2CRemindLater() {
+  try {
+    await db.execute(sql`CREATE TABLE IF NOT EXISTS b2c_reminders (
+      id serial PRIMARY KEY, scan_id integer, user_id text,
+      remind_at timestamptz NOT NULL, sent boolean DEFAULT false, created_at timestamptz DEFAULT now()
+    )`).catch(() => {});
+    const r: any = await db.execute(sql`
+      SELECT b.id, b.user_id, u.email, u.first_name
+      FROM b2c_reminders b LEFT JOIN users u ON u.id = b.user_id
+      WHERE b.sent = false AND b.remind_at <= NOW() LIMIT 200`);
+    const rows = (r?.rows ?? r ?? []) as any[];
+    if (!rows.length) return;
+    let done = 0;
+    for (const row of rows) {
+      if (row.user_id) {
+        await sendPushToUsers(new Set([row.user_id]), {
+          title: "Ton analyse GlowScan t'attend", body: "Un dermatologue est disponible pour évaluer ta peau.", url: "/consultations",
+        } as any);
+        if (row.email && !String(row.email).endsWith("@phone.glowscan.cm")) {
+          try {
+            const base = (process.env.PUBLIC_BASE_URL || "https://glow-scan.com").replace(/\/$/, "");
+            await sendEmail(row.email, "Ton analyse GlowScan t'attend 🩺",
+              `<p>Bonjour ${fn(row.first_name || "")},</p><p>Ton analyse est prête et un dermatologue certifié est disponible pour l'évaluer. Ça ne prend que quelques minutes.</p><p><a href="${base}/consultations">Consulter un dermatologue →</a></p>`,
+              `Ton analyse GlowScan t'attend. Consulte : ${base}/consultations`);
+          } catch {}
+        }
+      }
+      try { await db.execute(sql`UPDATE b2c_reminders SET sent = true WHERE id = ${row.id}`); } catch {}
+      done++;
+    }
+    log(`⏰ Rappels B2C « plus tard » : ${done} envoyé(s)`);
+  } catch (err) { log(`❌ Erreur rappels B2C plus tard : ${err}`); }
+}
+
+// ── Garantie « réponse sous 2 h » : marque en timeout + alerte propriétaire. ──
+async function flagConsultationTimeouts() {
+  try {
+    const r: any = await db.execute(sql`
+      SELECT c.id, u.first_name, p.full_name AS derm_name
+      FROM consultations c
+      LEFT JOIN users u ON u.id = c.user_id
+      LEFT JOIN pro_accounts p ON p.id = c.pro_account_id
+      WHERE c.payment_status = 'paid' AND c.status = 'open'
+        AND c.last_message_at IS NULL
+        AND c.created_at < (NOW() - INTERVAL '2 hours')
+      LIMIT 100`);
+    const rows = (r?.rows ?? r ?? []) as any[];
+    if (!rows.length) return;
+    const ownerEmail = process.env.OWNER_EMAIL || "demiseessawe12@gmail.com";
+    for (const row of rows) {
+      try { await db.execute(sql`UPDATE consultations SET status = 'timeout' WHERE id = ${row.id}`); } catch {}
+      try {
+        const base = (process.env.PUBLIC_BASE_URL || "https://glow-scan.com").replace(/\/$/, "");
+        await sendEmail(ownerEmail, `⏱️ Remboursement à traiter — consultation #${row.id} sans réponse (2 h)`,
+          `<p>La consultation <strong>#${row.id}</strong> (${fn(row.first_name || "Patient")} → Dr ${String(row.derm_name || "").replace(/^dr\.?\s*/i, "")}) est payée mais <strong>aucun dermatologue n'a répondu en 2 h</strong>.</p><p>Conformément à la garantie affichée au patient, procède au <strong>remboursement Mobile Money</strong>. Détails : <a href="${base}/admin">/admin</a></p>`,
+          `Consultation #${row.id} sans réponse 2h → remboursement à traiter. ${base}/admin`);
+      } catch {}
+    }
+    log(`⏱️ Consultations en timeout (2 h) : ${rows.length} signalée(s) au propriétaire`);
+  } catch (err) { log(`❌ Erreur timeout consultations : ${err}`); }
+}
+
 export function startCronJobs() {
   // ✅ CORRECTION 2: Skip en mode test
   if (process.env.NODE_ENV === "test") {
@@ -529,6 +592,14 @@ export function startCronJobs() {
   // ✅ Rappels RDV agenda H-2 — toutes les 15 minutes
   cron.schedule("*/15 * * * *", sendAppointmentH2Reminders, { timezone: "Africa/Douala" });
   log("✅ Cron rappels RDV H-2 actif — toutes les 15 min (Douala)");
+
+  // ✅ Rappel B2C « plus tard » (score bas) — toutes les heures
+  cron.schedule("0 * * * *", sendB2CRemindLater, { timezone: "Africa/Douala" });
+  log("✅ Cron rappel B2C « plus tard » actif — toutes les heures");
+
+  // ✅ Timeout consultations (garantie 2 h) — toutes les 15 minutes
+  cron.schedule("*/15 * * * *", flagConsultationTimeouts, { timezone: "Africa/Douala" });
+  log("✅ Cron timeout consultations 2 h actif — toutes les 15 min");
 
   // ✅ Emails DERM automatiques
   cron.schedule("0 8 * * *", sendTrialReminders, { timezone: "Africa/Douala" });   // fin d'essai J-3/J-1
