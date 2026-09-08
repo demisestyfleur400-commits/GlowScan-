@@ -6,8 +6,13 @@ import { useEffect, useState } from "react";
 // de confirmation → la conversation s'ouvre dans « Mes consultations ».
 // ════════════════════════════════════════════════════════════════════════
 
-// Numéro Mobile Money où le patient envoie le paiement (modifiable).
-const PAYMENT_NUMBER = "674 377 959";
+// Numéros où le patient envoie le paiement (modifiables).
+// MTN Mobile Money = ancien numéro (aussi le numéro WhatsApp pour la preuve).
+// Orange Money = numéro dédié Orange.
+const MTN_NUMBER = "674 377 959";
+const ORANGE_NUMBER = "690 501 392";
+// Numéro WhatsApp (preuve de paiement) = le numéro MTN/historique.
+const PAYMENT_NUMBER = MTN_NUMBER;
 
 function urlBase64ToUint8Array(base64: string) {
   const padding = "=".repeat((4 - (base64.length % 4)) % 4);
@@ -281,7 +286,9 @@ export function ConsultationLauncher({ scanId, condition, imageUrl }: { scanId?:
               <>
                 <div style={{ background: "#fff", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 12, padding: 12, marginBottom: 12 }}>
                   <p style={{ fontSize: 12, color: "#374151", margin: 0, lineHeight: 1.7 }}>
-                    1. Envoie <strong>{selected.price.toLocaleString("fr-FR")} FCFA</strong> par <strong>MTN ou Orange Money</strong> au <strong>{PAYMENT_NUMBER}</strong>.<br />
+                    1. Envoie <strong>{selected.price.toLocaleString("fr-FR")} FCFA</strong> :<br />
+                    &nbsp;&nbsp;• <strong>MTN Mobile Money</strong> au <strong>{MTN_NUMBER}</strong><br />
+                    &nbsp;&nbsp;• <strong>Orange Money</strong> au <strong>{ORANGE_NUMBER}</strong><br />
                     2. <strong>Envoie ta preuve sur WhatsApp</strong> (capture du paiement) — ta consultation est déverrouillée dès réception.
                   </p>
                 </div>
