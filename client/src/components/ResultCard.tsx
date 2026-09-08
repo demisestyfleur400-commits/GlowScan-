@@ -2210,6 +2210,7 @@ ${medicalSections}
         scanId={savedScanId || scanId || undefined}
         condition={result.condition || ""}
         imageUrl={imageUrl || undefined}
+        result={result}
       />
     );
   }
