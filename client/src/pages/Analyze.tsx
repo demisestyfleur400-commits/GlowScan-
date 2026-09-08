@@ -19,7 +19,7 @@ const ResultCard = lazy(() =>
   import("@/components/ResultCard").then((m) => ({ default: m.ResultCard }))
 );
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Sparkles, Lock, ChevronRight, HelpCircle, ScanLine, Scissors } from "lucide-react";
+import { ArrowLeft, Sparkles, Lock, ChevronRight, HelpCircle, Scissors, Camera } from "lucide-react";
 import type { AnalysisResult } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -533,81 +533,68 @@ export default function Analyze() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="space-y-6"
+              className="space-y-4"
             >
-              {/* Ambient glow */}
-              <div className="pointer-events-none absolute inset-0 overflow-hidden">
-                <div
-                  className="absolute top-0 left-1/2 -translate-x-1/2 w-[360px] h-[360px] rounded-full"
-                  style={{ background: "radial-gradient(circle, rgba(47,158,110,0.15), transparent)" }}
-                />
-              </div>
-
-              <div className="text-center pt-4 relative z-10">
-                <div
-                  className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[10px] font-bold tracking-wide mb-4"
-                  style={{
-                    background: "rgba(47,158,110,0.15)",
-                    border: "1px solid rgba(47,158,110,0.3)",
-                    color: "#c4b5fd",
-                  }}
-                >
-                  <Sparkles className="w-3 h-3" />
-                  Nouveau diagnostic
-                </div>
-                <h1 className="text-xl font-bold" style={{ color: "#1f2a26" }}>
-                  Que veux-tu analyser ?
+              {/* En-tête compact — laisse le bouton monter tout en haut */}
+              <div className="text-center pt-1">
+                <h1 className="text-xl font-extrabold" style={{ color: "#1f2a26" }}>
+                  Analyse ta peau en 30 secondes
                 </h1>
-                <p className="text-xs mt-1" style={{ color: "rgba(0,0,0,0.35)" }}>
-                  Choisis une zone pour commencer
+                <p className="text-xs mt-1" style={{ color: "rgba(0,0,0,0.4)" }}>
+                  Prends une photo, l'IA fait le reste. <strong style={{ color: "#2f9e6e" }}>Gratuit.</strong>
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 gap-3 relative z-10">
-                {([
-                  {
-                    id: "face" as AnalysisArea,
-                    label: "Visage et teint",
-                    desc: "Analyse des pores, sébum, acné, taches et uniformité mélanique",
-                    icon: <ScanLine className="w-5 h-5" style={{ color: "#a78bfa" }} />,
-                  },
-                  {
-                    id: "hair" as AnalysisArea,
-                    label: "Cheveux et cuir chevelu",
-                    desc: "Analyse capillaire : chute, pellicules, sécheresse, densité et santé du cuir chevelu",
-                    icon: <Scissors className="w-5 h-5" style={{ color: "#f9a8d4" }} />,
-                  },
-                ] as { id: AnalysisArea; label: string; desc: string; icon: React.ReactNode }[]).map(area => (
-                  <button
-                    key={area.id}
-                    onClick={() => handleAreaSelect(area.id)}
-                    className="rounded-2xl p-5 text-left flex items-start gap-4 transition-all active:scale-[0.98]"
-                    style={{
-                      background: "rgba(47,158,110,0.06)",
-                      border: "1px solid rgba(47,158,110,0.18)",
-                    }}
-                  >
-                    <div
-                      className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                      style={{
-                        background: "rgba(47,158,110,0.15)",
-                        border: "1px solid rgba(47,158,110,0.25)",
-                      }}
-                    >
-                      {area.icon}
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-sm font-bold" style={{ color: "#1f2a26" }}>
-                        {area.label}
-                      </h3>
-                      <p className="text-xs mt-0.5 leading-normal" style={{ color: "#4a5a52" }}>
-                        {area.desc}
-                      </p>
-                    </div>
-                    <ChevronRight className="w-4 h-4 self-center" style={{ color: "rgba(0,0,0,0.25)" }} />
-                  </button>
-                ))}
-              </div>
+              {/* ── BOUTON PRINCIPAL — visible sans scroller (≥56px), visage par défaut ── */}
+              <button
+                onClick={() => handleAreaSelect("face")}
+                data-testid="button-analyze-face"
+                className="w-full flex items-center justify-center gap-2.5 text-white font-extrabold text-base active:scale-[0.98] transition-transform"
+                style={{
+                  minHeight: 60,
+                  borderRadius: 16,
+                  background: "linear-gradient(135deg, #E91E8C, #f43f5e)",
+                  boxShadow: "0 10px 28px rgba(233,30,140,0.28)",
+                }}
+              >
+                <Camera className="w-5 h-5" /> Analyser ma peau
+              </button>
+
+              {/* ── Option secondaire : cheveux ── */}
+              <button
+                onClick={() => handleAreaSelect("hair")}
+                data-testid="button-analyze-hair"
+                className="w-full flex items-center justify-center gap-2 font-bold text-sm active:scale-[0.98] transition-transform"
+                style={{
+                  minHeight: 52,
+                  borderRadius: 14,
+                  background: "rgba(47,158,110,0.08)",
+                  border: "1px solid rgba(47,158,110,0.22)",
+                  color: "#1f2a26",
+                }}
+              >
+                <Scissors className="w-4 h-4" style={{ color: "#f9a8d4" }} /> Analyser mes cheveux & cuir chevelu
+              </button>
+
+              <p className="text-center text-[11px]" style={{ color: "rgba(0,0,0,0.35)" }}>
+                🔒 Confidentiel · aucun humain ne voit ta photo · sans engagement
+              </p>
+
+              {/* ── Détails repliés : n'occupent pas le premier écran ── */}
+              <details className="rounded-2xl overflow-hidden" style={{ background: "rgba(0,0,0,0.03)", border: "1px solid rgba(0,0,0,0.06)" }}>
+                <summary className="cursor-pointer list-none px-4 py-3 text-sm font-bold flex items-center justify-between" style={{ color: "#1f2a26" }}>
+                  Comment ça marche ?
+                  <ChevronRight className="w-4 h-4" style={{ color: "rgba(0,0,0,0.3)" }} />
+                </summary>
+                <div className="px-4 pb-4 text-xs space-y-2.5" style={{ color: "#4a5a52" }}>
+                  <p><strong style={{ color: "#1f2a26" }}>1.</strong> Tu prends un selfie bien éclairé (ou une photo de tes cheveux).</p>
+                  <p><strong style={{ color: "#1f2a26" }}>2.</strong> L'IA analyse : pores, sébum, acné, taches, uniformité — adaptée aux peaux africaines.</p>
+                  <p><strong style={{ color: "#1f2a26" }}>3.</strong> Tu reçois ton Glow Score, tes conseils et ta routine.</p>
+                  <p className="text-[11px] pt-1" style={{ color: "rgba(0,0,0,0.4)" }}>
+                    Analyse indicative — ne remplace pas l'avis d'un dermatologue.
+                  </p>
+                </div>
+              </details>
             </motion.div>
           )}
 
