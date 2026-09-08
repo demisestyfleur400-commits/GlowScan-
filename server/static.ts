@@ -63,6 +63,17 @@ export function serveStatic(app: Express) {
     });
   }
 
+  // Serve glowscan-africa.html explicitly for /glowscan-africa route
+  const glowscanAfricaPage = path.resolve(distPath, "glowscan-africa.html");
+  if (fs.existsSync(glowscanAfricaPage)) {
+    app.get("/glowscan-africa", (_req, res) => {
+      res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+      res.setHeader("Pragma", "no-cache");
+      res.setHeader("Expires", "0");
+      res.sendFile(glowscanAfricaPage);
+    });
+  }
+
   // Serve fondateur.html explicitly for /fondateur route
   const fondateurPage = path.resolve(distPath, "fondateur.html");
   if (fs.existsSync(fondateurPage)) {
