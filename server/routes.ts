@@ -1173,6 +1173,62 @@ export async function registerRoutes(
     }
   });
 
+  // ── PROSPECTS / RELANCE ────────────────────────────────────────────────
+  // Liste des numéros WhatsApp saisis à l'intake B2C, pour relance manuelle.
+  // Un prospect = un scan avec un prospect_phone. « À relancer » = pas encore
+  // de compte rattaché ET pas de consultation payée. Le plus récent par numéro.
+  app.get("/api/admin/prospects", async (req: any, res) => {
+    if (!checkDatasetKey(req)) return res.status(403).json({ message: "Accès refusé" });
+    try {
+      // Colonnes résilientes — l'endpoint ne casse pas si aucun prospect encore.
+      try { await db.execute(sql`ALTER TABLE scans ADD COLUMN IF NOT EXISTS prospect_phone text`); } catch {}
+      try { await db.execute(sql`ALTER TABLE scans ADD COLUMN IF NOT EXISTS prospect_name text`); } catch {}
+      try { await db.execute(sql`ALTER TABLE consultations ADD COLUMN IF NOT EXISTS patient_phone text`); } catch {}
+      const days = Math.min(365, Math.max(1, parseInt(String(req.query?.days), 10) || 60));
+      // Dernier scan par numéro (DISTINCT ON), enrichi : a un compte ? a consulté ?
+      const rows = Rows(await db.execute(sql`
+        SELECT DISTINCT ON (s.prospect_phone)
+          s.prospect_phone AS phone,
+          s.prospect_name  AS name,
+          s.condition, s.score, s.created_at,
+          (s.user_id IS NOT NULL) AS has_account,
+          EXISTS (
+            SELECT 1 FROM consultations c
+            WHERE c.patient_phone IS NOT NULL
+              AND regexp_replace(c.patient_phone,'[^0-9]','','g') = regexp_replace(s.prospect_phone,'[^0-9]','','g')
+          ) AS has_consulted,
+          COUNT(*) OVER (PARTITION BY s.prospect_phone) AS scans_count
+        FROM scans s
+        WHERE s.prospect_phone IS NOT NULL
+          AND s.created_at >= NOW() - make_interval(days => ${days})
+        ORDER BY s.prospect_phone, s.created_at DESC
+      `));
+      const prospects = rows
+        .map((r: any) => {
+          const digits = String(r.phone || "").replace(/\D/g, "");
+          const local = digits.length === 9 ? `237${digits}` : digits; // Cameroun par défaut
+          return {
+            phone: r.phone,
+            waNumber: local,
+            name: r.name || null,
+            condition: r.condition || null,
+            score: r.score ?? null,
+            createdAt: r.created_at,
+            hasAccount: r.has_account === true,
+            hasConsulted: r.has_consulted === true,
+            scansCount: Number(r.scans_count) || 1,
+            toRelance: r.has_consulted !== true, // pas encore converti en consultation
+          };
+        })
+        .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      const toRelance = prospects.filter((p: any) => p.toRelance);
+      res.json({ total: prospects.length, toRelanceCount: toRelance.length, prospects });
+    } catch (e) {
+      console.error("[prospects] list:", e);
+      res.json({ total: 0, toRelanceCount: 0, prospects: [] });
+    }
+  });
+
   // Résout le rôle du user courant sur une consultation (patient / doctor).
   async function consultAccess(c: any, userId: string): Promise<{ side: "patient" | "doctor" | null; doctorUserId: string | null }> {
     let doctorUserId: string | null = null;
@@ -2449,6 +2505,23 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
           motivation: finalResult.motivation,
         });
         savedScanId = savedScan.id;
+        // ── RÉTENTION PROSPECT ─────────────────────────────────────────────
+        // Le numéro WhatsApp saisi à l'intake (B2C) est conservé sur le scan
+        // pour permettre une relance manuelle (visible dans l'admin, rappel du
+        // mercredi). Colonnes hors schéma Drizzle, résilientes. Best-effort :
+        // n'impacte jamais l'analyse. On ne stocke rien en mode DERM.
+        if (!isProRequest && savedScanId) {
+          const rawPhone = String((intake as any)?.phone || "").trim();
+          const digits = rawPhone.replace(/[^0-9+]/g, "");
+          if (digits.replace(/\D/g, "").length >= 8) {
+            const prospectName = String((intake as any)?.fullName || "").trim().slice(0, 120) || null;
+            try {
+              await db.execute(sql`ALTER TABLE scans ADD COLUMN IF NOT EXISTS prospect_phone text`);
+              await db.execute(sql`ALTER TABLE scans ADD COLUMN IF NOT EXISTS prospect_name text`);
+              await db.execute(sql`UPDATE scans SET prospect_phone = ${digits.slice(0, 20)}, prospect_name = ${prospectName} WHERE id = ${savedScanId}`);
+            } catch (e) { console.error("[analyze] prospect_phone save failed (non bloquant):", e); }
+          }
+        }
         // Persiste les angles supplémentaires (colonne hors schéma Drizzle, résiliente).
         if (extraImagePaths.length && savedScanId) {
           try { await db.execute(sql`ALTER TABLE scans ADD COLUMN IF NOT EXISTS extra_images jsonb`); } catch {}

@@ -17,7 +17,7 @@ export function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
 
   const handleWhatsApp = () => {
     setLoading(true);
-    const text = `🌟 *ACTIVATION GLOWSCAN PREMIUM*\n\nJe souhaite activer mon abonnement GlowScan Premium.\n\n💵 *Tarif :* ${PREMIUM_PRICE.toLocaleString()} FCFA/mois\n📲 *Paiement :* Orange Money ou MTN MoMo au *674 37 79 59*\n\nJe vous envoie la capture d'écran de mon reçu de paiement pour activer mon accès immédiatement ! ✨`;
+    const text = `🌟 *ACTIVATION GLOWSCAN PREMIUM*\n\nJe souhaite activer mon abonnement GlowScan Premium.\n\n💵 *Tarif :* ${PREMIUM_PRICE.toLocaleString()} FCFA/mois\n📲 *Paiement :*\n• Orange Money au *690 501 392*\n• MTN MoMo au *674 377 959*\n\nJe vous envoie la capture d'écran de mon reçu de paiement pour activer mon accès immédiatement ! ✨`;
 
     window.open(`https://wa.me/${ADMIN_WHATSAPP.replace(/\D/g, "")}?text=${encodeURIComponent(text)}`, "_blank");
 

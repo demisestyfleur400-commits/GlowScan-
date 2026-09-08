@@ -543,6 +543,65 @@ async function flagConsultationTimeouts() {
   } catch (err) { log(`❌ Erreur timeout consultations : ${err}`); }
 }
 
+// ── RELANCE PROSPECTS (chaque mercredi) ────────────────────────────────
+// Envoie au propriétaire la liste des numéros WhatsApp saisis à l'intake B2C
+// qui n'ont PAS encore consulté, avec un lien wa.me pré-rempli par prospect
+// pour relancer en un clic. Rétention des prospects tièdes du funnel.
+async function sendWeeklyProspectRelance() {
+  try {
+    try { await db.execute(sql`ALTER TABLE scans ADD COLUMN IF NOT EXISTS prospect_phone text`); } catch {}
+    try { await db.execute(sql`ALTER TABLE scans ADD COLUMN IF NOT EXISTS prospect_name text`); } catch {}
+    try { await db.execute(sql`ALTER TABLE consultations ADD COLUMN IF NOT EXISTS patient_phone text`); } catch {}
+    const r: any = await db.execute(sql`
+      SELECT DISTINCT ON (s.prospect_phone)
+        s.prospect_phone AS phone, s.prospect_name AS name, s.condition, s.score, s.created_at,
+        EXISTS (
+          SELECT 1 FROM consultations c
+          WHERE c.patient_phone IS NOT NULL
+            AND regexp_replace(c.patient_phone,'[^0-9]','','g') = regexp_replace(s.prospect_phone,'[^0-9]','','g')
+        ) AS has_consulted
+      FROM scans s
+      WHERE s.prospect_phone IS NOT NULL
+        AND s.created_at >= NOW() - INTERVAL '30 days'
+      ORDER BY s.prospect_phone, s.created_at DESC`);
+    const rows = ((r?.rows ?? r ?? []) as any[]).filter((x) => x.has_consulted !== true);
+    const ownerEmail = process.env.OWNER_EMAIL || "demiseessawe12@gmail.com";
+    if (!rows.length) {
+      log("🔔 Relance mercredi : aucun prospect à relancer cette semaine");
+      return;
+    }
+    rows.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    const items = rows.map((p) => {
+      const digits = String(p.phone || "").replace(/\D/g, "");
+      const wa = digits.length === 9 ? `237${digits}` : digits;
+      const msg = encodeURIComponent(
+        `Bonjour${p.name ? ` ${String(p.name).split(" ")[0]}` : ""} 👋\n` +
+        `C'est GlowScan. Vous avez fait une analyse de peau chez nous récemment 🩺.\n` +
+        `Un dermatologue peut examiner votre situation et répondre à vos questions. On s'occupe de vous ?`
+      );
+      const when = new Date(p.created_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", timeZone: "Africa/Douala" });
+      return `<tr>
+        <td style="padding:6px 10px;border-bottom:1px solid #eee">${p.name || "—"}</td>
+        <td style="padding:6px 10px;border-bottom:1px solid #eee"><strong>${p.phone}</strong></td>
+        <td style="padding:6px 10px;border-bottom:1px solid #eee">${p.condition || "—"}${p.score != null ? ` · ${p.score}/100` : ""}</td>
+        <td style="padding:6px 10px;border-bottom:1px solid #eee">${when}</td>
+        <td style="padding:6px 10px;border-bottom:1px solid #eee"><a href="https://wa.me/${wa}?text=${msg}" style="color:#25D366;font-weight:700">Relancer →</a></td>
+      </tr>`;
+    }).join("");
+    const html = `<p>Bonjour 👋</p>
+      <p>Voici les <strong>${rows.length} prospect(s)</strong> du funnel GlowScan (30 derniers jours) qui ont fait une analyse mais <strong>n'ont pas encore consulté</strong>. Clique « Relancer » pour ouvrir WhatsApp avec un message pré-rempli.</p>
+      <table style="border-collapse:collapse;width:100%;font-size:13px">
+        <tr style="text-align:left;color:#64748B"><th style="padding:6px 10px">Nom</th><th style="padding:6px 10px">WhatsApp</th><th style="padding:6px 10px">Analyse</th><th style="padding:6px 10px">Date</th><th style="padding:6px 10px"></th></tr>
+        ${items}
+      </table>
+      <p style="font-size:12px;color:#94A3B8;margin-top:14px">La liste complète est aussi dans ton espace admin.</p>`;
+    const text = `Relance mercredi — ${rows.length} prospect(s) sans consultation :\n` +
+      rows.map((p) => `• ${p.name || "—"} — ${p.phone} (${p.condition || "—"})`).join("\n");
+    await sendEmail(ownerEmail, `🔔 Relance mercredi — ${rows.length} prospect(s) WhatsApp à recontacter`, html, text);
+    log(`🔔 Relance mercredi envoyée au propriétaire : ${rows.length} prospect(s)`);
+  } catch (err) { log(`❌ Erreur relance prospects mercredi : ${err}`); }
+}
+
 export function startCronJobs() {
   // ✅ CORRECTION 2: Skip en mode test
   if (process.env.NODE_ENV === "test") {
@@ -607,4 +666,8 @@ export function startCronJobs() {
   cron.schedule("0 11 * * *", sendB2CReengagement, { timezone: "Africa/Douala" });  // patients B2C inactifs ~15j (plafonné 60/j)
   cron.schedule("0 9 1 * *", sendMonthlyDigest, { timezone: "Africa/Douala" });    // digest le 1er du mois
   log("✅ Crons emails DERM actifs — essai (8h), ré-engagement (10h30), digest (1er du mois 9h)");
+
+  // ✅ Relance prospects — chaque MERCREDI à 9h00 (Douala)
+  cron.schedule("0 9 * * 3", sendWeeklyProspectRelance, { timezone: "Africa/Douala" });
+  log("✅ Cron relance prospects actif — mercredi 9h00 (Douala)");
 }

@@ -57,7 +57,20 @@ export default function Admin() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [period, setPeriod] = useState<Period>("all");
-  const [adminTab, setAdminTab] = useState<"traction" | "stats" | "premium" | "leads" | "partenaires" | "vedettes" | "dataset" | "retention" | "dermatologues" | "iavsdoc" | "consults" | "revenus">("traction");
+  const [adminTab, setAdminTab] = useState<"traction" | "stats" | "premium" | "leads" | "partenaires" | "vedettes" | "dataset" | "retention" | "dermatologues" | "iavsdoc" | "consults" | "revenus" | "prospects">("traction");
+  const [prospects, setProspects] = useState<any[]>([]);
+  const [prospectsMeta, setProspectsMeta] = useState<{ total: number; toRelanceCount: number }>({ total: 0, toRelanceCount: 0 });
+  const [prospectsLoading, setProspectsLoading] = useState(false);
+  const fetchProspects = async (key: string) => {
+    setProspectsLoading(true);
+    try {
+      const res = await fetch("/api/admin/prospects?days=60", { headers: { "x-admin-key": key } });
+      const d = await res.json();
+      setProspects(Array.isArray(d?.prospects) ? d.prospects : []);
+      setProspectsMeta({ total: d?.total || 0, toRelanceCount: d?.toRelanceCount || 0 });
+    } catch { setProspects([]); }
+    finally { setProspectsLoading(false); }
+  };
   const [revenue, setRevenue] = useState<{ entries: any[]; totals: { encaisse: number; attente: number; global: number } }>({ entries: [], totals: { encaisse: 0, attente: 0, global: 0 } });
   const [revForm, setRevForm] = useState<{ amount: string; source: string; status: string; note: string }>({ amount: "", source: "consultation", status: "encaisse", note: "" });
   const [revBusy, setRevBusy] = useState(false);
@@ -154,6 +167,7 @@ export default function Admin() {
     if (adminTab === "iavsdoc") fetchIaVsDoc(adminKey);
     if (adminTab === "consults") fetchConsults(adminKey);
     if (adminTab === "revenus") fetchRevenue(adminKey);
+    if (adminTab === "prospects") fetchProspects(adminKey);
   }, [adminTab]);
 
   const fetchRevenue = async (key: string) => {
@@ -482,6 +496,7 @@ export default function Admin() {
               { key: "iavsdoc", label: "IA vs Médecin", icon: BarChart2, badge: 0, activeColor: "#7c3aed" },
               { key: "consults", label: "Consultations", icon: MessageCircle, badge: consults.filter((c) => c.paymentStatus !== "paid").length, activeColor: "#10b981" },
               { key: "revenus", label: "Revenus", icon: DollarSign, badge: 0, activeColor: "#22c55e" },
+              { key: "prospects", label: "Prospects", icon: Phone, badge: prospectsMeta.toRelanceCount || 0, activeColor: "#25D366" },
               { key: "dermatologues", label: "Dermatologues", icon: Stethoscope, badge: dermActivity.filter((d: any) => (d.blockers?.length || 0) > 0).length, activeColor: "#f43f5e" },
               { key: "traction", label: "Traction", icon: TrendingUp, badge: 0, activeColor: DS.violet },
               { key: "stats", label: "Stats", icon: BarChart2, badge: 0, activeColor: DS.violet },
@@ -1109,6 +1124,73 @@ export default function Admin() {
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {adminTab === "prospects" && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div>
+                <h3 className="text-base font-bold" style={{ color: DS.text }}>Prospects à relancer</h3>
+                <p className="text-[11px]" style={{ color: DS.muted }}>
+                  Numéros WhatsApp saisis à l'analyse (60 derniers jours). Relance automatique par email <strong>chaque mercredi 9h</strong>.
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="text-center px-3 py-1.5 rounded-xl" style={{ background: "rgba(37,211,102,0.1)", border: "1px solid rgba(37,211,102,0.3)" }}>
+                  <div className="text-lg font-extrabold" style={{ color: "#128C4A" }}>{prospectsMeta.toRelanceCount}</div>
+                  <div className="text-[9px] font-bold uppercase" style={{ color: "#128C4A" }}>à relancer</div>
+                </div>
+                <div className="text-center px-3 py-1.5 rounded-xl" style={{ background: DS.surface, border: `1px solid ${DS.border}` }}>
+                  <div className="text-lg font-extrabold" style={{ color: DS.text }}>{prospectsMeta.total}</div>
+                  <div className="text-[9px] font-bold uppercase" style={{ color: DS.muted }}>total</div>
+                </div>
+                <button onClick={() => fetchProspects(adminKey)} className="text-[11px] font-bold px-3 py-2 rounded-xl" style={{ background: DS.surface, border: `1px solid ${DS.border}`, color: DS.text }}>
+                  ↻ Actualiser
+                </button>
+              </div>
+            </div>
+
+            {prospectsLoading ? (
+              <div className="text-center py-8"><Loader2 className="w-5 h-5 animate-spin inline" style={{ color: DS.muted }} /></div>
+            ) : prospects.length === 0 ? (
+              <div className="text-center py-10 rounded-2xl" style={{ background: DS.surface, border: `1px solid ${DS.border}` }}>
+                <p className="text-sm" style={{ color: DS.muted }}>Aucun prospect avec numéro WhatsApp pour l'instant.</p>
+                <p className="text-[11px] mt-1" style={{ color: DS.muted }}>Les numéros saisis à l'étape « Numéro de téléphone » de l'analyse apparaîtront ici.</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {prospects.map((p, i) => {
+                  const first = (p.name || "").split(" ")[0] || "";
+                  const msg = encodeURIComponent(
+                    `Bonjour${first ? ` ${first}` : ""} 👋\n` +
+                    `C'est GlowScan. Vous avez fait une analyse de peau chez nous récemment 🩺.\n` +
+                    `Un dermatologue peut examiner votre situation et répondre à vos questions. On s'occupe de vous ?`
+                  );
+                  return (
+                    <div key={i} className="flex items-center justify-between gap-3 p-3 rounded-xl" style={{ background: DS.surface, border: `1px solid ${p.hasConsulted ? DS.border : "rgba(37,211,102,0.35)"}` }}>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-bold" style={{ color: DS.text }}>{p.name || "Prospect"}</span>
+                          <span className="text-sm font-mono" style={{ color: DS.muted }}>{p.phone}</span>
+                          {p.hasConsulted && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ background: "rgba(34,197,94,0.15)", color: "#128C4A" }}>✅ a consulté</span>}
+                          {p.hasAccount && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ background: "rgba(124,58,237,0.12)", color: DS.violet }}>compte</span>}
+                        </div>
+                        <p className="text-[11px] mt-0.5" style={{ color: DS.muted }}>
+                          {p.condition || "—"}{p.score != null ? ` · ${p.score}/100` : ""}
+                          {p.createdAt ? ` · ${new Date(p.createdAt).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" })}` : ""}
+                          {p.scansCount > 1 ? ` · ${p.scansCount} analyses` : ""}
+                        </p>
+                      </div>
+                      <a href={`https://wa.me/${p.waNumber}?text=${msg}`} target="_blank" rel="noreferrer"
+                        className="flex items-center gap-1.5 text-[12px] font-bold px-3 py-2 rounded-xl flex-shrink-0" style={{ background: "#25D366", color: "#fff", textDecoration: "none" }}>
+                        📲 Relancer
+                      </a>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
