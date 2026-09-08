@@ -1163,6 +1163,99 @@ interface ResultCardProps {
   autoEmailTo?: string;
 }
 
+// ════════════════════════════════════════════════════════════════════════
+// B2C · Réception du rapport par EMAIL (score ≥ 60, visiteur sans compte).
+// Remplace le téléchargement PDF (cassé sur Chrome). L'utilisateur saisit son
+// email → le serveur lui envoie le rapport (le corps de l'email EST le rapport,
+// PDF facultatif). Puis appel à l'action : créer un compte / retour à l'accueil.
+// Composant hissé au niveau module → pas de remount à chaque frappe.
+// ════════════════════════════════════════════════════════════════════════
+function ReportEmailCapture({ scanId, condition, score, name, getPdfBase64, violet }: {
+  scanId?: number | null; condition: string; score: number; name?: string;
+  getPdfBase64?: () => Promise<string | null>; violet: string;
+}) {
+  const [phase, setPhase] = useState<"idle" | "form" | "sending" | "done">("idle");
+  const [email, setEmail] = useState("");
+  const [err, setErr] = useState("");
+
+  const send = async () => {
+    const e = email.trim().toLowerCase();
+    if (!e.includes("@") || e.length < 5) { setErr("Entre une adresse email valide."); return; }
+    setErr(""); setPhase("sending");
+    let pdfBase64: string | null = null;
+    // On tente le PDF en pièce jointe, mais on n'échoue JAMAIS si ça ne marche pas
+    // (Chrome) — le corps de l'email est déjà le rapport.
+    try { if (getPdfBase64) pdfBase64 = await getPdfBase64(); } catch {}
+    try {
+      const r = await fetch("/api/scans/email-report", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: e, scanId, condition, score, name: name || "", pdfBase64: pdfBase64 || undefined }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (r.ok && (d?.sent ?? true)) { setPhase("done"); return; }
+      throw new Error();
+    } catch {
+      setErr("Envoi impossible pour l'instant. Réessaie dans un instant.");
+      setPhase("form");
+    }
+  };
+
+  if (phase === "done") {
+    return (
+      <div data-testid="report-email-done" style={{ display: "flex", flexDirection: "column", gap: 14, textAlign: "center", padding: "4px 0" }}>
+        <div style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.3)", borderRadius: 14, padding: "16px 14px" }}>
+          <p style={{ fontSize: 15, fontWeight: 800, color: "#047857", margin: "0 0 4px" }}>Vous recevrez votre rapport par email ✅</p>
+          <p style={{ fontSize: 12.5, color: "#065f46", margin: 0, lineHeight: 1.5 }}>Vérifie ta boîte de réception (et les spams) dans quelques minutes.</p>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 4 }}>
+          <p style={{ fontSize: 13.5, fontWeight: 700, color: "#1a1a2e", margin: 0, lineHeight: 1.4 }}>
+            Crée ton compte pour retrouver ton analyse et suivre l'évolution de ta peau.
+          </p>
+          <a href="/auth" data-testid="link-create-account"
+            style={{ display: "block", width: "100%", boxSizing: "border-box", padding: "14px", borderRadius: 14, background: violet, color: "#fff", fontWeight: 800, fontSize: 14, textDecoration: "none", textAlign: "center" }}>
+            Créer mon compte →
+          </a>
+          <a href="/" data-testid="link-home"
+            style={{ fontSize: 12.5, fontWeight: 600, color: "#6b7280", textDecoration: "none", textAlign: "center", padding: 4 }}>
+            Retour à l'accueil
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  if (phase === "idle") {
+    return (
+      <button onClick={() => setPhase("form")} data-testid="button-receive-report"
+        style={{ width: "100%", padding: "14px", borderRadius: 14, border: "none", background: violet, color: "#fff", fontWeight: 800, fontSize: 14, cursor: "pointer" }}>
+        📩 Recevoir mon rapport de consultation
+      </button>
+    );
+  }
+
+  // phase form / sending
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <p style={{ fontSize: 13, fontWeight: 700, color: "#1a1a2e", margin: 0, textAlign: "center" }}>
+        Entre ton email — on t'envoie ton rapport.
+      </p>
+      <input
+        type="email" inputMode="email" autoComplete="email" placeholder="ton@email.com"
+        value={email} onChange={(ev) => setEmail(ev.target.value)}
+        disabled={phase === "sending"}
+        onKeyDown={(ev) => { if (ev.key === "Enter") send(); }}
+        data-testid="input-report-email"
+        style={{ width: "100%", boxSizing: "border-box", padding: "13px 14px", borderRadius: 12, border: "1px solid #E2E8F0", fontSize: 15, outline: "none" }}
+      />
+      {err && <p style={{ fontSize: 11.5, color: "#dc2626", margin: 0, textAlign: "center" }}>{err}</p>}
+      <button onClick={send} disabled={phase === "sending"} data-testid="button-send-report"
+        style={{ width: "100%", padding: "14px", borderRadius: 14, border: "none", background: violet, color: "#fff", fontWeight: 800, fontSize: 14, cursor: phase === "sending" ? "wait" : "pointer", opacity: phase === "sending" ? 0.7 : 1 }}>
+        {phase === "sending" ? "Envoi…" : "Recevoir"}
+      </button>
+    </div>
+  );
+}
+
 export function ResultCard({ result, scanId, savedScanId, area, imageUrl, userFirstName, patientIntake, isPro = false, doctorName, doctorLicense, cabinetName, practitionerNotes, overrideNote, reportMode = "fusionne", clinicalRecord, examen, onPdfReady, autoEmailTo }: ResultCardProps) {
   // 🎨 Thème actif : clair en B2C (page blanche), sombre en DERM (isPro).
   // Réassigne le DS module-level lu par les sous-composants pendant ce rendu.
@@ -2174,11 +2267,22 @@ ${medicalSections}
           </div>
         )}
 
-        {/* Le rapport — pour les curieuses */}
-        <button onClick={() => handleDownloadPDF()} disabled={pdfGenerating} data-testid="button-download-pdf"
-          style={{ width: "100%", padding: "14px", borderRadius: 14, border: "none", background: DS.violet, color: "#fff", fontWeight: 800, fontSize: 14, cursor: pdfGenerating ? "wait" : "pointer", opacity: pdfGenerating ? 0.7 : 1 }}>
-          {pdfGenerating ? "Génération…" : "📄 Télécharger mon rapport complet"}
-        </button>
+        {/* Le rapport. Visiteur sans compte → réception par email (le téléchargement
+            PDF échoue sur Chrome). Utilisateur connecté → téléchargement direct. */}
+        {user ? (
+          <button onClick={() => handleDownloadPDF()} disabled={pdfGenerating} data-testid="button-download-pdf"
+            style={{ width: "100%", padding: "14px", borderRadius: 14, border: "none", background: DS.violet, color: "#fff", fontWeight: 800, fontSize: 14, cursor: pdfGenerating ? "wait" : "pointer", opacity: pdfGenerating ? 0.7 : 1 }}>
+            {pdfGenerating ? "Génération…" : "📄 Télécharger mon rapport complet"}
+          </button>
+        ) : (
+          <ReportEmailCapture
+            scanId={savedScanId || scanId || undefined}
+            condition={result.condition || ""}
+            score={result.score || 0}
+            name={userFirstName}
+            violet={DS.violet}
+          />
+        )}
 
         {/* Consultation — lien discret */}
         <details style={{ textAlign: "center" }}>

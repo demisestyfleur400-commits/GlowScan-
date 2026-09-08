@@ -3602,17 +3602,21 @@ Réponds en 2-4 phrases max, sois direct et utile.`;
     try {
       const email = String(req.body?.email || "").trim().toLowerCase();
       if (!email.includes("@") || email.length < 5) return res.status(400).json({ message: "Email invalide" });
+      // Le PDF est FACULTATIF : la génération PDF côté client échoue sur certains
+      // navigateurs (Chrome). Le corps HTML de l'email est déjà un rapport valide,
+      // donc on envoie le rapport quoi qu'il arrive, avec le PDF en pièce jointe
+      // seulement s'il a bien pu être généré.
       let pdf = String(req.body?.pdfBase64 || "");
       if (pdf.startsWith("data:")) pdf = pdf.split(",")[1] || "";
-      if (pdf.length < 100) return res.status(400).json({ message: "PDF manquant" });
+      const attachments = pdf.length >= 100 ? [{ filename: "analyse-glowscan.pdf", content: pdf }] : undefined;
       const { sendEmail, buildB2CResultEmail } = await import("./email");
       const base = (process.env.PUBLIC_BASE_URL || "https://glow-scan.com").replace(/\/$/, "");
       const name = String(req.body?.name || "").trim();
       const condition = String(req.body?.condition || "Analyse cutanée").trim();
       const score = parseInt(req.body?.score) || 0;
       const e = buildB2CResultEmail(name, condition, score, `${base}/analyze`);
-      const r = await sendEmail(email, e.subject, e.html, e.text, [{ filename: "analyse-glowscan.pdf", content: pdf }]);
-      res.json({ success: r.ok, sent: r.ok });
+      const r = await sendEmail(email, e.subject, e.html, e.text, attachments);
+      res.json({ success: r.ok, sent: r.ok, attached: !!attachments });
     } catch (err) {
       res.status(500).json({ message: "Erreur serveur" });
     }
