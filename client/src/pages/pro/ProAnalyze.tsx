@@ -49,7 +49,7 @@ import type { AnalysisResult, Patient } from "@shared/schema";
 import { ProLayout, ProCard, ProInput } from "@/components/ProLayout";
 import { ClinicalDossierForm, type ClinicalRecord } from "@/components/pro/ClinicalDossierForm";
 import { ExamenPhysiqueForm, EMPTY_EXAMEN, type ExamenData } from "@/components/pro/ExamenPhysiqueForm";
-import { ClinicalAssistant } from "@/components/pro/ClinicalAssistant";
+import { ClinicalReasoningPanel } from "@/components/pro/ClinicalReasoningPanel";
 import PDFViewerModal from "@/components/PDFViewerModal";
 import { PremiumPdfTemplate } from "@/templates/PremiumPdfTemplate";
 import { buildObservationDoc, type ObservationData } from "@/lib/observationPdf";
@@ -1283,6 +1283,24 @@ export default function ProAnalyze() {
   const allAnswered = questionnaire.length > 0 && questionnaire.every((q) => answers[q.id]);
   const patientLabel = `${firstName} ${lastName}`.trim() || "—";
 
+  // Signes cliniques agrégés depuis l'examen physique — source unique partagée
+  // par le panneau de raisonnement IA (étape examen + étape 4). Évite la duplication.
+  const examSignsText = [
+    examen.lesions.length ? `Lésions : ${examen.lesions.join(", ")}` : "",
+    examen.zones.length ? `Zones : ${examen.zones.join(", ")}` : "",
+    examen.lesionMorphologie ? `Morphologie : ${examen.lesionMorphologie}` : "",
+    examen.lesionDistribution ? `Distribution : ${examen.lesionDistribution}` : "",
+    examen.examPeau ? `Peau : ${examen.examPeau}` : "",
+    examen.examPhaneres ? `Phanères : ${examen.examPhaneres}` : "",
+    examen.examMuqueuses ? `Muqueuses : ${examen.examMuqueuses}` : "",
+    examen.autresSignes ? `Autres : ${examen.autresSignes}` : "",
+  ].filter(Boolean).join(" · ");
+  const patientHistoryText = [
+    consultMotif ? `Motif : ${consultMotif}` : "",
+    problemDuration ? `Durée : ${problemDuration}` : "",
+    allergies ? `Allergies : ${allergies}` : "",
+  ].filter(Boolean).join(" · ") || undefined;
+
   return (
     <ProLayout title="Analyser un patient" onBack={() => {
       // Retour ÉTAPE PAR ÉTAPE (ne quitte le wizard que depuis la 1re étape).
@@ -1498,22 +1516,13 @@ export default function ProAnalyze() {
             {/* ── Examen physique du médecin — AVANT la photo et l'IA (§2, §3) ── */}
             <div className="mb-4">
               <ExamenPhysiqueForm value={examen} onChange={setExamen} />
-              {/* Assistant IA clinique — raisonne sur les signes saisis (temps réel) */}
-              <ClinicalAssistant
-                signesCliniques={[
-                  examen.lesions.length ? `Lésions : ${examen.lesions.join(", ")}` : "",
-                  examen.zones.length ? `Zones : ${examen.zones.join(", ")}` : "",
-                  examen.lesionMorphologie ? `Morphologie : ${examen.lesionMorphologie}` : "",
-                  examen.lesionDistribution ? `Distribution : ${examen.lesionDistribution}` : "",
-                  examen.examPeau ? `Peau : ${examen.examPeau}` : "",
-                  examen.examPhaneres ? `Phanères : ${examen.examPhaneres}` : "",
-                  examen.examMuqueuses ? `Muqueuses : ${examen.examMuqueuses}` : "",
-                  examen.autresSignes ? `Autres : ${examen.autresSignes}` : "",
-                ].filter(Boolean).join(" · ")}
+              {/* Raisonnement clinique IA — différentiels live sur les signes saisis */}
+              <ClinicalReasoningPanel
+                signesCliniques={examSignsText}
                 diagnostic={(result as any)?.condition}
                 fitzpatrick={examen.phototype}
                 age={age}
-                historiquePatient={[consultMotif ? `Motif : ${consultMotif}` : "", problemDuration ? `Durée : ${problemDuration}` : "", allergies ? `Allergies : ${allergies}` : ""].filter(Boolean).join(" · ") || undefined}
+                historiquePatient={patientHistoryText}
               />
             </div>
 
@@ -1638,27 +1647,16 @@ export default function ProAnalyze() {
                   keloidRisk: examen.keloidRisk,
                 })} />
 
-                {/* ── Brique 1 : Trace de raisonnement IA (auditable) ── */}
-                {Array.isArray((result as any)?.reasoningSteps) && (result as any).reasoningSteps.length > 0 && (
-                  <div className="mb-4 rounded-2xl overflow-hidden" style={{ background: "rgba(124,58,237,0.06)", border: "1px solid rgba(167,139,250,0.2)" }}>
-                    <div className="px-4 py-3" style={{ borderBottom: "1px solid rgba(167,139,250,0.15)" }}>
-                      <p className="text-xs font-extrabold uppercase tracking-wider" style={{ color: "#0369A1" }}>🧠 Trace de raisonnement de l'IA</p>
-                      <p className="text-[10px] mt-0.5" style={{ color: DS.muted }}>Chaque étape est indicative — votre jugement prime.</p>
-                    </div>
-                    <div className="p-3 space-y-2.5">
-                      {(result as any).reasoningSteps.map((s: any, i: number) => (
-                        <div key={i} className="flex gap-2.5">
-                          <span className="flex-shrink-0 w-5 h-5 rounded-full text-[10px] font-extrabold flex items-center justify-center" style={{ background: "rgba(124,58,237,0.2)", color: "#0891B2" }}>{i + 1}</span>
-                          <div className="text-[11.5px] leading-relaxed" style={{ color: INK }}>
-                            {s.observation && <p><span style={{ color: "#6ee7b7", fontWeight: 700 }}>Observation :</span> {s.observation}</p>}
-                            {s.rule && <p style={{ color: DS.body }}><span style={{ color: "#fbbf24", fontWeight: 700 }}>Règle :</span> {s.rule}</p>}
-                            {s.conclusion && <p><span style={{ color: "#0369A1", fontWeight: 700 }}>→ Conclusion :</span> {s.conclusion}</p>}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                {/* ── Raisonnement clinique IA unifié (trace auditable + fil interactif) ── */}
+                <ClinicalReasoningPanel
+                  signesCliniques={examSignsText}
+                  diagnostic={(result as any)?.condition}
+                  fitzpatrick={examen.phototype}
+                  age={age}
+                  historiquePatient={patientHistoryText}
+                  reasoningSteps={Array.isArray((result as any)?.reasoningSteps) ? (result as any).reasoningSteps : undefined}
+                  autoAnalyze={false}
+                />
 
                 <Suspense fallback={
                   <div className="flex justify-center py-12">

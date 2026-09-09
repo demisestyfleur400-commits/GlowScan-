@@ -323,6 +323,20 @@ Réponds UNIQUEMENT par un objet JSON valide, sans texte autour, au format EXACT
 }
 Donne exactement 3 diagnostics ; le 1er est le principal (renseigne ses "causes"). Les autres peuvent avoir "causes": [].`;
 
+// Question de suivi du médecin sur SON cas (fil interactif). Strictement scopé
+// au dossier actif ; jamais une conversation libre. Réponse = suggestion, jamais
+// une affirmation diagnostique ; le jugement du médecin prime toujours.
+const CLINICAL_FOLLOWUP_SYSTEM = `Tu es un assistant clinique expert en dermatologie africaine (Fitzpatrick IV-VI). Tu assistes un dermatologue qualifié sur UN cas précis — tu ne le remplaces JAMAIS.
+
+Règles STRICTES :
+1. Réponds UNIQUEMENT à propos du cas clinique fourni (signes, diagnostic envisagé, phototype, âge, antécédents de CE patient). Si la question sort du cadre médical de ce cas (question générale, hors dermatologie, hors de ce patient), refuse poliment en une phrase et rappelle que tu es limité à ce dossier.
+2. Formule TOUJOURS tes réponses comme des SUGGESTIONS ou des pistes de réflexion — jamais comme une affirmation diagnostique définitive. Emploie « il est possible que », « à envisager », « vous pourriez vérifier ».
+3. Adapte systématiquement aux peaux africaines : hyperpigmentation post-inflammatoire, risque chéloïdien, photoprotection.
+4. Termine toujours ta réponse par un rappel court : le diagnostic final appartient au médecin, ton avis est indicatif.
+5. Sois concis (3 à 6 phrases), en français médical clair.
+
+Réponds en texte simple (pas de JSON, pas de Markdown lourd).`;
+
 const OWNER_WHATSAPP = "237674377959";
 // Email du propriétaire de la plateforme (notifications d'activité). Surchargeable.
 const OWNER_EMAIL = process.env.OWNER_EMAIL || "demiseessawe12@gmail.com";
@@ -2245,6 +2259,67 @@ Analyse ce cas selon tes règles. Vérifie particulièrement la cohérence entre
         suggestion: c.suggestion && String(c.suggestion).toLowerCase() !== "null" ? String(c.suggestion).slice(0, 400) : null,
       },
     });
+  });
+
+  // ─────────────────────────────────────────────
+  // Question de suivi du médecin sur SON cas (fil interactif). Même moteur IA
+  // que /analyze, mais réponse en texte (suggestion). Strictement scopé au
+  // dossier : le contexte du cas + l'historique du fil sont renvoyés au modèle.
+  // ─────────────────────────────────────────────
+  app.post("/api/pro/ai-assistant/followup", requireProAccess, async (req: any, res) => {
+    if (!proGemini) return res.status(503).json({ message: "Assistant IA indisponible." });
+    const b = req.body || {};
+    const question = String(b.question || "").trim().slice(0, 800);
+    if (!question) return res.status(400).json({ message: "Question vide." });
+    const signes = String(b.signesCliniques || "").slice(0, 2000);
+    const diagnostic = String(b.diagnostic || "").slice(0, 500);
+    const prescription = String(b.prescription || "").slice(0, 1000);
+    const fitzpatrick = String(b.fitzpatrick || "").slice(0, 20);
+    const age = b.age ? String(b.age).slice(0, 10) : "";
+    const historique = String(b.historiquePatient || "").slice(0, 1000);
+    // Historique du fil (échanges précédents sur CE dossier) — borné.
+    const history = Array.isArray(b.history)
+      ? b.history.slice(-6).map((m: any) => ({
+          role: m?.role === "ai" ? "assistant" : "doctor",
+          text: String(m?.text || "").slice(0, 1200),
+        })).filter((m: any) => m.text)
+      : [];
+
+    const caseBlock = `Cas clinique de CE patient (dermatologie africaine) :
+- Signes cliniques observés : ${signes || "—"}
+- Hypothèse diagnostique du médecin : ${diagnostic || "—"}
+- Phototype Fitzpatrick : ${fitzpatrick || "—"}
+- Âge : ${age || "—"}
+- Prescription envisagée : ${prescription || "—"}
+- Historique / antécédents : ${historique || "—"}`;
+    const threadBlock = history.length
+      ? "\n\nÉchanges précédents sur ce dossier :\n" + history.map((m: any) => `${m.role === "doctor" ? "Médecin" : "Assistant"} : ${m.text}`).join("\n")
+      : "";
+    const userPrompt = `${caseBlock}${threadBlock}\n\nQuestion du médecin sur ce cas : ${question}`;
+
+    const modelId = process.env.GEMINI_MODEL || "gemini-2.0-flash";
+    const run = async (withSearch: boolean) => {
+      const m = proGemini!.getGenerativeModel({ model: modelId, systemInstruction: CLINICAL_FOLLOWUP_SYSTEM });
+      const cfg: any = { contents: [{ role: "user", parts: [{ text: userPrompt }] }] };
+      if (withSearch) cfg.tools = [{ googleSearch: {} }];
+      return Promise.race([
+        m.generateContent(cfg),
+        new Promise<never>((_, rej) => setTimeout(() => rej(new Error("Timeout")), 30000)),
+      ]);
+    };
+
+    let resp: any = null;
+    try { resp = (await run(true) as any).response; }
+    catch {
+      try { resp = (await run(false) as any).response; }
+      catch (e2) {
+        console.error("[ai-followup] error:", (e2 as any)?.message || e2);
+        return res.status(500).json({ message: "Réponse IA momentanément indisponible. Réessayez." });
+      }
+    }
+    const answer = (resp?.text?.() || "").trim().slice(0, 2500);
+    if (!answer) return res.status(500).json({ message: "Réponse IA vide. Réessayez." });
+    res.json({ answer });
   });
 
   // ═══════════════════════════════════════════════════════════════════════
