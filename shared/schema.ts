@@ -377,6 +377,7 @@ export const patients = pgTable("patients", {
   status: text("status").default("green"),              // red | yellow | green (calculé auto par IA)
   intakePending: boolean("intake_pending").default(true), // true = en attente d'analyse, false = analysé
   lastScanAt: timestamp("last_scan_at"),
+  lastOpenedAt: timestamp("last_opened_at"),            // dernière ouverture du dossier par le dermatologue (reprise auto)
   createdAt: timestamp("created_at").defaultNow(),
 });
 

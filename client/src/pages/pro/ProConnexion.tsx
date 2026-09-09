@@ -36,6 +36,9 @@ export default function ProConnexion() {
   const goAfterLogin = async (role?: string) => {
     await qc.invalidateQueries({ queryKey: ["/api/pro/account"] });
     await qc.invalidateQueries({ queryKey: ["/api/auth/user"] });
+    // Nouvelle connexion → autoriser la reprise auto du dernier dossier sur le
+    // dashboard (le drapeau one-shot par onglet est réinitialisé).
+    try { sessionStorage.removeItem("derm_autoresumed"); } catch {}
     setLocation(role === "secretary" ? "/derm/patients" : "/derm/dashboard");
   };
 

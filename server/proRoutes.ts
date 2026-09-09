@@ -1187,6 +1187,63 @@ export function registerProRoutes(app: Express) {
     res.json({ patient: { ...p, clinicalRecord, ...followUp, datasetConsent }, scans: scansWithFollowUp });
   });
 
+  // ───────────────────────────────────────────
+  // POST /api/pro/patients/:id/open — marque ce dossier comme « dernier ouvert »
+  // par CE médecin (reprise automatique au retour). Isolation stricte : on ne
+  // met à jour que si le patient appartient au cabinet du médecin. Réservé au
+  // médecin (pas la secrétaire) pour refléter « dernier dossier ouvert par lui ».
+  // ───────────────────────────────────────────
+  app.post("/api/pro/patients/:id/open", requireProAccess, async (req: any, res) => {
+    const id = parseInt(req.params.id);
+    if (!Number.isFinite(id)) return res.status(400).json({ message: "ID invalide" });
+    if (req.isSecretary) return res.json({ ok: true, tracked: false }); // le suivi « reprise » ne concerne que le médecin
+    try {
+      const [p] = await db.select().from(patients)
+        .where(and(eq(patients.id, id), eq(patients.dermatologistId, req.proAccount.id)));
+      if (!p) return res.status(404).json({ message: "Patient introuvable" });
+      // Colonne résiliente : présente après migration, sinon ajoutée à la volée.
+      try { await db.execute(sql`ALTER TABLE patients ADD COLUMN IF NOT EXISTS last_opened_at timestamp`); } catch {}
+      await db.execute(sql`UPDATE patients SET last_opened_at = now() WHERE id = ${id} AND dermatologist_id = ${req.proAccount.id}`);
+      res.json({ ok: true, tracked: true });
+    } catch (err) {
+      console.error("[pro patient open] error:", err);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // ───────────────────────────────────────────
+  // GET /api/pro/last-opened-patient — le dernier dossier ouvert par le médecin,
+  // uniquement s'il a été ouvert dans les 4 dernières heures (sinon null). Sert
+  // à la reprise automatique du dashboard. Isolation par dermatologist_id.
+  // Chemin distinct de /patients/:id pour éviter toute collision de route.
+  // ───────────────────────────────────────────
+  app.get("/api/pro/last-opened-patient", requireProAccess, async (req: any, res) => {
+    if (req.isSecretary) return res.json({ patient: null });
+    try {
+      try { await db.execute(sql`ALTER TABLE patients ADD COLUMN IF NOT EXISTS last_opened_at timestamp`); } catch {}
+      const q: any = await db.execute(sql`
+        SELECT id, first_name, last_name, intake_pending, last_opened_at
+        FROM patients
+        WHERE dermatologist_id = ${req.proAccount.id}
+          AND last_opened_at IS NOT NULL
+          AND last_opened_at >= now() - interval '4 hours'
+        ORDER BY last_opened_at DESC
+        LIMIT 1`);
+      const r = (q?.rows ?? q ?? [])[0];
+      if (!r) return res.json({ patient: null });
+      res.json({ patient: {
+        id: r.id,
+        firstName: r.first_name,
+        lastName: r.last_name,
+        intakePending: r.intake_pending === true,
+        lastOpenedAt: r.last_opened_at,
+      } });
+    } catch (err) {
+      console.error("[pro last-opened-patient] error:", err);
+      res.json({ patient: null }); // jamais bloquant : au pire, pas de reprise
+    }
+  });
+
   // Consentement dataset au niveau patient (le dermato atteste l'accord du patient).
   app.post("/api/pro/patients/:id/dataset-consent", requireActivePro, async (req: any, res) => {
     try {

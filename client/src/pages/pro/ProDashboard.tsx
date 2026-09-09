@@ -14,7 +14,7 @@ import {
   TrendingUp,
   Clock,
 } from "lucide-react";
-import { useProAccount, useProPatients, useUpdateProAccount, useProStats, useProPendingPatients } from "@/hooks/use-pro";
+import { useProAccount, useProPatients, useUpdateProAccount, useProStats, useProPendingPatients, useLastOpenedPatient } from "@/hooks/use-pro";
 import { ProLayout, ProCard } from "@/components/ProLayout";
 import { SubscriptionExpiredBanner } from "@/components/pro/SubscriptionExpiredBanner";
 import { DermOnboarding } from "@/components/pro/DermOnboarding";
@@ -117,9 +117,63 @@ export default function ProDashboard() {
     if (!isLoading && !accData?.account && role !== "secretary") setLocation("/derm");
   }, [isLoading, accData, role]);
 
+  // ── REPRISE AUTOMATIQUE DU DERNIER DOSSIER (médecin uniquement) ──────────
+  // Comme un éditeur qui rouvre le dernier fichier : si le médecin a ouvert un
+  // dossier dans les 4 dernières heures, on l'y renvoie directement au lieu du
+  // KPI. Jamais pour la secrétaire. Anti-enfermement : le lien « Tableau de
+  // bord » pointe vers ?stay=1 (jamais de rebond), et un drapeau one-shot par
+  // onglet (réinitialisé à la connexion) évite tout aller-retour en boucle.
+  const isDoctor = !!accData?.account && role !== "secretary";
+  const { data: lastOpened, isLoading: lastOpenedLoading } = useLastOpenedPatient(isDoctor);
+
+  const resumeAllowed = (() => {
+    if (!isDoctor) return false;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("stay") === "1") return false;                 // retour volontaire au dashboard
+      if (sessionStorage.getItem("derm_autoresumed") === "1") return false; // déjà repris dans cet onglet
+    } catch {}
+    return true;
+  })();
+
+  const resumePatient = resumeAllowed ? lastOpened?.patient : null;
+  const resumeTarget = resumePatient
+    ? (resumePatient.intakePending
+        ? `/derm/analyse?patient=${resumePatient.id}`   // analyse en cours (non finalisée)
+        : `/derm/patient/${resumePatient.id}`)          // dossier déjà finalisé
+    : null;
+
+  // Si le médecin reste volontairement (stay=1), on mémorise pour ne plus rebondir.
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (isDoctor && params.get("stay") === "1") sessionStorage.setItem("derm_autoresumed", "1");
+    } catch {}
+  }, [isDoctor]);
+
+  useEffect(() => {
+    if (!resumeTarget) return;
+    try { sessionStorage.setItem("derm_autoresumed", "1"); } catch {}
+    setLocation(resumeTarget);
+  }, [resumeTarget]);
+
+  // Anti-enfermement : dès que le médecin voit réellement le dashboard (pas de
+  // reprise à faire), on ne le rebondira plus dans cet onglet — même s'il ouvre
+  // ensuite un dossier puis revient ici via « Tableau de bord ». Réinitialisé à
+  // la prochaine connexion (goAfterLogin efface le drapeau).
+  useEffect(() => {
+    if (isDoctor && !lastOpenedLoading && !resumeTarget) {
+      try { sessionStorage.setItem("derm_autoresumed", "1"); } catch {}
+    }
+  }, [isDoctor, lastOpenedLoading, resumeTarget]);
+
   if (isLoading) {
     return <LoadingScreen />;
   }
+
+  // Éviter le flash du dashboard KPI pendant qu'on décide de reprendre ou non.
+  if (resumeAllowed && lastOpenedLoading) return <LoadingScreen />;
+  if (resumeTarget) return <LoadingScreen />;
 
   // 🔑 SÉCURITÉ : Les secrétaires n'ont pas accès au tableau de bord (vérifié AVANT
   // la garde account-null, car une secrétaire n'a pas de proAccount).

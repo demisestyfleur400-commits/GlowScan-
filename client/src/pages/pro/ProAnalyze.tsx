@@ -29,6 +29,7 @@ import {
   useProAccount,
   useGenerateQuestionnaire,
   useUpdatePatientStatus,
+  useTrackPatientOpen,
   type QuestionnaireItem,
 } from "@/hooks/use-pro";
 import { useAnalyze } from "@/hooks/use-scans";
@@ -353,6 +354,7 @@ export default function ProAnalyze() {
   const [patientMode, setPatientMode] = useState<"choice" | "new" | "existing">("choice");
   const [patientId, setPatientId] = useState<number | null>(null);
   const [patient, setPatient] = useState<Patient | null>(null);
+  const trackOpen = useTrackPatientOpen();
   const [search, setSearch] = useState("");
 
   // Champs nouveau patient
@@ -466,6 +468,7 @@ export default function ProAnalyze() {
         if (!p) return;
         setPatient(p);
         setPatientId(p.id);
+        trackOpen.mutate(p.id); // reprise auto : ce dossier devient le « dernier ouvert »
         setLastName(p.lastName || "");
         setFirstName(p.firstName || "");
         setAge(p.age?.toString() || "");

@@ -59,6 +59,49 @@ export function usePatientDossier(id: number | null) {
   });
 }
 
+// ── Reprise automatique : dernier dossier ouvert par le médecin ──────────
+// Le serveur ne renvoie un patient que s'il a été ouvert dans les 4 dernières
+// heures (sinon patient: null). Réservé au médecin (secrétaire → toujours null).
+export interface LastOpenedPatient {
+  id: number;
+  firstName: string;
+  lastName: string;
+  intakePending: boolean;   // true = analyse en cours (non finalisée) → /derm/analyse
+  lastOpenedAt: string;
+}
+
+export function useLastOpenedPatient(enabled = true) {
+  return useQuery<{ patient: LastOpenedPatient | null }>({
+    queryKey: ["/api/pro/last-opened-patient"],
+    queryFn: async () => {
+      const res = await fetch("/api/pro/last-opened-patient", { credentials: "include" });
+      if (!res.ok) return { patient: null }; // jamais bloquant
+      return res.json();
+    },
+    enabled,
+    staleTime: 0,          // on veut l'état frais à l'atterrissage
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+}
+
+// Marque un dossier comme « dernier ouvert » par le médecin (reprise auto).
+// Best-effort : on ignore silencieusement les erreurs (ex: secrétaire, réseau).
+export function useTrackPatientOpen() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (patientId: number) => {
+      try {
+        await apiRequest("POST", `/api/pro/patients/${patientId}/open`, undefined);
+      } catch { /* non bloquant */ }
+      return true;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/pro/last-opened-patient"] });
+    },
+  });
+}
+
 // ── Suivi évolution : ajouter une photo de contrôle à un scan ────────────
 export interface FollowUpEntry {
   date: string;

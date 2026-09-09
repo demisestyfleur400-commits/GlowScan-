@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import html2pdf from "html2pdf.js";
 import { Link, useRoute, useLocation } from "wouter";
 import { motion } from "framer-motion";
@@ -30,6 +30,7 @@ import {
   useAddFollowUpPhoto,
   useFollowUpReminder,
   useCreatePeerReview,
+  useTrackPatientOpen,
 } from "@/hooks/use-pro";
 import { Users, Lock } from "lucide-react";
 import { useLocation as useWouterLocation } from "wouter";
@@ -55,6 +56,13 @@ export default function ProPatient() {
   const id = params ? parseInt(params.id) : null;
   const { data, isLoading } = usePatientDossier(id);
   const { data: accData } = useProAccount();
+  // Reprise auto : mémorise ce dossier comme « dernier ouvert » (médecin only,
+  // filtré côté serveur). Best-effort, ne bloque jamais l'affichage.
+  const trackOpen = useTrackPatientOpen();
+  useEffect(() => {
+    if (id && Number.isFinite(id)) trackOpen.mutate(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
   const validate = useValidateScan();
   const del = useDeletePatient();
   const updateStatus = useUpdatePatientStatus();
