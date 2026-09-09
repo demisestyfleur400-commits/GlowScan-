@@ -666,3 +666,26 @@ export const consultationMessages = pgTable("consultation_messages", {
 
 export type Consultation = typeof consultations.$inferSelect;
 export type ConsultationMessage = typeof consultationMessages.$inferSelect;
+
+// ════════════════════════════════════════════════════════════════════════
+// Échanges IA cliniques (fil de questions/réponses du médecin) — trace auditable.
+// Double clé (cohérent avec `scans` qui porte userId ET patientId) :
+//  · patientId      → fil rattaché au patient (persistant à travers ses visites,
+//                      contexte /derm/analyse où un `patients` row existe).
+//  · consultationId → fil rattaché à un épisode de consultation in-app (contexte
+//                      ConsultationChat, où il n'y a pas de `patients` row).
+// doctorId = clé d'isolation : un médecin ne lit que ses propres échanges.
+// ════════════════════════════════════════════════════════════════════════
+export const clinicalAiExchanges = pgTable("clinical_ai_exchanges", {
+  id: serial("id").primaryKey(),
+  doctorId: integer("doctor_id").notNull().references(() => proAccounts.id, { onDelete: "cascade" }),
+  patientId: integer("patient_id").references(() => patients.id, { onDelete: "cascade" }),
+  consultationId: integer("consultation_id").references(() => consultations.id, { onDelete: "cascade" }),
+  question: text("question").notNull(),
+  answer: text("answer").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertClinicalAiExchangeSchema = createInsertSchema(clinicalAiExchanges).omit({ id: true, createdAt: true });
+export type ClinicalAiExchange = typeof clinicalAiExchanges.$inferSelect;
+export type InsertClinicalAiExchange = z.infer<typeof insertClinicalAiExchangeSchema>;

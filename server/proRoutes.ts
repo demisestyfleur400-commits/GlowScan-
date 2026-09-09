@@ -349,6 +349,24 @@ async function notifyOwner(subject: string, html: string, text: string) {
 const PRO_PRICE_FCFA = 10000;
 const TRIAL_DAYS = 14;
 
+// Crée la table du fil IA clinique si absente (résilient : la migration 0011 la
+// crée aussi, mais ceci garantit l'existence au runtime avant application). No-op
+// si déjà présente.
+let _clinicalAiTableReady = false;
+async function ensureClinicalAiExchangesTable() {
+  if (_clinicalAiTableReady) return;
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS clinical_ai_exchanges (
+    id serial PRIMARY KEY,
+    doctor_id integer NOT NULL,
+    patient_id integer,
+    consultation_id integer,
+    question text NOT NULL,
+    answer text NOT NULL,
+    created_at timestamp DEFAULT now()
+  )`);
+  _clinicalAiTableReady = true;
+}
+
 // ─────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────
@@ -2185,7 +2203,7 @@ export function registerProRoutes(app: Express) {
   // N'AFFICHE JAMAIS de diagnostic final : le médecin décide toujours.
   // ═══════════════════════════════════════════════════════════════════════
   app.post("/api/pro/ai-assistant/analyze", requireProAccess, async (req: any, res) => {
-    if (!proGemini) return res.status(503).json({ message: "Assistant IA indisponible (clé Gemini absente)." });
+    if (!proGemini) return res.status(503).json({ message: "Assistant IA indisponible pour le moment." });
     const b = req.body || {};
     const signes = String(b.signesCliniques || b.signesCliNiques || "").slice(0, 2000);
     const diagnostic = String(b.diagnostic || "").slice(0, 500);
@@ -2271,6 +2289,18 @@ Analyse ce cas selon tes règles. Vérifie particulièrement la cohérence entre
     const b = req.body || {};
     const question = String(b.question || "").trim().slice(0, 800);
     if (!question) return res.status(400).json({ message: "Question vide." });
+    // Contexte de rattachement (fil persistant) — au plus une des deux clés.
+    const patientId = b.patientId != null && b.patientId !== "" ? parseInt(String(b.patientId)) : null;
+    const consultationId = b.consultationId != null && b.consultationId !== "" ? parseInt(String(b.consultationId)) : null;
+    // Isolation stricte : on n'écrit un échange que sur un dossier appartenant à CE médecin.
+    if (patientId != null && Number.isFinite(patientId)) {
+      const [p] = await db.select().from(patients).where(and(eq(patients.id, patientId), eq(patients.dermatologistId, req.proAccount.id)));
+      if (!p) return res.status(403).json({ message: "Dossier non autorisé." });
+    }
+    if (consultationId != null && Number.isFinite(consultationId)) {
+      const [c] = await db.select().from(consultations).where(and(eq(consultations.id, consultationId), eq(consultations.proAccountId, req.proAccount.id)));
+      if (!c) return res.status(403).json({ message: "Consultation non autorisée." });
+    }
     const signes = String(b.signesCliniques || "").slice(0, 2000);
     const diagnostic = String(b.diagnostic || "").slice(0, 500);
     const prescription = String(b.prescription || "").slice(0, 1000);
@@ -2319,7 +2349,46 @@ Analyse ce cas selon tes règles. Vérifie particulièrement la cohérence entre
     }
     const answer = (resp?.text?.() || "").trim().slice(0, 2500);
     if (!answer) return res.status(500).json({ message: "Réponse IA vide. Réessayez." });
+
+    // Persistance (trace auditable) — best-effort, ne bloque jamais la réponse.
+    // On ne persiste que si un contexte de rattachement valide est fourni.
+    if ((patientId != null && Number.isFinite(patientId)) || (consultationId != null && Number.isFinite(consultationId))) {
+      try {
+        await ensureClinicalAiExchangesTable();
+        await db.execute(sql`INSERT INTO clinical_ai_exchanges (doctor_id, patient_id, consultation_id, question, answer)
+          VALUES (${req.proAccount.id}, ${Number.isFinite(patientId as any) ? patientId : null}, ${Number.isFinite(consultationId as any) ? consultationId : null}, ${question}, ${answer})`);
+      } catch (e) { console.error("[ai-followup persist]", (e as any)?.message || e); }
+    }
     res.json({ answer });
+  });
+
+  // ─────────────────────────────────────────────
+  // GET /api/pro/ai-assistant/thread — recharge le fil IA d'un patient OU d'une
+  // consultation. Isolation : filtre doctor_id = médecin courant (un médecin ne
+  // voit jamais les échanges d'un autre). Renvoie un fil plat [question, réponse].
+  // ─────────────────────────────────────────────
+  app.get("/api/pro/ai-assistant/thread", requireProAccess, async (req: any, res) => {
+    try {
+      const patientId = req.query.patientId ? parseInt(String(req.query.patientId)) : null;
+      const consultationId = req.query.consultationId ? parseInt(String(req.query.consultationId)) : null;
+      if (!Number.isFinite(patientId as any) && !Number.isFinite(consultationId as any)) return res.json({ thread: [] });
+      await ensureClinicalAiExchangesTable();
+      // doctor_id = req.proAccount.id garantit l'isolation même si un id étranger est passé.
+      const q = Number.isFinite(patientId as any)
+        ? sql`SELECT question, answer FROM clinical_ai_exchanges WHERE doctor_id = ${req.proAccount.id} AND patient_id = ${patientId} ORDER BY created_at ASC, id ASC LIMIT 100`
+        : sql`SELECT question, answer FROM clinical_ai_exchanges WHERE doctor_id = ${req.proAccount.id} AND consultation_id = ${consultationId} ORDER BY created_at ASC, id ASC LIMIT 100`;
+      const raw: any = await db.execute(q);
+      const rows = (raw?.rows ?? raw ?? []) as any[];
+      const thread: { role: "doctor" | "ai"; text: string }[] = [];
+      for (const r of rows) {
+        if (r.question) thread.push({ role: "doctor", text: String(r.question) });
+        if (r.answer) thread.push({ role: "ai", text: String(r.answer) });
+      }
+      res.json({ thread });
+    } catch (e) {
+      console.error("[ai-thread]", (e as any)?.message || e);
+      res.json({ thread: [] });
+    }
   });
 
   // ═══════════════════════════════════════════════════════════════════════
@@ -2346,7 +2415,7 @@ Réponds UNIQUEMENT par un objet JSON valide, sans texte autour :
 Donne exactement 3 diagnostics (le 1er = principal avec causes).`;
 
   app.post("/api/pro/refine-diagnosis", requireProAccess, async (req: any, res) => {
-    if (!proGemini) return res.status(503).json({ message: "IA indisponible (clé Gemini absente)." });
+    if (!proGemini) return res.status(503).json({ message: "IA indisponible pour le moment." });
     const b = req.body || {};
     const observations = String(b.observations || "").trim().slice(0, 3000);
     const condition = String(b.condition || "").slice(0, 300);

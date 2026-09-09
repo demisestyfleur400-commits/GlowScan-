@@ -1523,6 +1523,7 @@ export default function ProAnalyze() {
                 fitzpatrick={examen.phototype}
                 age={age}
                 historiquePatient={patientHistoryText}
+                patientId={patientId || undefined}
               />
             </div>
 
@@ -1656,6 +1657,7 @@ export default function ProAnalyze() {
                   historiquePatient={patientHistoryText}
                   reasoningSteps={Array.isArray((result as any)?.reasoningSteps) ? (result as any).reasoningSteps : undefined}
                   autoAnalyze={false}
+                  patientId={patientId || undefined}
                 />
 
                 <Suspense fallback={

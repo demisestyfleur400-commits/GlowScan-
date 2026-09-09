@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useConsultationSocket } from "@/hooks/use-consultation-socket";
-import { ClinicalAssistant } from "@/components/pro/ClinicalAssistant";
+import { ClinicalReasoningPanel } from "@/components/pro/ClinicalReasoningPanel";
 
 // ════════════════════════════════════════════════════════════════════════
 // Fil de discussion d'une consultation (temps réel). Utilisé côté patient (clair)
@@ -670,10 +670,11 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
             </div>
           )}
 
-          {/* Assistant IA clinique — raisonne, recherche, recadre (temps réel) */}
+          {/* Raisonnement clinique IA — différentiels, recadrage + fil interactif persistant */}
           {ctx?.status !== "closed" && (
-            <ClinicalAssistant
+            <ClinicalReasoningPanel
               dark={dark}
+              consultationId={consultationId}
               signesCliniques={dossier.scan?.analysis || dossier.scan?.condition || dossier.consultation?.condition}
               diagnostic={dossier.scan?.expertCorrectedCondition || dossier.scan?.condition || dossier.consultation?.condition}
               prescription={prescription}

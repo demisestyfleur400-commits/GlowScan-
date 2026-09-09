@@ -2,19 +2,19 @@ import { useEffect, useRef, useState } from "react";
 import { DERM } from "@/lib/design-tokens";
 
 // ════════════════════════════════════════════════════════════════════════
-// Raisonnement clinique IA (DERM) — panneau UNIQUE.
-// Fusionne l'ancien ClinicalAssistant (diagnostics différentiels live +
-// recherche web + détection d'incohérence) et le bloc « Trace de raisonnement »
-// (reasoningSteps) de ProAnalyze, plus un fil interactif : le médecin peut
-// poser une question de suivi STRICTEMENT scopée à SON cas.
+// Raisonnement clinique IA (DERM) — panneau UNIQUE, utilisé sur /derm/analyse
+// (thème clair) et dans la consultation in-app côté médecin (thème sombre).
+// Fusionne diagnostics différentiels live + recherche web + détection
+// d'incohérence + trace de raisonnement (reasoningSteps) + fil interactif de
+// questions STRICTEMENT scopé au cas. Le fil est persisté et rechargé au montage.
 //
-// Hiérarchie : diagnostic le plus probable en avant → détail du raisonnement en
-// second niveau (accordéon) → fil de questions. Non bloquant : le médecin peut
-// toujours valider/corriger sans attendre l'IA. Couleurs = tokens DERM.
+// Hiérarchie : hypothèse la plus probable en avant → détail en accordéon → fil.
+// Non bloquant : le médecin peut toujours valider/corriger sans attendre l'IA.
 // ════════════════════════════════════════════════════════════════════════
 
-// DERM n'expose pas de tokens de « teinte » (fonds translucides) ; on les dérive
-// des tokens de couleur existants plutôt que d'inventer des hex au hasard.
+// DERM n'expose pas de tokens de « teinte » ni de palette sombre ; on dérive les
+// translucides et les neutres sombres des tokens de couleur existants (DERM.violet,
+// DERM.surface, …) plutôt que d'inventer des hex au hasard.
 function withAlpha(hex: string, alpha: number): string {
   const h = hex.replace("#", "");
   const r = parseInt(h.slice(0, 2), 16);
@@ -43,8 +43,13 @@ export interface ClinicalReasoningPanelProps {
   historiquePatient?: string;
   // Trace d'audit issue de l'analyse (step 4). Affichée en second niveau.
   reasoningSteps?: ReasoningStep[];
-  // Analyse live débounce à partir des signes saisis (step examen). false au step 4.
+  // Analyse live débounce à partir des signes saisis. false au step 4 (déjà analysé).
   autoAnalyze?: boolean;
+  // Contexte de rattachement du fil persistant (au plus une des deux clés).
+  patientId?: number | null;
+  consultationId?: number | null;
+  // Thème sombre (consultation côté médecin). Défaut : clair (/derm/analyse).
+  dark?: boolean;
 }
 
 const probaColor = (p: string) =>
@@ -52,7 +57,7 @@ const probaColor = (p: string) =>
 
 export function ClinicalReasoningPanel({
   signesCliniques, diagnostic, prescription, fitzpatrick, age, historiquePatient,
-  reasoningSteps, autoAnalyze = true,
+  reasoningSteps, autoAnalyze = true, patientId, consultationId, dark = false,
 }: ClinicalReasoningPanelProps) {
   const [result, setResult] = useState<AnalyzeResult | null>(null);
   const [loading, setLoading] = useState(false);
@@ -61,15 +66,52 @@ export function ClinicalReasoningPanel({
   const timerRef = useRef<any>(null);
   const lastKeyRef = useRef("");
 
-  // Fil interactif — scopé au cas (état local, une conversation par instance).
+  // Fil interactif — scopé au cas ; rechargé depuis le serveur au montage.
   const [thread, setThread] = useState<ThreadMsg[]>([]);
   const [question, setQuestion] = useState("");
   const [sending, setSending] = useState(false);
   const [threadErr, setThreadErr] = useState("");
 
-  const caseContext = { signesCliniques, diagnostic, prescription, fitzpatrick, age, historiquePatient };
+  const caseContext = { signesCliniques, diagnostic, prescription, fitzpatrick, age, historiquePatient, patientId, consultationId };
 
-  // ── Analyse live (différentiels) — même débounce que l'ancien assistant ──
+  // ── Thème : neutres/translucides dérivés des tokens DERM (pas de hex inventé) ──
+  const T = dark ? {
+    ink: DERM.surface,                       // blanc (token surface)
+    body: withAlpha(DERM.surface, 0.72),
+    muted: withAlpha(DERM.surface, 0.5),
+    border: withAlpha(DERM.surface, 0.12),
+    card: withAlpha(DERM.surface, 0.05),
+    panelBg: withAlpha(DERM.violet, 0.14),
+    accent: DERM.violet,                     // meilleur contraste sur fond sombre
+    inputBg: withAlpha(DERM.surface, 0.05),
+    inputBorder: withAlpha(DERM.surface, 0.15),
+  } : {
+    ink: DERM.text,
+    body: DERM.textBody,
+    muted: DERM.textMuted,
+    border: DERM.border,
+    card: DERM.surface,
+    panelBg: withAlpha(DERM.violet, 0.05),
+    accent: DERM.violetMid,
+    inputBg: DERM.surface,
+    inputBorder: DERM.inputBorder,
+  };
+
+  // ── Historique du fil : rechargé au montage / changement de contexte ──
+  useEffect(() => {
+    if (!patientId && !consultationId) return;
+    const params = new URLSearchParams();
+    if (patientId) params.set("patientId", String(patientId));
+    if (consultationId) params.set("consultationId", String(consultationId));
+    let cancelled = false;
+    fetch(`/api/pro/ai-assistant/thread?${params.toString()}`, { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : { thread: [] }))
+      .then((d) => { if (!cancelled && Array.isArray(d?.thread)) setThread(d.thread); })
+      .catch(() => { /* non bloquant : fil vide */ });
+    return () => { cancelled = true; };
+  }, [patientId, consultationId]);
+
+  // ── Analyse live (différentiels) — débounce 3 s après l'arrêt de la frappe ──
   useEffect(() => {
     if (!autoAnalyze) return;
     const key = JSON.stringify({ signesCliniques, diagnostic, prescription, fitzpatrick, age });
@@ -122,29 +164,26 @@ export function ClinicalReasoningPanel({
     }
   };
 
-  // ── Styles dérivés des tokens DERM ──
-  const panelBorder = DERM.borderViolet;
-  const panelBg = withAlpha(DERM.violet, 0.05);
   const S = {
-    label: { fontSize: 10, fontWeight: 800, color: DERM.textMuted, textTransform: "uppercase" as const, letterSpacing: 0.5 },
-    body: { fontSize: 12, color: DERM.textBody, lineHeight: 1.5 },
+    label: { fontSize: 10, fontWeight: 800, color: T.muted, textTransform: "uppercase" as const, letterSpacing: 0.5 },
+    body: { fontSize: 12, color: T.body, lineHeight: 1.5 },
   };
 
   const primary = diffs[0];
   const secondary = diffs.slice(1);
 
   return (
-    <div style={{ marginTop: 12, marginBottom: 16, border: `1px solid ${panelBorder}`, borderRadius: 14, background: panelBg, overflow: "hidden", fontFamily: DERM.font }}>
+    <div style={{ marginTop: 12, marginBottom: 16, border: `1px solid ${T.border}`, borderRadius: 14, background: T.panelBg, overflow: "hidden", fontFamily: DERM.font }}>
       {/* ── En-tête ── */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "10px 12px", borderBottom: `1px solid ${panelBorder}` }}>
-        <span style={{ fontSize: 12, fontWeight: 800, color: DERM.violetMid, display: "flex", alignItems: "center", gap: 6 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "10px 12px", borderBottom: `1px solid ${T.border}` }}>
+        <span style={{ fontSize: 12, fontWeight: 800, color: T.accent, display: "flex", alignItems: "center", gap: 6 }}>
           🧠 Raisonnement clinique IA
           {result?.groundingUsed && <span style={{ fontSize: 9.5, fontWeight: 700, color: DERM.green }}>· Recherche web ✓</span>}
         </span>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          {loading && <span style={{ fontSize: 10.5, color: DERM.textMuted }}>analyse…</span>}
+          {loading && <span style={{ fontSize: 10.5, color: T.muted }}>analyse…</span>}
           <button onClick={() => setOpen((v) => !v)} aria-label={open ? "Réduire" : "Déplier"}
-            style={{ background: "transparent", border: "none", color: DERM.textMuted, fontSize: 12, fontWeight: 800, cursor: "pointer", padding: 0 }}>
+            style={{ background: "transparent", border: "none", color: T.muted, fontSize: 12, fontWeight: 800, cursor: "pointer", padding: 0 }}>
             {open ? "▲" : "▼"}
           </button>
         </div>
@@ -154,33 +193,33 @@ export function ClinicalReasoningPanel({
         <div style={{ padding: 12 }}>
           {/* ⚠️ Incohérence détectée — priorité visuelle */}
           {result?.contradiction?.detectee && !ignored && (
-            <div style={{ marginBottom: 12, background: withAlpha(DERM.red, 0.08), border: `1px solid ${withAlpha(DERM.red, 0.35)}`, borderRadius: 10, padding: "10px 12px" }}>
+            <div style={{ marginBottom: 12, background: withAlpha(DERM.red, dark ? 0.16 : 0.08), border: `1px solid ${withAlpha(DERM.red, 0.35)}`, borderRadius: 10, padding: "10px 12px" }}>
               <p style={{ fontSize: 12, fontWeight: 800, color: DERM.red, margin: "0 0 4px" }}>⚠️ Incohérence détectée</p>
-              {result.contradiction.explication && <p style={{ fontSize: 12, color: DERM.textBody, margin: "0 0 6px", lineHeight: 1.5 }}>{result.contradiction.explication}</p>}
-              {result.contradiction.suggestion && <p style={{ fontSize: 12, color: DERM.text, margin: "0 0 8px", lineHeight: 1.5 }}><strong>Suggestion :</strong> {result.contradiction.suggestion}</p>}
+              {result.contradiction.explication && <p style={{ fontSize: 12, color: T.body, margin: "0 0 6px", lineHeight: 1.5 }}>{result.contradiction.explication}</p>}
+              {result.contradiction.suggestion && <p style={{ fontSize: 12, color: T.ink, margin: "0 0 8px", lineHeight: 1.5 }}><strong>Suggestion :</strong> {result.contradiction.suggestion}</p>}
               <button onClick={() => setIgnored(true)}
-                style={{ background: "transparent", border: `1px solid ${panelBorder}`, color: DERM.textMuted, borderRadius: 9999, padding: "5px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>Ignorer</button>
+                style={{ background: "transparent", border: `1px solid ${T.border}`, color: T.muted, borderRadius: 9999, padding: "5px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>Ignorer</button>
             </div>
           )}
 
           {/* ── Diagnostic le plus probable — en avant ── */}
           {primary && (
-            <div style={{ background: DERM.surface, border: `1px solid ${DERM.border}`, borderRadius: 12, padding: "12px 14px", marginBottom: 10 }}>
+            <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 12, padding: "12px 14px", marginBottom: 10 }}>
               <p style={{ ...S.label, margin: "0 0 6px" }}>Hypothèse la plus probable</p>
-              <p style={{ fontSize: 15, fontWeight: 800, color: DERM.text, margin: 0, display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+              <p style={{ fontSize: 15, fontWeight: 800, color: T.ink, margin: 0, display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
                 {primary.diagnostic}
                 {primary.probabilite && <span style={{ fontSize: 11, fontWeight: 800, color: probaColor(primary.probabilite) }}>{primary.probabilite}</span>}
               </p>
               {primary.causes?.length > 0 && (
-                <p style={{ ...S.body, margin: "6px 0 0", color: DERM.textMuted }}>Causes possibles : {primary.causes.join(" · ")}</p>
+                <p style={{ ...S.body, margin: "6px 0 0", color: T.muted }}>Causes possibles : {primary.causes.join(" · ")}</p>
               )}
             </div>
           )}
 
           {/* ── Détail du raisonnement — second niveau (accordéon) ── */}
           {(secondary.length > 0 || hasReasoning) && (
-            <details style={{ marginBottom: 10, background: DERM.surface, border: `1px solid ${DERM.border}`, borderRadius: 12, overflow: "hidden" }}>
-              <summary style={{ cursor: "pointer", listStyle: "none", padding: "10px 14px", fontSize: 11.5, fontWeight: 800, color: DERM.violetMid }}>
+            <details style={{ marginBottom: 10, background: T.card, border: `1px solid ${T.border}`, borderRadius: 12, overflow: "hidden" }}>
+              <summary style={{ cursor: "pointer", listStyle: "none", padding: "10px 14px", fontSize: 11.5, fontWeight: 800, color: T.accent }}>
                 Voir le détail du raisonnement
               </summary>
               <div style={{ padding: "0 14px 12px" }}>
@@ -190,11 +229,11 @@ export function ClinicalReasoningPanel({
                     <p style={{ ...S.label, margin: "0 0 6px" }}>Autres diagnostics différentiels</p>
                     {secondary.map((d, i) => (
                       <div key={i} style={{ marginBottom: 6 }}>
-                        <p style={{ fontSize: 12.5, color: DERM.text, margin: 0, fontWeight: 600 }}>
+                        <p style={{ fontSize: 12.5, color: T.ink, margin: 0, fontWeight: 600 }}>
                           {i + 2}. {d.diagnostic}
                           {d.probabilite && <span style={{ fontSize: 10.5, fontWeight: 800, color: probaColor(d.probabilite), marginLeft: 6 }}>— {d.probabilite}</span>}
                         </p>
-                        {d.causes?.length > 0 && <p style={{ ...S.body, margin: "2px 0 0", color: DERM.textMuted }}>Causes : {d.causes.join(" · ")}</p>}
+                        {d.causes?.length > 0 && <p style={{ ...S.body, margin: "2px 0 0", color: T.muted }}>Causes : {d.causes.join(" · ")}</p>}
                       </div>
                     ))}
                   </div>
@@ -207,11 +246,11 @@ export function ClinicalReasoningPanel({
                     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                       {reasoningSteps!.map((s, i) => (
                         <div key={i} style={{ display: "flex", gap: 10 }}>
-                          <span style={{ flexShrink: 0, width: 20, height: 20, borderRadius: "50%", background: withAlpha(DERM.violet, 0.15), color: DERM.violetMid, fontSize: 10, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{i + 1}</span>
+                          <span style={{ flexShrink: 0, width: 20, height: 20, borderRadius: "50%", background: withAlpha(DERM.violet, dark ? 0.28 : 0.15), color: T.accent, fontSize: 10, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{i + 1}</span>
                           <div style={{ fontSize: 11.5, lineHeight: 1.5 }}>
-                            {s.observation && <p style={{ margin: 0, color: DERM.text }}><span style={{ color: DERM.green, fontWeight: 700 }}>Observation :</span> {s.observation}</p>}
-                            {s.rule && <p style={{ margin: 0, color: DERM.textBody }}><span style={{ color: DERM.amber, fontWeight: 700 }}>Règle :</span> {s.rule}</p>}
-                            {s.conclusion && <p style={{ margin: 0, color: DERM.text }}><span style={{ color: DERM.violetMid, fontWeight: 700 }}>→ Conclusion :</span> {s.conclusion}</p>}
+                            {s.observation && <p style={{ margin: 0, color: T.ink }}><span style={{ color: DERM.green, fontWeight: 700 }}>Observation :</span> {s.observation}</p>}
+                            {s.rule && <p style={{ margin: 0, color: T.body }}><span style={{ color: DERM.amber, fontWeight: 700 }}>Règle :</span> {s.rule}</p>}
+                            {s.conclusion && <p style={{ margin: 0, color: T.ink }}><span style={{ color: T.accent, fontWeight: 700 }}>→ Conclusion :</span> {s.conclusion}</p>}
                           </div>
                         </div>
                       ))}
@@ -226,20 +265,20 @@ export function ClinicalReasoningPanel({
           {result?.sourceWeb?.url && (
             <div style={{ marginBottom: 10 }}>
               <p style={{ ...S.label, margin: "0 0 4px" }}>Source web consultée</p>
-              <a href={result.sourceWeb.url} target="_blank" rel="noreferrer" style={{ fontSize: 11.5, color: DERM.violetMid, textDecoration: "none", wordBreak: "break-word" }}>
-                🔗 {result.sourceWeb.titre} <span style={{ color: DERM.textMuted }}>· {result.sourceWeb.date}</span>
+              <a href={result.sourceWeb.url} target="_blank" rel="noreferrer" style={{ fontSize: 11.5, color: T.accent, textDecoration: "none", wordBreak: "break-word" }}>
+                🔗 {result.sourceWeb.titre} <span style={{ color: T.muted }}>· {result.sourceWeb.date}</span>
               </a>
             </div>
           )}
           {result?.questionClarification && (
-            <div style={{ marginBottom: 10, background: withAlpha(DERM.violet, 0.06), border: `1px solid ${panelBorder}`, borderRadius: 10, padding: "8px 10px" }}>
+            <div style={{ marginBottom: 10, background: withAlpha(DERM.violet, dark ? 0.14 : 0.06), border: `1px solid ${T.border}`, borderRadius: 10, padding: "8px 10px" }}>
               <p style={{ ...S.label, margin: "0 0 3px" }}>Question de clarification</p>
-              <p style={{ fontSize: 12, color: DERM.text, margin: 0, lineHeight: 1.5 }}>{result.questionClarification}</p>
+              <p style={{ fontSize: 12, color: T.ink, margin: 0, lineHeight: 1.5 }}>{result.questionClarification}</p>
             </div>
           )}
 
           {/* ── Fil interactif — questions du médecin sur CE cas ── */}
-          <div style={{ borderTop: `1px solid ${panelBorder}`, paddingTop: 10 }}>
+          <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 10 }}>
             <p style={{ ...S.label, margin: "0 0 6px" }}>Poser une question sur ce cas</p>
             {thread.length > 0 && (
               <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 8 }}>
@@ -247,17 +286,17 @@ export function ClinicalReasoningPanel({
                   <div key={i} style={{
                     alignSelf: m.role === "doctor" ? "flex-end" : "flex-start",
                     maxWidth: "88%",
-                    background: m.role === "doctor" ? withAlpha(DERM.violetMid, 0.10) : DERM.surface,
-                    border: `1px solid ${m.role === "doctor" ? withAlpha(DERM.violetMid, 0.25) : DERM.border}`,
+                    background: m.role === "doctor" ? withAlpha(T.accent, dark ? 0.22 : 0.10) : T.card,
+                    border: `1px solid ${m.role === "doctor" ? withAlpha(T.accent, 0.30) : T.border}`,
                     borderRadius: 12, padding: "8px 10px",
                   }}>
-                    <p style={{ fontSize: 9.5, fontWeight: 800, color: DERM.textMuted, textTransform: "uppercase", letterSpacing: 0.4, margin: "0 0 2px" }}>
+                    <p style={{ fontSize: 9.5, fontWeight: 800, color: T.muted, textTransform: "uppercase", letterSpacing: 0.4, margin: "0 0 2px" }}>
                       {m.role === "doctor" ? "Vous" : "Assistant"}
                     </p>
-                    <p style={{ fontSize: 12, color: DERM.text, margin: 0, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{m.text}</p>
+                    <p style={{ fontSize: 12, color: T.ink, margin: 0, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{m.text}</p>
                   </div>
                 ))}
-                {sending && <p style={{ fontSize: 11, color: DERM.textMuted, margin: 0 }}>L'assistant réfléchit…</p>}
+                {sending && <p style={{ fontSize: 11, color: T.muted, margin: 0 }}>L'assistant réfléchit…</p>}
               </div>
             )}
             {threadErr && <p style={{ fontSize: 11, color: DERM.red, margin: "0 0 6px" }}>{threadErr}</p>}
@@ -269,7 +308,7 @@ export function ClinicalReasoningPanel({
                 placeholder="Ex : pourquoi éliminer un eczéma ici ? et si le patient a aussi du prurit nocturne ?"
                 rows={2}
                 disabled={sending}
-                style={{ flex: 1, resize: "none", outline: "none", fontFamily: DERM.font, fontSize: 12.5, color: DERM.text, background: DERM.surface, border: `1px solid ${DERM.inputBorder}`, borderRadius: 10, padding: "8px 10px" }}
+                style={{ flex: 1, resize: "none", outline: "none", fontFamily: DERM.font, fontSize: 12.5, color: T.ink, background: T.inputBg, border: `1px solid ${T.inputBorder}`, borderRadius: 10, padding: "8px 10px" }}
               />
               <button onClick={askFollowUp} disabled={sending || !question.trim()}
                 /* DERM n'a pas de token « texte sur accent » ; DERM.surface (blanc) sert de blanc sourcé */
@@ -280,7 +319,7 @@ export function ClinicalReasoningPanel({
           </div>
 
           {/* Mention légale — toujours visible */}
-          <p style={{ fontSize: 9.5, color: DERM.textMuted, margin: "10px 0 0", lineHeight: 1.4 }}>
+          <p style={{ fontSize: 9.5, color: T.muted, margin: "10px 0 0", lineHeight: 1.4 }}>
             Assistance indicative — suggestions non contractuelles. Le diagnostic final appartient au médecin ; votre jugement prime.
           </p>
         </div>
