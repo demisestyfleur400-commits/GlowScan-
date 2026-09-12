@@ -14,6 +14,27 @@ import crypto from "crypto";
 // Tokens de lien magique B2C (usage unique, 15 min).
 const b2cMagicTokens = new Map<string, { userId: string; expiresAt: number }>();
 
+// ── Vérification email obligatoire (colonne résiliente, comme les colonnes 2FA) ──
+// email_verified : un compte email n'est actif qu'après saisie du code envoyé à
+// cette adresse. Les comptes existants sont grand-pérennisés (=true) par la
+// migration 0012 pour ne jamais bloquer un utilisateur en place. Les comptes
+// téléphone (@phone.glowscan.cm) n'ont pas d'email → toujours true.
+let _emailVerifiedColReady = false;
+async function ensureEmailVerifiedColumn() {
+  if (_emailVerifiedColReady) return;
+  try { await db.execute(sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "email_verified" boolean DEFAULT false`); } catch {}
+  _emailVerifiedColReady = true;
+}
+async function isEmailVerified(userId: string): Promise<boolean> {
+  try {
+    const r: any = await db.execute(sql`SELECT "email_verified" FROM "users" WHERE "id" = ${userId}`);
+    return (r?.rows ?? r ?? [])[0]?.email_verified === true;
+  } catch { return true; } // en cas de doute (colonne absente), ne bloque jamais la connexion
+}
+async function markEmailVerified(userId: string) {
+  try { await db.execute(sql`UPDATE "users" SET "email_verified" = TRUE WHERE "id" = ${userId}`); } catch {}
+}
+
 // ── Rate limiter simple en mémoire ───────────────────────────────────────────
 // Map<ip, { count, resetAt }>
 const _rateLimitStore = new Map<string, { count: number; resetAt: number }>();
@@ -192,7 +213,10 @@ export function registerAuthRoutes(app: Express): void {
         });
       }
 
-      // Compte téléphone : pas d'email possible → session directe.
+      // Compte téléphone : pas d'email possible → session directe (email_verified
+      // sans objet ; on le marque vérifié pour ne jamais gêner ses connexions).
+      await ensureEmailVerifiedColumn();
+      await markEmailVerified(user.id);
       req.session.userId = user.id;
       req.session.save(async (err: any) => {
         if (err) {
@@ -226,6 +250,21 @@ export function registerAuthRoutes(app: Express): void {
       const valid = await bcrypt.compare(password, user.passwordHash);
       if (!valid) {
         return res.status(401).json({ message: "Email ou mot de passe incorrect" });
+      }
+
+      // ── VÉRIFICATION EMAIL OBLIGATOIRE ──
+      // Un compte email jamais vérifié (inscription abandonnée avant le code) ne
+      // peut pas se connecter directement : on renvoie vers la saisie du code.
+      // Ferme le contournement « je m'inscris avec un faux email puis je me
+      // connecte quand même ». Les comptes téléphone en sont exemptés.
+      const isPhoneAccount = emailLower.endsWith("@phone.glowscan.cm");
+      await ensureEmailVerifiedColumn();
+      if (!isPhoneAccount && !(await isEmailVerified(user.id))) {
+        (req.session as any).pending2faUserId = user.id;
+        const otp = await issueEmailOtp(user.id, user.email, user.firstName);
+        return req.session.save(() => {
+          res.json({ requires2fa: true, method: "email", emailSent: otp.ok, emailHint: maskEmailAddr(user.email), devFallback: otp.provider === "dev", reason: "email_unverified" });
+        });
       }
 
       // 2FA OPTIONNELLE côté B2C : seulement si l'utilisateur l'a activée.
@@ -280,6 +319,9 @@ export function registerAuthRoutes(app: Express): void {
 
       const [user] = await db.select().from(users).where(eq(users.id, pendingId));
       if (!user) return res.status(401).json({ message: "Utilisateur introuvable" });
+      // Le code reçu prouve la possession de l'email → compte vérifié (inscription
+      // ou 2FA de connexion, dans les deux cas l'email est confirmé).
+      await markEmailVerified(user.id);
       const previousSessionId = req.session?.id;
       delete (req.session as any).pending2faUserId;
       req.session.userId = user.id;
