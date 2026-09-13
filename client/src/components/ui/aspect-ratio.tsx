@@ -1,9 +1,5 @@
-theme: {
-  extend: {
-    keyframes: {
-      shimmer: {
-        '100%': { transform: 'translateX(100%)' },
-      },
-    },
-  },
-}
+import * as AspectRatioPrimitive from "@radix-ui/react-aspect-ratio";
+
+const AspectRatio = AspectRatioPrimitive.Root;
+
+export { AspectRatio };
