@@ -174,9 +174,24 @@ export function registerAuthRoutes(app: Express): void {
         }
       }
 
+      await ensureEmailVerifiedColumn();
       const [existing] = await db.select().from(users).where(eq(users.email, emailLower));
       if (existing) {
-        console.log(`[register] ⚠️ Email déjà utilisé — email=${emailLower}`);
+        // Anti-squattage : un compte email JAMAIS vérifié n'appartient à personne
+        // de prouvé → on autorise sa reprise (nouvelle identité + mot de passe +
+        // nouveau code). Empêche qu'une adresse soit verrouillée par une
+        // inscription abandonnée ou malveillante. Un compte vérifié reste protégé.
+        if (!isPhoneAccount && !(await isEmailVerified(existing.id))) {
+          const newHash = await bcrypt.hash(password, 10);
+          await db.update(users).set({ firstName: firstName.trim(), passwordHash: newHash }).where(eq(users.id, existing.id));
+          (req.session as any).pending2faUserId = existing.id;
+          const otp = await issueEmailOtp(existing.id, emailLower, firstName.trim());
+          return req.session.save(() => {
+            console.log(`[register] ♻️ Reprise d'un compte non vérifié — userId=${existing.id}`);
+            res.json({ requires2fa: true, method: "email", emailSent: otp.ok, emailHint: maskEmailAddr(emailLower), devFallback: otp.provider === "dev" });
+          });
+        }
+        console.log(`[register] ⚠️ Email déjà utilisé (vérifié) — email=${emailLower}`);
         return res.status(409).json({ message: "Cet email est déjà utilisé. Connecte-toi plutôt !" });
       }
 
@@ -501,13 +516,15 @@ export function registerAuthRoutes(app: Express): void {
       const [user] = await db.select().from(users).where(eq(users.email, emailInDb));
 
       if (!user) {
-        // Ne pas révéler si le compte existe — générer un code fake quand même
-        const fakeCode = generateCode();
+        // Anti-énumération : on renvoie EXACTEMENT la même forme qu'un envoi
+        // réussi en production (canal selon le contact, aucun code affiché) — le
+        // client montre alors le même écran « code envoyé » que pour un vrai
+        // compte. On n'envoie évidemment rien (pas de spam vers un non-inscrit).
         return res.json({
           sent: true,
           maskedContact: isPhone ? maskPhone(trimmed) : maskEmail(trimmed),
-          viaSms: false,
-          code: fakeCode, // Code fake pour la sécurité (user inexistant)
+          viaSms: isPhone,
+          viaEmail: !isPhone,
         });
       }
 

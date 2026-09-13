@@ -602,6 +602,27 @@ async function sendWeeklyProspectRelance() {
   } catch (err) { log(`❌ Erreur relance prospects mercredi : ${err}`); }
 }
 
+// ── Purge des comptes email jamais vérifiés (inscriptions abandonnées/fausses) ──
+// Ne supprime QUE des comptes email non vérifiés, âgés de +30 j, SANS aucune
+// donnée rattachée (ni scan ni consultation) → suppression sûre (pas de FK
+// bloquante), et libère l'adresse email. Les comptes téléphone et vérifiés sont
+// intouchés. Non fatal : toute erreur (colonne absente, FK) est loggée sans crash.
+async function cleanupUnverifiedAccounts() {
+  try {
+    const r: any = await db.execute(sql`
+      DELETE FROM users u
+      WHERE u.email_verified = false
+        AND u.email IS NOT NULL
+        AND u.email NOT LIKE '%@phone.glowscan.cm'
+        AND u.created_at < now() - interval '30 days'
+        AND NOT EXISTS (SELECT 1 FROM scans s WHERE s.user_id = u.id)
+        AND NOT EXISTS (SELECT 1 FROM consultations c WHERE c.user_id = u.id)
+      RETURNING u.id`);
+    const n = ((r?.rows ?? r ?? []) as any[]).length;
+    if (n > 0) log(`🧹 Comptes non vérifiés purgés (>30j, sans données) : ${n}`);
+  } catch (err) { log(`❌ Erreur purge comptes non vérifiés : ${err}`); }
+}
+
 export function startCronJobs() {
   // ✅ CORRECTION 2: Skip en mode test
   if (process.env.NODE_ENV === "test") {
@@ -669,5 +690,9 @@ export function startCronJobs() {
 
   // ✅ Relance prospects — chaque MERCREDI à 9h00 (Douala)
   cron.schedule("0 9 * * 3", sendWeeklyProspectRelance, { timezone: "Africa/Douala" });
+
+  // ✅ Purge des comptes email non vérifiés (>30j, sans données) — chaque jour 3h30
+  cron.schedule("30 3 * * *", cleanupUnverifiedAccounts, { timezone: "Africa/Douala" });
+  log("✅ Cron purge comptes non vérifiés actif — 3h30 (Douala)");
   log("✅ Cron relance prospects actif — mercredi 9h00 (Douala)");
 }
