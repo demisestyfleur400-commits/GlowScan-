@@ -194,10 +194,10 @@ export default function AuthPage() {
     if (!forgotContact.trim()) return;
     setLoading(true);
     try {
-      const data = await apiRequest("POST", "/api/auth/forgot-password", {
+      const res = await apiRequest("POST", "/api/auth/forgot-password", {
         contact: forgotContact.trim(),
       });
-      const json = data as any;
+      const json = await res.json().catch(() => ({} as any));
       // Le serveur renvoie { maskedContact, viaSms, viaEmail, code? }.
       // `code` n'est présent qu'en fallback dev (aucun SMS/email configuré) ;
       // en production il est absent car le code part par SMS ou email.
@@ -208,7 +208,14 @@ export default function AuthPage() {
         code: typeof json.code === "string" && json.code ? json.code : undefined,
       });
     } catch (err: any) {
-      toast({ title: "Erreur", description: parseError(err) || "Erreur serveur", variant: "destructive" });
+      // Échec d'envoi confirmé par le serveur (502, sent:false) : on affiche
+      // le même écran « Code non envoyé » avec bouton Réessayer, plutôt
+      // qu'un simple toast, pour rester cohérent avec le reste du flux.
+      setForgotResult({ maskedContact: "", viaSms: false, viaEmail: false, code: undefined });
+      const msg = parseError(err);
+      if (msg && msg !== "L'envoi du code a échoué. Réessaie dans un instant.") {
+        toast({ title: "Erreur", description: msg, variant: "destructive" });
+      }
     } finally {
       setLoading(false);
     }

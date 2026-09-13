@@ -542,22 +542,43 @@ export function registerAuthRoutes(app: Express): void {
         emailSent = r.ok;
       }
 
-      // Stocker le token (usage unique, 15 min)
+      const maskedContact = isPhone ? maskPhone(trimmed) : maskEmail(emailInDb);
+
+      // 🔒 SÉCURITÉ : si aucun canal n'a réellement délivré le code (panne
+      // Twilio/Resend, domaine non vérifié, rate limit, etc.), on NE stocke
+      // PAS le code et on ne le renvoie JAMAIS dans la réponse HTTP en
+      // production — quelle que soit la cause de l'échec. L'ancien
+      // comportement renvoyait le code dès que les deux canaux échouaient,
+      // ce qui permettait de contourner totalement la vérification SMS/email
+      // (il suffisait de déclencher un échec d'envoi, par ex. avec une
+      // adresse qui rebondit, pour récupérer le code directement dans la
+      // réponse JSON). Le seul fallback autorisé à afficher le code est
+      // l'environnement de développement local, jamais la prod.
+      const isDevFallback = !smsSent && !emailSent && process.env.NODE_ENV !== "production";
+
+      if (!smsSent && !emailSent && !isDevFallback) {
+        console.error(`[forgot-pwd] échec d'envoi (sms=${smsSent} email=${emailSent}) pour userId=${user.id}`);
+        return res.status(502).json({
+          sent: false,
+          maskedContact,
+          message: "L'envoi du code a échoué. Réessaie dans un instant.",
+        });
+      }
+
+      // Stocker le token (usage unique, 15 min) — uniquement si un envoi a
+      // réellement eu lieu (réel, ou fallback dev volontaire ci-dessus).
       resetTokens.set(code, {
         userId: user.id,
         phone: phone || "",
         expiresAt: Date.now() + 15 * 60 * 1000,
       });
 
-      const maskedContact = isPhone ? maskPhone(trimmed) : maskEmail(emailInDb);
       res.json({
         sent: true,
         maskedContact,
         viaSms: smsSent,
         viaEmail: emailSent,
-        // 🔒 SÉCURITÉ : on ne renvoie JAMAIS le code si un canal réel a envoyé.
-        // Fallback dev uniquement (ni SMS ni email configuré) → code affiché.
-        code: (!smsSent && !emailSent) ? code : undefined,
+        code: isDevFallback ? code : undefined,
       });
     } catch (err) {
       console.error("[forgot-pwd] error:", err);
