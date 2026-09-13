@@ -2744,14 +2744,27 @@ Affine ton analyse selon tes règles.`;
         await db.execute(sql`UPDATE pro_accounts SET slug = ${slug} WHERE id = ${id}`);
       }
 
-      // Mises à jour ciblées (chaque champ optionnel).
-      if (bio !== undefined) await db.execute(sql`UPDATE pro_accounts SET bio = ${bio} WHERE id = ${id}`);
-      if (specialties !== undefined) await db.execute(sql`UPDATE pro_accounts SET specialties = ${specialties as any} WHERE id = ${id}`);
-      if (photoUrl !== undefined) await db.execute(sql`UPDATE pro_accounts SET photo_url = ${photoUrl} WHERE id = ${id}`);
-      if (whatsapp !== undefined) await db.execute(sql`UPDATE pro_accounts SET whatsapp_number = ${whatsapp} WHERE id = ${id}`);
-      if (publicEnabled !== undefined) await db.execute(sql`UPDATE pro_accounts SET public_profile_enabled = ${publicEnabled} WHERE id = ${id}`);
+      // Mises à jour ciblées, chacune ISOLÉE : un champ en échec ne doit jamais
+      // faire échouer tout l'enregistrement. On journalise le champ fautif et on
+      // renvoie la liste des échecs éventuels (diagnostic + résilience).
+      const failures: string[] = [];
+      const run = async (field: string, fn: () => Promise<any>) => {
+        try { await fn(); } catch (e) { failures.push(field); console.error(`[profile/update] champ '${field}' KO:`, (e as any)?.message || e); }
+      };
+
+      if (bio !== undefined) await run("bio", () => db.execute(sql`UPDATE pro_accounts SET bio = ${bio} WHERE id = ${id}`));
+      if (specialties !== undefined) {
+        // node-postgres : on sérialise nous-mêmes le littéral tableau Postgres et on
+        // caste en text[], pour éviter toute ambiguïté de binding d'un tableau JS
+        // (cause probable des échecs d'enregistrement du profil).
+        const pgArr = `{${specialties.map((s: string) => `"${String(s).replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`).join(",")}}`;
+        await run("specialties", () => db.execute(sql`UPDATE pro_accounts SET specialties = ${pgArr}::text[] WHERE id = ${id}`));
+      }
+      if (photoUrl !== undefined) await run("photo", () => db.execute(sql`UPDATE pro_accounts SET photo_url = ${photoUrl} WHERE id = ${id}`));
+      if (whatsapp !== undefined) await run("whatsapp", () => db.execute(sql`UPDATE pro_accounts SET whatsapp_number = ${whatsapp} WHERE id = ${id}`));
+      if (publicEnabled !== undefined) await run("public", () => db.execute(sql`UPDATE pro_accounts SET public_profile_enabled = ${publicEnabled} WHERE id = ${id}`));
       if (typeof b.b2cAvailable === "boolean") {
-        await db.execute(sql`UPDATE pro_accounts SET b2c_available = ${b.b2cAvailable} WHERE id = ${id}`);
+        await run("b2c", () => db.execute(sql`UPDATE pro_accounts SET b2c_available = ${b.b2cAvailable} WHERE id = ${id}`));
         // Activation « consultable en B2C » → consultation fantôme de démonstration.
         if (b.b2cAvailable === true) {
           try {
@@ -2777,7 +2790,7 @@ Affine ton analyse selon tes règles.`;
       }
       if (b.consultPriceFcfa !== undefined) {
         const price = Math.max(500, Math.min(50000, parseInt(String(b.consultPriceFcfa), 10) || 4800));
-        await db.execute(sql`UPDATE pro_accounts SET consult_price_fcfa = ${price} WHERE id = ${id}`);
+        await run("price", () => db.execute(sql`UPDATE pro_accounts SET consult_price_fcfa = ${price} WHERE id = ${id}`));
       }
 
       // Profil complété (photo + bio + ≥1 spécialité) → horodatage (critère certif).
@@ -2787,8 +2800,14 @@ Affine ton analyse selon tes règles.`;
         if (complete && !p.profile_completed_at) await db.execute(sql`UPDATE pro_accounts SET profile_completed_at = NOW() WHERE id = ${id}`);
       } catch {}
 
-      const out = Rows(await db.execute(sql`SELECT slug, bio, specialties, photo_url, whatsapp_number, COALESCE(public_profile_enabled,true) AS enabled, COALESCE(is_certified,false) AS certified FROM pro_accounts WHERE id = ${id}`))[0];
-      res.json({ ok: true, profile: out });
+      let out: any = null;
+      try {
+        out = Rows(await db.execute(sql`SELECT slug, bio, specialties, photo_url, whatsapp_number, COALESCE(public_profile_enabled,true) AS enabled, COALESCE(is_certified,false) AS certified FROM pro_accounts WHERE id = ${id}`))[0];
+      } catch (e) { console.error("[profile/update] relecture finale KO:", (e as any)?.message || e); }
+      if (failures.length) console.error(`[profile/update] champs en échec pour id=${id}: ${failures.join(", ")}`);
+      // On répond 200 tant qu'on a pu traiter la requête : les champs valides sont
+      // enregistrés, et failedFields signale les éventuels champs à corriger.
+      res.json({ ok: true, profile: out, failedFields: failures });
     } catch (err) {
       console.error("[pro/profile/update] error:", err);
       res.status(500).json({ message: "Erreur serveur (migration profil appliquée ?)" });
