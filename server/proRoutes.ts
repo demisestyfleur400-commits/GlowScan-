@@ -15,6 +15,14 @@ import webpush from "web-push";
 import { sendEmail, buildOtpEmail, buildWelcomeEmail, buildSecurityAlertEmail, buildPeerNotifEmail, buildMagicLinkEmail } from "./email";
 import crypto from "crypto";
 
+// Normalise le résultat de db.execute (postgres-js renvoie un tableau ; d'autres
+// pilotes renvoient { rows }). Défini localement ICI : l'identifiant `Rows`
+// existait dans routes.ts/whatsapp.ts mais PAS dans ce module → au runtime,
+// chaque appel `Rows(...)` levait un ReferenceError (esbuild le traitait comme un
+// global implicite, sans erreur de build) et faisait échouer tous les endpoints
+// DERM qui l'utilisent (profil, référral, agenda, onboarding…).
+const Rows = (x: any): any[] => (x?.rows ?? x ?? []) as any[];
+
 // ── 2FA email (dermatologues) ──────────────────────────────────────────────
 const OTP_TTL_MS = 10 * 60 * 1000;   // 10 min
 const OTP_MAX_ATTEMPTS = 5;
