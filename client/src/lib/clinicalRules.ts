@@ -16,6 +16,8 @@ export interface RuleContext {
   durationText?: string;    // durée du problème (texte libre)
   phototype?: string;       // "IV" | "V" | "VI" ...
   keloidRisk?: string;      // "low" | "medium" | "high"
+  pregnancyStatus?: string; // "non" | "grossesse" | "allaitement" (ou texte libre)
+  protocolText?: string;    // texte agrégé des produits RECOMMANDÉS (protocole IA)
 }
 
 export type RuleLevel = "urgent" | "important" | "info";
@@ -25,6 +27,7 @@ export interface FiredRule {
   id: string;
   level: RuleLevel;
   triage?: TriageLevel; // impact triage (urgence / orientation)
+  blocker?: boolean;    // true = blocage dur (sécurité) → mis en avant dans l'UI
   label: string;   // la règle
   action: string;  // ce qu'elle impose
 }
@@ -43,7 +46,25 @@ function isChronic(text?: string): boolean {
 // Texte agrégé (diagnostic + signaux d'alarme) pour la détection d'urgence.
 const dangerText = (c: RuleContext) => lower((c.condition || "") + " " + (c.redFlags || []).join(" "));
 
-const RULES: { id: string; level: RuleLevel; triage?: TriageLevel; label: string; action: string; test: (c: RuleContext) => boolean }[] = [
+// Rétinoïdes (rétinol, trétinoïne, adapalène, isotrétinoïne, tazarotène…) —
+// tolère l'absence d'accents. Tératogènes → contre-indiqués en grossesse/allaitement.
+const RETINOID_RE = /r[ée]tino|tr[ée]tino|isotr[ée]tino|adapal[eè]ne|tazarot/i;
+const isPregnantOrLactating = (s?: string) => /grossesse|enceinte|allaite/i.test(s || "");
+
+const RULES: { id: string; level: RuleLevel; triage?: TriageLevel; blocker?: boolean; label: string; action: string; test: (c: RuleContext) => boolean }[] = [
+  // ── BLOCAGE SÉCURITÉ (grossesse/allaitement) ──
+  // Filet DÉTERMINISTE, indépendant de l'IA : même si le prompt échoue et qu'un
+  // rétinoïde (tératogène) est recommandé à une patiente enceinte/allaitante, cette
+  // règle le détecte et BLOQUE la validation. Double filet exigé pour un risque
+  // fœtal. Ne remplace pas le jugement du médecin — le rend visible et opposable.
+  {
+    id: "retinoid-pregnancy",
+    level: "urgent", triage: "orientation", blocker: true,
+    label: "Rétinoïde recommandé malgré grossesse/allaitement déclarés",
+    action: "BLOQUER — ne jamais valider une recommandation contenant un rétinoïde (rétinol, trétinoïne, adapalène, isotrétinoïne) chez une patiente enceinte ou allaitante. Remplacer par niacinamide ou acide azélaïque (compatibles grossesse/allaitement).",
+    test: (c) => isPregnantOrLactating(c.pregnancyStatus)
+      && RETINOID_RE.test(`${c.protocolText || ""} ${c.products || ""}`),
+  },
   // ── RÈGLES D'URGENCE (triage: urgence) ──
   {
     id: "melanome",
@@ -120,7 +141,7 @@ const RULES: { id: string; level: RuleLevel; triage?: TriageLevel; label: string
 
 export function evaluateRules(ctx: RuleContext): FiredRule[] {
   return RULES.filter((r) => { try { return r.test(ctx); } catch { return false; } })
-    .map(({ id, level, triage, label, action }) => ({ id, level, triage, label, action }));
+    .map(({ id, level, triage, blocker, label, action }) => ({ id, level, triage, blocker, label, action }));
 }
 
 export interface TriageResult {

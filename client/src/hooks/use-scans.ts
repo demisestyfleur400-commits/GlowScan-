@@ -9,7 +9,10 @@ import type { InsertScan } from "@shared/schema";
 export interface AnalyzeRequest {
   image: string; // base64
   area: 'face' | 'body' | 'hair';
-  intake?: Record<string, string | undefined>;
+  // Valeurs hétérogènes : la plupart des champs sont des chaînes, mais certains
+  // sont typés (patientId: number, examen: objet structuré, grossesseAllaitement…).
+  intake?: Record<string, any>;
+  images?: string[];
 }
 
 /**

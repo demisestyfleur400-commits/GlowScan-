@@ -118,10 +118,48 @@ function Field({ f, value, set }: { f: FieldDef; value: ClinicalRecord; set: (k:
   );
 }
 
-export function ClinicalDossierForm({ value, onChange }: { value: ClinicalRecord; onChange: (next: ClinicalRecord) => void }) {
+// Champ de sécurité GROSSESSE/ALLAITEMENT — volontairement explicite (3 choix,
+// pas un oui/non ambigu) et TOUJOURS visible en haut du dossier (sauf sexe
+// masculin renseigné). Stocké normalisé : "non" | "grossesse" | "allaitement".
+const PREGNANCY_OPTIONS: { v: string; label: string }[] = [
+  { v: "non", label: "Non" },
+  { v: "grossesse", label: "Oui — grossesse" },
+  { v: "allaitement", label: "Oui — allaitement" },
+];
+function PregnancyField({ value, set }: { value: ClinicalRecord; set: (k: string, v: string) => void }) {
+  const cur = value["grossesseAllaitement"] || "";
+  return (
+    <div style={{ background: "rgba(220,38,38,0.05)", border: "1px solid rgba(220,38,38,0.25)", borderRadius: 12, padding: "11px 13px" }}>
+      <label style={{ display: "block", fontSize: 12, fontWeight: 800, color: "#b91c1c", marginBottom: 7 }}>
+        🤰 Grossesse ou allaitement en cours ? <span style={{ fontWeight: 600, color: MUTED }}>(sécurité — contre-indications)</span>
+      </label>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+        {PREGNANCY_OPTIONS.map((o) => {
+          const on = cur === o.v;
+          return (
+            <button key={o.v} type="button" data-testid={`pregnancy-${o.v}`}
+              onClick={() => set("grossesseAllaitement", on ? "" : o.v)}
+              style={{ padding: "7px 12px", borderRadius: 9999, fontSize: 12, fontWeight: 700, cursor: "pointer",
+                background: on ? "#dc2626" : "#fff", color: on ? "#fff" : "#64748B",
+                border: on ? "1px solid #dc2626" : "1px solid #E2E8F0" }}>
+              {o.label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+export function ClinicalDossierForm({ value, onChange, sex }: { value: ClinicalRecord; onChange: (next: ClinicalRecord) => void; sex?: string }) {
   const [showContext, setShowContext] = useState(false); // contexte replié par défaut
   const [open, setOpen] = useState<string>("hma");        // 1re sous-section ouverte quand on déplie
   const set = (k: string, v: string) => onChange({ ...value, [k]: v });
+
+  // Question de sécurité affichée SAUF si le sexe renseigné est explicitement
+  // masculin. Un sexe non renseigné/ambigu ne masque JAMAIS la question.
+  const isMale = /^m/i.test((sex || "").trim()); // "M", "Masculin", "Homme"…
+  const showPregnancy = !isMale;
 
   // Combien de champs de contexte sont remplis (pour un indice discret sur le bouton).
   const ctxFilled =
@@ -132,6 +170,9 @@ export function ClinicalDossierForm({ value, onChange }: { value: ClinicalRecord
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       {/* MOTIF — le seul champ visible par défaut */}
       <Field f={MOTIF} value={value} set={set} />
+
+      {/* Sécurité grossesse/allaitement — toujours visible (sauf sexe masculin) */}
+      {showPregnancy && <PregnancyField value={value} set={set} />}
 
       {/* Un SEUL bouton pour tout le contexte clinique (optionnel) */}
       <button type="button" onClick={() => setShowContext((v) => !v)} data-testid="toggle-clinical-context"

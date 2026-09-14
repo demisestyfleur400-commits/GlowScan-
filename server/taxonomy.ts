@@ -13,9 +13,28 @@
  */
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TAXONOMIE 9 CATÉGORIES
+// TAXONOMIE 10 CATÉGORIES
 // ─────────────────────────────────────────────────────────────────────────────
 export const CONDITION_CATEGORIES = {
+  // Rosacée / dermatite périorale (ICD-10 L71). Placée EN PREMIER volontairement :
+  // ses mots-clés sont très spécifiques (jamais présents dans une acné/PIH), donc
+  // elle ne masque aucune catégorie existante ; et cela évite qu'une « rosacée
+  // papulo-pustuleuse » soit captée à tort par le mot-clé « pustule » de l'acné.
+  // Mots-clés NON accentués (classifyCondition compare sur texte sans accents).
+  rosacea: {
+    label: "Rosacée / Dermatite périorale",
+    labelEn: "Rosacea / Perioral dermatitis",
+    emoji: "🔴",
+    color: "#dc2626",
+    icd10Base: "L71",
+    target: 500,
+    keywords: ["rosacee", "rosacea", "couperose", "dermatite periorale", "periorale", "perioral"],
+    subtypes: {
+      "L71.0": "Dermatite périorale",
+      "L71.1": "Rhinophyma",
+      "L71.9": "Rosacée sans précision",
+    },
+  },
   acne: {
     label: "Acné",
     labelEn: "Acne",
@@ -58,6 +77,9 @@ export const CONDITION_CATEGORIES = {
       "L91.0": "Chéloïde",
       "L44.1": "Dermatose papuleuse nigra (DPN)",
       "L73.1": "Pseudofolliculite de la barbe (PFB)",
+      // Folliculite générique — placée APRÈS L73.1 pour que « pseudofolliculite »
+      // reste en L73.1 (findBestIcd renvoie le 1er sous-type dont le 1er mot matche).
+      "L73.9": "Folliculite",
       "L80": "Vitiligo",
       "L43": "Lichen plan",
     },

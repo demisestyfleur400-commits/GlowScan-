@@ -594,6 +594,9 @@ export default function ProAnalyze() {
         images: [photoBase64, photoRight, photoLeft].filter(Boolean) as string[],
         area: examArea,
         intake: {
+          // Patient existant → permet au serveur de lire l'historique de diagnostics
+          // (signal fiable pour le contexte acné : cf. buildDermResult/acneContext).
+          patientId: patientId ?? undefined,
           fullName: `${firstName} ${lastName}`.trim() || undefined,
           phone: phone || undefined,
           age: age ? `${age} ans` : undefined,
@@ -603,6 +606,8 @@ export default function ProAnalyze() {
           consultMotif: consultMotif || undefined,
           region: patientRegion || undefined,
           motif: consultMotif || undefined,
+          // Sécurité : statut grossesse/allaitement → contre-indication rétinoïdes.
+          grossesseAllaitement: (clinicalRecord?.grossesseAllaitement as string) || undefined,
           // Réponses au questionnaire (rempli AVANT l'IA) → contexte supplémentaire
           questionnaireAnswers: (() => {
             const parts = questionnaire.filter((q) => answers[q.id]).map((q) => `${q.label} : ${answers[q.id]}`);
@@ -973,6 +978,8 @@ export default function ProAnalyze() {
         products: [previousProducts, clinicalRecord?.atcdCosmeto].filter(Boolean).join(", "),
         durationText: problemDuration || clinicalRecord?.hmaDebut,
         phototype: examen.phototype, keloidRisk: examen.keloidRisk,
+        pregnancyStatus: clinicalRecord?.grossesseAllaitement,
+        protocolText: getProtocolProducts(r).join(" · "),
       }),
       validatedBy: doctorName && doctorName !== "—" ? `Dr ${doctorName}` : undefined,
       validatedAt: date,
@@ -1398,7 +1405,7 @@ export default function ProAnalyze() {
                     <p className="text-xs font-extrabold mb-2 px-1" style={{ color: "#0369A1" }}>
                       🩺 Dossier clinique
                     </p>
-                    <ClinicalDossierForm value={clinicalRecord} onChange={setClinicalRecord} />
+                    <ClinicalDossierForm value={clinicalRecord} onChange={setClinicalRecord} sex={sex} />
                   </div>
 
                   <button
@@ -1646,6 +1653,9 @@ export default function ProAnalyze() {
                   durationText: problemDuration || clinicalRecord?.hmaDebut,
                   phototype: examen.phototype,
                   keloidRisk: examen.keloidRisk,
+                  // Filet grossesse : statut + texte des produits RECOMMANDÉS par l'IA
+                  pregnancyStatus: clinicalRecord?.grossesseAllaitement,
+                  protocolText: getProtocolProducts(result).join(" · "),
                 })} />
 
                 {/* ── Raisonnement clinique IA unifié (trace auditable + fil interactif) ── */}

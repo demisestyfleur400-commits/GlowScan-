@@ -1811,6 +1811,7 @@ ${(patientIntake?.fullName || patientIntake?.phone || patientIntake?.age) ? `
       <div class="badges">
         <span class="badge" style="background:#ede9fe;color:#7c3aed">Peau : ${result.skinType || "—"}</span>
         <span class="badge" style="background:#fce7f3;color:#9d174d">Sévérité : ${result.severity || "Modérée"}</span>
+        ${result.geaIgaGrade != null ? `<span class="badge" style="background:#ede9fe;color:#6d28d9">GEA/IGA : ${result.geaIgaGrade} — ${result.geaIgaLabel || ""}</span>` : ""}
         <span class="badge" style="background:#ecfdf5;color:#065f46">Peaux africaines ✓</span>
       </div>
     </div>
@@ -2403,6 +2404,12 @@ ${medicalSections}
                   {result.severity && (
                     <p style={{ fontSize: "9px", color: "#9D174D", marginTop: "2px" }}>
                       Sévérité : {result.severity} · {result.skinType?.split("(")[0].trim() || ""}
+                    </p>
+                  )}
+                  {/* Échelle GEA/IGA (acné) — affichée uniquement si applicable */}
+                  {result.geaIgaGrade != null && (
+                    <p data-testid="gea-iga-grade" style={{ fontSize: "9px", fontWeight: 800, color: "#7c3aed", marginTop: "2px" }}>
+                      Sévérité GEA/IGA : {result.geaIgaGrade} — {result.geaIgaLabel || ""}
                     </p>
                   )}
                 </div>

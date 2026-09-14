@@ -565,6 +565,10 @@ export interface ProtocolStep {
 export interface AnalysisResult {
   condition: string;
   severity: string;
+  // Échelle GEA/IGA de l'acné (0–4) + libellé, ou null si le diagnostic n'est pas
+  // une forme d'acné. Mode DERM uniquement (étude de concordance Kappa).
+  geaIgaGrade?: number | null;
+  geaIgaLabel?: string | null;
   score: number;
   skinType: string;
   details: string;

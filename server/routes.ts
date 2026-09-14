@@ -126,7 +126,37 @@ function isAuth(req: any): boolean {
  * définis par GLOWSCAN_DERM_SYSTEM_PROMPT (clinicalProtocol, zonesAnalysis, etc.).
  * Tolérant aux champs manquants — clamp/sanitize sans jamais throw.
  */
-function buildDermResult(a: any) {
+/**
+ * Repli texte libre pour détecter si un motif/antécédent évoque une acné ACTUELLE.
+ * N'est utilisé que lorsqu'aucun historique structuré n'est disponible (1ʳᵉ visite
+ * d'un patient) — le signal PRINCIPAL et fiable reste le diagnostic antérieur du
+ * patient (scans.condition, cf. site d'appel de buildDermResult).
+ *
+ * Fonctionnement :
+ *  1) On enlève les accents (é→e) pour une seule liste de mots-clés.
+ *  2) On cherche un mot-clé positif — acné + LANGAGE COURANT :
+ *     acné, bouton(s), comédon(s), point(s) noir(s), papule(s), pustule(s), microkyste(s).
+ *  3) Autour de ce mot-clé (fenêtre ~24 car. avant / 20 après), on cherche une
+ *     NÉGATION ou une mention d'acné PASSÉE/RÉSOLUE qui neutralise le match :
+ *     "pas d'acné", "aucune acné", "sans acné", "plus d'acné",
+ *     "ancienne acné", "acné réglée/résolue/guérie/passée", "acné il y a 2 ans",
+ *     "acné de l'enfance/adolescence". → retourne false.
+ * Heuristique volontairement conservatrice : en cas de doute (négation détectée),
+ * on NE déclenche PAS le contexte acné.
+ */
+function textEvokesAcne(raw: string): boolean {
+  const t = (raw || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  if (!t) return false;
+  const POS = /\b(acne|boutons?|comedons?|points?\s+noirs?|papules?|pustules?|microkystes?)\b/;
+  const m = POS.exec(t);
+  if (!m) return false;
+  const window = t.slice(Math.max(0, m.index - 24), m.index + m[0].length + 20);
+  const NEG = /\b(pas|aucun|aucune|sans|plus|jamais|ex|ancien|ancienne|vieil|vieille|regle|reglee|resolu|resolue|gueri|guerie|passe|passee|termine|terminee|enfance|adolescence)\b|il y a \d/;
+  if (NEG.test(window)) return false;
+  return true;
+}
+
+function buildDermResult(a: any, opts?: { acneContext?: boolean }) {
   const str = (x: any, max = 4000) => (typeof x === "string" ? x.slice(0, max) : undefined);
   const arrStr = (x: any) =>
     Array.isArray(x) ? x.filter((s: any) => typeof s === "string").map((s: string) => s.slice(0, 400)) : [];
@@ -144,11 +174,24 @@ function buildDermResult(a: any) {
   });
   const cp = a?.clinicalProtocol && typeof a.clinicalProtocol === "object" ? a.clinicalProtocol : {};
 
+  // ── Échelle GEA/IGA (acné) — grade entier 0–4 + libellé, ou null si non-acné. ──
+  // Étude clinique : concordance (Kappa) entre le grade IA et le grade du dermato.
+  const GEA_LABELS = ["Absent", "Léger", "Modéré", "Sévère", "Très sévère"];
+  const rawGea = a?.geaIgaGrade;
+  const geaIgaGrade = (rawGea !== null && rawGea !== undefined && Number.isFinite(Number(rawGea)))
+    ? Math.max(0, Math.min(4, Math.round(Number(rawGea))))
+    : null;
+  const geaIgaLabel = geaIgaGrade === null
+    ? null
+    : (str(a?.geaIgaLabel, 40) || GEA_LABELS[geaIgaGrade]);
+
   const out: any = {
     aiModelVersion: AI_MODEL, // version du modèle IA ayant produit ce diagnostic (traçabilité)
     condition: str(a?.condition, 200) || "Analyse clinique",
     conditionSecondaire: a?.conditionSecondaire === null ? null : str(a?.conditionSecondaire, 200),
     severity: str(a?.severity, 40) || "Modérée",
+    geaIgaGrade,
+    geaIgaLabel,
     score: clampScore(a?.score),
     confidence: str(a?.confidence, 200),
     skinType: str(a?.skinType, 200),
@@ -206,6 +249,17 @@ function buildDermResult(a: any) {
     out.redFlags = [];
     if (out.score < 80) out.score = 85;
     if (!out.severity || /s[ée]v[èe]re|mod[ée]r/i.test(out.severity)) out.severity = "Aucune";
+    // Peau saine + contexte acnéique (patient suivi/consulté pour acné : motif,
+    // antécédent, visite de suivi S4/S8/S12) ⇒ l'échelle reste applicable, au
+    // stade le plus favorable → grade 0 « Absent » (surtout pas null : le patient
+    // reste évalué sur l'échelle). Sinon (aucun contexte acné) ⇒ null.
+    if (opts?.acneContext) {
+      out.geaIgaGrade = 0;
+      out.geaIgaLabel = "Absent";
+    } else {
+      out.geaIgaGrade = null;
+      out.geaIgaLabel = null;
+    }
   }
 
   return out;
@@ -1814,6 +1868,7 @@ export async function registerRoutes(
 
       // ── Données patient (formulaire d'intake) ─────────────────────────────
       const intake = (req.body as any).intake as {
+        patientId?: number;
         fullName?: string;
         phone?: string;
         age?: string;
@@ -1823,6 +1878,7 @@ export async function registerRoutes(
         region?: string;
         motif?: string;
         chiefComplaint?: string;
+        grossesseAllaitement?: string; // "non" | "grossesse" | "allaitement"
       } | undefined;
 
       // Construction du contexte patient pour enrichir le prompt IA
@@ -1854,6 +1910,8 @@ export async function registerRoutes(
         chiefComplaint: intake.chiefComplaint || intake.motif,
         region: intake.region,
         motif: intake.motif,
+        // Statut grossesse/allaitement — sécurité (contre-indication rétinoïdes).
+        grossesseAllaitement: intake.grossesseAllaitement || "non",
         // Examen physique du médecin (documenté AVANT l'IA) — l'IA doit en tenir compte
         examenPhysiqueMedecin: (intake as any).examen || undefined,
       }, null, 2) : "Aucun antécédent fourni.";
@@ -2252,7 +2310,26 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
       // on retourne immédiatement — le pipeline B2C ci-dessous n'est PAS exécuté.
       // ══════════════════════════════════════════════════════════════════
       if (isProRequest) {
-        const dermResult = buildDermResult(analysisResult);
+        // Contexte acnéique : le patient est-il sur le SPECTRE ACNÉIQUE ? Détermine
+        // si une peau redevenue nette vaut grade 0 « Absent » plutôt que null.
+        //
+        // SIGNAL PRINCIPAL (structuré, fiable) : un diagnostic ANTÉRIEUR de CE
+        // patient contient « acné » (ex. J0 = « Acné inflammatoire » → suivi S12
+        // peau nette = toujours un patient acnéique). Requête l'historique par
+        // patientId. Insensible au langage/négation du texte libre.
+        let acneHistory = false;
+        const pid = Number((intake as any)?.patientId);
+        if (Number.isFinite(pid) && pid > 0) {
+          try {
+            const prior = await db.select({ condition: scans.condition }).from(scans).where(eq(scans.patientId, pid));
+            acneHistory = prior.some((s) => /acn[eé]/i.test(String(s.condition || "")));
+          } catch (e) { console.warn("[analyze][derm] historique acné indisponible:", (e as any)?.message); }
+        }
+        // REPLI (texte libre) : uniquement si pas d'historique — motif/plainte/durée
+        // en langage courant, avec gestion des négations (cf. textEvokesAcne).
+        const motifText = [intake?.motif, intake?.chiefComplaint, intake?.duration].filter(Boolean).join(" · ");
+        const acneContext = acneHistory || textEvokesAcne(motifText);
+        const dermResult = buildDermResult(analysisResult, { acneContext });
         const uploadedDermImage = await uploadScanImageToStorage(image);
         let dermScanId: number | null = null;
         try {
