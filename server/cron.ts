@@ -623,6 +623,25 @@ async function cleanupUnverifiedAccounts() {
   } catch (err) { log(`❌ Erreur purge comptes non vérifiés : ${err}`); }
 }
 
+// ── RÉTENTION 24 MOIS (automatique) ────────────────────────────────────
+// Tient la promesse de /confidentialite : les photos des analyses B2C ANONYMES
+// jamais converties (pas de compte, pas de dossier patient DERM) sont retirées
+// après RETENTION_MONTHS (défaut 24). ANONYMISATION uniquement (image_url=NULL) :
+// la ligne agrégée du dataset est conservée, AUCUNE ligne n'est supprimée. Le
+// script scripts/retention-dryrun.ts reste disponible pour un contrôle manuel.
+async function applyRetentionPolicy() {
+  try {
+    const months = Math.max(1, parseInt(process.env.RETENTION_MONTHS || "24", 10));
+    const res: any = await db.execute(sql`
+      UPDATE scans SET image_url = NULL
+      WHERE user_id IS NULL AND patient_id IS NULL
+        AND created_at < (NOW() - make_interval(months => ${months}))
+        AND image_url IS NOT NULL AND image_url <> ''`);
+    const n = res?.rowCount ?? res?.count ?? 0;
+    if (n > 0) log(`🗓️ Rétention ${months} mois : ${n} photo(s) anonyme(s) anonymisée(s) (image_url=NULL)`);
+  } catch (err) { log(`❌ Erreur rétention automatique : ${err}`); }
+}
+
 export function startCronJobs() {
   // ✅ CORRECTION 2: Skip en mode test
   if (process.env.NODE_ENV === "test") {
@@ -693,6 +712,10 @@ export function startCronJobs() {
 
   // ✅ Purge des comptes email non vérifiés (>30j, sans données) — chaque jour 3h30
   cron.schedule("30 3 * * *", cleanupUnverifiedAccounts, { timezone: "Africa/Douala" });
+
+  // ✅ Rétention 24 mois — anonymisation auto des scans anonymes le 1er du mois 4h00
+  cron.schedule("0 4 1 * *", applyRetentionPolicy, { timezone: "Africa/Douala" });
+  log("✅ Cron rétention 24 mois actif — 1er du mois 4h00 (Douala)");
   log("✅ Cron purge comptes non vérifiés actif — 3h30 (Douala)");
   log("✅ Cron relance prospects actif — mercredi 9h00 (Douala)");
 }
