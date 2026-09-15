@@ -15,7 +15,7 @@ const DS = {
 export default function Privacy() {
   useSEO({
     title: "Politique de Confidentialité | GlowScan",
-    description: "Politique de confidentialité de GlowScan. Vos données dermatologiques sont protégées et ne sont jamais vendues. Conformité RGPD.",
+    description: "Politique de confidentialité de GlowScan. Vos données dermatologiques sont protégées et ne sont jamais vendues. Transparence totale sur leur usage.",
     canonical: "https://glow-scan.com/confidentialite",
   });
 
@@ -45,7 +45,7 @@ export default function Privacy() {
             <h1 className="text-xl font-extrabold" style={{ color: DS.text }} data-testid="text-privacy-title">
               Politique de confidentialité
             </h1>
-            <p className="text-xs mt-0.5" style={{ color: DS.muted }}>Dernière mise à jour : 7 septembre 2026 · version 2026-09-07</p>
+            <p className="text-xs mt-0.5" style={{ color: DS.muted }}>Dernière mise à jour : 15 septembre 2026 · version 2026-09-15</p>
           </div>
         </div>
 
@@ -84,21 +84,34 @@ export default function Privacy() {
           </ul>
         </Section>
 
-        <Section icon={<Globe className="w-4 h-4" style={{ color: "#a78bfa" }} />} title="4. Partage des données">
+        <Section icon={<Globe className="w-4 h-4" style={{ color: "#a78bfa" }} />} title="4. Partage & mesure d'audience">
           <p className="mb-3">
-            Nous ne vendons <strong style={{ color: DS.text }}>jamais</strong> tes données personnelles à des tiers.
-            Aucune publicité ciblée n'est diffusée dans l'app.
+            Nous ne vendons <strong style={{ color: DS.text }}>jamais</strong> tes données personnelles.
+            Tes <strong style={{ color: DS.text }}>photos et tes diagnostics ne sont jamais transmis à des fins publicitaires</strong>.
           </p>
           <div
             className="rounded-xl p-3 mb-3"
             style={{ background: "rgba(251,191,36,0.06)", border: "1px solid rgba(251,191,36,0.2)" }}
           >
-            <p className="text-xs font-bold mb-1" style={{ color: "#fbbf24" }}>Prestataires techniques (sous-traitants)</p>
+            <p className="text-xs font-bold mb-1" style={{ color: "#fbbf24" }}>Prestataires IA (sous-traitants)</p>
             <p>
-              Pour fonctionner, GlowScan s'appuie sur : <strong style={{ color: DS.text }}>Google Gemini</strong> (analyse d'image par IA)
-              et <strong style={{ color: DS.text }}>Groq</strong> (transcription vocale). Ces prestataires traitent la donnée
-              le temps nécessaire au service et ne l'utilisent pas à d'autres fins. Aucun humain ne consulte tes photos hors
-              d'une consultation que tu as toi-même demandée avec un dermatologue.
+              Pour analyser ta peau, GlowScan s'appuie sur <strong style={{ color: DS.text }}>Google Gemini</strong> (analyse d'image par IA)
+              et <strong style={{ color: DS.text }}>Groq</strong> (transcription vocale et traitement IA de secours). Ils traitent la
+              donnée le temps nécessaire au service, sans autre usage. Aucun humain ne consulte tes photos en dehors d'une
+              consultation que tu as toi-même demandée avec un dermatologue.
+            </p>
+          </div>
+          <div
+            className="rounded-xl p-3 mb-3"
+            style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}
+          >
+            <p className="text-xs font-bold mb-1" style={{ color: DS.text }}>Mesure d'audience & amélioration</p>
+            <p>
+              Pour comprendre comment l'app est utilisée et l'améliorer, et pour mesurer l'efficacité de nos actions de
+              communication, nous utilisons <strong style={{ color: DS.text }}>Microsoft Clarity</strong> (statistiques d'usage
+              et d'ergonomie — clics, navigation, de façon agrégée) et le <strong style={{ color: DS.text }}>pixel Meta / Facebook</strong>
+              (mesure publicitaire). Ces outils reçoivent des données de navigation et d'interaction et déposent des cookies de
+              mesure. En utilisant GlowScan, tu en acceptes l'usage ; tu peux t'y opposer via les réglages de ton navigateur.
             </p>
           </div>
           <div
@@ -107,10 +120,10 @@ export default function Privacy() {
           >
             <p className="text-xs font-bold mb-1" style={{ color: DS.text }}>Hébergement (transparence)</p>
             <p>
-              Tes données sont hébergées sur <strong style={{ color: DS.text }}>Supabase (PostgreSQL)</strong> et
-              <strong style={{ color: DS.text }}> Railway</strong>. Leurs serveurs peuvent être situés
-              <strong style={{ color: DS.text }}> hors d'Afrique (Union Européenne ou États-Unis)</strong>. Nous te
-              l'indiquons en toute transparence. Les échanges sont chiffrés (HTTPS) et l'accès à la base est restreint.
+              Tes données, <strong style={{ color: DS.text }}>y compris tes photos</strong>, sont hébergées sur
+              <strong style={{ color: DS.text }}> Supabase (PostgreSQL)</strong> et <strong style={{ color: DS.text }}>Railway</strong>.
+              Leurs serveurs peuvent être situés <strong style={{ color: DS.text }}>hors d'Afrique (Union Européenne ou États-Unis)</strong>.
+              Les échanges sont chiffrés (HTTPS) et l'accès à la base est restreint.
             </p>
           </div>
         </Section>
@@ -176,8 +189,9 @@ export default function Privacy() {
           style={{ background: "rgba(167,139,250,0.06)", border: "1px solid rgba(167,139,250,0.18)" }}
         >
           <p className="text-xs italic" style={{ color: DS.body }}>
-            En utilisant GlowScan, tu acceptes cette politique. Nous t'informerons de tout changement important
-            par email ou via une notification dans l'app.
+            En créant ton compte et en utilisant GlowScan, tu acceptes l'ensemble de cette politique — un seul
+            consentement couvre le traitement de tes données pour l'analyse, la mesure d'audience et les cookies décrits
+            ci-dessus. Nous t'informerons de tout changement important par email ou via une notification dans l'app.
           </p>
         </div>
       </main>

@@ -5,7 +5,7 @@ import { ShieldCheck, Globe, Lock } from "lucide-react";
 
 const CONSENT_KEY_BASE = "glowscan_consent_v1";
 // Version de la politique de confidentialité acceptée (à incrémenter si la politique change).
-export const PRIVACY_POLICY_VERSION = "2026-09-07";
+export const PRIVACY_POLICY_VERSION = "2026-09-15";
 
 // Choix explicite de contribution au dataset de recherche anonymisé (true = accepté).
 export function getDatasetConsent(userId?: string | null): boolean {
