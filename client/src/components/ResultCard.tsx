@@ -2250,7 +2250,7 @@ ${medicalSections}
       `📍 Livraison à Douala 🙏`
     ) : "";
     return (
-      <div data-testid="result-card" style={{ maxWidth: "460px", margin: "0 auto", display: "flex", flexDirection: "column", gap: "20px", padding: "8px 0", fontFamily: DS.font }}>
+      <div data-testid="result-card" data-clarity-mask="true" style={{ maxWidth: "460px", margin: "0 auto", display: "flex", flexDirection: "column", gap: "20px", padding: "8px 0", fontFamily: DS.font }}>
         {/* Le Glow Score — héros, grand, fier */}
         <GlowGauge score={result.score} observationsVisuelles={result.consultationData?.observations_visuelles || (result as any).observationsVisuelles} />
 
@@ -2322,6 +2322,7 @@ ${medicalSections}
   return (
     <div
       data-testid="result-card"
+      data-clarity-mask="true"
       style={{
         maxWidth: "512px",
         margin: "0 auto",

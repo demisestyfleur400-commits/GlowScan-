@@ -703,7 +703,7 @@ export default function Analyze() {
 
               {/* Aperçu photo */}
               {uploadedImage && (
-                <div className="flex items-center gap-3 rounded-2xl p-3" style={{ background: "rgba(47,158,110,0.06)", border: "1px solid rgba(47,158,110,0.18)" }}>
+                <div data-clarity-mask="true" className="flex items-center gap-3 rounded-2xl p-3" style={{ background: "rgba(47,158,110,0.06)", border: "1px solid rgba(47,158,110,0.18)" }}>
                   <img src={uploadedImage} alt="Photo" className="w-12 h-12 rounded-xl object-cover border-2" style={{ borderColor: "#2f9e6e" }} />
                   <div>
                     <p className="text-xs font-bold" style={{ color: "#c4b5fd" }}>Photo reçue ✓</p>

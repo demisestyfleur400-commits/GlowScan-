@@ -129,7 +129,7 @@ export function LowScoreExperience({ score, scanId, condition, imageUrl, result 
   };
 
   const shell = (children: React.ReactNode) => (
-    <div data-testid={`lowscore-step-${step}`} style={{ maxWidth: 460, margin: "0 auto", display: "flex", flexDirection: "column", gap: 18, padding: "8px 0", fontFamily: "-apple-system, system-ui, sans-serif" }}>
+    <div data-testid={`lowscore-step-${step}`} data-clarity-mask="true" style={{ maxWidth: 460, margin: "0 auto", display: "flex", flexDirection: "column", gap: 18, padding: "8px 0", fontFamily: "-apple-system, system-ui, sans-serif" }}>
       {/* Progression — 5 points, aucune urgence */}
       <div style={{ display: "flex", justifyContent: "center", gap: 6 }}>
         {[1, 2, 3, 4, 5].map((n) => (

@@ -382,7 +382,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
   const lastMineId = mineMsgs.length ? mineMsgs[mineMsgs.length - 1].id : -1;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", background: BG, position: "relative" }}>
+    <div data-clarity-mask="true" style={{ display: "flex", flexDirection: "column", height: "100%", background: BG, position: "relative" }}>
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", borderBottom: `1px solid ${BORDER}`, background: CARD }}>
         {onBack && (
