@@ -593,6 +593,26 @@ function SkeletonCard() {
 }
 
 // ─────────────────────────────────────────────────────────────────────
+//  Placeholder produit — affiché quand aucune image ne charge (kits sans
+//  image, ou URLs externes hotlinkées bloquées/timeout). Design intentionnel
+//  et cohérent par catégorie, plutôt qu'une image cassée ou un emoji nu.
+// ─────────────────────────────────────────────────────────────────────
+const CAT_PLACEHOLDER: Record<string, { grad: string; emoji: string; accent: string }> = {
+  visage:  { grad: "linear-gradient(135deg,#ede9fe,#ddd6fe)", emoji: "✨", accent: "#7c3aed" },
+  corps:   { grad: "linear-gradient(135deg,#ccfbf1,#99f6e4)", emoji: "🧴", accent: "#0d9488" },
+  cheveux: { grad: "linear-gradient(135deg,#fef3c7,#fde68a)", emoji: "💆", accent: "#b45309" },
+};
+function ProductPlaceholder({ category, brand }: { category?: string; brand?: string }) {
+  const c = CAT_PLACEHOLDER[category || "visage"] || CAT_PLACEHOLDER.visage;
+  return (
+    <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, background: c.grad, textAlign: "center", padding: 8 }}>
+      <span style={{ fontSize: 32, lineHeight: 1 }}>{c.emoji}</span>
+      {brand && <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: ".06em", textTransform: "uppercase", color: c.accent, maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{brand}</span>}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────
 //  Product Card — design référence (horizontal, fond blanc)
 // ─────────────────────────────────────────────────────────────────────
 function ProductCard({
@@ -616,10 +636,31 @@ function ProductCard({
   );
 
   const waNumber = (product.whatsapp || "+237674377959").replace("+", "");
-  const waMsg = encodeURIComponent(
-    `Bonjour 👋, je souhaite commander :\n• ${product.name}\nPrix : ${product.price?.toLocaleString("fr-FR")} FCFA\n\nMerci 🙏`
-  );
-  const waUrl = `https://wa.me/${waNumber}?text=${waMsg}`;
+  const priceLine = product.price ? `Prix : ${product.price.toLocaleString("fr-FR")} FCFA\n` : "";
+  // Deux intentions distinctes, textes cohérents (voir le contenu ≠ commander).
+  const waUrl = `https://wa.me/${waNumber}?text=${encodeURIComponent(
+    `Bonjour 👋, je souhaite commander :\n• ${product.name}\n${priceLine}\nMerci 🙏`
+  )}`;
+  const waUrlContent = `https://wa.me/${waNumber}?text=${encodeURIComponent(
+    `Bonjour 👋, je souhaite voir le contenu de :\n• ${product.name}\n${priceLine}\nMerci 🙏`
+  )}`;
+  // Contenu affiché sur la carte (kits surtout) → répond à « ce que contient ce kit »
+  // directement à l'écran, sans avoir à écrire sur WhatsApp.
+  const contents: string[] = Array.isArray((product as any).usagePoints) ? (product as any).usagePoints : [];
+  const logWaClick = () => {
+    fetch("/api/analytics/whatsapp-click", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ productId: product.id, productName: product.name, brand, whatsappNumber: product.whatsapp || "+237674377959" }),
+    }).catch(() => {});
+  };
+
+  // Certaines images externes (hotlink marques) ne déclenchent jamais onError :
+  // elles restent bloquées sur le skeleton. Timeout → bascule sur le placeholder.
+  useEffect(() => {
+    if (!img || imgLoaded || imgError) return;
+    const t = setTimeout(() => setImgError(true), 4000);
+    return () => clearTimeout(t);
+  }, [img, imgLoaded, imgError]);
 
   return (
     <motion.div
@@ -687,13 +728,7 @@ function ProductCard({
             }}
           />
         ) : (
-          <div style={{
-            width: "100%", height: "100%",
-            display: "flex", alignItems: "center",
-            justifyContent: "center", fontSize: 36,
-          }}>
-            {product.category === "cheveux" ? "💆" : product.category === "corps" ? "🧴" : "✨"}
-          </div>
+          <ProductPlaceholder category={product.category} brand={brand} />
         )}
       </div>
 
@@ -739,34 +774,51 @@ function ProductCard({
           {product.price ? `${product.price.toLocaleString("fr-FR")} FCFA` : "Sur demande"}
         </p>
 
-        {/* Bouton Commander */}
-        <a
-          href={waUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={() => {
-            fetch("/api/analytics/whatsapp-click", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                productId: product.id,
-                productName: product.name,
-                brand: brand,
-                whatsappNumber: product.whatsapp || "+237674377959",
-              }),
-            }).catch(() => {});
-          }}
-          style={{
-            display: "flex", alignItems: "center", justifyContent: "center",
-            gap: 6, padding: "10px 0", borderRadius: 10,
-            background: "#25d366", color: "#fff",
-            fontSize: 13, fontWeight: 800,
-            textDecoration: "none", marginTop: 2,
-          }}
-        >
-          <MessageCircle style={{ width: 14, height: 14 }} />
-          Commander
-        </a>
+        {/* Contenu du produit / kit — visible directement (répond à « ce que contient ») */}
+        {contents.length > 0 && (
+          <div style={{ background: "#f7f8fa", borderRadius: 10, padding: "8px 10px", marginTop: 2 }}>
+            <p style={{ fontSize: 9.5, fontWeight: 800, color: "#6b7280", letterSpacing: ".04em", textTransform: "uppercase", marginBottom: 4 }}>Ce que contient ce kit</p>
+            <ul style={{ margin: 0, paddingLeft: 14, display: "flex", flexDirection: "column", gap: 2 }}>
+              {contents.slice(0, 3).map((c, i) => (
+                <li key={i} style={{ fontSize: 11, color: "#374151", lineHeight: 1.4 }}>{c}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Actions — 2 intentions claires et cohérentes */}
+        <div style={{ display: "flex", gap: 8, marginTop: 2 }}>
+          <a
+            href={waUrlContent}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={logWaClick}
+            style={{
+              display: "flex", alignItems: "center", justifyContent: "center",
+              gap: 5, padding: "10px 0", borderRadius: 10, flex: 1,
+              background: "#fff", color: "#128C4A",
+              border: "1.5px solid #25d366",
+              fontSize: 12.5, fontWeight: 800, textDecoration: "none",
+            }}
+          >
+            Voir le contenu
+          </a>
+          <a
+            href={waUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={logWaClick}
+            style={{
+              display: "flex", alignItems: "center", justifyContent: "center",
+              gap: 6, padding: "10px 0", borderRadius: 10, flex: 1,
+              background: "#25d366", color: "#fff",
+              fontSize: 12.5, fontWeight: 800, textDecoration: "none",
+            }}
+          >
+            <MessageCircle style={{ width: 14, height: 14 }} />
+            Commander
+          </a>
+        </div>
       </div>
     </motion.div>
   );

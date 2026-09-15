@@ -325,6 +325,18 @@ import { buildObservationSections, type ObservationData } from "@/lib/observatio
 
 const productImages = centralProductImages;
 
+// Placeholder produit auto-porté (SVG data-URI) — remplace le fichier
+// /placeholder-product.png qui n'existe pas (image cassée). Toujours rendu.
+const PRODUCT_PLACEHOLDER =
+  "data:image/svg+xml;utf8," +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">' +
+    '<rect width="120" height="120" rx="14" fill="#ede9fe"/>' +
+    '<g fill="#c4b5fd"><rect x="50" y="22" width="20" height="12" rx="3"/>' +
+    '<rect x="44" y="34" width="32" height="60" rx="8"/></g>' +
+    '<rect x="52" y="54" width="16" height="26" rx="3" fill="#a78bfa" opacity="0.6"/></svg>'
+  );
+
 // ─── Priorité marques locales (marques partenaires locales retirées) ──────
 const LOCAL_WHATSAPP = new Set<string>([]);
 
@@ -3241,7 +3253,7 @@ ${medicalSections}
                               }}
                             >
                               <img
-                                src={productImages[matchedItem.product.id] || "/placeholder-product.png"}
+                                src={productImages[matchedItem.product.id] || PRODUCT_PLACEHOLDER}
                                 alt={matchedItem.product.name}
                                 style={{ width: "100%", height: "100%", objectFit: "contain" }}
                               />
@@ -3341,7 +3353,7 @@ ${medicalSections}
                               }}
                             >
                               <img
-                                src={productImages[matchedItem.product.id] || "/placeholder-product.png"}
+                                src={productImages[matchedItem.product.id] || PRODUCT_PLACEHOLDER}
                                 alt={matchedItem.product.name}
                                 style={{ width: "100%", height: "100%", objectFit: "contain" }}
                               />
