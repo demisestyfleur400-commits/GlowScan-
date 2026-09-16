@@ -11,6 +11,7 @@ import { z } from "zod";
 import OpenAI from "openai";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { GLOWSCAN_SYSTEM_PROMPT, GLOWSCAN_DERM_SYSTEM_PROMPT } from "./prompt";
+import { sendPurchaseEvent } from "./metaCapi";
 import { classifyCondition, extractPhototype, calcAnnotationScore } from "./taxonomy";
 import webpush from "web-push";
 import { db } from "./db";
@@ -956,6 +957,14 @@ export async function registerRoutes(
       if (!c) return res.status(404).json({ message: "Consultation introuvable" });
       // Notifie les DEUX parties (dermatologue + patient) : WS + push + email.
       await notifyConsultationOpened(c);
+      // Meta Conversions API — événement Purchase (serveur→serveur). Fire-and-forget :
+      // ne bloque JAMAIS la réponse ni la confirmation du paiement.
+      sendPurchaseEvent({
+        valueFcfa: (c as any).priceFcfa ?? 0,
+        consultationId: c.id,
+        clientIp: req.ip,
+        userAgent: req.headers["user-agent"],
+      }).catch(() => {});
       res.json({ consultation: c });
     } catch (err) {
       console.error("[consultations confirm] error:", err);
