@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { ProLayout, ProCard, ProInput, LogoutButton  } from "@/components/ProLayout";
 import { LoadingScreen } from "./ProDashboard";
+import { NotifSettingsCard } from "@/components/NotifSettingsCard";
 import { DERM } from "@/lib/design-tokens";
 
 const NAVY = "#7c3aed";        // CTA violet
@@ -214,6 +215,9 @@ export default function ProCabinet() {
   return (
     <ProLayout title="Mon cabinet" back="/derm/dashboard">
       <div className="space-y-4 max-w-3xl mx-auto">
+        {/* Notifications — réglage permanent (push consultations/messages) */}
+        <NotifSettingsCard />
+
         {/* Profil dermato */}
         <ProCard className="p-5">
           <div className="flex items-center justify-between mb-4">
