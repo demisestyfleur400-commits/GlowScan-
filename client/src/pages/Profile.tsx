@@ -3,6 +3,7 @@ import { useScans } from "@/hooks/use-scans";
 import { useSubscription } from "@/hooks/use-subscription";
 import { UpgradeModal } from "@/components/UpgradeModal";
 import { Navbar } from "@/components/Navbar";
+import { NotifSettingsCard } from "@/components/NotifSettingsCard";
 import { ResultCard } from "@/components/ResultCard";
 import { PrivacySettings } from "@/components/PrivacySettings";
 import { TwoFASettings } from "@/components/TwoFASettings";
@@ -548,6 +549,11 @@ export default function Profile() {
         <AnimatePresence mode="wait">
           {activeTab === "profil" ? (
             <motion.div key="profil" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+
+              {/* Notifications — réglage permanent (push : réponse du dermatologue) */}
+              <div className="mb-6">
+                <NotifSettingsCard audience="patient" />
+              </div>
 
               {/* Stat tiles */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">

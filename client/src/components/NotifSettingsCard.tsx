@@ -20,9 +20,16 @@ function urlBase64ToUint8Array(base64String: string) {
 
 type NotifState = "loading" | "unsupported" | "ios-install" | "denied" | "enabled" | "available";
 
-export function NotifSettingsCard() {
+export function NotifSettingsCard({ audience = "derm" }: { audience?: "derm" | "patient" }) {
   const [state, setState] = useState<NotifState>("loading");
   const [busy, setBusy] = useState(false);
+  // Textes contextualisés selon le destinataire.
+  const enabledMsg = audience === "patient"
+    ? "✅ Notifications activées — tu seras prévenu dès que ton dermatologue répond à ta consultation."
+    : "✅ Notifications activées sur cet appareil — tu seras alerté dès qu'un patient te consulte ou t'écrit.";
+  const availableMsg = audience === "patient"
+    ? "Active les notifications pour être prévenu dès que ton dermatologue te répond, même app fermée."
+    : "Active les notifications pour être alerté d'une nouvelle consultation ou d'un nouveau message, même app fermée.";
 
   const isIos = typeof navigator !== "undefined" && /iphone|ipad|ipod/i.test(navigator.userAgent);
   const isStandalone = typeof window !== "undefined" &&
@@ -83,13 +90,13 @@ export function NotifSettingsCard() {
       {title}
       {state === "enabled" && (
         <p style={{ fontSize: 12.5, color: "#047857", margin: 0, lineHeight: 1.5 }}>
-          ✅ Notifications activées sur cet appareil — tu seras alerté dès qu'un patient te consulte ou t'écrit.
+          {enabledMsg}
         </p>
       )}
       {state === "available" && (
         <div>
           <p style={{ fontSize: 12.5, color: "#475569", margin: "0 0 10px", lineHeight: 1.5 }}>
-            Active les notifications pour être alerté <strong style={{ color: "#0F172A" }}>en temps réel</strong> d'une nouvelle consultation ou d'un nouveau message, même app fermée.
+            {availableMsg}
           </p>
           <button onClick={enable} disabled={busy} data-testid="button-enable-notif"
             style={{ background: NAVY, color: "#fff", border: "none", borderRadius: 9999, padding: "9px 16px", fontSize: 12.5, fontWeight: 800, cursor: busy ? "wait" : "pointer", opacity: busy ? 0.6 : 1 }}>
