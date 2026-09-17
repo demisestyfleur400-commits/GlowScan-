@@ -58,7 +58,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
   const [followUpOpt, setFollowUpOpt] = useState("1_month");
   const [showFull, setShowFull] = useState(false);
   const [coachStep, setCoachStep] = useState(-1); // -1 = inactif
-  const [dossierCollapsed, setDossierCollapsed] = useState(false);
+  const [dossierCollapsed, setDossierCollapsed] = useState(true);
   const [lightbox, setLightbox] = useState(-1); // index photo en plein écran, -1 = fermé
   const recognitionRef = useRef<any>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -379,33 +379,48 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
   const THEIRS = dark ? "rgba(255,255,255,0.08)" : "#eef0f6";
 
   const mineMsgs = messages.filter((m) => m.senderType === side);
+  // Statut clair de la consultation (jamais "Hors ligne", ambigu) — mappé sur l'état réel.
+  const lastMsg = messages.length ? messages[messages.length - 1] : null;
+  const statusLabel = ctx?.status === "closed"
+    ? "Consultation validée"
+    : side === "doctor"
+      ? (!messages.length ? "Nouvelle demande" : lastMsg?.senderType === "patient" ? "En attente de votre réponse" : "En attente du patient")
+      : (!messages.length ? "Consultation ouverte" : lastMsg?.senderType === "doctor" ? "Le dermatologue a répondu" : "En attente de réponse");
+  const statusColor = ctx?.status === "closed" ? "#10b981"
+    : (side === "doctor" && lastMsg?.senderType === "patient") ? "#f59e0b"
+    : (side === "patient" && lastMsg?.senderType === "doctor") ? "#10b981"
+    : MUTED;
   const lastMineId = mineMsgs.length ? mineMsgs[mineMsgs.length - 1].id : -1;
 
   return (
     <div data-clarity-mask="true" style={{ display: "flex", flexDirection: "column", height: "100%", background: BG, position: "relative" }}>
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", borderBottom: `1px solid ${BORDER}`, background: CARD }}>
+      <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", rowGap: 8, gap: 10, padding: "12px 14px", borderBottom: `1px solid ${BORDER}`, background: CARD }}>
         {onBack && (
           <button onClick={onBack} style={{ background: "transparent", border: "none", color: INK, fontSize: 18, cursor: "pointer", flexShrink: 0 }}>←</button>
         )}
-        {/* Avatar dermatologue (côté patient) — visage + confiance */}
-        {side === "patient" && (
+        {/* Avatar — dermatologue (côté patient) / patient (côté dermatologue) */}
+        {side === "patient" ? (
           doctor?.photoUrl ? (
             <img src={doctor.photoUrl} alt="" style={{ width: 38, height: 38, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
           ) : (
             <div style={{ width: 38, height: 38, borderRadius: "50%", background: "linear-gradient(135deg,#a78bfa,#7c3aed)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>👩🏾‍⚕️</div>
           )
+        ) : (
+          <div style={{ width: 38, height: 38, borderRadius: "50%", background: "linear-gradient(135deg,#a78bfa,#7c3aed)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 800, color: "#fff", flexShrink: 0 }}>
+            {(dossier?.patient?.firstName || "P").charAt(0).toUpperCase()}
+          </div>
         )}
         <div style={{ minWidth: 0, flex: 1 }}>
-          <p style={{ fontSize: 13, fontWeight: 800, color: INK, margin: 0, display: "flex", alignItems: "center", gap: 5 }}>
-            {side === "patient" ? (doctor?.fullName ? `Dr ${doctor.fullName.replace(/^dr\.?\s*/i, "")}` : "Consultation") : "Patient"}
+          <p style={{ fontSize: 13, fontWeight: 800, color: INK, margin: 0, display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            {side === "patient" ? (doctor?.fullName ? `Dr ${doctor.fullName.replace(/^dr\.?\s*/i, "")}` : "Consultation") : (dossier?.patient?.firstName || "Patient")}
             {side === "patient" && doctor?.certified && (
               <span title="Dermatologue Certifié GlowScan" style={{ color: "#7c3aed", fontSize: 12 }}>✦</span>
             )}
           </p>
-          <p style={{ fontSize: 11, margin: 0, display: "flex", alignItems: "center", gap: 5, color: otherOnline ? "#10b981" : MUTED }}>
-            <span style={{ width: 7, height: 7, borderRadius: "50%", background: otherOnline ? "#10b981" : "#9ca3af", display: "inline-block", flexShrink: 0 }} />
-            {otherOnline ? "En ligne" : "Hors ligne"}
+          <p style={{ fontSize: 11, margin: 0, display: "flex", alignItems: "center", gap: 5, color: statusColor }}>
+            <span style={{ width: 7, height: 7, borderRadius: "50%", background: statusColor === MUTED ? "#9ca3af" : statusColor, display: "inline-block", flexShrink: 0 }} />
+            {statusLabel}
           </p>
         </div>
         {/* Rapport PDF — consultation terminée (patient + dermatologue) */}
@@ -415,6 +430,15 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
             style={{ flexShrink: 0, background: dark ? "rgba(255,255,255,0.08)" : "rgba(124,58,237,0.08)", color: dark ? "#c4b5fd" : "#7c3aed", border: `1px solid ${dark ? "rgba(255,255,255,0.15)" : "rgba(124,58,237,0.2)"}`, borderRadius: 9999, padding: "6px 12px", fontSize: 11, fontWeight: 800, cursor: "pointer" }}
           >
             📄 Rapport
+          </button>
+        )}
+        {/* Dermatologue : ouvrir/masquer le résumé (dossier) */}
+        {side === "doctor" && dossier && (
+          <button
+            onClick={() => setDossierCollapsed((v) => !v)}
+            style={{ flexShrink: 0, background: dark ? "rgba(255,255,255,0.08)" : "rgba(124,58,237,0.08)", color: dark ? "#c4b5fd" : "#7c3aed", border: `1px solid ${dark ? "rgba(255,255,255,0.15)" : "rgba(124,58,237,0.2)"}`, borderRadius: 9999, padding: "6px 12px", fontSize: 11, fontWeight: 800, cursor: "pointer" }}
+          >
+            {dossierCollapsed ? "Voir le résumé" : "Masquer le résumé"}
           </button>
         )}
         {/* Dermatologue : convertir en dossier patient DERM */}
@@ -438,7 +462,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
             disabled={closing}
             style={{ flexShrink: 0, background: "rgba(16,185,129,0.2)", color: "#6ee7b7", border: "1px solid rgba(16,185,129,0.4)", borderRadius: 9999, padding: "6px 12px", fontSize: 11, fontWeight: 800, cursor: "pointer", opacity: closing ? 0.6 : 1 }}
           >
-            {closing ? "…" : "✓ Terminer"}
+            {closing ? "…" : "✓ Valider la consultation"}
           </button>
         )}
       </div>
@@ -456,7 +480,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
             <span style={{ fontSize: 10.5, fontWeight: 800, color: MUTED, textTransform: "uppercase", letterSpacing: 0.5 }}>Dossier patient</span>
             <button onClick={() => setDossierCollapsed((v) => !v)}
               style={{ background: "transparent", border: "none", color: "#7c3aed", fontSize: 11.5, fontWeight: 800, cursor: "pointer", padding: "2px 4px" }}>
-              {dossierCollapsed ? "▼ Déplier le dossier" : "▲ Replier (voir le chat)"}
+              {dossierCollapsed ? "▼ Déplier le dossier" : "▲ Masquer le dossier"}
             </button>
           </div>
 
@@ -739,13 +763,18 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
       <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", padding: "14px", display: "flex", flexDirection: "column", gap: 8 }}>
         {loading && <p style={{ fontSize: 12, color: MUTED, textAlign: "center" }}>Chargement…</p>}
         {!loading && messages.length === 0 && (
-          <p style={{ fontSize: 12.5, color: MUTED, textAlign: "center", marginTop: 20 }}>
-            Écris ton premier message au dermatologue 👋
-          </p>
+          <div style={{ margin: "auto", textAlign: "center", padding: "24px 16px", maxWidth: 260 }}>
+            <div style={{ fontSize: 30, marginBottom: 8 }}>💬</div>
+            <p style={{ fontSize: 13, fontWeight: 800, color: INK, margin: "0 0 4px" }}>
+              {side === "doctor" ? "Aucun message pour l'instant" : "Démarrez la conversation"}
+            </p>
+            <p style={{ fontSize: 12, color: MUTED, margin: 0, lineHeight: 1.5 }}>
+              {side === "doctor" ? "Écrivez au patient pour lancer l'échange." : "Écrivez au dermatologue, sa réponse s'affichera ici."}
+            </p>
+          </div>
         )}
         {messages.map((m) => {
           const mine = m.senderType === side;
-          const showSeen = mine && m.id === lastMineId && !!m.readAt;
           const body = m.body || "";
           const callMatch = body.startsWith("§CALL§");
           const fileMatch = body.startsWith("§FILE§") ? body.split("§") : null; // ["", "FILE", name, type, size, ""]
@@ -794,7 +823,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
               )}
               <p style={{ fontSize: 10, color: MUTED, textAlign: mine ? "right" : "left", margin: "2px 4px 0" }}>
                 {m.createdAt ? new Date(m.createdAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : ""}
-                {showSeen ? " · Vu ✓✓" : ""}
+                {mine && m.id === lastMineId ? (m.readAt ? " · Vu ✓✓" : " · Envoyé ✓") : ""}
               </p>
             </div>
           );
@@ -845,7 +874,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
           value={text}
           onChange={(e) => { setText(e.target.value); if (e.target.value.trim()) notifyTyping(); }}
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
-          placeholder="Écris un message…"
+          placeholder={side === "doctor" ? "Écrire au patient…" : "Écrire au dermatologue…"}
           style={{ flex: 1, padding: "10px 14px", borderRadius: 9999, border: `1px solid ${BORDER}`, background: dark ? "rgba(255,255,255,0.05)" : "#fff", color: INK, fontSize: 13, outline: "none" }}
         />
         <button onClick={send} disabled={sending || !text.trim()}
