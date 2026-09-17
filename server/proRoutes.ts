@@ -2051,12 +2051,20 @@ export function registerProRoutes(app: Express) {
   }
 
   // GET /api/pro/consultations/unread-count — badge nombre de messages non lus
+  // Nombre de consultations PAYÉES encore OUVERTES (= patients à traiter),
+  // hors consultation de démonstration. Sert au badge de l'onglet Consultations
+  // pour que le dermatologue voie les nouveaux patients même sans email/push.
   app.get("/api/pro/consultations/unread-count", requireProAccess, async (req: any, res) => {
     try {
-      const rows = await db.select({ u: consultations.unreadDoctor }).from(consultations)
-        .where(and(eq(consultations.proAccountId, req.proAccount.id), eq(consultations.paymentStatus, "paid")));
-      const total = rows.reduce((a, r) => a + (r.u || 0), 0);
-      res.json({ count: total });
+      const r: any = await db.execute(sql`
+        SELECT COUNT(*)::int AS n
+        FROM consultations
+        WHERE pro_account_id = ${req.proAccount.id}
+          AND payment_status = 'paid'
+          AND status = 'open'
+          AND COALESCE(is_demo, false) = false`);
+      const count = (r?.rows ?? r ?? [])[0]?.n || 0;
+      res.json({ count });
     } catch (e) { res.json({ count: 0 }); }
   });
 

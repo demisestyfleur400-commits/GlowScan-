@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { ReactNode } from "react";
+import { ReactNode, useState, useEffect } from "react";
 import { Stethoscope, Home, Users, ScanLine, BarChart3, Settings, ArrowLeft, LogOut, Clock, MessageCircle, Calendar } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useProAccount } from "@/hooks/use-pro";
@@ -50,6 +50,23 @@ export function ProLayout({ children, title, back, onBack, hideBottomNav, rightA
       ]
     : NAV_ITEMS;
 
+  // Compteur de patients à traiter (consultations payées ouvertes) → badge sur
+  // l'onglet Consultations, pour repérer les nouveaux patients sans email/push.
+  const [consultCount, setConsultCount] = useState(0);
+  useEffect(() => {
+    if (isSecretary) return;
+    let stop = false;
+    const load = () => fetch("/api/pro/consultations/unread-count", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : { count: 0 }))
+      .then((d) => { if (!stop) setConsultCount(d?.count || 0); })
+      .catch(() => {});
+    load();
+    const iv = setInterval(load, 30000);
+    const onVis = () => { if (document.visibilityState === "visible") load(); };
+    document.addEventListener("visibilitychange", onVis);
+    return () => { stop = true; clearInterval(iv); document.removeEventListener("visibilitychange", onVis); };
+  }, [isSecretary]);
+
   return (
     <div
       className="min-h-screen flex flex-col md:flex-row antialiased"
@@ -87,6 +104,9 @@ export function ProLayout({ children, title, back, onBack, hideBottomNav, rightA
                 >
                   <Icon className="w-4 h-4 flex-shrink-0" />
                   <span>{item.label}</span>
+                  {item.href === "/derm/consultations" && consultCount > 0 && (
+                    <span data-testid="badge-consultations" style={{ marginLeft: "auto", minWidth: 18, height: 18, padding: "0 5px", borderRadius: 9999, background: "#dc2626", color: "#fff", fontSize: 10, fontWeight: 800, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>{consultCount}</span>
+                  )}
                 </Link>
               );
             })}
@@ -163,9 +183,15 @@ export function ProLayout({ children, title, back, onBack, hideBottomNav, rightA
                   </Link>
                 );
               }
+              const showBadge = item.href === "/derm/consultations" && consultCount > 0;
               return (
                 <Link key={item.href} href={item.href} data-testid={`navlink-${item.label.toLowerCase()}`} className="flex flex-col items-center justify-center gap-1 transition-all" style={{ color: active ? BLUE : MUTED }}>
-                  <Icon className="w-4 h-4" />
+                  <span style={{ position: "relative", display: "inline-flex" }}>
+                    <Icon className="w-4 h-4" />
+                    {showBadge && (
+                      <span data-testid="badge-consultations-mobile" style={{ position: "absolute", top: -6, right: -8, minWidth: 15, height: 15, padding: "0 4px", borderRadius: 9999, background: "#dc2626", color: "#fff", fontSize: 8.5, fontWeight: 800, display: "inline-flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>{consultCount}</span>
+                    )}
+                  </span>
                   <span className="text-[9px] font-bold">{item.label.split(" ")[0]}</span>
                 </Link>
               );
