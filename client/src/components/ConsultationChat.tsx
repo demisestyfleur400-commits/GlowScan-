@@ -637,6 +637,21 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
                 })()}
               </div>
 
+              {/* Orientation rapide (dermatologue) — basée UNIQUEMENT sur des signaux
+                  déjà présents (redFlags de l'analyse). Ne pose aucun diagnostic
+                  d'urgence : signale au médecin des éléments à vérifier vite. */}
+              {Array.isArray(dossier.rich?.redFlags) && dossier.rich.redFlags.length > 0 && (
+                <div style={{ background: dark ? "rgba(239,68,68,0.12)" : "#fef2f2", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 12, padding: "10px 12px" }}>
+                  <p style={{ fontSize: 12, fontWeight: 800, color: dark ? "#fca5a5" : "#b91c1c", margin: "0 0 4px" }}>⚠️ Signaux à vérifier rapidement</p>
+                  <p style={{ fontSize: 12.5, color: dark ? "#fecaca" : "#991b1b", margin: 0, lineHeight: 1.5 }}>
+                    {dossier.rich.redFlags.filter(Boolean).join(" · ")}
+                  </p>
+                  <p style={{ fontSize: 10.5, color: MUTED, margin: "6px 0 0", lineHeight: 1.5 }}>
+                    Éléments issus de l'analyse, à confirmer par votre examen. GlowScan n'évalue pas une urgence à distance.
+                  </p>
+                </div>
+              )}
+
               {/* Ce que le patient décrit — uniquement les infos réellement saisies */}
               {(() => {
                 const zone = dossier.scan?.area || (Array.isArray(dossier.rich?.zones) && dossier.rich.zones.length ? dossier.rich.zones.join(" · ") : null);
