@@ -1941,6 +1941,43 @@ export function registerProRoutes(app: Express) {
     }
   });
 
+  // POST /api/pro/consultations/:id/summary-note — « dossier vivant » : le
+  // dermatologue ajoute EXPLICITEMENT au résumé une information tirée de la
+  // conversation (durée, symptômes, zone, produits, évolution, allergies,
+  // antécédents). Stocké dans patient_context.summaryNotes (colonne jsonb déjà
+  // existante — aucune migration). Jamais d'extraction ni d'écriture automatique :
+  // c'est une action validée par le médecin. Ne touche pas aux champs patient.
+  app.post("/api/pro/consultations/:id/summary-note", requireProAccess, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const schema = z.object({
+        category: z.enum(["duree", "symptomes", "zone", "produits", "evolution", "allergies", "antecedents"]),
+        value: z.string().trim().min(1).max(500),
+      });
+      const data = schema.parse(req.body || {});
+      const [c] = await db.select().from(consultations)
+        .where(and(eq(consultations.id, id), eq(consultations.proAccountId, req.proAccount.id)));
+      if (!c) return res.status(404).json({ message: "Consultation introuvable" });
+
+      await db.execute(sql`ALTER TABLE consultations ADD COLUMN IF NOT EXISTS patient_context jsonb`).catch(() => {});
+      let ctx: any = {};
+      try {
+        const row = (Rows(await db.execute(sql`SELECT patient_context FROM consultations WHERE id = ${id}`))[0] as any)?.patient_context;
+        if (row) ctx = typeof row === "string" ? JSON.parse(row) : row;
+      } catch {}
+      const notes: any[] = Array.isArray(ctx.summaryNotes) ? ctx.summaryNotes : [];
+      const note = { category: data.category, value: data.value, source: "chat", at: new Date().toISOString() };
+      notes.push(note);
+      ctx.summaryNotes = notes.slice(-50); // borne de sécurité
+      await db.execute(sql`UPDATE consultations SET patient_context = ${JSON.stringify(ctx)}::jsonb WHERE id = ${id}`);
+      res.json({ ok: true, note, summaryNotes: ctx.summaryNotes });
+    } catch (err) {
+      if (err instanceof z.ZodError) return res.status(400).json({ message: "Requête invalide" });
+      console.error("[pro/consultations summary-note] error:", err);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
   // POST /api/pro/consultations/:id/validate-diagnosis — le dermatologue VALIDE ou
   // CORRIGE le diagnostic IA d'une consultation B2C. Scopé par la consultation (pas
   // besoin que le scan soit rattaché à un patient du cabinet). Alimente la ground

@@ -50,6 +50,12 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
   const [prescription, setPrescription] = useState("");
   const [prescriptionTouched, setPrescriptionTouched] = useState(false);
   const [dictating, setDictating] = useState(false);
+  const [msgDictating, setMsgDictating] = useState(false); // dictée dans le champ message
+  const msgRecognitionRef = useRef<any>(null);
+  const [quickOpen, setQuickOpen] = useState(false); // réponses rapides (dermatologue)
+  const [summaryFor, setSummaryFor] = useState<number | null>(null); // id du message dont on choisit la catégorie
+  const [summaryBusy, setSummaryBusy] = useState(false);
+  const [addedToSummary, setAddedToSummary] = useState<Set<number>>(new Set()); // messages ajoutés au résumé (session)
   const [closing, setClosing] = useState(false);
   const [closedInfo, setClosedInfo] = useState<{ payoutFcfa?: number; demo?: boolean; followUpDate?: string; reportUrl?: string } | null>(null);
   const [reportSending, setReportSending] = useState(false);
@@ -110,6 +116,8 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
     setMessages([]); setDossier(null); setDoctor(null); setCtx(null);
     setPrescription(""); setPrescriptionTouched(false); setClosedInfo(null); setReportSent(false); setReportSending(false);
     setShowFull(false); setLightbox(-1); setCorrecting(false); setCoachStep(-1);
+    setQuickOpen(false); setSummaryFor(null); setAddedToSummary(new Set());
+    try { msgRecognitionRef.current?.stop(); } catch {} setMsgDictating(false);
     setFullImg(null); setUploadPct(0);
     setLoading(true);
     load();
@@ -360,6 +368,77 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
     } catch { setDictating(false); }
   };
 
+  // Dictée vocale DANS le champ message — insère dans le brouillon, jamais d'envoi auto.
+  // Gère micro indisponible et permission refusée ; la saisie clavier reste possible.
+  const toggleMsgDictation = () => {
+    const SR: any = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) { alert("La dictée vocale n'est pas disponible sur ce navigateur. Utilisez Chrome sur Android."); return; }
+    if (msgDictating) { try { msgRecognitionRef.current?.stop(); } catch {} setMsgDictating(false); return; }
+    try {
+      const rec = new SR();
+      rec.lang = "fr-FR"; rec.continuous = true; rec.interimResults = false;
+      rec.onresult = (e: any) => {
+        let add = "";
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+          if (e.results[i].isFinal) add += e.results[i][0].transcript;
+        }
+        if (add) setText((prev) => (prev ? prev.trimEnd() + " " : "") + add.trim());
+      };
+      rec.onend = () => setMsgDictating(false);
+      rec.onerror = (e: any) => {
+        setMsgDictating(false);
+        if (e?.error === "not-allowed" || e?.error === "service-not-allowed") {
+          alert("Micro refusé. Autorisez le microphone dans les réglages du navigateur, puis réessayez.");
+        } else if (e?.error === "no-speech" || e?.error === "aborted") {
+          // silencieux — l'utilisateur peut retenter ou taper au clavier
+        } else if (e?.error) {
+          alert("Micro indisponible. Vous pouvez écrire au clavier.");
+        }
+      };
+      msgRecognitionRef.current = rec;
+      rec.start();
+      setMsgDictating(true);
+    } catch { setMsgDictating(false); alert("Micro indisponible. Vous pouvez écrire au clavier."); }
+  };
+
+  // Réponses rapides (dermatologue) — insérées dans le brouillon, relues puis envoyées à la main.
+  const patientFirstName = dossier?.patient?.firstName || "";
+  const QUICK_REPLIES: string[] = [
+    `Bonjour ${patientFirstName ? patientFirstName + ", " : ""}j'ai bien reçu votre demande. Je vais examiner vos informations et vos photos.`,
+    "Depuis quand avez-vous remarqué cela ?",
+    "Est-ce douloureux, irritant ou accompagné de démangeaisons ?",
+    "Avez-vous déjà utilisé un produit ou un traitement ?",
+    "Pouvez-vous envoyer une photo plus nette, prise à la lumière du jour ?",
+    "Le problème s'étend-il à d'autres zones ?",
+    "Merci, j'ai les informations nécessaires. Je prépare mes conseils.",
+  ];
+  const useQuickReply = (t: string) => {
+    setText((prev) => (prev.trim() ? prev.trimEnd() + " " : "") + t);
+    setQuickOpen(false);
+  };
+
+  // Dossier vivant — le dermatologue ajoute EXPLICITEMENT une info du chat au résumé.
+  const addToSummary = async (messageId: number, category: string, value: string) => {
+    if (summaryBusy) return;
+    const v = (value || "").trim();
+    if (!v) { setSummaryFor(null); return; }
+    setSummaryBusy(true);
+    try {
+      const res = await fetch(`/api/pro/consultations/${consultationId}/summary-note`, {
+        method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ category, value: v.slice(0, 500) }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (res.ok && d.ok) {
+        setDossier((prev: any) => prev ? { ...prev, intake: { ...(prev.intake || {}), summaryNotes: d.summaryNotes } } : prev);
+        setAddedToSummary((prev) => new Set(prev).add(messageId));
+        setSummaryFor(null);
+      } else {
+        alert(d.message || "Ajout impossible.");
+      }
+    } catch { alert("Erreur réseau."); } finally { setSummaryBusy(false); }
+  };
+
   // Clôture en 2 temps : d'abord choisir un suivi, puis clôturer réellement.
   // Le médecin envoie lui-même le rapport au patient (après relecture).
   const sendReport = async () => {
@@ -550,6 +629,21 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
                   </div>
                 );
               })()}
+
+              {/* Ajouté par le dermatologue — dossier vivant (infos tirées du chat, validées) */}
+              {Array.isArray(dossier.intake?.summaryNotes) && dossier.intake.summaryNotes.length > 0 && (
+                <div>
+                  <p style={{ fontSize: 11, fontWeight: 800, color: MUTED, margin: "0 0 8px", textTransform: "uppercase", letterSpacing: 0.4 }}>Ajouté par le dermatologue</p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {dossier.intake.summaryNotes.map((n: any, i: number) => (
+                      <div key={i}>
+                        <span style={{ fontSize: 11.5, color: MUTED, display: "block" }}>{({ duree: "Depuis quand ?", symptomes: "Symptômes", zone: "Zone concernée", produits: "Produits essayés", evolution: "Évolution", allergies: "Allergies", antecedents: "Antécédents" } as any)[n.category] || n.category}</span>
+                        <span style={{ fontSize: 13, color: INK, fontWeight: 700 }}>{n.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Photos envoyées */}
               {Array.isArray(dossier.photos) && dossier.photos.length > 0 && (
@@ -846,6 +940,31 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
                 {m.createdAt ? new Date(m.createdAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : ""}
                 {mine && m.id === lastMineId ? (m.readAt ? " · Vu ✓✓" : " · Envoyé ✓") : ""}
               </p>
+              {/* Dossier vivant — ajouter cette réponse du patient au résumé (dermatologue) */}
+              {side === "doctor" && !mine && !!m.body && !m.body.startsWith("§") && (
+                addedToSummary.has(m.id) ? (
+                  <p style={{ fontSize: 10, color: "#10b981", fontWeight: 700, margin: "3px 4px 0" }}>✓ Ajouté au résumé</p>
+                ) : summaryFor === m.id ? (
+                  <div style={{ marginTop: 4, background: dark ? "rgba(255,255,255,0.05)" : "#f6f7fb", border: `1px solid ${BORDER}`, borderRadius: 10, padding: "7px 8px" }}>
+                    <p style={{ fontSize: 10.5, color: MUTED, margin: "0 0 6px" }}>Ajouter au résumé comme :</p>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                      {([["duree", "Depuis quand ?"], ["symptomes", "Symptômes"], ["zone", "Zone"], ["produits", "Produits essayés"], ["evolution", "Évolution"], ["allergies", "Allergies"], ["antecedents", "Antécédents"]] as [string, string][]).map(([cat, label]) => (
+                        <button key={cat} disabled={summaryBusy} onClick={() => addToSummary(m.id, cat, m.body || "")}
+                          style={{ background: dark ? "rgba(124,58,237,0.2)" : "rgba(124,58,237,0.08)", color: "#7c3aed", border: "1px solid rgba(124,58,237,0.25)", borderRadius: 9999, padding: "4px 9px", fontSize: 10.5, fontWeight: 700, cursor: summaryBusy ? "wait" : "pointer" }}>
+                          {label}
+                        </button>
+                      ))}
+                      <button disabled={summaryBusy} onClick={() => setSummaryFor(null)}
+                        style={{ background: "transparent", color: MUTED, border: `1px solid ${BORDER}`, borderRadius: 9999, padding: "4px 9px", fontSize: 10.5, fontWeight: 700, cursor: "pointer" }}>Annuler</button>
+                    </div>
+                  </div>
+                ) : (
+                  <button onClick={() => setSummaryFor(m.id)}
+                    style={{ background: "transparent", border: "none", color: "#7c3aed", fontSize: 10.5, fontWeight: 700, cursor: "pointer", padding: "2px 4px", margin: "1px 0 0" }}>
+                    ＋ Ajouter au résumé
+                  </button>
+                )
+              )}
             </div>
           );
         })}
@@ -866,6 +985,18 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
         </div>
       )}
 
+      {/* Réponses rapides (dermatologue) — insérées dans le brouillon, jamais envoyées auto */}
+      {side === "doctor" && quickOpen && (
+        <div style={{ display: "flex", gap: 6, overflowX: "auto", padding: "8px 12px", borderTop: `1px solid ${BORDER}`, background: CARD, WebkitOverflowScrolling: "touch" }}>
+          {QUICK_REPLIES.map((q, i) => (
+            <button key={i} onClick={() => useQuickReply(q)}
+              style={{ flexShrink: 0, maxWidth: 230, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", background: dark ? "rgba(124,58,237,0.18)" : "rgba(124,58,237,0.08)", color: dark ? "#c4b5fd" : "#7c3aed", border: "1px solid rgba(124,58,237,0.25)", borderRadius: 9999, padding: "6px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+              {q}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Saisie */}
       <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "10px 12px", borderTop: `1px solid ${BORDER}`, background: CARD }}>
         <input
@@ -875,13 +1006,22 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
           style={{ display: "none" }}
           onChange={(e) => { sendFile(e.target.files?.[0]); e.currentTarget.value = ""; }}
         />
+        {side === "doctor" && (
+          <button
+            onClick={() => setQuickOpen((v) => !v)}
+            title="Réponses rapides"
+            style={{ background: quickOpen ? MINE : "transparent", border: quickOpen ? "none" : `1px solid ${BORDER}`, color: quickOpen ? "#fff" : "#7c3aed", cursor: "pointer", fontSize: 15, flexShrink: 0, borderRadius: 9999, width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center" }}
+          >
+            ⚡
+          </button>
+        )}
         <button
           onClick={() => fileRef.current?.click()}
           disabled={sending}
-          title="Envoyer un fichier (image ou PDF)"
-          style={{ background: "transparent", border: "none", cursor: "pointer", fontSize: 20, flexShrink: 0, opacity: sending ? 0.5 : 1, color: MUTED }}
+          title="Envoyer une photo ou un PDF"
+          style={{ background: "transparent", border: "none", cursor: "pointer", fontSize: 20, flexShrink: 0, opacity: sending ? 0.5 : 1, color: "#7c3aed" }}
         >
-          📎
+          📷
         </button>
         <button
           onClick={startCall}
@@ -895,9 +1035,16 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
           value={text}
           onChange={(e) => { setText(e.target.value); if (e.target.value.trim()) notifyTyping(); }}
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
-          placeholder={side === "doctor" ? "Écrire au patient…" : "Écrire au dermatologue…"}
-          style={{ flex: 1, padding: "10px 14px", borderRadius: 9999, border: `1px solid ${BORDER}`, background: dark ? "rgba(255,255,255,0.05)" : "#fff", color: INK, fontSize: 13, outline: "none" }}
+          placeholder={msgDictating ? "🎙️ Dictée en cours…" : (side === "doctor" ? "Écrire au patient…" : "Écrire au dermatologue…")}
+          style={{ flex: 1, minWidth: 0, padding: "10px 14px", borderRadius: 9999, border: `1px solid ${BORDER}`, background: dark ? "rgba(255,255,255,0.05)" : "#fff", color: INK, fontSize: 13, outline: "none" }}
         />
+        <button
+          onClick={toggleMsgDictation}
+          title={msgDictating ? "Arrêter la dictée" : "Dicter le message"}
+          style={{ background: msgDictating ? "#ef4444" : "transparent", border: msgDictating ? "none" : `1px solid ${BORDER}`, color: msgDictating ? "#fff" : "#7c3aed", cursor: "pointer", fontSize: 16, flexShrink: 0, borderRadius: 9999, width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center" }}
+        >
+          {msgDictating ? "●" : "🎙️"}
+        </button>
         <button onClick={send} disabled={sending || !text.trim()}
           style={{ background: MINE, color: "#fff", border: "none", borderRadius: "50%", width: 42, height: 42, cursor: "pointer", fontSize: 18, opacity: sending || !text.trim() ? 0.5 : 1, flexShrink: 0 }}>
           ➤
