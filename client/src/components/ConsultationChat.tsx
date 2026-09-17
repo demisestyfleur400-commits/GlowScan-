@@ -57,10 +57,12 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
   const [summaryBusy, setSummaryBusy] = useState(false);
   const [addedToSummary, setAddedToSummary] = useState<Set<number>>(new Set()); // messages ajoutés au résumé (session)
   const [closing, setClosing] = useState(false);
-  const [closedInfo, setClosedInfo] = useState<{ payoutFcfa?: number; demo?: boolean; followUpDate?: string; reportUrl?: string } | null>(null);
+  const [closedInfo, setClosedInfo] = useState<{ payoutFcfa?: number; demo?: boolean; followUpDate?: string; reportUrl?: string; at?: string } | null>(null);
   const [reportSending, setReportSending] = useState(false);
   const [reportSent, setReportSent] = useState(false);
+  const [reportError, setReportError] = useState(false); // échec d'envoi du compte rendu
   const [showFollowUp, setShowFollowUp] = useState(false);
+  const [confirmSend, setConfirmSend] = useState(false); // étape « Prêt à envoyer ? »
   const [followUpOpt, setFollowUpOpt] = useState("1_month");
   const [showFull, setShowFull] = useState(false);
   const [coachStep, setCoachStep] = useState(-1); // -1 = inactif
@@ -117,6 +119,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
     setPrescription(""); setPrescriptionTouched(false); setClosedInfo(null); setReportSent(false); setReportSending(false);
     setShowFull(false); setLightbox(-1); setCorrecting(false); setCoachStep(-1);
     setQuickOpen(false); setSummaryFor(null); setAddedToSummary(new Set());
+    setConfirmSend(false); setReportError(false);
     try { msgRecognitionRef.current?.stop(); } catch {} setMsgDictating(false);
     setFullImg(null); setUploadPct(0);
     setLoading(true);
@@ -140,7 +143,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
     { t: "🤖 Le diagnostic IA", b: "Ceci est une suggestion indicative. Votre diagnostic prime toujours." },
     { t: "✅ Vos actions", b: "Validez si vous êtes d'accord. Corrigez si vous avez un autre avis." },
     { t: "💊 La prescription", b: "Dictez ou écrivez votre prescription. Elle apparaîtra dans le rapport final." },
-    { t: "✓ Terminer", b: "Quand vous cliquez ici — le rapport est envoyé au patient sur WhatsApp et vous êtes payé sur Mobile Money." },
+    { t: "✓ Valider et envoyer le compte rendu", b: "Vous relisez votre avis, vous validez, puis le compte rendu part au patient (e-mail / WhatsApp). Vous êtes payé sur Mobile Money." },
   ];
   const advanceCoach = () => {
     setCoachStep((s) => {
@@ -441,28 +444,49 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
 
   // Clôture en 2 temps : d'abord choisir un suivi, puis clôturer réellement.
   // Le médecin envoie lui-même le rapport au patient (après relecture).
-  const sendReport = async () => {
-    if (reportSending) return;
-    setReportSending(true);
+  // Envoi du compte rendu au patient (WhatsApp + push + email via le flux existant).
+  // Renvoie true/false pour piloter l'état de livraison et proposer une nouvelle tentative.
+  const sendReport = async (): Promise<boolean> => {
+    if (reportSending) return false;
+    setReportSending(true); setReportError(false);
     try {
       const res = await fetch(`/api/pro/consultations/${consultationId}/send-report`, { method: "POST", credentials: "include" });
-      if (res.ok) setReportSent(true);
-      else { const d = await res.json().catch(() => ({})); alert(d.message || "Échec de l'envoi."); }
-    } catch { alert("Erreur réseau."); } finally { setReportSending(false); }
+      if (res.ok) { setReportSent(true); return true; }
+      setReportError(true); return false;
+    } catch { setReportError(true); return false; } finally { setReportSending(false); }
   };
 
-  const doClose = async (followUp: string) => {
-    if (closing) return;
+  // Clôture / validation de la consultation. Renvoie la réponse serveur (ou null si
+  // la validation échoue) — l'envoi du compte rendu n'a lieu QUE si la validation réussit.
+  const doClose = async (followUp: string): Promise<any | null> => {
+    if (closing) return null;
     setClosing(true);
     try { recognitionRef.current?.stop(); } catch {}
+    try { msgRecognitionRef.current?.stop(); } catch {}
     try {
       const res = await fetch(`/api/pro/consultations/${consultationId}/close`, {
         method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prescription: prescription.trim() || undefined, followUp: followUp === "none" ? undefined : followUp }),
       });
       const d = await res.json().catch(() => ({}));
-      if (res.ok) { setClosedInfo({ payoutFcfa: d.payoutFcfa, demo: d.demo, followUpDate: d.followUpDate, reportUrl: d.reportUrl }); setReportSent(false); setShowFollowUp(false); load(); }
-    } catch {} finally { setClosing(false); }
+      if (res.ok) {
+        setClosedInfo({ payoutFcfa: d.payoutFcfa, demo: d.demo, followUpDate: d.followUpDate, reportUrl: d.reportUrl, at: new Date().toISOString() });
+        setReportSent(false); setReportError(false); load();
+        return d;
+      }
+      alert(d.message || "La validation a échoué. Le compte rendu n'a pas été envoyé.");
+      return null;
+    } catch { alert("Erreur réseau. Le compte rendu n'a pas été envoyé."); return null; }
+    finally { setClosing(false); }
+  };
+
+  // Action principale « Valider et envoyer le compte rendu » : on valide d'abord,
+  // puis on n'envoie au patient QUE si la validation a réussi (démo = pas d'envoi réel).
+  const validateAndSend = async () => {
+    const d = await doClose(followUpOpt);
+    if (!d) return; // validation échouée → on reste sur la revue, rien n'est envoyé
+    setConfirmSend(false); setShowFollowUp(false);
+    if (!d.demo) await sendReport();
   };
 
   const BG = dark ? "#0d0a0e" : "#f6f7fb";
@@ -557,7 +581,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
             disabled={closing}
             style={{ flexShrink: 0, background: "rgba(16,185,129,0.2)", color: "#6ee7b7", border: "1px solid rgba(16,185,129,0.4)", borderRadius: 9999, padding: "6px 12px", fontSize: 11, fontWeight: 800, cursor: "pointer", opacity: closing ? 0.6 : 1 }}
           >
-            {closing ? "…" : "✓ Valider la consultation"}
+            {closing ? "…" : "✓ Valider et envoyer le compte rendu"}
           </button>
         )}
       </div>
@@ -839,25 +863,37 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
             </>
           ) : (
             <>
-              <p style={{ fontSize: 13, fontWeight: 800, color: dark ? "#6ee7b7" : "#047857", margin: 0 }}>✅ Consultation terminée</p>
+              <p style={{ fontSize: 13, fontWeight: 800, color: dark ? "#6ee7b7" : "#047857", margin: 0 }}>✅ Consultation validée</p>
               <p style={{ fontSize: 11.5, color: MUTED, margin: "4px 0 8px", lineHeight: 1.6 }}>
-                Relisez le rapport, puis envoyez-le au patient.
+                {closedInfo.at ? `Le ${new Date(closedInfo.at).toLocaleDateString("fr-FR")} à ${new Date(closedInfo.at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}.` : ""}
                 {closedInfo.payoutFcfa ? ` Paiement de ${closedInfo.payoutFcfa.toLocaleString("fr-FR")} FCFA en cours.` : ""}
                 {closedInfo.followUpDate ? ` 📅 Suivi programmé pour le ${new Date(closedInfo.followUpDate).toLocaleDateString("fr-FR")}.` : ""}
               </p>
+              {/* État de livraison du compte rendu */}
+              {reportSent ? (
+                <p style={{ fontSize: 11.5, color: dark ? "#6ee7b7" : "#047857", fontWeight: 700, margin: "0 0 8px" }}>📲 Compte rendu envoyé au patient (e-mail / WhatsApp selon les canaux disponibles).</p>
+              ) : reportError ? (
+                <p style={{ fontSize: 11.5, color: dark ? "#fca5a5" : "#b91c1c", fontWeight: 700, margin: "0 0 8px" }}>⚠️ L'envoi du compte rendu a échoué. La consultation reste validée — vous pouvez réessayer l'envoi ci-dessous.</p>
+              ) : reportSending ? (
+                <p style={{ fontSize: 11.5, color: MUTED, margin: "0 0 8px" }}>Envoi du compte rendu en cours…</p>
+              ) : null}
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 {closedInfo.reportUrl && (
                   <a href={closedInfo.reportUrl} target="_blank" rel="noreferrer"
                     style={{ flex: "1 1 auto", textAlign: "center", textDecoration: "none", background: dark ? "rgba(255,255,255,0.1)" : "#fff", color: "#7c3aed", border: "1px solid rgba(124,58,237,0.3)", borderRadius: 9999, padding: "10px 14px", fontSize: 12.5, fontWeight: 800 }}>
-                    📄 Voir le rapport d'abord
+                    📄 Voir le compte rendu
                   </a>
                 )}
+                <button onClick={() => setDossierCollapsed(false)}
+                  style={{ flex: "1 1 auto", background: dark ? "rgba(255,255,255,0.1)" : "#fff", color: "#7c3aed", border: "1px solid rgba(124,58,237,0.3)", borderRadius: 9999, padding: "10px 14px", fontSize: 12.5, fontWeight: 800, cursor: "pointer" }}>
+                  🗂️ Ouvrir le dossier
+                </button>
                 {reportSent ? (
-                  <span style={{ flex: "1 1 auto", textAlign: "center", color: "#047857", fontSize: 12.5, fontWeight: 800, padding: "10px 14px" }}>✅ Rapport envoyé au patient</span>
+                  <span style={{ flex: "1 1 auto", textAlign: "center", color: "#047857", fontSize: 12.5, fontWeight: 800, padding: "10px 14px" }}>✅ Envoyé</span>
                 ) : (
                   <button onClick={sendReport} disabled={reportSending}
                     style={{ flex: "1 1 auto", background: "#10b981", color: "#fff", border: "none", borderRadius: 9999, padding: "10px 14px", fontSize: 12.5, fontWeight: 800, cursor: "pointer", opacity: reportSending ? 0.6 : 1 }}>
-                    {reportSending ? "Envoi…" : "📲 Envoyer le PDF à votre patient"}
+                    {reportSending ? "Envoi…" : reportError ? "🔁 Réessayer l'envoi" : "📲 Envoyer au patient"}
                   </button>
                 )}
               </div>
@@ -1076,29 +1112,78 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
 
       {/* ── Sélecteur de suivi (à la clôture) ── */}
       {showFollowUp && (
-        <div onClick={() => !closing && setShowFollowUp(false)}
+        <div onClick={() => { if (!closing) { setShowFollowUp(false); setConfirmSend(false); } }}
           style={{ position: "fixed", inset: 0, zIndex: 85, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-          <div onClick={(e) => e.stopPropagation()} style={{ maxWidth: 360, width: "100%", background: dark ? "#171226" : "#fff", borderRadius: 20, padding: 20, boxShadow: "0 20px 50px rgba(0,0,0,0.4)" }}>
-            <p style={{ fontSize: 16, fontWeight: 900, color: INK, margin: "0 0 4px" }}>Programmer un suivi ?</p>
-            <p style={{ fontSize: 12, color: MUTED, margin: "0 0 14px", lineHeight: 1.5 }}>Le patient recevra un rappel la veille (photo d'évolution) — vous aussi.</p>
-            {[
-              { v: "2_weeks", l: "Dans 2 semaines" },
-              { v: "1_month", l: "Dans 1 mois" },
-              { v: "2_months", l: "Dans 2 mois" },
-              { v: "none", l: "Pas de suivi" },
-            ].map((o) => (
-              <button key={o.v} onClick={() => setFollowUpOpt(o.v)}
-                style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left", background: followUpOpt === o.v ? (dark ? "rgba(124,58,237,0.2)" : "rgba(124,58,237,0.08)") : "transparent", border: `1px solid ${followUpOpt === o.v ? "#7c3aed" : BORDER}`, borderRadius: 12, padding: "11px 14px", marginBottom: 8, cursor: "pointer" }}>
-                <span style={{ width: 18, height: 18, borderRadius: "50%", border: `2px solid ${followUpOpt === o.v ? "#7c3aed" : MUTED}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  {followUpOpt === o.v && <span style={{ width: 9, height: 9, borderRadius: "50%", background: "#7c3aed" }} />}
-                </span>
-                <span style={{ fontSize: 14, fontWeight: 700, color: INK }}>{o.l}</span>
-              </button>
-            ))}
-            <button onClick={() => doClose(followUpOpt)} disabled={closing}
-              style={{ width: "100%", marginTop: 6, background: "#10b981", color: "#fff", border: "none", borderRadius: 9999, padding: "13px", fontSize: 14, fontWeight: 800, cursor: "pointer", opacity: closing ? 0.6 : 1 }}>
-              {closing ? "Clôture…" : "Confirmer et clôturer →"}
-            </button>
+          <div onClick={(e) => e.stopPropagation()} style={{ maxWidth: 380, width: "100%", maxHeight: "88vh", overflowY: "auto", background: dark ? "#171226" : "#fff", borderRadius: 20, padding: 20, boxShadow: "0 20px 50px rgba(0,0,0,0.4)" }}>
+            {!confirmSend ? (
+              <>
+                {/* Étape 1 — revue du compte rendu (réutilise l'avis médical + le dossier) */}
+                <p style={{ fontSize: 16, fontWeight: 900, color: INK, margin: "0 0 4px" }}>Vérifiez votre compte rendu</p>
+                <p style={{ fontSize: 12, color: MUTED, margin: "0 0 14px", lineHeight: 1.5 }}>Ce que le patient recevra. Rien n'est envoyé tant que vous n'avez pas validé.</p>
+
+                <div style={{ border: `1px solid ${BORDER}`, borderRadius: 12, padding: 12, marginBottom: 14, display: "flex", flexDirection: "column", gap: 10 }}>
+                  <div>
+                    <span style={{ fontSize: 10.5, color: MUTED, display: "block", marginBottom: 2, textTransform: "uppercase", letterSpacing: 0.4, fontWeight: 800 }}>Votre avis médical</span>
+                    <span style={{ fontSize: 13, color: INK, fontWeight: 700 }}>
+                      {dossier?.scan?.isVerified
+                        ? `✅ ${dossier?.scan?.expertCorrectedCondition || dossier?.scan?.condition || "Avis validé"}`
+                        : "Diagnostic non précisé"}
+                    </span>
+                  </div>
+                  {prescription.trim() && (
+                    <div>
+                      <span style={{ fontSize: 10.5, color: MUTED, display: "block", marginBottom: 2, textTransform: "uppercase", letterSpacing: 0.4, fontWeight: 800 }}>Conseils, traitement et suivi</span>
+                      <span style={{ fontSize: 12.5, color: INK, whiteSpace: "pre-wrap", lineHeight: 1.5 }}>{prescription.trim()}</span>
+                    </div>
+                  )}
+                  {Array.isArray(dossier?.photos) && dossier.photos.length > 0 && (
+                    <span style={{ fontSize: 11.5, color: MUTED }}>📷 {dossier.photos.length} photo{dossier.photos.length > 1 ? "s" : ""} jointe{dossier.photos.length > 1 ? "s" : ""}</span>
+                  )}
+                </div>
+
+                <p style={{ fontSize: 12.5, fontWeight: 800, color: INK, margin: "0 0 8px" }}>Programmer un suivi ?</p>
+                {[
+                  { v: "2_weeks", l: "Dans 2 semaines" },
+                  { v: "1_month", l: "Dans 1 mois" },
+                  { v: "2_months", l: "Dans 2 mois" },
+                  { v: "none", l: "Pas de suivi" },
+                ].map((o) => (
+                  <button key={o.v} onClick={() => setFollowUpOpt(o.v)}
+                    style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left", background: followUpOpt === o.v ? (dark ? "rgba(124,58,237,0.2)" : "rgba(124,58,237,0.08)") : "transparent", border: `1px solid ${followUpOpt === o.v ? "#7c3aed" : BORDER}`, borderRadius: 12, padding: "11px 14px", marginBottom: 8, cursor: "pointer" }}>
+                    <span style={{ width: 18, height: 18, borderRadius: "50%", border: `2px solid ${followUpOpt === o.v ? "#7c3aed" : MUTED}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      {followUpOpt === o.v && <span style={{ width: 9, height: 9, borderRadius: "50%", background: "#7c3aed" }} />}
+                    </span>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: INK }}>{o.l}</span>
+                  </button>
+                ))}
+                <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+                  <button onClick={() => setShowFollowUp(false)}
+                    style={{ flex: "0 0 auto", background: "transparent", color: MUTED, border: `1px solid ${BORDER}`, borderRadius: 9999, padding: "13px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                    Retour à la consultation
+                  </button>
+                  <button onClick={() => setConfirmSend(true)}
+                    style={{ flex: 1, background: "#7c3aed", color: "#fff", border: "none", borderRadius: 9999, padding: "13px", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>
+                    Continuer →
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Étape 2 — confirmation d'envoi */}
+                <p style={{ fontSize: 16, fontWeight: 900, color: INK, margin: "0 0 8px" }}>Prêt à envoyer le compte rendu ?</p>
+                <p style={{ fontSize: 12.5, color: MUTED, margin: "0 0 18px", lineHeight: 1.6 }}>
+                  Le patient recevra le compte rendu validé par vous par e-mail et/ou WhatsApp selon les canaux disponibles. Le dossier restera accessible dans votre historique.
+                </p>
+                <button onClick={validateAndSend} disabled={closing || reportSending}
+                  style={{ width: "100%", background: "#10b981", color: "#fff", border: "none", borderRadius: 9999, padding: "14px", fontSize: 14, fontWeight: 800, cursor: "pointer", opacity: (closing || reportSending) ? 0.6 : 1 }}>
+                  {closing ? "Validation…" : reportSending ? "Envoi…" : "Valider et envoyer"}
+                </button>
+                <button onClick={() => setConfirmSend(false)} disabled={closing || reportSending}
+                  style={{ width: "100%", marginTop: 8, background: "transparent", color: MUTED, border: `1px solid ${BORDER}`, borderRadius: 9999, padding: "12px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                  Retour à la consultation
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}
