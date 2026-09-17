@@ -60,6 +60,16 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
   const [coachStep, setCoachStep] = useState(-1); // -1 = inactif
   const [dossierCollapsed, setDossierCollapsed] = useState(true);
   const [lightbox, setLightbox] = useState(-1); // index photo en plein écran, -1 = fermé
+  const [aiOpen, setAiOpen] = useState(false); // mini-bloc « Aide GlowScan » replié par défaut
+  // Résumé patient : panneau latéral sur desktop, bottom sheet sur mobile.
+  const [isWide, setIsWide] = useState(() => typeof window !== "undefined" && window.matchMedia("(min-width: 900px)").matches);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(min-width: 900px)");
+    const h = () => setIsWide(mq.matches);
+    mq.addEventListener?.("change", h);
+    return () => mq.removeEventListener?.("change", h);
+  }, []);
   const recognitionRef = useRef<any>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
@@ -467,249 +477,241 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
         )}
       </div>
 
-      {/* ── DOSSIER B2C (côté dermatologue) — « il arrive en expert, tout est là » ── */}
-      {side === "doctor" && dossier && (
-        <div style={{ padding: "12px 14px", borderBottom: `1px solid ${BORDER}`, background: CARD }}>
-          {dossier.consultation?.isDemo && (
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(245,158,11,0.15)", border: "1px solid rgba(245,158,11,0.4)", borderRadius: 9999, padding: "3px 10px", marginBottom: 10 }}>
-              <span style={{ fontSize: 11, fontWeight: 800, color: dark ? "#fbbf24" : "#b45309" }}>🎯 DÉMONSTRATION — patient fictif, entraînez-vous librement</span>
+      {/* ── RÉSUMÉ PATIENT (dermatologue) — panneau latéral desktop / bottom sheet mobile ── */}
+      {side === "doctor" && dossier && !dossierCollapsed && (
+        <>
+          <div onClick={() => setDossierCollapsed(true)}
+            style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 70 }} />
+          <div role="dialog" aria-label="Résumé du patient"
+            style={{
+              position: "absolute", zIndex: 71, background: dark ? "#171226" : "#fff",
+              display: "flex", flexDirection: "column", boxShadow: "0 -8px 40px rgba(0,0,0,0.4)",
+              ...(isWide
+                ? { top: 0, right: 0, bottom: 0, width: 400, maxWidth: "92%", borderLeft: `1px solid ${BORDER}` }
+                : { left: 0, right: 0, bottom: 0, maxHeight: "88%", borderTopLeftRadius: 20, borderTopRightRadius: 20 }),
+            }}
+          >
+            {/* En-tête du panneau */}
+            <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 16px", borderBottom: `1px solid ${BORDER}`, flexShrink: 0 }}>
+              <span style={{ fontSize: 13, fontWeight: 900, color: INK, flex: 1 }}>Résumé du patient</span>
+              <button onClick={() => setDossierCollapsed(true)} aria-label="Fermer"
+                style={{ background: "transparent", border: "none", color: MUTED, fontSize: 20, cursor: "pointer", lineHeight: 1 }}>✕</button>
             </div>
-          )}
-          {/* Barre repliable — libère la conversation quand le dossier est lu */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: dossierCollapsed ? 0 : 10 }}>
-            <span style={{ fontSize: 10.5, fontWeight: 800, color: MUTED, textTransform: "uppercase", letterSpacing: 0.5 }}>Dossier patient</span>
-            <button onClick={() => setDossierCollapsed((v) => !v)}
-              style={{ background: "transparent", border: "none", color: "#7c3aed", fontSize: 11.5, fontWeight: 800, cursor: "pointer", padding: "2px 4px" }}>
-              {dossierCollapsed ? "▼ Déplier le dossier" : "▲ Masquer le dossier"}
-            </button>
-          </div>
 
-          {dossierCollapsed ? (
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              {dossier.photos?.[0]?.url && (
-                <img src={dossier.photos[0].url} alt="" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} style={{ width: 34, height: 34, borderRadius: 8, objectFit: "cover" }} />
-              )}
-              <span style={{ fontSize: 12.5, fontWeight: 800, color: INK }}>{dossier.patient?.firstName || "Patient"}</span>
-              <span style={{ fontSize: 12, color: MUTED }}>{dossier.scan?.condition || dossier.consultation?.condition}</span>
-              {dossier.scan?.score != null && <span style={{ fontSize: 12, fontWeight: 800, color: "#7c3aed", marginLeft: "auto" }}>Score {dossier.scan.score}</span>}
-            </div>
-          ) : (
-          <>
-          <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-            {/* Galerie photos du patient — toucher pour agrandir en plein écran */}
-            {Array.isArray(dossier.photos) && dossier.photos.length > 0 && (
-              <div style={{ display: "flex", flexDirection: "column", gap: 5, flexShrink: 0 }}>
-                <div style={{ display: "flex", gap: 6 }}>
-                  {dossier.photos.slice(0, 3).map((ph: any, i: number) => (
-                    <button key={i} onClick={() => setLightbox(i)} title={ph.label}
-                      style={{ padding: 0, border: "none", background: "transparent", cursor: "pointer", lineHeight: 0 }}>
-                      <img src={ph.url} alt={ph.label} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
-                        style={{ width: 58, height: 58, borderRadius: 10, objectFit: "cover", display: "block", border: `1px solid ${BORDER}` }} />
-                    </button>
-                  ))}
+            <div style={{ overflowY: "auto", padding: "14px 16px", display: "flex", flexDirection: "column", gap: 14 }}>
+              {dossier.consultation?.isDemo && (
+                <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(245,158,11,0.15)", border: "1px solid rgba(245,158,11,0.4)", borderRadius: 9999, padding: "4px 10px", alignSelf: "flex-start" }}>
+                  <span style={{ fontSize: 11, fontWeight: 800, color: dark ? "#fbbf24" : "#b45309" }}>🎯 Démonstration — patient fictif</span>
                 </div>
-                <span style={{ fontSize: 9.5, color: MUTED, textAlign: "center", fontWeight: 700 }}>🔍 Agrandir</span>
+              )}
+
+              {/* Identité patient */}
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ width: 40, height: 40, borderRadius: "50%", background: "linear-gradient(135deg,#a78bfa,#7c3aed)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, fontWeight: 800, color: "#fff", flexShrink: 0 }}>
+                  {(dossier.patient?.firstName || "P").charAt(0).toUpperCase()}
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <p style={{ fontSize: 15, fontWeight: 800, color: INK, margin: 0 }}>{dossier.patient?.firstName || "Patient"}</p>
+                  {(dossier.intake?.age || dossier.intake?.city) && (
+                    <p style={{ fontSize: 12, color: MUTED, margin: "2px 0 0" }}>
+                      {[dossier.intake?.age ? `${dossier.intake.age} ans` : null, dossier.intake?.city].filter(Boolean).join(" · ")}
+                    </p>
+                  )}
+                </div>
               </div>
-            )}
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ fontSize: 14, fontWeight: 800, color: INK, margin: 0 }}>
-                {dossier.patient?.firstName || "Patient"}
-                {(dossier.intake?.age || dossier.intake?.city) && (
-                  <span style={{ fontSize: 12, fontWeight: 600, color: MUTED }}>
-                    {" · "}{[dossier.intake?.age ? `${dossier.intake.age} ans` : null, dossier.intake?.city].filter(Boolean).join(" · ")}
-                  </span>
-                )}
-              </p>
-              <p style={{ fontSize: 11, color: "#10b981", fontWeight: 700, margin: "2px 0 0" }}>✅ Payé</p>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", marginTop: 8 }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: INK, background: dark ? "rgba(124,58,237,0.2)" : "rgba(124,58,237,0.08)", borderRadius: 8, padding: "3px 8px" }}>
-                  🤖 {dossier.scan?.condition || dossier.consultation?.condition || "Diagnostic IA"}
-                </span>
-                {dossier.scan?.score != null && (
-                  <span style={{ fontSize: 12, fontWeight: 800, color: "#7c3aed", background: dark ? "rgba(124,58,237,0.2)" : "rgba(124,58,237,0.08)", borderRadius: 8, padding: "3px 8px" }}>
-                    Glow Score {dossier.scan.score}/100
-                  </span>
-                )}
-                {dossier.rich?.fitzpatrick && (
-                  <span style={{ fontSize: 12, fontWeight: 700, color: INK, background: dark ? "rgba(255,255,255,0.08)" : "#f1f5f9", borderRadius: 8, padding: "3px 8px" }}>
-                    Fitzpatrick {dossier.rich.fitzpatrick}
-                  </span>
-                )}
-                {dossier.rich?.severity && (
-                  <span style={{ fontSize: 12, fontWeight: 700, color: INK, background: dark ? "rgba(255,255,255,0.08)" : "#f1f5f9", borderRadius: 8, padding: "3px 8px" }}>
-                    Sévérité : {({ mild: "légère", moderate: "modérée", severe: "sévère", critical: "critique" } as any)[dossier.rich.severity] || dossier.rich.severity}
-                  </span>
-                )}
-              </div>
-              <p style={{ fontSize: 10.5, color: MUTED, margin: "8px 0 0" }}>
-                🤖 Analyse IA — indicative{dossier.rich?.confidence ? ` · confiance ${({ low: "faible", medium: "moyenne", high: "élevée" } as any)[dossier.rich.confidence] || dossier.rich.confidence}` : ""}. Votre appréciation clinique prime.
-              </p>
 
-              {/* ⚠️ Alerte produit / ingrédient à risque — priorité visuelle */}
-              {Array.isArray(dossier.rich?.riskyIngredients) && dossier.rich.riskyIngredients.length > 0 && (
-                <div style={{ marginTop: 8, background: dark ? "rgba(239,68,68,0.12)" : "#fef2f2", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 10, padding: "7px 10px" }}>
-                  <span style={{ fontSize: 11.5, fontWeight: 800, color: dark ? "#fca5a5" : "#b91c1c" }}>⚠️ Produit à risque : </span>
-                  <span style={{ fontSize: 11.5, color: dark ? "#fecaca" : "#991b1b" }}>
-                    {dossier.rich.riskyIngredients.map((x: any) => x.name).filter(Boolean).join(" · ")}
-                  </span>
-                </div>
-              )}
-              {dossier.intake?.duration && (
-                <p style={{ fontSize: 11.5, color: MUTED, margin: "8px 0 0" }}>⏱️ Durée du problème : <strong style={{ color: INK }}>{dossier.intake.duration}</strong></p>
-              )}
-
-              {/* ── Valider / Corriger le diagnostic (2 clics max) ── */}
-              {dossier.scan?.isVerified ? (
-                <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 6, background: dark ? "rgba(16,185,129,0.15)" : "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.3)", borderRadius: 10, padding: "7px 10px" }}>
-                  <span style={{ fontSize: 13 }}>✅</span>
-                  <span style={{ fontSize: 11.5, fontWeight: 700, color: dark ? "#6ee7b7" : "#047857" }}>
-                    {dossier.scan?.expertCorrectedCondition
-                      ? `Corrigé par le médecin : ${dossier.scan.expertCorrectedCondition}`
-                      : "Diagnostic validé par le médecin"}
-                  </span>
-                </div>
-              ) : correcting ? (
-                <div style={{ marginTop: 10 }}>
-                  <textarea
-                    value={correctText}
-                    onChange={(e) => setCorrectText(e.target.value)}
-                    autoFocus
-                    rows={2}
-                    placeholder="Diagnostic corrigé…"
-                    style={{ width: "100%", boxSizing: "border-box", padding: "8px 10px", borderRadius: 10, border: `1px solid ${BORDER}`, background: dark ? "rgba(255,255,255,0.05)" : "#fff", color: INK, fontSize: 13, outline: "none", resize: "vertical" }}
-                  />
-                  <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
-                    <button onClick={() => submitDiagnosis(correctText.trim() || null)} disabled={diagBusy || !correctText.trim()}
-                      style={{ flex: 1, background: "#7c3aed", color: "#fff", border: "none", borderRadius: 9999, padding: "8px", fontSize: 12, fontWeight: 800, cursor: "pointer", opacity: diagBusy || !correctText.trim() ? 0.5 : 1 }}>
-                      {diagBusy ? "…" : "Enregistrer la correction"}
-                    </button>
-                    <button onClick={() => setCorrecting(false)} disabled={diagBusy}
-                      style={{ background: "transparent", color: MUTED, border: `1px solid ${BORDER}`, borderRadius: 9999, padding: "8px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-                      Annuler
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-                  <button onClick={() => submitDiagnosis(null)} disabled={diagBusy}
-                    style={{ flex: 1, background: "rgba(16,185,129,0.18)", color: dark ? "#6ee7b7" : "#047857", border: "1px solid rgba(16,185,129,0.35)", borderRadius: 9999, padding: "8px", fontSize: 12, fontWeight: 800, cursor: "pointer", opacity: diagBusy ? 0.6 : 1 }}>
-                    ✅ Valider
-                  </button>
-                  <button onClick={() => { setCorrectText(dossier.scan?.condition || dossier.consultation?.condition || ""); setCorrecting(true); }} disabled={diagBusy}
-                    style={{ flex: 1, background: dark ? "rgba(255,255,255,0.06)" : "rgba(124,58,237,0.08)", color: "#7c3aed", border: `1px solid ${dark ? "rgba(255,255,255,0.12)" : "rgba(124,58,237,0.2)"}`, borderRadius: 9999, padding: "8px", fontSize: 12, fontWeight: 800, cursor: "pointer" }}>
-                    ✏️ Corriger
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-          {/* Carte PDF cliquable — ouvre le rapport dans l'app, zéro navigation externe */}
-          {(dossier.scan || dossier.consultation) && (
-            <button
-              onClick={openDossierPdf}
-              style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", marginTop: 12, background: dark ? "rgba(255,255,255,0.04)" : "#faf9ff", border: `1px solid ${dark ? "rgba(255,255,255,0.1)" : "rgba(124,58,237,0.18)"}`, borderRadius: 12, padding: "10px 12px", cursor: "pointer", textAlign: "left" }}
-            >
-              <span style={{ fontSize: 22, flexShrink: 0 }}>📄</span>
-              <span style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ display: "block", fontSize: 12.5, fontWeight: 800, color: INK }}>Analyse GlowScan complète</span>
-                <span style={{ display: "block", fontSize: 11, color: MUTED }}>Toucher pour ouvrir le rapport</span>
-              </span>
-              <span style={{ color: "#7c3aed", fontSize: 16, flexShrink: 0 }}>→</span>
-            </button>
-          )}
-
-          {/* ── Dossier complet (1 tap) — contexte, métriques, zones, ingrédients, conseil IA ── */}
-          {((dossier.rich && (dossier.rich.metrics || (dossier.rich.zones?.length) || (dossier.rich.riskyIngredients?.length) || dossier.rich.advice)) || (dossier.intake && (dossier.intake.products || dossier.intake.allergies))) && (
-            <div style={{ marginTop: 12 }}>
-              <button onClick={() => setShowFull((v) => !v)}
-                style={{ display: "flex", alignItems: "center", gap: 6, background: "transparent", border: "none", color: "#7c3aed", fontSize: 12, fontWeight: 800, cursor: "pointer", padding: 0 }}>
-                {showFull ? "▲ Masquer le dossier complet" : "▼ Voir le dossier complet"}
-              </button>
-              {showFull && (
-                <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 10 }}>
-                  {(dossier.intake?.products || dossier.intake?.allergies) && (
-                    <div>
-                      <p style={{ fontSize: 11, fontWeight: 800, color: MUTED, margin: "0 0 4px", textTransform: "uppercase", letterSpacing: 0.4 }}>Déclaré par le patient</p>
-                      {dossier.intake?.products && <p style={{ fontSize: 12.5, color: INK, margin: "0 0 2px" }}>Produits utilisés : {dossier.intake.products}</p>}
-                      {dossier.intake?.allergies && <p style={{ fontSize: 12.5, color: INK, margin: "0 0 2px" }}>Allergies : {dossier.intake.allergies}</p>}
-                    </div>
-                  )}
-                  {dossier.rich.metrics && (
-                    <div>
-                      <p style={{ fontSize: 11, fontWeight: 800, color: MUTED, margin: "0 0 4px", textTransform: "uppercase", letterSpacing: 0.4 }}>Métriques</p>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                        {([["Hydratation", dossier.rich.metrics.hydratation], ["Sébum", dossier.rich.metrics.sebum], ["Uniformité", dossier.rich.metrics.uniformite], ["Éclat", dossier.rich.metrics.eclat]] as [string, number | null][])
-                          .filter(([, v]) => typeof v === "number").map(([k, v]) => (
-                          <span key={k} style={{ fontSize: 11.5, color: INK, background: dark ? "rgba(255,255,255,0.06)" : "#f1f5f9", borderRadius: 8, padding: "3px 8px" }}>{k} : {v}%</span>
-                        ))}
-                        {dossier.rich.inflammation && (
-                          <span style={{ fontSize: 11.5, color: INK, background: dark ? "rgba(255,255,255,0.06)" : "#f1f5f9", borderRadius: 8, padding: "3px 8px" }}>Inflammation : {({ none: "aucune", low: "faible", moderate: "modérée", high: "élevée" } as any)[dossier.rich.inflammation] || dossier.rich.inflammation}</span>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                  {dossier.rich.zones?.length > 0 && (
-                    <div>
-                      <p style={{ fontSize: 11, fontWeight: 800, color: MUTED, margin: "0 0 4px", textTransform: "uppercase", letterSpacing: 0.4 }}>Zones concernées</p>
-                      <p style={{ fontSize: 12.5, color: INK, margin: 0 }}>{dossier.rich.zones.join(" · ")}</p>
-                    </div>
-                  )}
-                  {dossier.rich.riskyIngredients?.length > 0 && (
-                    <div>
-                      <p style={{ fontSize: 11, fontWeight: 800, color: MUTED, margin: "0 0 4px", textTransform: "uppercase", letterSpacing: 0.4 }}>Ingrédients à risque</p>
-                      {dossier.rich.riskyIngredients.map((x: any, i: number) => (
-                        <p key={i} style={{ fontSize: 12.5, color: INK, margin: "0 0 2px" }}>· {x.name}{x.note ? ` — ${x.note}` : ""}</p>
+              {/* Ce que le patient décrit — uniquement les infos réellement saisies */}
+              {(() => {
+                const zone = dossier.scan?.area || (Array.isArray(dossier.rich?.zones) && dossier.rich.zones.length ? dossier.rich.zones.join(" · ") : null);
+                const rows: { label: string; value: string | null; essential?: boolean }[] = [
+                  { label: "Zone concernée", value: zone },
+                  { label: "Depuis quand ?", value: dossier.intake?.duration || null, essential: true },
+                  { label: "Produits déjà essayés", value: dossier.intake?.products || null },
+                  { label: "Allergies connues", value: dossier.intake?.allergies || null, essential: true },
+                ].filter((r) => r.value || r.essential);
+                if (!rows.length) return null;
+                return (
+                  <div>
+                    <p style={{ fontSize: 11, fontWeight: 800, color: MUTED, margin: "0 0 8px", textTransform: "uppercase", letterSpacing: 0.4 }}>Ce que le patient décrit</p>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {rows.map((r) => (
+                        <div key={r.label}>
+                          <span style={{ fontSize: 11.5, color: MUTED, display: "block" }}>{r.label}</span>
+                          <span style={{ fontSize: 13, color: r.value ? INK : "#9ca3af", fontWeight: r.value ? 700 : 600, fontStyle: r.value ? "normal" : "italic" }}>{r.value || "Non renseigné"}</span>
+                        </div>
                       ))}
                     </div>
-                  )}
-                  {dossier.rich.advice && (
-                    <div>
-                      <p style={{ fontSize: 11, fontWeight: 800, color: MUTED, margin: "0 0 4px", textTransform: "uppercase", letterSpacing: 0.4 }}>Conseil IA (indicatif)</p>
-                      <p style={{ fontSize: 12.5, color: INK, margin: 0, lineHeight: 1.6 }}>{dossier.rich.advice}</p>
+                  </div>
+                );
+              })()}
+
+              {/* Photos envoyées */}
+              {Array.isArray(dossier.photos) && dossier.photos.length > 0 && (
+                <div>
+                  <p style={{ fontSize: 11, fontWeight: 800, color: MUTED, margin: "0 0 8px", textTransform: "uppercase", letterSpacing: 0.4 }}>Photos envoyées</p>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    {dossier.photos.map((ph: any, i: number) => (
+                      <button key={i} onClick={() => setLightbox(i)} title={ph.label}
+                        style={{ padding: 0, border: "none", background: "transparent", cursor: "pointer", lineHeight: 0 }}>
+                        <img src={ph.url} alt={ph.label} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                          style={{ width: 66, height: 66, borderRadius: 12, objectFit: "cover", display: "block", border: `1px solid ${BORDER}` }} />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Aide GlowScan — mini-bloc repliable, jamais dominant */}
+              {(dossier.scan?.condition || dossier.consultation?.condition || dossier.rich) && (
+                <div style={{ border: `1px solid ${BORDER}`, borderRadius: 12, overflow: "hidden" }}>
+                  <button onClick={() => setAiOpen((v) => !v)}
+                    style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", background: dark ? "rgba(124,58,237,0.12)" : "rgba(124,58,237,0.06)", border: "none", padding: "10px 12px", cursor: "pointer", textAlign: "left" }}>
+                    <span style={{ fontSize: 14 }}>🤖</span>
+                    <span style={{ flex: 1, fontSize: 12.5, fontWeight: 800, color: INK }}>Aide GlowScan — à vérifier</span>
+                    <span style={{ color: "#7c3aed", fontSize: 12, fontWeight: 800 }}>{aiOpen ? "▲" : "▼"}</span>
+                  </button>
+                  {aiOpen && (
+                    <div style={{ padding: 12, display: "flex", flexDirection: "column", gap: 10 }}>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                        {(dossier.scan?.condition || dossier.consultation?.condition) && (
+                          <span style={{ fontSize: 12, fontWeight: 700, color: INK, background: dark ? "rgba(124,58,237,0.2)" : "rgba(124,58,237,0.08)", borderRadius: 8, padding: "3px 8px" }}>
+                            {dossier.scan?.condition || dossier.consultation?.condition}
+                          </span>
+                        )}
+                        {dossier.scan?.score != null && (
+                          <span style={{ fontSize: 12, fontWeight: 800, color: "#7c3aed", background: dark ? "rgba(124,58,237,0.2)" : "rgba(124,58,237,0.08)", borderRadius: 8, padding: "3px 8px" }}>Score {dossier.scan.score}/100</span>
+                        )}
+                        {dossier.rich?.fitzpatrick && (
+                          <span style={{ fontSize: 12, fontWeight: 700, color: INK, background: dark ? "rgba(255,255,255,0.08)" : "#f1f5f9", borderRadius: 8, padding: "3px 8px" }}>Fitzpatrick {dossier.rich.fitzpatrick}</span>
+                        )}
+                        {dossier.rich?.severity && (
+                          <span style={{ fontSize: 12, fontWeight: 700, color: INK, background: dark ? "rgba(255,255,255,0.08)" : "#f1f5f9", borderRadius: 8, padding: "3px 8px" }}>
+                            Sévérité : {({ mild: "légère", moderate: "modérée", severe: "sévère", critical: "critique" } as any)[dossier.rich.severity] || dossier.rich.severity}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Alerte produit à risque */}
+                      {Array.isArray(dossier.rich?.riskyIngredients) && dossier.rich.riskyIngredients.length > 0 && (
+                        <div style={{ background: dark ? "rgba(239,68,68,0.12)" : "#fef2f2", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 10, padding: "7px 10px" }}>
+                          <span style={{ fontSize: 11.5, fontWeight: 800, color: dark ? "#fca5a5" : "#b91c1c" }}>⚠️ Produit à risque : </span>
+                          <span style={{ fontSize: 11.5, color: dark ? "#fecaca" : "#991b1b" }}>{dossier.rich.riskyIngredients.map((x: any) => x.name).filter(Boolean).join(" · ")}</span>
+                        </div>
+                      )}
+
+                      {/* Détail repliable : métriques, zones, conseil IA */}
+                      {(dossier.rich?.metrics || (Array.isArray(dossier.rich?.zones) && dossier.rich.zones.length) || dossier.rich?.advice) && (
+                        <>
+                          <button onClick={() => setShowFull((v) => !v)}
+                            style={{ alignSelf: "flex-start", background: "transparent", border: "none", color: "#7c3aed", fontSize: 12, fontWeight: 800, cursor: "pointer", padding: 0 }}>
+                            {showFull ? "▲ Masquer le détail" : "▼ Voir le détail"}
+                          </button>
+                          {showFull && (
+                            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                              {dossier.rich?.metrics && (
+                                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                                  {([["Hydratation", dossier.rich.metrics.hydratation], ["Sébum", dossier.rich.metrics.sebum], ["Uniformité", dossier.rich.metrics.uniformite], ["Éclat", dossier.rich.metrics.eclat]] as [string, number | null][])
+                                    .filter(([, v]) => typeof v === "number").map(([k, v]) => (
+                                    <span key={k} style={{ fontSize: 11.5, color: INK, background: dark ? "rgba(255,255,255,0.06)" : "#f1f5f9", borderRadius: 8, padding: "3px 8px" }}>{k} : {v}%</span>
+                                  ))}
+                                  {dossier.rich.inflammation && (
+                                    <span style={{ fontSize: 11.5, color: INK, background: dark ? "rgba(255,255,255,0.06)" : "#f1f5f9", borderRadius: 8, padding: "3px 8px" }}>Inflammation : {({ none: "aucune", low: "faible", moderate: "modérée", high: "élevée" } as any)[dossier.rich.inflammation] || dossier.rich.inflammation}</span>
+                                  )}
+                                </div>
+                              )}
+                              {Array.isArray(dossier.rich?.zones) && dossier.rich.zones.length > 0 && (
+                                <p style={{ fontSize: 12.5, color: INK, margin: 0 }}>Zones : {dossier.rich.zones.join(" · ")}</p>
+                              )}
+                              {dossier.rich?.advice && (
+                                <p style={{ fontSize: 12.5, color: INK, margin: 0, lineHeight: 1.6 }}>{dossier.rich.advice}</p>
+                              )}
+                            </div>
+                          )}
+                        </>
+                      )}
+
+                      {/* Valider / corriger le diagnostic — action explicite du médecin */}
+                      {dossier.scan?.isVerified ? (
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, background: dark ? "rgba(16,185,129,0.15)" : "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.3)", borderRadius: 10, padding: "7px 10px" }}>
+                          <span style={{ fontSize: 13 }}>✅</span>
+                          <span style={{ fontSize: 11.5, fontWeight: 700, color: dark ? "#6ee7b7" : "#047857" }}>
+                            {dossier.scan?.expertCorrectedCondition ? `Corrigé : ${dossier.scan.expertCorrectedCondition}` : "Validé par vous"}
+                          </span>
+                        </div>
+                      ) : correcting ? (
+                        <div>
+                          <textarea value={correctText} onChange={(e) => setCorrectText(e.target.value)} autoFocus rows={2} placeholder="Diagnostic corrigé…"
+                            style={{ width: "100%", boxSizing: "border-box", padding: "8px 10px", borderRadius: 10, border: `1px solid ${BORDER}`, background: dark ? "rgba(255,255,255,0.05)" : "#fff", color: INK, fontSize: 13, outline: "none", resize: "vertical" }} />
+                          <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+                            <button onClick={() => submitDiagnosis(correctText.trim() || null)} disabled={diagBusy || !correctText.trim()}
+                              style={{ flex: 1, background: "#7c3aed", color: "#fff", border: "none", borderRadius: 9999, padding: "8px", fontSize: 12, fontWeight: 800, cursor: "pointer", opacity: diagBusy || !correctText.trim() ? 0.5 : 1 }}>
+                              {diagBusy ? "…" : "Enregistrer"}
+                            </button>
+                            <button onClick={() => setCorrecting(false)} disabled={diagBusy}
+                              style={{ background: "transparent", color: MUTED, border: `1px solid ${BORDER}`, borderRadius: 9999, padding: "8px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Annuler</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={{ display: "flex", gap: 8 }}>
+                          <button onClick={() => submitDiagnosis(null)} disabled={diagBusy}
+                            style={{ flex: 1, background: "rgba(16,185,129,0.18)", color: dark ? "#6ee7b7" : "#047857", border: "1px solid rgba(16,185,129,0.35)", borderRadius: 9999, padding: "8px", fontSize: 12, fontWeight: 800, cursor: "pointer", opacity: diagBusy ? 0.6 : 1 }}>✅ Valider</button>
+                          <button onClick={() => { setCorrectText(dossier.scan?.condition || dossier.consultation?.condition || ""); setCorrecting(true); }} disabled={diagBusy}
+                            style={{ flex: 1, background: dark ? "rgba(255,255,255,0.06)" : "rgba(124,58,237,0.08)", color: "#7c3aed", border: `1px solid ${dark ? "rgba(255,255,255,0.12)" : "rgba(124,58,237,0.2)"}`, borderRadius: 9999, padding: "8px", fontSize: 12, fontWeight: 800, cursor: "pointer" }}>✏️ Corriger</button>
+                        </div>
+                      )}
+
+                      <p style={{ fontSize: 10.5, color: MUTED, margin: 0, lineHeight: 1.5 }}>Cette analyse est une aide et ne remplace pas votre appréciation clinique.</p>
                     </div>
                   )}
                 </div>
               )}
-            </div>
-          )}
 
-          {/* ── Ordonnance / prescription (pré-remplie IA · dictée vocale) ── */}
-          {ctx?.status !== "closed" && (
-            <div style={{ marginTop: 12 }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 6 }}>
-                <span style={{ fontSize: 12, fontWeight: 800, color: INK }}>💊 Ordonnance / conseils</span>
-                <button onClick={toggleDictation}
-                  style={{ display: "flex", alignItems: "center", gap: 5, background: dictating ? "#ef4444" : (dark ? "rgba(124,58,237,0.2)" : "rgba(124,58,237,0.08)"), color: dictating ? "#fff" : "#7c3aed", border: `1px solid ${dictating ? "#ef4444" : "rgba(124,58,237,0.25)"}`, borderRadius: 9999, padding: "5px 11px", fontSize: 11, fontWeight: 800, cursor: "pointer" }}>
-                  {dictating ? "● Écoute…" : "🎙️ Dicter"}
+              {/* Rapport GlowScan complet (PDF in-app) */}
+              {(dossier.scan || dossier.consultation) && (
+                <button onClick={openDossierPdf}
+                  style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", background: dark ? "rgba(255,255,255,0.04)" : "#faf9ff", border: `1px solid ${dark ? "rgba(255,255,255,0.1)" : "rgba(124,58,237,0.18)"}`, borderRadius: 12, padding: "10px 12px", cursor: "pointer", textAlign: "left" }}>
+                  <span style={{ fontSize: 22, flexShrink: 0 }}>📄</span>
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{ display: "block", fontSize: 12.5, fontWeight: 800, color: INK }}>Analyse GlowScan complète</span>
+                    <span style={{ display: "block", fontSize: 11, color: MUTED }}>Toucher pour ouvrir le rapport</span>
+                  </span>
+                  <span style={{ color: "#7c3aed", fontSize: 16, flexShrink: 0 }}>→</span>
                 </button>
-              </div>
-              <textarea
-                value={prescription}
-                onChange={(e) => { setPrescription(e.target.value); setPrescriptionTouched(true); }}
-                rows={4}
-                placeholder="Traitement, posologie, conseils… (pré-rempli avec la suggestion IA — modifiez ou dictez par-dessus)"
-                style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: `1px solid ${BORDER}`, background: dark ? "rgba(255,255,255,0.05)" : "#fff", color: INK, fontSize: 13, lineHeight: 1.6, outline: "none", resize: "vertical" }}
-              />
-              <p style={{ fontSize: 10, color: MUTED, margin: "4px 2px 0" }}>Sera incluse dans le rapport envoyé au patient à la clôture.</p>
-            </div>
-          )}
+              )}
 
-          {/* Raisonnement clinique IA — différentiels, recadrage + fil interactif persistant */}
-          {ctx?.status !== "closed" && (
-            <ClinicalReasoningPanel
-              dark={dark}
-              consultationId={consultationId}
-              signesCliniques={dossier.scan?.analysis || dossier.scan?.condition || dossier.consultation?.condition}
-              diagnostic={dossier.scan?.expertCorrectedCondition || dossier.scan?.condition || dossier.consultation?.condition}
-              prescription={prescription}
-              fitzpatrick={dossier.rich?.fitzpatrick}
-              age={dossier.intake?.age}
-              historiquePatient={[dossier.intake?.duration ? `Durée : ${dossier.intake.duration}` : "", dossier.intake?.products ? `Produits : ${dossier.intake.products}` : "", dossier.intake?.allergies ? `Allergies : ${dossier.intake.allergies}` : ""].filter(Boolean).join(" · ") || undefined}
-            />
-          )}
-          </>
-          )}
-        </div>
+              {/* Vos conseils / ordonnance */}
+              {ctx?.status !== "closed" && (
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 6 }}>
+                    <span style={{ fontSize: 12, fontWeight: 800, color: INK }}>💊 Vos conseils / ordonnance</span>
+                    <button onClick={toggleDictation}
+                      style={{ display: "flex", alignItems: "center", gap: 5, background: dictating ? "#ef4444" : (dark ? "rgba(124,58,237,0.2)" : "rgba(124,58,237,0.08)"), color: dictating ? "#fff" : "#7c3aed", border: `1px solid ${dictating ? "#ef4444" : "rgba(124,58,237,0.25)"}`, borderRadius: 9999, padding: "5px 11px", fontSize: 11, fontWeight: 800, cursor: "pointer" }}>
+                      {dictating ? "● Écoute…" : "🎙️ Dicter"}
+                    </button>
+                  </div>
+                  <textarea value={prescription} onChange={(e) => { setPrescription(e.target.value); setPrescriptionTouched(true); }} rows={4}
+                    placeholder="Traitement, posologie, conseils… (modifiez ou dictez)"
+                    style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: `1px solid ${BORDER}`, background: dark ? "rgba(255,255,255,0.05)" : "#fff", color: INK, fontSize: 13, lineHeight: 1.6, outline: "none", resize: "vertical" }} />
+                  <p style={{ fontSize: 10, color: MUTED, margin: "4px 2px 0" }}>Incluse dans le rapport envoyé au patient à la clôture.</p>
+                </div>
+              )}
+
+              {/* Raisonnement clinique IA — au fond du panneau, non dominant */}
+              {ctx?.status !== "closed" && (
+                <ClinicalReasoningPanel
+                  dark={dark}
+                  consultationId={consultationId}
+                  signesCliniques={dossier.scan?.analysis || dossier.scan?.condition || dossier.consultation?.condition}
+                  diagnostic={dossier.scan?.expertCorrectedCondition || dossier.scan?.condition || dossier.consultation?.condition}
+                  prescription={prescription}
+                  fitzpatrick={dossier.rich?.fitzpatrick}
+                  age={dossier.intake?.age}
+                  historiquePatient={[dossier.intake?.duration ? `Durée : ${dossier.intake.duration}` : "", dossier.intake?.products ? `Produits : ${dossier.intake.products}` : "", dossier.intake?.allergies ? `Allergies : ${dossier.intake.allergies}` : ""].filter(Boolean).join(" · ") || undefined}
+                />
+              )}
+            </div>
+          </div>
+        </>
       )}
 
       {/* Confirmation de clôture (côté dermatologue) — rapport envoyé + paiement */}
