@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { PRIVACY_POLICY_VERSION } from "@/components/ConsentBanner";
 
 // ════════════════════════════════════════════════════════════════════════
 // Lancement d'une consultation IN-APP (circuit fermé) — remplace le WhatsApp.
@@ -46,13 +47,14 @@ export function ConsultationLauncher({ scanId, condition, imageUrl }: { scanId?:
   const [ctxDuration, setCtxDuration] = useState("");
   const [ctxProducts, setCtxProducts] = useState("");
   const [ctxAllergies, setCtxAllergies] = useState("");
+  const [consentChecked, setConsentChecked] = useState(false);
 
   const saveContext = async () => {
     if (!consultationId) return;
     try {
       await fetch(`/api/consultations/${consultationId}/context`, {
         method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ age: ctxAge.trim(), city: ctxCity.trim(), duration: ctxDuration.trim(), products: ctxProducts.trim(), allergies: ctxAllergies.trim() }),
+        body: JSON.stringify({ age: ctxAge.trim(), city: ctxCity.trim(), duration: ctxDuration.trim(), products: ctxProducts.trim(), allergies: ctxAllergies.trim(), consent: consentChecked, consentVersion: PRIVACY_POLICY_VERSION }),
       });
     } catch {}
   };
@@ -270,6 +272,15 @@ export function ConsultationLauncher({ scanId, condition, imageUrl }: { scanId?:
               <input value={ctxAllergies} onChange={(e) => setCtxAllergies(e.target.value)} onBlur={saveContext} placeholder="Allergies connues (sinon laisse vide)"
                 style={{ width: "100%", boxSizing: "border-box", padding: "9px 10px", borderRadius: 10, border: "1px solid rgba(0,0,0,0.15)", fontSize: 12.5 }} />
             </div>
+            {/* Consentement — partage des photos/données avec le dermatologue (requis) */}
+            <label style={{ display: "flex", alignItems: "flex-start", gap: 9, background: "#fff", border: `1px solid ${consentChecked ? "rgba(124,58,237,0.4)" : "rgba(0,0,0,0.12)"}`, borderRadius: 12, padding: 12, marginBottom: 12, cursor: "pointer" }}>
+              <input type="checkbox" checked={consentChecked} onChange={(e) => setConsentChecked(e.target.checked)} style={{ marginTop: 2, width: 16, height: 16, flexShrink: 0, accentColor: VIOLET }} />
+              <span style={{ fontSize: 11.5, color: "#374151", lineHeight: 1.6 }}>
+                Vos photos et informations sont partagées uniquement avec le dermatologue chargé de votre consultation afin de vous répondre. Elles sont traitées conformément aux règles de confidentialité applicables.
+                {" "}
+                <a href="/confidentialite" target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} style={{ color: VIOLET, fontWeight: 700 }}>Voir les informations de confidentialité</a>
+              </span>
+            </label>
             {payProvider !== "simulated" ? (
               <>
                 <div style={{ background: "#fff", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 12, padding: 12, marginBottom: 12 }}>
@@ -277,10 +288,11 @@ export function ConsultationLauncher({ scanId, condition, imageUrl }: { scanId?:
                     Paie en toute sécurité par <strong>MTN Mobile Money</strong> ou <strong>Orange Money</strong>. Une page de paiement s'ouvre — confirme sur ton téléphone, puis reviens ici.
                   </p>
                 </div>
-                <button onClick={startCinetPay} disabled={busy}
-                  style={{ width: "100%", background: VIOLET, color: "#fff", border: "none", borderRadius: 9999, padding: "12px", fontSize: 13, fontWeight: 800, cursor: "pointer", opacity: busy ? 0.6 : 1 }}>
+                <button onClick={startCinetPay} disabled={busy || !consentChecked}
+                  style={{ width: "100%", background: VIOLET, color: "#fff", border: "none", borderRadius: 9999, padding: "12px", fontSize: 13, fontWeight: 800, cursor: (busy || !consentChecked) ? "not-allowed" : "pointer", opacity: (busy || !consentChecked) ? 0.5 : 1 }}>
                   {busy ? "Paiement en cours… garde cette page ouverte" : `Payer ${selected.price.toLocaleString("fr-FR")} FCFA →`}
                 </button>
+                {!consentChecked && <p style={{ fontSize: 10.5, color: "#9ca3af", textAlign: "center", margin: "6px 0 0" }}>Cochez le consentement ci-dessus pour continuer.</p>}
               </>
             ) : (
               <>
@@ -293,17 +305,19 @@ export function ConsultationLauncher({ scanId, condition, imageUrl }: { scanId?:
                   </p>
                 </div>
                 {/* Preuve par WhatsApp — le patient prévient, l'admin confirme et déverrouille */}
+                {!consentChecked && <p style={{ fontSize: 10.5, color: "#9ca3af", textAlign: "center", margin: "0 0 10px" }}>Cochez le consentement ci-dessus pour continuer.</p>}
                 <a
-                  href={`https://wa.me/237${PAYMENT_NUMBER.replace(/\D/g, "")}?text=${encodeURIComponent(`Bonjour GlowScan 👋\nJ'ai payé ${selected.price.toLocaleString("fr-FR")} FCFA pour ma consultation${selected.fullName ? ` avec Dr ${selected.fullName}` : ""}.\nRéf. consultation : ${consultationId || "—"}\nVoici ma preuve de paiement :`)}`}
+                  href={consentChecked ? `https://wa.me/237${PAYMENT_NUMBER.replace(/\D/g, "")}?text=${encodeURIComponent(`Bonjour GlowScan 👋\nJ'ai payé ${selected.price.toLocaleString("fr-FR")} FCFA pour ma consultation${selected.fullName ? ` avec Dr ${selected.fullName}` : ""}.\nRéf. consultation : ${consultationId || "—"}\nVoici ma preuve de paiement :`)}` : undefined}
+                  onClick={(e) => { if (!consentChecked) e.preventDefault(); else saveContext(); }}
                   target="_blank" rel="noreferrer"
-                  style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", boxSizing: "border-box", background: "#25D366", color: "#fff", borderRadius: 9999, padding: "13px", fontSize: 13.5, fontWeight: 800, textDecoration: "none", marginBottom: 12 }}>
+                  style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", boxSizing: "border-box", background: "#25D366", color: "#fff", borderRadius: 9999, padding: "13px", fontSize: 13.5, fontWeight: 800, textDecoration: "none", marginBottom: 12, opacity: consentChecked ? 1 : 0.5, pointerEvents: consentChecked ? "auto" : "none" }}>
                   📲 Envoyer ma preuve sur WhatsApp
                 </a>
                 <p style={{ fontSize: 11, color: "#9ca3af", textAlign: "center", margin: "0 0 12px" }}>ou entre la référence reçue par SMS :</p>
                 <input value={ref} onChange={(e) => setRef(e.target.value)} placeholder="Référence du paiement (SMS)"
                   style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: "1px solid rgba(0,0,0,0.15)", fontSize: 13, marginBottom: 10 }} />
-                <button onClick={submitRef} disabled={busy || !ref.trim()}
-                  style={{ width: "100%", background: VIOLET, color: "#fff", border: "none", borderRadius: 9999, padding: "12px", fontSize: 13, fontWeight: 800, cursor: "pointer", opacity: busy || !ref.trim() ? 0.5 : 1 }}>
+                <button onClick={submitRef} disabled={busy || !ref.trim() || !consentChecked}
+                  style={{ width: "100%", background: VIOLET, color: "#fff", border: "none", borderRadius: 9999, padding: "12px", fontSize: 13, fontWeight: 800, cursor: "pointer", opacity: busy || !ref.trim() || !consentChecked ? 0.5 : 1 }}>
                   {busy ? "Envoi…" : "J'ai payé — valider"}
                 </button>
               </>

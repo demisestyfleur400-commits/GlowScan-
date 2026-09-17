@@ -881,14 +881,26 @@ export async function registerRoutes(
       if (!c || c.userId !== userId) return res.status(404).json({ message: "Consultation introuvable" });
       const b = req.body || {};
       const clean = (v: any, n = 200) => typeof v === "string" ? v.trim().slice(0, n) : null;
-      const ctx = {
+      try { await db.execute(sql`ALTER TABLE consultations ADD COLUMN IF NOT EXISTS patient_context jsonb`); } catch {}
+      // Fusion (ne pas écraser summaryNotes/consent déjà présents dans patient_context).
+      let existing: any = {};
+      try {
+        const row = (Rows(await db.execute(sql`SELECT patient_context FROM consultations WHERE id = ${id}`))[0] as any)?.patient_context;
+        if (row) existing = typeof row === "string" ? JSON.parse(row) : row;
+      } catch {}
+      const ctx: any = {
+        ...existing,
         age: clean(b.age, 20),
         city: clean(b.city, 80),
         duration: clean(b.duration, 80),
         products: clean(b.products, 300),
         allergies: clean(b.allergies, 300),
       };
-      try { await db.execute(sql`ALTER TABLE consultations ADD COLUMN IF NOT EXISTS patient_context jsonb`); } catch {}
+      // Consentement patient (partage photos/données) — enregistré UNIQUEMENT si
+      // accepté explicitement. On ne dégrade jamais un consentement déjà donné.
+      if (b.consent === true && !existing.consent?.accepted) {
+        ctx.consent = { accepted: true, at: new Date().toISOString(), version: clean(b.consentVersion, 20) || "v1" };
+      }
       try { await db.execute(sql`UPDATE consultations SET patient_context = ${JSON.stringify(ctx)}::jsonb WHERE id = ${id}`); } catch {}
       res.json({ ok: true });
     } catch (err) {
@@ -1336,7 +1348,17 @@ export async function registerRoutes(
         const d = Rows(await db.execute(sql`SELECT full_name, cabinet_name, city, photo_url, COALESCE(is_certified,false) AS certified, slug FROM pro_accounts WHERE id = ${c.proAccountId}`))[0] as any;
         if (d) doctor = { fullName: d.full_name, cabinet: d.cabinet_name, city: d.city, photoUrl: d.photo_url || null, certified: d.certified === true, slug: d.slug || null };
       } catch {}
-      res.json({ consultation: c, messages: msgs, side, otherUserId, doctor, otherOnline: otherUserId ? isUserOnline(otherUserId) : false });
+      // Signaux d'orientation (redFlags) déjà produits par l'analyse — exposés pour
+      // afficher un message d'orientation NEUTRE (jamais un diagnostic d'urgence).
+      let redFlags: string[] = [];
+      try {
+        if (c.scanId) {
+          const rf = (Rows(await db.execute(sql`SELECT red_flags FROM training_data WHERE scan_id = ${c.scanId}`))[0] as any)?.red_flags;
+          const arr = typeof rf === "string" ? JSON.parse(rf) : rf;
+          if (Array.isArray(arr)) redFlags = arr.filter((x) => typeof x === "string" && x.trim()).slice(0, 8);
+        }
+      } catch {}
+      res.json({ consultation: c, messages: msgs, side, otherUserId, doctor, redFlags, otherOnline: otherUserId ? isUserOnline(otherUserId) : false });
     } catch (err) {
       console.error("[consultations get] error:", err);
       res.status(500).json({ message: "Erreur serveur" });

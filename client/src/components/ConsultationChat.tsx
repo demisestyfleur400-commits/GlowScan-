@@ -33,6 +33,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
   const [side, setSide] = useState<"patient" | "doctor" | null>(null);
   const [ctx, setCtx] = useState<any>(null);
   const [otherOnline, setOtherOnline] = useState(false);
+  const [redFlags, setRedFlags] = useState<string[]>([]); // signaux d'orientation (analyse)
   const [otherUserId, setOtherUserId] = useState<string | null>(null);
   const [doctor, setDoctor] = useState<{ fullName?: string; city?: string; photoUrl?: string | null; certified?: boolean } | null>(null);
   const [otherTyping, setOtherTyping] = useState(false);
@@ -99,6 +100,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
         setOtherUserId(d.otherUserId || null);
         setOtherOnline(!!d.otherOnline);
         setDoctor(d.doctor || null);
+        setRedFlags(Array.isArray(d.redFlags) ? d.redFlags : []);
         // Côté dermatologue : charger le dossier B2C complet (photo, IA, Glow Score).
         if (d.side === "doctor") {
           fetch(`/api/pro/consultations/${consultationId}/dossier`, { credentials: "include" })
@@ -637,6 +639,16 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
                 })()}
               </div>
 
+              {/* Consentement patient — affiché UNIQUEMENT s'il est réellement enregistré */}
+              {dossier.intake?.consent?.accepted && (
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", fontSize: 11.5, color: MUTED }}>
+                  <span style={{ color: dark ? "#6ee7b7" : "#047857", fontWeight: 700 }}>
+                    ✓ Consentement patient enregistré{dossier.intake.consent.at ? ` le ${new Date(dossier.intake.consent.at).toLocaleDateString("fr-FR")}` : ""}
+                  </span>
+                  <a href="/confidentialite" target="_blank" rel="noreferrer" style={{ color: "#7c3aed", fontWeight: 700 }}>Voir les informations de confidentialité</a>
+                </div>
+              )}
+
               {/* Orientation rapide (dermatologue) — basée UNIQUEMENT sur des signaux
                   déjà présents (redFlags de l'analyse). Ne pose aucun diagnostic
                   d'urgence : signale au médecin des éléments à vérifier vite. */}
@@ -930,6 +942,16 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
         <div style={{ display: "flex", gap: 10, alignItems: "center", padding: "10px 14px", borderBottom: `1px solid ${BORDER}`, background: CARD }}>
           <img src={ctx.imageUrl} alt="" style={{ width: 46, height: 46, borderRadius: 10, objectFit: "cover" }} />
           <p style={{ fontSize: 11.5, color: MUTED, margin: 0 }}>Photo & diagnostic partagés avec le dermatologue.</p>
+        </div>
+      )}
+
+      {/* Orientation patient — message NEUTRE basé sur des signaux déjà présents
+          (redFlags de l'analyse). N'affirme jamais une urgence, ne bloque pas. */}
+      {side === "patient" && redFlags.length > 0 && (
+        <div style={{ padding: "10px 14px", borderBottom: `1px solid ${BORDER}`, background: dark ? "rgba(239,68,68,0.12)" : "#fff7ed" }}>
+          <p style={{ fontSize: 12.5, color: dark ? "#fecaca" : "#9a3412", margin: 0, lineHeight: 1.6 }}>
+            <strong>ℹ️ À lire :</strong> Certains éléments indiquent qu'un avis médical rapide peut être nécessaire. GlowScan ne peut pas évaluer une urgence à distance. Veuillez contacter sans attendre un professionnel de santé ou un service d'urgence près de vous.
+          </p>
         </div>
       )}
 
