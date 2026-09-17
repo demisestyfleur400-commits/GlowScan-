@@ -70,6 +70,12 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
     mq.addEventListener?.("change", h);
     return () => mq.removeEventListener?.("change", h);
   }, []);
+  // Préremplit « Diagnostic retenu » avec la piste GlowScan (le médecin édite librement).
+  useEffect(() => {
+    if (dossier && !dossier.scan?.isVerified) {
+      setCorrectText((prev) => prev || dossier.scan?.condition || dossier.consultation?.condition || "");
+    }
+  }, [dossier]);
   const recognitionRef = useRef<any>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
@@ -572,12 +578,18 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
                   </button>
                   {aiOpen && (
                     <div style={{ padding: 12, display: "flex", flexDirection: "column", gap: 10 }}>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                        {(dossier.scan?.condition || dossier.consultation?.condition) && (
-                          <span style={{ fontSize: 12, fontWeight: 700, color: INK, background: dark ? "rgba(124,58,237,0.2)" : "rgba(124,58,237,0.08)", borderRadius: 8, padding: "3px 8px" }}>
+                      <p style={{ fontSize: 10.5, color: MUTED, margin: 0, lineHeight: 1.5 }}>
+                        Observations générées à partir des informations disponibles. Votre appréciation clinique reste prioritaire.
+                      </p>
+                      {(dossier.scan?.condition || dossier.consultation?.condition) && (
+                        <div>
+                          <span style={{ fontSize: 11, color: MUTED, display: "block", marginBottom: 3 }}>Piste évoquée — à confirmer</span>
+                          <span style={{ fontSize: 12.5, fontWeight: 700, color: INK, background: dark ? "rgba(124,58,237,0.2)" : "rgba(124,58,237,0.08)", borderRadius: 8, padding: "3px 8px", display: "inline-block" }}>
                             {dossier.scan?.condition || dossier.consultation?.condition}
                           </span>
-                        )}
+                        </div>
+                      )}
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                         {dossier.scan?.score != null && (
                           <span style={{ fontSize: 12, fontWeight: 800, color: "#7c3aed", background: dark ? "rgba(124,58,237,0.2)" : "rgba(124,58,237,0.08)", borderRadius: 8, padding: "3px 8px" }}>Score {dossier.scan.score}/100</span>
                         )}
@@ -587,6 +599,11 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
                         {dossier.rich?.severity && (
                           <span style={{ fontSize: 12, fontWeight: 700, color: INK, background: dark ? "rgba(255,255,255,0.08)" : "#f1f5f9", borderRadius: 8, padding: "3px 8px" }}>
                             Sévérité : {({ mild: "légère", moderate: "modérée", severe: "sévère", critical: "critique" } as any)[dossier.rich.severity] || dossier.rich.severity}
+                          </span>
+                        )}
+                        {dossier.rich?.confidence && (
+                          <span style={{ fontSize: 12, fontWeight: 700, color: INK, background: dark ? "rgba(255,255,255,0.08)" : "#f1f5f9", borderRadius: 8, padding: "3px 8px" }}>
+                            Confiance : {({ low: "faible", medium: "moyenne", high: "élevée" } as any)[dossier.rich.confidence] || dossier.rich.confidence}
                           </span>
                         )}
                       </div>
@@ -630,37 +647,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
                         </>
                       )}
 
-                      {/* Valider / corriger le diagnostic — action explicite du médecin */}
-                      {dossier.scan?.isVerified ? (
-                        <div style={{ display: "flex", alignItems: "center", gap: 6, background: dark ? "rgba(16,185,129,0.15)" : "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.3)", borderRadius: 10, padding: "7px 10px" }}>
-                          <span style={{ fontSize: 13 }}>✅</span>
-                          <span style={{ fontSize: 11.5, fontWeight: 700, color: dark ? "#6ee7b7" : "#047857" }}>
-                            {dossier.scan?.expertCorrectedCondition ? `Corrigé : ${dossier.scan.expertCorrectedCondition}` : "Validé par vous"}
-                          </span>
-                        </div>
-                      ) : correcting ? (
-                        <div>
-                          <textarea value={correctText} onChange={(e) => setCorrectText(e.target.value)} autoFocus rows={2} placeholder="Diagnostic corrigé…"
-                            style={{ width: "100%", boxSizing: "border-box", padding: "8px 10px", borderRadius: 10, border: `1px solid ${BORDER}`, background: dark ? "rgba(255,255,255,0.05)" : "#fff", color: INK, fontSize: 13, outline: "none", resize: "vertical" }} />
-                          <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
-                            <button onClick={() => submitDiagnosis(correctText.trim() || null)} disabled={diagBusy || !correctText.trim()}
-                              style={{ flex: 1, background: "#7c3aed", color: "#fff", border: "none", borderRadius: 9999, padding: "8px", fontSize: 12, fontWeight: 800, cursor: "pointer", opacity: diagBusy || !correctText.trim() ? 0.5 : 1 }}>
-                              {diagBusy ? "…" : "Enregistrer"}
-                            </button>
-                            <button onClick={() => setCorrecting(false)} disabled={diagBusy}
-                              style={{ background: "transparent", color: MUTED, border: `1px solid ${BORDER}`, borderRadius: 9999, padding: "8px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Annuler</button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div style={{ display: "flex", gap: 8 }}>
-                          <button onClick={() => submitDiagnosis(null)} disabled={diagBusy}
-                            style={{ flex: 1, background: "rgba(16,185,129,0.18)", color: dark ? "#6ee7b7" : "#047857", border: "1px solid rgba(16,185,129,0.35)", borderRadius: 9999, padding: "8px", fontSize: 12, fontWeight: 800, cursor: "pointer", opacity: diagBusy ? 0.6 : 1 }}>✅ Valider</button>
-                          <button onClick={() => { setCorrectText(dossier.scan?.condition || dossier.consultation?.condition || ""); setCorrecting(true); }} disabled={diagBusy}
-                            style={{ flex: 1, background: dark ? "rgba(255,255,255,0.06)" : "rgba(124,58,237,0.08)", color: "#7c3aed", border: `1px solid ${dark ? "rgba(255,255,255,0.12)" : "rgba(124,58,237,0.2)"}`, borderRadius: 9999, padding: "8px", fontSize: 12, fontWeight: 800, cursor: "pointer" }}>✏️ Corriger</button>
-                        </div>
-                      )}
-
-                      <p style={{ fontSize: 10.5, color: MUTED, margin: 0, lineHeight: 1.5 }}>Cette analyse est une aide et ne remplace pas votre appréciation clinique.</p>
+                      <p style={{ fontSize: 10.5, color: MUTED, margin: 0, lineHeight: 1.5 }}>Cette aide ne remplace pas votre examen. Votre avis médical sera celui transmis au patient.</p>
                     </div>
                   )}
                 </div>
@@ -679,22 +666,54 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
                 </button>
               )}
 
-              {/* Vos conseils / ordonnance */}
-              {ctx?.status !== "closed" && (
+              {/* ── VOTRE AVIS MÉDICAL — autorité clinique, prioritaire sur l'IA ── */}
+              <div style={{ border: `1px solid ${dark ? "rgba(124,58,237,0.35)" : "rgba(124,58,237,0.25)"}`, borderRadius: 12, padding: 12, display: "flex", flexDirection: "column", gap: 12 }}>
+                <span style={{ fontSize: 13, fontWeight: 900, color: INK }}>🩺 Votre avis médical</span>
+
+                {/* Diagnostic retenu */}
                 <div>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 6 }}>
-                    <span style={{ fontSize: 12, fontWeight: 800, color: INK }}>💊 Vos conseils / ordonnance</span>
-                    <button onClick={toggleDictation}
-                      style={{ display: "flex", alignItems: "center", gap: 5, background: dictating ? "#ef4444" : (dark ? "rgba(124,58,237,0.2)" : "rgba(124,58,237,0.08)"), color: dictating ? "#fff" : "#7c3aed", border: `1px solid ${dictating ? "#ef4444" : "rgba(124,58,237,0.25)"}`, borderRadius: 9999, padding: "5px 11px", fontSize: 11, fontWeight: 800, cursor: "pointer" }}>
-                      {dictating ? "● Écoute…" : "🎙️ Dicter"}
-                    </button>
-                  </div>
-                  <textarea value={prescription} onChange={(e) => { setPrescription(e.target.value); setPrescriptionTouched(true); }} rows={4}
-                    placeholder="Traitement, posologie, conseils… (modifiez ou dictez)"
-                    style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: `1px solid ${BORDER}`, background: dark ? "rgba(255,255,255,0.05)" : "#fff", color: INK, fontSize: 13, lineHeight: 1.6, outline: "none", resize: "vertical" }} />
-                  <p style={{ fontSize: 10, color: MUTED, margin: "4px 2px 0" }}>Incluse dans le rapport envoyé au patient à la clôture.</p>
+                  <span style={{ fontSize: 11, color: MUTED, display: "block", marginBottom: 4 }}>Diagnostic retenu</span>
+                  {dossier.scan?.isVerified ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, background: dark ? "rgba(16,185,129,0.15)" : "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.3)", borderRadius: 10, padding: "8px 10px" }}>
+                      <span style={{ fontSize: 13 }}>✅</span>
+                      <span style={{ fontSize: 12, fontWeight: 800, color: dark ? "#6ee7b7" : "#047857" }}>
+                        Avis médical validé{(dossier.scan?.expertCorrectedCondition || dossier.scan?.condition) ? ` — ${dossier.scan.expertCorrectedCondition || dossier.scan.condition}` : ""}
+                      </span>
+                    </div>
+                  ) : ctx?.status === "closed" ? (
+                    <span style={{ fontSize: 12.5, color: INK, fontWeight: 700 }}>{dossier.scan?.expertCorrectedCondition || dossier.scan?.condition || dossier.consultation?.condition || "—"}</span>
+                  ) : (
+                    <>
+                      <textarea value={correctText} onChange={(e) => setCorrectText(e.target.value)} rows={2} placeholder="Votre diagnostic…"
+                        style={{ width: "100%", boxSizing: "border-box", padding: "8px 10px", borderRadius: 10, border: `1px solid ${BORDER}`, background: dark ? "rgba(255,255,255,0.05)" : "#fff", color: INK, fontSize: 13, outline: "none", resize: "vertical" }} />
+                      <button
+                        onClick={() => { const ia = dossier.scan?.condition || dossier.consultation?.condition || ""; const v = correctText.trim(); submitDiagnosis(v && v !== ia ? v : null); }}
+                        disabled={diagBusy}
+                        style={{ marginTop: 6, width: "100%", background: "#7c3aed", color: "#fff", border: "none", borderRadius: 9999, padding: "9px", fontSize: 12.5, fontWeight: 800, cursor: "pointer", opacity: diagBusy ? 0.6 : 1 }}>
+                        {diagBusy ? "…" : "Confirmer mon avis médical"}
+                      </button>
+                      <p style={{ fontSize: 10, color: MUTED, margin: "4px 2px 0", lineHeight: 1.5 }}>Prérempli avec la piste GlowScan — modifiez librement. C'est votre diagnostic qui sera transmis au patient.</p>
+                    </>
+                  )}
                 </div>
-              )}
+
+                {/* Observations, conseils, traitement et suivi — champ unique transmis au rapport */}
+                {ctx?.status !== "closed" && (
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 6 }}>
+                      <span style={{ fontSize: 11, color: MUTED }}>Observations, conseils, traitement et suivi</span>
+                      <button onClick={toggleDictation}
+                        style={{ display: "flex", alignItems: "center", gap: 5, background: dictating ? "#ef4444" : (dark ? "rgba(124,58,237,0.2)" : "rgba(124,58,237,0.08)"), color: dictating ? "#fff" : "#7c3aed", border: `1px solid ${dictating ? "#ef4444" : "rgba(124,58,237,0.25)"}`, borderRadius: 9999, padding: "5px 11px", fontSize: 11, fontWeight: 800, cursor: "pointer" }}>
+                        {dictating ? "● Écoute…" : "🎙️ Dicter"}
+                      </button>
+                    </div>
+                    <textarea value={prescription} onChange={(e) => { setPrescription(e.target.value); setPrescriptionTouched(true); }} rows={6}
+                      placeholder={"Ce que vous avez observé…\nConseils pour la suite…\nTraitement, si nécessaire…\nSuivi recommandé…"}
+                      style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: `1px solid ${BORDER}`, background: dark ? "rgba(255,255,255,0.05)" : "#fff", color: INK, fontSize: 13, lineHeight: 1.6, outline: "none", resize: "vertical" }} />
+                    <p style={{ fontSize: 10, color: MUTED, margin: "4px 2px 0" }}>Incluse dans le rapport envoyé au patient à la clôture.</p>
+                  </div>
+                )}
+              </div>
 
               {/* Raisonnement clinique IA — au fond du panneau, non dominant */}
               {ctx?.status !== "closed" && (
