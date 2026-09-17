@@ -619,7 +619,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
                 <div style={{ width: 40, height: 40, borderRadius: "50%", background: "linear-gradient(135deg,#a78bfa,#7c3aed)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, fontWeight: 800, color: "#fff", flexShrink: 0 }}>
                   {(dossier.patient?.firstName || "P").charAt(0).toUpperCase()}
                 </div>
-                <div style={{ minWidth: 0 }}>
+                <div style={{ minWidth: 0, flex: 1 }}>
                   <p style={{ fontSize: 15, fontWeight: 800, color: INK, margin: 0 }}>{dossier.patient?.firstName || "Patient"}</p>
                   {(dossier.intake?.age || dossier.intake?.city) && (
                     <p style={{ fontSize: 12, color: MUTED, margin: "2px 0 0" }}>
@@ -627,6 +627,14 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
                     </p>
                   )}
                 </div>
+                {/* Badge paiement discret — donnée réelle uniquement (jamais mélangé au clinique) */}
+                {(() => {
+                  const pay = (dossier.consultation?.paymentStatus || "").toLowerCase();
+                  if (pay === "paid") return <span style={{ flexShrink: 0, fontSize: 10, fontWeight: 800, color: dark ? "#6ee7b7" : "#047857", background: dark ? "rgba(16,185,129,0.15)" : "rgba(5,150,105,0.1)", borderRadius: 9999, padding: "3px 9px" }}>Paiement confirmé</span>;
+                  if (pay === "refunded") return <span style={{ flexShrink: 0, fontSize: 10, fontWeight: 800, color: MUTED, background: dark ? "rgba(255,255,255,0.08)" : "rgba(100,116,139,0.12)", borderRadius: 9999, padding: "3px 9px" }}>Remboursé</span>;
+                  if (pay) return <span style={{ flexShrink: 0, fontSize: 10, fontWeight: 800, color: dark ? "#fbbf24" : "#b45309", background: "rgba(217,119,6,0.12)", borderRadius: 9999, padding: "3px 9px" }}>Paiement en attente</span>;
+                  return null;
+                })()}
               </div>
 
               {/* Ce que le patient décrit — uniquement les infos réellement saisies */}

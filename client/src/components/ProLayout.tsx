@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { ReactNode, useState, useEffect } from "react";
-import { Stethoscope, Home, Users, ScanLine, BarChart3, Settings, ArrowLeft, LogOut, Clock, MessageCircle, Calendar } from "lucide-react";
+import { Stethoscope, Home, Users, ScanLine, BarChart3, Settings, ArrowLeft, LogOut, Clock, MessageCircle, Calendar, Wallet } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useProAccount } from "@/hooks/use-pro";
 import { useProNotifications } from "@/hooks/use-realtime";
@@ -21,6 +21,7 @@ const NAV_ITEMS = [
   { href: "/derm/consultations", icon: MessageCircle, label: "Consultations" },
   { href: "/derm/agenda", icon: Calendar, label: "Agenda" },
   { href: "/derm/statistiques", icon: BarChart3, label: "Performances" },
+  { href: "/derm/paiements", icon: Wallet, label: "Paiements" },
   { href: "/derm/cabinet", icon: Settings, label: "Cabinet" },
 ];
 

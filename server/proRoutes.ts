@@ -1831,6 +1831,59 @@ export function registerProRoutes(app: Express) {
     }
   });
 
+  // GET /api/pro/payments — espace financier (LECTURE SEULE), séparé du dossier
+  // clinique. N'expose QUE des valeurs réellement enregistrées : prix payé
+  // (price_fcfa), part dermatologue (dermatologue_payout) et part plateforme
+  // (platform_commission) uniquement si stockées — aucun recalcul, aucun taux
+  // codé en dur, aucun statut de versement inventé. Ne touche à aucun paiement.
+  app.get("/api/pro/payments", requireProAccess, async (req: any, res) => {
+    try {
+      let rows: any[] = [];
+      try {
+        rows = Rows(await db.execute(sql`
+          SELECT c.id,
+                 c.created_at            AS "createdAt",
+                 c.status                AS "status",
+                 c.payment_status        AS "paymentStatus",
+                 c.price_fcfa            AS "priceFcfa",
+                 c.dermatologue_payout   AS "dermatologuePayout",
+                 c.platform_commission   AS "platformCommission",
+                 c.is_demo               AS "isDemo",
+                 u.first_name            AS "patientFirstName"
+          FROM consultations c
+          LEFT JOIN users u ON u.id = c.user_id
+          WHERE c.pro_account_id = ${req.proAccount.id}
+          ORDER BY c.created_at DESC
+          LIMIT 200`));
+      } catch (e) {
+        // Colonnes financières absentes sur cet environnement → repli minimal sans invention.
+        rows = Rows(await db.execute(sql`
+          SELECT c.id, c.created_at AS "createdAt", c.status AS "status",
+                 c.payment_status AS "paymentStatus", c.price_fcfa AS "priceFcfa",
+                 u.first_name AS "patientFirstName"
+          FROM consultations c LEFT JOIN users u ON u.id = c.user_id
+          WHERE c.pro_account_id = ${req.proAccount.id}
+          ORDER BY c.created_at DESC LIMIT 200`));
+      }
+      const payments = rows.map((r: any) => ({
+        id: Number(r.id),
+        ref: `Consultation #${r.id}`,
+        patientFirstName: r.patientFirstName || null,
+        createdAt: r.createdAt,
+        status: r.status || null,
+        paymentStatus: r.paymentStatus || null,
+        priceFcfa: r.priceFcfa != null ? Number(r.priceFcfa) : null,
+        dermatologuePayout: r.dermatologuePayout != null ? Number(r.dermatologuePayout) : null,
+        platformCommission: r.platformCommission != null ? Number(r.platformCommission) : null,
+        isDemo: r.isDemo === true,
+      }));
+      res.json({ payments });
+    } catch (e) {
+      console.error("[pro/payments] error:", e);
+      res.json({ payments: [] });
+    }
+  });
+
   // GET /api/pro/consultations/:id/dossier — dossier B2C complet d'une consultation.
   // Le dermatologue « arrive en expert » : photo + patient + diagnostic IA + Glow
   // Score + analyse, déjà là. Lecture seule, limité à SES propres consultations.
