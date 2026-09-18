@@ -213,36 +213,144 @@ export async function deliverConsultationReport(consultationId: number): Promise
   }
 }
 
-// ── Rendu HTML du rapport (imprimable / téléchargeable) ──────────────────────
-export function buildReportHtml(c: any, messages: any[], doctorName: string, patientName: string): string {
-  const esc = (s: string) => String(s || "").replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch] as string));
-  const date = c?.created_at ? new Date(c.created_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" }) : new Date().toLocaleDateString("fr-FR");
-  const rows = (messages || []).map((m) => {
-    const who = m.sender_type === "doctor" || m.senderType === "doctor" ? "Dermatologue" : "Patient";
-    const t = (m.created_at || m.createdAt) ? new Date(m.created_at || m.createdAt).toLocaleString("fr-FR") : "";
-    const body = (m.body) ? esc(m.body) : ((m.image_url || m.imageUrl) ? "<em>[photo partagée]</em>" : "");
-    const left = who === "Dermatologue";
-    return `<div style="text-align:${left ? "left" : "right"};margin:8px 0"><div style="display:inline-block;max-width:80%;background:${left ? "#f3f0ff" : "#eafaf1"};border-radius:12px;padding:8px 12px;text-align:left"><div style="font-size:10px;color:#7c3aed;font-weight:700">${who} · ${t}</div><div style="font-size:12px;color:#1a1a2e;margin-top:2px;white-space:pre-wrap">${body}</div></div></div>`;
-  }).join("");
+// ── Rendu HTML du COMPTE RENDU PATIENT — professionnel, mobile-first, fond clair.
+// N'affiche QUE des données réelles/validées. Priorité absolue au diagnostic du
+// médecin. Aucune donnée IA technique (score, redFlags, différentiels, confiance)
+// n'est exposée. Les sections vides sont entièrement masquées. `d` est assemblé par
+// l'endpoint /report/download à partir des colonnes existantes.
+export function buildReportHtml(d: any): string {
+  const esc = (s: any) => String(s ?? "").replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch] as string));
+  const dt = (v: any, withTime = false) => {
+    if (!v) return "";
+    const date = new Date(v);
+    return withTime
+      ? date.toLocaleString("fr-FR", { day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })
+      : date.toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" });
+  };
+  const firstName = esc(d?.patient?.firstName || "cher patient");
+  const docName = esc(String(d?.doctor?.name || "GlowScan").replace(/^dr\.?\s*/i, ""));
+  const validated = d?.validatedAt || d?.createdAt || new Date().toISOString();
+  const genDate = dt(new Date().toISOString());
+
+  // ── Praticien (city/cabinet/photo seulement si présents) ──
+  const docMeta = [d?.doctor?.cabinet, d?.doctor?.city].filter(Boolean).map(esc).join(" · ");
+  const docPhoto = d?.doctor?.photoUrl
+    ? `<img src="${esc(d.doctor.photoUrl)}" alt="" style="width:56px;height:56px;border-radius:50%;object-fit:cover;flex-shrink:0"/>`
+    : "";
+
+  // ── Section 3 : ce que le patient a signalé (données patient réelles) ──
+  const sig = d?.signaled || {};
+  const sigRows: string[] = [];
+  if (sig.duration) sigRows.push(`<li><strong>Depuis :</strong> ${esc(sig.duration)}</li>`);
+  if (sig.products) sigRows.push(`<li><strong>Produits déjà utilisés :</strong> ${esc(sig.products)}</li>`);
+  if (sig.allergies) sigRows.push(`<li><strong>Allergies signalées :</strong> ${esc(sig.allergies)}</li>`);
+  if (Array.isArray(sig.summaryNotes)) {
+    const catLabel: Record<string, string> = { duree: "Depuis quand", symptomes: "Symptômes", zone: "Zone concernée", produits: "Produits essayés", evolution: "Évolution", allergies: "Allergies", antecedents: "Antécédents" };
+    for (const n of sig.summaryNotes) {
+      if (n?.value) sigRows.push(`<li><strong>${esc(catLabel[n.category] || n.category)} :</strong> ${esc(n.value)}</li>`);
+    }
+  }
+  const section3 = sigRows.length
+    ? `<h2 style="${H2}">Ce que vous avez signalé</h2><ul style="${UL}">${sigRows.join("")}</ul>`
+    : "";
+
+  // ── Section 4 : avis du dermatologue (PRIORITÉ ABSOLUE, jamais l'IA) ──
+  const avis = d?.finalCondition
+    ? `L'examen à distance est compatible avec <strong>${esc(d.finalCondition)}</strong>. Votre dermatologue vous recommande les mesures ci-dessous et un suivi de l'évolution.`
+    : "Les informations disponibles nécessitent une surveillance et/ou un examen complémentaire. Votre dermatologue vous a indiqué les prochaines étapes à suivre.";
+  const section4 = `<h2 style="${H2}">L'avis de votre dermatologue</h2>
+    <p style="${P}">${avis}</p>
+    <p style="font-size:11.5px;color:#6b7280;margin:6px 0 0;line-height:1.6">Une consultation à distance a certaines limites. Votre dermatologue peut recommander un examen en personne si nécessaire.</p>`;
+
+  // ── Section 5 : conseils OU traitement prescrit (jamais « ordonnance » sans validation) ──
+  const adviceTitle = d?.isPrescription ? "Traitement prescrit" : "Conseils de votre dermatologue";
+  const section5 = d?.advice
+    ? `<h2 style="${H2}">${adviceTitle}</h2><div style="${BOX}white-space:pre-wrap">${esc(d.advice)}</div>`
+    : "";
+
+  // ── Section 6 : suivi (seulement si programmé) ──
+  const section6 = d?.followUpDate
+    ? `<h2 style="${H2}">Votre suivi</h2><p style="${P}">Envoyez une nouvelle photo autour du <strong>${esc(dt(d.followUpDate))}</strong> pour suivre l'évolution. Recontactez votre dermatologue si la situation change.</p>`
+    : "";
+
+  // ── Section 7 : photos (déjà filtrées par consentement côté serveur) ──
+  const photos: string[] = Array.isArray(d?.photos) ? d.photos : [];
+  const section7 = photos.length
+    ? `<h2 style="${H2}">Photos utilisées pour votre suivi</h2>
+       <div style="display:flex;gap:8px;flex-wrap:wrap">${photos.map((u) => `<img src="${esc(u)}" alt="" style="width:88px;height:88px;object-fit:cover;border-radius:10px;border:1px solid #eee"/>`).join("")}</div>
+       <p style="font-size:11px;color:#6b7280;margin:6px 0 0">Le ${esc(dt(d?.createdAt))}. Comparaison disponible pour discussion avec votre dermatologue.</p>`
+    : "";
+
+  // ── Section 2 : message personnel du dermatologue (si saisi) ──
+  const persoMsg = d?.doctorMessage
+    ? `<div style="${BOX}"><div style="font-size:11px;font-weight:800;color:#7c3aed;margin-bottom:4px">Message de votre dermatologue</div><div style="white-space:pre-wrap">${esc(d.doctorMessage)}</div></div>`
+    : "";
+
+  // ── Section 8 : mention IA discrète UNIQUEMENT si l'IA a servi (jamais de détail technique) ──
+  const aiLine = d?.usedAI
+    ? `<p style="${P}">GlowScan a aidé à organiser les informations de votre consultation. Les conseils et conclusions de ce compte rendu ont été validés par votre dermatologue.</p>`
+    : "";
+
   return `<!doctype html><html lang="fr"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Rapport consultation GlowScan</title></head>
-<body style="font-family:-apple-system,system-ui,sans-serif;max-width:640px;margin:0 auto;padding:24px;color:#1a1a2e">
-  <div style="display:flex;align-items:center;gap:10px;border-bottom:2px solid #7c3aed;padding-bottom:12px;margin-bottom:16px">
-    <div style="font-size:22px">✨</div>
-    <div><div style="font-size:18px;font-weight:900">GlowScan</div><div style="font-size:11px;color:#6b7280">Rapport de consultation dermatologique</div></div>
-    <div style="margin-left:auto;font-size:11px;color:#6b7280">${date}</div>
+<title>Votre compte rendu dermatologique — GlowScan DERM</title>
+<style>@media print{.no-print{display:none!important}}</style></head>
+<body style="font-family:-apple-system,BlinkMacSystemFont,system-ui,'Segoe UI',sans-serif;background:#fff;max-width:680px;margin:0 auto;padding:22px 20px;color:#1f2937;line-height:1.55">
+
+  <!-- SECTION 1 — EN-TÊTE -->
+  <div style="border-bottom:2px solid #7c3aed;padding-bottom:14px;margin-bottom:16px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <span style="font-size:20px">✨</span>
+      <span style="font-size:17px;font-weight:900;color:#111827">GlowScan <span style="color:#7c3aed">DERM</span></span>
+    </div>
+    <h1 style="font-size:20px;font-weight:900;margin:6px 0 2px;color:#111827">Votre compte rendu dermatologique</h1>
+    <p style="font-size:12.5px;color:#6b7280;margin:0 0 8px">Consultation à distance validée par un dermatologue</p>
+    <span style="display:inline-block;font-size:11.5px;font-weight:800;color:#047857;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:9999px;padding:4px 10px">✓ Compte rendu validé par le dermatologue</span>
+    <div style="display:flex;justify-content:space-between;gap:12px;margin-top:12px;font-size:11.5px;color:#6b7280">
+      <span>Validé le ${esc(dt(validated, true))}</span>
+      <span>Réf. consultation #${esc(d?.ref)}</span>
+    </div>
   </div>
-  <p style="font-size:13px"><strong>Patient :</strong> ${esc(patientName)}</p>
-  <p style="font-size:13px"><strong>Dermatologue :</strong> Dr ${esc(doctorName)}</p>
-  ${c?.condition ? `<p style="font-size:13px"><strong>Motif / diagnostic IA (indicatif) :</strong> ${esc(c.condition)}</p>` : ""}
-  ${c?.final_condition ? `<p style="font-size:13px"><strong>Diagnostic retenu par le dermatologue :</strong> ${esc(c.final_condition)}</p>` : ""}
-  ${c?.image_url || c?.imageUrl ? `<img src="${esc(c.image_url || c.imageUrl)}" style="width:120px;height:120px;object-fit:cover;border-radius:12px;margin:8px 0"/>` : ""}
-  ${c?.prescription ? `<h3 style="font-size:14px;margin:18px 0 6px;color:#7c3aed">💊 Ordonnance / conseils du dermatologue</h3><div style="font-size:12.5px;line-height:1.7;white-space:pre-wrap;background:#f9f7ff;border:1px solid #ede9fe;border-radius:12px;padding:12px">${esc(c.prescription)}</div>` : ""}
-  <h3 style="font-size:14px;margin:18px 0 6px;color:#7c3aed">Échange de la consultation</h3>
-  ${rows || "<p style='font-size:12px;color:#6b7280'>Aucun message.</p>"}
-  <p style="font-size:10px;color:#9ca3af;margin-top:24px;border-top:1px solid #eee;padding-top:10px">
-    Ce rapport résume une consultation en ligne réalisée via GlowScan. Il ne remplace pas un examen clinique en présentiel. Document valable 3 mois.
-  </p>
-  <div style="text-align:center;margin-top:20px"><button onclick="window.print()" style="background:#7c3aed;color:#fff;border:none;border-radius:9999px;padding:10px 20px;font-size:13px;font-weight:800;cursor:pointer">Enregistrer en PDF</button></div>
+
+  <!-- Praticien + patient -->
+  <div style="display:flex;gap:12px;align-items:center;background:#faf9ff;border:1px solid #ede9fe;border-radius:14px;padding:12px 14px;margin-bottom:8px">
+    ${docPhoto}
+    <div style="flex:1;min-width:0">
+      <div style="font-size:14px;font-weight:800;color:#111827">Dr ${docName}${d?.doctor?.certified ? ` <span title="Certifié GlowScan" style="color:#7c3aed">✦</span>` : ""}</div>
+      <div style="font-size:12px;color:#6b7280">Dermatologue${docMeta ? ` · ${docMeta}` : ""}</div>
+    </div>
+  </div>
+  <p style="font-size:12.5px;color:#374151;margin:0 0 18px"><strong>Patient :</strong> ${firstName}${d?.patient?.age ? ` · ${esc(d.patient.age)} ans` : ""}</p>
+
+  <!-- SECTION 2 — MESSAGE PERSONNEL -->
+  <h2 style="${H2}">Bonjour ${firstName}, voici le résumé de votre consultation</h2>
+  ${persoMsg}
+  <p style="${P}">Votre dermatologue a examiné les informations et les photos partagées lors de votre consultation. Vous trouverez ci-dessous les points importants et les conseils pour la suite.</p>
+
+  ${section3}
+  ${section4}
+  ${section5}
+  ${section6}
+  ${section7}
+
+  <!-- SECTION 8 — À RETENIR -->
+  <h2 style="${H2}">À retenir</h2>
+  <p style="${P}">Ce document résume les conseils donnés par votre dermatologue à partir des informations disponibles lors de votre consultation. Il ne remplace pas une consultation en personne lorsque celle-ci est recommandée.</p>
+  ${aiLine}
+
+  <!-- SECTION 9 — PIED DE PAGE -->
+  <div style="margin-top:26px;border-top:1px solid #eee;padding-top:12px;font-size:10.5px;color:#9ca3af">
+    <div style="font-weight:700;color:#6b7280">GlowScan DERM · Réf. #${esc(d?.ref)} · Généré le ${esc(genDate)}</div>
+    <div style="margin-top:3px">Document personnel et confidentiel. · <a href="https://glow-scan.com/derm" style="color:#7c3aed;text-decoration:none">glow-scan.com/derm</a></div>
+  </div>
+
+  <div class="no-print" style="text-align:center;margin-top:22px">
+    <button onclick="window.print()" style="background:#7c3aed;color:#fff;border:none;border-radius:9999px;padding:11px 22px;font-size:13px;font-weight:800;cursor:pointer">Enregistrer en PDF</button>
+  </div>
 </body></html>`;
 }
+
+// Styles inline partagés (fond clair, bon contraste, lisible mobile + impression A4).
+const H2 = "font-size:14.5px;font-weight:800;color:#111827;margin:20px 0 8px";
+const P = "font-size:13px;color:#374151;margin:0 0 8px;line-height:1.6";
+const UL = "font-size:13px;color:#374151;margin:0 0 8px;padding-left:18px;line-height:1.7";
+const BOX = "font-size:13px;color:#1f2937;line-height:1.6;background:#faf9ff;border:1px solid #ede9fe;border-radius:12px;padding:12px;margin:0 0 8px;";

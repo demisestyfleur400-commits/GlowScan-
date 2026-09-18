@@ -1397,26 +1397,66 @@ export async function registerRoutes(
         if (userId) { const { side } = await consultAccess(c, userId); allowed = !!side; }
       }
       if (!allowed) return res.status(403).send("Accès refusé");
-      const msgs = await db.select().from(consultationMessages)
-        .where(eq(consultationMessages.consultationId, id)).orderBy(consultationMessages.createdAt);
-      let doctorName = "GlowScan", patientName = "Patient";
+      // ── Assemblage des données RÉELLES pour le compte rendu patient ──
+      let doctorName = "GlowScan", patientName = "Patient", patientAge: string | null = null;
+      let doctor: any = { name: "GlowScan", city: null, cabinet: null, photoUrl: null, certified: false };
       try {
-        const d = Rows(await db.execute(sql`SELECT full_name FROM pro_accounts WHERE id = ${c.proAccountId}`))[0] as any;
-        if (d?.full_name) doctorName = d.full_name;
+        const d = Rows(await db.execute(sql`SELECT full_name, city, cabinet_name, photo_url, COALESCE(is_certified,false) AS certified FROM pro_accounts WHERE id = ${c.proAccountId}`))[0] as any;
+        if (d) { doctorName = d.full_name || "GlowScan"; doctor = { name: doctorName, city: d.city || null, cabinet: d.cabinet_name || null, photoUrl: d.photo_url || null, certified: d.certified === true }; }
         const u = Rows(await db.execute(sql`SELECT first_name FROM users WHERE id = ${c.userId}`))[0] as any;
         if (u?.first_name) patientName = u.first_name;
       } catch {}
-      // Prescription (colonne hors schéma Drizzle) + diagnostic retenu (scan corrigé).
+      // Prescription + message perso + type (ordonnance ?) + contexte patient (jsonb).
       let prescription: string | null = null, finalCondition: string | null = null;
-      try { prescription = (Rows(await db.execute(sql`SELECT prescription FROM consultations WHERE id = ${id}`))[0] as any)?.prescription || null; } catch {}
+      let doctorMessage: string | null = null, isPrescription = false, intake: any = {};
+      let validatedAt: string | null = null;
+      try {
+        const r = (Rows(await db.execute(sql`SELECT prescription, closed_at FROM consultations WHERE id = ${id}`))[0] as any);
+        prescription = r?.prescription || null;
+        if (r?.closed_at) validatedAt = new Date(r.closed_at).toISOString();
+      } catch {}
+      try {
+        const row = (Rows(await db.execute(sql`SELECT patient_context FROM consultations WHERE id = ${id}`))[0] as any)?.patient_context;
+        if (row) intake = typeof row === "string" ? JSON.parse(row) : row;
+        doctorMessage = typeof intake.doctorMessage === "string" && intake.doctorMessage.trim() ? intake.doctorMessage.trim() : null;
+        isPrescription = intake.isPrescription === true;
+        patientAge = intake.age || null;
+      } catch {}
+      // Diagnostic RETENU par le médecin — priorité absolue, seulement si validé.
+      let scanScore: number | null = null, extraImages: string[] = [];
       try {
         if (c.scanId) {
-          const s = Rows(await db.execute(sql`SELECT COALESCE(expert_corrected_condition, condition) AS fc, is_verified FROM scans WHERE id = ${c.scanId}`))[0] as any;
+          const s = Rows(await db.execute(sql`SELECT COALESCE(expert_corrected_condition, condition) AS fc, is_verified, score, extra_images FROM scans WHERE id = ${c.scanId}`))[0] as any;
           if (s?.is_verified && s?.fc) finalCondition = s.fc;
+          scanScore = typeof s?.score === "number" ? s.score : null;
+          try { const ei = typeof s?.extra_images === "string" ? JSON.parse(s.extra_images) : s?.extra_images; if (Array.isArray(ei)) extraImages = ei.filter(Boolean); } catch {}
         }
       } catch {}
+      // Suivi programmé (facultatif) — table résiliente.
+      let followUpDate: string | null = null;
+      try {
+        const fr = Rows(await db.execute(sql`SELECT scheduled_date FROM follow_up_reminders WHERE consultation_id = ${id} ORDER BY created_at DESC LIMIT 1`))[0] as any;
+        if (fr?.scheduled_date) followUpDate = new Date(fr.scheduled_date).toISOString();
+      } catch {}
+      // Photos — uniquement si le patient a consenti au partage.
+      const consented = intake?.consent?.accepted === true;
+      const photos: string[] = consented ? ([c.imageUrl, ...extraImages].filter(Boolean) as string[]).slice(0, 3) : [];
       res.setHeader("Content-Type", "text/html; charset=utf-8");
-      res.send(buildReportHtml({ ...c, prescription, final_condition: finalCondition }, msgs, doctorName, patientName));
+      res.send(buildReportHtml({
+        ref: id,
+        createdAt: (c as any).createdAt || null,
+        validatedAt,
+        patient: { firstName: patientName, age: patientAge },
+        doctor,
+        doctorMessage,
+        finalCondition,
+        signaled: { duration: intake?.duration || null, products: intake?.products || null, allergies: intake?.allergies || null, summaryNotes: Array.isArray(intake?.summaryNotes) ? intake.summaryNotes : [] },
+        advice: prescription,
+        isPrescription,
+        followUpDate,
+        photos,
+        usedAI: !!(c as any).condition,
+      }));
     } catch (err) {
       console.error("[report download] error:", err);
       res.status(500).send("Erreur serveur");

@@ -50,6 +50,9 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
   const [diagBusy, setDiagBusy] = useState(false);
   const [prescription, setPrescription] = useState("");
   const [prescriptionTouched, setPrescriptionTouched] = useState(false);
+  const [doctorMessage, setDoctorMessage] = useState(""); // message perso au patient (Section 2 du CR)
+  const [isPrescription, setIsPrescription] = useState(false); // le texte est une ordonnance
+  const [draftSaving, setDraftSaving] = useState(false);
   const [dictating, setDictating] = useState(false);
   const [msgDictating, setMsgDictating] = useState(false); // dictée dans le champ message
   const msgRecognitionRef = useRef<any>(null);
@@ -109,6 +112,8 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
               setDossier(dd);
               // Pré-remplit la prescription : celle déjà saisie, sinon la suggestion IA.
               setPrescription((prev) => (prescriptionTouched ? prev : (dd.prescription || dd.suggestedTreatment || "")));
+              setDoctorMessage((prev) => prev || dd.intake?.doctorMessage || "");
+              setIsPrescription(dd.intake?.isPrescription === true);
             }).catch(() => {});
         }
       }
@@ -119,6 +124,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
   useEffect(() => {
     setMessages([]); setDossier(null); setDoctor(null); setCtx(null);
     setPrescription(""); setPrescriptionTouched(false); setClosedInfo(null); setReportSent(false); setReportSending(false);
+    setDoctorMessage(""); setIsPrescription(false);
     setShowFull(false); setLightbox(-1); setCorrecting(false); setCoachStep(-1);
     setQuickOpen(false); setSummaryFor(null); setAddedToSummary(new Set());
     setConfirmSend(false); setReportError(false);
@@ -468,7 +474,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
     try {
       const res = await fetch(`/api/pro/consultations/${consultationId}/close`, {
         method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prescription: prescription.trim() || undefined, followUp: followUp === "none" ? undefined : followUp }),
+        body: JSON.stringify({ prescription: prescription.trim() || undefined, followUp: followUp === "none" ? undefined : followUp, doctorMessage: doctorMessage.trim() || undefined, isPrescription }),
       });
       const d = await res.json().catch(() => ({}));
       if (res.ok) {
@@ -480,6 +486,18 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
       return null;
     } catch { alert("Erreur réseau. Le compte rendu n'a pas été envoyé."); return null; }
     finally { setClosing(false); }
+  };
+
+  // Enregistrer le brouillon du compte rendu (sans clôturer ni envoyer).
+  const saveDraft = async () => {
+    if (draftSaving) return;
+    setDraftSaving(true);
+    try {
+      await fetch(`/api/pro/consultations/${consultationId}/draft`, {
+        method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prescription: prescription.trim(), doctorMessage: doctorMessage.trim(), isPrescription }),
+      });
+    } catch {} finally { setDraftSaving(false); }
   };
 
   // Action principale « Valider et envoyer le compte rendu » : on valide d'abord,
@@ -863,7 +881,26 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
                     <textarea value={prescription} onChange={(e) => { setPrescription(e.target.value); setPrescriptionTouched(true); }} rows={6}
                       placeholder={"Ce que vous avez observé…\nConseils pour la suite…\nTraitement, si nécessaire…\nSuivi recommandé…"}
                       style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: `1px solid ${BORDER}`, background: dark ? "rgba(255,255,255,0.05)" : "#fff", color: INK, fontSize: 13, lineHeight: 1.6, outline: "none", resize: "vertical" }} />
-                    <p style={{ fontSize: 10, color: MUTED, margin: "4px 2px 0" }}>Incluse dans le rapport envoyé au patient à la clôture.</p>
+                    <label style={{ display: "flex", alignItems: "center", gap: 8, margin: "8px 2px 0", cursor: "pointer" }}>
+                      <input type="checkbox" checked={isPrescription} onChange={(e) => setIsPrescription(e.target.checked)} style={{ width: 15, height: 15, accentColor: "#7c3aed" }} />
+                      <span style={{ fontSize: 11.5, color: INK }}>C'est une ordonnance (sinon : « Conseils » dans le compte rendu)</span>
+                    </label>
+                    <p style={{ fontSize: 10, color: MUTED, margin: "4px 2px 0" }}>Inclus dans le compte rendu envoyé au patient à la clôture.</p>
+                  </div>
+                )}
+
+                {/* Message personnel au patient (Section 2 du compte rendu) */}
+                {ctx?.status !== "closed" && (
+                  <div>
+                    <span style={{ fontSize: 11, color: MUTED, display: "block", marginBottom: 6 }}>Message personnel au patient (optionnel)</span>
+                    <textarea value={doctorMessage} onChange={(e) => setDoctorMessage(e.target.value)} rows={3}
+                      placeholder="Ex : Bonjour, merci pour vos photos. Voici mes recommandations…"
+                      style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: `1px solid ${BORDER}`, background: dark ? "rgba(255,255,255,0.05)" : "#fff", color: INK, fontSize: 13, lineHeight: 1.6, outline: "none", resize: "vertical" }} />
+                    <p style={{ fontSize: 10, color: MUTED, margin: "4px 2px 0" }}>Apparaît en tête du compte rendu, tel quel.</p>
+                    <button onClick={saveDraft} disabled={draftSaving}
+                      style={{ marginTop: 8, background: "transparent", color: "#7c3aed", border: `1px solid ${dark ? "rgba(255,255,255,0.15)" : "rgba(124,58,237,0.3)"}`, borderRadius: 9999, padding: "7px 14px", fontSize: 11.5, fontWeight: 800, cursor: "pointer", opacity: draftSaving ? 0.6 : 1 }}>
+                      {draftSaving ? "Enregistrement…" : "💾 Enregistrer le brouillon"}
+                    </button>
                   </div>
                 )}
               </div>
@@ -1166,25 +1203,42 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
                 <p style={{ fontSize: 16, fontWeight: 900, color: INK, margin: "0 0 4px" }}>Vérifiez votre compte rendu</p>
                 <p style={{ fontSize: 12, color: MUTED, margin: "0 0 14px", lineHeight: 1.5 }}>Ce que le patient recevra. Rien n'est envoyé tant que vous n'avez pas validé.</p>
 
-                <div style={{ border: `1px solid ${BORDER}`, borderRadius: 12, padding: 12, marginBottom: 14, display: "flex", flexDirection: "column", gap: 10 }}>
-                  <div>
-                    <span style={{ fontSize: 10.5, color: MUTED, display: "block", marginBottom: 2, textTransform: "uppercase", letterSpacing: 0.4, fontWeight: 800 }}>Votre avis médical</span>
-                    <span style={{ fontSize: 13, color: INK, fontWeight: 700 }}>
-                      {dossier?.scan?.isVerified
-                        ? `✅ ${dossier?.scan?.expertCorrectedCondition || dossier?.scan?.condition || "Avis validé"}`
-                        : "Diagnostic non précisé"}
-                    </span>
-                  </div>
-                  {prescription.trim() && (
-                    <div>
-                      <span style={{ fontSize: 10.5, color: MUTED, display: "block", marginBottom: 2, textTransform: "uppercase", letterSpacing: 0.4, fontWeight: 800 }}>Conseils, traitement et suivi</span>
-                      <span style={{ fontSize: 12.5, color: INK, whiteSpace: "pre-wrap", lineHeight: 1.5 }}>{prescription.trim()}</span>
+                {/* Prévisualisation enrichie : sections visibles + sections masquées (vides) */}
+                {(() => {
+                  const consented = dossier?.intake?.consent?.accepted === true;
+                  const hasPhotos = Array.isArray(dossier?.photos) && dossier.photos.length > 0 && consented;
+                  const hasSignaled = !!(dossier?.intake?.duration || dossier?.intake?.products || dossier?.intake?.allergies || (Array.isArray(dossier?.intake?.summaryNotes) && dossier.intake.summaryNotes.length));
+                  const avisTxt = dossier?.scan?.isVerified
+                    ? `Compatible avec « ${dossier?.scan?.expertCorrectedCondition || dossier?.scan?.condition || "avis validé"} »`
+                    : "Surveillance / prochaines étapes indiquées";
+                  const adviceTitle = isPrescription ? "Traitement prescrit" : "Conseils de votre dermatologue";
+                  const sections = [
+                    { on: !!doctorMessage.trim(), t: "Message personnel", v: doctorMessage.trim() },
+                    { on: true, t: "L'avis de votre dermatologue", v: avisTxt },
+                    { on: hasSignaled, t: "Ce que vous avez signalé", v: "" },
+                    { on: !!prescription.trim(), t: adviceTitle, v: prescription.trim().slice(0, 140) },
+                    { on: followUpOpt !== "none", t: "Votre suivi", v: "" },
+                    { on: hasPhotos, t: "Photos", v: hasPhotos ? `${dossier.photos.length} photo(s)` : "" },
+                  ];
+                  const masked = sections.filter((s) => !s.on).map((s) => s.t);
+                  return (
+                    <div style={{ border: `1px solid ${BORDER}`, borderRadius: 12, padding: 12, marginBottom: 14, display: "flex", flexDirection: "column", gap: 9 }}>
+                      <span style={{ fontSize: 10.5, color: MUTED, textTransform: "uppercase", letterSpacing: 0.4, fontWeight: 800 }}>Aperçu du compte rendu patient</span>
+                      {sections.filter((s) => s.on).map((s) => (
+                        <div key={s.t}>
+                          <span style={{ fontSize: 12, fontWeight: 800, color: INK }}>✓ {s.t}</span>
+                          {s.v && <span style={{ display: "block", fontSize: 12, color: MUTED, whiteSpace: "pre-wrap", lineHeight: 1.5 }}>{s.v}{s.v.length >= 140 ? "…" : ""}</span>}
+                        </div>
+                      ))}
+                      {!dossier?.scan?.isVerified && (
+                        <p style={{ fontSize: 11, color: dark ? "#fbbf24" : "#b45309", margin: 0 }}>⚠️ Diagnostic non confirmé — le compte rendu indiquera « surveillance / examen complémentaire ».</p>
+                      )}
+                      {masked.length > 0 && (
+                        <p style={{ fontSize: 10.5, color: MUTED, margin: "2px 0 0", lineHeight: 1.5 }}>Sections masquées (vides) : {masked.join(" · ")}</p>
+                      )}
                     </div>
-                  )}
-                  {Array.isArray(dossier?.photos) && dossier.photos.length > 0 && (
-                    <span style={{ fontSize: 11.5, color: MUTED }}>📷 {dossier.photos.length} photo{dossier.photos.length > 1 ? "s" : ""} jointe{dossier.photos.length > 1 ? "s" : ""}</span>
-                  )}
-                </div>
+                  );
+                })()}
 
                 <p style={{ fontSize: 12.5, fontWeight: 800, color: INK, margin: "0 0 8px" }}>Programmer un suivi ?</p>
                 {[
@@ -1204,7 +1258,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
                 <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
                   <button onClick={() => setShowFollowUp(false)}
                     style={{ flex: "0 0 auto", background: "transparent", color: MUTED, border: `1px solid ${BORDER}`, borderRadius: 9999, padding: "13px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
-                    Retour à la consultation
+                    ← Modifier
                   </button>
                   <button onClick={() => setConfirmSend(true)}
                     style={{ flex: 1, background: "#7c3aed", color: "#fff", border: "none", borderRadius: 9999, padding: "13px", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>

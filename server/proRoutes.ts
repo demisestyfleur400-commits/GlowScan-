@@ -2031,6 +2031,35 @@ export function registerProRoutes(app: Express) {
     }
   });
 
+  // POST /api/pro/consultations/:id/draft — enregistre le BROUILLON du compte rendu
+  // (prescription + message perso + type) SANS clôturer ni envoyer. Réutilise les
+  // colonnes existantes (prescription text, patient_context jsonb) — aucune migration.
+  app.post("/api/pro/consultations/:id/draft", requireProAccess, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const [c] = await db.select().from(consultations)
+        .where(and(eq(consultations.id, id), eq(consultations.proAccountId, req.proAccount.id)));
+      if (!c) return res.status(404).json({ message: "Consultation introuvable" });
+      const prescription = typeof req.body?.prescription === "string" ? req.body.prescription.trim().slice(0, 4000) : null;
+      const doctorMessage = typeof req.body?.doctorMessage === "string" ? req.body.doctorMessage.trim().slice(0, 2000) : "";
+      const isPrescription = req.body?.isPrescription === true;
+      try { await db.execute(sql`ALTER TABLE consultations ADD COLUMN IF NOT EXISTS prescription text`); } catch {}
+      if (prescription != null) { try { await db.execute(sql`UPDATE consultations SET prescription = ${prescription} WHERE id = ${id}`); } catch {} }
+      try {
+        await db.execute(sql`ALTER TABLE consultations ADD COLUMN IF NOT EXISTS patient_context jsonb`).catch(() => {});
+        let pc: any = {};
+        try { const row = (Rows(await db.execute(sql`SELECT patient_context FROM consultations WHERE id = ${id}`))[0] as any)?.patient_context; if (row) pc = typeof row === "string" ? JSON.parse(row) : row; } catch {}
+        if (doctorMessage) pc.doctorMessage = doctorMessage; else delete pc.doctorMessage;
+        pc.isPrescription = isPrescription;
+        await db.execute(sql`UPDATE consultations SET patient_context = ${JSON.stringify(pc)}::jsonb WHERE id = ${id}`);
+      } catch (e) { console.warn("[draft] patient_context:", (e as any)?.message); }
+      res.json({ ok: true });
+    } catch (err) {
+      console.error("[pro/consultations draft] error:", err);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
   // POST /api/pro/consultations/:id/validate-diagnosis — le dermatologue VALIDE ou
   // CORRIGE le diagnostic IA d'une consultation B2C. Scopé par la consultation (pas
   // besoin que le scan soit rattaché à un patient du cabinet). Alimente la ground
@@ -2212,6 +2241,20 @@ export function registerProRoutes(app: Express) {
         try { await db.execute(sql`ALTER TABLE consultations ADD COLUMN IF NOT EXISTS prescription text`); } catch {}
         try { await db.execute(sql`UPDATE consultations SET prescription = ${prescription} WHERE id = ${id}`); } catch {}
       }
+      // Compte rendu patient : message personnel + type (ordonnance vs conseils),
+      // fusionnés dans patient_context (jsonb existant, aucune migration).
+      try {
+        const doctorMessage = typeof req.body?.doctorMessage === "string" ? req.body.doctorMessage.trim().slice(0, 2000) : "";
+        const isPrescription = req.body?.isPrescription === true;
+        if (doctorMessage || isPrescription) {
+          await db.execute(sql`ALTER TABLE consultations ADD COLUMN IF NOT EXISTS patient_context jsonb`).catch(() => {});
+          let pc: any = {};
+          try { const row = (Rows(await db.execute(sql`SELECT patient_context FROM consultations WHERE id = ${id}`))[0] as any)?.patient_context; if (row) pc = typeof row === "string" ? JSON.parse(row) : row; } catch {}
+          if (doctorMessage) pc.doctorMessage = doctorMessage;
+          pc.isPrescription = isPrescription;
+          await db.execute(sql`UPDATE consultations SET patient_context = ${JSON.stringify(pc)}::jsonb WHERE id = ${id}`);
+        }
+      } catch (e) { console.warn("[close] message/type non enregistré:", (e as any)?.message); }
       // Démo : on clôture pour l'expérience, mais AUCUNE livraison réelle ni paiement.
       let isDemo = false;
       try { isDemo = (Rows(await db.execute(sql`SELECT is_demo FROM consultations WHERE id = ${id}`))[0] as any)?.is_demo === true; } catch {}
