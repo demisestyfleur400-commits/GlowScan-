@@ -20,7 +20,7 @@ const ResultCard = lazy(() =>
 );
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Sparkles, Lock, ChevronRight, HelpCircle, Scissors, Camera, User, PersonStanding, ArrowRight } from "lucide-react";
-import { GS, GsButton, GsMono, GsSteps, GsCheck } from "@/lib/gs-ui";
+import { GS, GsButton, GsMono, GsSteps, GsCheck, GsOption } from "@/lib/gs-ui";
 import type { AnalysisResult } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -233,6 +233,16 @@ export default function Analyze() {
     // Champ produits utilisés = obligatoire (alimente l'IA + l'alerte produits nocifs)
     if (!intake.previousProducts.trim()) {
       toast({ title: "Champ requis", description: "Indiquez les produits que vous utilisez actuellement (ou écrivez « Aucun »).", variant: "destructive" });
+      return;
+    }
+    // Sexe + durée passés en choix unique (design 02C) → on garde la validation
+    // que <select required> assurait auparavant.
+    if (!intake.sexe) {
+      toast({ title: "Champ requis", description: "Sélectionnez votre sexe.", variant: "destructive" });
+      return;
+    }
+    if (!intake.duration) {
+      toast({ title: "Champ requis", description: "Indiquez depuis combien de temps.", variant: "destructive" });
       return;
     }
     setIsAnalyzing(true);
@@ -738,23 +748,14 @@ export default function Analyze() {
                     </select>
                   </div>
 
-                  {/* Sexe */}
+                  {/* Sexe — choix unique (gabarit design 02C) */}
                   <div>
-                    <label className="text-xs font-bold block mb-1.5" style={{ color: "#1f2a26" }}>
-                      🧍 Sexe <span style={{ color: "#2f9e6e" }}>*</span>
-                    </label>
-                    <select
-                      required
-                      value={intake.sexe}
-                      onChange={e => updateIntake("sexe", e.target.value)}
-                      className="w-full px-3.5 py-2.5 text-xs font-medium outline-none transition-colors"
-                      style={{ background: "#ffffff", border: "1px solid rgba(47,158,110,0.2)", borderRadius: "10px", color: intake.sexe ? "#1f2a26" : "rgba(0,0,0,0.35)" }}
-                    >
-                      <option value="" disabled>Sélectionne</option>
-                      <option value="femme">Femme</option>
-                      <option value="homme">Homme</option>
-                      <option value="autre">Autre / je préfère ne pas dire</option>
-                    </select>
+                    <label className="block mb-2" style={{ fontFamily: GS.mono, fontSize: 9, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".14em", color: GS.faint }}>Sexe *</label>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {([["femme", "Femme"], ["homme", "Homme"], ["autre", "Autre / je préfère ne pas dire"]] as const).map(([v, l]) => (
+                        <GsOption key={v} label={l} selected={intake.sexe === v} onClick={() => updateIntake("sexe", v)} />
+                      ))}
+                    </div>
                   </div>
                 </div>
 
@@ -763,27 +764,22 @@ export default function Analyze() {
                     Antécédents et symptômes
                   </p>
 
-                  {/* Durée du problème */}
+                  {/* Durée du problème — choix unique (gabarit design 02C) */}
                   <div>
-                    <label className="text-xs font-bold block mb-1.5" style={{ color: "#1f2a26" }}>
-                      🩺 Depuis combien de temps avez-vous ce problème ? <span style={{ color: "#2f9e6e" }}>*</span>
-                    </label>
-                    <select
-                      required
-                      value={intake.duration}
-                      onChange={e => updateIntake("duration", e.target.value)}
-                      className="w-full px-3.5 py-2.5 text-xs font-medium outline-none transition-colors"
-                      style={{ background: "#ffffff", border: "1px solid rgba(47,158,110,0.2)", borderRadius: "10px", color: intake.duration ? "#1f2a26" : "rgba(0,0,0,0.35)" }}
-                    >
-                      <option value="" disabled>Sélectionne la durée</option>
-                      <option value="quelques jours">Quelques jours (moins d'une semaine)</option>
-                      <option value="quelques semaines (1-3 semaines)">Quelques semaines (1 – 3 sem.)</option>
-                      <option value="1 à 3 mois">1 à 3 mois</option>
-                      <option value="3 à 6 mois">3 à 6 mois</option>
-                      <option value="plus de 6 mois">Plus de 6 mois</option>
-                      <option value="plus d'un an">Plus d'un an (problème chronique)</option>
-                      <option value="depuis toujours (peau naturellement ainsi)">Depuis toujours</option>
-                    </select>
+                    <label className="block mb-2" style={{ fontFamily: GS.mono, fontSize: 9, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".14em", color: GS.faint }}>Depuis combien de temps ? *</label>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {([
+                        ["quelques jours", "Quelques jours (moins d'une semaine)"],
+                        ["quelques semaines (1-3 semaines)", "Quelques semaines (1 – 3 sem.)"],
+                        ["1 à 3 mois", "1 à 3 mois"],
+                        ["3 à 6 mois", "3 à 6 mois"],
+                        ["plus de 6 mois", "Plus de 6 mois"],
+                        ["plus d'un an", "Plus d'un an (chronique)"],
+                        ["depuis toujours (peau naturellement ainsi)", "Depuis toujours"],
+                      ] as const).map(([v, l]) => (
+                        <GsOption key={v} label={l} selected={intake.duration === v} onClick={() => updateIntake("duration", v)} />
+                      ))}
+                    </div>
                   </div>
 
                   {/* Produits utilisés — OBLIGATOIRE (alimente l'IA + alerte produits nocifs) */}
