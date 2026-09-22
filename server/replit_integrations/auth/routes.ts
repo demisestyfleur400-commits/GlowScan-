@@ -139,7 +139,7 @@ export function registerAuthRoutes(app: Express): void {
   app.post("/api/auth/register", authLimiter, async (req: any, res) => {
     const ip = req.headers["x-forwarded-for"] || req.socket?.remoteAddress || "?";
     try {
-      const { firstName, email, password, website } = req.body;
+      const { firstName, email, password, website, phone, consentDataset, consentWhatsapp } = req.body;
 
       // ── Anti-bot 1 : honeypot. Un champ caché que seuls les robots remplissent. ──
       if (typeof website === "string" && website.trim() !== "") {
@@ -204,6 +204,22 @@ export function registerAuthRoutes(app: Express): void {
       }).returning();
 
       console.log(`[register] ✅ Nouveau compte créé — id=${user.id} email=${emailLower}`);
+
+      // Refonte B2C — infos d'inscription additionnelles (téléphone + consentements).
+      // Colonnes résilientes (ADD COLUMN IF NOT EXISTS) — additif, aucune migration
+      // destructive, aucune modification de la sémantique d'authentification.
+      try {
+        const cleanPhone = typeof phone === "string" ? phone.replace(/[^0-9+]/g, "").slice(0, 20) : "";
+        if (cleanPhone) {
+          await db.execute(sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "phone" text`).catch(() => {});
+          await db.execute(sql`UPDATE "users" SET "phone" = ${cleanPhone} WHERE "id" = ${user.id}`).catch(() => {});
+        }
+        if (consentDataset != null || consentWhatsapp != null) {
+          await db.execute(sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "consent_dataset" boolean`).catch(() => {});
+          await db.execute(sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "consent_whatsapp" boolean`).catch(() => {});
+          await db.execute(sql`UPDATE "users" SET "consent_dataset" = ${consentDataset === true}, "consent_whatsapp" = ${consentWhatsapp === true} WHERE "id" = ${user.id}`).catch(() => {});
+        }
+      } catch (e) { console.warn("[register] infos inscription (phone/consent) non enregistrées:", (e as any)?.message); }
 
       // Email de bienvenue (best-effort, ne bloque pas l'inscription).
       try {

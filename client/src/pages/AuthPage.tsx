@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Eye, EyeOff, Mail, Lock, User, ArrowLeft, Phone, ShieldAlert, Sparkles, MessageCircle, KeyRound, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { AuthRegisterWizard } from "@/pages/AuthRegisterWizard";
 
 type Mode = "register" | "login" | "forgot" | "reset" | "twofa";
 
@@ -250,6 +251,12 @@ export default function AuthPage() {
     setMode("forgot");
   };
 
+  // Refonte B2C — inscription fractionnée (5 écrans) sur la fondation gs-ui.
+  // Les autres modes (connexion, oubli, reset, 2FA login) restent inchangés.
+  if (mode === "register") {
+    return <AuthRegisterWizard onGoLogin={() => setMode("login")} />;
+  }
+
   return (
     <div
       className="min-h-screen w-full flex flex-col px-6 py-10 relative overflow-hidden"
@@ -270,7 +277,7 @@ export default function AuthPage() {
       {/* Header */}
       <div className="flex items-center justify-between relative z-10 mb-10 max-w-sm mx-auto w-full">
         <button
-          onClick={() => mode === "register" || mode === "login" ? setLocation("/") : setMode("login")}
+          onClick={() => mode === "login" ? setLocation("/") : setMode("login")}
           className="w-10 h-10 rounded-xl flex items-center justify-center transition-all active:scale-95"
           style={{ background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.07)", color: "#4a5a52" }}
         >
@@ -283,80 +290,6 @@ export default function AuthPage() {
       </div>
 
       <AnimatePresence mode="wait">
-
-        {/* ────── REGISTER ────── */}
-        {mode === "register" && (
-          <motion.form key="register" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.3 }}
-            onSubmit={handleRegister}
-            className="flex-1 flex flex-col justify-center relative z-10 space-y-4 max-w-sm mx-auto w-full"
-          >
-            <div className="text-center mb-2">
-              <div className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 mb-3 text-[10px] font-bold tracking-wide"
-                style={{ background: "rgba(47,158,110,0.1)", border: "1px solid rgba(47,158,110,0.2)", color: "#c4b5fd" }}>
-                <Sparkles className="w-3 h-3" />
-                Gratuit · 30 secondes
-              </div>
-              <h1 className="text-2xl font-bold" style={{ color: "#1f2a26" }}>Crée ton profil peau</h1>
-              <p className="text-xs font-medium mt-1" style={{ color: "#4a5a52" }}>
-                Un compte pour sauvegarder toutes tes analyses
-              </p>
-            </div>
-
-            {/* Honeypot anti-bot : invisible aux humains, rempli par les robots. */}
-            <input type="text" name="website" tabIndex={-1} autoComplete="off" value={hp} onChange={(e) => setHp(e.target.value)}
-              aria-hidden="true" style={{ position: "absolute", left: "-9999px", width: 1, height: 1, opacity: 0 }} />
-            <Field icon={<User className="w-4 h-4" />} type="text" placeholder="Ton prénom" value={firstName} onChange={setFirstName} testId="input-firstname" autoFocus />
-            <Field icon={contact.includes("@") ? <Mail className="w-4 h-4" /> : <Phone className="w-4 h-4" />} type="text" placeholder="Email ou numéro (+237...)" value={contact} onChange={setContact} testId="input-contact" />
-            <PwdField value={regPwd} onChange={setRegPwd} show={showPwd} onToggle={() => setShowPwd(v => !v)} testId="input-register-password" placeholder="Mot de passe (6 caractères min)" />
-
-            {/* Compte déjà existant */}
-            {accountExistsHint && (
-              <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}
-                className="rounded-2xl p-4 space-y-3"
-                style={{ background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.25)" }}
-              >
-                <p className="text-xs font-bold" style={{ color: "#fbbf24" }}>
-                  ⚠️ Ce compte existe déjà
-                </p>
-                <p className="text-[11px]" style={{ color: "#4a5a52" }}>
-                  Un compte avec <strong>{contact}</strong> est déjà enregistré.
-                </p>
-                <div className="flex gap-2">
-                  <button type="button" onClick={goLogin}
-                    className="flex-1 py-2.5 rounded-xl text-xs font-extrabold"
-                    style={{ background: "#2f9e6e", color: "#fff" }}>
-                    Se connecter
-                  </button>
-                  <button type="button" onClick={() => goForgot(contact)}
-                    className="flex-1 py-2.5 rounded-xl text-xs font-extrabold"
-                    style={{ background: "rgba(0,0,0,0.07)", border: "1px solid rgba(0,0,0,0.1)", color: "#4a5a52" }}>
-                    Mot de passe oublié ?
-                  </button>
-                </div>
-              </motion.div>
-            )}
-
-            {!accountExistsHint && (
-              <button type="submit" disabled={loading} data-testid="button-register-finish"
-                className="w-full py-4 text-sm font-extrabold mt-2 transition-all active:scale-[0.98] disabled:opacity-50 relative overflow-hidden"
-                style={{ background: "linear-gradient(135deg, #2f9e6e, #f43f5e)", borderRadius: "14px", color: "#fff" }}>
-                <div className="absolute top-0 left-0 right-0 h-1/2"
-                  style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.1), transparent)", borderRadius: "14px 14px 0 0" }} />
-                <span className="relative z-10">{loading ? "Création du compte..." : "Obtenir mon bilan gratuit →"}</span>
-              </button>
-            )}
-
-            <p className="text-center text-[10px] font-medium" style={{ color: "rgba(0,0,0,0.25)" }}>
-              Gratuit · Données privées · Sans engagement
-            </p>
-            <p className="text-center text-xs font-medium pt-1" style={{ color: "#4a5a52" }}>
-              Déjà inscrit·e ?{" "}
-              <button type="button" onClick={goLogin} className="font-bold" style={{ color: "#a78bfa" }}>
-                Se connecter
-              </button>
-            </p>
-          </motion.form>
-        )}
 
         {/* ────── LOGIN ────── */}
         {mode === "login" && (
