@@ -19,7 +19,8 @@ const ResultCard = lazy(() =>
   import("@/components/ResultCard").then((m) => ({ default: m.ResultCard }))
 );
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Sparkles, Lock, ChevronRight, HelpCircle, Scissors, Camera } from "lucide-react";
+import { ArrowLeft, Sparkles, Lock, ChevronRight, HelpCircle, Scissors, Camera, User, PersonStanding, ArrowRight } from "lucide-react";
+import { GS, GsButton, GsMono, GsSteps, GsCheck } from "@/lib/gs-ui";
 import type { AnalysisResult } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -528,73 +529,47 @@ export default function Analyze() {
 
           {/* ══════════ STEP 1 : AREA SELECTION ══════════ */}
           {step === "select" && !isAnalyzing && (
-            <motion.div
-              key="select"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="space-y-4"
-            >
-              {/* En-tête compact — laisse le bouton monter tout en haut */}
-              <div className="text-center pt-1">
-                <h1 className="text-xl font-extrabold" style={{ color: "#1f2a26" }}>
-                  Analyse ta peau en 30 secondes
-                </h1>
-                <p className="text-xs mt-1" style={{ color: "rgba(0,0,0,0.4)" }}>
-                  Prends une photo, l'IA fait le reste. <strong style={{ color: "#2f9e6e" }}>Gratuit.</strong>
-                </p>
+            <motion.div key="select" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+              style={{ fontFamily: GS.sans, color: GS.ink, paddingTop: 4 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 22 }}>
+                <GsSteps total={3} current={1} />
+                <span style={{ fontFamily: GS.mono, fontSize: 10, fontWeight: 600, color: GS.teal }}>1/3</span>
               </div>
-
-              {/* ── BOUTON PRINCIPAL — visible sans scroller (≥56px), visage par défaut ── */}
-              <button
-                onClick={() => handleAreaSelect("face")}
-                data-testid="button-analyze-face"
-                className="w-full flex items-center justify-center gap-2.5 text-white font-extrabold text-base active:scale-[0.98] transition-transform"
-                style={{
-                  minHeight: 60,
-                  borderRadius: 16,
-                  background: "linear-gradient(135deg, #E91E8C, #f43f5e)",
-                  boxShadow: "0 10px 28px rgba(233,30,140,0.28)",
-                }}
-              >
-                <Camera className="w-5 h-5" /> Analyser ma peau
-              </button>
-
-              {/* ── Option secondaire : cheveux ── */}
-              <button
-                onClick={() => handleAreaSelect("hair")}
-                data-testid="button-analyze-hair"
-                className="w-full flex items-center justify-center gap-2 font-bold text-sm active:scale-[0.98] transition-transform"
-                style={{
-                  minHeight: 52,
-                  borderRadius: 14,
-                  background: "rgba(47,158,110,0.08)",
-                  border: "1px solid rgba(47,158,110,0.22)",
-                  color: "#1f2a26",
-                }}
-              >
-                <Scissors className="w-4 h-4" style={{ color: "#f9a8d4" }} /> Analyser mes cheveux & cuir chevelu
-              </button>
-
-              <p className="text-center text-[11px]" style={{ color: "rgba(0,0,0,0.35)" }}>
-                🔒 Confidentiel · aucun humain ne voit ta photo · sans engagement
-              </p>
-
-              {/* ── Détails repliés : n'occupent pas le premier écran ── */}
-              <details className="rounded-2xl overflow-hidden" style={{ background: "rgba(0,0,0,0.03)", border: "1px solid rgba(0,0,0,0.06)" }}>
-                <summary className="cursor-pointer list-none px-4 py-3 text-sm font-bold flex items-center justify-between" style={{ color: "#1f2a26" }}>
-                  Comment ça marche ?
-                  <ChevronRight className="w-4 h-4" style={{ color: "rgba(0,0,0,0.3)" }} />
-                </summary>
-                <div className="px-4 pb-4 text-xs space-y-2.5" style={{ color: "#4a5a52" }}>
-                  <p><strong style={{ color: "#1f2a26" }}>1.</strong> Tu prends un selfie bien éclairé (ou une photo de tes cheveux).</p>
-                  <p><strong style={{ color: "#1f2a26" }}>2.</strong> L'IA analyse : pores, sébum, acné, taches, uniformité — adaptée aux peaux africaines.</p>
-                  <p><strong style={{ color: "#1f2a26" }}>3.</strong> Tu reçois ton Glow Score, tes conseils et ta routine.</p>
-                  <p className="text-[11px] pt-1" style={{ color: "rgba(0,0,0,0.4)" }}>
-                    Analyse indicative — ne remplace pas l'avis d'un dermatologue.
-                  </p>
-                </div>
-              </details>
+              <GsMono style={{ display: "block", marginBottom: 9 }}>Étape 1 · zone</GsMono>
+              <div style={{ fontSize: 26, fontWeight: 600, letterSpacing: "-.85px", lineHeight: 1.15, color: GS.ink }}>Qu'est-ce qu'on analyse ?</div>
+              <div style={{ fontSize: 13, lineHeight: 1.55, color: GS.muted, marginTop: 10 }}>Le modèle et les mesures changent selon la zone. Une analyse porte sur une seule zone.</div>
+              <div style={{ marginTop: 22, display: "flex", flexDirection: "column", gap: 10 }}>
+                {([
+                  { key: "face", Icon: User, title: "Visage", desc: "Acné, taches, pores, âge cutané — grille GEA incluse", shots: "3 PHOTOS · FACE + 2 PROFILS" },
+                  { key: "body", Icon: PersonStanding, title: "Corps", desc: "Lésion isolée, eczéma, psoriasis, grain de beauté", shots: "3 PHOTOS · MACRO + LARGE + PROFIL" },
+                  { key: "hair", Icon: Scissors, title: "Cheveux & cuir chevelu", desc: "Chute, alopécie de traction, pellicules, sécheresse", shots: "3 PHOTOS · RAIE + SOMMET + NUQUE" },
+                ] as const).map((c) => {
+                  const on = selectedArea === c.key;
+                  return (
+                    <button key={c.key} onClick={() => setSelectedArea(c.key)}
+                      style={{ textAlign: "left", cursor: "pointer", background: on ? GS.mintBg : "#fff", border: `1px solid ${on ? GS.ink : GS.line}`, padding: 13, display: "flex", gap: 13, alignItems: "center" }}>
+                      <span style={{ width: 74, height: 74, flex: "none", border: `1px solid ${on ? GS.line : GS.hair}`, background: GS.panel, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <c.Icon size={30} strokeWidth={1.4} style={{ color: GS.teal }} />
+                      </span>
+                      <span style={{ flex: 1, minWidth: 0 }}>
+                        <span style={{ display: "block", fontSize: 16, fontWeight: 600, color: GS.ink }}>{c.title}</span>
+                        <span style={{ display: "block", fontSize: 11, color: GS.muted, marginTop: 4, lineHeight: 1.45 }}>{c.desc}</span>
+                        <span style={{ display: "block", marginTop: 6 }}><GsMono color={on ? GS.teal : GS.faint} style={{ letterSpacing: ".06em" }}>{c.shots}</GsMono></span>
+                      </span>
+                      <GsCheck checked={on} size={20} />
+                    </button>
+                  );
+                })}
+              </div>
+              <div style={{ marginTop: 16, border: `1px solid ${GS.line}`, padding: 13, display: "flex", gap: 12, alignItems: "flex-start" }}>
+                <HelpCircle size={17} style={{ color: GS.teal, marginTop: 1, flexShrink: 0 }} strokeWidth={1.8} />
+                <div style={{ fontSize: 11, lineHeight: 1.55, color: GS.muted }}>Lésion qui saigne, change vite ou fait mal ? Ne perdez pas de temps avec l'analyse — <a href="/derm" style={{ color: GS.teal, fontWeight: 600 }}>écrivez à un médecin</a>.</div>
+              </div>
+              <div style={{ marginTop: 18 }}>
+                <div style={{ marginBottom: 12 }}><GsMono style={{ letterSpacing: ".05em" }}>Zone choisie · {selectedArea === "face" ? "Visage" : selectedArea === "body" ? "Corps" : "Cheveux"}</GsMono></div>
+                <GsButton onClick={() => handleAreaSelect(selectedArea)} icon={<ArrowRight size={16} style={{ color: GS.accent }} strokeWidth={2} />}>Passer aux photos</GsButton>
+                <p style={{ textAlign: "center", fontSize: 11, color: GS.faint, marginTop: 12 }}>🔒 Confidentiel · aucun humain ne voit votre photo · sans engagement</p>
+              </div>
             </motion.div>
           )}
 
