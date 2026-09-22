@@ -580,74 +580,43 @@ export default function Analyze() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="space-y-4"
             >
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => setStep("select")}
-                  className="w-9 h-9 rounded-xl flex items-center justify-center transition-all active:scale-95"
-                  style={{
-                    background: "rgba(0,0,0,0.04)",
-                    border: "1px solid rgba(0,0,0,0.07)",
-                    color: "#4a5a52",
-                  }}
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                </button>
-                <span className="text-xs font-bold" style={{ color: "#1f2a26" }}>
-                  {selectedArea === "hair" ? "Photo du cuir chevelu" : "Capture faciale"}
-                </span>
-              </div>
-
-              {/* ── Guidage photo ── */}
-              <div
-                className="rounded-2xl p-4"
-                style={{
-                  background: "rgba(251,191,36,0.06)",
-                  border: "1px solid rgba(251,191,36,0.2)",
-                }}
-              >
-                <div className="flex items-start gap-3">
-                  <span className="text-base leading-none mt-0.5">📸</span>
-                  <div>
-                    <p className="text-xs font-bold mb-1.5" style={{ color: "#fbbf24" }}>
-                      Pour une analyse précise, ta photo doit :
-                    </p>
-                    <ul className="space-y-1">
-                      {(selectedArea === "hair"
-                        ? [
-                            "Montrer clairement le cuir chevelu ou la longueur des cheveux",
-                            "Être prise dans une bonne lumière naturelle",
-                            "Être nette — pas floue ni trop sombre",
-                          ]
-                        : [
-                            "Être un selfie bien éclairé, visage centré et de face",
-                            "Montrer ton visage de près (pas en plein pied)",
-                            "Être nette — pas floue, pas de filtre",
-                          ]
-                      ).map((tip, i) => (
-                        <li key={i} className="flex items-start gap-1.5 text-[11px]" style={{ color: "rgba(251,191,36,0.85)" }}>
-                          <span className="mt-px">✓</span>
-                          <span>{tip}</span>
-                        </li>
-                      ))}
-                    </ul>
-                    <p className="text-[10px] mt-2 font-medium" style={{ color: "rgba(0,0,0,0.35)" }}>
-                      Une photo floue ou trop éloignée empêche l'analyse — l'IA a besoin de voir ta peau clairement.
-                    </p>
-                  </div>
+              {/* Écran de capture guidée — fond sombre, langage instrument (design 02) */}
+              <div style={{ background: GS.deep, fontFamily: GS.sans }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px" }}>
+                  <button onClick={() => setStep("select")} aria-label="Retour"
+                    style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: "#fff", display: "flex" }}>
+                    <ArrowLeft className="w-5 h-5" />
+                  </button>
+                  <span style={{ fontFamily: GS.mono, fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".14em", color: GS.accent }}>
+                    {selectedArea === "hair" ? "Cuir chevelu · macro" : selectedArea === "body" ? "Lésion · macro" : "Visage · macro"}
+                  </span>
+                  <span style={{ width: 20 }} />
                 </div>
-              </div>
 
-              <div
-                className="rounded-2xl p-5"
-                style={{
-                  background: "rgba(0,0,0,0.04)",
-                  border: "1px solid rgba(0,0,0,0.07)",
-                }}
-              >
-                {/* autoStart=true : la caméra démarre seulement quand cette section est montée */}
-                <FileUpload onFileSelect={handleFileSelect} autoStart={true} />
+                {/* Conseils de prise de vue — rangées « instrument » */}
+                <div style={{ padding: "0 16px", display: "flex", flexDirection: "column", gap: 7 }}>
+                  {(selectedArea === "hair"
+                    ? ["Montrez le cuir chevelu ou la longueur, bien dégagé", "Lumière du jour, dos à la fenêtre", "Image nette — ni floue ni sombre"]
+                    : ["Zone bien centrée et de près (plan macro)", "Lumière du jour, dos à la fenêtre", "Image nette — ni floue ni filtre"]
+                  ).map((tip, i) => (
+                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, border: "1px solid rgba(18,216,190,.4)", background: "rgba(18,216,190,.08)", padding: "11px 13px" }}>
+                      <span style={{ color: GS.accent, fontSize: 14, lineHeight: 1 }}>✓</span>
+                      <span style={{ fontFamily: GS.sans, fontSize: 12, color: "#9FEFE2", lineHeight: 1.4 }}>{tip}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Viseur caméra (composant existant, déjà sombre) */}
+                <div style={{ padding: "14px 16px 0" }}>
+                  <FileUpload onFileSelect={handleFileSelect} autoStart={true} />
+                </div>
+
+                <div style={{ textAlign: "center", padding: "12px 16px 18px" }}>
+                  <span style={{ fontFamily: GS.mono, fontSize: 9, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".08em", color: "rgba(255,255,255,.55)" }}>
+                    Votre photo n'est envoyée qu'après validation
+                  </span>
+                </div>
               </div>
             </motion.div>
           )}
