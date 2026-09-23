@@ -21,6 +21,7 @@ const ResultCard = lazy(() =>
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Sparkles, Lock, ChevronRight, HelpCircle, Scissors, Camera, User, PersonStanding, ArrowRight } from "lucide-react";
 import { GS, GsButton, GsMono, GsSteps, GsCheck, GsOption, GsMarks } from "@/lib/gs-ui";
+import { PhotoUnusable, UrgentOrientation } from "@/components/AnalysisStates";
 import type { AnalysisResult } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -101,6 +102,7 @@ export default function Analyze() {
   const pendingImageRef = useRef<string | null>(null);
   const cancelledRef = useRef(false); // « Annuler l'analyse » — empêche un résultat tardif de forcer la navigation
   const cancelAnalysis = () => { cancelledRef.current = true; setIsAnalyzing(false); setStep("intake"); };
+  const [photoUnusable, setPhotoUnusable] = useState(false); // état 05 (photo inexploitable)
 
   const [consultationData, setConsultationData] = useState<ConsultationData | null>(null);
   const [answers, setAnswers] = useState<Record<number, string>>({});
@@ -248,6 +250,7 @@ export default function Analyze() {
       return;
     }
     cancelledRef.current = false;
+    setPhotoUnusable(false);
     setIsAnalyzing(true);
 
     try {
@@ -305,12 +308,7 @@ export default function Analyze() {
         }
         if (analyzeRes.status === 422 && errBody.code === "AI_REFUSED") {
           setIsAnalyzing(false);
-          toast({
-            title: "Photo difficile à analyser",
-            description: errBody.message || "Essaie avec une photo plus nette, bien éclairée et de face.",
-            variant: "destructive",
-          });
-          setStep("upload");
+          setPhotoUnusable(true); // état 05 — écran « photo inexploitable »
           return;
         }
         if (analyzeRes.status === 429 && errBody.code === "AI_QUOTA") {
@@ -498,6 +496,17 @@ export default function Analyze() {
           )}
 
           {/* ══════════ STEP 1 : AREA SELECTION ══════════ */}
+          {photoUnusable && !isAnalyzing && (
+            <motion.div key="photo-unusable" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+              <PhotoUnusable
+                onRetry={() => { setPhotoUnusable(false); setStep("upload"); }}
+                scanId={savedScanId || undefined}
+                condition={result?.condition || ""}
+                imageUrl={uploadedImage}
+              />
+            </motion.div>
+          )}
+
           {step === "select" && !isAnalyzing && (
             <motion.div key="select" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
               style={{ fontFamily: GS.sans, color: GS.ink, paddingTop: 4 }}>
@@ -592,7 +601,7 @@ export default function Analyze() {
           )}
 
           {/* ══════════ STEP 3 : FORMULAIRE PATIENT ══════════ */}
-          {step === "intake" && !isAnalyzing && (
+          {step === "intake" && !isAnalyzing && !photoUnusable && (
             <motion.div
               key="intake"
               initial={{ opacity: 0, y: 10 }}
@@ -905,6 +914,14 @@ export default function Analyze() {
                   <div style={{ width: "32px", height: "32px", border: "3px solid rgba(47,158,110,0.3)", borderTopColor: "#a78bfa", borderRadius: "9999px", animation: "spin 0.8s linear infinite" }} />
                 </div>
               }>
+                {(((result as any).redFlags?.length ?? 0) >= 2) ? (
+                  <UrgentOrientation
+                    redFlags={(result as any).redFlags}
+                    scanId={savedScanId || undefined}
+                    condition={result.condition || ""}
+                    imageUrl={uploadedImage}
+                  />
+                ) : (
                 <ResultCard
                   result={result}
                   savedScanId={savedScanId}
@@ -921,6 +938,7 @@ export default function Analyze() {
                     allergies: intake.allergies || undefined,
                   }}
                 />
+                )}
               </Suspense>
             </motion.div>
           )}
