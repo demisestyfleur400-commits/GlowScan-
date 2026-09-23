@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { ConsultationLauncher } from "@/components/ConsultationLauncher";
 import type { AnalysisResult } from "@shared/schema";
+import { GS, GsMeter, GsMono } from "@/lib/gs-ui";
 
 // ════════════════════════════════════════════════════════════════════════
 // Score bas (< 60) — parcours de confiance guidé (B2C), 5 écrans.
@@ -14,9 +15,11 @@ import type { AnalysisResult } from "@shared/schema";
 // formulation alarmante. L'utilisateur reste libre (rappel 24 h).
 // ════════════════════════════════════════════════════════════════════════
 
+// Repointé sur la palette de la refonte B2C (turquoise/encre, angles carrés).
+// « violet » = ancien accent → devient le turquoise-texte #0A6E72 (lisible).
 const DS = {
-  ink: "#1a1a2e", body: "#374151", muted: "#6b7280", violet: "#7c3aed",
-  surface: "#faf9ff", border: "rgba(124,58,237,0.15)",
+  ink: "#0B1719", body: "#5D6E71", muted: "#8C9C9E", violet: "#0A6E72",
+  surface: "#ffffff", border: "#DCE4E5",
 };
 
 type Concern = { label: string; explain: string; source: "named" | "derived" };
@@ -133,7 +136,7 @@ export function LowScoreExperience({ score, scanId, condition, imageUrl, result 
       {/* Progression — 5 points, aucune urgence */}
       <div style={{ display: "flex", justifyContent: "center", gap: 6 }}>
         {[1, 2, 3, 4, 5].map((n) => (
-          <span key={n} style={{ width: n === step ? 22 : 7, height: 7, borderRadius: 4, background: n <= step ? DS.violet : "#e5e7eb", transition: "all .3s" }} />
+          <span key={n} style={{ width: n === step ? 22 : 7, height: 4, background: n <= step ? GS.accent : GS.line, transition: "all .3s" }} />
         ))}
       </div>
       {children}
@@ -145,7 +148,7 @@ export function LowScoreExperience({ score, scanId, condition, imageUrl, result 
 
   const primaryBtn = (label: string, onClick: () => void) => (
     <button onClick={onClick} data-testid={`btn-step-${step}-next`}
-      style={{ width: "100%", minHeight: 54, borderRadius: 16, border: "none", background: "linear-gradient(135deg,#7c3aed,#4f46e5)", color: "#fff", fontSize: 15, fontWeight: 800, cursor: "pointer" }}>
+      style={{ width: "100%", minHeight: 54, borderRadius: 0, border: "none", background: GS.ink, color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer" }}>
       {label}
     </button>
   );
@@ -160,11 +163,14 @@ export function LowScoreExperience({ score, scanId, condition, imageUrl, result 
   // ═══════════════ ÉCRAN 1 — RÉSULTAT PERSONNALISÉ ═══════════════
   if (step === 1) {
     return shell(<>
-      <div style={{ textAlign: "center" }}>
-        <div style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", justifyContent: "center", width: 92, height: 92, borderRadius: "50%", background: "rgba(124,58,237,0.06)", border: "2px solid rgba(124,58,237,0.3)" }}>
-          <span style={{ fontSize: 32, fontWeight: 900, color: DS.violet, lineHeight: 1 }}>{score}</span>
-          <span style={{ fontSize: 9, fontWeight: 700, color: DS.violet, letterSpacing: "0.1em", marginTop: 2 }}>GLOW SCORE</span>
+      {/* Glow Score — instrument de mesure avec seuil 60 (design 04) */}
+      <div style={{ border: `1px solid ${GS.line}`, padding: 16 }}>
+        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 8 }}>
+          <GsMono>Glow Score</GsMono>
+          <span style={{ fontFamily: GS.mono, fontSize: 30, fontWeight: 600, color: GS.ink, letterSpacing: "-1px", fontVariantNumeric: "tabular-nums" }}>{score}<span style={{ fontSize: 14, color: GS.faint }}>/100</span></span>
         </div>
+        <GsMeter value={score} threshold={60} />
+        <div style={{ fontSize: 11.5, color: GS.muted, marginTop: 8, lineHeight: 1.5 }}>Sous 60, GlowScan ne recommande pas de produits seul : l'avis d'un dermatologue est nécessaire avant tout traitement.</div>
       </div>
       <div style={{ textAlign: "center", padding: "0 6px" }}>
         <p style={{ fontSize: 20, fontWeight: 800, color: DS.ink, lineHeight: 1.35, margin: "0 0 10px" }}>
@@ -182,7 +188,7 @@ export function LowScoreExperience({ score, scanId, condition, imageUrl, result 
             Préoccupations observées
           </p>
           {concerns.map((c, i) => (
-            <div key={i} data-testid={`concern-${i}`} style={{ background: DS.surface, border: `1px solid ${DS.border}`, borderRadius: 14, padding: "12px 14px" }}>
+            <div key={i} data-testid={`concern-${i}`} style={{ background: DS.surface, border: `1px solid ${DS.border}`, borderRadius: 0, padding: "12px 14px" }}>
               <p style={{ fontSize: 14, fontWeight: 800, color: DS.ink, margin: "0 0 3px" }}>{c.label}</p>
               <p style={{ fontSize: 12.5, color: DS.muted, margin: 0, lineHeight: 1.5 }}>{c.explain}</p>
             </div>
@@ -195,7 +201,7 @@ export function LowScoreExperience({ score, scanId, condition, imageUrl, result 
         </div>
       ) : (
         // État neutre : score < 60 mais aucune préoccupation assez fiable
-        <div style={{ background: DS.surface, border: `1px solid ${DS.border}`, borderRadius: 14, padding: "14px 16px", textAlign: "center" }}>
+        <div style={{ background: DS.surface, border: `1px solid ${DS.border}`, borderRadius: 0, padding: "14px 16px", textAlign: "center" }}>
           <p style={{ fontSize: 13.5, color: DS.body, margin: 0, lineHeight: 1.55 }}>
             L'analyse n'a pas isolé de préoccupation assez fiable pour être détaillée ici. Un dermatologue peut examiner votre situation et vous orienter avec certitude.
           </p>
@@ -251,7 +257,7 @@ export function LowScoreExperience({ score, scanId, condition, imageUrl, result 
       </p>
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {advantages.map((a, i) => (
-          <div key={i} style={{ display: "flex", gap: 12, alignItems: "center", background: DS.surface, border: `1px solid ${DS.border}`, borderRadius: 14, padding: "12px 14px" }}>
+          <div key={i} style={{ display: "flex", gap: 12, alignItems: "center", background: DS.surface, border: `1px solid ${DS.border}`, borderRadius: 0, padding: "12px 14px" }}>
             <span style={{ fontSize: 20, flexShrink: 0 }}>{a.e}</span>
             <p style={{ fontSize: 13.5, fontWeight: 700, color: DS.ink, margin: 0, lineHeight: 1.4 }}>{a.t}</p>
           </div>
@@ -277,7 +283,7 @@ export function LowScoreExperience({ score, scanId, condition, imageUrl, result 
       </p>
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {steps.map((s, i) => (
-          <div key={i} style={{ display: "flex", gap: 12, alignItems: "flex-start", background: DS.surface, border: `1px solid ${DS.border}`, borderRadius: 14, padding: "12px 14px" }}>
+          <div key={i} style={{ display: "flex", gap: 12, alignItems: "flex-start", background: DS.surface, border: `1px solid ${DS.border}`, borderRadius: 0, padding: "12px 14px" }}>
             <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 24, height: 24, borderRadius: "50%", background: DS.violet, color: "#fff", fontSize: 12, fontWeight: 800, flexShrink: 0 }}>{i + 1}</span>
             <p style={{ fontSize: 13.5, color: DS.body, margin: 0, lineHeight: 1.5 }}>{s}</p>
           </div>
@@ -298,7 +304,7 @@ export function LowScoreExperience({ score, scanId, condition, imageUrl, result 
     </p>
 
     {/* Garantie — signal de confiance, sans fausse urgence */}
-    <div style={{ background: "rgba(16,185,129,0.07)", border: "1px solid rgba(16,185,129,0.25)", borderRadius: 12, padding: "10px 12px", textAlign: "center" }}>
+    <div style={{ background: "rgba(16,185,129,0.07)", border: "1px solid rgba(16,185,129,0.25)", borderRadius: 0, padding: "10px 12px", textAlign: "center" }}>
       <p style={{ fontSize: 12, fontWeight: 700, color: "#047857", margin: 0, lineHeight: 1.5 }}>
         🛡️ Si aucun dermatologue ne répond dans les 2 heures, le montant est remboursé selon les conditions du service.
       </p>
