@@ -54,20 +54,22 @@ const AI_PROVIDER   = USE_GROQ ? "Groq" : USE_GEMINI ? "Gemini" : "OpenAI";
 // GROQ_MODEL dans Railway sans redéploiement.
 const GROQ_MODEL    = process.env.GROQ_MODEL || "qwen/qwen3.6-27b";
 // Modèle Gemini configurable via Railway (GEMINI_MODEL) sans redéploiement.
-// Défaut : gemini-2.5-flash — quota gratuit journalier SÉPARÉ de la 2.0-flash,
-// donc si la 2.0 est saturée (429), basculer la variable débloque l'analyse.
-// gemini-2.5-flash n'est plus ouvert aux nouveaux projets (404) → défaut sur
-// gemini-2.0-flash (accessible, pas de plafond TPM bloquant). Surchargeable via
-// GEMINI_MODEL dans Railway (ex: gemini-flash-latest) sans redéploiement.
-const GEMINI_MODEL  = process.env.GEMINI_MODEL || "gemini-2.0-flash";
+// Défaut : gemini-flash-latest — ALIAS géré par Google qui pointe TOUJOURS sur
+// le dernier modèle Flash disponible. Les versions figées (gemini-2.0-flash,
+// gemini-2.5-flash-lite…) finissent par être retirées aux nouveaux projets et
+// renvoient 404 ; les alias « *-latest » évitent ça. Surchargeable via
+// GEMINI_MODEL dans Railway.
+const GEMINI_MODEL  = process.env.GEMINI_MODEL || "gemini-flash-latest";
 // Chaîne de secours : si un modèle Gemini sature (429/quota) ou disparaît (404),
 // le code bascule automatiquement sur le suivant. Chaque modèle gratuit a son
 // PROPRE quota journalier → la chaîne multiplie la capacité et évite que
-// l'analyse plante. Surchargeable via GEMINI_FALLBACKS (liste séparée par des
-// virgules) dans Railway. Doublons filtrés, modèle principal en tête.
+// l'analyse plante. On privilégie les alias « *-latest » (toujours valides),
+// puis des versions figées récentes en secours. Surchargeable via
+// GEMINI_FALLBACKS (liste séparée par des virgules) dans Railway. Doublons
+// filtrés, modèle principal en tête.
 const GEMINI_FALLBACKS = [
   GEMINI_MODEL,
-  ...(process.env.GEMINI_FALLBACKS || "gemini-2.0-flash-lite,gemini-flash-latest,gemini-flash-lite-latest,gemini-2.5-flash-lite")
+  ...(process.env.GEMINI_FALLBACKS || "gemini-flash-lite-latest,gemini-2.5-flash,gemini-2.0-flash,gemini-2.0-flash-lite")
     .split(",").map((s) => s.trim()).filter(Boolean),
 ].filter((v, i, a) => a.indexOf(v) === i);
 const AI_MODEL      = USE_GROQ ? GROQ_MODEL : USE_GEMINI ? GEMINI_MODEL : "gpt-4o";

@@ -211,7 +211,7 @@ else if (_proGroqKey) PRO_USE_GROQ = true;       // secours : Groq
 // modèle de raisonnement casse response_format sur les appels texte pro.
 const PRO_GROQ_MODEL = process.env.GROQ_TEXT_MODEL || "llama-3.3-70b-versatile";
 const PRO_AI_MODEL   = PRO_USE_GROQ ? PRO_GROQ_MODEL
-                     : PRO_USE_GEMINI ? (process.env.GEMINI_MODEL || "gemini-2.0-flash") : "gpt-4o-mini";
+                     : PRO_USE_GEMINI ? (process.env.GEMINI_MODEL || "gemini-flash-latest") : "gpt-4o-mini";
 
 // Gemini native SDK (uniquement sans clé Groq)
 const proGemini = PRO_USE_GEMINI ? new GoogleGenerativeAI(_proGeminiKey) : null;
@@ -247,8 +247,8 @@ function extractInlineImage(src: string): { mime: string; b64: string } | null {
 }
 
 const EVOLUTION_MODELS = Array.from(new Set([
-  process.env.GEMINI_MODEL || "gemini-2.0-flash",
-  "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-flash-8b",
+  process.env.GEMINI_MODEL || "gemini-flash-latest",
+  "gemini-flash-latest", "gemini-flash-lite-latest", "gemini-2.5-flash", "gemini-2.0-flash",
 ]));
 
 async function compareEvolutionAI(opts: {
@@ -2375,7 +2375,7 @@ export function registerProRoutes(app: Express) {
 Analyse ce cas selon tes règles. Vérifie particulièrement la cohérence entre le diagnostic, la prescription et le phototype.`;
 
     // 1er essai AVEC grounding Google Search ; repli sans grounding si échec.
-    const modelId = process.env.GEMINI_MODEL || "gemini-2.0-flash";
+    const modelId = process.env.GEMINI_MODEL || "gemini-flash-latest";
     const run = async (withSearch: boolean) => {
       const m = proGemini!.getGenerativeModel({ model: modelId, systemInstruction: CLINICAL_ASSISTANT_SYSTEM });
       const cfg: any = { contents: [{ role: "user", parts: [{ text: userPrompt }] }] };
@@ -2476,7 +2476,7 @@ Analyse ce cas selon tes règles. Vérifie particulièrement la cohérence entre
       : "";
     const userPrompt = `${caseBlock}${threadBlock}\n\nQuestion du médecin sur ce cas : ${question}`;
 
-    const modelId = process.env.GEMINI_MODEL || "gemini-2.0-flash";
+    const modelId = process.env.GEMINI_MODEL || "gemini-flash-latest";
     const run = async (withSearch: boolean) => {
       const m = proGemini!.getGenerativeModel({ model: modelId, systemInstruction: CLINICAL_FOLLOWUP_SYSTEM });
       const cfg: any = { contents: [{ role: "user", parts: [{ text: userPrompt }] }] };
@@ -2577,7 +2577,7 @@ OBSERVATIONS CLINIQUES DU DERMATOLOGUE (examen en personne) :
 "${observations}"
 
 Affine ton analyse selon tes règles.`;
-    const modelId = process.env.GEMINI_MODEL || "gemini-2.0-flash";
+    const modelId = process.env.GEMINI_MODEL || "gemini-flash-latest";
     let txt = "";
     try {
       const m = proGemini.getGenerativeModel({ model: modelId, systemInstruction: REFINE_SYSTEM });
