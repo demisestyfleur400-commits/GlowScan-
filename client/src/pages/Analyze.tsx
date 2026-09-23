@@ -401,6 +401,11 @@ export default function Analyze() {
     setAnswers({ ...answers, [questionId]: value });
   };
 
+  // Soumission du questionnaire complémentaire → lance l'analyse (les réponses
+  // `answers` sont déjà incluses dans le POST /api/analyze de handleIntakeSubmit).
+  // Corrige le bug : cette fonction était référencée mais non définie.
+  const handleConsultationSubmit = handleIntakeSubmit;
+
   const reset = () => {
     setResult(null);
     setSavedScanId(null);
@@ -852,80 +857,33 @@ export default function Analyze() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="space-y-5"
+              style={{ fontFamily: GS.sans, color: GS.ink }}
             >
-              {/* AI observation card */}
-              <div
-                className="rounded-2xl p-5 relative overflow-hidden"
-                style={{
-                  background: "rgba(47,158,110,0.06)",
-                  border: "1px solid rgba(47,158,110,0.18)",
-                }}
-              >
-                <div
-                  className="pointer-events-none absolute top-0 right-0 w-32 h-32 rounded-full"
-                  style={{ background: "radial-gradient(circle, rgba(47,158,110,0.15), transparent)" }}
-                />
-                <div className="flex items-center gap-2 mb-2" style={{ color: "#a78bfa" }}>
-                  <HelpCircle className="w-4 h-4" />
-                  <span className="text-[10px] font-bold tracking-wide">Première observation IA</span>
-                </div>
-                <p className="text-xs font-medium leading-relaxed italic" style={{ color: "#4a5a52" }}>
-                  "{consultationData.observations_visuelles}"
-                </p>
+              {/* Première observation — présentée comme aide, pas comme verdict */}
+              <div style={{ border: `1px solid ${GS.line}`, padding: 14, marginBottom: 16 }}>
+                <GsMono style={{ display: "block", marginBottom: 6 }}>Première observation</GsMono>
+                <div style={{ fontSize: 12.5, color: GS.muted, lineHeight: 1.55, fontStyle: "italic" }}>« {consultationData.observations_visuelles} »</div>
               </div>
 
-              {/* Question form */}
-              <form
-                onSubmit={handleConsultationSubmit}
-                className="space-y-4 rounded-2xl p-5"
-                style={{
-                  background: "rgba(0,0,0,0.04)",
-                  border: "1px solid rgba(0,0,0,0.07)",
-                }}
-              >
-                <span
-                  className="text-[10px] font-bold tracking-wide block mb-1"
-                  style={{ color: "rgba(0,0,0,0.35)" }}
-                >
-                  Quelques questions pour affiner le diagnostic
-                </span>
+              <form onSubmit={handleConsultationSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                <GsMono>Quelques questions pour affiner</GsMono>
 
                 {consultationData.questions.map((q) => (
-                  <div key={q.id} className="space-y-1.5">
-                    <label className="text-xs font-bold leading-normal block" style={{ color: "#1f2a26" }}>
-                      {q.label}
-                    </label>
-                    <input
-                      type="text"
+                  <div key={q.id}>
+                    <div style={{ fontSize: 15, fontWeight: 600, color: GS.ink, letterSpacing: "-.2px", lineHeight: 1.25, marginBottom: 8 }}>{q.label}</div>
+                    <textarea
                       required
-                      placeholder="Saisis ta réponse ici..."
+                      rows={2}
+                      placeholder="Votre réponse…"
                       value={answers[q.id] || ""}
                       onChange={(e) => handleInputChange(q.id, e.target.value)}
-                      className="w-full px-3.5 py-2.5 text-xs font-medium outline-none transition-colors"
-                      style={{
-                        background: "#ffffff",
-                        border: "1px solid rgba(47,158,110,0.2)",
-                        borderRadius: "12px",
-                        color: "#1f2a26",
-                      }}
-                      onFocus={e => (e.target.style.borderColor = "rgba(47,158,110,0.5)")}
-                      onBlur={e => (e.target.style.borderColor = "rgba(47,158,110,0.2)")}
+                      style={{ width: "100%", boxSizing: "border-box", border: `1px solid ${GS.ink}`, padding: 13, fontFamily: GS.sans, fontSize: 14, color: GS.ink, outline: "none", resize: "vertical", borderRadius: 0 }}
                     />
                   </div>
                 ))}
 
-                <button
-                  type="submit"
-                  className="w-full py-3.5 text-sm font-bold mt-2 transition-all active:scale-[0.98]"
-                  style={{
-                    background: "#2f9e6e",
-                    borderRadius: "9999px",
-                    color: "#fff",
-                  }}
-                >
-                  Générer mon ordonnance finale
-                </button>
+                <div style={{ fontSize: 11, lineHeight: 1.55, color: GS.muted }}>Une réponse par question suffit — écrivez « je ne sais pas » si besoin.</div>
+                <GsButton type="submit" icon={<ArrowRight size={16} style={{ color: GS.accent }} strokeWidth={2} />}>Générer mon compte rendu</GsButton>
               </form>
             </motion.div>
           )}
