@@ -66,6 +66,29 @@ export function ProductOrderFlow({ items, bundle, total, kitLabel = "Kit protoco
 
   const copyNum = async () => { try { await navigator.clipboard.writeText(beneNum.replace(/\s/g, "")); setCopied(true); setTimeout(() => setCopied(false), 1500); } catch {} };
 
+  // Persiste la commande en base (suivi in-app) — table orders existante.
+  const [submitting, setSubmitting] = useState(false);
+  const submitOrder = async () => {
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      await fetch("/api/orders", {
+        method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderNumber: orderRef,
+          clientName: nom || "Client",
+          clientPhone: (tel || "").replace(/\s/g, "") || "—",
+          clientAddress: [quartier, repere, ville].filter(Boolean).join(", ") || ville,
+          clientNotes: livraison ? `Livraison ${ville}` : "Retrait Akwa",
+          items: chosen.map((it) => ({ name: it.name, price: it.price })),
+          totalPrice: grandTotal,
+          brand: "GlowScan",
+          whatsappNumber: WA_NUM,
+        }),
+      });
+    } catch {} finally { setSubmitting(false); }
+  };
+
   // ── Déclencheur (bouton dans le rapport 04C) ──
   if (!open) {
     return (
@@ -180,7 +203,7 @@ export function ProductOrderFlow({ items, bundle, total, kitLabel = "Kit protoco
             {fee > 0 && <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: GS.muted }}><span>Livraison {ville}</span><span style={{ fontFamily: GS.mono, color: GS.ink }}>{fee.toLocaleString("fr-FR")} F</span></div>}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: 4 }}><GsMono style={{ letterSpacing: ".12em" }}>Total</GsMono><span style={{ fontFamily: GS.mono, fontSize: 20, fontWeight: 600, color: GS.ink }}>{grandTotal.toLocaleString("fr-FR")} F</span></div>
           </div>
-          {primary("Passer au paiement", () => setStep(3))}
+          {primary("Passer au paiement", () => { if (!nom.trim() || (tel || "").replace(/\D/g, "").length < 8) { alert("Renseignez votre nom et un numéro de livraison valide."); return; } setStep(3); })}
         </>
       );
     }
@@ -275,7 +298,7 @@ export function ProductOrderFlow({ items, bundle, total, kitLabel = "Kit protoco
           <div style={{ fontSize: 11, lineHeight: 1.5, color: GS.ink }}>WhatsApp va s'ouvrir avec ce texte. <strong>Ajoutez la capture</strong> puis appuyez sur Envoyer, et revenez dans GlowScan.</div>
         </div>
         <div style={{ marginTop: 18 }}>
-          <a href={`https://wa.me/${WA_NUM}?text=${orderMsg}`} target="_blank" rel="noreferrer" onClick={() => setTimeout(() => setStep(6), 400)}
+          <a href={`https://wa.me/${WA_NUM}?text=${orderMsg}`} target="_blank" rel="noreferrer" onClick={() => { submitOrder(); setTimeout(() => setStep(6), 400); }}
             style={{ background: "#25D366", color: "#05262B", padding: 17, display: "flex", alignItems: "center", justifyContent: "center", gap: 10, fontSize: 14, fontWeight: 700, textDecoration: "none" }}><Send size={16} />Envoyer sur WhatsApp</a>
         </div>
       </>

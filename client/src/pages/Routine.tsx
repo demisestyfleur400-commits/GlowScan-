@@ -37,13 +37,14 @@ interface RoutinesResponse {
   stats: { streak: number; weeklyPct: number; totalSteps: number; today: string };
 }
 
+// Repointé sur la palette de la refonte B2C (turquoise/encre, filets 1px).
 const DS = {
-  base: "#fbfdfe",
+  base: "#ffffff",
   surface: "#ffffff",
-  text: "#1a2235",
-  body: "#4a5568",
-  muted: "rgba(0,0,0,0.35)",
-  border: "rgba(0,0,0,0.07)",
+  text: "#0B1719",
+  body: "#5D6E71",
+  muted: "#8C9C9E",
+  border: "#DCE4E5",
 };
 
 // ─────────────────────────────────────────────────────────────────────
@@ -249,9 +250,10 @@ function RoutineCard({ period, routine, todayCompletions }: { period: Period; ro
 
   const Icon = isMorning ? Sun : Moon;
   const title = isMorning ? "Protocole matinal" : "Protocole nocturne";
-  const accentColor = isMorning ? "#fb923c" : "#a78bfa";
-  const accentBg = isMorning ? "rgba(251,146,60,0.12)" : "rgba(139,92,246,0.12)";
-  const accentBorder = isMorning ? "rgba(251,146,60,0.25)" : "rgba(139,92,246,0.25)";
+  // Palette design (turquoise) — matin/soir gardent l'icône Sun/Moon pour se distinguer.
+  const accentColor = "#0A6E72";
+  const accentBg = "#F4FEFC";
+  const accentBorder = "#12D8BE";
 
   const [localTime, setLocalTime] = useState(routine?.reminderTime || (isMorning ? "07:00" : "21:00"));
   useEffect(() => {
