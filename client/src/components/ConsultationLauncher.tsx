@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { PRIVACY_POLICY_VERSION } from "@/components/ConsentBanner";
+import { GS, GsMono, useGsFonts } from "@/lib/gs-ui";
+import { Check, Copy, ArrowRight, ShieldCheck } from "lucide-react";
 
 // ════════════════════════════════════════════════════════════════════════
 // Lancement d'une consultation IN-APP (circuit fermé) — remplace le WhatsApp.
@@ -48,6 +50,10 @@ export function ConsultationLauncher({ scanId, condition, imageUrl }: { scanId?:
   const [ctxProducts, setCtxProducts] = useState("");
   const [ctxAllergies, setCtxAllergies] = useState("");
   const [consentChecked, setConsentChecked] = useState(false);
+  const [copied, setCopied] = useState<string | null>(null);
+  useGsFonts();
+
+  const copyNum = (n: string) => { try { navigator.clipboard?.writeText(n.replace(/\s/g, "")); setCopied(n); setTimeout(() => setCopied(null), 1600); } catch {} };
 
   const saveContext = async () => {
     if (!consultationId) return;
@@ -163,161 +169,164 @@ export function ConsultationLauncher({ scanId, condition, imageUrl }: { scanId?:
     finally { setBusy(false); }
   };
 
-  const VIOLET = "#7c3aed";
 
-  // ── Titre section ──
+  // ── Titre section (design turquoise) ──
   const Header = (
-    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-      <span style={{ fontSize: 15 }}>💬</span>
-      <p style={{ fontSize: 12, fontWeight: 700, color: VIOLET, margin: 0 }}>Consulter un dermatologue</p>
+    <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 12 }}>
+      <ShieldCheck size={16} style={{ color: GS.teal }} />
+      <GsMono color={GS.teal} style={{ letterSpacing: ".12em" }}>Consulter un dermatologue</GsMono>
     </div>
   );
 
   if (loading) return null;
 
-  // Aucun dermato disponible → message doux (pas de WhatsApp)
+  const shellCard: React.CSSProperties = { fontFamily: GS.sans, color: GS.ink, marginTop: 6 };
+
+  // Aucun dermato disponible → message doux
   if (derms.length === 0 && step === "list") {
     return (
-      <div style={{ marginTop: 4 }}>
+      <div style={shellCard}>
         {Header}
-        <div style={{ background: "rgba(124,58,237,0.06)", border: "1px solid rgba(124,58,237,0.2)", borderRadius: 16, padding: 16 }}>
-          <p style={{ fontSize: 12.5, color: "#6b7280", margin: 0, lineHeight: 1.6 }}>
-            La consultation en ligne avec un dermatologue arrive très bientôt sur GlowScan. Reviens d'ici peu 👩🏾‍⚕️
-          </p>
+        <div style={{ border: `1px solid ${GS.line}`, background: GS.panel, padding: 16, fontSize: 12.5, color: GS.muted, lineHeight: 1.6 }}>
+          La consultation en ligne avec un dermatologue arrive très bientôt sur GlowScan. Revenez d'ici peu.
         </div>
       </div>
     );
   }
 
   return (
-    <div style={{ marginTop: 4 }}>
+    <div style={shellCard}>
       {Header}
-      <div style={{ background: "rgba(124,58,237,0.06)", border: "1px solid rgba(124,58,237,0.2)", borderRadius: 20, padding: 16 }}>
-        {err && <p style={{ fontSize: 11.5, color: "#b91c1c", marginBottom: 10 }}>{err}</p>}
+      <div style={{ border: `1px solid ${GS.line}`, background: "#fff", padding: 16 }}>
+        {err && <p style={{ fontFamily: GS.mono, fontSize: 11, color: GS.red, margin: "0 0 10px" }}>{err}</p>}
 
-        {/* ── Non connecté → redirection claire vers la page de connexion ── */}
+        {/* ── Non connecté ── */}
         {needLogin && (
           <div style={{ textAlign: "center", padding: "6px 0" }}>
-            <div style={{ fontSize: 30, marginBottom: 6 }}>🔒</div>
-            <p style={{ fontSize: 13.5, fontWeight: 800, color: "#1a1a2e", margin: "0 0 4px" }}>Crée ton compte pour consulter</p>
-            <p style={{ fontSize: 12, color: "#6b7280", margin: "0 0 14px", lineHeight: 1.6 }}>
-              Un compte protège ta consultation et tes échanges avec le dermatologue. C'est rapide.
-            </p>
-            <a
-              href="/auth"
-              onClick={() => { try { sessionStorage.setItem("postLoginIntent", "consultation"); } catch {} }}
-              style={{ display: "inline-block", background: VIOLET, color: "#fff", borderRadius: 9999, padding: "12px 24px", fontSize: 13.5, fontWeight: 800, textDecoration: "none" }}>
-              Me connecter →
-            </a>
-            <button onClick={() => setNeedLogin(false)}
-              style={{ display: "block", margin: "10px auto 0", background: "none", border: "none", color: "#9ca3af", fontSize: 11.5, fontWeight: 700, cursor: "pointer" }}>
-              Retour
-            </button>
+            <div style={{ width: 48, height: 48, margin: "0 auto 12px", border: `1px solid ${GS.ink}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <ShieldCheck size={22} style={{ color: GS.ink }} />
+            </div>
+            <div style={{ fontSize: 18, fontWeight: 600, letterSpacing: "-.4px", marginBottom: 6 }}>Créez votre compte pour consulter</div>
+            <p style={{ fontSize: 12.5, color: GS.muted, margin: "0 0 16px", lineHeight: 1.6 }}>Un compte protège votre consultation et vos échanges avec le dermatologue.</p>
+            <a href="/auth" onClick={() => { try { sessionStorage.setItem("postLoginIntent", "consultation"); } catch {} }}
+              style={{ display: "inline-block", background: GS.ink, color: "#fff", padding: "13px 26px", fontSize: 13.5, fontWeight: 600, textDecoration: "none" }}>Me connecter</a>
+            <button onClick={() => setNeedLogin(false)} style={{ display: "block", margin: "12px auto 0", background: "none", border: "none", color: GS.faint, fontFamily: GS.mono, fontSize: 10, fontWeight: 600, letterSpacing: ".08em", cursor: "pointer" }}>RETOUR</button>
           </div>
         )}
 
-        {/* ── ÉTAPE : choisir un dermatologue ── */}
+        {/* ── 07 · CHOISIR UN DERMATOLOGUE ── */}
         {!needLogin && step === "list" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {recommendedLabel && derms.some((d) => d.recommendedFor) && (
-              <p style={{ fontSize: 11.5, color: "#6b7280", margin: "0 0 2px" }}>
-                Pour ton cas, on te conseille un spécialiste en <strong style={{ color: VIOLET }}>{recommendedLabel}</strong> :
+              <p style={{ fontSize: 12, color: GS.muted, margin: "0 0 2px", lineHeight: 1.55 }}>
+                Pour votre cas, nous conseillons un spécialiste en <strong style={{ color: GS.teal }}>{recommendedLabel}</strong>.
               </p>
             )}
             {derms.map((d) => (
-              <div key={d.id} style={{ display: "flex", alignItems: "center", gap: 12, background: "#fff", border: d.recommendedFor ? "1.5px solid rgba(124,58,237,0.5)" : "1px solid rgba(0,0,0,0.06)", borderRadius: 14, padding: "10px 12px" }}>
-                <div style={{ width: 44, height: 44, borderRadius: 12, background: "linear-gradient(135deg,rgba(167,139,250,0.25),rgba(124,58,237,0.15))", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>👩🏾‍⚕️</div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontSize: 13, fontWeight: 800, color: "#1a1a2e", margin: 0 }}>Dr {d.fullName}</p>
-                  {d.recommendedFor && (
-                    <span style={{ display: "inline-block", fontSize: 9.5, fontWeight: 800, color: VIOLET, background: "rgba(124,58,237,0.1)", borderRadius: 9999, padding: "1px 7px", margin: "2px 0" }}>✓ Recommandé pour ton cas</span>
-                  )}
-                  <p style={{ fontSize: 11, color: "#6b7280", margin: "1px 0 0" }}>{d.cabinet || "Dermatologue"}{d.city ? ` · ${d.city}` : ""}</p>
-                  <p style={{ fontSize: 11, fontWeight: 800, color: VIOLET, margin: "2px 0 0" }}>{d.price.toLocaleString("fr-FR")} FCFA</p>
+              <div key={d.id} style={{ border: `1px solid ${d.recommendedFor ? GS.ink : GS.line}`, background: d.recommendedFor ? GS.mintBg : "#fff", padding: 14 }}>
+                <div style={{ display: "flex", gap: 13, alignItems: "flex-start" }}>
+                  <div style={{ width: 46, height: 46, flex: "none", background: GS.panel, border: `1px solid ${GS.hair}` }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: GS.ink }}>Dr {d.fullName}</div>
+                    <div style={{ fontSize: 11.5, color: GS.muted, marginTop: 2 }}>{d.cabinet || "Dermatologue"}{d.city ? ` · ${d.city}` : ""}</div>
+                    {d.recommendedFor && (
+                      <div style={{ marginTop: 6 }}><span style={{ fontFamily: GS.mono, fontSize: 9.5, fontWeight: 600, letterSpacing: ".06em", color: GS.teal, border: `1px solid ${GS.accent}`, padding: "3px 7px" }}>RECOMMANDÉ POUR VOTRE CAS</span></div>
+                    )}
+                  </div>
+                  <div style={{ textAlign: "right", flex: "none" }}>
+                    <GsMono style={{ letterSpacing: 0 }}>Tarif</GsMono>
+                    <div style={{ fontFamily: GS.mono, fontSize: 15, fontWeight: 600, color: GS.ink, fontVariantNumeric: "tabular-nums" }}>{d.price.toLocaleString("fr-FR")}<span style={{ fontSize: 9, color: GS.muted }}> F</span></div>
+                  </div>
                 </div>
                 <button onClick={() => openConsultation(d)} disabled={busy}
-                  style={{ flexShrink: 0, background: VIOLET, color: "#fff", border: "none", borderRadius: 9999, padding: "8px 14px", fontSize: 12, fontWeight: 800, cursor: "pointer", opacity: busy ? 0.6 : 1 }}>
-                  Consulter
+                  style={{ width: "100%", marginTop: 12, background: GS.ink, color: "#fff", border: "none", padding: 13, fontSize: 13, fontWeight: 600, cursor: busy ? "not-allowed" : "pointer", opacity: busy ? 0.6 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                  Me faire consulter par Dr {d.fullName.split(" ")[0]} <ArrowRight size={15} />
                 </button>
               </div>
             ))}
           </div>
         )}
 
-        {/* ── ÉTAPE : paiement Mobile Money ── */}
+        {/* ── 08 · PAIEMENT ── */}
         {step === "pay" && selected && (
           <div>
-            <p style={{ fontSize: 13, fontWeight: 800, color: "#1a1a2e", margin: "0 0 4px" }}>Paiement de la consultation</p>
-            <p style={{ fontSize: 12, color: "#6b7280", margin: "0 0 12px", lineHeight: 1.6 }}>
-              Consultation avec <strong>Dr {selected.fullName}</strong> — <strong>{selected.price.toLocaleString("fr-FR")} FCFA</strong>.
+            <div style={{ fontSize: 18, fontWeight: 600, letterSpacing: "-.4px", marginBottom: 4 }}>Régler la consultation</div>
+            <p style={{ fontSize: 12.5, color: GS.muted, margin: "0 0 14px", lineHeight: 1.55 }}>
+              Consultation avec <strong style={{ color: GS.ink }}>Dr {selected.fullName}</strong> — <strong style={{ color: GS.ink }}>{selected.price.toLocaleString("fr-FR")} FCFA</strong>.
             </p>
-            {/* Numéro WhatsApp — pour recevoir le rapport après la consultation */}
-            <label style={{ fontSize: 11, fontWeight: 700, color: "#374151", display: "block", marginBottom: 4 }}>📱 Ton numéro WhatsApp (pour recevoir le rapport)</label>
-            <input value={patientPhone} onChange={(e) => setPatientPhone(e.target.value)} onBlur={savePhone} placeholder="Ex : 6XX XXX XXX" inputMode="tel"
-              style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: "1px solid rgba(0,0,0,0.15)", fontSize: 13, marginBottom: 12 }} />
 
-            {/* Contexte pour le dermatologue — le patient fait le travail en amont */}
-            <div style={{ background: "#fff", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 12, padding: 12, marginBottom: 12 }}>
-              <p style={{ fontSize: 11, fontWeight: 800, color: "#374151", margin: "0 0 8px" }}>Aide le dermatologue à mieux te soigner</p>
-              <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-                <input value={ctxAge} onChange={(e) => setCtxAge(e.target.value)} onBlur={saveContext} placeholder="Âge" inputMode="numeric"
-                  style={{ width: "40%", boxSizing: "border-box", padding: "9px 10px", borderRadius: 10, border: "1px solid rgba(0,0,0,0.15)", fontSize: 12.5 }} />
-                <input value={ctxCity} onChange={(e) => setCtxCity(e.target.value)} onBlur={saveContext} placeholder="Ville"
-                  style={{ flex: 1, boxSizing: "border-box", padding: "9px 10px", borderRadius: 10, border: "1px solid rgba(0,0,0,0.15)", fontSize: 12.5 }} />
-              </div>
-              <input value={ctxDuration} onChange={(e) => setCtxDuration(e.target.value)} onBlur={saveContext} placeholder="Depuis combien de temps ? (ex : 3 semaines)"
-                style={{ width: "100%", boxSizing: "border-box", padding: "9px 10px", borderRadius: 10, border: "1px solid rgba(0,0,0,0.15)", fontSize: 12.5, marginBottom: 8 }} />
-              <input value={ctxProducts} onChange={(e) => setCtxProducts(e.target.value)} onBlur={saveContext} placeholder="Produits utilisés (ex : savon noir, Nivea)"
-                style={{ width: "100%", boxSizing: "border-box", padding: "9px 10px", borderRadius: 10, border: "1px solid rgba(0,0,0,0.15)", fontSize: 12.5, marginBottom: 8 }} />
-              <input value={ctxAllergies} onChange={(e) => setCtxAllergies(e.target.value)} onBlur={saveContext} placeholder="Allergies connues (sinon laisse vide)"
-                style={{ width: "100%", boxSizing: "border-box", padding: "9px 10px", borderRadius: 10, border: "1px solid rgba(0,0,0,0.15)", fontSize: 12.5 }} />
+            {/* Numéro WhatsApp patient */}
+            <GsMono style={{ display: "block", marginBottom: 6 }}>Votre numéro WhatsApp (pour recevoir le rapport)</GsMono>
+            <input value={patientPhone} onChange={(e) => setPatientPhone(e.target.value)} onBlur={savePhone} placeholder="Ex : 6XX XXX XXX" inputMode="tel"
+              style={{ width: "100%", boxSizing: "border-box", padding: "11px 12px", border: `1px solid ${GS.line}`, fontFamily: GS.mono, fontSize: 13, marginBottom: 16 }} />
+
+            {/* Contexte médecin */}
+            <GsMono style={{ display: "block", marginBottom: 8 }}>Aidez le dermatologue à mieux vous soigner</GsMono>
+            <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+              <input value={ctxAge} onChange={(e) => setCtxAge(e.target.value)} onBlur={saveContext} placeholder="Âge" inputMode="numeric"
+                style={{ width: "38%", boxSizing: "border-box", padding: "10px", border: `1px solid ${GS.line}`, fontSize: 12.5 }} />
+              <input value={ctxCity} onChange={(e) => setCtxCity(e.target.value)} onBlur={saveContext} placeholder="Ville"
+                style={{ flex: 1, boxSizing: "border-box", padding: "10px", border: `1px solid ${GS.line}`, fontSize: 12.5 }} />
             </div>
-            {/* Consentement — partage des photos/données avec le dermatologue (requis) */}
-            <label style={{ display: "flex", alignItems: "flex-start", gap: 9, background: "#fff", border: `1px solid ${consentChecked ? "rgba(124,58,237,0.4)" : "rgba(0,0,0,0.12)"}`, borderRadius: 12, padding: 12, marginBottom: 12, cursor: "pointer" }}>
-              <input type="checkbox" checked={consentChecked} onChange={(e) => setConsentChecked(e.target.checked)} style={{ marginTop: 2, width: 16, height: 16, flexShrink: 0, accentColor: VIOLET }} />
-              <span style={{ fontSize: 11.5, color: "#374151", lineHeight: 1.6 }}>
-                Vos photos et informations sont partagées uniquement avec le dermatologue chargé de votre consultation afin de vous répondre. Elles sont traitées conformément aux règles de confidentialité applicables.
-                {" "}
-                <a href="/confidentialite" target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} style={{ color: VIOLET, fontWeight: 700 }}>Voir les informations de confidentialité</a>
+            <input value={ctxDuration} onChange={(e) => setCtxDuration(e.target.value)} onBlur={saveContext} placeholder="Depuis combien de temps ? (ex : 3 semaines)"
+              style={{ width: "100%", boxSizing: "border-box", padding: "10px", border: `1px solid ${GS.line}`, fontSize: 12.5, marginBottom: 8 }} />
+            <input value={ctxProducts} onChange={(e) => setCtxProducts(e.target.value)} onBlur={saveContext} placeholder="Produits utilisés (ex : savon noir, Nivea)"
+              style={{ width: "100%", boxSizing: "border-box", padding: "10px", border: `1px solid ${GS.line}`, fontSize: 12.5, marginBottom: 8 }} />
+            <input value={ctxAllergies} onChange={(e) => setCtxAllergies(e.target.value)} onBlur={saveContext} placeholder="Allergies connues (sinon laissez vide)"
+              style={{ width: "100%", boxSizing: "border-box", padding: "10px", border: `1px solid ${GS.line}`, fontSize: 12.5, marginBottom: 16 }} />
+
+            {/* Consentement */}
+            <label style={{ display: "flex", alignItems: "flex-start", gap: 10, border: `1px solid ${consentChecked ? GS.ink : GS.line}`, background: consentChecked ? GS.mintBg : "#fff", padding: 13, marginBottom: 16, cursor: "pointer" }}>
+              <span style={{ width: 18, height: 18, flex: "none", marginTop: 1, ...(consentChecked ? { background: GS.ink, display: "flex", alignItems: "center", justifyContent: "center" } : { border: `1px solid ${GS.disabled}` }) }}>{consentChecked && <Check size={12} style={{ color: GS.accent }} strokeWidth={3} />}</span>
+              <input type="checkbox" checked={consentChecked} onChange={(e) => setConsentChecked(e.target.checked)} style={{ display: "none" }} />
+              <span style={{ fontSize: 11.5, color: GS.muted, lineHeight: 1.6 }}>
+                Vos photos et informations sont partagées uniquement avec le dermatologue chargé de votre consultation. Elles sont traitées conformément aux règles de confidentialité applicables.{" "}
+                <a href="/confidentialite" target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} style={{ color: GS.teal, fontWeight: 600 }}>Voir la confidentialité</a>
               </span>
             </label>
+
             {payProvider !== "simulated" ? (
               <>
-                <div style={{ background: "#fff", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 12, padding: 12, marginBottom: 12 }}>
-                  <p style={{ fontSize: 12, color: "#374151", margin: 0, lineHeight: 1.7 }}>
-                    Paie en toute sécurité par <strong>MTN Mobile Money</strong> ou <strong>Orange Money</strong>. Une page de paiement s'ouvre — confirme sur ton téléphone, puis reviens ici.
-                  </p>
+                <div style={{ border: `1px solid ${GS.line}`, background: GS.panel, padding: 13, marginBottom: 14, fontSize: 12, color: GS.muted, lineHeight: 1.65 }}>
+                  Payez en sécurité par <strong style={{ color: GS.ink }}>MTN Mobile Money</strong> ou <strong style={{ color: GS.ink }}>Orange Money</strong>. Une page de paiement s'ouvre — confirmez sur votre téléphone, puis revenez ici.
                 </div>
                 <button onClick={startCinetPay} disabled={busy || !consentChecked}
-                  style={{ width: "100%", background: VIOLET, color: "#fff", border: "none", borderRadius: 9999, padding: "12px", fontSize: 13, fontWeight: 800, cursor: (busy || !consentChecked) ? "not-allowed" : "pointer", opacity: (busy || !consentChecked) ? 0.5 : 1 }}>
-                  {busy ? "Paiement en cours… garde cette page ouverte" : `Payer ${selected.price.toLocaleString("fr-FR")} FCFA →`}
+                  style={{ width: "100%", background: GS.ink, color: "#fff", border: "none", padding: 15, fontSize: 13.5, fontWeight: 600, cursor: (busy || !consentChecked) ? "not-allowed" : "pointer", opacity: (busy || !consentChecked) ? 0.5 : 1 }}>
+                  {busy ? "Paiement en cours… gardez cette page ouverte" : `Payer ${selected.price.toLocaleString("fr-FR")} FCFA`}
                 </button>
-                {!consentChecked && <p style={{ fontSize: 10.5, color: "#9ca3af", textAlign: "center", margin: "6px 0 0" }}>Cochez le consentement ci-dessus pour continuer.</p>}
+                {!consentChecked && <p style={{ fontSize: 10.5, color: GS.faint, textAlign: "center", margin: "8px 0 0" }}>Cochez le consentement pour continuer.</p>}
+                <p style={{ fontFamily: GS.mono, fontSize: 9.5, color: GS.faint, textAlign: "center", margin: "10px 0 0", letterSpacing: ".04em" }}>Remboursé si aucun médecin ne répond sous 24 h.</p>
               </>
             ) : (
               <>
-                <div style={{ background: "#fff", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 12, padding: 12, marginBottom: 12 }}>
-                  <p style={{ fontSize: 12, color: "#374151", margin: 0, lineHeight: 1.7 }}>
-                    1. Envoie <strong>{selected.price.toLocaleString("fr-FR")} FCFA</strong> :<br />
-                    &nbsp;&nbsp;• <strong>MTN Mobile Money</strong> au <strong>{MTN_NUMBER}</strong><br />
-                    &nbsp;&nbsp;• <strong>Orange Money</strong> au <strong>{ORANGE_NUMBER}</strong><br />
-                    2. <strong>Envoie ta preuve sur WhatsApp</strong> (capture du paiement) — ta consultation est déverrouillée dès réception.
-                  </p>
-                </div>
-                {/* Preuve par WhatsApp — le patient prévient, l'admin confirme et déverrouille */}
-                {!consentChecked && <p style={{ fontSize: 10.5, color: "#9ca3af", textAlign: "center", margin: "0 0 10px" }}>Cochez le consentement ci-dessus pour continuer.</p>}
+                {/* Bénéficiaires Mobile Money */}
+                <GsMono style={{ display: "block", marginBottom: 8 }}>Envoyez {selected.price.toLocaleString("fr-FR")} FCFA à</GsMono>
+                {[{ label: "Orange Money", num: ORANGE_NUMBER }, { label: "MTN Mobile Money", num: MTN_NUMBER }].map((p) => (
+                  <div key={p.label} style={{ display: "flex", alignItems: "center", gap: 12, border: `1px solid ${GS.line}`, padding: "11px 13px", marginBottom: 8 }}>
+                    <div style={{ flex: 1 }}>
+                      <GsMono style={{ letterSpacing: 0 }}>{p.label}</GsMono>
+                      <div style={{ fontFamily: GS.mono, fontSize: 15, fontWeight: 600, color: GS.ink, marginTop: 2 }}>{p.num}</div>
+                    </div>
+                    <button onClick={() => copyNum(p.num)} style={{ display: "flex", alignItems: "center", gap: 6, border: `1px solid ${GS.ink}`, background: "#fff", color: GS.ink, fontFamily: GS.mono, fontSize: 10, fontWeight: 600, padding: "7px 10px", cursor: "pointer" }}>
+                      {copied === p.num ? <><Check size={13} style={{ color: GS.teal }} /> COPIÉ</> : <><Copy size={13} /> COPIER</>}
+                    </button>
+                  </div>
+                ))}
+                <p style={{ fontSize: 11.5, color: GS.muted, margin: "10px 0 14px", lineHeight: 1.6 }}>Puis envoyez votre <strong style={{ color: GS.ink }}>preuve de paiement</strong> sur WhatsApp — votre consultation est déverrouillée dès réception.</p>
+
+                {!consentChecked && <p style={{ fontSize: 10.5, color: GS.faint, textAlign: "center", margin: "0 0 10px" }}>Cochez le consentement pour continuer.</p>}
                 <a
                   href={consentChecked ? `https://wa.me/237${PAYMENT_NUMBER.replace(/\D/g, "")}?text=${encodeURIComponent(`Bonjour GlowScan 👋\nJ'ai payé ${selected.price.toLocaleString("fr-FR")} FCFA pour ma consultation${selected.fullName ? ` avec Dr ${selected.fullName}` : ""}.\nRéf. consultation : ${consultationId || "—"}\nVoici ma preuve de paiement :`)}` : undefined}
                   onClick={(e) => { if (!consentChecked) e.preventDefault(); else saveContext(); }}
                   target="_blank" rel="noreferrer"
-                  style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", boxSizing: "border-box", background: "#25D366", color: "#fff", borderRadius: 9999, padding: "13px", fontSize: 13.5, fontWeight: 800, textDecoration: "none", marginBottom: 12, opacity: consentChecked ? 1 : 0.5, pointerEvents: consentChecked ? "auto" : "none" }}>
-                  📲 Envoyer ma preuve sur WhatsApp
+                  style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", boxSizing: "border-box", background: "#25D366", color: "#fff", padding: 15, fontSize: 13.5, fontWeight: 700, textDecoration: "none", marginBottom: 12, opacity: consentChecked ? 1 : 0.5, pointerEvents: consentChecked ? "auto" : "none" }}>
+                  Envoyer ma preuve sur WhatsApp
                 </a>
-                <p style={{ fontSize: 11, color: "#9ca3af", textAlign: "center", margin: "0 0 12px" }}>ou entre la référence reçue par SMS :</p>
+                <p style={{ fontFamily: GS.mono, fontSize: 9.5, color: GS.faint, textAlign: "center", margin: "0 0 12px", letterSpacing: ".04em" }}>ou entrez la référence reçue par SMS</p>
                 <input value={ref} onChange={(e) => setRef(e.target.value)} placeholder="Référence du paiement (SMS)"
-                  style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: "1px solid rgba(0,0,0,0.15)", fontSize: 13, marginBottom: 10 }} />
+                  style={{ width: "100%", boxSizing: "border-box", padding: "11px 12px", border: `1px solid ${GS.line}`, fontFamily: GS.mono, fontSize: 13, marginBottom: 10 }} />
                 <button onClick={submitRef} disabled={busy || !ref.trim() || !consentChecked}
-                  style={{ width: "100%", background: VIOLET, color: "#fff", border: "none", borderRadius: 9999, padding: "12px", fontSize: 13, fontWeight: 800, cursor: "pointer", opacity: busy || !ref.trim() || !consentChecked ? 0.5 : 1 }}>
+                  style={{ width: "100%", background: GS.ink, color: "#fff", border: "none", padding: 15, fontSize: 13.5, fontWeight: 600, cursor: "pointer", opacity: (busy || !ref.trim() || !consentChecked) ? 0.5 : 1 }}>
                   {busy ? "Envoi…" : "J'ai payé — valider"}
                 </button>
               </>
@@ -325,36 +334,28 @@ export function ConsultationLauncher({ scanId, condition, imageUrl }: { scanId?:
           </div>
         )}
 
-        {/* ── ÉTAPE : confirmation ── */}
+        {/* ── 08B · CONFIRMATION ── */}
         {step === "done" && (
-          <div style={{ textAlign: "center", padding: "8px 0" }}>
-            <div style={{ fontSize: 34, marginBottom: 6 }}>✅</div>
-            <p style={{ fontSize: 13.5, fontWeight: 800, color: "#1a1a2e", margin: "0 0 4px" }}>
-              {paidConfirmed ? "Paiement reçu ✅" : "Paiement enregistré"}
+          <div style={{ textAlign: "center", padding: "6px 0" }}>
+            <div style={{ width: 48, height: 48, margin: "0 auto 12px", border: `1px solid ${GS.teal}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Check size={24} style={{ color: GS.teal }} strokeWidth={2.5} />
+            </div>
+            <div style={{ fontSize: 18, fontWeight: 600, letterSpacing: "-.4px", marginBottom: 6 }}>{paidConfirmed ? "Paiement reçu" : "Paiement enregistré"}</div>
+            <p style={{ fontSize: 12.5, color: GS.muted, margin: "0 0 16px", lineHeight: 1.6 }}>
+              {paidConfirmed
+                ? <>Dr {selected?.fullName} a été notifié. La conversation est ouverte dans <strong style={{ color: GS.ink }}>« Mes consultations »</strong>.</>
+                : <>Dès que votre paiement est confirmé, la conversation s'ouvre dans <strong style={{ color: GS.ink }}>« Mes consultations »</strong>. Vous serez notifié(e).</>}
             </p>
-            <p style={{ fontSize: 12, color: "#6b7280", margin: "0 0 12px", lineHeight: 1.6 }}>
-              {paidConfirmed ? (
-                <>Dr {selected?.fullName} a été notifié. La conversation est ouverte dans <strong>« Mes consultations »</strong>.</>
-              ) : (
-                <>Dès que ton paiement est confirmé, la conversation s'ouvre dans <strong>« Mes consultations »</strong>. Tu seras notifié(e).</>
-              )}
-            </p>
-            {/* Prompt push — le moment clé : être notifié quand le dermato répond */}
             {pushState !== "on" ? (
-              <div style={{ background: "rgba(124,58,237,0.06)", border: "1px solid rgba(124,58,237,0.2)", borderRadius: 12, padding: 12, marginBottom: 12, textAlign: "left" }}>
-                <p style={{ fontSize: 12, fontWeight: 700, color: "#1a1a2e", margin: "0 0 8px" }}>🔔 Sois prévenu(e) dès que le dermatologue répond</p>
-                <button onClick={enablePush}
-                  style={{ width: "100%", background: VIOLET, color: "#fff", border: "none", borderRadius: 9999, padding: "10px", fontSize: 12.5, fontWeight: 800, cursor: "pointer" }}>
-                  Activer les notifications
-                </button>
-                {pushState === "denied" && <p style={{ fontSize: 10.5, color: "#dc2626", margin: "6px 0 0" }}>Notifications bloquées — active-les dans les réglages de ton navigateur pour ne rien manquer.</p>}
+              <div style={{ border: `1px solid ${GS.line}`, background: GS.panel, padding: 14, marginBottom: 14, textAlign: "left" }}>
+                <GsMono style={{ display: "block", marginBottom: 8 }}>Soyez prévenu(e) dès que le dermatologue répond</GsMono>
+                <button onClick={enablePush} style={{ width: "100%", background: GS.ink, color: "#fff", border: "none", padding: 12, fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>Activer les notifications</button>
+                {pushState === "denied" && <p style={{ fontSize: 10.5, color: GS.red, margin: "8px 0 0" }}>Notifications bloquées — activez-les dans les réglages de votre navigateur.</p>}
               </div>
             ) : (
-              <p style={{ fontSize: 11.5, color: "#059669", fontWeight: 700, marginBottom: 12 }}>✅ Notifications activées</p>
+              <p style={{ fontFamily: GS.mono, fontSize: 10, color: GS.teal, fontWeight: 600, letterSpacing: ".06em", marginBottom: 14 }}>NOTIFICATIONS ACTIVÉES</p>
             )}
-            <a href="/consultations" style={{ display: "inline-block", background: VIOLET, color: "#fff", borderRadius: 9999, padding: "10px 20px", fontSize: 12.5, fontWeight: 800, textDecoration: "none" }}>
-              Voir mes consultations
-            </a>
+            <a href="/consultations" style={{ display: "inline-block", background: GS.ink, color: "#fff", padding: "13px 24px", fontSize: 13, fontWeight: 600, textDecoration: "none" }}>Voir mes consultations</a>
           </div>
         )}
       </div>
