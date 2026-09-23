@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { GS, useGsFonts } from "@/lib/gs-ui";
 
 const MTN_NUMBER = "674377959";
 const ORANGE_NUMBER = "690501392";
@@ -30,13 +31,14 @@ const FEATURES_PREMIUM = [
 
 type Step = "offer" | "payment" | "confirm";
 
-const DS = '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif';
+const DS = GS.sans;
 
 export default function Premium() {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
   const { isPremium } = useSubscription();
   const { toast } = useToast();
+  useGsFonts();
 
   const [step, setStep] = useState<Step>("offer");
   const [method, setMethod] = useState<"mtn_momo" | "orange_money">("mtn_momo");
@@ -107,9 +109,9 @@ export default function Premium() {
       >
         <div
           className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5"
-          style={{ background: "rgba(37,99,235,0.06)", border: "1px solid rgba(37,99,235,0.18)" }}
+          style={{ background: "rgba(10,110,114,0.06)", border: "1px solid rgba(10,110,114,0.18)" }}
         >
-          <Crown className="w-6 h-6" style={{ color: "#a78bfa" }} />
+          <Crown className="w-6 h-6" style={{ color: "#0A6E72" }} />
         </div>
         <h1 className="text-xl font-extrabold tracking-tight mb-2" style={{ color: "#1a2235", fontWeight: 800 }}>
           Licence active
@@ -130,7 +132,7 @@ export default function Premium() {
       <div className="min-h-screen flex flex-col" style={{ background: "#fbfdfe", fontFamily: DS }}>
         <div
           className="p-4 flex items-center gap-3 sticky top-0 z-10"
-          style={{ background: "rgba(13,10,14,0.95)", borderBottom: "1px solid rgba(0,0,0,0.07)", backdropFilter: "blur(20px)" }}
+          style={{ background: "#ffffff", borderBottom: "1px solid rgba(0,0,0,0.07)", backdropFilter: "blur(20px)" }}
         >
           <button
             onClick={() => setLocation(-1 as any)}
@@ -180,7 +182,7 @@ export default function Premium() {
           transform: "translateX(-50%)",
           width: "700px",
           height: "700px",
-          background: "radial-gradient(circle, rgba(37,99,235,0.15), transparent)",
+          background: "radial-gradient(circle, rgba(10,110,114,0.15), transparent)",
           pointerEvents: "none",
           zIndex: 0,
         }}
@@ -189,7 +191,7 @@ export default function Premium() {
       {/* Header */}
       <div
         className="px-4 py-3.5 flex items-center gap-3 sticky top-0 z-10"
-        style={{ background: "rgba(13,10,14,0.95)", borderBottom: "1px solid rgba(0,0,0,0.07)", backdropFilter: "blur(20px)" }}
+        style={{ background: "#ffffff", borderBottom: "1px solid rgba(0,0,0,0.07)", backdropFilter: "blur(20px)" }}
       >
         <button
           onClick={() => (step === "offer" ? setLocation(-1 as any) : setStep("offer"))}
@@ -217,8 +219,8 @@ export default function Premium() {
               <div
                 className="relative overflow-hidden text-center p-6"
                 style={{
-                  background: "rgba(37,99,235,0.1)",
-                  border: "2px solid rgba(37,99,235,0.4)",
+                  background: "rgba(10,110,114,0.1)",
+                  border: "2px solid rgba(10,110,114,0.4)",
                   borderRadius: "24px",
                 }}
               >
@@ -229,16 +231,16 @@ export default function Premium() {
                     right: 0,
                     width: "220px",
                     height: "220px",
-                    background: "radial-gradient(circle, rgba(37,99,235,0.12), transparent)",
+                    background: "radial-gradient(circle, rgba(10,110,114,0.12), transparent)",
                     pointerEvents: "none",
                   }}
                 />
                 <div className="relative">
                   <div
                     className="inline-flex items-center gap-1.5 px-3 py-1 mb-4"
-                    style={{ background: "rgba(37,99,235,0.15)", border: "1px solid rgba(37,99,235,0.3)", borderRadius: "9999px" }}
+                    style={{ background: "rgba(10,110,114,0.15)", border: "1px solid rgba(10,110,114,0.3)", borderRadius: "9999px" }}
                   >
-                    <span className="text-[10px] font-bold tracking-widest" style={{ color: "#f9a8d4" }}>Offre de lancement</span>
+                    <span className="text-[10px] font-bold tracking-widest" style={{ color: "#0A6E72" }}>Offre de lancement</span>
                   </div>
                   <h2
                     className="text-xl font-extrabold tracking-tight mb-1"
@@ -283,13 +285,13 @@ export default function Premium() {
                 </div>
 
                 <div className="pt-4" style={{ borderTop: "1px solid rgba(0,0,0,0.07)" }}>
-                  <span className="text-[9px] font-bold uppercase tracking-widest block mb-2.5" style={{ color: "#c4b5fd" }}>
+                  <span className="text-[9px] font-bold uppercase tracking-widest block mb-2.5" style={{ color: "#0A6E72" }}>
                     Fonctionnalités premium débloquées
                   </span>
                   <div className="space-y-2.5">
                     {FEATURES_PREMIUM.map(f => (
                       <div key={f.text} className="flex items-start gap-2.5 text-xs font-bold" style={{ color: "#1a2235" }}>
-                        <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" style={{ color: "#a78bfa" }} />
+                        <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" style={{ color: "#0A6E72" }} />
                         <span>{f.text}</span>
                       </div>
                     ))}
@@ -300,11 +302,11 @@ export default function Premium() {
               {/* Founder quote */}
               <div
                 className="p-5 flex items-start gap-4"
-                style={{ background: "rgba(37,99,235,0.06)", border: "1px solid rgba(37,99,235,0.18)", borderRadius: "24px" }}
+                style={{ background: "rgba(10,110,114,0.06)", border: "1px solid rgba(10,110,114,0.18)", borderRadius: "24px" }}
               >
                 <div
                   className="w-10 h-10 flex items-center justify-center shrink-0 text-sm font-extrabold"
-                  style={{ background: "#2563eb", borderRadius: "12px", color: "#fff", fontWeight: 800 }}
+                  style={{ background: "#0B1719", borderRadius: "12px", color: "#fff", fontWeight: 800 }}
                 >
                   DE
                 </div>
@@ -324,8 +326,8 @@ export default function Premium() {
               {/* Trust badges */}
               <div className="grid grid-cols-2 gap-2">
                 {[
-                  { icon: <Shield className="w-3.5 h-3.5" style={{ color: "#a78bfa" }} />, label: "Protocole MoMo/OM chiffré" },
-                  { icon: <Zap className="w-3.5 h-3.5" style={{ color: "#a78bfa" }} />, label: "Activation serveur rapide" },
+                  { icon: <Shield className="w-3.5 h-3.5" style={{ color: "#0A6E72" }} />, label: "Protocole MoMo/OM chiffré" },
+                  { icon: <Zap className="w-3.5 h-3.5" style={{ color: "#0A6E72" }} />, label: "Activation serveur rapide" },
                 ].map(({ icon, label }) => (
                   <div
                     key={label}
@@ -344,7 +346,7 @@ export default function Premium() {
                   onClick={() => setLocation("/auth")}
                   className="w-full py-4 text-sm font-extrabold transition-all active:scale-[0.98]"
                   style={{
-                    background: "linear-gradient(135deg,#2563eb,#f43f5e)",
+                    background: "#0B1719",
                     borderRadius: "12px",
                     color: "#fff",
                     fontWeight: 800,
@@ -357,7 +359,7 @@ export default function Premium() {
                   onClick={() => setStep("payment")}
                   className="w-full py-4 text-sm font-extrabold flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
                   style={{
-                    background: "linear-gradient(135deg,#2563eb,#f43f5e)",
+                    background: "#0B1719",
                     borderRadius: "12px",
                     color: "#fff",
                     fontWeight: 800,
@@ -404,13 +406,13 @@ export default function Premium() {
                       className="flex flex-col items-center gap-1.5 p-4 text-center transition-all"
                       style={
                         method === m.id
-                          ? { background: "rgba(37,99,235,0.12)", border: "2px solid rgba(37,99,235,0.4)", borderRadius: "16px" }
+                          ? { background: "rgba(10,110,114,0.12)", border: "2px solid rgba(10,110,114,0.4)", borderRadius: "16px" }
                           : { background: "rgba(0,0,0,0.04)", border: "2px solid rgba(0,0,0,0.08)", borderRadius: "16px" }
                       }
                     >
                       <span className="text-lg">{m.badge}</span>
                       <span className="text-xs font-extrabold tracking-tight" style={{ color: "#1a2235", fontWeight: 800 }}>{m.label}</span>
-                      {method === m.id && <CheckCircle2 className="w-3.5 h-3.5 mt-0.5" style={{ color: "#a78bfa" }} />}
+                      {method === m.id && <CheckCircle2 className="w-3.5 h-3.5 mt-0.5" style={{ color: "#0A6E72" }} />}
                     </button>
                   ))}
                 </div>
@@ -418,7 +420,7 @@ export default function Premium() {
                 {/* Payment instructions */}
                 <div
                   className="p-4 space-y-2"
-                  style={{ background: "#eef2fb", border: "1px solid rgba(37,99,235,0.2)", borderRadius: "12px" }}
+                  style={{ background: "#EEF4F4", border: "1px solid rgba(10,110,114,0.2)", borderRadius: "12px" }}
                 >
                   <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "rgba(0,0,0,0.35)" }}>
                     Instruction d'envoi :
@@ -454,7 +456,7 @@ export default function Premium() {
                   </label>
                   <div
                     className="flex items-center gap-2 px-3.5 py-3 transition-all"
-                    style={{ background: "#ffffff", border: "1px solid rgba(37,99,235,0.2)", borderRadius: "12px" }}
+                    style={{ background: "#ffffff", border: "1px solid rgba(10,110,114,0.2)", borderRadius: "12px" }}
                   >
                     <Phone className="w-4 h-4 flex-shrink-0" style={{ color: "rgba(0,0,0,0.35)" }} />
                     <input
@@ -473,7 +475,7 @@ export default function Premium() {
                   disabled={loading || !phone.trim()}
                   className="w-full py-4 text-sm font-extrabold flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{
-                    background: "linear-gradient(135deg,#2563eb,#f43f5e)",
+                    background: "#0B1719",
                     borderRadius: "12px",
                     color: "#fff",
                     fontWeight: 800,
