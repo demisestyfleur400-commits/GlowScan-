@@ -22,36 +22,37 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { AnalysisResult } from "@shared/schema";
+import { GS, useGsFonts } from "@/lib/gs-ui";
 
 // ─────────────────────────────────────────────────────────────────────
 //  Design tokens (inline, no tailwind conflict)
 // ─────────────────────────────────────────────────────────────────────
 const DS = {
-  bg: "#fbfbfe",
+  bg: "#F4FEFC",
   surface: "#ffffff",
-  element: "#f3f1fb",
-  textPrimary: "#1f1a2e",
-  textBody: "#5a5470",
-  textMuted: "#8b86a0",
-  textHint: "#a8a3ba",
-  violet: "#7c3aed",
-  violetMid: "#a78bfa",
-  violetLight: "#c4b5fd",
-  pink: "#E91E8C",
-  pinkLight: "#f9a8d4",
+  element: "#EEF4F4",
+  textPrimary: "#0B1719",
+  textBody: "#5D6E71",
+  textMuted: "#8C9C9E",
+  textHint: "#8C9C9E",
+  violet: "#0A6E72",
+  violetMid: "#0A6E72",
+  violetLight: "#0A6E72",
+  pink: "#0B1719",
+  pinkLight: "#8C9C9E",
   green: "#6ee7b7",
   amber: "#fbbf24",
   subtleCard: {
-    background: "rgba(0,0,0,0.04)",
-    border: "1px solid rgba(0,0,0,0.07)",
-    borderRadius: 24,
+    background: "#fff",
+    border: "1px solid #DCE4E5",
+    borderRadius: 0,
   },
   violetCard: {
-    background: "rgba(167,139,250,0.06)",
-    border: "1px solid rgba(167,139,250,0.18)",
-    borderRadius: 24,
+    background: "#F4FEFC",
+    border: "1px solid #12D8BE",
+    borderRadius: 0,
   },
-  font: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
+  font: GS.sans,
 };
 
 // ─────────────────────────────────────────────────────────────────────
@@ -65,7 +66,7 @@ function getScoreColor(score: number): string {
 
 function getScoreBg(score: number): React.CSSProperties {
   if (score >= 75) return { background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)", borderRadius: 12 };
-  if (score >= 50) return { background: "rgba(167,139,250,0.06)", border: "1px solid rgba(167,139,250,0.18)", borderRadius: 12 };
+  if (score >= 50) return { background: "rgba(10,110,114,0.06)", border: "1px solid rgba(10,110,114,0.18)", borderRadius: 12 };
   return { background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 12 };
 }
 
@@ -112,7 +113,7 @@ function ScoreChart({ scans }: { scans: Array<{ score: number | null; createdAt:
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: 80 }}>
         <defs>
           <linearGradient id="chartGrad" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor="#7c3aed" stopOpacity="0.8" />
+            <stop offset="0%" stopColor="#0A6E72" stopOpacity="0.8" />
             <stop offset="100%" stopColor="#6ee7b7" stopOpacity="1" />
           </linearGradient>
         </defs>
@@ -123,7 +124,7 @@ function ScoreChart({ scans }: { scans: Array<{ score: number | null; createdAt:
         <path d={path} fill="none" stroke="url(#chartGrad)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
         {pts.map((p, i) => (
           <circle key={i} cx={toX(i)} cy={toY(p.score)} r={i === pts.length - 1 ? 5 : 3}
-            fill={i === pts.length - 1 ? "#6ee7b7" : "#a78bfa"}
+            fill={i === pts.length - 1 ? "#6ee7b7" : "#0A6E72"}
             stroke="rgba(13,10,14,0.8)" strokeWidth="1.5" />
         ))}
       </svg>
@@ -154,8 +155,8 @@ function RoutineShortcut() {
           <div
             className="w-10 h-10 flex items-center justify-center"
             style={{
-              background: "rgba(167,139,250,0.15)",
-              border: "1px solid rgba(167,139,250,0.3)",
+              background: "rgba(10,110,114,0.15)",
+              border: "1px solid rgba(10,110,114,0.3)",
               borderRadius: "12px",
             }}
           >
@@ -415,6 +416,7 @@ export default function Profile() {
   const { user, isLoading: authLoading } = useAuth();
   const { data: scans, isLoading: scansLoading } = useScans();
   const { isPremium, scansThisMonth, scansRemaining, scansLimit, data: subData } = useSubscription();
+  useGsFonts();
   const [activeTab, setActiveTab] = useState<"profil" | "fidelite">("profil");
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [filterArea, setFilterArea] = useState<"all" | "face" | "body" | "hair">("all");
@@ -493,7 +495,7 @@ export default function Profile() {
             transform: "translateX(-50%)",
             width: 420,
             height: 420,
-            background: "radial-gradient(circle, rgba(124,58,237,0.15), transparent)",
+            background: "radial-gradient(circle, rgba(10,110,114,0.15), transparent)",
             borderRadius: "9999px",
           }}
         />
@@ -535,7 +537,7 @@ export default function Profile() {
               className="flex items-center gap-2 px-5 py-2 text-sm font-700 transition-all"
               style={
                 activeTab === tab
-                  ? { background: "rgba(124,58,237,0.2)", color: DS.violetLight, border: "1px solid rgba(124,58,237,0.35)", borderRadius: "10px" }
+                  ? { background: "rgba(10,110,114,0.2)", color: DS.violetLight, border: "1px solid rgba(10,110,114,0.35)", borderRadius: "10px" }
                   : { color: DS.textMuted, borderRadius: "10px" }
               }
               data-testid={`tab-${tab}`}
@@ -605,7 +607,7 @@ export default function Profile() {
                 className="p-4 mb-5 flex items-center justify-between"
                 style={
                   isPremium
-                    ? { background: "rgba(167,139,250,0.06)", border: "1px solid rgba(167,139,250,0.18)", borderRadius: 24 }
+                    ? { background: "rgba(10,110,114,0.06)", border: "1px solid rgba(10,110,114,0.18)", borderRadius: 24 }
                     : { ...DS.subtleCard } as React.CSSProperties
                 }
                 data-testid="card-subscription"
@@ -615,7 +617,7 @@ export default function Profile() {
                     className="w-10 h-10 flex items-center justify-center"
                     style={
                       isPremium
-                        ? { background: "rgba(167,139,250,0.15)", border: "1px solid rgba(167,139,250,0.3)", borderRadius: "12px" }
+                        ? { background: "rgba(10,110,114,0.15)", border: "1px solid rgba(10,110,114,0.3)", borderRadius: "12px" }
                         : { background: "rgba(0,0,0,0.08)", border: "1px solid rgba(0,0,0,0.12)", borderRadius: "12px" }
                     }
                   >
@@ -642,7 +644,7 @@ export default function Profile() {
                     data-testid="button-upgrade-profile"
                     className="text-xs font-700 px-3 py-1.5"
                     style={{
-                      background: "linear-gradient(135deg,#E91E8C,#f43f5e)",
+                      background: "#0B1719",
                       borderRadius: "12px",
                       color: "#fff",
                     }}
@@ -655,8 +657,8 @@ export default function Profile() {
                     className="text-xs font-700 px-2.5 py-1"
                     style={{
                       color: DS.violetLight,
-                      background: "rgba(167,139,250,0.15)",
-                      border: "1px solid rgba(167,139,250,0.3)",
+                      background: "rgba(10,110,114,0.15)",
+                      border: "1px solid rgba(10,110,114,0.3)",
                       borderRadius: "8px",
                     }}
                   >
@@ -677,7 +679,7 @@ export default function Profile() {
                   <div className="flex items-center gap-2.5 mb-3">
                     <div
                       className="w-9 h-9 flex items-center justify-center flex-shrink-0"
-                      style={{ background: "rgba(167,139,250,0.2)", border: "1px solid rgba(167,139,250,0.35)", borderRadius: "12px" }}
+                      style={{ background: "rgba(10,110,114,0.2)", border: "1px solid rgba(10,110,114,0.35)", borderRadius: "12px" }}
                     >
                       <Link2 className="w-5 h-5" style={{ color: DS.violetLight }} />
                     </div>
@@ -689,7 +691,7 @@ export default function Profile() {
 
                   <div
                     className="flex items-center justify-between px-4 py-3 mb-3"
-                    style={{ background: "rgba(0,0,0,0.05)", border: "1px solid rgba(167,139,250,0.25)", borderRadius: "16px" }}
+                    style={{ background: "rgba(0,0,0,0.05)", border: "1px solid rgba(10,110,114,0.25)", borderRadius: "16px" }}
                   >
                     <span
                       className="text-2xl font-800 tracking-[0.15em]"
@@ -704,7 +706,7 @@ export default function Profile() {
                         toast({ title: "Code copié !", description: "Colle-le dans ton message WhatsApp" });
                       }}
                       className="flex items-center gap-1.5 text-xs font-700 px-3 py-1.5 transition-all"
-                      style={{ background: "rgba(167,139,250,0.2)", borderRadius: "10px", color: DS.violetLight }}
+                      style={{ background: "rgba(10,110,114,0.2)", borderRadius: "10px", color: DS.violetLight }}
                       data-testid="button-copy-referral-profil"
                     >
                       <Copy className="w-3.5 h-3.5" />
@@ -721,7 +723,7 @@ export default function Profile() {
                       <div key={step} className="flex items-center gap-2.5">
                         <div
                           className="w-5 h-5 flex items-center justify-center flex-shrink-0"
-                          style={{ background: "rgba(167,139,250,0.2)", borderRadius: "9999px" }}
+                          style={{ background: "rgba(10,110,114,0.2)", borderRadius: "9999px" }}
                         >
                           <span className="text-[10px] font-800" style={{ color: DS.violetLight }}>{step}</span>
                         </div>
@@ -737,7 +739,7 @@ export default function Profile() {
                         toast({ title: "Lien copié !", description: "Colle-le dans ton WhatsApp" });
                       }}
                       className="flex items-center justify-center gap-2 py-2.5 text-xs font-700 transition-all"
-                      style={{ background: "rgba(167,139,250,0.15)", border: "1px solid rgba(167,139,250,0.3)", borderRadius: "12px", color: DS.violetLight }}
+                      style={{ background: "rgba(10,110,114,0.15)", border: "1px solid rgba(10,110,114,0.3)", borderRadius: "12px", color: DS.violetLight }}
                       data-testid="button-copy-link-profil"
                     >
                       <Link2 className="w-4 h-4" />
@@ -790,7 +792,7 @@ export default function Profile() {
                           style={
                             isDue
                               ? { background: "rgba(245,158,11,0.12)", borderRadius: "10px", color: DS.amber }
-                              : { background: "rgba(167,139,250,0.12)", borderRadius: "10px", color: DS.violetMid }
+                              : { background: "rgba(10,110,114,0.12)", borderRadius: "10px", color: DS.violetMid }
                           }
                         >
                           {isDue ? <Bell className="w-4 h-4" /> : <Target className="w-4 h-4" />}
@@ -826,7 +828,7 @@ export default function Profile() {
                         <button
                           data-testid="button-rescan-now"
                           className="w-full py-2.5 text-sm font-700 flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
-                          style={{ background: "linear-gradient(135deg,#E91E8C,#f43f5e)", borderRadius: "12px", color: "#fff" }}
+                          style={{ background: "#0B1719", borderRadius: "12px", color: "#fff" }}
                         >
                           <ScanFace className="w-4 h-4" />
                           Rescanner maintenant
@@ -853,7 +855,7 @@ export default function Profile() {
                   <div className="flex items-center gap-3">
                     <div
                       className="w-10 h-10 flex items-center justify-center"
-                      style={{ background: "rgba(167,139,250,0.2)", border: "1px solid rgba(167,139,250,0.35)", borderRadius: "12px" }}
+                      style={{ background: "rgba(10,110,114,0.2)", border: "1px solid rgba(10,110,114,0.35)", borderRadius: "12px" }}
                     >
                       <Bot className="w-5 h-5" style={{ color: DS.violetLight }} />
                     </div>
@@ -927,7 +929,7 @@ export default function Profile() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 20 }}
                     className="fixed bottom-20 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 px-5 py-3"
-                    style={{ background: DS.surface, border: "1px solid rgba(167,139,250,0.25)", borderRadius: "24px" }}
+                    style={{ background: DS.surface, border: "1px solid rgba(10,110,114,0.25)", borderRadius: "24px" }}
                   >
                     <span className="text-sm font-700" style={{ color: DS.textPrimary }}>
                       {compareSelection.length}/2 scan{compareSelection.length > 1 ? "s" : ""} sélectionné{compareSelection.length > 1 ? "s" : ""}
@@ -996,7 +998,7 @@ export default function Profile() {
                           className="p-4 transition-all cursor-pointer group"
                           style={
                             isSelected
-                              ? { background: "rgba(124,58,237,0.12)", border: "1px solid rgba(124,58,237,0.4)", borderRadius: 24 }
+                              ? { background: "rgba(10,110,114,0.12)", border: "1px solid rgba(10,110,114,0.4)", borderRadius: 24 }
                               : { ...DS.subtleCard } as React.CSSProperties
                           }
                         >
@@ -1015,7 +1017,7 @@ export default function Profile() {
                             ) : (
                               <div
                                 className="w-10 h-10 flex items-center justify-center flex-shrink-0 text-xl"
-                                style={{ background: "rgba(167,139,250,0.1)", border: "1px solid rgba(167,139,250,0.2)", borderRadius: "12px" }}
+                                style={{ background: "rgba(10,110,114,0.1)", border: "1px solid rgba(10,110,114,0.2)", borderRadius: "12px" }}
                               >
                                 {AREA_EMOJI[scan.area] || "🔬"}
                               </div>
@@ -1026,9 +1028,9 @@ export default function Profile() {
                                 <span
                                   className="px-2 py-0.5 text-[10px] font-700 uppercase"
                                   style={{
-                                    background: "rgba(167,139,250,0.15)",
+                                    background: "rgba(10,110,114,0.15)",
                                     color: DS.violetLight,
-                                    border: "1px solid rgba(167,139,250,0.3)",
+                                    border: "1px solid rgba(10,110,114,0.3)",
                                     borderRadius: "8px",
                                   }}
                                 >
@@ -1102,7 +1104,7 @@ export default function Profile() {
                   >
                     <div
                       className="absolute top-0 right-0 w-32 h-32 pointer-events-none"
-                      style={{ background: "radial-gradient(circle, rgba(124,58,237,0.15), transparent)", borderRadius: "9999px", transform: "translate(30%,-30%)" }}
+                      style={{ background: "radial-gradient(circle, rgba(10,110,114,0.15), transparent)", borderRadius: "9999px", transform: "translate(30%,-30%)" }}
                     />
                     <div className="relative">
                       <div className="flex items-center gap-2 mb-1">
@@ -1133,8 +1135,8 @@ export default function Profile() {
                         subtitle: "Faites une analyse de peau",
                         pts: "+2 pts",
                         color: DS.violetLight,
-                        bg: "rgba(167,139,250,0.12)",
-                        border: "rgba(167,139,250,0.25)",
+                        bg: "rgba(10,110,114,0.12)",
+                        border: "rgba(10,110,114,0.25)",
                       },
                       {
                         icon: <Share2 className="w-5 h-5" style={{ color: DS.green }} />,
@@ -1214,7 +1216,7 @@ export default function Profile() {
                                   className="px-4 py-1.5 text-xs font-700 transition-all active:scale-95"
                                   style={
                                     canRedeem
-                                      ? { background: "linear-gradient(135deg,#E91E8C,#f43f5e)", color: "#fff", borderRadius: "10px" }
+                                      ? { background: "#0B1719", color: "#fff", borderRadius: "10px" }
                                       : { background: "rgba(0,0,0,0.07)", color: DS.textHint, borderRadius: "10px", cursor: "not-allowed" }
                                   }
                                   data-testid={`button-redeem-${reward.type}`}
@@ -1267,7 +1269,7 @@ export default function Profile() {
                                 toast({ title: "Code copié !", description: `${reward.discountCode} — mentionnez-le dans votre commande WhatsApp` });
                               }}
                               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-700 transition-all"
-                              style={{ background: "rgba(167,139,250,0.1)", color: DS.violetLight, border: "1px solid rgba(167,139,250,0.25)", borderRadius: "10px" }}
+                              style={{ background: "rgba(10,110,114,0.1)", color: DS.violetLight, border: "1px solid rgba(10,110,114,0.25)", borderRadius: "10px" }}
                               data-testid={`button-copy-${reward.id}`}
                             >
                               <Copy className="w-3.5 h-3.5" />
@@ -1294,7 +1296,7 @@ export default function Profile() {
                                   className="w-8 h-8 flex items-center justify-center"
                                   style={
                                     entry.reason === "analyse"
-                                      ? { background: "rgba(167,139,250,0.12)", border: "1px solid rgba(167,139,250,0.2)", borderRadius: "10px" }
+                                      ? { background: "rgba(10,110,114,0.12)", border: "1px solid rgba(10,110,114,0.2)", borderRadius: "10px" }
                                       : { background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)", borderRadius: "10px" }
                                   }
                                 >
@@ -1336,7 +1338,7 @@ export default function Profile() {
                         <div className="flex items-center gap-2 mb-2">
                           <div
                             className="flex-1 px-4 py-3 text-center"
-                            style={{ background: "rgba(0,0,0,0.05)", border: "1px solid rgba(167,139,250,0.3)", borderRadius: "16px" }}
+                            style={{ background: "rgba(0,0,0,0.05)", border: "1px solid rgba(10,110,114,0.3)", borderRadius: "16px" }}
                           >
                             <span className="text-xl font-800 tracking-widest" style={{ color: DS.violetLight }} data-testid="text-referral-code">
                               {referralData.code}
@@ -1348,7 +1350,7 @@ export default function Profile() {
                               toast({ title: "Code copié !", description: "Partage-le avec tes amies" });
                             }}
                             className="w-12 h-12 flex items-center justify-center flex-shrink-0"
-                            style={{ background: "rgba(167,139,250,0.15)", border: "1px solid rgba(167,139,250,0.3)", borderRadius: "14px", color: DS.violetLight }}
+                            style={{ background: "rgba(10,110,114,0.15)", border: "1px solid rgba(10,110,114,0.3)", borderRadius: "14px", color: DS.violetLight }}
                             data-testid="button-copy-referral"
                           >
                             <Copy className="w-5 h-5" />
