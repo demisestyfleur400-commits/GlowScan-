@@ -11,6 +11,7 @@ import { productImages } from "@/lib/productImages";
 import OrderModal, { type OrderItem } from "@/components/OrderModal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { GS, useGsFonts } from "@/lib/gs-ui";
 
 // ─────────────────────────────────────────────────────────────────────
 //  Filtres par problème (Esthétique Clinique)
@@ -375,7 +376,7 @@ function ProductDetailModal({
             {img ? (
               <img src={img} alt={product.name} className="w-full h-full object-cover" />
             ) : (
-              <Sparkles className="w-16 h-16" style={{ color: "rgba(37,99,235,0.3)" }} />
+              <Sparkles className="w-16 h-16" style={{ color: "rgba(10,110,114,0.3)" }} />
             )}
             <div className="absolute bottom-4 left-4">
               <span
@@ -384,11 +385,11 @@ function ProductDetailModal({
                   background: "rgba(251,253,254,0.85)",
                   border: "1px solid rgba(0,0,0,0.1)",
                   borderRadius: "8px",
-                  color: "#c4b5fd",
+                  color: "#0A6E72",
                   backdropFilter: "blur(10px)",
                 }}
               >
-                <ShieldCheck className="w-3 h-3" style={{ color: "#a78bfa" }} />
+                <ShieldCheck className="w-3 h-3" style={{ color: "#0A6E72" }} />
                 Authentique
               </span>
             </div>
@@ -397,7 +398,7 @@ function ProductDetailModal({
           <div className="p-6 space-y-5">
             {/* Product info */}
             <div>
-              <span className="text-[10px] font-700 uppercase tracking-widest" style={{ color: "#a78bfa" }}>
+              <span className="text-[10px] font-700 uppercase tracking-widest" style={{ color: "#0A6E72" }}>
                 {brand}
               </span>
               <h2 className="text-xl font-800 leading-tight mt-1" style={{ color: "#1a2235" }}>
@@ -421,11 +422,11 @@ function ProductDetailModal({
               <div
                 className="rounded-2xl p-4"
                 style={{
-                  background: "rgba(37,99,235,0.06)",
-                  border: "1px solid rgba(37,99,235,0.2)",
+                  background: "rgba(10,110,114,0.06)",
+                  border: "1px solid rgba(10,110,114,0.2)",
                 }}
               >
-                <p className="text-[10px] font-bold tracking-wide mb-1.5" style={{ color: "#2563eb" }}>
+                <p className="text-[10px] font-bold tracking-wide mb-1.5" style={{ color: "#0B1719" }}>
                   {packCopy.emoji} {packCopy.packName}
                 </p>
                 <p className="text-sm font-bold leading-snug mb-2" style={{ color: "#1a2235" }}>
@@ -442,8 +443,8 @@ function ProductDetailModal({
                 className="text-xs md:text-sm font-500 leading-relaxed px-4 py-3"
                 style={{
                   color: "#4a5568",
-                  background: "rgba(37,99,235,0.06)",
-                  border: "1px solid rgba(37,99,235,0.18)",
+                  background: "rgba(10,110,114,0.06)",
+                  border: "1px solid rgba(10,110,114,0.18)",
                   borderRadius: "24px",
                 }}
               >
@@ -458,14 +459,14 @@ function ProductDetailModal({
                 animate={{ opacity: 1, y: 0 }}
                 className="p-4"
                 style={{
-                  background: "rgba(37,99,235,0.06)",
-                  border: "1px solid rgba(37,99,235,0.18)",
+                  background: "rgba(10,110,114,0.06)",
+                  border: "1px solid rgba(10,110,114,0.18)",
                   borderRadius: "24px",
                 }}
               >
                 <div className="flex items-center gap-2 mb-2">
-                  <Sparkles className="w-4 h-4" style={{ color: "#a78bfa" }} />
-                  <h3 className="text-[10px] font-700 uppercase tracking-wider" style={{ color: "#c4b5fd" }}>
+                  <Sparkles className="w-4 h-4" style={{ color: "#0A6E72" }} />
+                  <h3 className="text-[10px] font-700 uppercase tracking-wider" style={{ color: "#0A6E72" }}>
                     Analyse clinique GlowScan
                   </h3>
                 </div>
@@ -479,7 +480,7 @@ function ProductDetailModal({
             <section>
               <h3 className="text-xs font-700 mb-3" style={{ color: "#4a5568" }}>
                 Impact ciblé sur{" "}
-                <span style={{ color: "#c4b5fd" }}>{targetLabel}</span> :
+                <span style={{ color: "#0A6E72" }}>{targetLabel}</span> :
               </h3>
               <ul className="space-y-2.5">
                 {benefits.map((b, i) => (
@@ -487,12 +488,12 @@ function ProductDetailModal({
                     <div
                       className="w-5 h-5 flex items-center justify-center flex-shrink-0 mt-0.5"
                       style={{
-                        background: "rgba(37,99,235,0.15)",
-                        border: "1px solid rgba(37,99,235,0.3)",
+                        background: "rgba(10,110,114,0.15)",
+                        border: "1px solid rgba(10,110,114,0.3)",
                         borderRadius: "8px",
                       }}
                     >
-                      <Check className="w-3 h-3" style={{ color: "#c4b5fd" }} strokeWidth={3} />
+                      <Check className="w-3 h-3" style={{ color: "#0A6E72" }} strokeWidth={3} />
                     </div>
                     <span>{b}</span>
                   </li>
@@ -522,7 +523,7 @@ function ProductDetailModal({
           className="p-4 flex-shrink-0"
           style={{
             borderTop: "1px solid rgba(0,0,0,0.07)",
-            background: "rgba(19,16,31,0.97)",
+            background: "#ffffff",
             backdropFilter: "blur(20px)",
           }}
         >
@@ -531,7 +532,7 @@ function ProductDetailModal({
             onClick={() => onOrder(product)}
             className="w-full flex items-center justify-center gap-2 py-4 text-sm font-800"
             style={{
-              background: "linear-gradient(135deg,#2563eb,#f43f5e)",
+              background: "#0B1719",
               borderRadius: "12px",
               color: "#fff",
             }}
@@ -598,7 +599,7 @@ function SkeletonCard() {
 //  et cohérent par catégorie, plutôt qu'une image cassée ou un emoji nu.
 // ─────────────────────────────────────────────────────────────────────
 const CAT_PLACEHOLDER: Record<string, { grad: string; emoji: string; accent: string }> = {
-  visage:  { grad: "linear-gradient(135deg,#ede9fe,#ddd6fe)", emoji: "✨", accent: "#7c3aed" },
+  visage:  { grad: "linear-gradient(135deg,#ede9fe,#ddd6fe)", emoji: "✨", accent: "#0A6E72" },
   corps:   { grad: "linear-gradient(135deg,#ccfbf1,#99f6e4)", emoji: "🧴", accent: "#0d9488" },
   cheveux: { grad: "linear-gradient(135deg,#fef3c7,#fde68a)", emoji: "💆", accent: "#b45309" },
 };
@@ -676,9 +677,9 @@ function ProductCard({
         gap: 14,
         alignItems: "flex-start",
         boxShadow: recommended
-          ? "0 2px 16px rgba(37,99,235,0.12)"
+          ? "0 2px 16px rgba(10,110,114,0.12)"
           : "0 2px 12px rgba(0,0,0,0.06)",
-        border: recommended ? "1.5px solid rgba(37,99,235,0.2)" : "1px solid #f0f0f0",
+        border: recommended ? "1.5px solid rgba(10,110,114,0.2)" : "1px solid #f0f0f0",
         position: "relative",
       }}
     >
@@ -686,7 +687,7 @@ function ProductCard({
       {recommended && (
         <div style={{
           position: "absolute", top: -1, left: 16,
-          background: "#2563eb", color: "#fff",
+          background: "#0B1719", color: "#fff",
           fontSize: 9, fontWeight: 800, letterSpacing: ".04em",
           padding: "3px 8px", borderRadius: "0 0 8px 8px",
           display: "flex", alignItems: "center", gap: 3,
@@ -830,6 +831,7 @@ function ProductCard({
 export default function Shop() {
   const { user } = useAuth();
   const { data: scans } = useScans();
+  useGsFonts();
 
   useSEO({
     title: "Boutique Skincare — Produits adaptés à votre peau | GlowScan",
@@ -896,7 +898,7 @@ export default function Shop() {
     return (
       <div
         className="min-h-screen flex flex-col items-center justify-center px-6"
-        style={{ background: "#fbfdfe", fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif' }}
+        style={{ background: "#fbfdfe", fontFamily: GS.sans }}
       >
         {/* Glow orb */}
         <div
@@ -907,15 +909,15 @@ export default function Shop() {
             top: "50%",
             left: "50%",
             transform: "translate(-50%,-60%)",
-            background: "radial-gradient(circle, rgba(37,99,235,0.15), transparent)",
+            background: "radial-gradient(circle, rgba(10,110,114,0.15), transparent)",
             borderRadius: "9999px",
           }}
         />
         <div
           className="w-16 h-16 flex items-center justify-center mb-6 text-2xl relative"
           style={{
-            background: "rgba(37,99,235,0.06)",
-            border: "1px solid rgba(37,99,235,0.18)",
+            background: "rgba(10,110,114,0.06)",
+            border: "1px solid rgba(10,110,114,0.18)",
             borderRadius: "24px",
           }}
         >
@@ -934,7 +936,7 @@ export default function Shop() {
           href="/auth"
           className="w-full max-w-xs flex items-center justify-center py-3.5 text-sm font-800"
           style={{
-            background: "#2563eb",
+            background: "#0B1719",
             borderRadius: "9999px",
             color: "#fff",
           }}
@@ -948,7 +950,7 @@ export default function Shop() {
   return (
     <div
       className="min-h-screen pb-28"
-      style={{ background: "#f5f5f7", fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif' }}
+      style={{ background: "#f5f5f7", fontFamily: GS.sans }}
     >
       <Navbar />
 
