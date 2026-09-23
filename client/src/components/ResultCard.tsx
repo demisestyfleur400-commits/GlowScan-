@@ -321,7 +321,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useSubscription } from "@/hooks/use-subscription";
 import { ConsultationLauncher } from "@/components/ConsultationLauncher";
 import { LowScoreExperience } from "@/components/LowScoreExperience";
-import { GS, GsMono, GsMeter, GsMetric, GsMetricGrid, GsChip, GsButton } from "@/lib/gs-ui";
+import { GS, GsMono, GsMeter, GsMetric, GsMetricGrid, GsChip, GsButton, GsMarks } from "@/lib/gs-ui";
 import { buildObservationSections, type ObservationData } from "@/lib/observationPdf";
 
 const productImages = centralProductImages;
@@ -2309,15 +2309,65 @@ ${medicalSections}
           </div>
         )}
 
-        {/* Produits adaptés — teaser (protocole complet 04C à venir) */}
-        {_bestProduct && (
-          <div style={{ border: `1px solid ${GS.line}`, padding: 14 }}>
-            <GsMono color={GS.teal} style={{ display: "block", marginBottom: 6, letterSpacing: ".08em" }}>Produit adapté à votre rapport</GsMono>
-            <div style={{ fontSize: 14, fontWeight: 600, color: GS.ink }}>{_bestProduct.name}</div>
-            {_benefit && <div style={{ fontSize: 12, color: GS.muted, marginTop: 3, lineHeight: 1.45 }}>{_benefit}</div>}
-            {_bestProduct.price ? <div style={{ fontFamily: GS.mono, fontSize: 13, fontWeight: 600, color: GS.ink, marginTop: 8 }}>{_bestProduct.price.toLocaleString("fr-FR")} FCFA</div> : null}
-          </div>
-        )}
+        {/* Votre protocole — 3 produits (design 04C), branché sur la reco réelle */}
+        {routineProducts.length >= 2 && (() => {
+          const items = routineProducts.slice(0, 3);
+          const total = items.reduce((s, it) => s + (it.product.price || 0), 0);
+          const bundle = Math.round((total * 0.85) / 100) * 100;
+          const eco = Math.max(0, total - bundle);
+          const waNumber = "237674377959";
+          const orderMsg = encodeURIComponent(
+            `Bonjour GlowScan 👋\n\nJe souhaite commander mon protocole (${items.length} produits) :\n` +
+            items.map((it) => `• ${it.product.name}${it.product.price ? ` — ${it.product.price.toLocaleString("fr-FR")} FCFA` : ""}`).join("\n") +
+            `\n\nTotal protocole : ${bundle.toLocaleString("fr-FR")} FCFA\n📍 Livraison Douala 🙏\n\nMon analyse : Glow Score ${result.score}/100 · ${result.condition || "—"}`
+          );
+          return (
+            <>
+              <GsMono style={{ display: "block", marginTop: 4 }}>Votre protocole</GsMono>
+              <div style={{ border: `1px solid ${GS.accent}`, background: GS.mintBg, padding: 14 }}>
+                <GsMono color={GS.teal} style={{ display: "block", marginBottom: 6, letterSpacing: ".08em" }}>{typePeau} · phototype {phototype}{geaIdx ? ` · GEA ${geaIdx}` : ""}</GsMono>
+                <div style={{ fontSize: 13, lineHeight: 1.55, color: GS.ink }}>Chacun répond à une mesure précise de votre rapport — rien de décoratif.</div>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+                {items.map((it, i) => {
+                  const img = getProductImage(it.product as any);
+                  return (
+                    <div key={i} style={{ border: `1px solid ${GS.line}`, padding: 12, display: "flex", gap: 12, alignItems: "center" }}>
+                      <div style={{ width: 62, height: 62, flex: "none", border: `1px solid ${GS.hair}`, background: GS.panel, overflow: "hidden" }}>
+                        {img && <img src={img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <GsMono color={GS.teal} style={{ letterSpacing: ".08em" }}>{typeof it.role === "string" ? it.role : it.role.label}</GsMono>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: GS.ink, marginTop: 3 }}>{it.product.name}</div>
+                        {it.why && <div style={{ fontSize: 11, color: GS.muted, marginTop: 2, lineHeight: 1.4 }}>{it.why}</div>}
+                      </div>
+                      {it.product.price ? <div style={{ fontFamily: GS.mono, fontSize: 13, fontWeight: 600, color: GS.ink, flex: "none" }}>{it.product.price.toLocaleString("fr-FR")} F</div> : null}
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{ position: "relative", border: `1px solid ${GS.ink}`, padding: 16 }}>
+                <GsMarks />
+                <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
+                  <div>
+                    <GsMono color={GS.teal} style={{ display: "block" }}>Protocole complet</GsMono>
+                    <div style={{ fontSize: 15, fontWeight: 600, color: GS.ink, marginTop: 4 }}>Les {items.length} produits</div>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    {eco > 0 && <div style={{ fontFamily: GS.mono, fontSize: 11, color: GS.faint, textDecoration: "line-through" }}>{total.toLocaleString("fr-FR")} F</div>}
+                    <div style={{ fontFamily: GS.mono, fontSize: 20, fontWeight: 600, color: GS.ink, letterSpacing: "-.5px" }}>{bundle.toLocaleString("fr-FR")} F</div>
+                  </div>
+                </div>
+                {eco > 0 && <div style={{ marginTop: 8 }}><GsMono color={GS.teal} style={{ letterSpacing: ".06em" }}>Économie {eco.toLocaleString("fr-FR")} F · livraison Douala incluse</GsMono></div>}
+              </div>
+              <a href={`https://wa.me/${waNumber}?text=${orderMsg}`} target="_blank" rel="noreferrer"
+                style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, width: "100%", boxSizing: "border-box", background: GS.ink, color: "#fff", padding: 17, fontSize: 14, fontWeight: 600, textDecoration: "none" }}>
+                Commander le protocole · {bundle.toLocaleString("fr-FR")} FCFA
+              </a>
+              <div style={{ textAlign: "center", fontSize: 12, color: GS.muted }}>Ou <a href="/shop" style={{ color: GS.teal, fontWeight: 600 }}>ajouter un seul produit</a></div>
+            </>
+          );
+        })()}
 
         {/* Rapport complet : PDF (connecté) ou email (visiteur) */}
         {user ? (
