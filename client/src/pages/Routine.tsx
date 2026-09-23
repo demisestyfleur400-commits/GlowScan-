@@ -9,6 +9,8 @@ import { useSubscription } from "@/hooks/use-subscription";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { catalog, type Product, getProductBrand } from "@shared/catalog";
+import { GS, GsMono, useGsFonts } from "@/lib/gs-ui";
+import { Home as HomeIcon, Camera, Calendar, User as UserIcon, ShoppingBag, ArrowRight } from "lucide-react";
 import { productImages } from "@/lib/productImages";
 
 type Period = "morning" | "evening";
@@ -443,6 +445,18 @@ export default function Routine() {
     enabled: !!user && isPremium,
   });
 
+  // Onglet Matin/Soir + mutations (hoisted avant les gates : hooks au top-level).
+  const [period, setPeriod] = useState<Period>("morning");
+  const [showAddR, setShowAddR] = useState(false);
+  const checkMutR = useMutation({
+    mutationFn: async (stepId: number) => { const r = await apiRequest("POST", "/api/routines/check", { stepId }); return r.json(); },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/routines"] }),
+  });
+  const deleteMutR = useMutation({
+    mutationFn: async (stepId: number) => { await apiRequest("DELETE", `/api/routines/steps/${stepId}`); },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/routines"] }),
+  });
+
   if (authLoading || subLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: DS.base }}>
@@ -553,95 +567,102 @@ export default function Routine() {
   const evening = data?.routines.find((r) => r.period === "evening");
   const todayCompletions = data?.todayCompletions || [];
   const stats = data?.stats || { streak: 0, weeklyPct: 0, totalSteps: 0, today: "" };
+  useGsFonts();
+
+  const active = period === "morning" ? morning : evening;
+  const steps = active?.steps || [];
+  const cnt = (r?: Routine) => { const st = r?.steps || []; return { total: st.length, done: st.filter((s) => todayCompletions.includes(s.id)).length }; };
+  const activeCnt = cnt(active);
+  const dateStr = new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "short" });
+  const todayIdx = (new Date().getDay() + 6) % 7; // Lundi = 0
+  const dayLetters = ["L", "M", "M", "J", "V", "S", "D"];
+  const nav = [
+    { icon: HomeIcon, label: "ACCUEIL", path: "/", on: false },
+    { icon: Camera, label: "SCAN", path: "/analyze", on: false },
+    { icon: Calendar, label: "ROUTINE", path: "/routine", on: true },
+    { icon: UserIcon, label: "DOSSIER", path: "/profile", on: false },
+  ];
 
   return (
-    <div className="min-h-screen pb-24" style={{ background: DS.base, fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif' }}>
-      <Navbar />
+    <div style={{ minHeight: "100dvh", background: "#fff", fontFamily: GS.sans, color: GS.ink, display: "flex", flexDirection: "column" }}>
+      <div style={{ width: "100%", maxWidth: 430, margin: "0 auto", flex: 1, display: "flex", flexDirection: "column", padding: "14px 24px 0", boxSizing: "border-box" }}>
 
-      {/* Ambient orb */}
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div
-          className="absolute top-[-5%] left-1/2 -translate-x-1/2 w-[350px] h-[350px] rounded-full"
-          style={{ background: "radial-gradient(circle, rgba(37,99,235,0.15) 0%, transparent 70%)" }}
-        />
-      </div>
+        {/* En-tête : date · Ma routine · streak */}
+        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 12 }}>
+          <div>
+            <GsMono>{dateStr}</GsMono>
+            <div style={{ fontSize: 24, fontWeight: 600, letterSpacing: "-.7px", marginTop: 5 }}>Ma routine</div>
+          </div>
+          <div style={{ textAlign: "right" }}>
+            <div style={{ fontFamily: GS.mono, fontSize: 20, fontWeight: 600, color: GS.ink, fontVariantNumeric: "tabular-nums" }}>{stats.streak}<span style={{ fontSize: 11, color: GS.muted }}> j</span></div>
+            <GsMono style={{ letterSpacing: ".1em" }}>Sans oubli</GsMono>
+          </div>
+        </div>
 
-      {/* Sub-header */}
-      <div
-        className="sticky top-16 z-30"
-        style={{ background: "rgba(13,10,14,0.95)", borderBottom: `1px solid ${DS.border}`, backdropFilter: "blur(20px)" }}
-      >
-        <div className="max-w-md mx-auto px-4 py-4 flex items-center gap-3">
-          <button
-            onClick={() => setLocation("/")}
-            className="w-9 h-9 rounded-xl flex items-center justify-center active:scale-90 transition-transform"
-            style={{ background: "rgba(0,0,0,0.07)", border: `1px solid ${DS.border}`, color: DS.muted }}
-            data-testid="button-back-home"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-          <div className="flex-1">
-            <h1 className="text-sm font-extrabold" style={{ color: DS.text }}>Suivi chrono-cutané</h1>
-            <p className="text-[11px] font-medium" style={{ color: DS.muted }}>Contrôle de la régularité et des applications</p>
+        {/* Frise de la semaine (dérivée du streak) */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 3, marginBottom: 5 }}>
+          {dayLetters.map((_, i) => {
+            const isToday = i === todayIdx;
+            const done = i < todayIdx && (todayIdx - i) <= stats.streak;
+            const todayDone = isToday && activeCnt.total > 0 && activeCnt.done === activeCnt.total;
+            return <div key={i} style={{ height: 26, border: `1px solid ${isToday || done ? GS.ink : GS.line}`, background: done || todayDone ? GS.accent : (isToday ? "#fff" : GS.accentMint) }} />;
+          })}
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 3, marginBottom: 14, fontFamily: GS.mono, fontSize: 8, textAlign: "center" }}>
+          {dayLetters.map((d, i) => <span key={i} style={{ color: i === todayIdx ? GS.ink : GS.faint, fontWeight: i === todayIdx ? 600 : 400 }}>{d}</span>)}
+        </div>
+
+        {/* Onglets Matin / Soir */}
+        <div style={{ display: "flex", gap: 1, background: GS.line, border: `1px solid ${GS.line}`, marginBottom: 14 }}>
+          {(["morning", "evening"] as Period[]).map((p) => {
+            const on = period === p; const c = cnt(p === "morning" ? morning : evening);
+            return <button key={p} onClick={() => setPeriod(p)} style={{ flex: 1, background: on ? GS.ink : "#fff", padding: 11, textAlign: "center", fontFamily: GS.mono, fontSize: 10, fontWeight: 600, letterSpacing: ".08em", color: on ? GS.accent : GS.muted, border: "none", cursor: "pointer" }}>{p === "morning" ? "MATIN" : "SOIR"} · {c.done}/{c.total}</button>;
+          })}
+        </div>
+
+        {/* Étapes du créneau actif */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {steps.length === 0 && <div style={{ fontSize: 12, color: GS.muted, fontStyle: "italic", padding: "8px 0" }}>Aucun soin sur ce créneau.</div>}
+          {steps.map((step) => {
+            const done = todayCompletions.includes(step.id);
+            return (
+              <div key={step.id} style={{ display: "flex", gap: 8 }}>
+                <button onClick={() => checkMutR.mutate(step.id)} disabled={checkMutR.isPending}
+                  style={{ flex: 1, display: "flex", gap: 12, alignItems: "center", textAlign: "left", cursor: "pointer", border: `1px solid ${done ? GS.line : GS.ink}`, background: done ? GS.mintBg : "#fff", padding: 12 }}>
+                  <span style={{ width: 24, height: 24, flex: "none", ...(done ? { background: GS.ink, display: "flex", alignItems: "center", justifyContent: "center" } : { border: `1px solid ${GS.ink}` }) }}>{done && <Check size={15} style={{ color: GS.accent }} strokeWidth={3} />}</span>
+                  <span style={{ width: 44, height: 44, flex: "none", background: GS.panel, border: `1px solid ${GS.hair}` }} />
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{ display: "block", fontSize: 13, fontWeight: 600, color: GS.ink }}>{step.label}</span>
+                    <span style={{ display: "block", marginTop: 3 }}><GsMono color={done ? GS.teal : GS.muted} style={{ letterSpacing: 0 }}>{done ? "Fait" : (period === "morning" ? "Matin" : "Soir")}</GsMono></span>
+                  </span>
+                </button>
+                <button onClick={() => { if (confirm(`Retirer « ${step.label} » ?`)) deleteMutR.mutate(step.id); }} aria-label="Retirer" style={{ width: 44, flex: "none", border: `1px solid ${GS.line}`, background: "#fff", cursor: "pointer", color: GS.muted, display: "flex", alignItems: "center", justifyContent: "center" }}><Trash2 className="w-3.5 h-3.5" /></button>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Ajouter un produit (depuis les soins GlowScan) */}
+        <button onClick={() => setShowAddR(true)} style={{ marginTop: 13, border: `1px dashed ${GS.disabled}`, background: "#fff", padding: 13, display: "flex", alignItems: "center", gap: 12, cursor: "pointer", textAlign: "left" }}>
+          <ShoppingBag size={18} style={{ color: GS.teal }} />
+          <div style={{ flex: 1 }}><div style={{ fontSize: 12, fontWeight: 600, color: GS.ink }}>Ajouter un produit commandé</div><div style={{ fontSize: 10, color: GS.muted, marginTop: 2 }}>Seuls vos soins GlowScan entrent en routine</div></div>
+          <Plus size={16} style={{ color: GS.ink }} />
+        </button>
+
+        {/* Barre de navigation */}
+        <div style={{ marginTop: "auto", paddingBottom: 16 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 11, borderTop: `1px solid ${GS.hair}` }}>
+            {nav.map((n) => { const I = n.icon; return (
+              <button key={n.label} onClick={() => setLocation(n.path)} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, minWidth: 60, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+                <I size={19} strokeWidth={1.6} style={{ color: n.on ? GS.ink : GS.faint }} />
+                <span style={{ fontFamily: GS.mono, fontSize: 8, fontWeight: 600, color: n.on ? GS.ink : GS.faint, letterSpacing: ".06em" }}>{n.label}</span>
+              </button>
+            ); })}
           </div>
         </div>
       </div>
 
-      <div className="max-w-md mx-auto px-4 py-4 space-y-4 relative z-10">
-        {/* Stats */}
-        <div className="grid grid-cols-2 gap-3">
-          <div
-            className="rounded-2xl p-4 flex items-center gap-3.5"
-            style={{ background: "rgba(0,0,0,0.04)", border: `1px solid ${DS.border}` }}
-            data-testid="card-streak"
-          >
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "rgba(251,146,60,0.12)", border: "1px solid rgba(251,146,60,0.25)" }}>
-              <Flame className="w-4 h-4" style={{ color: "#fb923c" }} />
-            </div>
-            <div>
-              <p className="text-[9px] font-extrabold uppercase tracking-widest" style={{ color: DS.muted }}>Régularité</p>
-              <p className="text-base font-extrabold" style={{ color: DS.text }} data-testid="text-streak-value">
-                {stats.streak} <span className="text-[10px] font-bold" style={{ color: DS.muted }}>jour{stats.streak > 1 ? "s" : ""}</span>
-              </p>
-            </div>
-          </div>
-
-          <div
-            className="rounded-2xl p-4 flex items-center gap-3.5"
-            style={{ background: "rgba(0,0,0,0.04)", border: `1px solid ${DS.border}` }}
-            data-testid="card-weekly"
-          >
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "rgba(16,185,129,0.12)", border: "1px solid rgba(16,185,129,0.25)" }}>
-              <Sparkles className="w-4 h-4" style={{ color: "#10b981" }} />
-            </div>
-            <div>
-              <p className="text-[9px] font-extrabold uppercase tracking-widest" style={{ color: DS.muted }}>Complétion</p>
-              <p className="text-base font-extrabold" style={{ color: DS.text }} data-testid="text-weekly-value">{stats.weeklyPct}%</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Streak message */}
-        {stats.streak >= 3 && (
-          <motion.div
-            initial={{ opacity: 0, y: -5 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="rounded-xl p-3.5 text-center"
-            style={{ background: "rgba(251,146,60,0.08)", border: "1px solid rgba(251,146,60,0.2)" }}
-          >
-            <p className="text-xs font-bold leading-normal" style={{ color: DS.body }}>
-              ⚡ Discipline maintenue sur <span className="font-extrabold" style={{ color: "#fb923c" }}>{stats.streak} cycles</span>. Chaque jour valide forge ta transformation.
-            </p>
-          </motion.div>
-        )}
-
-        <RoutineCard period="morning" routine={morning} todayCompletions={todayCompletions} />
-        <RoutineCard period="evening" routine={evening} todayCompletions={todayCompletions} />
-
-        <p className="text-[10px] font-medium text-center px-6 pt-2 leading-relaxed" style={{ color: "rgba(0,0,0,0.25)" }}>
-          Les alertes push s'adaptent automatiquement à ton fuseau local pour respecter la chronobiologie cutanée.
-        </p>
-      </div>
+      <AnimatePresence>{showAddR && <AddStepModal period={period} onClose={() => setShowAddR(false)} />}</AnimatePresence>
     </div>
   );
 }
