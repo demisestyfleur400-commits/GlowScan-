@@ -322,6 +322,7 @@ import { useSubscription } from "@/hooks/use-subscription";
 import { ConsultationLauncher } from "@/components/ConsultationLauncher";
 import { LowScoreExperience } from "@/components/LowScoreExperience";
 import { GS, GsMono, GsMeter, GsMetric, GsMetricGrid, GsChip, GsButton, GsMarks } from "@/lib/gs-ui";
+import { ProductOrderFlow } from "@/components/ProductOrderFlow";
 import { buildObservationSections, type ObservationData } from "@/lib/observationPdf";
 
 const productImages = centralProductImages;
@@ -2360,10 +2361,11 @@ ${medicalSections}
                 </div>
                 {eco > 0 && <div style={{ marginTop: 8 }}><GsMono color={GS.teal} style={{ letterSpacing: ".06em" }}>Économie {eco.toLocaleString("fr-FR")} F · livraison Douala incluse</GsMono></div>}
               </div>
-              <a href={`https://wa.me/${waNumber}?text=${orderMsg}`} target="_blank" rel="noreferrer"
-                style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, width: "100%", boxSizing: "border-box", background: GS.ink, color: "#fff", padding: 17, fontSize: 14, fontWeight: 600, textDecoration: "none" }}>
-                Commander le protocole · {bundle.toLocaleString("fr-FR")} FCFA
-              </a>
+              <ProductOrderFlow
+                items={items.map((it) => ({ name: it.product.name, price: it.product.price || 0 }))}
+                bundle={bundle} total={total} kitLabel="Kit protocole 30j"
+                userFirstName={userFirstName} phone={patientIntake?.phone} score={result.score} condition={result.condition}
+              />
               <div style={{ textAlign: "center", fontSize: 12, color: GS.muted }}>Ou <a href="/shop" style={{ color: GS.teal, fontWeight: 600 }}>ajouter un seul produit</a></div>
             </>
           );
