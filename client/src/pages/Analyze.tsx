@@ -361,7 +361,7 @@ export default function Analyze() {
           (window as any).fbq("track", "ViewContent", {
             content_name: "Analyse peau GlowScan",
             content_category: selectedArea ?? "visage",
-            value: data.glowScore ?? 0,
+            value: data.score ?? 0,
             currency: "XAF",
           });
         }
@@ -973,7 +973,7 @@ export default function Analyze() {
         </AnimatePresence>
       </main>
 
-      <UpgradeModal open={showUpgrade} onOpenChange={setShowUpgrade} />
+      <UpgradeModal isOpen={showUpgrade} onClose={() => setShowUpgrade(false)} />
       {needsConsent && <ConsentBanner onAccept={onConsentGiven} userId={user?.id?.toString()} />}
     </div>
   );
