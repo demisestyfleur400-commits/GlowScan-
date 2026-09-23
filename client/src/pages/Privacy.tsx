@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { Navbar } from "@/components/Navbar";
+import { GsTopBar } from "@/components/GsTopBar";
 import { ArrowLeft, ShieldCheck, FileText, Globe, Trash2, Download, Mail, Lock } from "lucide-react";
 import { useSEO } from "@/hooks/useSEO";
 
@@ -21,7 +21,7 @@ export default function Privacy() {
 
   return (
     <div className="min-h-screen pb-24" style={{ background: DS.base, fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif' }}>
-      <Navbar />
+      <GsTopBar />
 
       <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Link href="/profile">

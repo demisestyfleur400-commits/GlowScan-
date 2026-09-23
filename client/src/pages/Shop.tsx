@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { Navbar } from "@/components/Navbar";
+import { GsTopBar } from "@/components/GsTopBar";
 import { useSEO } from "@/hooks/useSEO";
 import { catalog, type Product, formatPrice, getProductBrand } from "@shared/catalog";
 import { Sparkles, X, Check, MessageCircle, Star, ChevronLeft, ShieldCheck, Truck } from "lucide-react";
@@ -952,7 +952,7 @@ export default function Shop() {
       className="min-h-screen pb-28"
       style={{ background: "#f5f5f7", fontFamily: GS.sans }}
     >
-      <Navbar />
+      <GsTopBar />
 
       {/* Header */}
       <header className="px-4 pt-5 pb-4 bg-white" style={{ borderBottom: "1px solid #f0f0f0" }}>

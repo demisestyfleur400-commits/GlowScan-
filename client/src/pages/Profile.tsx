@@ -2,7 +2,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useScans } from "@/hooks/use-scans";
 import { useSubscription } from "@/hooks/use-subscription";
 import { UpgradeModal } from "@/components/UpgradeModal";
-import { Navbar } from "@/components/Navbar";
+import { GsTopBar } from "@/components/GsTopBar";
 import { NotifSettingsCard } from "@/components/NotifSettingsCard";
 import { ResultCard } from "@/components/ResultCard";
 import { PrivacySettings } from "@/components/PrivacySettings";
@@ -501,7 +501,7 @@ export default function Profile() {
         />
       </div>
 
-      <Navbar />
+      <GsTopBar />
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-10">
         {/* Page header */}

@@ -5,7 +5,7 @@ import { trackPageVisit } from "@/lib/analytics";
 import { fetchWithRetry } from "@/lib/imageUtils";
 import { triggerPWAInstallPrompt } from "@/hooks/use-pwa-install";
 import { useSubscription } from "@/hooks/use-subscription";
-import { Navbar } from "@/components/Navbar";
+import { GsTopBar } from "@/components/GsTopBar";
 import { FileUpload } from "@/components/FileUpload";
 import { UpgradeModal } from "@/components/UpgradeModal";
 import { ConsentBanner, hasUserConsented, getDatasetConsent, PRIVACY_POLICY_VERSION } from "@/components/ConsentBanner";
@@ -432,7 +432,7 @@ export default function Analyze() {
         fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
       }}
     >
-      <Navbar />
+      <GsTopBar />
 
       <main className="max-w-xl mx-auto px-4 pt-8">
         <AnimatePresence mode="wait">

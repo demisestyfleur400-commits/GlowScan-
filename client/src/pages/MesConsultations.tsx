@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Navbar } from "@/components/Navbar";
+import { GsTopBar } from "@/components/GsTopBar";
 import { useAuth } from "@/hooks/use-auth";
 import { ConsultationChat } from "@/components/ConsultationChat";
 
@@ -54,7 +54,7 @@ export default function MesConsultations() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#f6f7fb" }}>
-      <Navbar />
+      <GsTopBar />
       <div style={{ maxWidth: 640, margin: "0 auto", padding: "20px 16px 60px" }}>
         <h1 style={{ fontSize: 20, fontWeight: 900, color: "#1a1a2e", margin: "0 0 4px" }}>Mes consultations</h1>
         <p style={{ fontSize: 12.5, color: "#6b7280", margin: "0 0 18px" }}>Tes échanges avec les dermatologues, directement dans GlowScan.</p>
