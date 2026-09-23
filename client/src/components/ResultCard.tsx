@@ -321,6 +321,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useSubscription } from "@/hooks/use-subscription";
 import { ConsultationLauncher } from "@/components/ConsultationLauncher";
 import { LowScoreExperience } from "@/components/LowScoreExperience";
+import { GS, GsMono, GsMeter, GsMetric, GsMetricGrid, GsChip, GsButton } from "@/lib/gs-ui";
 import { buildObservationSections, type ObservationData } from "@/lib/observationPdf";
 
 const productImages = centralProductImages;
@@ -2234,84 +2235,106 @@ ${medicalSections}
   //  Tout le détail médical (métriques, cartographie, synthèse) → dans le PDF.
   // ═══════════════════════════════════════════════════════════════════
   if (!isPro) {
-    const freeTip = getHygieneAdvice()[0] || null;
-    const p: any = _bestProduct;
-    const waNumber = "237674377959";
-    const priceStr = p?.price ? `${p.price.toLocaleString("fr-FR")} FCFA` : "";
-    // Message pré-rempli COMPLET : le client voit le prix (donc tu sais qu'il l'a vu),
-    // et tu reçois son contexte d'analyse (diagnostic + Glow Score) pour répondre juste.
-    const waMsg = p ? encodeURIComponent(
-      `Bonjour GlowScan 👋\n\n` +
-      `Je souhaite en savoir plus sur :\n${p.name}${p.brand ? ` · ${p.brand}` : ""}\n` +
-      (priceStr ? `💰 Prix : ${priceStr}\n` : "") +
-      `\nMon analyse GlowScan :\n` +
-      `• Diagnostic : ${result.condition || "—"}\n` +
-      `• Glow Score : ${result.score}/100\n\n` +
-      `📍 Livraison à Douala 🙏`
-    ) : "";
+    // Métriques du rapport (créées/dérivées des données réelles — design 04B).
+    const hydra = deriveHydratation(result);
+    const ageCut = deriveAgeCutane(result, patientIntake?.age);
+    const rides = deriveRides(result);
+    const poresLbl = derivePoresLabel(result);
+    const gea = deriveIndiceAcne(result);
+    const geaIdx = clamp(Math.round(gea.value / 20), 0, 5);
+    const phototype = (result as any).fitzpatrick || (result as any).consultationData?.phototype || "IV";
+    const typePeau = (((result as any).consultationData?.type_peau || result.skinType || "Mixte") as string).split("(")[0].trim();
+    const zonesList = (result.zones || []).filter((z: any) => z && z.name).slice(0, 4);
+    const zoneColor = (s: string) => s === "red" ? "#28B0D4" : s === "yellow" ? GS.accent : GS.accentMint;
     return (
-      <div data-testid="result-card" data-clarity-mask="true" style={{ maxWidth: "460px", margin: "0 auto", display: "flex", flexDirection: "column", gap: "20px", padding: "8px 0", fontFamily: DS.font }}>
-        {/* Le Glow Score — héros, grand, fier */}
-        <GlowGauge score={result.score} observationsVisuelles={result.consultationData?.observations_visuelles || (result as any).observationsVisuelles} />
+      <div data-testid="result-card" data-clarity-mask="true" style={{ maxWidth: 460, margin: "0 auto", display: "flex", flexDirection: "column", gap: 16, padding: "8px 0", fontFamily: GS.sans, color: GS.ink }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <GsMono>Rapport d'analyse</GsMono>
+          <GsChip tone="accent">Voie GlowScan</GsChip>
+        </div>
 
-        {/* 1 phrase — ce que ça veut dire, en humain */}
-        <p style={{ textAlign: "center", fontSize: 18, fontWeight: 800, color: DS.textPrimary, lineHeight: 1.35, margin: "0 8px" }}>
-          {conditionHook.emoji} {conditionHook.accroche}
-        </p>
+        {/* Glow Score + seuil 60 */}
+        <div>
+          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 8 }}>
+            <GsMono>Glow Score</GsMono>
+            <span style={{ fontFamily: GS.mono, fontSize: 30, fontWeight: 600, color: GS.ink, letterSpacing: "-1px", fontVariantNumeric: "tabular-nums" }}>{result.score}<span style={{ fontSize: 14, color: GS.faint }}>/100</span></span>
+          </div>
+          <GsMeter value={result.score || 0} threshold={60} />
+          <div style={{ fontSize: 12, lineHeight: 1.55, color: GS.muted, marginTop: 6 }}>Votre peau se gère en routine. GlowScan vous accompagne — un dermatologue reste joignable si vous le souhaitez.</div>
+        </div>
 
-        {/* 1 conseil gratuit — actionnable ce soir */}
-        {freeTip && (
-          <div style={{ borderRadius: 16, padding: "14px 16px", background: "rgba(16,185,129,0.06)", border: "1px solid rgba(16,185,129,0.25)" }}>
-            <p style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", color: "#047857", margin: "0 0 4px" }}>Ton geste ce soir</p>
-            <p style={{ fontSize: 13.5, color: DS.textBody, lineHeight: 1.5, margin: 0 }}>{freeTip}</p>
+        {/* Phototype / type de peau */}
+        <GsMetricGrid cols={2}>
+          <GsMetric label="Phototype" value={phototype} note="Fitzpatrick" />
+          <GsMetric label="Type de peau" value={typePeau} />
+        </GsMetricGrid>
+
+        {/* Échelle GEA · acné */}
+        <div style={{ border: `1px solid ${GS.line}`, padding: 13 }}>
+          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 10 }}>
+            <GsMono>Échelle GEA · acné</GsMono>
+            <span style={{ fontFamily: GS.mono, fontSize: 13, fontWeight: 600, color: GS.ink }}>{geaIdx} · {gea.label.toLowerCase()}</span>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(6,1fr)", gap: 4 }}>
+            {[0, 1, 2, 3, 4, 5].map((i) => (
+              <div key={i} style={{ height: 26, border: `1px solid ${i === geaIdx ? GS.ink : GS.line}`, background: i === geaIdx ? GS.grad : i < geaIdx ? GS.panel : "#fff" }} />
+            ))}
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(6,1fr)", gap: 4, marginTop: 4, fontFamily: GS.mono, fontSize: 9, color: GS.faint, textAlign: "center" }}>
+            {[0, 1, 2, 3, 4, 5].map((i) => <span key={i} style={{ color: i === geaIdx ? GS.ink : GS.faint, fontWeight: i === geaIdx ? 600 : 400 }}>{i}</span>)}
+          </div>
+        </div>
+
+        {/* Métriques cutanées */}
+        <GsMetricGrid cols={2}>
+          <GsMetric label="Hydratation" value={`${hydra.value} %`} note={hydra.label} />
+          <GsMetric label="Âge cutané" value={`${ageCut} ans`} />
+          <GsMetric label="Rides" value={rides.label} />
+          <GsMetric label="Pores" value={poresLbl} />
+        </GsMetricGrid>
+
+        {/* Cartographie des zones */}
+        {zonesList.length > 0 && (
+          <div style={{ border: `1px solid ${GS.line}`, padding: 14 }}>
+            <GsMono style={{ display: "block", marginBottom: 10 }}>Cartographie des zones</GsMono>
+            <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+              {zonesList.map((z: any, i: number) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                  <span style={{ width: 10, height: 10, background: zoneColor(z.status), flex: "none" }} />
+                  <span style={{ flex: 1, fontSize: 12, color: GS.ink }}>{z.name}</span>
+                  <span style={{ fontFamily: GS.mono, fontSize: 11, color: GS.muted }}>{z.status === "red" ? "à surveiller" : z.status === "yellow" ? "modéré" : "sain"}</span>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
-        {/* 1 produit — si tu veux aller plus loin. Sans pression. */}
-        {p && (
-          <div style={{ borderRadius: 16, padding: "14px 16px", background: DS.surface, border: `1px solid ${DS.border || "#E2E8F0"}` }}>
-            <p style={{ fontSize: 10, fontWeight: 700, color: DS.textMuted, margin: "0 0 4px" }}>Si tu veux aller plus loin</p>
-            <p style={{ fontSize: 14, fontWeight: 800, color: DS.textPrimary, margin: "0 0 2px" }}>{p.name}</p>
-            {_benefit && <p style={{ fontSize: 12, color: DS.textBody, margin: "0 0 6px", lineHeight: 1.4 }}>{_benefit}</p>}
-            {p.price ? <p style={{ fontSize: 13, fontWeight: 800, color: DS.textPrimary, margin: "0 0 10px" }}>{p.price.toLocaleString("fr-FR")} FCFA</p> : null}
-            <a href={`https://wa.me/${waNumber}?text=${waMsg}`} target="_blank" rel="noreferrer"
-              style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12.5, fontWeight: 700, color: "#0f9d58", textDecoration: "none" }}>
-              📱 En savoir plus sur WhatsApp
-            </a>
+        {/* Produits adaptés — teaser (protocole complet 04C à venir) */}
+        {_bestProduct && (
+          <div style={{ border: `1px solid ${GS.line}`, padding: 14 }}>
+            <GsMono color={GS.teal} style={{ display: "block", marginBottom: 6, letterSpacing: ".08em" }}>Produit adapté à votre rapport</GsMono>
+            <div style={{ fontSize: 14, fontWeight: 600, color: GS.ink }}>{_bestProduct.name}</div>
+            {_benefit && <div style={{ fontSize: 12, color: GS.muted, marginTop: 3, lineHeight: 1.45 }}>{_benefit}</div>}
+            {_bestProduct.price ? <div style={{ fontFamily: GS.mono, fontSize: 13, fontWeight: 600, color: GS.ink, marginTop: 8 }}>{_bestProduct.price.toLocaleString("fr-FR")} FCFA</div> : null}
           </div>
         )}
 
-        {/* Le rapport. Visiteur sans compte → réception par email (le téléchargement
-            PDF échoue sur Chrome). Utilisateur connecté → téléchargement direct. */}
+        {/* Rapport complet : PDF (connecté) ou email (visiteur) */}
         {user ? (
-          <button onClick={() => handleDownloadPDF()} disabled={pdfGenerating} data-testid="button-download-pdf"
-            style={{ width: "100%", padding: "14px", borderRadius: 14, border: "none", background: DS.violet, color: "#fff", fontWeight: 800, fontSize: 14, cursor: pdfGenerating ? "wait" : "pointer", opacity: pdfGenerating ? 0.7 : 1 }}>
-            {pdfGenerating ? "Génération…" : "📄 Télécharger mon rapport complet"}
-          </button>
+          <GsButton onClick={() => handleDownloadPDF()} disabled={pdfGenerating}>{pdfGenerating ? "Génération…" : "Télécharger mon rapport complet"}</GsButton>
         ) : (
-          <ReportEmailCapture
-            scanId={savedScanId || scanId || undefined}
-            condition={result.condition || ""}
-            score={result.score || 0}
-            name={userFirstName}
-            violet={DS.violet}
-          />
+          <ReportEmailCapture scanId={savedScanId || scanId || undefined} condition={result.condition || ""} score={result.score || 0} name={userFirstName || undefined} violet={GS.ink} />
         )}
 
-        {/* Consultation — lien discret */}
+        {/* Consultation dermatologue — accès discret */}
         <details style={{ textAlign: "center" }}>
-          <summary style={{ cursor: "pointer", fontSize: 12.5, fontWeight: 600, color: DS.textMuted, listStyle: "none" }}>
-            Envie d'un avis de dermatologue ?
-          </summary>
+          <summary style={{ cursor: "pointer", fontSize: 12.5, fontWeight: 600, color: GS.muted, listStyle: "none" }}>Envie d'un avis de dermatologue ?</summary>
           <div style={{ marginTop: 12, textAlign: "left" }}>
             <ConsultationLauncher scanId={savedScanId || scanId || undefined} condition={result.condition || ""} imageUrl={imageUrl || undefined} />
           </div>
         </details>
 
-        {/* Dernière phrase — une invitation, pas un avertissement */}
-        <p style={{ textAlign: "center", fontSize: 11.5, color: DS.textMuted, lineHeight: 1.5, margin: 0 }}>
-          On t'aide à comprendre ta peau. Ce que tu en fais t'appartient. 🌿
-        </p>
+        <p style={{ textAlign: "center", fontFamily: GS.mono, fontSize: 9, color: GS.faint, margin: 0, letterSpacing: ".04em" }}>Analyse indicative — ne remplace pas un examen médical.</p>
       </div>
     );
   }
