@@ -20,7 +20,7 @@ const ResultCard = lazy(() =>
 );
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Sparkles, Lock, ChevronRight, HelpCircle, Scissors, Camera, User, PersonStanding, ArrowRight } from "lucide-react";
-import { GS, GsButton, GsMono, GsSteps, GsCheck, GsOption } from "@/lib/gs-ui";
+import { GS, GsButton, GsMono, GsSteps, GsCheck, GsOption, GsMarks } from "@/lib/gs-ui";
 import type { AnalysisResult } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -99,6 +99,8 @@ export default function Analyze() {
   const [needsConsent, setNeedsConsent] = useState(false);
   const [showProdSug, setShowProdSug] = useState(false);
   const pendingImageRef = useRef<string | null>(null);
+  const cancelledRef = useRef(false); // « Annuler l'analyse » — empêche un résultat tardif de forcer la navigation
+  const cancelAnalysis = () => { cancelledRef.current = true; setIsAnalyzing(false); setStep("intake"); };
 
   const [consultationData, setConsultationData] = useState<ConsultationData | null>(null);
   const [answers, setAnswers] = useState<Record<number, string>>({});
@@ -245,6 +247,7 @@ export default function Analyze() {
       toast({ title: "Champ requis", description: "Indiquez depuis combien de temps.", variant: "destructive" });
       return;
     }
+    cancelledRef.current = false;
     setIsAnalyzing(true);
 
     try {
@@ -344,6 +347,7 @@ export default function Analyze() {
       }
 
       const data = await analyzeRes.json() as AnalysisResult & { savedScanId?: number; isAnonymous?: boolean; _fallback?: boolean };
+      if (cancelledRef.current) { cancelledRef.current = false; return; } // annulé pendant l'analyse
       setIsAnalyzing(false);
       setResult(data);
       setStep("result");
@@ -437,102 +441,53 @@ export default function Analyze() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-50 flex flex-col items-center justify-center px-5"
-              style={{ background: "#fbfdfb" }}
+              className="fixed inset-0 z-50"
+              style={{ background: "#fff", fontFamily: GS.sans, overflowY: "auto" }}
               data-testid="screen-analyzing"
             >
-              {/* Ambient glow */}
-              <div className="pointer-events-none absolute inset-0 overflow-hidden">
-                <div
-                  className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[480px] h-[480px] rounded-full"
-                  style={{ background: "radial-gradient(circle, rgba(47,158,110,0.15), transparent)" }}
-                />
-              </div>
+              <div style={{ maxWidth: 430, margin: "0 auto", minHeight: "100dvh", padding: "22px 24px", boxSizing: "border-box", display: "flex", flexDirection: "column" }}>
+                <GsMono>Dossier en cours d'analyse</GsMono>
+                <div style={{ fontSize: 24, fontWeight: 600, color: GS.ink, letterSpacing: "-.7px", marginTop: 8 }}>Analyse en cours</div>
 
-              <div className="w-full max-w-xs text-center space-y-6 relative z-10">
-                {/* Status badge */}
-                <div className="flex items-center justify-center">
-                  <div
-                    className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-[10px] font-bold tracking-wide animate-pulse"
-                    style={{
-                      background: "rgba(47,158,110,0.15)",
-                      border: "1px solid rgba(47,158,110,0.3)",
-                      color: "#c4b5fd",
-                    }}
-                  >
-                    <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: "#a78bfa" }} />
-                    Diagnostic en cours
+                {/* Carte de progression (repères +) */}
+                <div style={{ position: "relative", marginTop: 26, border: `1px solid ${GS.line}`, padding: 24 }}>
+                  <GsMarks />
+                  <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 16 }}>
+                    <GsMono style={{ letterSpacing: ".14em" }}>Progression</GsMono>
+                    <span style={{ fontFamily: GS.mono, fontSize: 22, fontWeight: 600, color: GS.ink, fontVariantNumeric: "tabular-nums" }}>{LOADING_STEPS[loadingStep].pct} %</span>
                   </div>
+                  <div style={{ height: 6, background: GS.panel, border: `1px solid ${GS.line}`, position: "relative" }}>
+                    <motion.div style={{ position: "absolute", top: 0, left: 0, bottom: 0, background: GS.grad }} animate={{ width: `${LOADING_STEPS[loadingStep].pct}%` }} transition={{ duration: 0.4 }} />
+                  </div>
+                  <div style={{ fontFamily: GS.mono, fontSize: 10, color: GS.faint, marginTop: 8 }}>{LOADING_STEPS[loadingStep].msg}</div>
                 </div>
 
-                {/* Scan frame */}
-                <div
-                  className="relative w-56 h-56 mx-auto rounded-2xl overflow-hidden"
-                  style={{
-                    border: "1px solid rgba(47,158,110,0.25)",
-                    background: "rgba(14,11,26,1)",
-                  }}
-                >
-                  {uploadedImage ? (
-                    <img
-                      src={uploadedImage}
-                      alt="Scanning"
-                      className="absolute inset-0 w-full h-full object-cover opacity-50"
-                      data-testid="img-scanning"
-                    />
-                  ) : (
-                    <div className="absolute inset-0 flex items-center justify-center text-4xl">🔬</div>
-                  )}
-                  {/* Grid overlay */}
-                  <div
-                    className="absolute inset-0 opacity-10"
-                    style={{
-                      backgroundImage: "linear-gradient(rgba(47,158,110,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(47,158,110,0.6) 1px, transparent 1px)",
-                      backgroundSize: "20px 20px",
-                    }}
-                  />
-                  {/* Scan line */}
-                  <motion.div
-                    className="absolute left-0 right-0 h-0.5"
-                    style={{ background: "linear-gradient(90deg, transparent, #a78bfa, transparent)" }}
-                    animate={{ top: ["0%", "100%", "0%"] }}
-                    transition={{ duration: 2, ease: "easeInOut", repeat: Infinity }}
-                  />
+                {/* Étapes du pipeline (état réel selon loadingStep) */}
+                <div style={{ marginTop: 20, display: "flex", flexDirection: "column" }}>
+                  {LOADING_STEPS.map((s, i) => {
+                    const done = i < loadingStep;
+                    const current = i === loadingStep;
+                    return (
+                      <div key={i} style={{ display: "flex", gap: 13, alignItems: "center", padding: "12px 0", borderBottom: i < LOADING_STEPS.length - 1 ? `1px solid ${GS.hair}` : "none" }}>
+                        {done
+                          ? <span style={{ color: GS.teal, fontSize: 15, width: 16, textAlign: "center", flex: "none" }}>✓</span>
+                          : current
+                            ? <span style={{ width: 16, height: 16, border: `1px solid ${GS.accent}`, background: GS.mintTint, flex: "none" }} />
+                            : <span style={{ width: 16, height: 16, border: `1px solid ${GS.line}`, flex: "none" }} />}
+                        <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: done || current ? GS.ink : GS.faint }}>{s.msg}</span>
+                        {done && <span style={{ fontFamily: GS.mono, fontSize: 10, color: GS.teal }}>OK</span>}
+                        {current && <span style={{ fontFamily: GS.mono, fontSize: 10, color: GS.teal }}>EN COURS</span>}
+                      </div>
+                    );
+                  })}
                 </div>
 
-                {/* Progress */}
-                <div className="space-y-2">
-                  <div
-                    className="flex justify-between text-[10px] font-medium"
-                    style={{ color: "#4a5a52" }}
-                  >
-                    <span>{LOADING_STEPS[loadingStep].icon} {LOADING_STEPS[loadingStep].msg}</span>
-                    <span style={{ color: "#c4b5fd" }}>{LOADING_STEPS[loadingStep].pct}%</span>
+                <div style={{ marginTop: "auto", paddingTop: 20 }}>
+                  <div style={{ borderLeft: `2px solid ${GS.accent}`, paddingLeft: 14, fontSize: 12, lineHeight: 1.6, color: GS.muted, marginBottom: 16 }}>
+                    Vous pouvez fermer l'application. Nous vous prévenons dès que le résultat est prêt.
                   </div>
-                  <div
-                    className="w-full h-1 rounded-full overflow-hidden"
-                    style={{ background: "rgba(0,0,0,0.06)" }}
-                  >
-                    <motion.div
-                      className="h-full rounded-full"
-                      style={{ background: "linear-gradient(90deg, #2f9e6e, #a78bfa)" }}
-                      animate={{ width: `${LOADING_STEPS[loadingStep].pct}%` }}
-                      transition={{ duration: 0.4 }}
-                    />
-                  </div>
+                  <GsButton variant="secondary" onClick={cancelAnalysis}>Annuler l'analyse</GsButton>
                 </div>
-
-                {/* Tip */}
-                <p
-                  className="text-xs leading-relaxed font-medium p-4 rounded-2xl min-h-[64px] flex items-center justify-center"
-                  style={{
-                    color: "#4a5a52",
-                    background: "rgba(0,0,0,0.04)",
-                    border: "1px solid rgba(0,0,0,0.07)",
-                  }}
-                >
-                  {LOADING_TIPS[loadingTip]}
-                </p>
               </div>
             </motion.div>
           )}
