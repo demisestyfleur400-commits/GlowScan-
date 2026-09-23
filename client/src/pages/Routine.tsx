@@ -445,9 +445,24 @@ export default function Routine() {
     enabled: !!user && isPremium,
   });
 
-  // Onglet Matin/Soir + mutations (hoisted avant les gates : hooks au top-level).
+  // Données dérivées (guards inclus) + tous les hooks AVANT les gates.
+  const morning = data?.routines.find((r) => r.period === "morning");
+  const evening = data?.routines.find((r) => r.period === "evening");
+  const todayCompletions = data?.todayCompletions || [];
+  const stats = data?.stats || { streak: 0, weeklyPct: 0, totalSteps: 0, today: "" };
+
+  useGsFonts();
   const [period, setPeriod] = useState<Period>("morning");
   const [showAddR, setShowAddR] = useState(false);
+  const [view, setView] = useState<"day" | "reminders" | "orders">("day");
+  const [remMorning, setRemMorning] = useState("07:30");
+  const [remEvening, setRemEvening] = useState("21:00");
+  const [channelWa, setChannelWa] = useState(true);
+  const [days, setDays] = useState<boolean[]>([true, true, true, true, true, false, false]);
+  useEffect(() => {
+    if (morning?.reminderTime) setRemMorning(morning.reminderTime);
+    if (evening?.reminderTime) setRemEvening(evening.reminderTime);
+  }, [morning?.reminderTime, evening?.reminderTime]);
   const checkMutR = useMutation({
     mutationFn: async (stepId: number) => { const r = await apiRequest("POST", "/api/routines/check", { stepId }); return r.json(); },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/routines"] }),
@@ -456,6 +471,21 @@ export default function Routine() {
     mutationFn: async (stepId: number) => { await apiRequest("DELETE", `/api/routines/steps/${stepId}`); },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/routines"] }),
   });
+  const reminderMutR = useMutation({
+    mutationFn: async (p: { period: Period; reminderTime?: string | null; reminderEnabled?: boolean }) => { const r = await apiRequest("PUT", `/api/routines/${p.period}`, { reminderTime: p.reminderTime, reminderEnabled: p.reminderEnabled }); return r.json(); },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/routines"] }),
+  });
+  const { data: ordersData } = useQuery<any[]>({ queryKey: ["/api/orders"], enabled: !!user && isPremium });
+  const addFromOrderMut = useMutation({
+    mutationFn: async (label: string) => { const r = await apiRequest("POST", "/api/routines/morning/steps", { kind: "product", label }); return r.json(); },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/routines"] }),
+  });
+  const saveReminders = () => {
+    reminderMutR.mutate({ period: "morning", reminderTime: remMorning });
+    reminderMutR.mutate({ period: "evening", reminderTime: remEvening });
+    try { localStorage.setItem("gs_routine_channel", channelWa ? "wa" : "push"); localStorage.setItem("gs_routine_days", JSON.stringify(days)); } catch {}
+    setView("day");
+  };
 
   if (authLoading || subLoading) {
     return (
@@ -563,12 +593,6 @@ export default function Routine() {
     );
   }
 
-  const morning = data?.routines.find((r) => r.period === "morning");
-  const evening = data?.routines.find((r) => r.period === "evening");
-  const todayCompletions = data?.todayCompletions || [];
-  const stats = data?.stats || { streak: 0, weeklyPct: 0, totalSteps: 0, today: "" };
-  useGsFonts();
-
   const active = period === "morning" ? morning : evening;
   const steps = active?.steps || [];
   const cnt = (r?: Routine) => { const st = r?.steps || []; return { total: st.length, done: st.filter((s) => todayCompletions.includes(s.id)).length }; };
@@ -582,6 +606,110 @@ export default function Routine() {
     { icon: Calendar, label: "ROUTINE", path: "/routine", on: true },
     { icon: UserIcon, label: "DOSSIER", path: "/profile", on: false },
   ];
+
+  // Cadre commun des sous-écrans (R2/R3) : plein écran, IBM Plex.
+  const shellR = (children: React.ReactNode) => (
+    <div style={{ minHeight: "100dvh", background: "#fff", fontFamily: GS.sans, color: GS.ink }}>
+      <div style={{ width: "100%", maxWidth: 430, margin: "0 auto", padding: "14px 24px 28px", boxSizing: "border-box", display: "flex", flexDirection: "column", minHeight: "100dvh" }}>{children}</div>
+    </div>
+  );
+
+  // ── R2 · RÉGLAGE DES RAPPELS ──
+  if (view === "reminders") {
+    return shellR(<>
+      <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 20 }}>
+        <button onClick={() => setView("day")} aria-label="Retour" style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: GS.ink, display: "flex" }}><ChevronLeft className="w-5 h-5" /></button>
+        <div style={{ fontSize: 19, fontWeight: 600, letterSpacing: "-.4px" }}>Mes rappels</div>
+      </div>
+
+      <GsMono style={{ display: "block", marginBottom: 10 }}>Horaires</GsMono>
+      <div style={{ display: "flex", gap: 1, background: GS.line, border: `1px solid ${GS.line}` }}>
+        <div style={{ flex: 1, background: "#fff", padding: 16, textAlign: "center" }}>
+          <GsMono style={{ letterSpacing: ".12em" }}>Matin</GsMono>
+          <input type="time" value={remMorning} onChange={(e) => setRemMorning(e.target.value)} style={{ display: "block", width: "100%", boxSizing: "border-box", border: "none", textAlign: "center", fontFamily: GS.mono, fontSize: 26, fontWeight: 600, color: GS.ink, marginTop: 6, outline: "none", background: "transparent" }} />
+        </div>
+        <div style={{ flex: 1, background: "#fff", padding: 16, textAlign: "center" }}>
+          <GsMono style={{ letterSpacing: ".12em" }}>Soir</GsMono>
+          <input type="time" value={remEvening} onChange={(e) => setRemEvening(e.target.value)} style={{ display: "block", width: "100%", boxSizing: "border-box", border: "none", textAlign: "center", fontFamily: GS.mono, fontSize: 26, fontWeight: 600, color: GS.ink, marginTop: 6, outline: "none", background: "transparent" }} />
+        </div>
+      </div>
+
+      <GsMono style={{ display: "block", margin: "20px 0 10px" }}>Par quel canal</GsMono>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <button onClick={() => setChannelWa(true)} style={{ textAlign: "left", cursor: "pointer", border: `1px solid ${channelWa ? GS.ink : GS.line}`, background: channelWa ? GS.mintBg : "#fff", padding: 14, display: "flex", alignItems: "center", gap: 13 }}>
+          <Bell size={19} style={{ color: GS.teal }} />
+          <div style={{ flex: 1 }}><div style={{ fontSize: 13, fontWeight: 600, color: GS.ink }}>WhatsApp</div><div style={{ fontSize: 11, color: GS.muted, marginTop: 2 }}>Arrive même quand l'app est fermée</div></div>
+          <span style={{ width: 20, height: 20, flex: "none", ...(channelWa ? { background: GS.ink, display: "flex", alignItems: "center", justifyContent: "center" } : { border: `1px solid ${GS.disabled}` }) }}>{channelWa && <Check size={13} style={{ color: GS.accent }} strokeWidth={3} />}</span>
+        </button>
+        <button onClick={() => setChannelWa(false)} style={{ textAlign: "left", cursor: "pointer", border: `1px solid ${!channelWa ? GS.ink : GS.line}`, background: !channelWa ? GS.mintBg : "#fff", padding: 14, display: "flex", alignItems: "center", gap: 13 }}>
+          <Bell size={19} style={{ color: GS.muted }} />
+          <div style={{ flex: 1 }}><div style={{ fontSize: 13, fontWeight: 600, color: GS.ink }}>Notification de l'application</div></div>
+          <span style={{ width: 20, height: 20, flex: "none", ...(!channelWa ? { background: GS.ink, display: "flex", alignItems: "center", justifyContent: "center" } : { border: `1px solid ${GS.disabled}` }) }}>{!channelWa && <Check size={13} style={{ color: GS.accent }} strokeWidth={3} />}</span>
+        </button>
+      </div>
+
+      <GsMono style={{ display: "block", margin: "20px 0 10px" }}>Jours de traitement</GsMono>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 4 }}>
+        {["L", "M", "M", "J", "V", "S", "D"].map((d, i) => (
+          <button key={i} onClick={() => setDays((arr) => arr.map((v, j) => j === i ? !v : v))}
+            style={{ height: 42, cursor: "pointer", border: days[i] ? "none" : `1px solid ${GS.line}`, background: days[i] ? GS.ink : "#fff", color: days[i] ? "#fff" : GS.muted, fontFamily: GS.mono, fontSize: 12, fontWeight: 600 }}>{d}</button>
+        ))}
+      </div>
+      <div style={{ fontSize: 11, color: GS.muted, marginTop: 9, lineHeight: 1.5 }}>Les rappels suivent l'ordonnance : « un jour sur deux » se règle d'un geste.</div>
+
+      <div style={{ marginTop: "auto", paddingTop: 20 }}>
+        <button onClick={saveReminders} disabled={reminderMutR.isPending} style={{ width: "100%", background: GS.ink, color: "#fff", border: "none", padding: 17, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>{reminderMutR.isPending ? "Enregistrement…" : "Enregistrer"}</button>
+      </div>
+    </>);
+  }
+
+  // ── R3 · AJOUT DEPUIS LES COMMANDES ──
+  if (view === "orders") {
+    const orders = Array.isArray(ordersData) ? ordersData : [];
+    const inRoutine = new Set<string>([...(morning?.steps || []), ...(evening?.steps || [])].map((s) => (s.label || "").toLowerCase()));
+    return shellR(<>
+      <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 18 }}>
+        <button onClick={() => setView("day")} aria-label="Retour" style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: GS.ink, display: "flex" }}><ChevronLeft className="w-5 h-5" /></button>
+        <div style={{ fontSize: 19, fontWeight: 600, letterSpacing: "-.4px" }}>Ajouter à ma routine</div>
+      </div>
+      <div style={{ border: `1px solid ${GS.line}`, padding: 13, display: "flex", gap: 12, alignItems: "flex-start", marginBottom: 18 }}>
+        <Sparkles size={17} style={{ color: GS.teal, marginTop: 1, flexShrink: 0 }} />
+        <div style={{ fontSize: 11, lineHeight: 1.55, color: GS.muted }}>Seuls les produits achetés sur GlowScan apparaissent ici. Nous connaissons leur composition et leur posologie — c'est ce qui rend les rappels fiables.</div>
+      </div>
+      {orders.length === 0 ? (
+        <div style={{ border: `1px solid ${GS.line}`, padding: 18, textAlign: "center", fontSize: 12.5, color: GS.muted, lineHeight: 1.55 }}>Vos produits commandés sur GlowScan apparaîtront ici, prêts à ajouter à votre routine.</div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+          {orders.map((o: any, oi: number) => (
+            <div key={oi}>
+              <GsMono style={{ display: "block", marginBottom: 10 }}>Commande {o.orderNumber || ""}{o.status ? ` · ${o.status}` : ""}</GsMono>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {(Array.isArray(o.items) ? o.items : []).map((it: any, ii: number) => {
+                  const name = typeof it === "string" ? it : (it?.name || "Produit");
+                  const already = inRoutine.has(name.toLowerCase());
+                  return (
+                    <div key={ii} style={{ border: `1px solid ${already ? GS.line : GS.ink}`, background: already ? GS.mintBg : "#fff", padding: 12, display: "flex", gap: 12, alignItems: "center" }}>
+                      <span style={{ width: 44, height: 44, flex: "none", background: GS.panel, border: `1px solid ${GS.hair}` }} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: GS.ink }}>{name}</div>
+                        <div style={{ marginTop: 3 }}><GsMono color={already ? GS.teal : GS.muted} style={{ letterSpacing: 0 }}>{already ? "Déjà en routine" : "Posologie connue"}</GsMono></div>
+                      </div>
+                      {already
+                        ? <Check size={18} style={{ color: GS.teal }} strokeWidth={2.5} />
+                        : <button onClick={() => addFromOrderMut.mutate(name)} disabled={addFromOrderMut.isPending} style={{ background: GS.ink, color: "#fff", border: "none", fontFamily: GS.mono, fontSize: 10, fontWeight: 600, padding: "8px 10px", flex: "none", cursor: "pointer" }}>AJOUTER</button>}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      <div style={{ marginTop: "auto", paddingTop: 20 }}>
+        <button onClick={() => setView("day")} style={{ width: "100%", background: "#fff", color: GS.ink, border: `1px solid ${GS.ink}`, padding: 16, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>Retour à ma routine</button>
+      </div>
+    </>);
+  }
 
   return (
     <div style={{ minHeight: "100dvh", background: "#fff", fontFamily: GS.sans, color: GS.ink, display: "flex", flexDirection: "column" }}>
@@ -643,10 +771,15 @@ export default function Routine() {
         </div>
 
         {/* Ajouter un produit (depuis les soins GlowScan) */}
-        <button onClick={() => setShowAddR(true)} style={{ marginTop: 13, border: `1px dashed ${GS.disabled}`, background: "#fff", padding: 13, display: "flex", alignItems: "center", gap: 12, cursor: "pointer", textAlign: "left" }}>
+        <button onClick={() => setView("orders")} style={{ marginTop: 13, border: `1px dashed ${GS.disabled}`, background: "#fff", padding: 13, display: "flex", alignItems: "center", gap: 12, cursor: "pointer", textAlign: "left" }}>
           <ShoppingBag size={18} style={{ color: GS.teal }} />
           <div style={{ flex: 1 }}><div style={{ fontSize: 12, fontWeight: 600, color: GS.ink }}>Ajouter un produit commandé</div><div style={{ fontSize: 10, color: GS.muted, marginTop: 2 }}>Seuls vos soins GlowScan entrent en routine</div></div>
           <Plus size={16} style={{ color: GS.ink }} />
+        </button>
+        <button onClick={() => setView("reminders")} style={{ marginTop: 8, border: `1px solid ${GS.line}`, background: "#fff", padding: 13, display: "flex", alignItems: "center", gap: 12, cursor: "pointer", textAlign: "left" }}>
+          <Bell size={18} style={{ color: GS.teal }} />
+          <div style={{ flex: 1 }}><div style={{ fontSize: 12, fontWeight: 600, color: GS.ink }}>Régler mes rappels</div><div style={{ fontSize: 10, color: GS.muted, marginTop: 2 }}>Horaires matin/soir, canal, jours</div></div>
+          <ArrowRight size={16} style={{ color: GS.ink }} />
         </button>
 
         {/* Barre de navigation */}
