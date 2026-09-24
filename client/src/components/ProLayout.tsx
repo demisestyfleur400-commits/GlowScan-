@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { ReactNode, useState, useEffect } from "react";
-import { Stethoscope, Home, Users, ScanLine, BarChart3, Settings, ArrowLeft, LogOut, Clock, MessageCircle, Calendar, Wallet } from "lucide-react";
+import { Home, Users, ScanLine, BarChart3, Settings, ArrowLeft, LogOut, Clock, MessageCircle, Calendar, Wallet } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useProAccount } from "@/hooks/use-pro";
 import { useProNotifications } from "@/hooks/use-realtime";
@@ -145,9 +145,9 @@ export function ProLayout({ children, title, back, onBack, hideBottomNav, rightA
                   <ArrowLeft className="w-4 h-4" />
                 </Link>
               ) : (
-                <div className="md:hidden w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: "rgba(0,147,122,0.1)", border: "1px solid rgba(0,147,122,0.25)" }}>
-                  <Stethoscope className="w-4 h-4" style={{ color: BLUE }} />
-                </div>
+                <Link href="/derm/dashboard" className="md:hidden flex items-center justify-center">
+                  <img src="/glowscan-mark.png" alt="GlowScan" className="w-8 h-8" />
+                </Link>
               )}
               {title && <h1 className="text-sm font-extrabold truncate" style={{ color: INK }}>{title}</h1>}
             </div>
