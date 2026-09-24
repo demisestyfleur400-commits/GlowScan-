@@ -1,20 +1,21 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
-import { ArrowLeft, ArrowRight, Loader2, KeyRound, Stethoscope, Eye, EyeOff, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Loader2, KeyRound, Eye, EyeOff, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const DS = {
   bg: "#F6FAFD",
   surface: "#FFFFFF",
-  violet: "#7c3aed",
-  violetMid: "#0369A1",
-  textPrimary: "#0F172A",
+  gradient: "linear-gradient(135deg, #00E6B8, #2E9FD6)",
+  teal: "#00937A",
+  textPrimary: "#0B1220",
   textBody: "#475569",
   textMuted: "#64748B",
-  inputBorder: "rgba(167,139,250,0.2)",
+  inputBorder: "#E2E8ED",
   cardBorder: "#E2E8F0",
-  cardVioletBorder: "rgba(167,139,250,0.18)",
+  cardTealBg: "#E4FBF5",
+  cardTealBorder: "rgba(0,147,122,0.22)",
   font: `-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif`,
 };
 
@@ -114,12 +115,10 @@ export default function ProMotDePasseOublie() {
           <Link href="/derm/connexion" data-testid="link-back" style={{ padding: 8, borderRadius: 10, color: DS.textBody, display: "flex", alignItems: "center", textDecoration: "none" }}>
             <ArrowLeft style={{ width: 18, height: 18 }} />
           </Link>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ width: 32, height: 32, borderRadius: 10, background: "rgba(167,139,250,0.15)", border: `1px solid ${DS.cardVioletBorder}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <Stethoscope style={{ width: 16, height: 16, color: DS.violetMid }} />
-            </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <img src="/glowscan-mark.png" width={26} height={26} alt="GlowScan" style={{ display: "block" }} />
             <span style={{ fontSize: 14, fontWeight: 700, color: DS.textPrimary }}>
-              GlowScan <span style={{ color: DS.violetMid }}>DERM</span>
+              GlowScan <span style={{ color: DS.textBody, fontWeight: 700 }}>DERM</span>
             </span>
           </div>
         </div>
@@ -128,8 +127,8 @@ export default function ProMotDePasseOublie() {
       <main style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 16px" }}>
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} style={{ width: "100%", maxWidth: 380 }}>
           <div style={{ textAlign: "center", marginBottom: 28 }}>
-            <div style={{ width: 52, height: 52, borderRadius: 16, background: "rgba(167,139,250,0.15)", border: `1px solid ${DS.cardVioletBorder}`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
-              <KeyRound style={{ width: 22, height: 22, color: DS.violetMid }} />
+            <div style={{ width: 52, height: 52, borderRadius: 16, background: DS.cardTealBg, border: `1px solid ${DS.cardTealBorder}`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+              <KeyRound style={{ width: 22, height: 22, color: DS.teal }} />
             </div>
             <h1 style={{ fontSize: 24, fontWeight: 800, color: DS.textPrimary, margin: "0 0 6px" }}>
               {step === 1 ? "Mot de passe oublié" : "Nouveau mot de passe"}
@@ -190,7 +189,7 @@ export default function ProMotDePasseOublie() {
           )}
 
           <p style={{ textAlign: "center", fontSize: 13, color: DS.textMuted, marginTop: 16 }}>
-            <Link href="/derm/connexion" style={{ color: DS.violetMid, fontWeight: 700, textDecoration: "none" }}>
+            <Link href="/derm/connexion" style={{ color: DS.teal, fontWeight: 700, textDecoration: "none" }}>
               Retour à la connexion
             </Link>
           </p>
@@ -208,7 +207,7 @@ export default function ProMotDePasseOublie() {
 function btnStyle(loading: boolean): React.CSSProperties {
   return {
     width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-    padding: "13px 24px", borderRadius: 9999, background: "#7c3aed", color: "#fff",
+    padding: "13px 24px", borderRadius: 9999, background: "linear-gradient(135deg, #00E6B8, #2E9FD6)", color: "#fff",
     fontWeight: 800, fontSize: 14, border: "none", cursor: loading ? "not-allowed" : "pointer",
     opacity: loading ? 0.6 : 1, marginTop: 4,
     fontFamily: `-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif`,

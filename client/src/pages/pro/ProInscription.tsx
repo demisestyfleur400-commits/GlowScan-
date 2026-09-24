@@ -8,12 +8,13 @@ import { useQueryClient } from "@tanstack/react-query";
 // Doit rester synchronisé avec DERM_TERMS_VERSION dans DermConditions.tsx
 const DERM_TERMS_VERSION = "v1-2026-07";
 
-// Palette dédiée (brief) : blanc + bleu #0891B2, CTA violet #7C3AED.
+// Palette GlowScan DERM : dégradé teal→bleu (identité du logo).
 const C = {
   bg: "#FFFFFF",
-  blue: "#0891B2",
-  violet: "#7C3AED",
-  ink: "#0F0A1E",
+  blue: "#00937A",
+  violet: "#00937A",
+  gradient: "linear-gradient(135deg, #00E6B8, #2E9FD6)",
+  ink: "#0B1220",
   body: "#475569",
   muted: "#8A93A5",
   border: "#E4E9F0",
@@ -133,7 +134,7 @@ export default function ProInscription() {
 
         {/* HEADER */}
         <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 18 }}>
-          <span style={{ fontSize: 18, color: C.blue }}>✦</span>
+          <img src="/glowscan-mark.png" width={22} height={22} alt="GlowScan" style={{ display: "block" }} />
           <span style={{ fontWeight: 800, fontSize: 15, letterSpacing: "-.01em", color: C.ink }}>GlowScan <span style={{ color: C.blue }}>DERM</span></span>
         </div>
 
@@ -269,10 +270,10 @@ export default function ProInscription() {
   function ctaStyle(disabled: boolean): React.CSSProperties {
     return {
       width: "100%", height: 52, borderRadius: 12, border: "none",
-      background: C.violet, color: "#fff", fontWeight: 800, fontSize: 15, fontFamily: C.font,
+      background: C.gradient, color: "#fff", fontWeight: 800, fontSize: 15, fontFamily: C.font,
       display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
       cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.55 : 1,
-      transition: "opacity .15s", boxShadow: "0 6px 18px rgba(124,58,237,.28)",
+      transition: "opacity .15s", boxShadow: "0 6px 18px rgba(0,150,128,.28)",
     };
   }
 }

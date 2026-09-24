@@ -5,9 +5,10 @@ import { useAuth } from "@/hooks/use-auth";
 import { useProAccount } from "@/hooks/use-pro";
 import { useProNotifications } from "@/hooks/use-realtime";
 
-// Thème CLAIR médical (blanc + bleu #0369A1). Violet #7C3AED réservé aux CTA.
-const BLUE = "#0369A1";
-const INK = "#0F172A";
+// Thème CLAIR médical (blanc + dégradé teal→bleu, identité du logo).
+const BLUE = "#00937A";
+const GRADIENT = "linear-gradient(135deg, #00E6B8, #2E9FD6)";
+const INK = "#0B1220";
 const BODY = "#475569";
 const MUTED = "#64748B";
 const BORDER = "#E2E8F0";
@@ -81,7 +82,7 @@ export function ProLayout({ children, title, back, onBack, hideBottomNav, rightA
         <div className="flex flex-col flex-1 min-h-0">
           <div className="flex items-center h-16 flex-shrink-0 px-5" style={{ borderBottom: `1px solid ${BORDER}` }}>
             <Link href="/derm/dashboard" className="flex items-center gap-3">
-              <img src="/logo-glowscan-square.jpeg" alt="GlowScan" className="w-8 h-8 rounded-xl object-cover" style={{ border: `1px solid ${BORDER}` }} />
+              <img src="/glowscan-mark.png" alt="GlowScan" className="w-8 h-8" />
               <div className="leading-tight">
                 <p className="text-sm font-extrabold" style={{ color: INK }}>GlowScan DERM</p>
                 <p className="text-[9px] uppercase tracking-widest font-bold" style={{ color: BLUE }}>Clinical Engine</p>
@@ -99,7 +100,7 @@ export function ProLayout({ children, title, back, onBack, hideBottomNav, rightA
                   href={item.href}
                   className="flex items-center gap-3 px-4 py-3 text-xs font-bold rounded-xl transition-all"
                   style={isActive
-                    ? { background: "rgba(3,105,161,0.1)", border: "1px solid rgba(3,105,161,0.25)", color: BLUE }
+                    ? { background: "rgba(0,147,122,0.1)", border: "1px solid rgba(0,147,122,0.25)", color: BLUE }
                     : { color: BODY }
                   }
                 >
@@ -133,7 +134,7 @@ export function ProLayout({ children, title, back, onBack, hideBottomNav, rightA
       {/* ── MAIN CONTENT ── */}
       <div className="flex-1 flex flex-col md:pl-60 min-w-0">
         <header className="sticky top-0 z-30 h-16 flex items-center px-4 sm:px-6" style={{ background: "rgba(255,255,255,0.92)", backdropFilter: "blur(12px)", borderBottom: `1px solid ${BORDER}` }}>
-          <div className="w-full max-w-5xl mx-auto flex items-center justify-between gap-4">
+          <div className="w-full max-w-6xl mx-auto flex items-center justify-between gap-4">
             <div className="flex items-center gap-3 min-w-0">
               {onBack ? (
                 <button onClick={onBack} data-testid="link-back" className="p-2 rounded-xl transition-opacity hover:opacity-70 active:scale-95" style={{ background: "#F1F5F9", border: `1px solid ${BORDER}`, color: BODY }}>
@@ -144,7 +145,7 @@ export function ProLayout({ children, title, back, onBack, hideBottomNav, rightA
                   <ArrowLeft className="w-4 h-4" />
                 </Link>
               ) : (
-                <div className="md:hidden w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: "rgba(3,105,161,0.1)", border: "1px solid rgba(3,105,161,0.25)" }}>
+                <div className="md:hidden w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: "rgba(0,147,122,0.1)", border: "1px solid rgba(0,147,122,0.25)" }}>
                   <Stethoscope className="w-4 h-4" style={{ color: BLUE }} />
                 </div>
               )}
@@ -163,7 +164,7 @@ export function ProLayout({ children, title, back, onBack, hideBottomNav, rightA
           </div>
         </header>
 
-        <main className="flex-1 w-full max-w-5xl mx-auto px-4 sm:px-6 py-6 pb-28 md:pb-8">
+        <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8 pb-28 md:pb-10">
           {children}
         </main>
       </div>
@@ -178,7 +179,7 @@ export function ProLayout({ children, title, back, onBack, hideBottomNav, rightA
               if (item.primary) {
                 return (
                   <Link key={item.href} href={item.href} className="flex items-center justify-center" data-testid={`navlink-${item.label.toLowerCase()}`}>
-                    <div className="flex flex-col items-center justify-center w-12 h-12 rounded-2xl -mt-5 transition-transform active:scale-90" style={{ background: "#7c3aed", boxShadow: "0 6px 16px rgba(124,58,237,0.35)" }}>
+                    <div className="flex flex-col items-center justify-center w-12 h-12 rounded-2xl -mt-5 transition-transform active:scale-90" style={{ background: GRADIENT, boxShadow: "0 6px 16px rgba(0,150,128,0.35)" }}>
                       <Icon className="w-4 h-4 text-white" />
                     </div>
                   </Link>
@@ -218,7 +219,7 @@ export function ProButton({
   children, variant = "primary", className = "", ...props
 }: { children: ReactNode; variant?: "primary" | "secondary" | "ghost" | "success" | "danger"; className?: string; } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
   const styles: Record<string, React.CSSProperties> = {
-    primary: { background: "#7c3aed", color: "#fff" },
+    primary: { background: GRADIENT, color: "#fff" },
     secondary: { background: "#F1F5F9", border: `1px solid ${BORDER}`, color: INK },
     ghost: { color: BLUE },
     success: { background: "rgba(5,150,105,0.1)", border: "1px solid rgba(5,150,105,0.25)", color: "#047857" },
