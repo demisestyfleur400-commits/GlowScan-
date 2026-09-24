@@ -11,9 +11,10 @@ import { NotifSettingsCard } from "@/components/NotifSettingsCard";
 import { DermSubscribeFlow } from "@/components/DermSubscribeFlow";
 import { DERM } from "@/lib/design-tokens";
 
-const NAVY = "#7c3aed";        // CTA violet
-const BLUE = "#0369A1";        // accent bleu
-const INK = "#0F172A";         // texte principal (foncé sur fond clair)
+const NAVY = "#00937A";        // accent teal (texte / icônes)
+const BLUE = "#2E9FD6";        // accent bleu (texte / icônes)
+const GRADIENT = "linear-gradient(135deg, #00E6B8, #2E9FD6)"; // fonds de boutons/CTA
+const INK = "#0B1220";         // texte principal (foncé sur fond clair)
 const GREEN = "#059669";
 
 const MTN_NUMBER = "674377959";
@@ -231,7 +232,7 @@ export default function ProCabinet() {
                   disabled={updateAcc.isPending}
                   data-testid="button-save"
                   className="flex-1 py-2.5 rounded-full text-white text-sm font-extrabold disabled:opacity-50"
-                  style={{ background: NAVY }}
+                  style={{ background: GRADIENT }}
                 >
                   {updateAcc.isPending ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Enregistrer"}
                 </button>
@@ -273,7 +274,7 @@ export default function ProCabinet() {
             const priceNum = Math.max(0, parseInt(consultPrice, 10) || 0);
             const dermShare = Math.max(0, priceNum - PLATFORM_FEE);
             return (
-            <div className="mb-4 rounded-xl p-4" style={{ background: "rgba(3,105,161,0.06)", border: "1px solid rgba(3,105,161,0.18)" }}>
+            <div className="mb-4 rounded-xl p-4" style={{ background: SOFT_BG, border: `1px solid ${SOFT_BORDER}` }}>
               <label className="text-xs font-extrabold block mb-1.5" style={{ color: INK }}>💬 Prix de votre consultation en ligne (FCFA)</label>
               <input
                 type="number" inputMode="numeric" value={consultPrice}
@@ -304,7 +305,7 @@ export default function ProCabinet() {
             }}
             disabled={savingB2c}
             className="w-full py-2.5 rounded-full text-white text-sm font-extrabold disabled:opacity-50"
-            style={{ background: NAVY }}
+            style={{ background: GRADIENT }}
           >
             {savingB2c ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Enregistrer"}
           </button>
@@ -339,7 +340,7 @@ export default function ProCabinet() {
                   onClick={() => setShowSubscribe(true)}
                   data-testid="button-subscribe"
                   className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-full text-white font-extrabold text-sm active:scale-[0.98] transition-all"
-                  style={{ background: NAVY }}
+                  style={{ background: GRADIENT }}
                 >
                   <Crown className="w-4 h-4" />
                   S'abonner — 10 000 FCFA / mois
@@ -364,7 +365,7 @@ export default function ProCabinet() {
             <button
               onClick={async () => { try { await updateAcc.mutateAsync({ onboardingDone: false }); } catch {} window.location.href = "/derm/dashboard"; }}
               className="flex-shrink-0 px-4 py-2 rounded-full text-sm font-extrabold text-white active:scale-95 transition-all"
-              style={{ background: NAVY }}
+              style={{ background: GRADIENT }}
             >
               Revoir →
             </button>
@@ -383,7 +384,7 @@ export default function ProCabinet() {
                 onClick={() => { setShowSecretaryForm(true); setCreatedSecretary(null); }}
                 data-testid="button-add-secretary"
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-extrabold transition-all active:scale-95"
-                style={{ background: NAVY, color: "#fff" }}
+                style={{ background: GRADIENT, color: "#fff" }}
               >
                 <UserPlus className="w-3 h-3" />
                 Ajouter une secrétaire
@@ -399,7 +400,7 @@ export default function ProCabinet() {
           {/* Identifiants générés (après création) */}
           {createdSecretary && (
             <div className="rounded-xl p-3 mb-4" style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.25)" }}>
-              <p className="text-xs font-extrabold mb-2" style={{ color: "#6ee7b7" }}>
+              <p className="text-xs font-extrabold mb-2" style={{ color: "#047857" }}>
                 ✅ Identifiants à transmettre à votre secrétaire
               </p>
               <div className="space-y-1.5">
@@ -424,7 +425,7 @@ export default function ProCabinet() {
                   disabled={createSecretary.isPending}
                   data-testid="button-confirm-secretary"
                   className="flex-1 py-2.5 rounded-full text-white text-sm font-extrabold disabled:opacity-50"
-                  style={{ background: NAVY }}
+                  style={{ background: GRADIENT }}
                 >
                   {createSecretary.isPending ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Créer l'accès"}
                 </button>
@@ -459,7 +460,7 @@ export default function ProCabinet() {
                     onClick={() => handleDeleteSecretary(s.id, s.fullName)}
                     data-testid={`button-delete-secretary-${s.id}`}
                     className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[11px] font-extrabold transition-all active:scale-95 flex-shrink-0"
-                    style={{ background: "rgba(233,30,140,0.08)", border: "1px solid rgba(233,30,140,0.2)", color: "#f9a8d4" }}
+                    style={{ background: "rgba(220,38,38,0.08)", border: "1px solid rgba(220,38,38,0.2)", color: "#dc2626" }}
                   >
                     <Trash2 className="w-3 h-3" />
                     Supprimer
@@ -680,7 +681,7 @@ function SecuritySection({ currentEmail }: { currentEmail?: string }) {
               </button>
             ) : (
               <button onClick={requestCode} disabled={busy} className="w-full py-2.5 rounded-full text-white text-sm font-extrabold disabled:opacity-50"
-                style={{ background: BLUE }} data-testid="button-2fa-enable">
+                style={{ background: GRADIENT }} data-testid="button-2fa-enable">
                 {busy ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Activer la vérification en 2 étapes"}
               </button>
             )
@@ -693,7 +694,7 @@ function SecuritySection({ currentEmail }: { currentEmail?: string }) {
                 placeholder="000000" data-testid="input-2fa-confirm"
                 className="w-full px-3 py-2.5 rounded-xl text-lg font-extrabold text-center outline-none" style={{ background: SOFT_BG, border: `1px solid ${SOFT_BORDER}`, color: INK, letterSpacing: 6 }} />
               <div className="flex gap-2">
-                <button onClick={confirmEnable} disabled={busy || code.length < 6} className="flex-1 py-2.5 rounded-full text-white text-sm font-extrabold disabled:opacity-50" style={{ background: BLUE }} data-testid="button-2fa-confirm">
+                <button onClick={confirmEnable} disabled={busy || code.length < 6} className="flex-1 py-2.5 rounded-full text-white text-sm font-extrabold disabled:opacity-50" style={{ background: GRADIENT }} data-testid="button-2fa-confirm">
                   {busy ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Confirmer"}
                 </button>
                 <button onClick={() => { setStep("idle"); setCode(""); }} className="px-4 py-2.5 rounded-full text-sm font-extrabold" style={{ background: SOFT_BG, border: `1px solid ${SOFT_BORDER}`, color: DS.body }}>Annuler</button>
@@ -757,7 +758,7 @@ function SecuritySection({ currentEmail }: { currentEmail?: string }) {
           <div className="flex gap-2">
             <input type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder="nouvel@email.com" data-testid="input-new-email"
               className="flex-1 px-3 py-2.5 rounded-xl text-sm outline-none" style={{ background: SOFT_BG, border: `1px solid ${SOFT_BORDER}`, color: INK }} />
-            <button onClick={requestEmailChange} disabled={emailBusy || !newEmail} className="px-4 py-2.5 rounded-full text-white text-sm font-extrabold disabled:opacity-50" style={{ background: BLUE }} data-testid="button-request-email-change">
+            <button onClick={requestEmailChange} disabled={emailBusy || !newEmail} className="px-4 py-2.5 rounded-full text-white text-sm font-extrabold disabled:opacity-50" style={{ background: GRADIENT }} data-testid="button-request-email-change">
               {emailBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : "Changer"}
             </button>
           </div>
@@ -767,7 +768,7 @@ function SecuritySection({ currentEmail }: { currentEmail?: string }) {
             <input value={emailCode} onChange={(e) => setEmailCode(e.target.value.replace(/\D/g, ""))} maxLength={6} inputMode="numeric" placeholder="000000" data-testid="input-email-change-code"
               className="w-full px-3 py-2.5 rounded-xl text-lg font-extrabold text-center outline-none" style={{ background: SOFT_BG, border: `1px solid ${SOFT_BORDER}`, color: INK, letterSpacing: 6 }} />
             <div className="flex gap-2">
-              <button onClick={confirmEmailChange} disabled={emailBusy || emailCode.length < 6} className="flex-1 py-2.5 rounded-full text-white text-sm font-extrabold disabled:opacity-50" style={{ background: BLUE }} data-testid="button-confirm-email-change">
+              <button onClick={confirmEmailChange} disabled={emailBusy || emailCode.length < 6} className="flex-1 py-2.5 rounded-full text-white text-sm font-extrabold disabled:opacity-50" style={{ background: GRADIENT }} data-testid="button-confirm-email-change">
                 {emailBusy ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Confirmer le nouvel email"}
               </button>
               <button onClick={() => { setEmailStep("idle"); setEmailCode(""); }} className="px-4 py-2.5 rounded-full text-sm font-extrabold" style={{ background: SOFT_BG, border: `1px solid ${SOFT_BORDER}`, color: DS.body }}>Annuler</button>

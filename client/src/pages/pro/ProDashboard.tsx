@@ -268,7 +268,7 @@ export default function ProDashboard() {
       <SubscriptionExpiredBanner />
       {/* ══ RAPPEL SOUS-SPÉCIALITÉS (pour être proposé aux bons patients) ══ */}
       {accData?.account && !((acc as any)?.specialties || []).some((k: string) => SUBSPEC_KEYS.has(k)) && (
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, background: "rgba(0,147,122,0.06)", border: "1px solid rgba(0,147,122,0.22)", borderRadius: 16, padding: "12px 14px", marginBottom: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, background: DS.surface, border: "1px solid #E2E8F0", borderRadius: 16, padding: "12px 14px", marginBottom: 16 }}>
           <div style={{ minWidth: 0 }}>
             <p style={{ fontSize: 13, fontWeight: 800, color: DS.textPrimary, margin: 0 }}>Précisez vos sous-spécialités 🩺</p>
             <p style={{ fontSize: 11.5, color: DS.textMuted, margin: "2px 0 0", lineHeight: 1.5 }}>Indiquez vos domaines (esthétique, pédiatrie, trichologie…) pour être proposé aux patients qui cherchent votre expertise.</p>
@@ -279,7 +279,7 @@ export default function ProDashboard() {
       {/* ══ BANNIÈRE COMPLÉTION PROFIL (priorité absolue — disparaît à 100%) ══ */}
       {profileScore < 100 && (
         <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: 16 }}>
-          <div style={{ borderRadius: 18, padding: "16px 18px", background: "linear-gradient(135deg, rgba(0,230,184,0.10), rgba(46,159,214,0.08))", border: "1px solid rgba(0,147,122,0.22)" }}>
+          <div style={{ borderRadius: 18, padding: "16px 18px", background: DS.surface, border: "1px solid #E2E8F0" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 10 }}>
               <p style={{ fontSize: 13, fontWeight: 800, color: DS.textPrimary, margin: 0 }}>{profileLabel(profileScore)}</p>
               <span style={{ fontSize: 13, fontWeight: 900, color: "#00937A", fontVariantNumeric: "tabular-nums" }}>{profileScore}%</span>
@@ -306,8 +306,8 @@ export default function ProDashboard() {
       {/* ══ WELCOME WIDGET ══ */}
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: 16 }}>
         <div style={{
-          background: "linear-gradient(135deg, rgba(0,230,184,0.10), rgba(46,159,214,0.06))",
-          border: `1px solid ${DS.cardVioletBorder}`,
+          background: DS.surface,
+          border: "1px solid #E2E8F0",
           borderRadius: 24, padding: "20px 22px",
         }}>
           <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".8px", textTransform: "uppercase", color: DS.textMuted, marginBottom: 4 }}>
@@ -377,8 +377,8 @@ export default function ProDashboard() {
       {!(acc as any).b2cAvailable && (
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.04 }} style={{ marginBottom: 16 }}>
           <div style={{ padding: "16px 18px", borderRadius: 20,
-            background: "linear-gradient(135deg, rgba(3,105,161,0.08), rgba(8,145,178,0.04))",
-            border: "1px solid rgba(3,105,161,0.20)" }}>
+            background: DS.surface,
+            border: "1px solid #E2E8F0" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
               <span style={{ fontSize: 18 }}>📱</span>
               <p style={{ fontSize: 14, fontWeight: 800, color: DS.textPrimary, margin: 0 }}>Patients GlowScan</p>
@@ -413,7 +413,7 @@ export default function ProDashboard() {
 
         {/* ── Parrainage : inviter un confrère ── */}
         {referral && (
-          <div style={{ marginTop: 12, padding: "14px 16px", borderRadius: 20, background: "rgba(0,147,122,0.06)", border: "1px solid rgba(0,147,122,0.2)" }}>
+          <div style={{ marginTop: 12, padding: "14px 16px", borderRadius: 20, background: DS.surface, border: "1px solid #E2E8F0" }}>
             <p style={{ fontSize: 13.5, fontWeight: 800, color: DS.textPrimary, margin: 0 }}>Invitez un confrère 🤝</p>
             <p style={{ fontSize: 11.5, color: DS.textBody, margin: "2px 0 10px" }}>
               Partagez GlowScan DERM à un dermatologue.{referral.count > 0 ? ` Déjà ${referral.count} confrère${referral.count > 1 ? "s" : ""} invité${referral.count > 1 ? "s" : ""} 🎉` : ""}
@@ -471,7 +471,7 @@ export default function ProDashboard() {
       {/* ══ PATIENTS EN ATTENTE D'ANALYSE (dossiers préparés par la secrétaire) ══ */}
       {(pendingData?.patients?.length || 0) > 0 && (
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: 16 }}>
-          <div style={{ background: "rgba(0,147,122,0.08)", border: `1px solid ${DS.cardVioletBorder}`, borderRadius: 20, padding: "16px 18px" }}>
+          <div style={{ background: DS.surface, border: "1px solid #E2E8F0", borderRadius: 20, padding: "16px 18px" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
               <p style={{ fontSize: 13, fontWeight: 800, color: DS.textPrimary, margin: 0 }}>
                 📋 {pendingData!.patients.length} patient{pendingData!.patients.length > 1 ? "s" : ""} en attente d'analyse
@@ -554,8 +554,8 @@ export default function ProDashboard() {
           data-testid="button-analyze-patient"
           style={{
             display: "block",
-            background: DS.cardVioletBg,
-            border: `1px solid ${DS.cardVioletBorder}`,
+            background: DS.surface,
+            border: "1px solid #E2E8F0",
             borderRadius: 24,
             padding: 20,
             textDecoration: "none",
@@ -568,7 +568,7 @@ export default function ProDashboard() {
                 width: 48,
                 height: 48,
                 borderRadius: 14,
-                background: DS.violet,
+                background: DS.gradient,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
