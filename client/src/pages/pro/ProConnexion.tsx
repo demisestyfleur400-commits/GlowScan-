@@ -1,23 +1,26 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
-import { ArrowLeft, ArrowRight, Loader2, LogIn, Stethoscope, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, ArrowRight, Loader2, LogIn, Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 
 const DS = {
   bg: "#F6FAFD",
   surface: "#FFFFFF",
-  violet: "#7c3aed",
-  violetMid: "#0369A1",
-  violetLight: "#0891B2",
-  textPrimary: "#0F172A",
+  accentFrom: "#00E6B8",
+  accentTo: "#2E9FD6",
+  gradient: "linear-gradient(135deg, #00E6B8, #2E9FD6)",
+  teal: "#00937A",
+  textPrimary: "#0B1220",
   textBody: "#475569",
   textMuted: "#64748B",
-  inputBorder: "rgba(167,139,250,0.2)",
+  inputBorder: "#E2E8ED",
   cardBorder: "#E2E8F0",
-  cardVioletBorder: "rgba(167,139,250,0.18)",
-  font: `-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif`,
+  cardTealBg: "#E4FBF5",
+  cardTealBorder: "rgba(0,147,122,0.22)",
+  font: `'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, system-ui, sans-serif`,
+  fontDisplay: `'Sora', -apple-system, BlinkMacSystemFont, system-ui, sans-serif`,
 };
 
 export default function ProConnexion() {
@@ -160,23 +163,10 @@ export default function ProConnexion() {
           >
             <ArrowLeft style={{ width: 18, height: 18 }} />
           </Link>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: 10,
-                background: `rgba(167,139,250,0.15)`,
-                border: `1px solid ${DS.cardVioletBorder}`,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <Stethoscope style={{ width: 16, height: 16, color: DS.violetMid }} />
-            </div>
-            <span style={{ fontSize: 14, fontWeight: 700, color: DS.textPrimary }}>
-              GlowScan <span style={{ color: DS.violetMid }}>DERM</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <img src="/glowscan-mark.png" width={26} height={26} alt="GlowScan" style={{ display: "block" }} />
+            <span style={{ fontSize: 14, fontFamily: DS.fontDisplay, fontWeight: 800, color: DS.textPrimary }}>
+              GlowScan <span style={{ color: DS.textBody, fontWeight: 700 }}>DERM</span>
             </span>
           </div>
         </div>
@@ -189,33 +179,34 @@ export default function ProConnexion() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          padding: "40px 16px",
+          padding: "clamp(40px, 8vw, 88px) 16px",
         }}
       >
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          style={{ width: "100%", maxWidth: 380 }}
+          style={{ width: "100%", maxWidth: 400 }}
         >
           {/* Icon + title */}
-          <div style={{ textAlign: "center", marginBottom: 28 }}>
+          <div style={{ textAlign: "center", marginBottom: "clamp(28px, 4vw, 36px)" }}>
             <div
               style={{
                 width: 52,
                 height: 52,
                 borderRadius: 16,
-                background: `rgba(167,139,250,0.15)`,
-                border: `1px solid ${DS.cardVioletBorder}`,
+                background: DS.cardTealBg,
+                border: `1px solid ${DS.cardTealBorder}`,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 margin: "0 auto 16px",
               }}
             >
-              <LogIn style={{ width: 22, height: 22, color: DS.violetMid }} />
+              <LogIn style={{ width: 22, height: 22, color: DS.teal }} />
             </div>
             <h1
               style={{
+                fontFamily: DS.fontDisplay,
                 fontSize: 24,
                 fontWeight: 800,
                 color: DS.textPrimary,
@@ -232,7 +223,7 @@ export default function ProConnexion() {
           {/* Étape 2FA — code email */}
           {twofa && (
             <form onSubmit={handleVerify2fa}
-              style={{ background: DS.surface, border: `1px solid ${DS.cardBorder}`, borderRadius: 24, padding: "28px 24px" }}>
+              style={{ background: DS.surface, border: `1px solid ${DS.cardBorder}`, borderRadius: 24, padding: "clamp(28px, 4vw, 40px) clamp(24px, 3vw, 32px)" }}>
               <p style={{ fontSize: 15, fontWeight: 800, color: DS.textPrimary, margin: "0 0 6px" }}>Vérification en 2 étapes</p>
               <p style={{ fontSize: 13, color: DS.textBody, margin: "0 0 18px" }}>
                 Nous avons envoyé un code à 6 chiffres à <strong style={{ color: DS.textPrimary }}>{emailHint}</strong>.
@@ -249,7 +240,7 @@ export default function ProConnexion() {
               </p>
               <button type="submit" disabled={loading || code.length < 6} data-testid="button-verify-2fa"
                 style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "13px 24px",
-                  borderRadius: 9999, background: DS.violet, color: "#fff", fontWeight: 800, fontSize: 14, border: "none",
+                  borderRadius: 9999, background: DS.gradient, color: "#fff", fontWeight: 800, fontSize: 14, border: "none",
                   cursor: loading || code.length < 6 ? "not-allowed" : "pointer", opacity: loading || code.length < 6 ? 0.6 : 1, fontFamily: DS.font }}>
                 {loading ? <Loader2 style={{ width: 16, height: 16, animation: "spin 1s linear infinite" }} /> : <>Vérifier <ArrowRight style={{ width: 16, height: 16 }} /></>}
               </button>
@@ -259,7 +250,7 @@ export default function ProConnexion() {
                   ← Retour
                 </button>
                 <button type="button" onClick={resend2fa}
-                  style={{ background: "none", border: "none", fontSize: 13, color: DS.violetMid, fontWeight: 700, cursor: "pointer" }} data-testid="button-resend-2fa">
+                  style={{ background: "none", border: "none", fontSize: 13, color: DS.teal, fontWeight: 700, cursor: "pointer" }} data-testid="button-resend-2fa">
                   Renvoyer le code
                 </button>
               </div>
@@ -274,7 +265,7 @@ export default function ProConnexion() {
               background: DS.surface,
               border: `1px solid ${DS.cardBorder}`,
               borderRadius: 24,
-              padding: "28px 24px",
+              padding: "clamp(28px, 4vw, 40px) clamp(24px, 3vw, 32px)",
             }}
           >
             <div style={{ marginBottom: 16 }}>
@@ -308,7 +299,7 @@ export default function ProConnexion() {
                   boxSizing: "border-box",
                   fontFamily: DS.font,
                 }}
-                onFocus={(e) => (e.target.style.borderColor = DS.violetMid)}
+                onFocus={(e) => (e.target.style.borderColor = DS.accentFrom)}
                 onBlur={(e) => (e.target.style.borderColor = DS.inputBorder)}
               />
             </div>
@@ -345,7 +336,7 @@ export default function ProConnexion() {
                     boxSizing: "border-box",
                     fontFamily: DS.font,
                   }}
-                  onFocus={(e) => (e.target.style.borderColor = DS.violetMid)}
+                  onFocus={(e) => (e.target.style.borderColor = DS.accentFrom)}
                   onBlur={(e) => (e.target.style.borderColor = DS.inputBorder)}
                 />
                 <button
@@ -364,7 +355,7 @@ export default function ProConnexion() {
               <Link
                 href="/derm/mot-de-passe-oublie"
                 data-testid="link-forgot-password"
-                style={{ fontSize: 12, color: DS.violetMid, fontWeight: 700, textDecoration: "none" }}
+                style={{ fontSize: 12, color: DS.teal, fontWeight: 700, textDecoration: "none" }}
               >
                 Mot de passe oublié ?
               </Link>
@@ -382,7 +373,7 @@ export default function ProConnexion() {
                 gap: 8,
                 padding: "13px 24px",
                 borderRadius: 9999,
-                background: DS.violet,
+                background: DS.gradient,
                 color: "#fff",
                 fontWeight: 800,
                 fontSize: 14,
@@ -412,14 +403,14 @@ export default function ProConnexion() {
               }}
             >
               <button type="button" onClick={requestMagicLink} data-testid="button-magic-link"
-                style={{ display: "block", width: "100%", background: "none", border: "none", cursor: "pointer", fontSize: 13, color: DS.violetMid, fontWeight: 700, marginBottom: 12 }}>
+                style={{ display: "block", width: "100%", background: "none", border: "none", cursor: "pointer", fontSize: 13, color: DS.teal, fontWeight: 700, marginBottom: 12 }}>
                 Se connecter par lien email (sans mot de passe)
               </button>
               Pas encore de compte ?{" "}
               <Link
                 href="/derm/inscription"
                 data-testid="link-register"
-                style={{ color: DS.violetMid, fontWeight: 700, textDecoration: "none" }}
+                style={{ color: DS.teal, fontWeight: 700, textDecoration: "none" }}
               >
                 Créer mon compte DERM
               </Link>

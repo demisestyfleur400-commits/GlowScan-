@@ -4,21 +4,22 @@ import { useSEO } from "@/hooks/useSEO";
 
 // ════════════════════════════════════════════════════════════════════════
 // Page d'accueil B2C (glow-scan.com) — écran de bienvenue
-// Design "Accueil dermatologie africaine" (handoff). Mobile-first, centré web.
+// Identité visuelle teal → bleu (dégradé du logo). Mobile-first, centré web.
 // ════════════════════════════════════════════════════════════════════════
 
 const C = {
   bodyBg: "#fbfdfb",
-  heroFrom: "#173a2c",
-  heroTo: "#1f4a39",
-  ctaFrom: "#2f9e6e",
-  ctaTo: "#1f7a52",
-  ctaShadow: "rgba(47,158,110,0.4)",
-  iconPill: "#e6f4ec",
-  check: "#2f9e6e",
-  dot: "#3fbf86",
-  textDark: "#283330",
-  textSecondary: "#6b7d76",
+  heroFrom: "#0A2E28",
+  heroTo: "#0F3D34",
+  gradientCta: "linear-gradient(135deg, #00E6B8, #2E9FD6)",
+  ctaShadow: "rgba(0,150,128,0.4)",
+  iconPill: "#E4FBF5",
+  check: "#00B894",
+  dot: "#00E6B8",
+  ink: "#0B1220",
+  textDark: "#0B1220",
+  textSecondary: "#475569",
+  fontDisplay: "'Sora', system-ui, sans-serif",
   font: "'Plus Jakarta Sans', system-ui, sans-serif",
 };
 
@@ -49,7 +50,7 @@ export default function Landing() {
         display: "flex",
         justifyContent: "center",
         background:
-          "radial-gradient(120% 90% at 50% 0%, #e8f5ee 0%, #f7fbf8 55%, #fbfdfb 100%)",
+          "radial-gradient(120% 90% at 50% 0%, #e8f5f2 0%, #f7fbf9 55%, #fbfdfb 100%)",
         fontFamily: C.font,
       }}
     >
@@ -62,9 +63,14 @@ export default function Landing() {
           display: "flex",
           flexDirection: "column",
           background: C.bodyBg,
-          boxShadow: "0 0 60px rgba(23,58,44,0.06)",
+          boxShadow: "0 0 60px rgba(11,18,32,0.06)",
         }}
       >
+        {/* ── Logo lockup ── */}
+        <div style={{ display: "flex", justifyContent: "center", padding: "20px 0 2px" }}>
+          <img src="/glowscan-lockup.png" alt="GlowScan" style={{ height: 44, width: "auto", display: "block" }} />
+        </div>
+
         {/* ── ZONE 1 : Héro photo ── */}
         <div
           style={{
@@ -96,7 +102,7 @@ export default function Landing() {
               position: "absolute",
               inset: 0,
               background:
-                "linear-gradient(180deg, transparent 52%, rgba(20,40,30,0.55) 78%, rgba(15,32,24,0.9) 100%)",
+                "linear-gradient(180deg, transparent 52%, rgba(10,30,26,0.55) 78%, rgba(8,24,20,0.9) 100%)",
               pointerEvents: "none",
             }}
           />
@@ -123,6 +129,7 @@ export default function Landing() {
             <h1
               style={{
                 margin: 0,
+                fontFamily: C.fontDisplay,
                 fontSize: 31,
                 lineHeight: 1.1,
                 fontWeight: 800,
@@ -141,7 +148,7 @@ export default function Landing() {
             flex: 1,
             display: "flex",
             flexDirection: "column",
-            padding: "20px 22px 26px",
+            padding: "clamp(20px, 5vw, 32px) clamp(22px, 5vw, 30px) clamp(26px, 6vw, 36px)",
           }}
         >
           <p
@@ -157,7 +164,7 @@ export default function Landing() {
           </p>
 
           {/* Liste d'avantages */}
-          <div style={{ marginTop: 18, display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ marginTop: "clamp(18px, 4vw, 26px)", display: "flex", flexDirection: "column", gap: 14 }}>
             {BENEFITS.map((label) => (
               <div key={label} style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <div
@@ -190,7 +197,7 @@ export default function Landing() {
                 cursor: "pointer",
                 height: 58,
                 borderRadius: 18,
-                background: `linear-gradient(150deg, ${C.ctaFrom}, ${C.ctaTo})`,
+                background: C.gradientCta,
                 boxShadow: `0 12px 26px ${C.ctaShadow}`,
                 display: "flex",
                 alignItems: "center",
