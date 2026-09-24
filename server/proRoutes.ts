@@ -3153,9 +3153,14 @@ ${patientScans.length === 0 ? '<p class="meta">Aucune analyse enregistrée.</p>'
   // ───────────────────────────────────────────
   app.post("/api/pro/subscribe", requirePro, async (req: any, res) => {
     try {
-      const { method, phone } = req.body;
+      const { method, phone, plan } = req.body;
       if (!method || !phone) return res.status(400).json({ message: "Méthode et téléphone requis" });
       const userId = req.session.userId;
+
+      // Formule : mensuel (10k) ou annuel (100k, 2 mois offerts). Défaut : mensuel.
+      const isAnnual = plan === "annual" || plan === "annuel" || plan === "yearly";
+      const amount = isAnnual ? PRO_PRICE_FCFA * 10 : PRO_PRICE_FCFA;
+      const planLabel = isAnnual ? "Annuel 12 mois" : "Mensuel";
 
       const [existing] = await db.select().from(premiumRequests)
         .where(and(eq(premiumRequests.userId, userId), eq(premiumRequests.status, "pending")))
@@ -3168,9 +3173,9 @@ ${patientScans.length === 0 ? '<p class="meta">Aucune analyse enregistrée.</p>'
         reference: ref,
         method,
         phone,
-        amount: PRO_PRICE_FCFA,
+        amount,
         status: "pending",
-        note: "GlowScan DERM — Abonnement dermato 10k FCFA/mois",
+        note: `GlowScan DERM — Abonnement dermato ${planLabel} (${amount} FCFA)`,
       }).returning();
 
       const msg = encodeURIComponent(
@@ -3178,8 +3183,9 @@ ${patientScans.length === 0 ? '<p class="meta">Aucune analyse enregistrée.</p>'
         `👨‍⚕️ Dermato : ${req.proAccount.fullName}\n` +
         `📱 Tel : ${phone}\n` +
         `💰 Méthode : ${method === "mtn_momo" ? "MTN MoMo" : "Orange Money"}\n` +
+        `📦 Formule : ${planLabel}\n` +
         `🔑 Référence : ${ref}\n` +
-        `💵 Montant : ${PRO_PRICE_FCFA} FCFA\n\n` +
+        `💵 Montant : ${amount} FCFA\n\n` +
         `➡️ Confirmer dans le dashboard Admin`
       );
       const ownerWaUrl = `https://wa.me/${OWNER_WHATSAPP}?text=${msg}`;

@@ -1,616 +1,299 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useLocation } from "wouter";
-import { motion, AnimatePresence } from "framer-motion";
-import { Crown, CheckCircle2, Clock, ArrowLeft, Phone, Shield, Zap, ChevronRight, Copy, Check, ShieldAlert } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { GS, useGsFonts } from "@/lib/gs-ui";
+import { GS, GsMono, GsMarks, useGsFonts } from "@/lib/gs-ui";
+import {
+  X, ArrowLeft, ArrowRight, Copy, Check, Phone, ScanFace, ScanBarcode,
+  ListChecks, RefreshCw, Send, Clock,
+} from "lucide-react";
 
-const MTN_NUMBER = "674377959";
-const ORANGE_NUMBER = "690501392";
+// ════════════════════════════════════════════════════════════════════════
+// PREMIUM PATIENT — refonte fidèle au design (P1→P4, Commande Produits.dc.html)
+//   P1 Bon de commande · P2 Paiement Orange/MTN · P3 Capture + WhatsApp ·
+//   P4 Activation (en vérification → actif)
+// Logique conservée : POST /api/premium/request, /api/premium/status, tracking.
+// Numéros Mobile Money = les miens. Langage gs-ui. Zéro bouton mort.
+// ════════════════════════════════════════════════════════════════════════
 
-// Ce que le plan gratuit inclut DÉJÀ (analyses illimitées !)
-const FEATURES_FREE = [
-  { text: "Analyses IA faciales illimitées gratuites" },
-  { text: "Diagnostic complet : Glow Score + cartographie" },
-  { text: "Historique de tes scans sauvegardé" },
-];
+const PRICE = 2000;
+const OPS = {
+  orange_money: { label: "Orange Money", tag: "OM", tagBg: "#FF7900", tagColor: "#fff", num: "690 501 392", ussd: "#150#" },
+  mtn_momo: { label: "MTN Mobile Money", tag: "MoMo", tagBg: "#FFCC00", tagColor: "#0B1719", num: "674 377 959", ussd: "*126#" },
+} as const;
+type Method = keyof typeof OPS;
+type Step = "bon" | "pay" | "capture" | "done";
 
-// Ce que le premium débloque EN PLUS
-const FEATURES_PREMIUM = [
-  { text: "Scan Produit IA — analyser n'importe quel cosmétique" },
-  { text: "Routine Tracker matin & soir avec rappels chrono" },
-  { text: "Suivi de progression cutanée semaine par semaine" },
-  { text: "Recommandations produits ultra-personnalisées" },
-  { text: "Crédit de +100 points de fidélité immédiat" },
-];
-
-type Step = "offer" | "payment" | "confirm";
-
-const DS = GS.sans;
+const fmtDate = (d: string | null | undefined) => d ? new Date(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" }) : "";
 
 export default function Premium() {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
-  const { isPremium } = useSubscription();
+  const { isPremium, data: subData } = useSubscription();
   const { toast } = useToast();
   useGsFonts();
 
-  const [step, setStep] = useState<Step>("offer");
-  const [method, setMethod] = useState<"mtn_momo" | "orange_money">("mtn_momo");
-  const [phone, setPhone] = useState("");
+  const [step, setStep] = useState<Step>("bon");
+  const [method, setMethod] = useState<Method>("mtn_momo");
+  const [phone, setPhone] = useState<string>(((user as any)?.phone || "").replace(/^\+?237/, "").trim());
   const [loading, setLoading] = useState(false);
   const [requestData, setRequestData] = useState<{ reference: string; ownerWaUrl?: string } | null>(null);
   const [copied, setCopied] = useState(false);
-
-  const planPrice = 2000;
+  const [capture, setCapture] = useState<{ url: string; name: string } | null>(null);
+  const fileRef = useRef<HTMLInputElement | null>(null);
 
   const { data: statusData } = useQuery<{ request: { reference: string; status: string } | null }>({
-    queryKey: ["/api/premium/status"],
-    enabled: !!user && !isPremium,
+    queryKey: ["/api/premium/status"], enabled: !!user && !isPremium, refetchInterval: step === "done" ? 8000 : false,
   });
 
-  const paymentNumber = method === "mtn_momo" ? MTN_NUMBER : ORANGE_NUMBER;
+  const op = OPS[method];
+  const userName = (user as any)?.firstName || "Titulaire";
+  const userEmail = (user as any)?.email || "";
 
-  const handleSubmitRequest = async () => {
-    if (!phone.trim() || phone.trim().length < 8) {
-      toast({
-        title: "Numéro incorrect",
-        description: "Veuillez entrer un numéro Mobile Money valide à 9 chiffres.",
-        variant: "destructive",
-      });
+  const copyNum = () => { try { navigator.clipboard?.writeText(op.num.replace(/\s/g, "")); setCopied(true); setTimeout(() => setCopied(false), 1800); } catch {} };
+
+  const submitRequest = async () => {
+    if (!phone.trim() || phone.trim().replace(/\D/g, "").length < 8) {
+      toast({ title: "Numéro requis", description: "Entrez le numéro Mobile Money qui a payé (9 chiffres).", variant: "destructive" });
       return;
     }
     setLoading(true);
     try {
       const res = await fetch("/api/premium/request", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
+        method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include",
         body: JSON.stringify({ method, phone: phone.trim() }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message);
-
       setRequestData({ reference: data.request.reference, ownerWaUrl: data.ownerWaUrl });
-
       if (typeof (window as any).fbq === "function") {
-        (window as any).fbq("track", "InitiateCheckout", {
-          value: planPrice,
-          currency: "XAF",
-          content_name: "GlowScan Premium Lifetime",
-          content_ids: ["premium_lifetime"],
-        });
+        (window as any).fbq("track", "InitiateCheckout", { value: PRICE, currency: "XAF", content_name: "GlowScan Premium", content_ids: ["premium_lifetime"] });
       }
-      setStep("confirm");
+      setStep("capture");
     } catch (err: any) {
-      toast({ title: "Échec de l'enregistrement", description: err.message || "Une erreur est survenue.", variant: "destructive" });
-    } finally {
-      setLoading(false);
+      toast({ title: "Échec", description: err?.message || "Une erreur est survenue.", variant: "destructive" });
+    } finally { setLoading(false); }
+  };
+
+  const pickCapture = (f: File | undefined | null) => {
+    if (!f) return;
+    if (!f.type.startsWith("image/")) { toast({ title: "Image requise", description: "Joignez une capture (image).", variant: "destructive" }); return; }
+    setCapture({ url: URL.createObjectURL(f), name: f.name });
+  };
+
+  const sendWhatsapp = () => {
+    if (requestData?.ownerWaUrl) window.open(requestData.ownerWaUrl, "_blank", "noopener,noreferrer");
+    if (typeof (window as any).fbq === "function" && !sessionStorage.getItem("gs_pixel_purchase_fired")) {
+      (window as any).fbq("track", "Purchase", { value: PRICE, currency: "XAF", contents: [{ id: "premium_lifetime", quantity: 1 }], content_ids: "XAF" });
+      try { sessionStorage.setItem("gs_pixel_purchase_fired", "1"); } catch {}
     }
+    setStep("done");
   };
 
-  const copyRef = (ref: string) => {
-    navigator.clipboard?.writeText(ref);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  // ── Already premium ──
-  if (isPremium) {
-    return (
-      <div
-        className="min-h-screen flex flex-col items-center justify-center p-6 text-center"
-        style={{ background: "#fbfdfe", fontFamily: DS }}
-      >
-        <div
-          className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5"
-          style={{ background: "rgba(10,110,114,0.06)", border: "1px solid rgba(10,110,114,0.18)" }}
-        >
-          <Crown className="w-6 h-6" style={{ color: "#0A6E72" }} />
-        </div>
-        <h1 className="text-xl font-extrabold tracking-tight mb-2" style={{ color: "#1a2235", fontWeight: 800 }}>
-          Licence active
-        </h1>
-        <p className="text-xs max-w-xs mx-auto mb-6" style={{ color: "#4a5568" }}>
-          Ton abonnement GlowScan Premium est actif. Profite de toutes les fonctionnalités sans limite.
-        </p>
-        <Button onClick={() => setLocation("/")} variant="premium" className="w-full max-w-xs">
-          Retour au tableau de bord
-        </Button>
-      </div>
-    );
-  }
-
-  // ── Pending verification ──
-  if (statusData?.request?.status === "pending" && step === "offer") {
-    return (
-      <div className="min-h-screen flex flex-col" style={{ background: "#fbfdfe", fontFamily: DS }}>
-        <div
-          className="p-4 flex items-center gap-3 sticky top-0 z-10"
-          style={{ background: "#ffffff", borderBottom: "1px solid rgba(0,0,0,0.07)", backdropFilter: "blur(20px)" }}
-        >
-          <button
-            onClick={() => setLocation(-1 as any)}
-            className="p-2 transition-colors"
-            style={{ background: "rgba(0,0,0,0.07)", border: "1px solid rgba(0,0,0,0.12)", borderRadius: "12px", color: "rgba(0,0,0,0.6)" }}
-          >
-            <ArrowLeft className="w-4 h-4" />
-          </button>
-          <span className="text-xs font-bold tracking-widest" style={{ color: "#1a2235" }}>Vérification de licence</span>
-        </div>
-        <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-          <div
-            className="w-12 h-12 flex items-center justify-center mb-4"
-            style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: "12px" }}
-          >
-            <Clock className="w-5 h-5 animate-pulse" style={{ color: "#fbbf24" }} />
-          </div>
-          <h2 className="text-base font-extrabold tracking-tight mb-1" style={{ color: "#1a2235", fontWeight: 800 }}>
-            Transaction en cours
-          </h2>
-          <p className="text-xs max-w-xs mx-auto mb-4 leading-relaxed" style={{ color: "#4a5568" }}>
-            Ta demande avec la référence{" "}
-            <span
-              className="font-bold"
-              style={{ color: "#1a2235", background: "rgba(0,0,0,0.07)", padding: "0 6px", borderRadius: "8px" }}
-            >
-              {statusData.request.reference}
-            </span>{" "}
-            est en cours de validation par nos équipes.
-          </p>
-          <p className="text-[10px] font-medium max-w-xs" style={{ color: "rgba(0,0,0,0.35)" }}>
-            L'activation définitive s'effectue généralement dans un délai inférieur à 24 heures.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen flex flex-col" style={{ background: "#fbfdfe", fontFamily: DS }}>
-      {/* Glow orb */}
-      <div
-        style={{
-          position: "fixed",
-          top: "-100px",
-          left: "50%",
-          transform: "translateX(-50%)",
-          width: "700px",
-          height: "700px",
-          background: "radial-gradient(circle, rgba(10,110,114,0.15), transparent)",
-          pointerEvents: "none",
-          zIndex: 0,
-        }}
-      />
-
-      {/* Header */}
-      <div
-        className="px-4 py-3.5 flex items-center gap-3 sticky top-0 z-10"
-        style={{ background: "#ffffff", borderBottom: "1px solid rgba(0,0,0,0.07)", backdropFilter: "blur(20px)" }}
-      >
-        <button
-          onClick={() => (step === "offer" ? setLocation(-1 as any) : setStep("offer"))}
-          className="p-2 transition-all"
-          style={{ background: "rgba(0,0,0,0.07)", border: "1px solid rgba(0,0,0,0.12)", borderRadius: "12px", color: "rgba(0,0,0,0.6)" }}
-        >
-          <ArrowLeft className="w-4 h-4" />
-        </button>
-        <span className="text-xs font-bold tracking-widest" style={{ color: "#1a2235" }}>GlowScan — passer premium</span>
-      </div>
-
-      <div className="relative flex-1 overflow-y-auto pb-12" style={{ zIndex: 1 }}>
-        <AnimatePresence mode="wait">
-
-          {/* ══ STEP 1: OFFER ══ */}
-          {step === "offer" && (
-            <motion.div
-              key="offer"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="p-4 space-y-4 max-w-md mx-auto w-full"
-            >
-              {/* Hero card */}
-              <div
-                className="relative overflow-hidden text-center p-6"
-                style={{
-                  background: "rgba(10,110,114,0.1)",
-                  border: "2px solid rgba(10,110,114,0.4)",
-                  borderRadius: "24px",
-                }}
-              >
-                <div
-                  style={{
-                    position: "absolute",
-                    top: 0,
-                    right: 0,
-                    width: "220px",
-                    height: "220px",
-                    background: "radial-gradient(circle, rgba(10,110,114,0.12), transparent)",
-                    pointerEvents: "none",
-                  }}
-                />
-                <div className="relative">
-                  <div
-                    className="inline-flex items-center gap-1.5 px-3 py-1 mb-4"
-                    style={{ background: "rgba(10,110,114,0.15)", border: "1px solid rgba(10,110,114,0.3)", borderRadius: "9999px" }}
-                  >
-                    <span className="text-[10px] font-bold tracking-widest" style={{ color: "#0A6E72" }}>Offre de lancement</span>
-                  </div>
-                  <h2
-                    className="text-xl font-extrabold tracking-tight mb-1"
-                    style={{ color: "#1a2235", fontWeight: 800 }}
-                  >
-                    Activer mon abonnement
-                  </h2>
-                  <p className="text-xs mb-6" style={{ color: "#4a5568" }}>
-                    Débloque le Scan Produit IA et le Routine Tracker — conçus pour transformer ta peau.
-                  </p>
-                  <div
-                    className="px-5 py-3.5 w-full"
-                    style={{ background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: "16px" }}
-                  >
-                    <p className="text-2xl font-extrabold tracking-tight" style={{ color: "#1a2235", fontWeight: 800 }}>
-                      2 000 FCFA / mois
-                    </p>
-                    <p className="text-[10px] font-medium mt-0.5" style={{ color: "rgba(0,0,0,0.35)" }}>
-                      Aucun abonnement caché · Paiement unique
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Features comparison */}
-              <div
-                className="p-5 space-y-4"
-                style={{ background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: "24px" }}
-              >
-                <div>
-                  <span className="text-[9px] font-bold uppercase tracking-widest block mb-2.5" style={{ color: "rgba(0,0,0,0.35)" }}>
-                    Plan Gratuit — déjà disponible
-                  </span>
-                  <div className="space-y-2">
-                    {FEATURES_FREE.map(f => (
-                      <div key={f.text} className="flex items-start gap-2.5 text-xs font-medium" style={{ color: "#4a5568" }}>
-                        <CheckCircle2 className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style={{ color: "#6ee7b7" }} />
-                        <span>{f.text}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="pt-4" style={{ borderTop: "1px solid rgba(0,0,0,0.07)" }}>
-                  <span className="text-[9px] font-bold uppercase tracking-widest block mb-2.5" style={{ color: "#0A6E72" }}>
-                    Fonctionnalités premium débloquées
-                  </span>
-                  <div className="space-y-2.5">
-                    {FEATURES_PREMIUM.map(f => (
-                      <div key={f.text} className="flex items-start gap-2.5 text-xs font-bold" style={{ color: "#1a2235" }}>
-                        <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" style={{ color: "#0A6E72" }} />
-                        <span>{f.text}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Founder quote */}
-              <div
-                className="p-5 flex items-start gap-4"
-                style={{ background: "rgba(10,110,114,0.06)", border: "1px solid rgba(10,110,114,0.18)", borderRadius: "24px" }}
-              >
-                <div
-                  className="w-10 h-10 flex items-center justify-center shrink-0 text-sm font-extrabold"
-                  style={{ background: "#0B1719", borderRadius: "12px", color: "#fff", fontWeight: 800 }}
-                >
-                  DE
-                </div>
-                <div>
-                  <span className="text-[9px] font-bold uppercase tracking-widest block" style={{ color: "rgba(0,0,0,0.35)" }}>
-                    Note d'ingénierie
-                  </span>
-                  <p className="text-xs font-medium leading-relaxed mt-1" style={{ color: "#4a5568" }}>
-                    "Nous développons des modèles algorithmiques entraînés spécifiquement sur les variations mélaniques et climatiques d'Afrique centrale. L'abonnement mensuel nous permet de financer la puissance de calcul et d'améliorer continuellement l'IA pour notre communauté."
-                  </p>
-                  <span className="text-[10px] font-bold block mt-1.5" style={{ color: "rgba(0,0,0,0.35)" }}>
-                    — Demise Essawe, Fondateur GlowScan
-                  </span>
-                </div>
-              </div>
-
-              {/* Trust badges */}
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  { icon: <Shield className="w-3.5 h-3.5" style={{ color: "#0A6E72" }} />, label: "Protocole MoMo/OM chiffré" },
-                  { icon: <Zap className="w-3.5 h-3.5" style={{ color: "#0A6E72" }} />, label: "Activation serveur rapide" },
-                ].map(({ icon, label }) => (
-                  <div
-                    key={label}
-                    className="p-3 flex items-center gap-2.5"
-                    style={{ background: "rgba(0,0,0,0.03)", border: "1px solid rgba(0,0,0,0.06)", borderRadius: "16px" }}
-                  >
-                    {icon}
-                    <p className="text-[10px] font-bold leading-tight" style={{ color: "#4a5568" }}>{label}</p>
-                  </div>
-                ))}
-              </div>
-
-              {/* Primary CTA */}
-              {!user ? (
-                <button
-                  onClick={() => setLocation("/auth")}
-                  className="w-full py-4 text-sm font-extrabold transition-all active:scale-[0.98]"
-                  style={{
-                    background: "#0B1719",
-                    borderRadius: "12px",
-                    color: "#fff",
-                    fontWeight: 800,
-                  }}
-                >
-                  Créer un compte pour s'enregistrer
-                </button>
-              ) : (
-                <button
-                  onClick={() => setStep("payment")}
-                  className="w-full py-4 text-sm font-extrabold flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
-                  style={{
-                    background: "#0B1719",
-                    borderRadius: "12px",
-                    color: "#fff",
-                    fontWeight: 800,
-                  }}
-                >
-                  Obtenir mon accès permanent
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              )}
-            </motion.div>
-          )}
-
-          {/* ══ STEP 2: PAYMENT ══ */}
-          {step === "payment" && (
-            <motion.div
-              key="payment"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="p-4 max-w-md mx-auto w-full"
-            >
-              <div
-                className="p-5 space-y-5"
-                style={{ background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: "24px" }}
-              >
-                <div>
-                  <h2 className="text-sm font-extrabold tracking-wide" style={{ color: "#1a2235", fontWeight: 800 }}>
-                    Passerelle de dépôt manuel
-                  </h2>
-                  <p className="text-xs mt-0.5" style={{ color: "#4a5568" }}>
-                    Traitement sécurisé via Mobile Money régional.
-                  </p>
-                </div>
-
-                {/* Operator selector */}
-                <div className="grid grid-cols-2 gap-3">
-                  {([
-                    { id: "mtn_momo", label: "MTN MoMo", badge: "🟡" },
-                    { id: "orange_money", label: "Orange Money", badge: "🟠" },
-                  ] as const).map(m => (
-                    <button
-                      key={m.id}
-                      onClick={() => setMethod(m.id)}
-                      className="flex flex-col items-center gap-1.5 p-4 text-center transition-all"
-                      style={
-                        method === m.id
-                          ? { background: "rgba(10,110,114,0.12)", border: "2px solid rgba(10,110,114,0.4)", borderRadius: "16px" }
-                          : { background: "rgba(0,0,0,0.04)", border: "2px solid rgba(0,0,0,0.08)", borderRadius: "16px" }
-                      }
-                    >
-                      <span className="text-lg">{m.badge}</span>
-                      <span className="text-xs font-extrabold tracking-tight" style={{ color: "#1a2235", fontWeight: 800 }}>{m.label}</span>
-                      {method === m.id && <CheckCircle2 className="w-3.5 h-3.5 mt-0.5" style={{ color: "#0A6E72" }} />}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Payment instructions */}
-                <div
-                  className="p-4 space-y-2"
-                  style={{ background: "#EEF4F4", border: "1px solid rgba(10,110,114,0.2)", borderRadius: "12px" }}
-                >
-                  <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "rgba(0,0,0,0.35)" }}>
-                    Instruction d'envoi :
-                  </p>
-                  <p className="text-xs font-medium" style={{ color: "#4a5568" }}>
-                    Effectue un transfert de exactement{" "}
-                    <span className="font-extrabold" style={{ color: "#1a2235", fontWeight: 800 }}>{planPrice} FCFA</span>{" "}
-                    au numéro ci-dessous :
-                  </p>
-                  <div
-                    className="flex items-center justify-between px-3.5 py-2.5"
-                    style={{ background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.1)", borderRadius: "12px" }}
-                  >
-                    <span className="text-base font-extrabold tracking-wider" style={{ color: "#1a2235", fontWeight: 800 }}>
-                      {paymentNumber}
-                    </span>
-                    <span
-                      className="text-[9px] font-bold px-2 py-0.5"
-                      style={{ background: "rgba(0,0,0,0.08)", color: "rgba(0,0,0,0.5)", borderRadius: "8px" }}
-                    >
-                      {method === "mtn_momo" ? "MTN" : "Orange"}
-                    </span>
-                  </div>
-                  <p className="text-[9px] leading-normal pt-1" style={{ color: "rgba(0,0,0,0.35)" }}>
-                    Note : n'ajoute aucun motif textuel lors de l'envoi pour accélérer le rapprochement automatique. Renseigne ton numéro de transaction ci-dessous après validation.
-                  </p>
-                </div>
-
-                {/* Phone input */}
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold uppercase tracking-widest block" style={{ color: "rgba(0,0,0,0.35)" }}>
-                    Numéro émetteur (celui qui a payé)
-                  </label>
-                  <div
-                    className="flex items-center gap-2 px-3.5 py-3 transition-all"
-                    style={{ background: "#ffffff", border: "1px solid rgba(10,110,114,0.2)", borderRadius: "12px" }}
-                  >
-                    <Phone className="w-4 h-4 flex-shrink-0" style={{ color: "rgba(0,0,0,0.35)" }} />
-                    <input
-                      type="tel"
-                      placeholder="Ex: 67X XX XX XX"
-                      value={phone}
-                      onChange={e => setPhone(e.target.value)}
-                      className="flex-1 text-xs font-bold outline-none bg-transparent"
-                      style={{ color: "#1a2235" }}
-                    />
-                  </div>
-                </div>
-
-                <button
-                  onClick={handleSubmitRequest}
-                  disabled={loading || !phone.trim()}
-                  className="w-full py-4 text-sm font-extrabold flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{
-                    background: "#0B1719",
-                    borderRadius: "12px",
-                    color: "#fff",
-                    fontWeight: 800,
-                  }}
-                >
-                  {loading ? (
-                    <span className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-                  ) : (
-                    "Confirmer mon transfert"
-                  )}
-                </button>
-              </div>
-            </motion.div>
-          )}
-
-          {/* ══ STEP 3: CONFIRM ══ */}
-          {step === "confirm" && requestData && (() => {
-            if (typeof (window as any).fbq === "function" && !sessionStorage.getItem("gs_pixel_purchase_fired")) {
-              (window as any).fbq("track", "Purchase", {
-                value: planPrice,
-                currency: "XAF",
-                contents: [{ id: "premium_lifetime", quantity: 1 }],
-                content_ids: "XAF",
-              });
-              sessionStorage.setItem("gs_pixel_purchase_fired", "1");
-            }
-            return null;
-          })()}
-          {step === "confirm" && requestData && (
-            <motion.div
-              key="confirm"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="p-4 max-w-md mx-auto w-full space-y-4"
-            >
-              {/* Confirmation card */}
-              <div
-                className="p-6 text-center space-y-4"
-                style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)", borderRadius: "24px" }}
-              >
-                <div
-                  className="w-12 h-12 flex items-center justify-center mx-auto"
-                  style={{ background: "rgba(16,185,129,0.12)", border: "1px solid rgba(16,185,129,0.25)", borderRadius: "12px" }}
-                >
-                  <CheckCircle2 className="w-5 h-5" style={{ color: "#6ee7b7" }} />
-                </div>
-
-                <div>
-                  <h2 className="text-base font-extrabold tracking-tight" style={{ color: "#1a2235", fontWeight: 800 }}>
-                    Demande prise en charge
-                  </h2>
-                  <p className="text-xs mt-1 leading-relaxed" style={{ color: "#4a5568" }}>
-                    Les logs de paiement ont été transmis au registre réseau. Validation finale sous 24 heures maximum.
-                  </p>
-                </div>
-
-                {/* Reference display */}
-                <div
-                  className="p-4 text-center space-y-1 relative"
-                  style={{ background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: "16px" }}
-                >
-                  <span className="text-[9px] font-bold uppercase tracking-widest block" style={{ color: "rgba(0,0,0,0.35)" }}>
-                    Référence système unique
-                  </span>
-                  <div className="flex items-center justify-center gap-3">
-                    <span className="text-lg font-extrabold tracking-wider" style={{ color: "#1a2235", fontWeight: 800 }}>
-                      {requestData.reference}
-                    </span>
-                    <button
-                      onClick={() => copyRef(requestData.reference)}
-                      className="p-1.5 transition-all active:scale-90"
-                      style={{ background: "rgba(0,0,0,0.07)", border: "1px solid rgba(0,0,0,0.12)", borderRadius: "8px" }}
-                    >
-                      {copied
-                        ? <Check className="w-3.5 h-3.5" style={{ color: "#6ee7b7" }} />
-                        : <Copy className="w-3.5 h-3.5" style={{ color: "rgba(0,0,0,0.5)" }} />
-                      }
-                    </button>
-                  </div>
-                </div>
-
-                {/* WhatsApp CTA */}
-                {requestData.ownerWaUrl && (
-                  <a
-                    href={requestData.ownerWaUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full inline-flex items-center justify-center gap-2 py-3.5 font-extrabold text-xs tracking-widest transition-all active:scale-[0.98]"
-                    style={{
-                      background: "#10b981",
-                      borderRadius: "12px",
-                      color: "#fff",
-                      fontWeight: 800,
-                    }}
-                  >
-                    Envoyer le reçu sur WhatsApp
-                  </a>
-                )}
-
-                <button
-                  onClick={() => setLocation("/")}
-                  className="w-full py-3 text-xs font-bold transition-all active:scale-[0.98]"
-                  style={{
-                    background: "rgba(0,0,0,0.08)",
-                    border: "1px solid rgba(0,0,0,0.15)",
-                    borderRadius: "9999px",
-                    color: "#1a2235",
-                    fontWeight: 700,
-                  }}
-                >
-                  Retour à l'application
-                </button>
-              </div>
-
-              {/* Validation protocol */}
-              <div
-                className="p-4 space-y-2"
-                style={{ background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: "24px" }}
-              >
-                <div className="flex items-center gap-2" style={{ color: "rgba(0,0,0,0.35)" }}>
-                  <ShieldAlert className="w-3.5 h-3.5" />
-                  <span className="text-[9px] font-bold uppercase tracking-widest">Protocole de validation</span>
-                </div>
-                <ul className="text-[11px] font-medium space-y-1.5 list-disc list-inside" style={{ color: "#4a5568" }}>
-                  <li>Vérification du hachage de la transaction Mobile Money.</li>
-                  <li>Déploiement des accès illimités sur ton ID utilisateur.</li>
-                  <li>Crédit automatique des points de fidélité au premier scan.</li>
-                </ul>
-              </div>
-            </motion.div>
-          )}
-
-        </AnimatePresence>
-      </div>
+  // Cadre plein écran (langage design).
+  const shell = (children: React.ReactNode) => (
+    <div style={{ minHeight: "100dvh", background: GS.mintBg, fontFamily: GS.sans, color: GS.ink }}>
+      <div style={{ width: "100%", maxWidth: 430, margin: "0 auto", padding: "16px 24px 32px", boxSizing: "border-box", display: "flex", flexDirection: "column", minHeight: "100dvh" }}>{children}</div>
     </div>
+  );
+  const stepHeader = (n: number, onBack: (() => void) | null) => (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+      {onBack ? <button onClick={onBack} aria-label="Retour" style={{ background: "none", border: "none", cursor: "pointer", color: GS.ink, display: "flex", padding: 0 }}>{n === 1 ? <X size={20} /> : <ArrowLeft size={20} />}</button> : <div style={{ width: 20 }} />}
+      <GsMono style={{ letterSpacing: ".14em" }}>ÉTAPE {n} / 3</GsMono>
+      <div style={{ width: 20 }} />
+    </div>
+  );
+  const marks = () => <GsMarks />;
+
+  // ════════ ÉTAT ACTIF (P4 actif) ════════
+  if (isPremium && step === "bon") {
+    return shell(<>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 22 }}>
+        <img src="/glowscan-mark.png" alt="GlowScan" onError={(e) => { (e.currentTarget as HTMLImageElement).src = "/logo-glowscan-square.jpeg"; }} style={{ width: 28, height: 28, objectFit: "contain" }} />
+        <button onClick={() => setLocation("/profile")} aria-label="Fermer" style={{ background: "none", border: "none", cursor: "pointer", color: GS.muted, display: "flex" }}><X size={20} /></button>
+      </div>
+      <div style={{ position: "relative", border: `1px solid ${GS.ink}`, padding: 20 }}>
+        {marks()}
+        <span style={{ background: GS.grad, padding: "5px 10px", fontFamily: GS.mono, fontSize: 9, fontWeight: 700, letterSpacing: ".12em", color: GS.deep }}>PREMIUM ACTIF</span>
+        <div style={{ fontSize: 23, fontWeight: 600, letterSpacing: "-.7px", lineHeight: 1.18, marginTop: 14 }}>Tout est débloqué{userName ? `, ${userName}` : ""}</div>
+        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginTop: 14, paddingTop: 12, borderTop: `1px solid ${GS.line}` }}>
+          <span style={{ fontSize: 12, color: GS.muted }}>Valable jusqu'au</span>
+          <span style={{ fontFamily: GS.mono, fontSize: 14, fontWeight: 600, color: GS.ink }}>{fmtDate(subData?.subscription?.expiresAt) || "—"}</span>
+        </div>
+      </div>
+      <GsMono style={{ display: "block", margin: "18px 0 8px" }}>Commencer par</GsMono>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <button onClick={() => setLocation("/product-scan-camera")} style={{ border: `1px solid ${GS.ink}`, background: "#fff", padding: 13, display: "flex", alignItems: "center", gap: 12, cursor: "pointer", textAlign: "left" }}>
+          <ScanBarcode size={19} style={{ color: GS.teal }} /><div style={{ flex: 1 }}><div style={{ fontSize: 13, fontWeight: 600, color: GS.ink }}>Scanner vos produits actuels</div><div style={{ fontSize: 11, color: GS.muted, marginTop: 2 }}>Savoir s'ils conviennent à votre peau</div></div><ArrowRight size={16} style={{ color: GS.ink }} />
+        </button>
+        <button onClick={() => setLocation("/analyze")} style={{ border: `1px solid ${GS.line}`, background: "#fff", padding: 13, display: "flex", alignItems: "center", gap: 12, cursor: "pointer", textAlign: "left" }}>
+          <ScanFace size={19} style={{ color: GS.teal }} /><div style={{ flex: 1 }}><div style={{ fontSize: 13, fontWeight: 600, color: GS.ink }}>Nouvelle analyse</div><div style={{ fontSize: 11, color: GS.muted, marginTop: 2 }}>Plus de limite mensuelle</div></div><ArrowRight size={16} style={{ color: GS.ink }} />
+        </button>
+      </div>
+    </>);
+  }
+
+  // ════════ P1 · BON DE COMMANDE ════════
+  if (step === "bon") {
+    // Demande déjà en attente → écran d'activation (P4 en vérification).
+    if (statusData?.request?.status === "pending" && !requestData) {
+      return shell(<>
+        {stepHeader(3, () => setLocation("/profile"))}
+        <PendingCard reference={statusData.request.reference} />
+      </>);
+    }
+    return shell(<>
+      {stepHeader(1, () => setLocation(-1 as any))}
+      <div style={{ position: "relative", border: `1px solid ${GS.ink}`, padding: 18 }}>
+        {marks()}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <img src="/glowscan-mark.png" alt="" onError={(e) => { (e.currentTarget as HTMLImageElement).src = "/logo-glowscan-square.jpeg"; }} style={{ width: 30, height: 30, objectFit: "contain" }} />
+          <span style={{ background: GS.grad, padding: "5px 10px", fontFamily: GS.mono, fontSize: 9, fontWeight: 700, letterSpacing: ".12em", color: GS.deep }}>PREMIUM</span>
+        </div>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginTop: 14 }}>
+          <span style={{ fontFamily: GS.mono, fontSize: 32, fontWeight: 600, letterSpacing: "-1px" }}>2 000 F</span>
+          <span style={{ fontSize: 13, color: GS.muted }}>/ mois</span>
+        </div>
+        <div style={{ marginTop: 14 }}>
+          {[{ icon: ScanFace, t: "Analyses de peau" }, { icon: ScanBarcode, t: "Scan produit" }, { icon: ListChecks, t: "Produits dans la routine" }].map((f, i) => {
+            const I = f.icon;
+            return <div key={i} style={{ display: "flex", alignItems: "center", gap: 11, padding: "9px 0", borderTop: `1px solid ${GS.hair}` }}><I size={17} style={{ color: GS.teal }} /><span style={{ flex: 1, fontSize: 13, color: GS.ink }}>{f.t}</span><GsMono color={GS.teal} style={{ letterSpacing: 0 }}>ILLIMITÉ</GsMono></div>;
+          })}
+        </div>
+      </div>
+
+      <GsMono style={{ display: "block", marginTop: 18, marginBottom: 8 }}>Titulaire du compte</GsMono>
+      <div style={{ border: `1px solid ${GS.line}` }}>
+        <div style={{ padding: "11px 12px", borderBottom: `1px solid ${GS.hair}`, display: "flex", justifyContent: "space-between", gap: 10 }}><span style={{ fontSize: 12, color: GS.muted }}>Nom</span><span style={{ fontSize: 13, color: GS.ink }}>{userName}</span></div>
+        <div style={{ padding: "11px 12px", borderBottom: `1px solid ${GS.hair}`, display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
+          <span style={{ fontSize: 12, color: GS.muted, flex: "none" }}>Téléphone</span>
+          <input value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" placeholder="6XX XXX XXX" style={{ flex: 1, minWidth: 0, textAlign: "right", border: "none", outline: "none", background: "transparent", fontFamily: GS.mono, fontSize: 12, color: GS.ink }} />
+        </div>
+        <div style={{ padding: "11px 12px", display: "flex", justifyContent: "space-between", gap: 10 }}><span style={{ fontSize: 12, color: GS.muted }}>Email</span><span style={{ fontSize: 13, color: GS.ink, wordBreak: "break-all" }}>{userEmail || "—"}</span></div>
+      </div>
+
+      <div style={{ marginTop: "auto", paddingTop: 20 }}>
+        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", paddingBottom: 12, borderBottom: `1px solid ${GS.line}`, marginBottom: 13 }}>
+          <span style={{ fontSize: 12, color: GS.muted }}>Premium · 1 mois</span>
+          <span style={{ fontFamily: GS.mono, fontSize: 20, fontWeight: 600, color: GS.ink }}>2 000 F</span>
+        </div>
+        <button onClick={() => setStep("pay")} style={{ width: "100%", background: GS.ink, color: "#fff", border: "none", padding: 17, display: "flex", alignItems: "center", justifyContent: "center", gap: 10, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>Passer au paiement <ArrowRight size={16} style={{ color: GS.accent }} /></button>
+      </div>
+    </>);
+  }
+
+  // ════════ P2 · PAIEMENT ════════
+  if (step === "pay") {
+    return shell(<>
+      {stepHeader(2, () => setStep("bon"))}
+      <div style={{ fontSize: 22, fontWeight: 600, letterSpacing: "-.6px" }}>Payer 2 000 F</div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 14 }}>
+        {(Object.keys(OPS) as Method[]).map((m) => {
+          const o = OPS[m]; const on = method === m;
+          return (
+            <button key={m} onClick={() => setMethod(m)} style={{ border: on ? `2px solid ${GS.ink}` : `1px solid ${GS.line}`, background: "#fff", padding: on ? 12 : 13, display: "flex", alignItems: "center", gap: 10, cursor: "pointer", textAlign: "left" }}>
+              <span style={{ width: 34, height: 34, flex: "none", background: o.tagBg, color: o.tagColor, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: GS.mono, fontSize: 10, fontWeight: 700 }}>{o.tag}</span>
+              <span style={{ fontSize: 12, fontWeight: 600, color: on ? GS.ink : GS.muted, lineHeight: 1.25 }}>{o.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div style={{ position: "relative", marginTop: 16, border: `1px solid ${GS.ink}`, padding: 16 }}>
+        {marks()}
+        <GsMono style={{ letterSpacing: ".14em" }}>Bénéficiaire</GsMono>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 6 }}>
+          <div><div style={{ fontSize: 14, fontWeight: 600, color: GS.ink }}>GlowScan</div><div style={{ fontFamily: GS.mono, fontSize: 14, color: GS.ink, marginTop: 3 }}>{op.num}</div></div>
+          <button onClick={copyNum} style={{ border: `1px solid ${GS.line}`, background: "#fff", padding: "8px 10px", display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>{copied ? <Check size={14} style={{ color: GS.teal }} /> : <Copy size={14} style={{ color: GS.ink }} />}<GsMono style={{ letterSpacing: 0 }}>{copied ? "COPIÉ" : "COPIER"}</GsMono></button>
+        </div>
+        <div style={{ height: 1, background: GS.line, margin: "14px 0" }} />
+        <GsMono style={{ letterSpacing: ".14em" }}>Code à composer</GsMono>
+        <div style={{ fontFamily: GS.mono, fontSize: 15, fontWeight: 600, color: GS.ink, marginTop: 6 }}>{op.ussd}</div>
+        <div style={{ fontSize: 11, color: GS.muted, marginTop: 5, lineHeight: 1.5 }}>Puis : Transfert d'argent → numéro {op.num} → montant 2 000</div>
+        <a href={`tel:${encodeURIComponent(op.ussd)}`} style={{ background: GS.ink, color: "#fff", padding: 13, marginTop: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 9, fontSize: 13, fontWeight: 600, textDecoration: "none" }}><Phone size={15} style={{ color: GS.accent }} />Composer le code</a>
+      </div>
+
+      <div style={{ marginTop: 16 }}>
+        {["Suivez le menu, validez avec votre PIN", "Faites une capture du SMS de confirmation", "Revenez ici pour la joindre"].map((t, i) => (
+          <div key={i} style={{ display: "flex", gap: 12, padding: "9px 0", borderBottom: i < 2 ? `1px solid ${GS.hair}` : "none" }}><GsMono color={GS.teal} style={{ letterSpacing: 0 }}>0{i + 1}</GsMono><span style={{ fontSize: 12, color: GS.ink }}>{t}</span></div>
+        ))}
+      </div>
+
+      <div style={{ marginTop: "auto", paddingTop: 20 }}>
+        <button onClick={submitRequest} disabled={loading} style={{ width: "100%", background: "#fff", border: `1px solid ${GS.ink}`, color: GS.ink, padding: 16, display: "flex", alignItems: "center", justifyContent: "center", gap: 10, fontSize: 14, fontWeight: 600, cursor: loading ? "wait" : "pointer", opacity: loading ? 0.6 : 1 }}>{loading ? "…" : "J'ai payé, joindre la capture"} <ArrowRight size={16} style={{ color: GS.teal }} /></button>
+      </div>
+    </>);
+  }
+
+  // ════════ P3 · CAPTURE + WHATSAPP ════════
+  if (step === "capture") {
+    return shell(<>
+      {stepHeader(3, () => setStep("pay"))}
+      <div style={{ fontSize: 22, fontWeight: 600, letterSpacing: "-.6px" }}>Joindre et envoyer</div>
+
+      <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => { pickCapture(e.target.files?.[0]); e.currentTarget.value = ""; }} />
+      <div style={{ position: "relative", marginTop: 14, border: `1px solid ${GS.ink}`, padding: 8 }}>
+        {marks()}
+        <button onClick={() => fileRef.current?.click()} style={{ width: "100%", height: 170, background: GS.panel, border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0, overflow: "hidden" }}>
+          {capture ? <img src={capture.url} alt="" style={{ width: "100%", height: "100%", objectFit: "contain" }} /> : <GsMono style={{ letterSpacing: 0 }}>Capture du SMS {op.tag}</GsMono>}
+        </button>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 4px 2px" }}>
+          <GsMono style={{ letterSpacing: 0 }}>{capture ? capture.name : "aucune capture"}</GsMono>
+          <button onClick={() => fileRef.current?.click()} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 5, fontFamily: GS.mono, fontSize: 10, fontWeight: 600, color: GS.ink }}><RefreshCw size={12} />{capture ? "REMPLACER" : "AJOUTER"}</button>
+        </div>
+      </div>
+
+      <GsMono style={{ display: "block", marginTop: 14, marginBottom: 8 }}>Message envoyé</GsMono>
+      <div style={{ border: `1px solid ${GS.line}`, background: "#F7FAFA", padding: 10 }}>
+        <div style={{ marginLeft: "auto", maxWidth: "94%", background: GS.mintTint, border: `1px solid ${GS.accentMint}`, padding: "10px 11px", fontFamily: GS.mono, fontSize: 10.5, lineHeight: 1.6, color: GS.ink }}>
+          <div style={{ fontWeight: 600 }}>DEMANDE PREMIUM {requestData?.reference || ""}</div>
+          <div>Formule : Premium 1 mois</div>
+          <div style={{ fontWeight: 600 }}>MONTANT PAYÉ : 2 000 F · {op.tag}</div>
+          <div style={{ marginTop: 4 }}>{userName} · {phone}</div>
+          {userEmail && <div>{userEmail}</div>}
+          <div style={{ marginTop: 4, color: GS.teal }}>{capture ? "+ capture jointe" : "capture à joindre dans WhatsApp"}</div>
+        </div>
+      </div>
+
+      <div style={{ marginTop: "auto", paddingTop: 20 }}>
+        <button onClick={sendWhatsapp} style={{ width: "100%", background: "#25D366", color: GS.deep, border: "none", padding: 17, display: "flex", alignItems: "center", justifyContent: "center", gap: 10, fontSize: 14, fontWeight: 700, cursor: "pointer" }}><Send size={16} />Envoyer sur WhatsApp</button>
+        <div style={{ fontSize: 11, color: GS.muted, textAlign: "center", marginTop: 9, lineHeight: 1.5 }}>Joignez la capture dans la conversation WhatsApp qui s'ouvre.</div>
+      </div>
+    </>);
+  }
+
+  // ════════ P4 · ACTIVATION (en vérification) ════════
+  return shell(<>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 22 }}>
+      <img src="/glowscan-mark.png" alt="" onError={(e) => { (e.currentTarget as HTMLImageElement).src = "/logo-glowscan-square.jpeg"; }} style={{ width: 28, height: 28, objectFit: "contain" }} />
+      <GsMono style={{ letterSpacing: 0 }}>{requestData?.reference || ""}</GsMono>
+    </div>
+    <PendingCard reference={requestData?.reference || statusData?.request?.reference || ""} />
+    <div style={{ marginTop: "auto", paddingTop: 20 }}>
+      <button onClick={() => setLocation("/")} style={{ width: "100%", background: "#fff", border: `1px solid ${GS.ink}`, color: GS.ink, padding: 15, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>Retour à l'accueil</button>
+    </div>
+  </>);
+}
+
+function PendingCard({ reference }: { reference: string }) {
+  return (
+    <>
+      <div style={{ border: `1px solid ${GS.line}`, padding: 14, display: "flex", gap: 12, alignItems: "flex-start" }}>
+        <span style={{ width: 18, height: 18, border: `1px solid ${GS.accent}`, background: GS.mintTint, flex: "none", marginTop: 1 }} />
+        <div style={{ flex: 1 }}><div style={{ fontSize: 13, fontWeight: 600, color: GS.ink }}>Paiement en vérification</div><GsMono color={GS.teal} style={{ letterSpacing: 0, marginTop: 3, display: "block" }}>ENVOYÉ SUR WHATSAPP</GsMono></div>
+        <Clock size={16} style={{ color: GS.muted }} />
+      </div>
+      <div style={{ width: 1, height: 18, background: GS.line, marginLeft: 23 }} />
+      <div style={{ position: "relative", border: `1px solid ${GS.ink}`, padding: 20 }}>
+        <GsMarks />
+        <GsMono style={{ letterSpacing: ".14em" }}>Activation sous 24 h</GsMono>
+        <div style={{ fontSize: 20, fontWeight: 600, letterSpacing: "-.6px", lineHeight: 1.2, marginTop: 12 }}>Dès confirmation, tout se débloque</div>
+        <div style={{ fontSize: 12, color: GS.muted, marginTop: 8, lineHeight: 1.55 }}>Notre équipe valide votre paiement Mobile Money. Vous serez notifié(e) et Premium s'activera automatiquement.</div>
+        {reference && <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginTop: 14, paddingTop: 12, borderTop: `1px solid ${GS.line}` }}><span style={{ fontSize: 12, color: GS.muted }}>Référence</span><span style={{ fontFamily: GS.mono, fontSize: 13, fontWeight: 600, color: GS.ink }}>{reference}</span></div>}
+      </div>
+    </>
   );
 }

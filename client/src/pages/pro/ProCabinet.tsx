@@ -8,6 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ProLayout, ProCard, ProInput, LogoutButton  } from "@/components/ProLayout";
 import { LoadingScreen } from "./ProDashboard";
 import { NotifSettingsCard } from "@/components/NotifSettingsCard";
+import { DermSubscribeFlow } from "@/components/DermSubscribeFlow";
 import { DERM } from "@/lib/design-tokens";
 
 const NAVY = "#7c3aed";        // CTA violet
@@ -102,11 +103,6 @@ export default function ProCabinet() {
   };
 
   const [showSubscribe, setShowSubscribe] = useState(false);
-  const [method, setMethod] = useState<"mtn_momo" | "orange_money">("mtn_momo");
-  const [payPhone, setPayPhone] = useState("");
-  const [subLoading, setSubLoading] = useState(false);
-  const [subRef, setSubRef] = useState<string | null>(null);
-  const [subWaUrl, setSubWaUrl] = useState<string | null>(null);
 
   const { data: statusData } = useQuery<{ request: { reference: string; status: string } | null }>({
     queryKey: ["/api/premium/status"],
@@ -149,30 +145,6 @@ export default function ProCabinet() {
     }
   };
 
-  const handleSubscribe = async () => {
-    if (!payPhone.trim() || payPhone.length < 8) {
-      toast({ title: "Numéro invalide", variant: "destructive" });
-      return;
-    }
-    setSubLoading(true);
-    try {
-      const res = await fetch("/api/pro/subscribe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ method, phone: payPhone }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
-      setSubRef(data.request.reference);
-      setSubWaUrl(data.ownerWaUrl);
-    } catch (err: any) {
-      toast({ title: "Erreur", description: err.message, variant: "destructive" });
-    } finally {
-      setSubLoading(false);
-    }
-  };
-
   const exportData = () => {
     const csv = [
       ["Prénom", "Nom", "Âge", "Sexe", "WhatsApp", "Statut", "Dernier scan", "Créé le"].join(","),
@@ -199,7 +171,6 @@ export default function ProCabinet() {
     toast({ title: "Export téléchargé", description: `${patients.length} patients exportés` });
   };
 
-  const paymentNumber = method === "mtn_momo" ? MTN_NUMBER : ORANGE_NUMBER;
 
   // 🔑 SÉCURITÉ : Les secrétaires n'ont pas accès aux paramètres cabinet
   if (accData?.user?.role === "secretary") {
@@ -547,137 +518,17 @@ export default function ProCabinet() {
         <LogoutButton />
       </div>
 
-      {/* Modal subscribe */}
-      <AnimatePresence>
-        {showSubscribe && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => !subRef && setShowSubscribe(false)}
-              className="fixed inset-0 z-40"
-              style={{ background: "rgba(0,0,0,0.7)" }}
-            />
-            <motion.div
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              transition={{ type: "spring", damping: 28 }}
-              className="fixed bottom-0 left-0 right-0 z-50 rounded-t-3xl p-6 max-w-md mx-auto"
-              style={{ background: DS.surface, border: "1px solid rgba(167,139,250,0.2)", fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif' }}
-            >
-              {!subRef ? (
-                <>
-                  <h3 className="text-lg font-extrabold mb-1" style={{ color: INK }}>Activer mon abonnement Pro</h3>
-                  <p className="text-xs mb-4" style={{ color: DS.muted }}>10 000 FCFA / mois — Mobile Money</p>
-                  <div className="grid grid-cols-2 gap-3 mb-4">
-                    {(
-                      [
-                        { id: "mtn_momo", label: "MTN MoMo", color: "#FFCC00" },
-                        { id: "orange_money", label: "Orange Money", color: "#FF6600" },
-                      ] as const
-                    ).map((m) => (
-                      <button
-                        key={m.id}
-                        onClick={() => setMethod(m.id)}
-                        data-testid={`button-method-${m.id}`}
-                        className="p-3 rounded-xl border-2 transition-all text-center"
-                        style={
-                          method === m.id
-                            ? { borderColor: NAVY, background: "rgba(124,58,237,0.15)" }
-                            : { borderColor: DS.border, background: SOFT_BG }
-                        }
-                      >
-                        <div className="w-5 h-5 rounded-full mx-auto mb-1.5" style={{ background: m.color }} />
-                        <p className="text-xs font-extrabold" style={{ color: method === m.id ? INK : DS.body }}>{m.label}</p>
-                      </button>
-                    ))}
-                  </div>
-                  <div
-                    className="rounded-xl p-3 mb-4"
-                    style={{ background: SOFT_BG, border: `1px solid ${DS.border}` }}
-                  >
-                    <p className="text-xs font-extrabold" style={{ color: DS.body }}>Envoyer {PRO_PRICE} FCFA au :</p>
-                    <p className="text-lg font-extrabold mt-1" style={{ color: NAVY }}>{paymentNumber}</p>
-                  </div>
-                  <div className="mb-4">
-                    <label className="text-xs font-extrabold mb-1.5 block" style={{ color: DS.body }}>Votre numéro de paiement</label>
-                    <div
-                      className="flex items-center gap-2 rounded-xl px-3 py-2.5"
-                      style={{ background: SOFT_BG, border: "1px solid rgba(167,139,250,0.2)" }}
-                    >
-                      <Phone className="w-4 h-4 flex-shrink-0" style={{ color: DS.muted }} />
-                      <input
-                        type="tel"
-                        value={payPhone}
-                        onChange={(e) => setPayPhone(e.target.value)}
-                        placeholder="675 000 000"
-                        data-testid="input-pay-phone"
-                        className="flex-1 text-sm font-extrabold outline-none bg-transparent"
-                        style={{ color: INK }}
-                      />
-                    </div>
-                  </div>
-                  <button
-                    onClick={handleSubscribe}
-                    disabled={subLoading || !payPhone}
-                    data-testid="button-confirm-subscribe"
-                    className="w-full py-3 rounded-full text-white font-extrabold text-sm disabled:opacity-50 active:scale-[0.98] transition-all"
-                    style={{ background: NAVY }}
-                  >
-                    {subLoading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "J'ai effectué le paiement"}
-                  </button>
-                  <button onClick={() => setShowSubscribe(false)} className="w-full mt-2 py-2 text-xs font-extrabold" style={{ color: DS.muted }}>
-                    Annuler
-                  </button>
-                </>
-              ) : (
-                <>
-                  <div
-                    className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3"
-                    style={{ background: "rgba(16,185,129,0.15)", border: "1px solid rgba(16,185,129,0.3)" }}
-                  >
-                    <CheckCircle2 className="w-6 h-6" style={{ color: "#6ee7b7" }} />
-                  </div>
-                  <h3 className="text-lg font-extrabold text-center mb-1" style={{ color: INK }}>Demande envoyée</h3>
-                  <p className="text-xs text-center mb-4" style={{ color: DS.muted }}>Activation sous 24 h après vérification du paiement.</p>
-                  <div
-                    className="rounded-xl p-3 mb-3 text-center"
-                    style={{ background: SOFT_BG, border: `1px solid ${DS.border}` }}
-                  >
-                    <p className="text-[10px] uppercase tracking-wider font-extrabold" style={{ color: DS.muted }}>Référence</p>
-                    <p className="text-lg font-extrabold mt-1" style={{ color: NAVY }}>{subRef}</p>
-                  </div>
-                  {subWaUrl && (
-                    <a
-                      href={subWaUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      data-testid="link-confirm-whatsapp"
-                      className="block w-full text-center py-3 rounded-full text-white font-extrabold text-sm mb-2 active:scale-[0.98] transition-all"
-                      style={{ background: "linear-gradient(135deg, #25d366 0%, #128c7e 100%)" }}
-                    >
-                      Envoyer la confirmation WhatsApp
-                    </a>
-                  )}
-                  <button
-                    onClick={() => {
-                      setShowSubscribe(false);
-                      setSubRef(null);
-                      setSubWaUrl(null);
-                    }}
-                    className="w-full py-2 text-xs font-extrabold"
-                    style={{ color: DS.muted }}
-                  >
-                    Fermer
-                  </button>
-                </>
-              )}
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+      {/* Abonnement dermatologue — flux fidèle au design (D1→D4) */}
+      {showSubscribe && (
+        <DermSubscribeFlow
+          fullName={acc.fullName}
+          licenseNumber={(acc as any).licenseNumber}
+          email={(accData as any)?.user?.email || null}
+          refNo={`GS-DRM-${String(acc.id).padStart(4, "0")}`}
+          defaultPhone={acc.phone}
+          onClose={() => setShowSubscribe(false)}
+        />
+      )}
     </ProLayout>
   );
 }
