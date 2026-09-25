@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Carlito:ital,wght@0,400;0,700;1,400;1,700&family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700&family=Sora:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Caprasimo:wght@400&family=Figtree:wght@400;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,108 +6,138 @@
 
 :root {
   /* ═══════════════════════════════════════════════════════
-     GlowScan Design System — Rose & Noir (avril 2026)
-     Premium · Médical · Africain · Moderne
+     GlowScan Design System — Organic (septembre 2026)
+     Source : design_handoff_glowscan/_ds/organic-a6b730fa…/styles.css
      ═══════════════════════════════════════════════════════ */
 
-  /* Rose GlowScan #E91E8C — couleur signature */
-  --primary: 327 81% 51%;
-  --primary-foreground: 0 0% 100%;
+  /* Tokens Organic (hex exacts) */
+  --color-bg: #f5ead8;
+  --color-surface: #ebddc5;
+  --color-text: #201e1d;
+  --color-accent: #c67139;
+  --color-accent-2: #7a8a5e;
+  --color-divider: color-mix(in srgb, #201e1d 16%, transparent);
 
-  /* Noir profond #1A1A2E — backgrounds sombres, headers */
-  --secondary: 323 80% 94%;        /* Rose clair #FCE4F1 pour sections douces */
-  --secondary-foreground: 240 28% 14%;
+  --color-neutral-100: #f9f4ed;
+  --color-neutral-200: #eee7db;
+  --color-neutral-300: #dcd3c4;
+  --color-neutral-400: #c0b6a5;
+  --color-neutral-500: #a19786;
+  --color-neutral-600: #82796a;
+  --color-neutral-700: #645c50;
+  --color-neutral-800: #474238;
+  --color-neutral-900: #2e2b25;
 
-  /* Accent = rose clair #FCE4F1 */
-  --accent: 323 80% 94%;
-  --accent-foreground: 240 28% 14%;
+  --color-accent-100: #fff2eb;
+  --color-accent-200: #ffe1d0;
+  --color-accent-300: #ffc6a5;
+  --color-accent-400: #f6a06b;
+  --color-accent-500: #d67f48;
+  --color-accent-600: #b2622d;
+  --color-accent-700: #8c491a;
+  --color-accent-800: #643312;
+  --color-accent-900: #402310;
 
-  /* Backgrounds & textes */
-  --background: 0 0% 100%;          /* Blanc pur */
-  --foreground: 240 28% 14%;        /* Noir profond #1A1A2E */
+  --color-accent-2-100: #f0fae1;
+  --color-accent-2-200: #e1eecc;
+  --color-accent-2-300: #ccdbb2;
+  --color-accent-2-400: #aebf92;
+  --color-accent-2-500: #8fa073;
+  --color-accent-2-600: #728157;
+  --color-accent-2-700: #56633f;
+  --color-accent-2-800: #3d472b;
+  --color-accent-2-900: #272e1b;
 
-  --muted: 323 60% 97%;              /* rose très très pâle pour zones neutres */
-  --muted-foreground: 0 0% 33%;     /* gris #555555 pour textes secondaires */
+  --font-heading: "Caprasimo", system-ui, sans-serif;
+  --font-heading-weight: 400;
+  --font-body: "Figtree", system-ui, sans-serif;
 
-  --card: 0 0% 100%;
-  --card-foreground: 240 28% 14%;
+  --space-1: 4.4px;
+  --space-2: 8.8px;
+  --space-3: 13.2px;
+  --space-4: 17.6px;
+  --space-6: 26.4px;
+  --space-8: 35.2px;
 
-  --popover: 0 0% 100%;
-  --popover-foreground: 240 28% 14%;
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 28px;
+  --radius-card: 32px;
 
-  --border: 323 40% 90%;             /* bordure rose subtile */
-  --input: 323 40% 90%;
+  --shadow-sm: 0 1px 2px rgba(46, 43, 37, .14);
+  --shadow-md: 0 3px 10px rgba(46, 43, 37, .16);
+  --shadow-lg: 0 12px 32px rgba(46, 43, 37, .22);
 
-  --ring: 327 81% 51%;               /* focus = rose */
+  /* Variables shadcn (HSL) dérivées des tokens Organic */
+  --background: 37.2 59.2% 90.4%;          /* bg #f5ead8 */
+  --foreground: 20 4.9% 12%;               /* text #201e1d */
 
-  --radius: 0.5rem;                  /* coins 8px par défaut (boutons) */
+  --primary: 23.8 55.3% 50%;               /* accent #c67139 */
+  --primary-foreground: 35 50% 95.3%;      /* neutral-100 #f9f4ed */
+  --primary-border: #b2622d;
 
-  /* Statuts sémantiques */
-  --success: 123 56% 24%;            /* Vert #1B5E20 */
-  --success-foreground: 0 0% 100%;
-  --alert: 20 100% 45%;              /* Orange #E65100 */
-  --alert-foreground: 0 0% 100%;
-  --destructive: 20 100% 45%;
-  --destructive-foreground: 0 0% 100%;
+  --secondary: 37.9 48.7% 84.7%;           /* surface #ebddc5 */
+  --secondary-foreground: 20 4.9% 12%;
+  --secondary-border: var(--color-divider);
 
-  /* Charts (fallback) */
-  --chart-1: 327 81% 51%;
-  --chart-2: 240 28% 14%;
-  --chart-3: 123 56% 24%;
-  --chart-4: 20 100% 45%;
-  --chart-5: 323 80% 80%;
+  --accent: 21 100% 96.1%;                 /* accent-100 #fff2eb */
+  --accent-foreground: 24.1 69.5% 23.1%;   /* accent-800 #643312 */
+  --accent-border: #ffe1d0;
 
-  /* Sidebar (fallback identique au thème principal) */
-  --sidebar: 240 28% 14%;
-  --sidebar-foreground: 0 0% 100%;
-  --sidebar-border: 323 40% 30%;
-  --sidebar-ring: 327 81% 51%;
-  --sidebar-primary: 327 81% 51%;
-  --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 323 80% 94%;
-  --sidebar-accent-foreground: 240 28% 14%;
+  --muted: 37.9 35.8% 89.6%;               /* neutral-200 #eee7db */
+  --muted-foreground: 36 11.1% 35.3%;      /* neutral-700 #645c50 */
+  --muted-border: var(--color-divider);
 
-  /* Tokens GlowScan exposés pour les usages directs */
-  --glow-pink: #E91E8C;
-  --glow-pink-soft: #FCE4F1;
-  --glow-dark: #1A1A2E;
-  --glow-text-2: #555555;
-  --glow-success: #1B5E20;
-  --glow-alert: #E65100;
+  --card: 37.9 48.7% 84.7%;                /* surface */
+  --card-foreground: 20 4.9% 12%;
+  --card-border: 37.9 48.7% 84.7%;
 
-  /* Typographie GlowScan — Calibri / Carlito (clone libre metric-compatible) */
-  --font-display: 'Carlito', 'Calibri', 'Inter', system-ui, sans-serif;
-  --font-body: 'Carlito', 'Calibri', 'Inter', system-ui, sans-serif;
-  --font-medical: 'Carlito', 'Calibri', 'Inter', system-ui, sans-serif;
-}
+  --popover: 35 50% 95.3%;                 /* neutral-100 */
+  --popover-foreground: 20 4.9% 12%;
+  --popover-border: 37.5 25.5% 81.6%;
 
-.dark {
-  /* Mode sombre = inversion sur fond noir profond */
-  --background: 240 28% 14%;
-  --foreground: 0 0% 100%;
+  --border: 37.5 25.5% 81.6%;              /* ≈ text à 16 % sur bg (neutral-300) */
+  --input: 37.5 25.5% 81.6%;
+  --ring: 23.8 55.3% 50%;
 
-  --primary: 327 81% 55%;
-  --primary-foreground: 240 28% 14%;
+  --radius: 1rem;
 
-  --secondary: 240 28% 22%;
-  --secondary-foreground: 0 0% 100%;
+  /* Statuts sémantiques : accent-2 = succès, accent-700 = alerte */
+  --success: 81.8 19% 45.5%;
+  --success-foreground: 35 50% 95.3%;
+  --alert: 24.7 68.7% 32.5%;
+  --alert-foreground: 35 50% 95.3%;
+  --destructive: 24.7 68.7% 32.5%;
+  --destructive-foreground: 35 50% 95.3%;
+  --destructive-border: #643312;
 
-  --muted: 240 28% 22%;
-  --muted-foreground: 323 30% 80%;
+  --chart-1: 23.8 55.3% 50%;
+  --chart-2: 81.8 19% 45.5%;
+  --chart-3: 40 10.8% 16.3%;
+  --chart-4: 24.7 68.7% 32.5%;
+  --chart-5: 37.8 12.6% 57.8%;
 
-  --accent: 327 60% 30%;
-  --accent-foreground: 0 0% 100%;
+  --sidebar: 37.9 48.7% 84.7%;
+  --sidebar-foreground: 20 4.9% 12%;
+  --sidebar-border: 37.5 25.5% 81.6%;
+  --sidebar-ring: 23.8 55.3% 50%;
+  --sidebar-primary: 23.8 55.3% 50%;
+  --sidebar-primary-foreground: 35 50% 95.3%;
+  --sidebar-primary-border: #b2622d;
+  --sidebar-accent: 21 100% 96.1%;
+  --sidebar-accent-foreground: 24.1 69.5% 23.1%;
+  --sidebar-accent-border: #ffe1d0;
 
-  --card: 240 28% 18%;
-  --card-foreground: 0 0% 100%;
+  /* Anciens tokens GlowScan, redirigés vers Organic pendant la transition */
+  --glow-pink: var(--color-accent);
+  --glow-pink-soft: var(--color-accent-100);
+  --glow-dark: var(--color-neutral-900);
+  --glow-text-2: var(--color-neutral-700);
+  --glow-success: var(--color-accent-2-700);
+  --glow-alert: var(--color-accent-700);
 
-  --popover: 240 28% 18%;
-  --popover-foreground: 0 0% 100%;
-
-  --border: 240 28% 25%;
-  --input: 240 28% 25%;
-
-  --ring: 327 81% 55%;
+  --font-display: var(--font-heading);
+  --font-medical: var(--font-body);
 }
 
 @layer base {
@@ -117,11 +147,18 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-family: var(--font-body);
+    font-size: 15px;
+    line-height: 1.55;
   }
   h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-display);
-    @apply font-bold tracking-tight;
+    font-family: var(--font-heading);
+    font-weight: var(--font-heading-weight);
+    line-height: 1.12;
+    letter-spacing: -0.015em;
   }
+  a { text-underline-offset: 3px; }
+  :focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+  ::selection { background: color-mix(in srgb, var(--color-accent) 30%, transparent); }
 }
 
 /* Utilities GlowScan ------------------------------------------------------ */
@@ -136,32 +173,39 @@
   .glow-text-alert { color: var(--glow-alert); }
   .glow-border-pink { border-color: var(--glow-pink); }
 
+  /* Kicker : 11–12 px, uppercase, accent-700 */
+  .kicker {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-accent-700);
+  }
+  .text-muted-organic { color: color-mix(in srgb, var(--color-text) 55%, transparent); }
+  .divider-organic { border-color: var(--color-divider); }
+
   .glass-card {
-    @apply bg-white/80 backdrop-blur-lg border border-white/40 shadow-lg;
+    background-color: color-mix(in srgb, var(--color-surface) 85%, transparent);
+    @apply backdrop-blur-lg shadow-lg;
   }
   .text-gradient {
     @apply bg-clip-text text-transparent;
-    background-image: linear-gradient(135deg, var(--glow-pink) 0%, var(--glow-dark) 100%);
+    background-image: linear-gradient(135deg, var(--color-accent) 0%, var(--color-neutral-900) 100%);
   }
   .animate-in {
     animation: animateIn 0.5s ease-out forwards;
   }
 }
 
-/* GlowScan Dark Theme Select Fixes */
 select {
-  background-color: #1a1625;
-  color: #f3f0ff;
-  border: 1px solid rgba(167,139,250,0.2);
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-divider);
 }
 
 select option {
-  background-color: #1a1625;
-  color: #f3f0ff;
-}
-
-select option:hover {
-  background-color: rgba(167,139,250,0.3);
+  background-color: var(--color-neutral-100);
+  color: var(--color-text);
 }
 
 @keyframes animateIn {
@@ -173,79 +217,4 @@ select option:hover {
     opacity: 1;
     transform: translateY(0);
   }
-}
-
-/* ─────────────────────────────────────────────────────────────────────
-   AUTO DARK MODE — soir : fonds noir profond, textes blancs
-   Surcharges des classes Tailwind utilitaires les plus utilisées.
-   Le rose (pink-*) reste intact pour conserver l'identité visuelle.
-   ───────────────────────────────────────────────────────────────────── */
-.dark body { background-color: #1A1A2E; color: #fff; }
-
-/* Fonds clairs → fond sombre */
-.dark .bg-white,
-.dark .bg-white\/95,
-.dark .bg-white\/90,
-.dark .bg-white\/80,
-.dark .bg-gray-50,
-.dark .bg-gray-100 { background-color: #1A1A2E !important; }
-
-.dark .bg-gray-200 { background-color: #2A2A40 !important; }
-
-/* Cartes & surfaces */
-.dark .bg-card { background-color: #232338 !important; }
-
-/* Gradients de fond pâles → uniforme sombre */
-.dark .from-gray-50 { --tw-gradient-from: #1A1A2E var(--tw-gradient-from-position) !important; }
-.dark .to-gray-100 { --tw-gradient-to: #1A1A2E var(--tw-gradient-to-position) !important; }
-.dark .to-white { --tw-gradient-to: #1A1A2E var(--tw-gradient-to-position) !important; }
-.dark .from-white { --tw-gradient-from: #1A1A2E var(--tw-gradient-from-position) !important; }
-
-/* Pink soft backgrounds → légèrement plus foncés mais lisibles */
-.dark .bg-pink-50 { background-color: #2A1B26 !important; }
-.dark .bg-pink-100 { background-color: #3A1F30 !important; }
-.dark .from-pink-50 { --tw-gradient-from: #2A1B26 var(--tw-gradient-from-position) !important; }
-.dark .to-pink-50 { --tw-gradient-to: #2A1B26 var(--tw-gradient-to-position) !important; }
-.dark .from-pink-100 { --tw-gradient-from: #3A1F30 var(--tw-gradient-from-position) !important; }
-.dark .to-pink-100 { --tw-gradient-to: #3A1F30 var(--tw-gradient-to-position) !important; }
-.dark .via-pink-50 { --tw-gradient-via: #2A1B26 var(--tw-gradient-via-position) !important; }
-.dark .via-rose-50 { --tw-gradient-via: #2A1B26 var(--tw-gradient-via-position) !important; }
-.dark .from-rose-50 { --tw-gradient-from: #2A1B26 var(--tw-gradient-from-position) !important; }
-
-/* Textes sombres → blanc */
-.dark .text-gray-900,
-.dark .text-black { color: #FFFFFF !important; }
-.dark .text-gray-800,
-.dark .text-gray-700 { color: #E8E8F0 !important; }
-.dark .text-gray-600,
-.dark .text-gray-500 { color: #B8B8C8 !important; }
-.dark .text-gray-400 { color: #888899 !important; }
-
-/* Bordures claires → bordures sombres */
-.dark .border-gray-100 { border-color: #2A2A40 !important; }
-.dark .border-gray-200 { border-color: #33334A !important; }
-.dark .border-pink-100,
-.dark .border-pink-200 { border-color: #C2185B !important; }
-
-/* Ombres douces deviennent moins visibles → on les neutralise */
-.dark .shadow-sm,
-.dark .shadow,
-.dark .shadow-md,
-.dark .shadow-lg { box-shadow: 0 4px 12px rgba(0,0,0,0.4) !important; }
-
-/* Inputs/textarea */
-.dark input:not([type="checkbox"]):not([type="radio"]),
-.dark textarea,
-.dark select {
-  background-color: #232338 !important;
-  color: #fff !important;
-  border-color: #33334A !important;
-}
-.dark input::placeholder,
-.dark textarea::placeholder { color: #888899 !important; }
-
-/* Glass cards */
-.dark .glass-card {
-  background-color: rgba(35, 35, 56, 0.85) !important;
-  border-color: rgba(233, 30, 140, 0.2) !important;
 }

@@ -4,7 +4,6 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useEffect, lazy, Suspense } from "react";
-import { useAutoTheme } from "@/hooks/use-auto-theme";
 import * as Sentry from "@sentry/react";
 
 // 🔴 SENTRY INITIALIZATION — Error monitoring & alerting
@@ -156,7 +155,6 @@ function Router() {
 }
 
 function App() {
-  useAutoTheme();
   useEffect(() => {
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("/service-worker.js").catch(() => {});

@@ -6,30 +6,33 @@ import { Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2.5 whitespace-nowrap rounded-xl text-xs font-black uppercase tracking-wider select-none focus-visible:outline-none transition-all disabled:pointer-events-none disabled:opacity-40 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98]",
+  // Organic : pilule, Figtree 700, bordure transparente par défaut
+  "inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-pill border border-transparent font-body text-sm font-bold leading-tight select-none transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-organic-accent disabled:cursor-not-allowed disabled:opacity-45 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        // Le bouton d'action standard : Propre, contrasté, autoritaire
+        // .btn-primary : accent, texte neutral-100, survol accent-600
         default:
-          "bg-slate-950 text-white shadow-md shadow-slate-950/10 hover:bg-slate-900",
-        // Le bouton de paiement / conversion : Attire instantanément l'œil
+          "bg-organic-accent text-organic-neutral-100 hover:bg-organic-accent-600 active:bg-organic-accent-700",
+        // Conservé pour compatibilité : même rendu que le bouton principal
         premium:
-          "bg-gradient-to-r from-pink-500 to-violet-600 text-white shadow-lg shadow-purple-500/20 hover:opacity-95 text-white border-0",
+          "bg-organic-accent text-organic-neutral-100 hover:bg-organic-accent-600 active:bg-organic-accent-700",
         destructive:
-          "bg-red-600 text-white shadow-md shadow-red-600/10 hover:bg-red-700",
+          "bg-organic-accent-700 text-organic-neutral-100 hover:bg-organic-accent-800",
+        // .btn-secondary : transparent, bordure divider, survol text 7 %
         outline:
-          "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900 shadow-xs",
-        secondary: 
-          "bg-slate-100 text-slate-800 hover:bg-slate-200/80 border border-slate-200/40",
-        ghost: 
-          "hover:bg-slate-50 text-slate-600 hover:text-slate-900",
+          "border-organic-divider bg-transparent text-organic-text hover:bg-organic-text/[.07] active:bg-organic-text/[.14]",
+        secondary:
+          "border-organic-divider bg-transparent text-organic-text hover:bg-organic-text/[.07] active:bg-organic-text/[.14]",
+        // .btn-ghost : texte accent, survol accent 10 %
+        ghost:
+          "bg-transparent text-organic-accent hover:bg-organic-accent/10 active:bg-organic-accent/[.18]",
       },
       size: {
-        default: "h-12 px-6 py-3",
-        sm: "h-9 rounded-lg px-3.5 text-[10px]",
-        lg: "h-14 rounded-2xl px-8 text-sm tracking-wide",
-        icon: "h-12 w-12 rounded-xl",
+        default: "h-10 px-4 py-2",
+        sm: "h-8 px-3 py-1.5 text-[13px]",
+        lg: "h-12 px-6 py-3 text-[15px]",
+        icon: "h-9 w-9 p-0",
       },
     },
     defaultVariants: {
@@ -57,7 +60,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         <Slot
           className={cn(buttonVariants({ variant, size, className }))}
           ref={ref}
-          disabled={isDisabled}
+          {...{ disabled: isDisabled }} // Slot transmet l'attribut à l'enfant
           {...props}
         >
           {children}
