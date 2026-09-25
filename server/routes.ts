@@ -25,6 +25,8 @@ import { normalizeCmPhone } from "@shared/phone";
 import { recordConsent, stopReminders, verifyStopLinkSig } from "./consents";
 import { buildResultWhatsApp, resultRequestText, RESULT_REF_RE, isStopMessage } from "@shared/whatsappMessages";
 import { RESULT_DISCLAIMER } from "@shared/resultB2C";
+import { FREE_PRODUCT_SCANS_PER_WEEK, sanitizeIngredients, productVerdict } from "@shared/productSafety";
+
 import { sanitizeFaceZones, faceZonesFromLegacy, score100OrNull, sanitizeUrgentSigns, resultStateOf, STATE_LEVEL } from "@shared/resultB2C";
 import { verifyReportToken, buildReportHtml, sendWhatsAppText } from "./whatsapp";
 
@@ -4996,17 +4998,40 @@ Réponds en 2-4 phrases max, sois direct et utile.`;
   });
 
   // === Scan Produit IA : analyse n'importe quel produit filmé ===
+  // Quota scan produit : 3 par semaine glissante en gratuit, illimité en Premium.
+  // Vérifié ICI (serveur) : l'écran seul ne suffit pas.
+  async function productScanQuota(userId: string) {
+    const { isPremium } = await checkScanQuota(userId);
+    const used = Number((Rows(await db.execute(sql`
+      SELECT COUNT(*)::int AS n FROM product_scans
+      WHERE user_id = ${userId} AND created_at >= NOW() - INTERVAL '7 days'`))[0] as any)?.n) || 0;
+    return { isPremium, used, limit: FREE_PRODUCT_SCANS_PER_WEEK, remaining: isPremium ? null : Math.max(0, FREE_PRODUCT_SCANS_PER_WEEK - used) };
+  }
+
+  app.get("/api/product-scan/quota", async (req: any, res) => {
+    const userId = getUID(req);
+    if (!userId) return res.status(401).json({ message: "Connexion requise" });
+    try { res.json(await productScanQuota(userId)); }
+    catch (e) { console.error("[product-scan/quota]", e); res.status(500).json({ message: "Erreur serveur" }); }
+  });
+
   app.post("/api/product-scan", async (req: any, res) => {
     try {
       const { image } = req.body;
       if (!image || typeof image !== "string") {
         return res.status(400).json({ message: "Image requise" });
       }
-
-      // Récupérer le profil de peau de l'utilisateur s'il est connecté
+      // Compte obligatoire (le quota est par compte).
+      const quotaUserId = getUID(req);
+      if (!quotaUserId) return res.status(401).json({ message: "Connexion requise", code: "AUTH_REQUIRED" });
+      const quota = await productScanQuota(quotaUserId);
+      if (!quota.isPremium && (quota.remaining ?? 0) <= 0) {
+        return res.status(403).json({ message: "Vous avez utilisé vos 3 scans gratuits de la semaine.", code: "PRODUCT_QUOTA_EXCEEDED", ...quota });
+      }
+      // Profil de peau de l'utilisateur (dernière analyse)
       let skinProfile: string | null = null;
-      if (isAuth(req)) {
-        const userId = req.user?.id || (req.user as any)?.claims?.sub;
+      {
+        const userId = quotaUserId;
         if (userId) {
           const lastScan = await db.select().from(scans)
             .where(eq(scans.userId, userId))
@@ -5022,29 +5047,23 @@ Réponds en 2-4 phrases max, sois direct et utile.`;
         ? `Le profil de peau de l'utilisateur est : "${skinProfile}".`
         : "Profil de peau inconnu — donne un avis général.";
 
-      const prompt = `Tu es un expert cosmétologue et dermatologiste IA. Analyse ce produit cosmétique ou de soin.
-
+      const prompt = `Tu es un expert cosmétologue et dermatologue IA. Analyse ce produit cosmétique ou de soin à partir de la photo (idéalement la liste des ingrédients au dos).
 ${skinContext}
-
 Réponds UNIQUEMENT en JSON valide avec ce format exact :
 {
   "productName": "Nom du produit identifié",
   "brand": "Marque si visible, sinon null",
-  "category": "type de produit (Crème hydratante, Sérum, Nettoyant, Shampooing, etc.)",
-  "mainIngredients": ["ingrédient 1", "ingrédient 2", "ingrédient 3"],
-  "benefits": ["bénéfice 1", "bénéfice 2", "bénéfice 3"],
-  "suitableFor": ["type de peau 1", "type de peau 2"],
-  "warnings": ["mise en garde 1 si applicable"],
-  "matchScore": 85,
-  "matchLabel": "Excellent pour ta peau",
-  "verdict": "Phrase courte de verdict (max 20 mots) sur l'adéquation avec le profil de l'utilisateur",
-  "safetyScore": 88,
-  "note": "Conseil personnalisé court (max 30 mots)"
+  "category": "type de produit (Crème éclaircissante, Sérum, Nettoyant, Shampooing, etc.)",
+  "ingredients": [
+    { "name": "nom INCI tel qu'écrit sur l'emballage", "risk": "ok" | "caution", "why": "rôle ou risque en 2 à 5 mots, en français simple" }
+  ],
+  "compatible": true | false
 }
-
-matchScore est entre 0 et 100 — compatibilité avec le profil de peau de l'utilisateur.
-safetyScore est entre 0 et 100 — sécurité générale des ingrédients.
-Si tu ne reconnais pas le produit, fais de ton mieux avec ce que tu vois.
+RÈGLES :
+- "ingredients" : recopie la liste réellement lisible sur la photo, dans l'ordre, sans en inventer. Si la liste n'est pas lisible, renvoie une liste vide.
+- "risk": "caution" pour un ingrédient irritant ou sensibilisant (parfum, alcool dénaturé…), sinon "ok".
+- Signale TOUJOURS explicitement l'hydroquinone, les corticoïdes (clobétasol, bétaméthasone…) et le mercure s'ils apparaissent.
+- "compatible" : false si le produit ne convient pas au profil de peau indiqué, sinon true.
 Ne mentionne JAMAIS la qualité de l'image.`;
 
       const base64Data = image.replace(/^data:image\/\w+;base64,/, "");
@@ -5091,8 +5110,23 @@ Ne mentionne JAMAIS la qualité de l'image.`;
       if (!jsonMatch) {
         return res.status(500).json({ message: "Réponse IA invalide" });
       }
-      const result = JSON.parse(jsonMatch[0]);
-      res.json(result);
+      const ai = JSON.parse(jsonMatch[0]);
+      const ingredients = sanitizeIngredients(ai?.ingredients);
+      const v = productVerdict(ingredients, typeof ai?.compatible === "boolean" ? ai.compatible : null);
+      const productName = typeof ai?.productName === "string" ? ai.productName.slice(0, 120) : null;
+      try {
+        await db.execute(sql`INSERT INTO product_scans (user_id, product_name, verdict, flagged)
+          VALUES (${quotaUserId}, ${productName}, ${v.verdict}, ${JSON.stringify(v.hazards)}::jsonb)`);
+      } catch (e: any) { console.warn("[product-scan] enregistrement impossible (migration 0014 appliquée ?) :", e?.message || e); }
+      const after = await productScanQuota(quotaUserId).catch(() => quota);
+      res.json({
+        productName,
+        brand: typeof ai?.brand === "string" ? ai.brand.slice(0, 80) : null,
+        category: typeof ai?.category === "string" ? ai.category.slice(0, 80) : null,
+        ingredients,
+        ...v,
+        quota: after,
+      });
     } catch (error: any) {
       console.error("Product scan error:", error);
       res.status(500).json({ message: "Erreur lors de l'analyse du produit" });

@@ -44,12 +44,18 @@ async function fileToJpeg(file: File): Promise<{ dataUrl: string; light: LightLe
   } finally { URL.revokeObjectURL(url); }
 }
 
-export function ScanCamera({ shotLabel, hint, oval = true, onCapture }: {
-  shotLabel: string;
+export function ScanCamera({ shotLabel, hint, oval = true, facing = "user", frame, captureLabel = "Prendre la photo", onCapture }: {
+  shotLabel?: string;
   hint: string;
   oval?: boolean;
+  /** « user » : caméra frontale (visage) ; « environment » : caméra arrière (produit). */
+  facing?: "user" | "environment";
+  /** Cadre de visée : ovale (visage, défaut si oval) ou étiquette (liste d'ingrédients). */
+  frame?: "oval" | "label" | "none";
+  captureLabel?: string;
   onCapture: (dataUrl: string, light: LightLevel) => void;
 }) {
+  const guide = frame ?? (oval ? "oval" : "none");
   const videoRef = useRef<HTMLVideoElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const [camOk, setCamOk] = useState<boolean | null>(null);
@@ -61,14 +67,14 @@ export function ScanCamera({ shotLabel, hint, oval = true, onCapture }: {
     (async () => {
       try {
         if (!navigator.mediaDevices?.getUserMedia) throw new Error("no camera");
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 1280 } }, audio: false });
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 1280 } }, audio: false });
         if (!alive) { stream.getTracks().forEach((t) => t.stop()); return; }
         if (videoRef.current) { videoRef.current.srcObject = stream; await videoRef.current.play().catch(() => {}); }
         setCamOk(true);
       } catch { if (alive) setCamOk(false); }
     })();
     return () => { alive = false; stream?.getTracks().forEach((t) => t.stop()); };
-  }, []);
+  }, [facing]);
 
   // Contrôle de la lumière en direct (toutes les 700 ms).
   useEffect(() => {
@@ -95,11 +101,12 @@ export function ScanCamera({ shotLabel, hint, oval = true, onCapture }: {
     <div className="flex flex-col gap-3">
       <div className="relative flex h-[300px] flex-none items-center justify-center overflow-hidden rounded-card bg-[#4a3322]">
         {camOk !== false && (
-          <video ref={videoRef} playsInline muted className="absolute inset-0 h-full w-full -scale-x-100 object-cover" />
+          <video ref={videoRef} playsInline muted className={`absolute inset-0 h-full w-full object-cover ${facing === "user" ? "-scale-x-100" : ""}`} />
         )}
-        {oval && (
+        {guide === "oval" && (
           <span className="relative h-[240px] w-[190px] rounded-[50%] border-[3px] border-dashed" style={{ borderColor: "color-mix(in srgb, var(--color-neutral-100) 80%, transparent)" }} />
         )}
+        {guide === "label" && <span className="relative h-[140px] w-[240px] rounded-[20px] border-[3px] border-organic-accent-300" />}
         <span className="absolute inset-x-3.5 top-3.5 flex justify-between gap-2">
           {light ? (
             <span className={light === "ok"
@@ -108,7 +115,7 @@ export function ScanCamera({ shotLabel, hint, oval = true, onCapture }: {
               {LIGHT_LABEL[light]}
             </span>
           ) : <span />}
-          <span className="rounded-pill bg-organic-neutral-900 px-3 py-1.5 text-[12px] font-bold text-organic-neutral-100">{shotLabel}</span>
+          {shotLabel ? <span className="rounded-pill bg-organic-neutral-900 px-3 py-1.5 text-[12px] font-bold text-organic-neutral-100">{shotLabel}</span> : <span />}
         </span>
         <span className="absolute inset-x-0 bottom-3.5 px-4 text-center text-[13px] font-semibold text-organic-neutral-100">
           {camOk === false ? "Caméra indisponible : importez une photo" : hint}
@@ -122,7 +129,7 @@ export function ScanCamera({ shotLabel, hint, oval = true, onCapture }: {
           disabled={!camOk}
           className="inline-flex items-center justify-center rounded-pill border-0 bg-organic-accent p-4 text-[16px] font-bold text-organic-neutral-100 hover:bg-organic-accent-600 disabled:opacity-45"
         >
-          Prendre la photo
+          {captureLabel}
         </button>
       )}
       <button

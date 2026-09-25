@@ -19,6 +19,8 @@ import { ScanCamera, type LightLevel } from "@/components/b2c/ScanCamera";
 import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { OPERATORS, cmNational, opOf } from "@shared/phone";
+import { useQuery } from "@tanstack/react-query";
+import { quotaLabel, type ProductQuota } from "@shared/productSafety";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Sparkles, Lock, ChevronRight, HelpCircle, Scissors, Camera, User, PersonStanding, ArrowRight } from "lucide-react";
 import { GS, GsButton, GsMono, GsSteps, GsCheck, GsOption, GsMarks } from "@/lib/gs-ui";
@@ -111,6 +113,9 @@ export default function Analyze() {
   const [scanMode, setScanMode] = useState<"skin" | "product">("skin");
   const [shotIdx, setShotIdx] = useState(0);
   const [, setLocation] = useLocation();
+  const { data: productQuota } = useQuery<ProductQuota>({
+    queryKey: ["/api/product-scan/quota"], enabled: !!user,
+  });
 
   const [consultationData, setConsultationData] = useState<ConsultationData | null>(null);
   const [answers, setAnswers] = useState<Record<number, string>>({});
@@ -341,7 +346,7 @@ export default function Analyze() {
           localStorage.setItem("glowscan_after_auth", "restore_questionnaire");
           toast({
             title: "Session expirée",
-            description: "Connecte-toi pour continuer — tes réponses sont sauvegardées.",
+            description: "Connectez-vous pour continuer : vos réponses sont sauvegardées.",
           });
           setTimeout(() => { window.location.href = "/auth"; }, 1500);
           return;
@@ -355,7 +360,7 @@ export default function Analyze() {
           setIsAnalyzing(false);
           toast({
             title: "Service saturé — réessaie bientôt",
-            description: errBody.message || "Le service d'analyse est momentanément saturé. Réessaie dans quelques minutes.",
+            description: errBody.message || "Le service d'analyse est momentanément saturé. Réessayez dans quelques minutes.",
             variant: "destructive",
           });
           setStep("upload");
@@ -428,7 +433,7 @@ export default function Analyze() {
       setIsAnalyzing(false);
       toast({
         title: "Analyse temporairement indisponible",
-        description: err?.message || "Réessaie dans quelques secondes.",
+        description: err?.message || "Réessayez dans quelques secondes.",
         variant: "destructive",
       });
       setStep("intake");
@@ -583,10 +588,8 @@ export default function Analyze() {
                   <button type="button" onClick={() => setLocation("/product-scan-camera")} className="inline-flex items-center justify-center rounded-pill border-0 bg-organic-accent p-4 text-[16px] font-bold text-organic-neutral-100 hover:bg-organic-accent-600">
                     Scanner le produit
                   </button>
-                  {/* Le quota gratuit (3 scans / semaine) arrive avec l'écran Scan produit ;
-                      d'ici là, on affiche l'accès réel. */}
                   <span className="text-center text-[12px] text-organic-neutral-700">
-                    {isPremium ? "Scans illimités avec Premium" : "Scan produit réservé aux membres Premium"}
+                    {user ? quotaLabel(productQuota) : "Compte gratuit requis · 3 scans par semaine"}
                   </span>
                 </>
               )}
@@ -759,47 +762,25 @@ export default function Analyze() {
             </motion.div>
           )}
 
-          {/* ══════════ STEP 5 : ANONYMOUS QUOTA LIMIT ══════════ */}
+          {/* ══════════ LIMITE D'ANALYSE SANS COMPTE ══════════ */}
           {step === "anon_limit" && !isAnalyzing && (
             <motion.div
               key="anon_limit"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="rounded-2xl p-6 text-center space-y-5"
-              style={{
-                background: "rgba(0,0,0,0.04)",
-                border: "1px solid rgba(0,0,0,0.07)",
-              }}
+              className="flex flex-col gap-3 rounded-lg bg-organic-surface p-5"
             >
-              <div
-                className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto"
-                style={{
-                  background: "rgba(47,158,110,0.12)",
-                  border: "1px solid rgba(47,158,110,0.25)",
-                }}
-              >
-                <Lock className="w-6 h-6" style={{ color: "#a78bfa" }} />
-              </div>
-
-              <div>
-                <h3 className="text-base font-bold" style={{ color: "#1f2a26" }}>
-                  Garde ta peau en mémoire
-                </h3>
-                <p className="text-xs mt-2 leading-relaxed" style={{ color: "#4a5a52" }}>
-                  Crée ton compte gratuit pour sauvegarder tes analyses, suivre l'évolution de ta peau et accéder à ton historique à tout moment.
-                </p>
-              </div>
-
+              <span className="kicker">Analyse gratuite utilisée</span>
+              <h2 className="m-0 text-[24px]">Gardez votre peau en mémoire</h2>
+              <p className="m-0 text-[14px] leading-normal">
+                Créez votre compte gratuit pour sauvegarder vos analyses, suivre l'évolution de votre peau et retrouver votre historique à tout moment.
+              </p>
               <button
+                type="button"
                 onClick={() => (window.location.href = "/auth")}
-                className="w-full py-3.5 text-sm font-bold transition-all active:scale-[0.98]"
-                style={{
-                  background: "#2f9e6e",
-                  borderRadius: "9999px",
-                  color: "#fff",
-                }}
+                className="rounded-pill border-0 bg-organic-accent p-3.5 text-[15px] font-bold text-organic-neutral-100 hover:bg-organic-accent-600"
               >
-                Créer mon compte — c'est gratuit
+                Créer mon compte gratuit
               </button>
             </motion.div>
           )}

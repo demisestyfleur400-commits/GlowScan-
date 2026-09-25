@@ -72,7 +72,7 @@ export function HomeAccueil({ firstName, lastScan, go }: { firstName: string; la
 
       {/* Dernier Glow Score */}
       {lastScan && copy ? (
-        <button type="button" onClick={() => go(`/profile?scan=${lastScan.id}`)} className="flex items-center gap-4 rounded-lg border-0 bg-organic-surface p-[18px] text-left text-organic-text">
+        <button type="button" onClick={() => go(`/ma-peau?scan=${lastScan.id}`)} className="flex items-center gap-4 rounded-lg border-0 bg-organic-surface p-[18px] text-left text-organic-text">
           <span
             className="flex h-[76px] w-[76px] flex-none items-center justify-center rounded-pill"
             style={{ background: `conic-gradient(${copy.ring} ${(score ?? 0) * 3.6}deg, var(--color-neutral-200) 0)` }}

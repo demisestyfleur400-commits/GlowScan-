@@ -723,3 +723,13 @@ export const recordAccessLog = pgTable("record_access_log", {
   viewerRole: varchar("viewer_role", { length: 20 }).notNull(), // derm | secretary | relay | patient
   at: timestamp("at").notNull().defaultNow(),
 });
+
+// Scans produit — migrations/0014_product_scans.sql (quota gratuit 3 / semaine).
+export const productScans = pgTable("product_scans", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  productName: text("product_name"),
+  verdict: varchar("verdict", { length: 20 }).notNull(), // compatible | avoid
+  flagged: jsonb("flagged").notNull().default([]),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});

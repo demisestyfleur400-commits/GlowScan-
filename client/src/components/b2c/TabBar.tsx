@@ -16,14 +16,14 @@ type Tab = { key: string; label: string; href: string; icon: LucideIcon; match: 
 // leurs versions Organic (sous-étapes suivantes de l'étape 2).
 const TABS: Tab[] = [
   { key: "home", label: "Accueil", href: "/", icon: House, match: ["/"] },
-  { key: "skin", label: "Ma peau", href: "/profile", icon: ChartLine, match: ["/profile"] },
-  { key: "scan", label: "Scanner", href: "/analyze", icon: ScanFace, match: ["/analyze", "/scan-product", "/product-scan-camera"] },
+  { key: "skin", label: "Ma peau", href: "/ma-peau", icon: ChartLine, match: ["/ma-peau", "/profile"] },
+  { key: "scan", label: "Scanner", href: "/analyze", icon: ScanFace, match: ["/analyze", "/product-scan-camera"] },
   { key: "care", label: "Soins", href: "/routine", icon: Droplet, match: ["/routine", "/shop"] },
   { key: "msg", label: "Messages", href: "/consultations", icon: MessageCircle, match: ["/consultations", "/chat", "/dermatologues", "/dr/"] },
 ];
 
 /** Routes de l'appli patient où la barre s'affiche. */
-const B2C_ROUTES = ["/", "/analyze", "/profile", "/shop", "/routine", "/consultations", "/chat", "/premium", "/scan-product", "/dermatologues"];
+const B2C_ROUTES = ["/", "/analyze", "/ma-peau", "/profile", "/shop", "/routine", "/consultations", "/chat", "/premium", "/product-scan-camera", "/dermatologues"];
 
 export const TAB_BAR_HEIGHT = 84;
 
