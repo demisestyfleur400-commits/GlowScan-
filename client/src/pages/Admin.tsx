@@ -1,3 +1,4 @@
+import { buildRelanceMessage } from "@shared/whatsappMessages";
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Navbar } from "@/components/Navbar";
@@ -1161,12 +1162,8 @@ export default function Admin() {
             ) : (
               <div className="space-y-2">
                 {prospects.map((p, i) => {
-                  const first = (p.name || "").split(" ")[0] || "";
-                  const msg = encodeURIComponent(
-                    `Bonjour${first ? ` ${first}` : ""} 👋\n` +
-                    `C'est GlowScan. Vous avez fait une analyse de peau chez nous récemment 🩺.\n` +
-                    `Un dermatologue peut examiner votre situation et répondre à vos questions. On s'occupe de vous ?`
-                  );
+                  // Message partagé avec l'email du mercredi : sans émoji, terminé par la ligne STOP.
+                  const msg = encodeURIComponent(buildRelanceMessage(p.name));
                   return (
                     <div key={i} className="flex items-center justify-between gap-3 p-3 rounded-xl" style={{ background: DS.surface, border: `1px solid ${p.hasConsulted ? DS.border : "rgba(37,211,102,0.35)"}` }}>
                       <div className="min-w-0">
@@ -1175,6 +1172,9 @@ export default function Admin() {
                           <span className="text-sm font-mono" style={{ color: DS.muted }}>{p.phone}</span>
                           {p.hasConsulted && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ background: "rgba(34,197,94,0.15)", color: "#128C4A" }}>✅ a consulté</span>}
                           {p.hasAccount && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ background: "rgba(124,58,237,0.12)", color: DS.violet }}>compte</span>}
+                          {p.stopped
+                            ? <span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ background: "rgba(239,68,68,0.12)", color: "#b91c1c" }}>STOP</span>
+                            : !p.reminders && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ background: "rgba(148,163,184,0.2)", color: DS.muted }}>sans consentement</span>}
                         </div>
                         <p className="text-[11px] mt-0.5" style={{ color: DS.muted }}>
                           {p.condition || "—"}{p.score != null ? ` · ${p.score}/100` : ""}
@@ -1182,10 +1182,25 @@ export default function Admin() {
                           {p.scansCount > 1 ? ` · ${p.scansCount} analyses` : ""}
                         </p>
                       </div>
-                      <a href={`https://wa.me/${p.waNumber}?text=${msg}`} target="_blank" rel="noreferrer"
-                        className="flex items-center gap-1.5 text-[12px] font-bold px-3 py-2 rounded-xl flex-shrink-0" style={{ background: "#25D366", color: "#fff", textDecoration: "none" }}>
-                        📲 Relancer
-                      </a>
+                      {p.reminders && !p.stopped ? (
+                        <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                          <a href={`https://wa.me/${p.waNumber}?text=${msg}`} target="_blank" rel="noreferrer"
+                            className="flex items-center gap-1.5 text-[12px] font-bold px-3 py-2 rounded-xl" style={{ background: "#25D366", color: "#fff", textDecoration: "none" }}>
+                            📲 Relancer
+                          </a>
+                          <button
+                            onClick={async () => {
+                              if (!window.confirm(`${p.phone} a répondu STOP ? Ce numéro ne sera plus relancé.`)) return;
+                              await fetch("/api/admin/consents/stop", { method: "POST", headers: { "Content-Type": "application/json", "x-admin-key": adminKey }, body: JSON.stringify({ phone: p.phone }) });
+                              fetchProspects(adminKey);
+                            }}
+                            className="text-[10px] font-bold" style={{ color: DS.muted, background: "none", border: "none", cursor: "pointer" }}>
+                            A répondu STOP
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-[11px] flex-shrink-0" style={{ color: DS.muted }}>{p.stopped ? "Ne plus relancer" : "Pas de relance"}</span>
+                      )}
                     </div>
                   );
                 })}

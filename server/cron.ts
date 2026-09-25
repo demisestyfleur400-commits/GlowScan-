@@ -3,6 +3,10 @@ import webpush from "web-push";
 import { storage } from "./storage";
 import { db } from "./db";
 import { sql } from "drizzle-orm";
+import { buildRelanceMessage } from "@shared/whatsappMessages";
+import { normalizeCmPhone } from "@shared/phone";
+import { stopLinkSig } from "./consents";
+const APP_BASE = (process.env.PUBLIC_BASE_URL || "https://glow-scan.com").replace(/\/$/, "");
 import { sendWhatsAppText, buildFollowUpReminderMessage } from "./whatsapp";
 import { sendEmail, buildTrialReminderEmail, buildDigestEmail, buildReengageEmail, buildB2CReengageEmail } from "./email";
 
@@ -545,8 +549,10 @@ async function flagConsultationTimeouts() {
 
 // ── RELANCE PROSPECTS (chaque mercredi) ────────────────────────────────
 // Envoie au propriétaire la liste des numéros WhatsApp saisis à l'intake B2C
-// qui n'ont PAS encore consulté, avec un lien wa.me pré-rempli par prospect
-// pour relancer en un clic. Rétention des prospects tièdes du funnel.
+// qui n'ont PAS encore consulté ET qui ont coché « J'accepte d'être recontacté »
+// (consents.reminders = true, retiré au STOP). Pour chacun : un lien wa.me
+// pré-rempli (message sans émoji, terminé par la ligne STOP) et un lien signé
+// « A répondu STOP » pour les réponses reçues sur le téléphone du fondateur.
 async function sendWeeklyProspectRelance() {
   try {
     try { await db.execute(sql`ALTER TABLE scans ADD COLUMN IF NOT EXISTS prospect_phone text`); } catch {}
@@ -563,6 +569,11 @@ async function sendWeeklyProspectRelance() {
       FROM scans s
       WHERE s.prospect_phone IS NOT NULL
         AND s.created_at >= NOW() - INTERVAL '30 days'
+        AND EXISTS (
+          SELECT 1 FROM consents k
+          WHERE k.phone = '237' || right(regexp_replace(s.prospect_phone,'[^0-9]','','g'), 9)
+            AND k.reminders = TRUE
+        )
       ORDER BY s.prospect_phone, s.created_at DESC`);
     const rows = ((r?.rows ?? r ?? []) as any[]).filter((x) => x.has_consulted !== true);
     const ownerEmail = process.env.OWNER_EMAIL || "demiseessawe12@gmail.com";
@@ -574,18 +585,16 @@ async function sendWeeklyProspectRelance() {
     const items = rows.map((p) => {
       const digits = String(p.phone || "").replace(/\D/g, "");
       const wa = digits.length === 9 ? `237${digits}` : digits;
-      const msg = encodeURIComponent(
-        `Bonjour${p.name ? ` ${String(p.name).split(" ")[0]}` : ""} 👋\n` +
-        `C'est GlowScan. Vous avez fait une analyse de peau chez nous récemment 🩺.\n` +
-        `Un dermatologue peut examiner votre situation et répondre à vos questions. On s'occupe de vous ?`
-      );
+      const msg = encodeURIComponent(buildRelanceMessage(p.name));
+      const e164 = normalizeCmPhone(p.phone);
+      const stopUrl = e164 ? `${APP_BASE}/api/consents/stop-link?phone=${e164}&sig=${stopLinkSig(e164)}` : "";
       const when = new Date(p.created_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", timeZone: "Africa/Douala" });
       return `<tr>
         <td style="padding:6px 10px;border-bottom:1px solid #eee">${p.name || "—"}</td>
         <td style="padding:6px 10px;border-bottom:1px solid #eee"><strong>${p.phone}</strong></td>
         <td style="padding:6px 10px;border-bottom:1px solid #eee">${p.condition || "—"}${p.score != null ? ` · ${p.score}/100` : ""}</td>
         <td style="padding:6px 10px;border-bottom:1px solid #eee">${when}</td>
-        <td style="padding:6px 10px;border-bottom:1px solid #eee"><a href="https://wa.me/${wa}?text=${msg}" style="color:#25D366;font-weight:700">Relancer →</a></td>
+        <td style="padding:6px 10px;border-bottom:1px solid #eee"><a href="https://wa.me/${wa}?text=${msg}" style="color:#25D366;font-weight:700">Relancer →</a>${stopUrl ? `<br><a href="${stopUrl}" style="color:#94A3B8;font-size:11px">A répondu STOP</a>` : ""}</td>
       </tr>`;
     }).join("");
     const html = `<p>Bonjour 👋</p>

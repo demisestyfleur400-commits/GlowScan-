@@ -699,3 +699,27 @@ export const clinicalAiExchanges = pgTable("clinical_ai_exchanges", {
 export const insertClinicalAiExchangeSchema = createInsertSchema(clinicalAiExchanges).omit({ id: true, createdAt: true });
 export type ClinicalAiExchange = typeof clinicalAiExchanges.$inferSelect;
 export type InsertClinicalAiExchange = z.infer<typeof insertClinicalAiExchangeSchema>;
+
+// ════════════════════════════════════════════════════════════════════════
+// CONSENTEMENTS PATIENT (refonte Organic) — migrations/0013_consents.sql
+// Une ligne par compte, ou par numéro WhatsApp pour un patient sans compte.
+// ════════════════════════════════════════════════════════════════════════
+export const consents = pgTable("consents", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").references(() => users.id, { onDelete: "cascade" }),
+  phone: text("phone"),                                   // 2376XXXXXXXX (cf. shared/phone.ts)
+  care: boolean("care").notNull().default(true),          // partage avec mes médecins : toujours vrai
+  research: boolean("research"),                          // atlas anonymisé
+  reminders: boolean("reminders").notNull().default(false), // recontact WhatsApp (relance, suivi)
+  stoppedAt: timestamp("stopped_at"),                     // réponse STOP reçue
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+export type Consent = typeof consents.$inferSelect;
+
+export const recordAccessLog = pgTable("record_access_log", {
+  id: serial("id").primaryKey(),
+  patientId: text("patient_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  viewerId: text("viewer_id").notNull(),
+  viewerRole: varchar("viewer_role", { length: 20 }).notNull(), // derm | secretary | relay | patient
+  at: timestamp("at").notNull().defaultNow(),
+});

@@ -21,6 +21,10 @@ import { users } from "@shared/models/auth";
 import { eq, and, sql, gte, count, lte, desc, avg, inArray, isNull } from "drizzle-orm";
 import { whatsappClicks, orders, pageVisits } from "@shared/schema";
 import { emitToUser, isUserOnline } from "./ws";
+import { normalizeCmPhone } from "@shared/phone";
+import { recordConsent, stopReminders, verifyStopLinkSig } from "./consents";
+import { buildResultWhatsApp, resultRequestText, RESULT_REF_RE, isStopMessage } from "@shared/whatsappMessages";
+import { RESULT_DISCLAIMER } from "@shared/resultB2C";
 import { sanitizeFaceZones, faceZonesFromLegacy, score100OrNull, sanitizeUrgentSigns, resultStateOf, STATE_LEVEL } from "@shared/resultB2C";
 import { verifyReportToken, buildReportHtml, sendWhatsAppText } from "./whatsapp";
 
@@ -1296,7 +1300,9 @@ export async function registerRoutes(
             WHERE c.patient_phone IS NOT NULL
               AND regexp_replace(c.patient_phone,'[^0-9]','','g') = regexp_replace(s.prospect_phone,'[^0-9]','','g')
           ) AS has_consulted,
-          COUNT(*) OVER (PARTITION BY s.prospect_phone) AS scans_count
+          COUNT(*) OVER (PARTITION BY s.prospect_phone) AS scans_count,
+          (SELECT bool_or(k.reminders) FROM consents k WHERE k.phone = '237' || right(regexp_replace(s.prospect_phone,'[^0-9]','','g'), 9)) AS reminders,
+          (SELECT max(k.stopped_at) FROM consents k WHERE k.phone = '237' || right(regexp_replace(s.prospect_phone,'[^0-9]','','g'), 9)) AS stopped_at
         FROM scans s
         WHERE s.prospect_phone IS NOT NULL
           AND s.created_at >= NOW() - make_interval(days => ${days})
@@ -1316,7 +1322,10 @@ export async function registerRoutes(
             hasAccount: r.has_account === true,
             hasConsulted: r.has_consulted === true,
             scansCount: Number(r.scans_count) || 1,
-            toRelance: r.has_consulted !== true, // pas encore converti en consultation
+            reminders: r.reminders === true,
+            stopped: !!r.stopped_at,
+            // Relance seulement si pas encore consulté ET consentement WhatsApp actif.
+            toRelance: r.has_consulted !== true && r.reminders === true,
           };
         })
         .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -2723,22 +2732,27 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
         if (missingAiFields.length > 0 && !isProRequest) {
           console.warn(`[analyze] ⚠️ Champs IA manquants (scan ${savedScanId}) : ${missingAiFields.join(", ")}`);
         }
-        // ── RÉTENTION PROSPECT ─────────────────────────────────────────────
-        // Le numéro WhatsApp saisi à l'intake (B2C) est conservé sur le scan
-        // pour permettre une relance manuelle (visible dans l'admin, rappel du
-        // mercredi). Colonnes hors schéma Drizzle, résilientes. Best-effort :
-        // n'impacte jamais l'analyse. On ne stocke rien en mode DERM.
+        // ── NUMÉRO WHATSAPP + CONSENTEMENT ────────────────────────────────
+        // Numéro facultatif (format Cameroun, cf. shared/phone.ts), conservé sur le
+        // scan pour l'envoi du résultat si le patient le demande. La relance du
+        // mercredi exige consents.reminders = true (case cochée), et s'arrête au STOP.
+        // Best-effort : n'impacte jamais l'analyse. Rien n'est stocké en mode DERM.
         if (!isProRequest && savedScanId) {
-          const rawPhone = String((intake as any)?.phone || "").trim();
-          const digits = rawPhone.replace(/[^0-9+]/g, "");
-          if (digits.replace(/\D/g, "").length >= 8) {
-            const prospectName = String((intake as any)?.fullName || "").trim().slice(0, 120) || null;
+          const phone = normalizeCmPhone((intake as any)?.phone);
+          const whatsappConsent = (intake as any)?.whatsappConsent === true;
+          if (phone) {
             try {
               await db.execute(sql`ALTER TABLE scans ADD COLUMN IF NOT EXISTS prospect_phone text`);
               await db.execute(sql`ALTER TABLE scans ADD COLUMN IF NOT EXISTS prospect_name text`);
-              await db.execute(sql`UPDATE scans SET prospect_phone = ${digits.slice(0, 20)}, prospect_name = ${prospectName} WHERE id = ${savedScanId}`);
+              await db.execute(sql`UPDATE scans SET prospect_phone = ${phone} WHERE id = ${savedScanId}`);
             } catch (e) { console.error("[analyze] prospect_phone save failed (non bloquant):", e); }
           }
+          await recordConsent({
+            userId: userId || null,
+            phone,
+            reminders: !!phone && whatsappConsent,
+            research: typeof req.body?.datasetConsent === "boolean" ? req.body.datasetConsent : null,
+          });
         }
         // Persiste les angles supplémentaires (colonne hors schéma Drizzle, résiliente).
         if (extraImagePaths.length && savedScanId) {
@@ -3938,6 +3952,131 @@ Réponds en 2-4 phrases max, sois direct et utile.`;
     } catch (err) {
       res.status(500).json({ message: "Erreur serveur" });
     }
+  });
+
+  // ── Résultat par WhatsApp (sur demande du patient) ─────────────────────
+  // Même règles que l'email : scan de cette session, un envoi par scan. Le numéro
+  // est celui saisi à l'analyse. Si Twilio échoue (pas de modèle Meta approuvé,
+  // fenêtre de 24 h fermée…), on renvoie un lien wa.me vers le numéro GlowScan :
+  // le patient écrit « … GS-123 », le webhook entrant lui répond avec le résultat.
+  const resultTextForScan = (scan: any) => {
+    const full: any = (scan.recommendations as any)?._fullResult || {};
+    const st = resultStateOf({ score: scan.score, condition: scan.condition, photo_quality: full.photo_quality, urgent: full.urgent });
+    const base = (process.env.PUBLIC_BASE_URL || "https://glow-scan.com").replace(/\/$/, "");
+    return {
+      state: st,
+      text: buildResultWhatsApp({
+        ref: `GS-${scan.id}`,
+        score: st === "unusable" ? null : (scan.score ?? null),
+        level: STATE_LEVEL[st],
+        condition: st === "unusable" ? null : scan.condition,
+        url: scan.userId ? `${base}/ma-peau?scan=${scan.id}` : null,
+        disclaimer: RESULT_DISCLAIMER,
+      }),
+    };
+  };
+  const twilioNumber = () => String(process.env.TWILIO_WHATSAPP_FROM || "").replace(/\D/g, "");
+
+  app.post("/api/scans/:id/whatsapp-result", emailReportLimiter, async (req: any, res) => {
+    try {
+      const scanId = parseInt(req.params.id, 10);
+      const [scan] = await db.select().from(scans).where(eq(scans.id, scanId));
+      const userId = req.session?.userId;
+      const owns = !!scan && ((userId && scan.userId === userId) || (!scan.userId && !!scan.sessionId && scan.sessionId === req.session?.id));
+      if (!owns) return res.status(404).json({ message: "Analyse introuvable" });
+      const phone = normalizeCmPhone(String((Rows(await db.execute(sql`SELECT prospect_phone FROM scans WHERE id = ${scanId}`))[0] as any)?.prospect_phone || ""));
+      if (!phone) return res.status(400).json({ message: "Aucun numéro WhatsApp pour cette analyse" });
+      const { state, text } = resultTextForScan(scan);
+      if (state === "unusable") return res.status(400).json({ message: "Photo inexploitable : pas de résultat à envoyer" });
+      const fallback = twilioNumber() ? `https://wa.me/${twilioNumber()}?text=${encodeURIComponent(resultRequestText(`GS-${scanId}`))}` : null;
+      const claimed = Rows(await db.execute(sql`
+        UPDATE scans SET recommendations = jsonb_set(COALESCE(recommendations, '{}'::jsonb), '{_whatsappResultSentAt}', to_jsonb(now()::text))
+        WHERE id = ${scanId} AND NOT (COALESCE(recommendations, '{}'::jsonb) ? '_whatsappResultSentAt')
+        RETURNING id`));
+      if (claimed.length === 0) return res.json({ sent: false, already: true, fallback });
+      const r = await sendWhatsAppText(phone, text);
+      if (!r.ok) {
+        // Échec : on libère la réservation pour permettre un nouvel essai, et on propose le repli.
+        try { await db.execute(sql`UPDATE scans SET recommendations = recommendations - '_whatsappResultSentAt' WHERE id = ${scanId}`); } catch {}
+        console.warn(`[whatsapp-result] envoi Twilio impossible (scan ${scanId}) : ${r.error || r.method}`);
+        return res.json({ sent: false, fallback });
+      }
+      res.json({ sent: true });
+    } catch (err) {
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // ── Webhook WhatsApp entrant (Twilio) ─────────────────────────────────
+  // À configurer dans la console Twilio : « When a message comes in » →
+  // POST {PUBLIC_BASE_URL}/api/whatsapp/twilio/inbound. Signature Twilio vérifiée.
+  //  - « STOP » (et variantes) : retire le consentement de relance de ce numéro.
+  //  - « … GS-123 » : si le numéro est celui de l'analyse, renvoie son résultat.
+  app.post("/api/whatsapp/twilio/inbound", async (req: any, res) => {
+    const twiml = (msg?: string) => {
+      const esc = (t: string) => t.replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]!));
+      res.type("text/xml").send(`<?xml version="1.0" encoding="UTF-8"?><Response>${msg ? `<Message>${esc(msg)}</Message>` : ""}</Response>`);
+    };
+    try {
+      const token = process.env.TWILIO_AUTH_TOKEN;
+      const base = (process.env.PUBLIC_BASE_URL || "https://glow-scan.com").replace(/\/$/, "");
+      const signature = String(req.headers["x-twilio-signature"] || "");
+      const twilioLib = (await import("twilio")).default as any;
+      if (!token || !twilioLib.validateRequest(token, signature, `${base}/api/whatsapp/twilio/inbound`, req.body || {})) {
+        return res.status(403).send("Signature invalide");
+      }
+      const from = String(req.body?.From || "").replace(/^whatsapp:/, "");
+      const body = String(req.body?.Body || "");
+      if (isStopMessage(body)) {
+        await stopReminders(from);
+        console.log(`[whatsapp-inbound] STOP reçu de ${from.slice(0, 6)}…`);
+        return twiml("C'est noté : vous ne recevrez plus de messages de GlowScan. Vos analyses restent accessibles dans l'application.");
+      }
+      const ref = body.match(RESULT_REF_RE);
+      const phone = normalizeCmPhone(from);
+      if (ref && phone) {
+        const scanId = parseInt(ref[1], 10);
+        const row = Rows(await db.execute(sql`SELECT prospect_phone FROM scans WHERE id = ${scanId}`))[0] as any;
+        if (row && normalizeCmPhone(row.prospect_phone) === phone) {
+          const [scan] = await db.select().from(scans).where(eq(scans.id, scanId));
+          const { state, text } = resultTextForScan(scan);
+          if (state !== "unusable") return twiml(text);
+        }
+      }
+      return twiml();
+    } catch (err) {
+      console.error("[whatsapp-inbound] erreur :", err);
+      return twiml();
+    }
+  });
+
+  // ── « A répondu STOP » (lien signé de l'email du mercredi) ─────────────
+  app.get("/api/consents/stop-link", (req: any, res) => {
+    const phone = String(req.query?.phone || ""), sig = String(req.query?.sig || "");
+    if (!verifyStopLinkSig(phone, sig)) return res.status(403).send("Lien invalide");
+    const shown = phone.replace(/^237/, "").replace(/(\d{3})(\d{2})(\d{2})(\d{2})/, "$1 $2 $3 $4");
+    res.type("html").send(`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+      <body style="font-family:system-ui,sans-serif;background:#f5ead8;color:#201e1d;display:grid;place-items:center;min-height:100vh;margin:0">
+      <form method="post" style="background:#ebddc5;border-radius:32px;padding:24px;max-width:360px;text-align:center">
+        <p style="font-size:16px;font-weight:700;margin:0 0 8px">Le ${shown} a répondu STOP ?</p>
+        <p style="font-size:13px;margin:0 0 16px">Ce numéro ne sera plus jamais relancé.</p>
+        <button style="border:0;border-radius:999px;background:#c67139;color:#f9f4ed;font-weight:700;padding:12px 20px;font-size:14px">Confirmer le STOP</button>
+      </form></body>`);
+  });
+  app.post("/api/consents/stop-link", async (req: any, res) => {
+    const phone = String(req.query?.phone || ""), sig = String(req.query?.sig || "");
+    if (!verifyStopLinkSig(phone, sig)) return res.status(403).send("Lien invalide");
+    try { await stopReminders(phone); } catch (e) { return res.status(500).send("Erreur serveur"); }
+    res.type("html").send(`<!doctype html><meta charset="utf-8"><body style="font-family:system-ui,sans-serif;background:#f5ead8;color:#201e1d;display:grid;place-items:center;min-height:100vh;margin:0"><p style="font-weight:700">C'est noté : ce numéro ne sera plus relancé.</p></body>`);
+  });
+
+  // ── STOP depuis l'admin (onglet Prospects) ──────────────────────────────
+  app.post("/api/admin/consents/stop", async (req: any, res) => {
+    if (!checkDatasetKey(req)) return res.status(403).json({ message: "Accès refusé" });
+    const phone = normalizeCmPhone(req.body?.phone);
+    if (!phone) return res.status(400).json({ message: "Numéro invalide" });
+    try { await stopReminders(phone); res.json({ ok: true }); }
+    catch (e) { res.status(500).json({ message: "Erreur serveur" }); }
   });
 
   // POST /api/scans/:id/email-result — envoyer le résultat d'une analyse par email

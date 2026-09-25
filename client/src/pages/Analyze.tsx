@@ -18,6 +18,7 @@ import { ResultB2C } from "@/components/b2c/ResultB2C";
 import { ScanCamera, type LightLevel } from "@/components/b2c/ScanCamera";
 import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
+import { OPERATORS, cmNational, opOf } from "@shared/phone";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Sparkles, Lock, ChevronRight, HelpCircle, Scissors, Camera, User, PersonStanding, ArrowRight } from "lucide-react";
 import { GS, GsButton, GsMono, GsSteps, GsCheck, GsOption, GsMarks } from "@/lib/gs-ui";
@@ -58,6 +59,8 @@ interface PatientIntake {
   allergies: string;
   /** Consentement explicite à recevoir le compte rendu par email (décoché par défaut). */
   emailConsent: boolean;
+  /** « J'accepte d'être recontacté par GlowScan sur WhatsApp » (décoché par défaut). */
+  whatsappConsent: boolean;
 }
 
 interface Question {
@@ -123,6 +126,7 @@ export default function Analyze() {
     previousProducts: "",
     allergies: "",
     emailConsent: false,
+    whatsappConsent: false,
   });
   const updateIntake = <K extends keyof PatientIntake>(k: K, v: PatientIntake[K]) =>
     setIntake(prev => ({ ...prev, [k]: v }));
@@ -280,6 +284,10 @@ export default function Analyze() {
       toast({ title: "Champ requis", description: "Indiquez votre sexe.", variant: "destructive" });
       return;
     }
+    if (intake.phone.trim() && !cmNational(intake.phone)) {
+      toast({ title: "Numéro WhatsApp invalide", description: "Saisissez un numéro camerounais à 9 chiffres, par exemple 677 12 45 90.", variant: "destructive" });
+      return;
+    }
     cancelledRef.current = false;
     setPhotoUnusable(false);
     setIsAnalyzing(true);
@@ -297,6 +305,7 @@ export default function Analyze() {
           intake: {
             fullName: intake.fullName.trim() || undefined,
             phone: intake.phone.trim() || undefined,
+            whatsappConsent: !!cmNational(intake.phone) && intake.whatsappConsent,
             age: intake.age || undefined,
             sexe: intake.sexe || undefined,
             duration: intake.duration || undefined,
@@ -441,7 +450,7 @@ export default function Analyze() {
     setConsultationData(null);
     setAnswers({});
     setUploadedImage(null); setUploadedRight(null); setUploadedLeft(null);
-    setIntake({ fullName: user?.firstName || "", phone: "", email: (user as any)?.email || "", age: "", sexe: "", duration: "", previousProducts: "", allergies: "", emailConsent: false });
+    setIntake({ fullName: user?.firstName || "", phone: "", email: (user as any)?.email || "", age: "", sexe: "", duration: "", previousProducts: "", allergies: "", emailConsent: false, whatsappConsent: false });
     setShotIdx(0);
     setStep("select");
   };
@@ -640,6 +649,42 @@ export default function Analyze() {
                   </label>
                 </div>
 
+                <div className="flex flex-col gap-2 rounded-lg bg-organic-surface p-4">
+                  <label htmlFor="intake-phone" className="text-[13px] font-bold">Numéro WhatsApp <span className="font-normal text-organic-neutral-700">(facultatif)</span></label>
+                  <div className="relative">
+                    <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[15px] text-organic-neutral-700">+237</span>
+                    <input
+                      id="intake-phone"
+                      type="tel"
+                      inputMode="tel"
+                      autoComplete="tel-national"
+                      placeholder="677 12 45 90"
+                      value={intake.phone}
+                      onChange={e => updateIntake("phone", e.target.value)}
+                      className="h-11 w-full rounded-pill border border-organic-divider bg-organic-bg pl-[62px] pr-28 text-[15px] text-organic-text caret-organic-accent placeholder:text-organic-text/55 hover:border-organic-text/45 focus-visible:border-organic-accent focus-visible:outline-none"
+                    />
+                    {(() => {
+                      const op = opOf(intake.phone);
+                      return op && intake.phone.replace(/\D/g, "").length >= 3 ? (
+                        <span className="absolute right-2 top-1/2 -translate-y-1/2 rounded-pill px-2.5 py-[3px] text-[11px] font-bold" style={{ background: OPERATORS[op].bg, color: OPERATORS[op].fg }}>
+                          {OPERATORS[op].name}
+                        </span>
+                      ) : null;
+                    })()}
+                  </div>
+                  <span className="text-[12px] text-organic-neutral-700">Pour recevoir votre résultat et un rappel de suivi.</span>
+                  <label className="flex items-start gap-2.5 text-[13px] leading-snug">
+                    <input
+                      type="checkbox"
+                      checked={intake.whatsappConsent}
+                      onChange={e => updateIntake("whatsappConsent", e.target.checked)}
+                      className="mt-0.5 h-4 w-4 accent-[var(--color-accent)]"
+                      data-testid="checkbox-whatsapp-consent"
+                    />
+                    <span>J'accepte d'être recontacté par GlowScan sur WhatsApp</span>
+                  </label>
+                </div>
+
                 <button type="submit" className="inline-flex items-center justify-center rounded-pill border-0 bg-organic-accent p-4 text-[16px] font-bold text-organic-neutral-100 hover:bg-organic-accent-600">
                   Voir mon résultat
                 </button>
@@ -708,6 +753,7 @@ export default function Analyze() {
                 photoCount={[uploadedImage, uploadedRight, uploadedLeft].filter(Boolean).length}
                 scanId={savedScanId}
                 autoEmailTo={intake.emailConsent ? intake.email : null}
+                whatsappAvailable={!!cmNational(intake.phone)}
                 onRetake={() => { setResult(null); setStep("upload"); }}
               />
             </motion.div>

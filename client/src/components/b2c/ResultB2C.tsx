@@ -29,11 +29,13 @@ export type ResultB2CProps = {
   scanId?: number | null;
   /** Envoi automatique du compte rendu : à passer UNIQUEMENT si le patient a coché le consentement. */
   autoEmailTo?: string | null;
+  /** Un numéro WhatsApp valide a été saisi : propose l'envoi du résultat sur demande. */
+  whatsappAvailable?: boolean;
   onBack?: () => void;
   onRetake?: () => void;
 };
 
-export function ResultB2C({ result, area = "face", imageUrl, createdAt, photoCount, scanId, autoEmailTo, onBack, onRetake }: ResultB2CProps) {
+export function ResultB2C({ result, area = "face", imageUrl, createdAt, photoCount, scanId, autoEmailTo, whatsappAvailable, onBack, onRetake }: ResultB2CProps) {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const v = useMemo(() => buildResultView(result, area), [result, area]);
@@ -75,6 +77,26 @@ export function ResultB2C({ result, area = "face", imageUrl, createdAt, photoCou
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoEmailTo, scanId, usable]);
+
+  // Résultat sur WhatsApp, à la demande. Si Twilio ne peut pas écrire en premier
+  // (modèle Meta non approuvé), on ouvre WhatsApp vers le numéro GlowScan avec un
+  // message pré-rempli : le webhook répond alors avec le résultat.
+  const [waState, setWaState] = useState<"idle" | "busy" | "sent">("idle");
+  const onWhatsApp = async () => {
+    if (!scanId) return;
+    setWaState("busy");
+    try {
+      const res = await fetch(`/api/scans/${scanId}/whatsapp-result`, { method: "POST", credentials: "include" });
+      const d = await res.json().catch(() => ({}));
+      if (d?.sent || d?.already) { setWaState("sent"); toast({ title: "Résultat envoyé sur WhatsApp" }); return; }
+      if (d?.fallback) { window.open(d.fallback, "_blank", "noopener"); setWaState("idle"); return; }
+      toast({ title: "Envoi impossible", description: d?.message || "Réessayez dans un instant.", variant: "destructive" });
+      setWaState("idle");
+    } catch {
+      toast({ title: "Envoi impossible", description: "Réessayez dans un instant.", variant: "destructive" });
+      setWaState("idle");
+    }
+  };
 
   const go = (to: string | "retake") => {
     if (to === "retake") return onRetake ? onRetake() : setLocation("/analyze");
@@ -294,6 +316,17 @@ export function ResultB2C({ result, area = "face", imageUrl, createdAt, photoCou
             </span>
           ))}
         </div>
+      )}
+
+      {usable && whatsappAvailable && scanId && (
+        <button
+          type="button"
+          onClick={onWhatsApp}
+          disabled={waState !== "idle"}
+          className="inline-flex items-center justify-center rounded-pill border border-organic-divider bg-transparent px-4 py-2.5 text-[14px] font-bold hover:bg-organic-text/[.07] disabled:opacity-60"
+        >
+          {waState === "sent" ? "Résultat envoyé sur WhatsApp" : waState === "busy" ? "Envoi…" : "Recevoir sur WhatsApp"}
+        </button>
       )}
 
       <span className="text-[11px] leading-normal text-organic-neutral-700">{RESULT_DISCLAIMER}</span>
