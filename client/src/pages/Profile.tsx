@@ -2,7 +2,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useScans } from "@/hooks/use-scans";
 import { useSubscription } from "@/hooks/use-subscription";
 import { GsTopBar } from "@/components/GsTopBar";
-import { ResultCard } from "@/components/ResultCard";
+import { ResultB2C } from "@/components/b2c/ResultB2C";
 import { GS, GsMono, GsMarks, useGsFonts } from "@/lib/gs-ui";
 import {
   Loader2, ArrowLeft, ArrowRight, ChevronRight, Settings, ScanFace,
@@ -35,10 +35,12 @@ function scanToAnalysisResult(scan: ScanRecord): AnalysisResult {
   const recs = (scan.recommendations as any) || {};
   if (recs._fullResult) return recs._fullResult as AnalysisResult;
   return {
-    condition: scan.condition || "Analyse", severity: "modérée", score: scan.score || 0,
-    skinType: "Normal", details: scan.analysis || "", motivation: scan.motivation || "",
+    // Ancien scan sans résultat complet : on n'invente aucune mesure
+    // (type de peau et indicateurs absents → masqués dans le Résultat).
+    condition: scan.condition || "Analyse", severity: "", score: scan.score as number, // null reste null → état « unusable »
+    skinType: "", details: scan.analysis || "", motivation: scan.motivation || "",
     stats: { lesions: "–", zones: "–", pores: "–", marks: "–" },
-    balance: { inflammation: 50, sebum: 50, pores: 50, sensitivity: 50, scars: 50 },
+    balance: undefined as unknown as AnalysisResult["balance"],
     recommendations: {
       products: Array.isArray(recs.products) ? recs.products : [],
       morning: Array.isArray(recs.morning) ? recs.morning : [],
@@ -53,22 +55,19 @@ const fmtDate = (d: Date | string | null | undefined, opts?: Intl.DateTimeFormat
 const fmtShort = (d: Date | string | null | undefined) =>
   d ? new Date(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" }) : "";
 
-// ── Modale : détail d'une analyse (réutilise ResultCard) ──────────────────
+// ── Modale : détail d'une analyse (Résultat patient Organic) ─────────────
 function ScanDetailModal({ scan, onClose }: { scan: ScanRecord; onClose: () => void }) {
-  const { user } = useAuth();
   const result = scanToAnalysisResult(scan);
   return (
-    <div data-clarity-mask="true" style={{ position: "fixed", inset: 0, zIndex: 300, background: GS.mintBg, overflowY: "auto", fontFamily: GS.sans }}>
-      <div style={{ position: "sticky", top: 0, zIndex: 10, display: "flex", alignItems: "center", gap: 14, padding: "12px 16px", background: "#fff", borderBottom: `1px solid ${GS.line}` }}>
-        <button onClick={onClose} aria-label="Retour" style={{ background: "none", border: "none", cursor: "pointer", color: GS.ink, display: "flex", padding: 0 }}><ArrowLeft className="w-5 h-5" /></button>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 14, fontWeight: 600, color: GS.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{scan.condition || "Analyse"}</div>
-          <GsMono style={{ letterSpacing: 0 }}>{fmtDate(scan.createdAt, { day: "numeric", month: "long", year: "numeric" })}</GsMono>
-        </div>
-        <div style={{ fontFamily: GS.mono, fontSize: 16, fontWeight: 600, color: GS.ink, fontVariantNumeric: "tabular-nums" }}>{scan.score ?? 0}<span style={{ fontSize: 10, color: GS.faint }}>/100</span></div>
-      </div>
-      <div style={{ maxWidth: 640, margin: "0 auto", padding: "18px 16px 40px" }}>
-        <ResultCard result={result} scanId={scan.id} area={scan.area as any} imageUrl={(scan as any).imageUrl || null} userFirstName={(user as any)?.firstName || null} />
+    <div data-clarity-mask="true" className="fixed inset-0 z-[300] overflow-y-auto bg-organic-bg">
+      <div className="mx-auto max-w-[640px] px-5 pb-10 pt-4">
+        <ResultB2C
+          result={result}
+          area={scan.area || "face"}
+          imageUrl={(scan as any).imageUrl || null}
+          createdAt={scan.createdAt}
+          onBack={onClose}
+        />
       </div>
     </div>
   );

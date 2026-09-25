@@ -18,6 +18,7 @@ if (process.env.NODE_ENV === "production") {
 
 import ErrorBoundary from "@/components/ErrorBoundary";
 import PWAInstallBanner from "@/components/PWAInstallBanner";
+import { TabBar } from "@/components/b2c/TabBar";
 
 // Recharge la page UNE fois si un chunk lazy échoue à se charger. Après un
 // déploiement, les anciens fichiers hashés (ex. ProAnalyze-XXXX.js) sont supprimés ;
@@ -166,6 +167,7 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <Router />
+          <TabBar />
           <PWAInstallBanner />
           <Toaster />
         </TooltipProvider>

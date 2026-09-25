@@ -1,4 +1,4 @@
-import { ScanLine, ShoppingBag, ArrowRight, Stethoscope, Home as HomeIcon, FolderClosed } from "lucide-react";
+import { ScanLine, ShoppingBag, ArrowRight, Stethoscope } from "lucide-react";
 import { GS, GsScreen, GsMono, GsMarks, GsButton } from "@/lib/gs-ui";
 
 // ════════════════════════════════════════════════════════════════════════
@@ -12,12 +12,6 @@ export function HomeAccueil({ firstName, monthCount, go }: { firstName: string; 
     { icon: <ScanLine size={19} strokeWidth={1.6} style={{ color: GS.ink }} />, label: "Scan produit", desc: "Bon pour vous ?", descColor: GS.muted, path: "/scan-product" },
     { icon: <ShoppingBag size={19} strokeWidth={1.6} style={{ color: GS.ink }} />, label: "Boutique", desc: "Livraison Douala", descColor: GS.muted, path: "/shop" },
     { icon: <Stethoscope size={19} strokeWidth={1.6} style={{ color: GS.ink }} />, label: "Dermatologues", desc: "Téléconsultation", descColor: GS.teal, path: "/derm" },
-  ];
-  const nav = [
-    { icon: HomeIcon, label: "ACCUEIL", path: "/", active: true },
-    { icon: ScanLine, label: "SCAN", path: "/analyze", active: false },
-    { icon: ShoppingBag, label: "BOUTIQUE", path: "/shop", active: false },
-    { icon: FolderClosed, label: "DOSSIER", path: "/profile", active: false },
   ];
 
   return (
@@ -79,21 +73,6 @@ export function HomeAccueil({ firstName, monthCount, go }: { firstName: string; 
         <span style={{ background: GS.ink, color: "#fff", padding: "11px 14px", fontSize: 12, fontWeight: 600, flex: "none" }}>Voir</span>
       </button>
 
-      {/* Barre de navigation */}
-      <div style={{ marginTop: "auto", paddingBottom: 18 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 12, borderTop: `1px solid ${GS.hair}` }}>
-          {nav.map((n) => {
-            const Icon = n.icon;
-            return (
-              <button key={n.label} onClick={() => go(n.path)}
-                style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, minWidth: 60, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-                <Icon size={19} strokeWidth={1.6} style={{ color: n.active ? GS.ink : GS.faint }} />
-                <span style={{ fontFamily: GS.mono, fontSize: 8, fontWeight: 600, color: n.active ? GS.ink : GS.faint, letterSpacing: ".06em" }}>{n.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
     </GsScreen>
   );
 }

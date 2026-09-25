@@ -320,7 +320,6 @@ import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
 import { useSubscription } from "@/hooks/use-subscription";
 import { ConsultationLauncher } from "@/components/ConsultationLauncher";
-import { LowScoreExperience } from "@/components/LowScoreExperience";
 import { GS, GsMono, GsMeter, GsMetric, GsMetricGrid, GsChip, GsButton, GsMarks } from "@/lib/gs-ui";
 import { ProductOrderFlow } from "@/components/ProductOrderFlow";
 import { buildObservationSections, type ObservationData } from "@/lib/observationPdf";
@@ -2214,21 +2213,8 @@ ${medicalSections}
 
   const intermediateOffer = getIntermediateOffer();
 
-  // ═══════════════════════════════════════════════════════════════════
-  //  RENDU — SCORE BAS (B2C) : une seule sortie = le dermatologue.
-  //  Aucun produit, aucune métrique, aucune cartographie, aucun accordéon.
-  // ═══════════════════════════════════════════════════════════════════
-  if (!isPro && (result.score || 0) < 60) {
-    return (
-      <LowScoreExperience
-        score={result.score || 0}
-        scanId={savedScanId || scanId || undefined}
-        condition={result.condition || ""}
-        imageUrl={imageUrl || undefined}
-        result={result}
-      />
-    );
-  }
+  // Le Résultat patient (B2C) est désormais rendu par components/b2c/ResultB2C
+  // (refonte Organic). LowScoreExperience et ses métriques inventées sont supprimés.
 
   // ═══════════════════════════════════════════════════════════════════
   //  RENDU — SCORE ≥ 60 (B2C) : le miroir intelligent.

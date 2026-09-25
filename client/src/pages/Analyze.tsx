@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, lazy, Suspense } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useSEO } from "@/hooks/useSEO";
 import { trackPageVisit } from "@/lib/analytics";
@@ -14,14 +14,11 @@ import { PRODUCT_SUGGESTIONS, detectToxicProducts } from "@/lib/toxic-products";
 import { TriageBadge } from "@/components/TriageBadge";
 import { classifyTriage } from "@/lib/clinicalRules";
 
-// ResultCard est énorme (~1900 lignes) — on le charge seulement quand on en a besoin
-const ResultCard = lazy(() =>
-  import("@/components/ResultCard").then((m) => ({ default: m.ResultCard }))
-);
+import { ResultB2C } from "@/components/b2c/ResultB2C";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Sparkles, Lock, ChevronRight, HelpCircle, Scissors, Camera, User, PersonStanding, ArrowRight } from "lucide-react";
 import { GS, GsButton, GsMono, GsSteps, GsCheck, GsOption, GsMarks } from "@/lib/gs-ui";
-import { PhotoUnusable, UrgentOrientation } from "@/components/AnalysisStates";
+import { PhotoUnusable } from "@/components/AnalysisStates";
 import type { AnalysisResult } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -210,8 +207,6 @@ export default function Analyze() {
       return;
     }
     setUploadedImage(base64);
-    // Précharger ResultCard en arrière-plan
-    import("@/components/ResultCard").catch(() => {});
     // Aller directement au formulaire patient (plus d'appel generate-consultation)
     setStep("intake");
   };
@@ -909,37 +904,16 @@ export default function Analyze() {
               {/* Bandeau "Niveau de triage" retiré du B2C : il contredisait le Glow Score
                   (ex. "Suivi standard" affiché au-dessus d'un score bas). La page
                   commence désormais par le Glow Score — le triage clinique reste en DERM. */}
-              <Suspense fallback={
-                <div style={{ display: "flex", justifyContent: "center", padding: "48px 0" }}>
-                  <div style={{ width: "32px", height: "32px", border: "3px solid rgba(47,158,110,0.3)", borderTopColor: "#a78bfa", borderRadius: "9999px", animation: "spin 0.8s linear infinite" }} />
-                </div>
-              }>
-                {(((result as any).redFlags?.length ?? 0) >= 2) ? (
-                  <UrgentOrientation
-                    redFlags={(result as any).redFlags}
-                    scanId={savedScanId || undefined}
-                    condition={result.condition || ""}
-                    imageUrl={uploadedImage}
-                  />
-                ) : (
-                <ResultCard
-                  result={result}
-                  savedScanId={savedScanId}
-                  area={selectedArea}
-                  imageUrl={uploadedImage}
-                  autoEmailTo={intake.email || undefined}
-                  userFirstName={intake.fullName || user?.firstName || null}
-                  patientIntake={{
-                    fullName: intake.fullName || user?.firstName || undefined,
-                    phone: intake.phone || undefined,
-                    age: intake.age || undefined,
-                    duration: intake.duration || undefined,
-                    previousProducts: intake.previousProducts || undefined,
-                    allergies: intake.allergies || undefined,
-                  }}
-                />
-                )}
-              </Suspense>
+              {/* Résultat patient (refonte Organic). L'état « urgent » vient du seul
+                  champ `urgent` renvoyé par l'IA (plus des redFlags génériques). */}
+              <ResultB2C
+                result={result}
+                area={selectedArea}
+                imageUrl={uploadedImage}
+                createdAt={new Date()}
+                photoCount={[uploadedImage, uploadedRight, uploadedLeft].filter(Boolean).length}
+                onRetake={() => { setResult(null); setStep("upload"); }}
+              />
             </motion.div>
           )}
 

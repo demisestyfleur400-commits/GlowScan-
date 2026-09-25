@@ -21,6 +21,7 @@ import { users } from "@shared/models/auth";
 import { eq, and, sql, gte, count, lte, desc, avg, inArray, isNull } from "drizzle-orm";
 import { whatsappClicks, orders, pageVisits } from "@shared/schema";
 import { emitToUser, isUserOnline } from "./ws";
+import { sanitizeFaceZones, faceZonesFromLegacy, score100OrNull, sanitizeUrgentSigns } from "@shared/resultB2C";
 import { verifyReportToken, buildReportHtml, sendWhatsAppText } from "./whatsapp";
 
 // ── Sélection automatique du provider IA ────────────────────────────────
@@ -2012,6 +2013,28 @@ ${intake.allergies?.trim() ? `- ALLERGIES CONNUES : "${intake.allergies}". NE JA
         ? GLOWSCAN_DERM_SYSTEM_PROMPT.replace("{PATIENT_INTAKE}", patientIntakeData)
         : GLOWSCAN_SYSTEM_PROMPT;
 
+      // Champs du Résultat patient (refonte Organic) : 5 zones fixes, taches,
+      // imperfections, signal d'urgence. B2C uniquement — le prompt DERM n'est pas touché.
+      const b2cResultFields = isProRequest ? "" : `
+CHAMPS SUPPLÉMENTAIRES OBLIGATOIRES (à ajouter au JSON ci-dessus, au même niveau que "score") :
+  "faceZones": ${area === "face" ? `{
+    "front": { "status": "ok" | "watch" | "med" | "urgent", "note": "constat court en français simple (max 12 mots)" } | null,
+    "joue_droite": { ... } | null,
+    "nez": { ... } | null,
+    "joue_gauche": { ... } | null,
+    "menton": { ... } | null
+  }` : "null"},
+  "spots": number 0-100 | null,
+  "blemishes": number 0-100 | null,
+  "urgent": true | false,
+  "urgentSigns": ["signe observé, en mots simples"]
+
+RÈGLES DE CES CHAMPS :
+- "faceZones" : exactement ces 5 clés. DROITE et GAUCHE sont celles du PATIENT, pas de la photo : sur une photo de face, la joue droite du patient apparaît à GAUCHE de l'image. Si une zone n'est pas visible sur les photos, mets null — n'invente jamais un statut. Statuts : "ok" = saine, "watch" = à surveiller, "med" = justifie un avis médical, "urgent" = lésion à faire examiner rapidement.
+- "spots" = hyperpigmentation : taches brunes, mélasma, marques post-inflammatoires. "blemishes" = imperfections actives : boutons, points noirs, comédons. Échelle 0 à 100 : plus la valeur est élevée, plus il y en a (même sens que le sébum et la sensibilité). Si tu ne peux pas évaluer (photo floue, zone non visible), mets null — pas de valeur par défaut.
+- "urgent" = true UNIQUEMENT si tu vois des signes qui imposent un examen médical rapide (ex. lésion pigmentée aux bords irréguliers, plusieurs couleurs dans la même tache, lésion qui saigne ou s'ulcère, extension rapide). Sinon false. "urgentSigns" liste les signes réellement observés (vide si urgent = false). Ne jamais mettre urgent = true par précaution générale.
+`;
+
       const prompt = `${patientContext}Analyse la photo de ${areaLabel} (zone : ${area}).
 
 Retourne UNIQUEMENT ce JSON valide et complet, sans texte avant ni après :
@@ -2104,6 +2127,7 @@ Retourne UNIQUEMENT ce JSON valide et complet, sans texte avant ni après :
 
 RÈGLES CHAMPS : "metrics" = valeurs réelles estimées (ne pas mettre 70/70/70 systématiquement). "zoneAnalysis" = 3-5 zones MAX pertinentes pour CETTE photo. "analyse_zones" = description technique ancrée dans ce que tu vois — si pas un visage, adapte les clés (mains: {dos, paume, doigts} ; cuir chevelu: {racines, longueurs, cuir}). "protocol" = 4 étapes matin/soir avec "why" personnalisé, SPF obligatoire en dernière étape matin. "severityLevel" = entier 1-5 honnête. "predictiveInsights" = 1-3 risques réels (pas de généralités). ZÉRO statistique générique.
 
+${b2cResultFields}
 JSON UNIQUEMENT — aucun texte avant ou après le JSON.`;
 
       // ── Few-shot RLHF : injecter les corrections expertes pour cette zone ──
@@ -2488,8 +2512,22 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
       console.log(`[analyze] 🛒 Recommandation: ${chosen?.name || "aucune"} (${chosen?.brand || "-"}, ${chosen?.price || 0} FCFA, local=${chosen ? isLocal(chosen) : false})`);
 
       // Score RÉEL renvoyé par l'IA, calibré 0-100. Pas de plafond artificiel.
-      const rawScore = Number(analysisResult.score);
-      const finalScore = Number.isFinite(rawScore) ? Math.max(0, Math.min(100, Math.round(rawScore))) : 60;
+      // Score absent → null : jamais de score inventé. Le Résultat patient passe
+      // alors en état « unusable » (cf. shared/resultB2C.ts).
+      const rawScore = analysisResult.score === null || analysisResult.score === undefined || analysisResult.score === ""
+        ? NaN : Number(analysisResult.score);
+      const finalScore: number | null = Number.isFinite(rawScore) ? Math.max(0, Math.min(100, Math.round(rawScore))) : null;
+      // Balance absente → null : la barre Sébum/Sensibilité est masquée, pas de 3/10 par défaut.
+      const finalBalance = analysisResult.balance && typeof analysisResult.balance === "object" && !Array.isArray(analysisResult.balance)
+        ? analysisResult.balance : null;
+      // Champs que Gemini a oubliés (suivi de fréquence, loggé avec l'id du scan après sauvegarde).
+      const missingAiFields = [
+        finalScore === null && "score",
+        finalBalance === null && "balance",
+        area === "face" && !sanitizeFaceZones(analysisResult.faceZones) && "faceZones",
+        score100OrNull(analysisResult.spots) === null && "spots",
+        score100OrNull(analysisResult.blemishes) === null && "blemishes",
+      ].filter(Boolean) as string[];
 
       // ── Calcul progression Type 3 (scans précédents) ─────────
       let progression: { previousScore: number; delta: number; trend: "improving" | "stable" | "worsening"; weeksTracked: number } | undefined;
@@ -2500,7 +2538,7 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
             const sorted = [...previousScans].sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
             const lastScan = sorted[0];
             const previousScore = lastScan.score ?? null;
-            if (previousScore !== null) {
+            if (previousScore !== null && finalScore !== null) {
               const delta = finalScore - previousScore;
               const firstScan = sorted[sorted.length - 1];
               const weeksTracked = Math.max(1, Math.round((Date.now() - new Date(firstScan.createdAt).getTime()) / (7 * 24 * 60 * 60 * 1000)));
@@ -2548,19 +2586,25 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
         details: analysisResult.details || "Analyse effectuée avec succès.",
         motivation: analysisResult.motivation || "Ta peau a une histoire — on en garde la mémoire pour que tu ne repartes jamais de zéro. Rescanne dans 14 jours pour suivre l'évolution.",
         zones: validZones,
+        // ── Résultat patient : 5 zones fixes (conversion de secours si la réponse
+        // ne contient pas les 5 clés — ne fait jamais échouer l'analyse).
+        faceZones: area === "face"
+          ? (sanitizeFaceZones(analysisResult.faceZones) ?? faceZonesFromLegacy(validZones))
+          : null,
+        // Taches / imperfections 0-100, null si non évaluables (barre masquée).
+        // L'uniformité (balance) reste utilisée pour le Glow Score, jamais pour afficher les taches.
+        spots: score100OrNull(analysisResult.spots),
+        blemishes: score100OrNull(analysisResult.blemishes),
+        urgent: analysisResult.urgent === true,
+        urgentSigns: analysisResult.urgent === true ? sanitizeUrgentSigns(analysisResult.urgentSigns) : [],
+        photo_quality: typeof analysisResult.photo_quality === "string" ? analysisResult.photo_quality.slice(0, 40) : undefined,
         stats: analysisResult.stats || {
           lesions: "Non détecté",
           zones: "Non détecté",
           pores: "Non détecté",
           marks: "Non détecté"
         },
-        balance: analysisResult.balance || {
-          inflammation: 3,
-          sebum: 3,
-          pores: 3,
-          sensitivity: 3,
-          scars: 3
-        },
+        balance: finalBalance,
         recommendations: {
           products: recommendedProducts,
           morning: (analysisResult.recommendations?.morning || []).map((s: any) =>
@@ -2655,6 +2699,9 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
           motivation: finalResult.motivation,
         });
         savedScanId = savedScan.id;
+        if (missingAiFields.length > 0 && !isProRequest) {
+          console.warn(`[analyze] ⚠️ Champs IA manquants (scan ${savedScanId}) : ${missingAiFields.join(", ")}`);
+        }
         // ── RÉTENTION PROSPECT ─────────────────────────────────────────────
         // Le numéro WhatsApp saisi à l'intake (B2C) est conservé sur le scan
         // pour permettre une relance manuelle (visible dans l'admin, rappel du
@@ -2700,6 +2747,7 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
           area,
           condition: finalResult.condition,
           score: finalResult.score,
+          missingAiFields,
           timestamp: new Date().toISOString(),
         });
       }

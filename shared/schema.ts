@@ -601,6 +601,12 @@ export interface AnalysisResult {
   whenToSeeDermatologist?: string;
   medicalDisclaimer?: string;
   zonesB2C?: Array<{ zone: string; status: string; findings: string; advice: string }>;
+  // === Résultat patient (refonte Organic) — cf. shared/resultB2C.ts ===
+  faceZones?: import("./resultB2C").FaceZones | null; // 5 zones fixes, null = non visible
+  spots?: number | null;      // taches (hyperpigmentation) 0-100, null = non évaluable
+  blemishes?: number | null;  // imperfections actives 0-100, null = non évaluable
+  urgent?: boolean;           // seul déclencheur de l'état « urgent »
+  urgentSigns?: string[];
   morningProtocol?: Array<{ step: string; product: string; brand?: string; price?: string; why?: string }>;
   eveningProtocol?: Array<{ step: string; product: string; brand?: string; price?: string; why?: string }>;
   weeklyProtocol?: string;

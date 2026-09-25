@@ -210,175 +210,6 @@ function resolveFeaturedProducts(items: { productId: string; badge?: string | nu
     .filter((x): x is DisplayProduct => x !== null);
 }
 
-type MenuItem =
-  | { kind: "link"; label: string; desc: string; path: string; icon: React.ReactNode }
-  | { kind: "logout"; label: string; desc: string; icon: React.ReactNode };
-
-const EXPLORER_ITEMS: MenuItem[] = [
-  { kind: "link", label: "Mon profil", desc: "Configuration de session, métriques, droits", path: "/profile", icon: <User className="w-4 h-4" style={{ color: DS.violetMid }} strokeWidth={1.5} /> },
-  { kind: "link", label: "Scanner ma peau", desc: "Acquisition optique et diagnostic IA", path: "/analyze", icon: <ScanLine className="w-4 h-4" style={{ color: DS.violetMid }} strokeWidth={1.5} /> },
-  { kind: "link", label: "SkinBot Engine", desc: "Agent conversationnel d'assistance", path: "/chat", icon: <Bot className="w-4 h-4" style={{ color: DS.violetMid }} strokeWidth={1.5} /> },
-  { kind: "link", label: "Boutique clinique", desc: "Formulations adaptées à vos indices", path: "/shop", icon: <ShoppingBag className="w-4 h-4" style={{ color: DS.violetMid }} strokeWidth={1.5} /> },
-  { kind: "link", label: "Protocole de soin", desc: "Planification d'application matin & soir", path: "/routine", icon: <ListChecks className="w-4 h-4" style={{ color: DS.violetMid }} strokeWidth={1.5} /> },
-  { kind: "link", label: "Courbe d'évolution", desc: "Visualisation des variations biométriques", path: "/profile?tab=evolution", icon: <TrendingUp className="w-4 h-4" style={{ color: DS.violetMid }} strokeWidth={1.5} /> },
-  { kind: "link", label: "Licence Pro / Premium", desc: "Extension globale des fonctionnalités", path: "/premium", icon: <Crown className="w-4 h-4" style={{ color: DS.violetMid }} strokeWidth={1.5} /> },
-  { kind: "logout", label: "Terminer la session", desc: "Déconnexion sécurisée de la console", icon: <LogOut className="w-4 h-4" style={{ color: "#f9a8d4" }} strokeWidth={1.5} /> },
-];
-
-// ─────────────────────────────────────────────────────────────────────────
-//  Explorer sheet (slide-up menu)
-// ─────────────────────────────────────────────────────────────────────────
-function ExplorerSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const [, setLocation] = useLocation();
-  const { logout, isLoggingOut } = useAuth();
-
-  const handleClick = (item: MenuItem) => {
-    if (item.kind === "logout") {
-      logout();
-      return;
-    }
-    onClose();
-    setTimeout(() => setLocation(item.path), 150);
-  };
-
-  return (
-    <AnimatePresence>
-      {open && (
-        <>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[60] backdrop-blur-sm"
-            style={{ background: "rgba(13,10,14,0.7)" }}
-            onClick={onClose}
-            data-testid="explorer-backdrop"
-          />
-          <motion.div
-            initial={{ y: "100%" }}
-            animate={{ y: 0 }}
-            exit={{ y: "100%" }}
-            transition={{ type: "spring", damping: 30, stiffness: 300 }}
-            className="fixed left-0 right-0 bottom-0 z-[61] max-h-[82vh] overflow-hidden flex flex-col"
-            style={{
-              background: DS.surface,
-              borderRadius: "28px 28px 0 0",
-              border: "1px solid rgba(47,158,110,0.15)",
-              borderBottom: "none",
-              fontFamily: DS.font,
-            }}
-            data-testid="explorer-sheet"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="explorer-title"
-          >
-            {/* Handle */}
-            <div className="pt-3 pb-1 flex justify-center">
-              <div
-                className="w-10 h-1 rounded-full"
-                style={{ background: "rgba(47,158,110,0.25)" }}
-              />
-            </div>
-
-            {/* Header */}
-            <div
-              className="px-5 pt-2 pb-4 flex items-center justify-between"
-              style={{ borderBottom: "1px solid rgba(0,0,0,0.07)" }}
-            >
-              <div>
-                <p
-                  className="flex items-center gap-1.5 text-[9px] font-bold tracking-[0.2em] uppercase"
-                  style={{ color: DS.textMuted }}
-                >
-                  <Terminal className="w-3 h-3" style={{ color: DS.violetMid }} strokeWidth={1.5} />
-                  Index des modules
-                </p>
-                <h2
-                  id="explorer-title"
-                  className="text-lg font-extrabold tracking-tight mt-0.5"
-                  style={{ color: DS.textPrimary }}
-                >
-                  Console globale
-                </h2>
-              </div>
-              <button
-                onClick={onClose}
-                className="w-8 h-8 flex items-center justify-center active:scale-90 transition-transform"
-                style={{
-                  background: "rgba(0,0,0,0.05)",
-                  border: "1px solid rgba(0,0,0,0.1)",
-                  borderRadius: "12px",
-                }}
-                data-testid="explorer-close"
-                aria-label="Fermer"
-              >
-                <X className="w-4 h-4" style={{ color: DS.textMuted }} strokeWidth={1.5} />
-              </button>
-            </div>
-
-            {/* Items */}
-            <div className="overflow-y-auto px-4 py-4 space-y-2">
-              {EXPLORER_ITEMS.map((item, i) => (
-                <motion.button
-                  key={item.kind === "link" ? item.path : "logout"}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.03, ease: "easeOut" }}
-                  onClick={() => handleClick(item)}
-                  disabled={item.kind === "logout" && isLoggingOut}
-                  data-testid={item.kind === "logout" ? "menu-item-logout" : `menu-item-${item.path.replace(/\//g, "-")}`}
-                  className={`w-full flex items-center gap-3.5 p-3.5 text-left active:scale-[0.99] transition-transform ${item.kind === "logout" && isLoggingOut ? "opacity-40" : ""}`}
-                  style={{
-                    background: "rgba(0,0,0,0.03)",
-                    border: "1px solid rgba(0,0,0,0.06)",
-                    borderRadius: "16px",
-                  }}
-                >
-                  <div
-                    className="w-8 h-8 flex items-center justify-center flex-shrink-0"
-                    style={{
-                      background: item.kind === "logout"
-                        ? "rgba(233,30,140,0.08)"
-                        : "rgba(47,158,110,0.12)",
-                      border: item.kind === "logout"
-                        ? "1px solid rgba(233,30,140,0.2)"
-                        : "1px solid rgba(47,158,110,0.2)",
-                      borderRadius: "10px",
-                    }}
-                  >
-                    {item.icon}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p
-                      className="text-xs font-bold"
-                      style={{
-                        color: item.kind === "logout" ? "#f9a8d4" : DS.textPrimary,
-                      }}
-                    >
-                      {item.label}
-                    </p>
-                    <p
-                      className="text-[11px] mt-0.5 font-medium truncate"
-                      style={{ color: DS.textBody }}
-                    >
-                      {item.desc}
-                    </p>
-                  </div>
-                  <ChevronRight
-                    className="w-4 h-4 flex-shrink-0"
-                    style={{ color: DS.textMuted }}
-                    strokeWidth={1.5}
-                  />
-                </motion.button>
-              ))}
-            </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
-  );
-}
-
 function daysSince(date: string | Date) {
   const d = new Date(date).getTime();
   const now = Date.now();
@@ -398,7 +229,6 @@ export default function Home() {
   const { user, isLoading } = useAuth();
   const { data: scans } = useScans();
   const [, setLocation] = useLocation();
-  const [explorerOpen, setExplorerOpen] = useState(false);
 
   const { data: proData } = useProAccount();
   useEffect(() => {
@@ -466,16 +296,6 @@ export default function Home() {
 
   const previousScan: any = scanList[1];
   const firstName = (user.firstName || user.lastName || user.email || "Utilisateur").split(/[\s@]/)[0];
-
-  const daysFromLastScan = lastScan?.createdAt ? daysSince(lastScan.createdAt) : null;
-  let reminderMessage = "Initiez votre première numérisation optique pour calculer vos métriques cutanées.";
-  if (daysFromLastScan === 0) {
-    reminderMessage = "Analyse effectuée aujourd'hui. Renouvelez l'acquisition dans 48h pour observer les micro-variations.";
-  } else if (daysFromLastScan === 1) {
-    reminderMessage = "Dernière analyse effectuée hier. Prévoyez une nouvelle capture demain pour stabiliser la courbe.";
-  } else if (daysFromLastScan && daysFromLastScan >= 2) {
-    reminderMessage = `Aucune télémétrie enregistrée depuis ${daysFromLastScan} jours. Actualisez vos indicateurs cellulaires.`;
-  }
 
   const extractScore = (s: any): number | null => {
     if (!s) return null;
