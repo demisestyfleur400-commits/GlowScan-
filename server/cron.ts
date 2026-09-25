@@ -3,9 +3,9 @@ import webpush from "web-push";
 import { storage } from "./storage";
 import { db } from "./db";
 import { sql } from "drizzle-orm";
-import { buildRelanceMessage } from "@shared/whatsappMessages";
+import { buildRelanceMessage, withFollowupFooter } from "@shared/whatsappMessages";
 import { normalizeCmPhone } from "@shared/phone";
-import { stopLinkSig } from "./consents";
+import { stopLinkSig, followupsStoppedAt } from "./consents";
 const APP_BASE = (process.env.PUBLIC_BASE_URL || "https://glow-scan.com").replace(/\/$/, "");
 import { sendWhatsAppText, buildFollowUpReminderMessage } from "./whatsapp";
 import { sendEmail, buildTrialReminderEmail, buildDigestEmail, buildReengageEmail, buildB2CReengageEmail } from "./email";
@@ -129,8 +129,14 @@ async function sendFollowUpReminders() {
     const rows = (r?.rows ?? r ?? []) as any[];
     let sent = 0;
     for (const row of rows) {
+      // « ARRÊT SUIVI » reçu : on n'écrit plus à ce patient (le médecin le voit dans la fiche).
+      if (await followupsStoppedAt({ phone: row.whatsapp_number })) {
+        await db.execute(sql`UPDATE "patients" SET "follow_up_reminder_sent" = TRUE WHERE "id" = ${row.id}`).catch(() => {});
+        continue;
+      }
       const name = [row.first_name, row.last_name].filter(Boolean).join(" ") || "cher patient";
-      const msg = buildFollowUpReminderMessage(name, row.dermato_name || "votre dermatologue", row.follow_up_message);
+      // Le pied « ARRÊT SUIVI » est ajouté même au message personnalisé par le médecin.
+      const msg = withFollowupFooter(buildFollowUpReminderMessage(name, row.dermato_name || "votre dermatologue", row.follow_up_message));
       const out = await sendWhatsAppText(row.whatsapp_number, msg);
       // Marqué envoyé même si Twilio absent (évite le spam de tentatives) — le
       // dermato garde le bouton "Envoyer maintenant / lien WhatsApp" côté dossier.
@@ -395,11 +401,19 @@ async function sendConsultationFollowUps() {
       const dName = (row.derm_name || "votre dermatologue").replace(/^dr\.?\s*/i, "");
       const cond = row.condition || "votre peau";
       const photoUrl = `${PUBLIC_BASE}/consultations`;
+      // « ARRÊT SUIVI » : aucun rappel au patient (push, email, WhatsApp) ; le médecin est prévenu.
+      const optedOut = await followupsStoppedAt({ phone: row.patient_phone, userId: row.patient_id });
       // 1) Push dermatologue (reste affiché jusqu'à interaction)
       if (row.derm_user_id) await sendPushToUsers(new Set([row.derm_user_id]), {
-        title: "Suivi prévu demain", body: `${pName} · ${cond}\nSuivi programmé pour demain.`,
+        title: "Suivi prévu demain",
+        body: `${pName} · ${cond}\n${optedOut ? "Rappels de suivi désactivés par le patient : aucun rappel ne lui est envoyé." : "Suivi programmé pour demain."}`,
         url: `/derm/consultations?c=${row.consultation_id}`, requireInteraction: true,
       } as any);
+      if (optedOut) {
+        try { await db.execute(sql`UPDATE follow_up_reminders SET status = 'patient_opted_out' WHERE id = ${row.id}`); } catch {}
+        done++;
+        continue;
+      }
       // 2) Push patient
       if (row.patient_id) await sendPushToUsers(new Set([row.patient_id]), {
         title: `Dr ${dName} souhaite voir l'évolution`, body: "Prenez une photo de la zone traitée et envoyez-la via GlowScan.",
@@ -419,7 +433,7 @@ async function sendConsultationFollowUps() {
       }
       // 5) WhatsApp patient — BACKUP OBLIGATOIRE (part toujours)
       if (row.patient_phone) {
-        const msg = `Bonjour ${pName}, Dr ${dName} souhaite voir l'évolution de votre peau demain.\nPrenez une photo de la zone traitée et envoyez-la ici : ${photoUrl}`;
+        const msg = withFollowupFooter(`Bonjour ${pName}, Dr ${dName} souhaite voir l'évolution de votre peau demain.\nPrenez une photo de la zone traitée et envoyez-la ici : ${photoUrl}`);
         try { await sendWhatsAppText(row.patient_phone, msg); } catch {}
       }
       // 6) status = notified

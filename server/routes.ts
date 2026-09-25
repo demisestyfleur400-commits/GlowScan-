@@ -21,11 +21,13 @@ import { users } from "@shared/models/auth";
 import { eq, and, sql, gte, count, lte, desc, avg, inArray, isNull } from "drizzle-orm";
 import { whatsappClicks, orders, pageVisits } from "@shared/schema";
 import { emitToUser, isUserOnline } from "./ws";
-import { normalizeCmPhone } from "@shared/phone";
-import { recordConsent, stopReminders, verifyStopLinkSig } from "./consents";
-import { buildResultWhatsApp, resultRequestText, RESULT_REF_RE, isStopMessage } from "@shared/whatsappMessages";
+import { normalizeCmPhone, formatCmPhone } from "@shared/phone";
+import { isMissingColumnError, ORDERS_MIGRATION_HINT } from "./dbErrors";
+import { recordConsent, stopReminders, verifyStopLinkSig, stopFollowups, followupsStoppedAt, resumeFollowups } from "./consents";
+import { buildResultWhatsApp, resultRequestText, RESULT_REF_RE, isStopMessage, isFollowupStopMessage } from "@shared/whatsappMessages";
 import { RESULT_DISCLAIMER } from "@shared/resultB2C";
 import { FREE_PRODUCT_SCANS_PER_WEEK, sanitizeIngredients, productVerdict } from "@shared/productSafety";
+import { DELIVERY_FEES, PAY_METHODS, ORDER_WHATSAPP, ORDER_STATUSES, computeOrder, buildOrderWhatsApp, type PayMethod } from "@shared/delivery";
 
 import { sanitizeFaceZones, faceZonesFromLegacy, score100OrNull, sanitizeUrgentSigns, resultStateOf, STATE_LEVEL } from "@shared/resultB2C";
 import { verifyReportToken, buildReportHtml, sendWhatsAppText } from "./whatsapp";
@@ -277,7 +279,7 @@ function buildDermResult(a: any, opts?: { acneContext?: boolean }) {
 
 // Stockage temporaire d'images pour contourner la limitation base64 du proxy
 // Les images sont servies via une URL publique /api/img/:id
-import { randomUUID } from "crypto";
+import { randomUUID, randomBytes } from "crypto";
 const tempImages = new Map<string, { buffer: Buffer; mime: string; expiresAt: number }>();
 // Nettoyage toutes les 10 minutes
 setInterval(() => {
@@ -358,7 +360,7 @@ export async function uploadScanImageToStorage(base64DataUrl: string): Promise<s
 
 // Upload générique d'un fichier de consultation (image OU PDF) vers Object
 // Storage (/objects/consult/), fallback base64. Retourne l'URL/chemin.
-export async function uploadConsultationFile(dataUrl: string, mimeHint?: string): Promise<string | null> {
+export async function uploadConsultationFile(dataUrl: string, mimeHint?: string, folder: "consult" | "orders" = "consult"): Promise<string | null> {
   try {
     const match = dataUrl.match(/^data:([a-z0-9.+/-]+);base64,(.+)$/i);
     let mime = (mimeHint || (match ? match[1] : "application/octet-stream")).toLowerCase();
@@ -370,12 +372,12 @@ export async function uploadConsultationFile(dataUrl: string, mimeHint?: string)
       try {
         const ext = mime.includes("pdf") ? "pdf" : (mime.split("/")[1] || "bin").replace("jpeg", "jpg");
         const objectId = `${randomUUID()}.${ext}`;
-        const fullPath = `${privateDir.startsWith("/") ? "" : "/"}${privateDir}/consult/${objectId}`;
+        const fullPath = `${privateDir.startsWith("/") ? "" : "/"}${privateDir}/${folder}/${objectId}`;
         const parts = fullPath.split("/").filter(Boolean);
         const bucket = objectStorageClient.bucket(parts[0]);
         const file = bucket.file(parts.slice(1).join("/"));
         await file.save(buffer, { contentType: mime, resumable: false, metadata: { metadata: { "custom:aclPolicy": JSON.stringify({ owner: "system", visibility: "private" }) } } });
-        return `/objects/consult/${objectId}`;
+        return `/objects/${folder}/${objectId}`;
       } catch (e) { console.error("[consult-file] Object Storage échoué, fallback base64:", e); }
     }
     return `data:${mime};base64,${b64}`;
@@ -389,6 +391,14 @@ function verifyAdminKey(key?: string | string[] | null): boolean {
   if (!expected) return false;
   const provided = Array.isArray(key) ? key[0] : key;
   return typeof provided === "string" && provided === expected;
+}
+
+/** Réponse commande quand la migration 0015 n'est pas appliquée : 503 + log clair, jamais de plantage. */
+function ordersMaintenance(err: any, res: any, where: string): boolean {
+  if (!isMissingColumnError(err)) return false;
+  console.error(`[orders] Migration 0015 non appliquée (${where}) : ${ORDERS_MIGRATION_HINT}. Détail : ${(err?.cause ?? err)?.message}`);
+  res.status(503).json({ message: "Service commande en maintenance" });
+  return true;
 }
 
 export async function registerRoutes(
@@ -932,6 +942,12 @@ export async function registerRoutes(
         const m = new Map(rows.map((r: any) => [Number(r.id), r]));
         list.forEach((c: any) => { const r = m.get(c.id); c.rating = r?.rating ?? null; c.reportStatus = r?.whatsapp_send_status ?? null; });
       } catch {}
+      // Soins : routine prescrite par le médecin (texte), gratuite, visible par le patient.
+      try {
+        const pr = Rows(await db.execute(sql`SELECT id, prescription, closed_at FROM consultations WHERE user_id = ${userId} AND prescription IS NOT NULL`));
+        const pm = new Map(pr.map((r: any) => [Number(r.id), r]));
+        list.forEach((c: any) => { const r = pm.get(c.id); c.prescription = r?.prescription ?? null; c.closedAt = r?.closed_at ?? null; });
+      } catch {}
       // Accueil patient : nom du médecin et photo de contrôle demandée (à venir, pas encore reçue).
       try {
         const ids = list.map((c) => c.id);
@@ -1393,7 +1409,15 @@ export async function registerRoutes(
           if (Array.isArray(arr)) redFlags = arr.filter((x) => typeof x === "string" && x.trim()).slice(0, 8);
         }
       } catch {}
-      res.json({ consultation: c, messages: msgs, side, otherUserId, doctor, redFlags, otherOnline: otherUserId ? isUserOnline(otherUserId) : false });
+      // Côté médecin : note « Rappels de suivi désactivés par le patient le JJ/MM » (lecture seule).
+      let followupsStoppedAtIso: string | null = null;
+      if (side === "doctor") {
+        let phone: string | null = null;
+        try { phone = (Rows(await db.execute(sql`SELECT patient_phone FROM consultations WHERE id = ${id}`))[0] as any)?.patient_phone ?? null; } catch {}
+        const at = await followupsStoppedAt({ phone, userId: c.userId });
+        followupsStoppedAtIso = at ? at.toISOString() : null;
+      }
+      res.json({ consultation: c, messages: msgs, side, otherUserId, doctor, redFlags, followupsStoppedAt: followupsStoppedAtIso, otherOnline: otherUserId ? isUserOnline(otherUserId) : false });
     } catch (err) {
       console.error("[consultations get] error:", err);
       res.status(500).json({ message: "Erreur serveur" });
@@ -3173,31 +3197,141 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
     }
   });
 
-  app.post("/api/orders", async (req, res) => {
+  // N° GS-XXXXXX unique : il sert de référence du paiement Mobile Money.
+  async function newOrderNumber(): Promise<string> {
+    const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    for (let tries = 0; tries < 8; tries++) {
+      const n = "GS-" + Array.from(randomBytes(6)).map((x: number) => alphabet[x % alphabet.length]).join("");
+      const exists = Rows(await db.execute(sql`SELECT 1 FROM orders WHERE order_number = ${n} LIMIT 1`));
+      if (exists.length === 0) return n;
+    }
+    throw new Error("order number collision");
+  }
+
+  // Réserve le n° de commande avant le paiement (étape 3), gardé en session
+  // jusqu'à l'envoi de la commande.
+  app.post("/api/orders/reserve", async (req: any, res) => {
+    if (!getUID(req)) return res.status(401).json({ message: "Connexion requise" });
     try {
-      const { orderNumber, clientName, clientPhone, clientAddress, clientNotes, items, totalPrice, brand, whatsappNumber } = req.body;
-      if (!orderNumber || !clientName || !clientPhone || !clientAddress || !items || !totalPrice || !brand || !whatsappNumber) {
-        return res.status(400).json({ message: "Données manquantes" });
+      if (!/^GS-[A-Z2-9]{6}$/.test(String(req.session.orderNumberDraft || ""))) {
+        req.session.orderNumberDraft = await newOrderNumber();
+        await new Promise<void>((r) => req.session.save(() => r()));
       }
-      const userId = isAuth(req) ? getUID(req) : null;
-      const order = await storage.createOrder({
-        orderNumber,
-        userId,
-        clientName,
-        clientPhone,
-        clientAddress,
-        clientNotes: clientNotes || null,
-        items,
-        totalPrice,
-        brand,
-        whatsappNumber,
-        status: "envoyée",
+      res.json({ number: req.session.orderNumberDraft });
+    } catch (e) { res.status(500).json({ message: "Erreur serveur" }); }
+  });
+
+  // POST /api/orders — commande en 4 étapes (refonte Organic).
+  // Le total est CALCULÉ et FIGÉ ici (prix du catalogue + frais de la ville),
+  // jamais repris du navigateur. Capture de paiement obligatoire sauf en espèces.
+  app.post("/api/orders", async (req: any, res) => {
+    try {
+      const userId = getUID(req);
+      if (!userId) return res.status(401).json({ message: "Connexion requise" });
+      const b = req.body || {};
+      const city = String(b.city || "");
+      const payMethod = String(b.payMethod || "") as PayMethod;
+      if (!(city in DELIVERY_FEES)) return res.status(400).json({ message: "Ville de livraison inconnue" });
+      if (!(payMethod in PAY_METHODS)) return res.status(400).json({ message: "Moyen de paiement inconnu" });
+      const name = String(b.name || "").trim().slice(0, 120);
+      const phone = normalizeCmPhone(b.phone);
+      const quartier = String(b.quartier || "").trim().slice(0, 200);
+      const notes = String(b.notes || "").trim().slice(0, 400) || null;
+      if (!name || !phone || !quartier) return res.status(400).json({ message: "Nom, téléphone et quartier sont obligatoires" });
+      const lines = Array.isArray(b.items) ? b.items.slice(0, 30) : [];
+      const o = computeOrder(lines, city);
+      if (o.items.length === 0 || o.total === null || o.fee === null) return res.status(400).json({ message: "Panier vide" });
+
+      let proofUrl: string | null = null;
+      if (payMethod !== "cash") {
+        const proof = String(b.proof || "");
+        if (!/^data:image\/(png|jpe?g|webp);base64,/i.test(proof) || proof.length > 8_000_000) {
+          return res.status(400).json({ message: "La capture du paiement est obligatoire" });
+        }
+        proofUrl = await uploadConsultationFile(proof, undefined, "orders");
+        if (!proofUrl) return res.status(500).json({ message: "Capture non enregistrée, réessayez" });
+      }
+
+      // N° réservé à l'étape Paiement (référence donnée au patient), sinon un nouveau.
+      const reserved = String(req.session?.orderNumberDraft || "");
+      const orderNumber = /^GS-[A-Z2-9]{6}$/.test(reserved) && String(b.number || "") === reserved ? reserved : await newOrderNumber();
+
+      const [created] = await db.insert(orders).values({
+        orderNumber, userId,
+        clientName: name, clientPhone: phone,
+        clientAddress: `${quartier}, ${city}`, clientNotes: notes,
+        items: o.items, subtotal: o.subtotal, deliveryCity: city, deliveryFee: o.fee,
+        totalPrice: o.total, quartier, payMethod, proofUrl,
+        brand: "GlowScan", whatsappNumber: ORDER_WHATSAPP,
+        status: "received",
+      }).returning();
+      if (req.session) { req.session.orderNumberDraft = undefined; req.session.save(() => {}); }
+
+      // Contexte d'analyse pour le message (dernier scan réel du patient).
+      let glowScore: number | null = null, skinType: string | null = null;
+      try {
+        const [last] = await db.select().from(scans).where(eq(scans.userId, userId)).orderBy(desc(scans.createdAt)).limit(1);
+        const full: any = (last?.recommendations as any)?._fullResult;
+        if (last && resultStateOf({ score: last.score, condition: last.condition, photo_quality: full?.photo_quality, urgent: full?.urgent }) !== "unusable") {
+          glowScore = last.score ?? null;
+          skinType = typeof full?.skinType === "string" ? full.skinType.split("·")[0].split("(")[0].trim() || null : null;
+        }
+      } catch {}
+
+      const message = buildOrderWhatsApp({
+        number: orderNumber, items: o.items, fee: o.fee, total: o.total, city, quartier, notes,
+        name, phone: formatCmPhone(phone), payMethod, glowScore, skinType,
       });
-      res.json(order);
+      res.json({
+        order: { number: created.orderNumber, total: created.totalPrice, subtotal: o.subtotal, fee: o.fee, city, payMethod, status: created.status, createdAt: created.createdAt },
+        whatsappUrl: `https://wa.me/${ORDER_WHATSAPP}?text=${encodeURIComponent(message)}`,
+      });
     } catch (error) {
+      if (ordersMaintenance(error, res, "POST /api/orders")) return;
       console.error("Create order error:", error);
       res.status(500).json({ message: "Erreur serveur" });
     }
+  });
+
+  // GET /api/orders/:num — suivi d'une commande (propriétaire uniquement).
+  app.get("/api/orders/:num", async (req: any, res) => {
+    const userId = getUID(req);
+    if (!userId) return res.status(401).json({ message: "Connexion requise" });
+    try {
+      const [o] = await db.select().from(orders).where(and(eq(orders.orderNumber, String(req.params.num)), eq(orders.userId, userId)));
+      if (!o) return res.status(404).json({ message: "Commande introuvable" });
+      res.json({ number: o.orderNumber, items: o.items, subtotal: o.subtotal, fee: o.deliveryFee, total: o.totalPrice, city: o.deliveryCity, payMethod: o.payMethod, status: o.status, createdAt: o.createdAt });
+    } catch (e) { if (ordersMaintenance(e, res, "GET /api/orders/:num")) return; res.status(500).json({ message: "Erreur serveur" }); }
+  });
+
+  // Admin : faire avancer le statut, voir la capture de paiement.
+  app.post("/api/admin/orders/:num/status", async (req: any, res) => {
+    if (!checkDatasetKey(req)) return res.status(403).json({ message: "Accès refusé" });
+    const status = String(req.body?.status || "");
+    if (!(ORDER_STATUSES as string[]).includes(status)) return res.status(400).json({ message: "Statut inconnu" });
+    try {
+      const r = await db.update(orders).set({ status }).where(eq(orders.orderNumber, String(req.params.num))).returning({ n: orders.orderNumber });
+      if (r.length === 0) return res.status(404).json({ message: "Commande introuvable" });
+      res.json({ ok: true, status });
+    } catch (e) { if (ordersMaintenance(e, res, "POST /api/admin/orders/:num/status")) return; res.status(500).json({ message: "Erreur serveur" }); }
+  });
+  app.get("/api/admin/orders/:num/proof", async (req: any, res) => {
+    if (!checkDatasetKey(req)) return res.status(403).json({ message: "Accès refusé" });
+    try {
+      const [o] = await db.select().from(orders).where(eq(orders.orderNumber, String(req.params.num)));
+      const url = o?.proofUrl || "";
+      if (url.startsWith("data:")) {
+        const m = url.match(/^data:([^;]+);base64,(.+)$/);
+        if (!m) return res.status(404).end();
+        res.setHeader("Content-Type", m[1]); res.setHeader("Cache-Control", "private, no-store");
+        return res.send(Buffer.from(m[2], "base64"));
+      }
+      if (!url.startsWith("/objects/orders/")) return res.status(404).json({ message: "Aucune capture" });
+      const { ObjectStorageService } = await import("./replit_integrations/object_storage/objectStorage");
+      const svc = new ObjectStorageService();
+      res.setHeader("Cache-Control", "private, no-store");
+      await svc.downloadObject(await svc.getObjectEntityFile(url), res);
+    } catch (e) { if (ordersMaintenance(e, res, "GET /api/admin/orders/:num/proof")) return; res.status(404).json({ message: "Capture introuvable" }); }
   });
 
   app.get("/api/orders", async (req, res) => {
@@ -3209,6 +3343,7 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
       const userOrders = await storage.getOrdersByUser(userId);
       res.json(userOrders);
     } catch (error) {
+      if (ordersMaintenance(error, res, "GET /api/orders")) return;
       console.error("Get orders error:", error);
       res.status(500).json({ message: "Erreur serveur" });
     }
@@ -4029,6 +4164,11 @@ Réponds en 2-4 phrases max, sois direct et utile.`;
       }
       const from = String(req.body?.From || "").replace(/^whatsapp:/, "");
       const body = String(req.body?.Body || "");
+      if (isFollowupStopMessage(body)) {
+        await stopFollowups(from);
+        console.log(`[whatsapp-inbound] ARRÊT SUIVI reçu de ${from.slice(0, 6)}…`);
+        return twiml("C'est noté : vous ne recevrez plus les rappels de suivi. Vous pouvez les réactiver depuis votre Profil GlowScan.");
+      }
       if (isStopMessage(body)) {
         await stopReminders(from);
         console.log(`[whatsapp-inbound] STOP reçu de ${from.slice(0, 6)}…`);
@@ -4070,6 +4210,32 @@ Réponds en 2-4 phrases max, sois direct et utile.`;
     if (!verifyStopLinkSig(phone, sig)) return res.status(403).send("Lien invalide");
     try { await stopReminders(phone); } catch (e) { return res.status(500).send("Erreur serveur"); }
     res.type("html").send(`<!doctype html><meta charset="utf-8"><body style="font-family:system-ui,sans-serif;background:#f5ead8;color:#201e1d;display:grid;place-items:center;min-height:100vh;margin:0"><p style="font-weight:700">C'est noté : ce numéro ne sera plus relancé.</p></body>`);
+  });
+
+  // ── Rappels de suivi : état et réactivation par le patient lui-même (Profil) ──
+  // Tous les numéros connus du patient comptent (consentement, consultations,
+  // analyses) : « ARRÊT SUIVI » a pu être envoyé depuis l'un d'eux.
+  const knownPhonesOf = async (userId: string): Promise<string[]> => {
+    const out = new Set<string>();
+    const add = (v: any) => { const n = normalizeCmPhone(v); if (n) out.add(n); };
+    try { Rows(await db.execute(sql`SELECT phone FROM consents WHERE user_id = ${userId}`)).forEach((r: any) => add(r.phone)); } catch {}
+    try { Rows(await db.execute(sql`SELECT patient_phone FROM consultations WHERE user_id = ${userId}`)).forEach((r: any) => add(r.patient_phone)); } catch {}
+    try { Rows(await db.execute(sql`SELECT prospect_phone FROM scans WHERE user_id = ${userId} AND prospect_phone IS NOT NULL`)).forEach((r: any) => add(r.prospect_phone)); } catch {}
+    return Array.from(out);
+  };
+  app.get("/api/me/followups", async (req: any, res) => {
+    const userId = getUID(req);
+    if (!userId) return res.status(401).json({ message: "Connexion requise" });
+    const dates = [await followupsStoppedAt({ userId })];
+    for (const phone of await knownPhonesOf(userId)) dates.push(await followupsStoppedAt({ phone }));
+    const at = dates.filter(Boolean).sort((a, b) => b!.getTime() - a!.getTime())[0] ?? null;
+    res.json({ enabled: !at, stoppedAt: at ? at.toISOString() : null });
+  });
+  app.post("/api/me/followups/resume", async (req: any, res) => {
+    const userId = getUID(req);
+    if (!userId) return res.status(401).json({ message: "Connexion requise" });
+    try { await resumeFollowups(userId, await knownPhonesOf(userId)); res.json({ enabled: true }); }
+    catch (e) { res.status(500).json({ message: "Erreur serveur" }); }
   });
 
   // ── STOP depuis l'admin (onglet Prospects) ──────────────────────────────

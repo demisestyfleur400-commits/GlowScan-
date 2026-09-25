@@ -1,3 +1,4 @@
+import { isMissingColumnError, ORDERS_MIGRATION_HINT } from "./dbErrors";
 import { db } from "./db";
 import { eq, desc, sql, count, gte, and, sum, lt, inArray } from "drizzle-orm";
 import { scans, users, pageVisits, whatsappClicks, orders, loyaltyPoints, loyaltyRewards, pushSubscriptions, challenges, partners, partnerProducts, routines, routineSteps, routineCompletions, featuredProducts, personalizedTipsCache, subscriptions, premiumRequests, referrals, leads, wellnessLogs, type Scan, type InsertScan, type User, type InsertPageVisit, type InsertWhatsappClick, type Order, type InsertOrder, type LoyaltyPoint, type InsertLoyaltyPoint, type LoyaltyReward, type InsertLoyaltyReward, type PushSubscription, type InsertPushSubscription, type Challenge, type InsertChallenge, type Partner, type InsertPartner, type PartnerProduct, type InsertPartnerProduct, type Routine, type InsertRoutine, type RoutineStep, type InsertRoutineStep, type RoutineCompletion, type FeaturedProduct, type PersonalizedTipsCache } from "@shared/schema";
@@ -117,9 +118,18 @@ export class DatabaseStorage implements IStorage {
   async getAllOrders(period: AnalyticsPeriod = "all"): Promise<Order[]> {
     const startDate = this.getPeriodStartDate(period);
     const dateFilter = startDate ? gte(orders.createdAt, startDate) : undefined;
-    return dateFilter
-      ? db.select().from(orders).where(dateFilter).orderBy(desc(orders.createdAt)).limit(100)
-      : db.select().from(orders).orderBy(desc(orders.createdAt)).limit(100);
+    try {
+      return await (dateFilter
+        ? db.select().from(orders).where(dateFilter).orderBy(desc(orders.createdAt)).limit(100)
+        : db.select().from(orders).orderBy(desc(orders.createdAt)).limit(100));
+    } catch (err: any) {
+      // Migration 0015 absente : le tableau de bord admin reste utilisable, sans commandes.
+      if (isMissingColumnError(err)) {
+        console.error(`[orders] Migration 0015 non appliquée (tableau de bord admin) : ${ORDERS_MIGRATION_HINT}.`);
+        return [];
+      }
+      throw err;
+    }
   }
 
   async addLoyaltyPoints(entry: InsertLoyaltyPoint): Promise<LoyaltyPoint> {

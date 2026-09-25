@@ -14,6 +14,8 @@ import { storage } from "./storage";
 import webpush from "web-push";
 import { sendEmail, buildOtpEmail, buildWelcomeEmail, buildSecurityAlertEmail, buildPeerNotifEmail, buildMagicLinkEmail } from "./email";
 import crypto from "crypto";
+import { followupsStoppedAt } from "./consents";
+import { withFollowupFooter, followupsStoppedNote } from "@shared/whatsappMessages";
 
 // Normalise le résultat de db.execute (postgres-js renvoie un tableau ; d'autres
 // pilotes renvoient { rows }). Défini localement ICI : l'identifiant `Rows`
@@ -1224,7 +1226,12 @@ export function registerProRoutes(app: Express) {
         scansWithFollowUp = patientScans.map((s) => ({ ...s, followUpPhotos: map.get(s.id) ?? [] }));
       }
     } catch { /* colonne pas encore migrée → followUpPhotos absent, non bloquant */ }
-    res.json({ patient: { ...p, clinicalRecord, ...followUp, datasetConsent }, scans: scansWithFollowUp });
+    // « ARRÊT SUIVI » : note en lecture seule pour le médecin (il ne peut pas réactiver).
+    const fuStopped = await followupsStoppedAt({ phone: (p as any).whatsappNumber });
+    res.json({
+      patient: { ...p, clinicalRecord, ...followUp, datasetConsent, followupsStoppedAt: fuStopped ? fuStopped.toISOString() : null },
+      scans: scansWithFollowUp,
+    });
   });
 
   // ───────────────────────────────────────────
@@ -1316,11 +1323,20 @@ export function registerProRoutes(app: Express) {
         .where(and(eq(patients.id, id), eq(patients.dermatologistId, req.proAccount.id)));
       if (!p) return res.status(404).json({ message: "Patient introuvable" });
 
-      const msg = buildFollowUpReminderMessage(
+      // « ARRÊT SUIVI » : le médecin ne peut ni envoyer ni reprogrammer ; seul le patient réactive.
+      const stoppedAt = await followupsStoppedAt({ phone: p.whatsappNumber });
+      if (stoppedAt) {
+        return res.status(409).json({
+          code: "FOLLOWUPS_STOPPED",
+          message: `${followupsStoppedNote(stoppedAt)}. Seul le patient peut les réactiver, depuis son Profil.`,
+        });
+      }
+
+      const msg = withFollowupFooter(buildFollowUpReminderMessage(
         [p.firstName, p.lastName].filter(Boolean).join(" ") || "cher patient",
         req.proAccount.fullName,
         data.message,
-      );
+      ));
 
       // Envoi immédiat
       if (data.sendNow) {

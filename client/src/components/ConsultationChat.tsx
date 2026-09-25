@@ -1,3 +1,4 @@
+import { followupsStoppedNote } from "@shared/whatsappMessages";
 import { useEffect, useRef, useState } from "react";
 import { useConsultationSocket } from "@/hooks/use-consultation-socket";
 import { ClinicalReasoningPanel } from "@/components/pro/ClinicalReasoningPanel";
@@ -35,6 +36,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
   const [ctx, setCtx] = useState<any>(null);
   const [otherOnline, setOtherOnline] = useState(false);
   const [redFlags, setRedFlags] = useState<string[]>([]); // signaux d'orientation (analyse)
+  const [followupsStoppedAt, setFollowupsStoppedAt] = useState<string | null>(null); // « ARRÊT SUIVI » (côté médecin)
   const [otherUserId, setOtherUserId] = useState<string | null>(null);
   const [doctor, setDoctor] = useState<{ fullName?: string; city?: string; photoUrl?: string | null; certified?: boolean } | null>(null);
   const [otherTyping, setOtherTyping] = useState(false);
@@ -106,6 +108,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
         setOtherOnline(!!d.otherOnline);
         setDoctor(d.doctor || null);
         setRedFlags(Array.isArray(d.redFlags) ? d.redFlags : []);
+        setFollowupsStoppedAt(d.followupsStoppedAt || null);
         // Côté dermatologue : charger le dossier B2C complet (photo, IA, Glow Score).
         if (d.side === "doctor") {
           fetch(`/api/pro/consultations/${consultationId}/dossier`, { credentials: "include" })
@@ -981,6 +984,15 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
         <div style={{ display: "flex", gap: 10, alignItems: "center", padding: "10px 14px", borderBottom: `1px solid ${BORDER}`, background: CARD }}>
           <img src={ctx.imageUrl} alt="" style={{ width: 46, height: 46, borderRadius: 10, objectFit: "cover" }} />
           <p style={{ fontSize: 11.5, color: MUTED, margin: 0 }}>Photo & diagnostic partagés avec le dermatologue.</p>
+        </div>
+      )}
+
+      {/* Médecin : le patient a coupé ses rappels de suivi (lecture seule, non réactivable ici) */}
+      {side === "doctor" && followupsStoppedAt && (
+        <div style={{ padding: "10px 14px", borderBottom: `1px solid ${BORDER}`, background: dark ? "rgba(148,163,184,0.12)" : "#f1f5f9" }} data-testid="note-followups-stopped">
+          <p style={{ fontSize: 12.5, color: dark ? "#e2e8f0" : "#334155", margin: 0, lineHeight: 1.6 }}>
+            <strong>{followupsStoppedNote(followupsStoppedAt)}.</strong> Seul le patient peut les réactiver, depuis son Profil.
+          </p>
         </div>
       )}
 

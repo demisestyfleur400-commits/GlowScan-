@@ -1,3 +1,4 @@
+import { ORDER_STATUSES } from "@shared/delivery";
 import { buildRelanceMessage } from "@shared/whatsappMessages";
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
@@ -50,6 +51,13 @@ interface Subscriber {
   isPremium: boolean; expiresAt: string | null; plan: string | null; note: string | null;
   scansThisMonth: number;
 }
+
+const ADMIN_ORDER_STATUS_LABEL: Record<string, string> = {
+  received: "Reçue",
+  paid_verified: "Paiement vérifié",
+  shipping: "En livraison",
+  delivered: "Livrée",
+};
 
 export default function Admin() {
   const [adminKey, setAdminKey] = useState("");
@@ -1539,7 +1547,36 @@ export default function Admin() {
                               <td className="py-2.5"><span className="px-2 py-0.5 rounded-full text-xs font-extrabold" style={{ background: "rgba(124,58,237,0.12)", color: DS.violetMid }}>{order.brand}</span></td>
                               <td className="py-2.5 text-xs max-w-[200px]" style={{ color: DS.body }}>{Array.isArray(order.items) ? order.items.map((it: any) => `${it.name} x${it.quantity}`).join(", ") : "—"}</td>
                               <td className="py-2.5 text-sm font-extrabold whitespace-nowrap" style={{ color: DS.text }}>{formatPrice(order.totalPrice)}</td>
-                              <td className="py-2.5"><span className="text-xs font-extrabold px-2.5 py-1 rounded-full" style={order.status === "livrée" ? { background: "rgba(16,185,129,0.12)", color: "#6ee7b7" } : { background: "rgba(124,58,237,0.1)", color: DS.violetMid }}>{order.status === "envoyée" ? "📦 Envoyée" : order.status === "livrée" ? "✅ Livrée" : order.status}</span></td>
+                              <td className="py-2.5">
+                                {/* Refonte Organic : statut modifiable ; « Paiement vérifié » seulement après contrôle de la capture et de l'ID de transaction. */}
+                                  <div className="flex flex-col gap-1">
+                                    <select
+                                      value={order.status}
+                                      onChange={async (e) => {
+                                        const r = await fetch(`/api/admin/orders/${order.orderNumber}/status`, { method: "POST", headers: { "Content-Type": "application/json", "x-admin-key": adminKey }, body: JSON.stringify({ status: e.target.value }) });
+                                        if (r.ok) fetchData(adminKey, period);
+                                      }}
+                                      className="text-xs font-bold rounded-lg px-2 py-1"
+                                      style={{ background: "rgba(255,255,255,0.05)", border: `1px solid ${DS.border}`, color: DS.text }}
+                                      data-testid={`select-order-status-${i}`}
+                                    >
+                                      {ORDER_STATUSES.map((st) => (
+                                        <option key={st} value={st}>{order.payMethod === "cash" && st === "paid_verified" ? "Confirmée" : ADMIN_ORDER_STATUS_LABEL[st]}</option>
+                                      ))}
+                                    </select>
+                                    {order.payMethod && order.payMethod !== "cash" && (
+                                      <button
+                                        onClick={async () => {
+                                          const r = await fetch(`/api/admin/orders/${order.orderNumber}/proof`, { headers: { "x-admin-key": adminKey } });
+                                          if (!r.ok) { alert("Aucune capture pour cette commande"); return; }
+                                          window.open(URL.createObjectURL(await r.blob()), "_blank");
+                                        }}
+                                        className="text-[11px] font-bold text-left" style={{ color: DS.violetMid, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+                                        Voir la capture ({order.payMethod === "orange" ? "Orange Money" : "MTN MoMo"})
+                                      </button>
+                                    )}
+                                  </div>
+                              </td>
                               <td className="py-2.5 text-xs whitespace-nowrap" style={{ color: DS.muted }}>{order.createdAt ? new Date(order.createdAt).toLocaleString("fr-FR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "—"}</td>
                             </tr>
                           ))}

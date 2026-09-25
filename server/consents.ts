@@ -83,3 +83,46 @@ export function verifyStopLinkSig(phone: string, sig: string): boolean {
   const a = Buffer.from(stopLinkSig(phone)), b = Buffer.from(String(sig));
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
+
+// ── Rappels de suivi demandés par un médecin (« ARRÊT SUIVI ») ─────────────
+// Coupe UNIQUEMENT ces rappels. Seul le patient peut les réactiver (Profil).
+
+/** « ARRÊT SUIVI » reçu : désactive les rappels de suivi de ce numéro. */
+export async function stopFollowups(phoneInput: string | null | undefined): Promise<void> {
+  const phone = normalizeCmPhone(phoneInput);
+  if (!phone) return;
+  const r = rows(await db.execute(sql`
+    UPDATE consents SET followups = FALSE, followups_stopped_at = NOW(), updated_at = NOW()
+    WHERE phone = ${phone} RETURNING id`));
+  if (r.length === 0) {
+    await db.execute(sql`
+      INSERT INTO consents (user_id, phone, followups, followups_stopped_at, updated_at)
+      VALUES (NULL, ${phone}, FALSE, NOW(), NOW())
+      ON CONFLICT (phone) WHERE user_id IS NULL AND phone IS NOT NULL DO UPDATE SET
+        followups = FALSE, followups_stopped_at = NOW(), updated_at = NOW()`);
+  }
+}
+
+/** Date d'arrêt des rappels de suivi pour ce patient (numéro ou compte), sinon null. */
+export async function followupsStoppedAt(opts: { phone?: string | null; userId?: string | null }): Promise<Date | null> {
+  const phone = normalizeCmPhone(opts.phone);
+  if (!phone && !opts.userId) return null;
+  try {
+    const r = rows(await db.execute(sql`
+      SELECT max(followups_stopped_at) AS at FROM consents
+      WHERE followups = FALSE AND (${phone}::text IS NOT NULL AND phone = ${phone} OR ${opts.userId ?? null}::text IS NOT NULL AND user_id = ${opts.userId ?? null})`))[0];
+    return r?.at ? new Date(r.at) : null;
+  } catch { return null; } // migration 0015 pas encore appliquée : rien n'est bloqué
+}
+
+/** Réactivation par le patient lui-même (Profil) : son compte et tous ses numéros connus. */
+export async function resumeFollowups(userId: string, phones: string[] = []): Promise<void> {
+  await db.execute(sql`
+    UPDATE consents SET followups = TRUE, followups_stopped_at = NULL, updated_at = NOW()
+    WHERE user_id = ${userId}`);
+  for (const phone of phones) {
+    await db.execute(sql`
+      UPDATE consents SET followups = TRUE, followups_stopped_at = NULL, updated_at = NOW()
+      WHERE phone = ${phone}`);
+  }
+}

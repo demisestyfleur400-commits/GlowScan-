@@ -99,8 +99,15 @@ export const orders = pgTable("orders", {
   totalPrice: integer("total_price").notNull(),
   brand: text("brand").notNull(),
   whatsappNumber: text("whatsapp_number").notNull(),
-  status: text("status").notNull().default("envoyée"),
+  status: text("status").notNull().default("received"), // received | paid_verified | shipping | delivered (0015)
   createdAt: timestamp("created_at").defaultNow(),
+  // Refonte Organic (0015) : total figé par le serveur, livraison, paiement.
+  subtotal: integer("subtotal"),
+  deliveryCity: text("delivery_city"),
+  deliveryFee: integer("delivery_fee"),
+  quartier: text("quartier"),
+  payMethod: varchar("pay_method", { length: 10 }), // orange | mtn | cash
+  proofUrl: text("proof_url"),
 });
 
 export const insertOrderSchema = createInsertSchema(orders).omit({ id: true, createdAt: true });
@@ -712,6 +719,8 @@ export const consents = pgTable("consents", {
   research: boolean("research"),                          // atlas anonymisé
   reminders: boolean("reminders").notNull().default(false), // recontact WhatsApp (relance, suivi)
   stoppedAt: timestamp("stopped_at"),                     // réponse STOP reçue
+  followups: boolean("followups").notNull().default(true), // rappels de suivi du médecin (0015)
+  followupsStoppedAt: timestamp("followups_stopped_at"),  // « ARRÊT SUIVI » reçu
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 export type Consent = typeof consents.$inferSelect;

@@ -18,12 +18,12 @@ const TABS: Tab[] = [
   { key: "home", label: "Accueil", href: "/", icon: House, match: ["/"] },
   { key: "skin", label: "Ma peau", href: "/ma-peau", icon: ChartLine, match: ["/ma-peau", "/profile"] },
   { key: "scan", label: "Scanner", href: "/analyze", icon: ScanFace, match: ["/analyze", "/product-scan-camera"] },
-  { key: "care", label: "Soins", href: "/routine", icon: Droplet, match: ["/routine", "/shop"] },
+  { key: "care", label: "Soins", href: "/routine", icon: Droplet, match: ["/routine", "/shop", "/commande"] },
   { key: "msg", label: "Messages", href: "/consultations", icon: MessageCircle, match: ["/consultations", "/chat", "/dermatologues", "/dr/"] },
 ];
 
 /** Routes de l'appli patient où la barre s'affiche. */
-const B2C_ROUTES = ["/", "/analyze", "/ma-peau", "/profile", "/shop", "/routine", "/consultations", "/chat", "/premium", "/product-scan-camera", "/dermatologues"];
+const B2C_ROUTES = ["/", "/analyze", "/ma-peau", "/profile", "/shop", "/routine", "/consultations", "/chat", "/premium", "/product-scan-camera", "/dermatologues", "/commande"];
 
 export const TAB_BAR_HEIGHT = 84;
 

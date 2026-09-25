@@ -50,6 +50,7 @@ const Admin = lazyWithRetry(() => import("@/pages/Admin"));
 const Challenge = lazyWithRetry(() => import("@/pages/Challenge"));
 const Chat = lazyWithRetry(() => import("@/pages/Chat"));
 const MaPeau = lazyWithRetry(() => import("@/pages/MaPeau"));
+const Commande = lazyWithRetry(() => import("@/pages/Commande"));
 const ProductScanCamera = lazyWithRetry(() => import("@/pages/ProductScanCamera"));
 const Routine = lazyWithRetry(() => import("@/pages/Routine"));
 const AuthPage = lazyWithRetry(() => import("@/pages/AuthPage"));
@@ -106,6 +107,7 @@ function Router() {
       <Route path="/admin" component={Admin} />
       <Route path="/chat" component={Chat} />
       <Route path="/ma-peau" component={MaPeau} />
+      <Route path="/commande" component={Commande} />
       {/* Scan produit fusionné dans le Scanner (onglet « Un produit ») */}
       <Route path="/scan-product">{() => { window.location.replace("/analyze"); return null; }}</Route>
       <Route path="/product-scan-camera" component={ProductScanCamera} />

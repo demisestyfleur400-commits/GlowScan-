@@ -1,3 +1,4 @@
+import { followupsStoppedNote } from "@shared/whatsappMessages";
 import { useState, useEffect } from "react";
 import html2pdf from "html2pdf.js";
 import { Link, useRoute, useLocation } from "wouter";
@@ -977,6 +978,20 @@ function FollowUpReminderCard({ patient, patientId }: { patient: any; patientId:
       toast({ title: "Erreur", description: e?.message, variant: "destructive" });
     }
   };
+
+  // « ARRÊT SUIVI » : note en lecture seule, aucun bouton (seul le patient peut réactiver).
+  if (patient.followupsStoppedAt) {
+    return (
+      <ProCard className="p-5 mb-4" data-testid="card-followups-stopped">
+        <div className="flex items-center gap-2 mb-2">
+          <BellRing className="w-4 h-4" style={{ color: DS.muted }} />
+          <p className="text-[11px] font-extrabold uppercase tracking-wider" style={{ color: DS.muted }}>Rappel de contrôle</p>
+        </div>
+        <p className="text-sm font-bold" style={{ color: DS.body }}>{followupsStoppedNote(patient.followupsStoppedAt)}</p>
+        <p className="text-xs mt-1" style={{ color: DS.muted }}>Seul le patient peut les réactiver, depuis son Profil.</p>
+      </ProCard>
+    );
+  }
 
   const scheduleIt = async () => {
     try {

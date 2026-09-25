@@ -1,1057 +1,117 @@
-import { motion, AnimatePresence } from "framer-motion";
-import { GsTopBar } from "@/components/GsTopBar";
-import { useSEO } from "@/hooks/useSEO";
-import { catalog, type Product, formatPrice, getProductBrand } from "@shared/catalog";
-import { Sparkles, X, Check, MessageCircle, Star, ChevronLeft, ShieldCheck, Truck } from "lucide-react";
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import { useMemo, useState } from "react";
+import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useScans } from "@/hooks/use-scans";
-import { trackPageVisit } from "@/lib/analytics";
+import { catalog, type Product } from "@shared/catalog";
+import { productsAllowed, resultStateOf } from "@shared/resultB2C";
+import { formatF } from "@shared/delivery";
 import { productImages } from "@/lib/productImages";
-import OrderModal, { type OrderItem } from "@/components/OrderModal";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { GS, useGsFonts } from "@/lib/gs-ui";
+import { cart, useCart } from "@/lib/cart";
+import { CareTabs } from "@/components/b2c/CareTabs";
+import { cn } from "@/lib/utils";
 
-// ─────────────────────────────────────────────────────────────────────
-//  Filtres par problème (Esthétique Clinique)
-// ─────────────────────────────────────────────────────────────────────
-type ProblemKey = "tous" | "acne" | "taches" | "hydratation" | "solaire" | "corps";
+// ════════════════════════════════════════════════════════════════════════
+// Soins › Boutique (refonte Organic). Chaque produit dit pourquoi il est pour
+// vous, à partir de données réelles (recommandation de votre dernière analyse).
+// Si cette analyse demande un avis médical, aucun produit n'est « conseillé ».
+// ════════════════════════════════════════════════════════════════════════
 
-interface ProblemFilter {
-  key: ProblemKey;
-  label: string;
-  emoji: string;
-  matcher: (p: Product) => boolean;
-}
+const CATS = [
+  { key: "visage", label: "Visage" },
+  { key: "corps", label: "Corps" },
+  { key: "cheveux", label: "Cheveux" },
+] as const;
 
-function searchableText(p: Product): string {
-  return `${p.targets.join(" ")} ${p.name} ${p.description || ""}`.toLowerCase();
-}
-
-const PROBLEMS: ProblemFilter[] = [
-  { key: "tous", label: "Tous", emoji: "✨", matcher: () => true },
-  {
-    key: "acne",
-    label: "Acné & Boutons",
-    emoji: "🔴",
-    matcher: (p) => {
-      if (p.category === "cheveux") return false;
-      const nameDesc = `${p.name} ${p.description || ""}`.toLowerCase();
-      const hasActiveSignal = /acn[eé]|bouton|imperfection|point.{0,3}noir|comédon|salicylique|peroxyde de benzoyle|anti-imperfection|purifiant.*visage|anti-acn/i.test(nameDesc);
-      if (!hasActiveSignal) return false;
-      const isJustPostAcne = /(post.acn|marques.acn|cicatrices.acn)/i.test(nameDesc) &&
-        !/anti.acn|salicylique|peroxyde|imperfection|bouton|comédon/i.test(nameDesc);
-      if (isJustPostAcne) return false;
-      if (p.category === "corps" && !/dos|body acne|acné corporelle|acné du dos/i.test(nameDesc)) return false;
-      return true;
-    },
-  },
-  {
-    key: "taches",
-    label: "Taches & Teint",
-    emoji: "🟤",
-    matcher: (p) => p.category !== "cheveux" && /tache|hyperpigment|éclaircis|pih|niacinamide|vitamine c|mélasma|dyschromie/i.test(searchableText(p)),
-  },
-  {
-    key: "hydratation",
-    label: "Hydratation & Barrière",
-    emoji: "💧",
-    matcher: (p) => /hydrat|déshydrat|hyaluron|barrière cutanée|céramide|nourrissant/i.test(searchableText(p)),
-  },
-  {
-    key: "solaire",
-    label: "Protections solaires",
-    emoji: "☀️",
-    matcher: (p) => {
-      if (p.category === "cheveux") return false;
-      const nameDesc = `${p.name} ${p.description || ""}`.toLowerCase();
-      return /spf\s?\d|écran solaire|crème solaire|sunscreen/i.test(nameDesc);
-    },
-  },
-  { key: "corps", label: "Soins corps", emoji: "🧴", matcher: (p) => p.category === "corps" },
-];
-
-interface UserProfile {
-  skinType?: string;
-  condition?: string;
-  scanDate?: Date;
-}
-
-function extractUserProfile(scans: any[]): UserProfile {
-  const last = scans?.[0];
-  if (!last) return {};
-  const full = last.recommendations?._fullResult;
-  return {
-    skinType: full?.skinType || last.skinType || undefined,
-    condition: full?.condition || last.condition || undefined,
-    scanDate: last.createdAt ? new Date(last.createdAt) : undefined,
-  };
-}
-
-// Mappe le problème détecté par l'analyse (condition + type de peau) vers le
-// filtre boutique correspondant. Permet d'ouvrir la boutique directement filtrée
-// sur le besoin de l'utilisateur. Retourne "tous" si rien de net (→ pas de filtre).
-function mapConditionToProblemKey(profile: UserProfile): ProblemKey {
-  const t = `${profile.condition || ""} ${profile.skinType || ""}`.toLowerCase();
-  if (!t.trim()) return "tous";
-  // Taches / hyperpigmentation (prioritaire sur acné si les deux : besoin ciblé)
-  if (/tache|hyperpigment|m[ée]lasma|\bpih\b|post.?inflammatoire|dyschromie|teint terne|teint irr[ée]gulier/.test(t)) return "taches";
-  // Acné / séborrhée / peau grasse → soins anti-imperfections
-  if (/acn[eé]|bouton|imperfection|com[ée]don|point.{0,3}noir|s[ée]borrh|peau grasse|peau mixte|pores?/.test(t)) return "acne";
-  // Sécheresse / déshydratation / eczéma / sensibilité / barrière → hydratation
-  if (/s[eè]che|s[ée]cheresse|d[ée]shydrat|ecz[ée]ma|atopi|sensible|r[ée]active|rougeur|barri[eè]re|tiraill/.test(t)) return "hydratation";
-  return "tous";
-}
-
-function isRecommendedForUser(product: Product, profile: UserProfile): boolean {
-  if (!profile.skinType && !profile.condition) return false;
-  const profileText = `${profile.skinType || ""} ${profile.condition || ""}`.toLowerCase();
-  const productText = searchableText(product);
-  const strongKeywords = [
-    "acn", "bouton", "imperfection", "comédon",
-    "tache", "hyperpigment", "pih", "mélasma",
-    "déshydrat", "sécheresse", "ride", "anti-âge",
-    "rougeur", "rosacée",
-  ];
-  const skinTypeMatch = ["grasse", "mixte", "sèche", "sensible"].some(
-    (t) => profileText.includes(t) && productText.includes(t)
-  );
-  const strongMatch = strongKeywords.some(
-    (kw) => profileText.includes(kw) && productText.includes(kw)
-  );
-  return strongMatch || skinTypeMatch;
-}
-
-function getDynamicBenefits(product: Product, profile: UserProfile): string[] {
-  const benefits: string[] = [];
-  const blob = searchableText(product);
-  const skin = profile.skinType?.toLowerCase() || "";
-  const cond = profile.condition?.toLowerCase() || "";
-  const userBlob = `${skin} ${cond}`;
-
-  if (/acn[eé]|bouton|imperfection|point.{0,3}noir|comédon|salicylique/i.test(blob)) {
-    if (/acn[eé]|bouton|comédon/.test(userBlob)) {
-      benefits.push("Aide à apaiser tes imperfections actuelles");
-    } else {
-      benefits.push("Prévient l'apparition de nouvelles imperfections");
-    }
-  }
-  if (/sébum|peau grasse|matifiant|pore|salicylique/i.test(blob)) {
-    if (skin.includes("mixte")) benefits.push("Régule l'excès de sébum sur ta zone T");
-    else if (skin.includes("grasse")) benefits.push("Régule la production de sébum sur tout le visage");
-    else benefits.push("Désincruste les pores et matifie la peau");
-  }
-  if (/tache|hyperpigment|éclaircis|pih|niacinamide|vitamine c/i.test(blob)) {
-    if (/tache|pih|hyperpigment/.test(userBlob)) benefits.push("Atténue tes taches post-inflammatoires");
-    else benefits.push("Unifie le teint et atténue les marques");
-  }
-  if (/hydrat|hyaluron|déshydrat|céramide|barrière/i.test(blob)) {
-    if (skin.includes("grasse") || skin.includes("mixte")) benefits.push("Hydrate sans obstruer les pores");
-    else if (skin.includes("sèche")) benefits.push("Hydrate intensément ta peau sèche pendant 24h");
-    else benefits.push("Hydratation longue durée jusqu'à 24h");
-  }
-  if (/spf|uv|solaire/i.test(blob)) {
-    if (/tache|pih|hyperpigment/.test(userBlob)) benefits.push("Protège des UV qui aggravent tes taches");
-    else benefits.push("Protège ta peau des UV au quotidien");
-  }
-  if (/sensible|doux|apais/i.test(blob)) {
-    if (skin.includes("sensible")) benefits.push("Formule douce qui ne réactive pas tes rougeurs");
-    else benefits.push("Formule douce respectant la barrière cutanée");
-  }
-  if (product.category === "cheveux") {
-    if (/sec|sèche/i.test(blob)) benefits.push("Nourrit en profondeur tes cheveux secs");
-    if (/croissance|pousse/i.test(blob)) benefits.push("Stimule la pousse de tes cheveux");
-    if (/frisé|crépu|naturel|boucle/i.test(blob)) benefits.push("Définit tes boucles sans alourdir");
-  }
-  if (product.category === "corps" && benefits.length === 0) {
-    if (skin.includes("sèche")) benefits.push("Nourrit ta peau et restaure sa douceur");
-    else benefits.push("Hydrate et adoucit ta peau au quotidien");
-  }
-  if (/rétinol|anti-âge|ride/i.test(blob)) {
-    benefits.push("Stimule le renouvellement cellulaire et lisse les rides");
-  }
-
-  const unique = Array.from(new Set(benefits)).slice(0, 4);
-  if (unique.length === 0) {
-    if (product.usagePoints && product.usagePoints.length > 0) return product.usagePoints.slice(0, 4);
-    return ["Améliore visiblement la qualité de ta peau", "Adapté à ton type de peau"];
-  }
-  return unique;
-}
-
-const SHOP_SOCIAL_CITIES = ["Douala", "Yaoundé", "Bafoussam", "Limbé", "Abidjan", "Dakar", "Kribi"];
-
-function getPackCategory(product: Product, profile: UserProfile): {
-  packName: string;
-  accroche: string;
-  emoji: string;
-  socialProof: string;
-} | null {
-  if (!profile.condition && !profile.skinType) return null;
-  const blob = searchableText(product);
-  const cond = (profile.condition || "").toLowerCase();
-
-  // Détermination déterministe de la ville selon l'id produit
-  let cityIdx = 0;
-  for (let i = 0; i < product.id.length; i++) cityIdx += product.id.charCodeAt(i);
-  const city = SHOP_SOCIAL_CITIES[cityIdx % SHOP_SOCIAL_CITIES.length];
-  let count = 12 + (cityIdx % 25);
-
-  if (/tache|hyperpigment|pih|mélasma|éclaircis|niacinamide|vitamine c/i.test(blob)) {
-    return {
-      packName: "Pack Anti-taches",
-      accroche: cond.includes("tache") || cond.includes("hyperpigment")
-        ? "Ton analyse a révélé des taches d'hyperpigmentation actives sur ta peau."
-        : "Ce soin cible les irrégularités de teint et les marques sombres.",
-      emoji: "🌟",
-      socialProof: `${count} femmes de ${city} ont éclairci leur teint avec ce soin ce mois-ci.`,
-    };
-  }
-  if (/acn[eé]|bouton|imperfection|comédon|salicylique|peroxyde|anti-acn/i.test(blob)) {
-    return {
-      packName: "Pack Anti-acné",
-      accroche: cond.includes("acné") || cond.includes("acne")
-        ? "Ton analyse a détecté une acné inflammatoire — ce soin traite la cause racine."
-        : "Formule sébo-régulatrice pour prévenir les imperfections.",
-      emoji: "🔴",
-      socialProof: `${count} femmes de ${city} ont réduit leurs boutons de plus de 70% en 4 semaines.`,
-    };
-  }
-  if (/hydrat|déshydrat|hyaluron|barrière|céramide|sèche/i.test(blob)) {
-    return {
-      packName: "Routine Éclat",
-      accroche: cond.includes("déshydrat") || cond.includes("sèche")
-        ? "Ton analyse a révélé une déshydratation cutanée profonde."
-        : "Hydratation intense pour redonner de l'éclat à ton teint.",
-      emoji: "💧",
-      socialProof: `${count} femmes de ${city} ont retrouvé une peau lumineuse en 2 semaines.`,
-    };
-  }
-  if (product.category === "cheveux" && /sec|sèche|sécheresse|démangeaison|cuir/i.test(blob)) {
-    return {
-      packName: "Pack Cuir Chevelu",
-      accroche: "Ton analyse a révélé une sécheresse du cuir chevelu et des démangeaisons.",
-      emoji: "🌿",
-      socialProof: `${count} femmes de ${city} ont apaisé leur cuir chevelu avec ce soin.`,
-    };
-  }
-  if (product.category === "cheveux" && /croissance|pousse|densité|fragilité|chute/i.test(blob)) {
-    return {
-      packName: "Pack Pousse & Densité",
-      accroche: "Ton analyse capillaire a détecté une fragilité pilaire et une pousse ralentie.",
-      emoji: "💪",
-      socialProof: `${count} femmes de ${city} ont observé une repousse visible en 6 semaines.`,
-    };
-  }
-  return null;
-}
-
-function getRecommendationReason(product: Product, profile: UserProfile): string | null {
-  if (!profile.skinType && !profile.condition && !profile.scanDate) return null;
-  const date = profile.scanDate?.toLocaleDateString("fr-FR", { day: "numeric", month: "long" }) || "ton dernier scan";
-  const skin = profile.skinType?.toLowerCase() || "ta peau";
-  const cond = profile.condition ? profile.condition.toLowerCase() : "";
-
-  const blob = searchableText(product);
-  let activeIngredient = "ses actifs ciblés";
-  if (/niacinamide/i.test(blob)) activeIngredient = "le niacinamide";
-  else if (/salicylique/i.test(blob)) activeIngredient = "l'acide salicylique";
-  else if (/hyaluron/i.test(blob)) activeIngredient = "l'acide hyaluronique";
-  else if (/céramide/i.test(blob)) activeIngredient = "les céramides";
-  else if (/spf|uv|solaire/i.test(blob)) activeIngredient = "sa protection solaire";
-  else if (/rétinol/i.test(blob)) activeIngredient = "le rétinol";
-  else if (/vitamine c/i.test(blob)) activeIngredient = "la vitamine C";
-
-  const condLabel = cond ? `**${cond}**` : `peau ${skin}`;
-  return `Ton analyse du ${date} a révélé ${condLabel}. Ce soin est calibré pour cibler précisément ce problème via ${activeIngredient} — actif démontré sur peaux africaines.`;
-}
-
-// ─────────────────────────────────────────────────────────────────────
-//  Modale Fiche Produit
-// ─────────────────────────────────────────────────────────────────────
-function ProductDetailModal({
-  product,
-  profile,
-  onClose,
-  onOrder,
-}: {
-  product: Product | null;
-  profile: UserProfile;
-  onClose: () => void;
-  onOrder: (product: Product) => void;
-}) {
-  useEffect(() => {
-    if (!product) return;
-    const handleEscape = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
-    document.addEventListener("keydown", handleEscape);
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", handleEscape);
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [product, onClose]);
-
-  if (!product) return null;
-  const benefits = getDynamicBenefits(product, profile);
-  const reason = getRecommendationReason(product, profile);
-  const packCopy = getPackCategory(product, profile);
-  const img = productImages[product.id] || product.image;
-  const brand = getProductBrand(product);
-
-  const targetLabel =
-    product.category === "cheveux" ? "tes cheveux" :
-    product.category === "corps" ? "ton corps" :
-    "ta peau";
-
-  return (
-    <AnimatePresence>
-      <motion.div
-        key="modal-backdrop"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50"
-        style={{ background: "rgba(251,253,254,0.7)", backdropFilter: "blur(6px)" }}
-        onClick={onClose}
-      />
-      <motion.div
-        key="modal-drawer"
-        initial={{ y: "100%" }}
-        animate={{ y: 0 }}
-        exit={{ y: "100%" }}
-        transition={{ type: "spring", damping: 30, stiffness: 300 }}
-        role="dialog"
-        aria-modal="true"
-        className="fixed inset-x-0 bottom-0 z-50 flex flex-col"
-        style={{
-          background: "#ffffff",
-          border: "1px solid rgba(0,0,0,0.07)",
-          borderRadius: "28px 28px 0 0",
-          maxHeight: "94vh",
-        }}
-      >
-        {/* Header */}
-        <div
-          className="flex items-center justify-between px-5 py-4 flex-shrink-0"
-          style={{ borderBottom: "1px solid rgba(0,0,0,0.07)" }}
-        >
-          <button
-            onClick={onClose}
-            className="w-10 h-10 flex items-center justify-center transition-all active:scale-95"
-            style={{
-              background: "rgba(0,0,0,0.08)",
-              border: "1px solid rgba(0,0,0,0.15)",
-              borderRadius: "9999px",
-              color: "#4a5568",
-            }}
-            aria-label="Retour"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-          <div className="w-10 h-1 rounded-full" style={{ background: "rgba(0,0,0,0.15)" }} />
-          <button
-            onClick={onClose}
-            className="w-10 h-10 flex items-center justify-center transition-all active:scale-95"
-            style={{
-              background: "rgba(0,0,0,0.08)",
-              border: "1px solid rgba(0,0,0,0.15)",
-              borderRadius: "9999px",
-              color: "#4a5568",
-            }}
-            aria-label="Fermer"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Scrollable body */}
-        <div className="overflow-y-auto flex-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {/* Product image */}
-          <div
-            className="relative aspect-square flex items-center justify-center overflow-hidden"
-            style={{ background: "rgba(0,0,0,0.04)", borderBottom: "1px solid rgba(0,0,0,0.06)" }}
-          >
-            {img ? (
-              <img src={img} alt={product.name} className="w-full h-full object-cover" />
-            ) : (
-              <Sparkles className="w-16 h-16" style={{ color: "rgba(10,110,114,0.3)" }} />
-            )}
-            <div className="absolute bottom-4 left-4">
-              <span
-                className="inline-flex items-center gap-1.5 text-[10px] font-700 px-3 py-1.5"
-                style={{
-                  background: "rgba(251,253,254,0.85)",
-                  border: "1px solid rgba(0,0,0,0.1)",
-                  borderRadius: "8px",
-                  color: "#0A6E72",
-                  backdropFilter: "blur(10px)",
-                }}
-              >
-                <ShieldCheck className="w-3 h-3" style={{ color: "#0A6E72" }} />
-                Authentique
-              </span>
-            </div>
-          </div>
-
-          <div className="p-6 space-y-5">
-            {/* Product info */}
-            <div>
-              <span className="text-[10px] font-700 uppercase tracking-widest" style={{ color: "#0A6E72" }}>
-                {brand}
-              </span>
-              <h2 className="text-xl font-800 leading-tight mt-1" style={{ color: "#1a2235" }}>
-                {product.name}
-              </h2>
-              <div className="flex items-baseline gap-3 mt-2">
-                <span className="text-2xl font-800" style={{ color: "#1a2235" }}>
-                  {product.price ? formatPrice(product.price) : "Sur demande"}
-                </span>
-                <span
-                  className="text-[10px] font-700 uppercase tracking-wider"
-                  style={{ color: "rgba(0,0,0,0.35)" }}
-                >
-                  Livraison rapide
-                </span>
-              </div>
-            </div>
-
-            {/* ── Pack copywriting émotionnel ── */}
-            {packCopy && (
-              <div
-                className="rounded-2xl p-4"
-                style={{
-                  background: "rgba(10,110,114,0.06)",
-                  border: "1px solid rgba(10,110,114,0.2)",
-                }}
-              >
-                <p className="text-[10px] font-bold tracking-wide mb-1.5" style={{ color: "#0B1719" }}>
-                  {packCopy.emoji} {packCopy.packName}
-                </p>
-                <p className="text-sm font-bold leading-snug mb-2" style={{ color: "#1a2235" }}>
-                  {packCopy.accroche}
-                </p>
-                <p className="text-[10px] font-medium" style={{ color: "rgba(249,168,212,0.8)" }}>
-                  ⭐ {packCopy.socialProof}
-                </p>
-              </div>
-            )}
-
-            {product.description && (
-              <p
-                className="text-xs md:text-sm font-500 leading-relaxed px-4 py-3"
-                style={{
-                  color: "#4a5568",
-                  background: "rgba(10,110,114,0.06)",
-                  border: "1px solid rgba(10,110,114,0.18)",
-                  borderRadius: "24px",
-                }}
-              >
-                {product.description}
-              </p>
-            )}
-
-            {/* AI recommendation reason */}
-            {reason && (
-              <motion.section
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="p-4"
-                style={{
-                  background: "rgba(10,110,114,0.06)",
-                  border: "1px solid rgba(10,110,114,0.18)",
-                  borderRadius: "24px",
-                }}
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  <Sparkles className="w-4 h-4" style={{ color: "#0A6E72" }} />
-                  <h3 className="text-[10px] font-700 uppercase tracking-wider" style={{ color: "#0A6E72" }}>
-                    Analyse clinique GlowScan
-                  </h3>
-                </div>
-                <p className="text-xs md:text-sm font-500 leading-relaxed" style={{ color: "#4a5568" }}>
-                  {reason}
-                </p>
-              </motion.section>
-            )}
-
-            {/* Benefits list */}
-            <section>
-              <h3 className="text-xs font-700 mb-3" style={{ color: "#4a5568" }}>
-                Impact ciblé sur{" "}
-                <span style={{ color: "#0A6E72" }}>{targetLabel}</span> :
-              </h3>
-              <ul className="space-y-2.5">
-                {benefits.map((b, i) => (
-                  <li key={i} className="flex items-start gap-3 text-xs md:text-sm font-500 leading-relaxed" style={{ color: "#4a5568" }}>
-                    <div
-                      className="w-5 h-5 flex items-center justify-center flex-shrink-0 mt-0.5"
-                      style={{
-                        background: "rgba(10,110,114,0.15)",
-                        border: "1px solid rgba(10,110,114,0.3)",
-                        borderRadius: "8px",
-                      }}
-                    >
-                      <Check className="w-3 h-3" style={{ color: "#0A6E72" }} strokeWidth={3} />
-                    </div>
-                    <span>{b}</span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-
-            {/* Delivery info */}
-            <div
-              className="flex items-center gap-3 p-4"
-              style={{
-                background: "rgba(16,185,129,0.08)",
-                border: "1px solid rgba(16,185,129,0.2)",
-                borderRadius: "16px",
-              }}
-            >
-              <Truck className="w-5 h-5 shrink-0" style={{ color: "#6ee7b7" }} />
-              <p className="text-[11px] font-500 leading-normal" style={{ color: "rgba(110,231,183,0.85)" }}>
-                Livraison à domicile ou retrait disponible à Douala & Yaoundé sous 24/48h.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Sticky CTA */}
-        <div
-          className="p-4 flex-shrink-0"
-          style={{
-            borderTop: "1px solid rgba(0,0,0,0.07)",
-            background: "#ffffff",
-            backdropFilter: "blur(20px)",
-          }}
-        >
-          <button
-            type="button"
-            onClick={() => onOrder(product)}
-            className="w-full flex items-center justify-center gap-2 py-4 text-sm font-800"
-            style={{
-              background: "#0B1719",
-              borderRadius: "12px",
-              color: "#fff",
-            }}
-          >
-            <MessageCircle className="w-4 h-4" />
-            Commander maintenant — Livraison à Douala
-          </button>
-        </div>
-      </motion.div>
-    </AnimatePresence>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────
-//  Tag color mapping
-// ─────────────────────────────────────────────────────────────────────
-function getTagStyle(tag: string): React.CSSProperties {
-  const t = tag.toLowerCase();
-  if (/acn[eé]|bouton|imperfection/.test(t))
-    return { background: "#fef2f2", color: "#ef4444", border: "1px solid #fecaca" };
-  if (/tache|hyperpigment|pih|mélasma|éclaircis/.test(t))
-    return { background: "#fefce8", color: "#ca8a04", border: "1px solid #fde68a" };
-  if (/hydrat|déshydrat|sèche|dry/.test(t))
-    return { background: "#eff6ff", color: "#3b82f6", border: "1px solid #bfdbfe" };
-  if (/cheveux|cuir|capillaire/.test(t))
-    return { background: "#f0fdf4", color: "#16a34a", border: "1px solid #bbf7d0" };
-  if (/corps|gommage|savon/.test(t))
-    return { background: "#fdf4ff", color: "#9333ea", border: "1px solid #e9d5ff" };
-  if (/solaire|spf|uv/.test(t))
-    return { background: "#fff7ed", color: "#ea580c", border: "1px solid #fed7aa" };
-  return { background: "#f3f4f6", color: "#6b7280", border: "1px solid #e5e7eb" };
-}
-
-// ─────────────────────────────────────────────────────────────────────
-//  Skeleton card
-// ─────────────────────────────────────────────────────────────────────
-function SkeletonCard() {
-  return (
-    <div style={{
-      background: "#fff", borderRadius: 16, padding: "14px 16px",
-      display: "flex", gap: 14, alignItems: "flex-start",
-      boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
-    }}>
-      <div style={{
-        width: 120, height: 120, borderRadius: 12, flexShrink: 0,
-        background: "linear-gradient(90deg,#f0f0f0 25%,#e8e8e8 50%,#f0f0f0 75%)",
-        backgroundSize: "200% 100%",
-        animation: "shimmer 1.5s infinite",
-      }} />
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
-        <div style={{ height: 10, width: "40%", borderRadius: 6, background: "linear-gradient(90deg,#f0f0f0 25%,#e8e8e8 50%,#f0f0f0 75%)", backgroundSize: "200% 100%", animation: "shimmer 1.5s infinite" }} />
-        <div style={{ height: 14, width: "85%", borderRadius: 6, background: "linear-gradient(90deg,#f0f0f0 25%,#e8e8e8 50%,#f0f0f0 75%)", backgroundSize: "200% 100%", animation: "shimmer 1.5s infinite" }} />
-        <div style={{ height: 14, width: "60%", borderRadius: 6, background: "linear-gradient(90deg,#f0f0f0 25%,#e8e8e8 50%,#f0f0f0 75%)", backgroundSize: "200% 100%", animation: "shimmer 1.5s infinite" }} />
-        <div style={{ height: 18, width: "35%", borderRadius: 6, marginTop: 4, background: "linear-gradient(90deg,#f0f0f0 25%,#e8e8e8 50%,#f0f0f0 75%)", backgroundSize: "200% 100%", animation: "shimmer 1.5s infinite" }} />
-        <div style={{ height: 38, borderRadius: 10, marginTop: 4, background: "linear-gradient(90deg,#f0f0f0 25%,#e8e8e8 50%,#f0f0f0 75%)", backgroundSize: "200% 100%", animation: "shimmer 1.5s infinite" }} />
-      </div>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────
-//  Placeholder produit — affiché quand aucune image ne charge (kits sans
-//  image, ou URLs externes hotlinkées bloquées/timeout). Design intentionnel
-//  et cohérent par catégorie, plutôt qu'une image cassée ou un emoji nu.
-// ─────────────────────────────────────────────────────────────────────
-const CAT_PLACEHOLDER: Record<string, { grad: string; emoji: string; accent: string }> = {
-  visage:  { grad: "linear-gradient(135deg,#ede9fe,#ddd6fe)", emoji: "✨", accent: "#0A6E72" },
-  corps:   { grad: "linear-gradient(135deg,#ccfbf1,#99f6e4)", emoji: "🧴", accent: "#0d9488" },
-  cheveux: { grad: "linear-gradient(135deg,#fef3c7,#fde68a)", emoji: "💆", accent: "#b45309" },
-};
-function ProductPlaceholder({ category, brand }: { category?: string; brand?: string }) {
-  const c = CAT_PLACEHOLDER[category || "visage"] || CAT_PLACEHOLDER.visage;
-  return (
-    <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, background: c.grad, textAlign: "center", padding: 8 }}>
-      <span style={{ fontSize: 32, lineHeight: 1 }}>{c.emoji}</span>
-      {brand && <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: ".06em", textTransform: "uppercase", color: c.accent, maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{brand}</span>}
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────
-//  Product Card — design référence (horizontal, fond blanc)
-// ─────────────────────────────────────────────────────────────────────
-function ProductCard({
-  product,
-  profile,
-  onOrder,
-  index,
-}: {
-  product: Product;
-  profile: UserProfile;
-  onOrder: (p: Product) => void;
-  index: number;
-}) {
-  const [imgLoaded, setImgLoaded] = useState(false);
-  const [imgError, setImgError] = useState(false);
-  const img = productImages[product.id] || product.image;
-  const brand = getProductBrand(product);
-  const recommended = isRecommendedForUser(product, profile);
-  const tags = product.targets.slice(0, 2).map(t =>
-    t.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")
-  );
-
-  const waNumber = (product.whatsapp || "+237674377959").replace("+", "");
-  const priceLine = product.price ? `Prix : ${product.price.toLocaleString("fr-FR")} FCFA\n` : "";
-  // Deux intentions distinctes, textes cohérents (voir le contenu ≠ commander).
-  const waUrl = `https://wa.me/${waNumber}?text=${encodeURIComponent(
-    `Bonjour 👋, je souhaite commander :\n• ${product.name}\n${priceLine}\nMerci 🙏`
-  )}`;
-  const waUrlContent = `https://wa.me/${waNumber}?text=${encodeURIComponent(
-    `Bonjour 👋, je souhaite voir le contenu de :\n• ${product.name}\n${priceLine}\nMerci 🙏`
-  )}`;
-  // Contenu affiché sur la carte (kits surtout) → répond à « ce que contient ce kit »
-  // directement à l'écran, sans avoir à écrire sur WhatsApp.
-  const contents: string[] = Array.isArray((product as any).usagePoints) ? (product as any).usagePoints : [];
-  const logWaClick = () => {
-    fetch("/api/analytics/whatsapp-click", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ productId: product.id, productName: product.name, brand, whatsappNumber: product.whatsapp || "+237674377959" }),
-    }).catch(() => {});
-  };
-
-  // Certaines images externes (hotlink marques) ne déclenchent jamais onError :
-  // elles restent bloquées sur le skeleton. Timeout → bascule sur le placeholder.
-  useEffect(() => {
-    if (!img || imgLoaded || imgError) return;
-    const t = setTimeout(() => setImgError(true), 4000);
-    return () => clearTimeout(t);
-  }, [img, imgLoaded, imgError]);
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ delay: Math.min(index * 0.04, 0.2), duration: 0.3 }}
-      style={{
-        background: "#fff",
-        borderRadius: 16,
-        padding: "14px 16px",
-        display: "flex",
-        gap: 14,
-        alignItems: "flex-start",
-        boxShadow: recommended
-          ? "0 2px 16px rgba(10,110,114,0.12)"
-          : "0 2px 12px rgba(0,0,0,0.06)",
-        border: recommended ? "1.5px solid rgba(10,110,114,0.2)" : "1px solid #f0f0f0",
-        position: "relative",
-      }}
-    >
-      {/* Badge recommandé */}
-      {recommended && (
-        <div style={{
-          position: "absolute", top: -1, left: 16,
-          background: "#0B1719", color: "#fff",
-          fontSize: 9, fontWeight: 800, letterSpacing: ".04em",
-          padding: "3px 8px", borderRadius: "0 0 8px 8px",
-          display: "flex", alignItems: "center", gap: 3,
-        }}>
-          <Star style={{ width: 8, height: 8, fill: "currentColor" }} />
-          Recommandé
-        </div>
-      )}
-
-      {/* Image 120×120 */}
-      <div style={{
-        width: 120, height: 120, borderRadius: 12, flexShrink: 0,
-        overflow: "hidden", background: "#f7f7f7",
-        position: "relative",
-      }}>
-        {/* Skeleton pendant chargement */}
-        {!imgLoaded && !imgError && img && (
-          <div style={{
-            position: "absolute", inset: 0,
-            background: "linear-gradient(90deg,#f0f0f0 25%,#e8e8e8 50%,#f0f0f0 75%)",
-            backgroundSize: "200% 100%",
-            animation: "shimmer 1.5s infinite",
-          }} />
-        )}
-        {img && !imgError ? (
-          <img
-            src={img}
-            alt={product.name}
-            loading="lazy"
-            width={120}
-            height={120}
-            onLoad={() => setImgLoaded(true)}
-            onError={() => setImgError(true)}
-            style={{
-              width: "100%", height: "100%",
-              objectFit: "cover",
-              opacity: imgLoaded ? 1 : 0,
-              transition: "opacity 0.3s ease",
-            }}
-          />
-        ) : (
-          <ProductPlaceholder category={product.category} brand={brand} />
-        )}
-      </div>
-
-      {/* Contenu */}
-      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>
-        {/* Marque */}
-        <span style={{
-          fontSize: 10, fontWeight: 700, color: "#9ca3af",
-          letterSpacing: ".08em", textTransform: "uppercase",
-        }}>
-          {brand}
-        </span>
-
-        {/* Nom produit */}
-        <p style={{
-          fontSize: 14, fontWeight: 800, color: "#111827",
-          lineHeight: 1.3,
-          display: "-webkit-box",
-          WebkitLineClamp: 2,
-          WebkitBoxOrient: "vertical",
-          overflow: "hidden",
-        }}>
-          {product.name}
-        </p>
-
-        {/* Tags */}
-        {tags.length > 0 && (
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-            {tags.map((tag, i) => (
-              <span key={i} style={{
-                fontSize: 10, fontWeight: 600,
-                padding: "3px 8px", borderRadius: 9999,
-                ...getTagStyle(tag),
-              }}>
-                {tag}
-              </span>
-            ))}
-          </div>
-        )}
-
-        {/* Prix */}
-        <p style={{ fontSize: 16, fontWeight: 900, color: "#111827", marginTop: 2 }}>
-          {product.price ? `${product.price.toLocaleString("fr-FR")} FCFA` : "Sur demande"}
-        </p>
-
-        {/* Contenu du produit / kit — visible directement (répond à « ce que contient ») */}
-        {contents.length > 0 && (
-          <div style={{ background: "#f7f8fa", borderRadius: 10, padding: "8px 10px", marginTop: 2 }}>
-            <p style={{ fontSize: 9.5, fontWeight: 800, color: "#6b7280", letterSpacing: ".04em", textTransform: "uppercase", marginBottom: 4 }}>Ce que contient ce kit</p>
-            <ul style={{ margin: 0, paddingLeft: 14, display: "flex", flexDirection: "column", gap: 2 }}>
-              {contents.slice(0, 3).map((c, i) => (
-                <li key={i} style={{ fontSize: 11, color: "#374151", lineHeight: 1.4 }}>{c}</li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {/* Actions — 2 intentions claires et cohérentes */}
-        <div style={{ display: "flex", gap: 8, marginTop: 2 }}>
-          <a
-            href={waUrlContent}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={logWaClick}
-            style={{
-              display: "flex", alignItems: "center", justifyContent: "center",
-              gap: 5, padding: "10px 0", borderRadius: 10, flex: 1,
-              background: "#fff", color: "#128C4A",
-              border: "1.5px solid #25d366",
-              fontSize: 12.5, fontWeight: 800, textDecoration: "none",
-            }}
-          >
-            Voir le contenu
-          </a>
-          <a
-            href={waUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={logWaClick}
-            style={{
-              display: "flex", alignItems: "center", justifyContent: "center",
-              gap: 6, padding: "10px 0", borderRadius: 10, flex: 1,
-              background: "#25d366", color: "#fff",
-              fontSize: 12.5, fontWeight: 800, textDecoration: "none",
-            }}
-          >
-            <MessageCircle style={{ width: 14, height: 14 }} />
-            Commander
-          </a>
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────
-//  PAGE PRINCIPALE : BOUTIQUE
-// ─────────────────────────────────────────────────────────────────────
 export default function Shop() {
+  const [, setLocation] = useLocation();
   const { user } = useAuth();
   const { data: scans } = useScans();
-  useGsFonts();
+  const lines = useCart();
+  const [cat, setCat] = useState<(typeof CATS)[number]["key"]>("visage");
 
-  useSEO({
-    title: "Boutique Skincare — Produits adaptés à votre peau | GlowScan",
-    description: "Découvrez des produits skincare sélectionnés et recommandés par l'IA selon votre diagnostic peau. Crèmes, sérums et soins pour peaux africaines.",
-    canonical: "https://glow-scan.com/shop",
-  });
-  const [problemFilter, setProblemFilter] = useState<ProblemKey>("tous");
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [showOrderModal, setShowOrderModal] = useState(false);
-  const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
+  const last: any = Array.isArray(scans) && scans.length ? scans[0] : null;
+  const full = last?.recommendations?._fullResult;
+  const lastState = last ? resultStateOf(full ?? { score: last.score, condition: last.condition }) : null;
+  const canRecommend = !!lastState && productsAllowed(lastState);
+  const recommended = new Set<string>(canRecommend ? (full?.recommendations?.products ?? []) : []);
+  const lastDate = last?.createdAt ? new Date(last.createdAt).toLocaleDateString("fr-FR", { day: "numeric", month: "long" }) : null;
 
-  useEffect(() => { trackPageVisit("/shop"); }, []);
+  const why = (p: Product) =>
+    recommended.has(p.name) || recommended.has(p.id)
+      ? `Conseillé par votre analyse${lastDate ? ` du ${lastDate}` : ""}`
+      : (p.description || "").split(/(?<=[.!?])\s/)[0].slice(0, 90);
 
-  const profile = useMemo(
-    () => extractUserProfile(Array.isArray(scans) ? (scans as any[]) : []),
-    [scans]
+  const products = useMemo(() => {
+    const list = catalog.filter((p) => p.category === cat && typeof p.price === "number" && p.price > 0);
+    // Les produits conseillés par l'analyse d'abord.
+    return [...list].sort((a, b) => Number(recommended.has(b.name) || recommended.has(b.id)) - Number(recommended.has(a.name) || recommended.has(a.id)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cat, canRecommend, full]);
+
+  const count = lines.reduce((a, l) => a + l.qty, 0);
+  const subtotal = lines.reduce((a, l) => a + (catalog.find((p) => p.id === l.id)?.price ?? 0) * l.qty, 0);
+  const chip = (on: boolean) => cn(
+    "whitespace-nowrap rounded-pill border px-4 py-[9px] text-[14px] font-semibold",
+    on ? "border-organic-accent bg-organic-accent text-organic-bg" : "border-organic-divider bg-transparent text-organic-text",
   );
-  const hasProfile = !!(profile.skinType || profile.condition);
-
-  // Auto-filtrage : si l'utilisateur a une analyse, ouvrir la boutique filtrée
-  // sur son problème détecté (une seule fois). Sans analyse → "tous" (tout voir).
-  // L'utilisateur peut ensuite cliquer "Tous" ou un autre filtre librement.
-  const autoSelectedRef = useRef(false);
-  useEffect(() => {
-    if (autoSelectedRef.current || !hasProfile) return;
-    const key = mapConditionToProblemKey(profile);
-    if (key !== "tous") setProblemFilter(key);
-    autoSelectedRef.current = true;
-  }, [hasProfile, profile]);
-
-  const openOrderForProduct = (product: Product) => {
-    setOrderItems([{
-      productId: product.id,
-      productName: product.name,
-      brand: getProductBrand(product),
-      price: product.price,
-    }]);
-    setSelectedProduct(null);
-    setShowOrderModal(true);
-  };
-
-  const filtered = useMemo(() => {
-    const matcher = PROBLEMS.find((p) => p.key === problemFilter)!.matcher;
-    let products = catalog.filter(matcher);
-    // Fallback : un filtre ciblé sans résultat → nettoyants universels + SPF
-    // (conviennent à tous), plutôt qu'une boutique vide.
-    if (problemFilter !== "tous" && products.length === 0) {
-      products = catalog.filter((p) =>
-        p.category !== "cheveux" &&
-        /nettoyant|gel moussant|gel douche|micellaire|d[ée]maquill|spf\s?\d|solaire|sunscreen/i.test(searchableText(p))
-      );
-    }
-    if (hasProfile) {
-      products = [...products].sort((a, b) => {
-        const aRec = isRecommendedForUser(a, profile) ? 1 : 0;
-        const bRec = isRecommendedForUser(b, profile) ? 1 : 0;
-        return bRec - aRec;
-      });
-    }
-    return products;
-  }, [problemFilter, profile, hasProfile]);
-
-  if (!user) {
-    return (
-      <div
-        className="min-h-screen flex flex-col items-center justify-center px-6"
-        style={{ background: "#fbfdfe", fontFamily: GS.sans }}
-      >
-        {/* Glow orb */}
-        <div
-          className="pointer-events-none absolute"
-          style={{
-            width: 320,
-            height: 320,
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%,-60%)",
-            background: "radial-gradient(circle, rgba(10,110,114,0.15), transparent)",
-            borderRadius: "9999px",
-          }}
-        />
-        <div
-          className="w-16 h-16 flex items-center justify-center mb-6 text-2xl relative"
-          style={{
-            background: "rgba(10,110,114,0.06)",
-            border: "1px solid rgba(10,110,114,0.18)",
-            borderRadius: "24px",
-          }}
-        >
-          🛍️
-        </div>
-        <h1 className="text-xl font-800 mb-2" style={{ color: "#1a2235" }}>
-          Boutique GlowScan
-        </h1>
-        <p
-          className="text-xs font-500 text-center max-w-xs mb-8 leading-relaxed"
-          style={{ color: "#4a5568" }}
-        >
-          Accède aux prescriptions cosmétiques calibrées pour ta mélanine et ton type de peau.
-        </p>
-        <a
-          href="/auth"
-          className="w-full max-w-xs flex items-center justify-center py-3.5 text-sm font-800"
-          style={{
-            background: "#0B1719",
-            borderRadius: "9999px",
-            color: "#fff",
-          }}
-        >
-          Créer mon compte / Connexion
-        </a>
-      </div>
-    );
-  }
 
   return (
-    <div
-      className="min-h-screen pb-28"
-      style={{ background: "#f5f5f7", fontFamily: GS.sans }}
-    >
-      <GsTopBar />
+    <div className="min-h-screen bg-organic-bg font-body text-organic-text">
+      <main className="mx-auto flex max-w-[480px] flex-col gap-4 px-5 pb-6 pt-4">
+        <CareTabs active="shop" />
 
-      {/* Header */}
-      <header className="px-4 pt-5 pb-4 bg-white" style={{ borderBottom: "1px solid #f0f0f0" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 2 }}>
-          <h1 style={{ fontSize: 20, fontWeight: 900, color: "#111827" }}>
-            Produits recommandés
-          </h1>
-          <button
-            onClick={() => setProblemFilter("tous")}
-            style={{ fontSize: 13, fontWeight: 700, color: "#ca8a04", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 3 }}
-          >
-            Voir tout <ChevronLeft style={{ width: 14, height: 14, transform: "rotate(180deg)" }} />
-          </button>
-        </div>
-        {hasProfile && (
-          <p style={{ fontSize: 12, color: "#9ca3af" }}>
-            Sélection basée sur ton analyse · {profile.skinType || profile.condition || ""}
-          </p>
+        {lastState && !canRecommend && lastState !== "unusable" && (
+          <div className="flex flex-col gap-1.5 rounded-lg bg-organic-accent-100 p-4 text-organic-accent-900">
+            <span className="text-[14px] font-bold">Votre dernière analyse demande l'avis d'un dermatologue</span>
+            <span className="text-[13px]">GlowScan ne vous conseille aucun produit avant cet avis.</span>
+            <button type="button" onClick={() => setLocation("/dermatologues")} className="self-start rounded-pill border-0 bg-organic-accent px-4 py-2 text-[13px] font-bold text-organic-bg">Consulter un dermatologue</button>
+          </div>
         )}
-      </header>
 
-      {/* Filter tabs */}
-      <div
-        className="sticky top-0 z-20 bg-white"
-        style={{ borderBottom: "1px solid #f0f0f0" }}
-      >
-        <div className="flex gap-2 overflow-x-auto px-4 py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {PROBLEMS.map((p) => {
-            const isActive = problemFilter === p.key;
+        <div className="flex gap-1.5">
+          {CATS.map((c) => (
+            <button key={c.key} type="button" className={chip(cat === c.key)} onClick={() => setCat(c.key)}>{c.label}</button>
+          ))}
+        </div>
+
+        <div className="flex flex-col gap-2">
+          {products.map((p) => {
+            const on = lines.some((l) => l.id === p.id);
+            const img = productImages[p.id] || p.image;
             return (
-              <button
-                key={p.key}
-                onClick={() => setProblemFilter(p.key)}
-                className="flex items-center gap-1.5 px-3.5 h-8 text-xs font-700 transition-all active:scale-[0.97] flex-shrink-0"
-                style={
-                  isActive
-                    ? { background: "#111827", borderRadius: 9999, color: "#fff" }
-                    : { background: "#f3f4f6", border: "1px solid #e5e7eb", borderRadius: 9999, color: "#6b7280" }
-                }
-              >
-                <span style={{ fontSize: 11 }}>{p.emoji}</span>
-                <span>{p.label}</span>
-              </button>
+              <div key={p.id} className="flex items-center gap-3 rounded-lg bg-organic-surface px-3 py-2.5">
+                {img ? <img src={img} alt="" loading="lazy" className="h-12 w-12 flex-none rounded-[14px] object-cover" /> : <span className="h-12 w-12 flex-none rounded-[14px] bg-organic-accent-200" />}
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <span className="text-[13px] font-bold">{p.name}</span>
+                  <span className="line-clamp-2 text-[11px] text-organic-accent-2-800">{why(p)}</span>
+                  <span className="text-[12px] font-bold">{formatF(p.price!)}</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => cart.toggle(p.id)}
+                  className="flex-none rounded-pill border-0 px-3.5 py-2 text-[13px] font-bold text-organic-bg"
+                  style={{ background: on ? "var(--color-accent-2-600)" : "var(--color-accent)" }}
+                >
+                  {on ? "Ajouté ✓" : "Ajouter"}
+                </button>
+              </div>
             );
           })}
         </div>
-      </div>
-
-      {/* Product list */}
-      <main className="px-4 py-4">
-
-        {/* CSS shimmer animation */}
-        <style>{`
-          @keyframes shimmer {
-            0% { background-position: -200% 0; }
-            100% { background-position: 200% 0; }
-          }
-        `}</style>
-
-        {filtered.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "48px 24px", background: "#fff", borderRadius: 16 }}>
-            <Sparkles style={{ width: 32, height: 32, margin: "0 auto 12px", color: "#d1d5db" }} />
-            <p style={{ fontSize: 14, fontWeight: 700, color: "#374151" }}>Aucun produit trouvé</p>
-            <p style={{ fontSize: 12, color: "#9ca3af", marginTop: 4 }}>Sélectionne un autre filtre.</p>
-          </div>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {filtered.map((product, i) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                profile={profile}
-                onOrder={openOrderForProduct}
-                index={i}
-              />
-            ))}
-          </div>
-        )}
       </main>
 
-      {/* Product detail drawer */}
-      <ProductDetailModal
-        product={selectedProduct}
-        profile={profile}
-        onClose={() => setSelectedProduct(null)}
-        onOrder={openOrderForProduct}
-      />
-
-      {/* Order modal */}
-      <OrderModal
-        isOpen={showOrderModal}
-        onClose={() => setShowOrderModal(false)}
-        items={orderItems}
-        title="Finaliser la commande"
-        scanContext={profile.skinType || profile.condition ? {
-          skinType: profile.skinType,
-          condition: profile.condition,
-        } : undefined}
-      />
+      {count > 0 && (
+        <div className="sticky bottom-[84px] z-40 mx-auto max-w-[480px] px-5 pb-3">
+          <button
+            type="button"
+            onClick={() => setLocation(user ? "/commande" : "/auth")}
+            className="flex w-full items-center justify-between rounded-pill border-0 bg-organic-neutral-900 px-5 py-3.5 text-[15px] font-bold text-organic-neutral-100 shadow-organic-md"
+          >
+            <span>Commander · {count} produit{count > 1 ? "s" : ""}</span>
+            <span>{formatF(subtotal)}</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 }
