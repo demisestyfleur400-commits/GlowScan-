@@ -5,6 +5,7 @@
 // puis définir RESEND_API_KEY et EMAIL_FROM (ex: "GlowScan <securite@glow-scan.com>").
 
 import crypto from "crypto";
+import { RESULT_DISCLAIMER } from "@shared/resultB2C";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
 const EMAIL_FROM = process.env.EMAIL_FROM || "GlowScan <onboarding@resend.dev>";
@@ -76,11 +77,16 @@ export function buildOtpEmail(code: string, name?: string): { subject: string; h
 
 // Layout partagé — en-tête GlowScan + corps + éventuel bouton CTA.
 const APP_URL = (process.env.PUBLIC_BASE_URL || "https://glow-scan.com").replace(/\/$/, "");
-function wrap(title: string, bodyHtml: string, cta?: { label: string; url: string }): string {
+/** Échappe le texte injecté dans les emails (jamais de HTML venant de l'extérieur). */
+export function escHtml(v: unknown): string {
+  return String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
+}
+
+function wrap(title: string, bodyHtml: string, cta?: { label: string; url: string }, brand = "GlowScan DERM"): string {
   const btn = cta ? `<a href="${cta.url}" style="display:inline-block;margin:8px 0 4px;background:#7c3aed;color:#fff;text-decoration:none;font-weight:800;font-size:14px;padding:12px 22px;border-radius:9999px">${cta.label}</a>` : "";
   return `
   <div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:460px;margin:0 auto;padding:24px;color:#0F172A">
-    <p style="font-size:13px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#0369A1;margin:0 0 10px">GlowScan DERM</p>
+    <p style="font-size:13px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#0369A1;margin:0 0 10px">${brand}</p>
     <h1 style="font-size:19px;margin:0 0 12px">${title}</h1>
     ${bodyHtml}
     ${btn}
@@ -101,7 +107,7 @@ export function buildWelcomeEmail(name: string, publicProfileUrl?: string) {
 
 // B2C · Email de bienvenue patient (grand public).
 export function buildB2CWelcomeEmail(name: string) {
-  const subject = `Bienvenue sur GlowScan 👋`;
+  const subject = `Bienvenue sur GlowScan`; // pas d'émoji dans les messages aux patients
   const body = `
     <p style="font-size:14px;color:#475569;margin:0 0 12px">Bonjour ${name || ""}, votre compte GlowScan est prêt.</p>
     <p style="font-size:14px;color:#475569;margin:0 0 12px">Analysez votre peau en une photo, suivez votre Glow Score, et si besoin, consultez un dermatologue certifié — directement depuis votre téléphone.</p>`;
@@ -109,16 +115,20 @@ export function buildB2CWelcomeEmail(name: string) {
   return { subject, html, text: strip(body) };
 }
 
-// B2C · Résultat d'analyse par email.
-export function buildB2CResultEmail(name: string, condition: string, score: number, url: string) {
-  const subject = `Votre analyse GlowScan — Glow Score ${score}/100`;
+// B2C · Résultat d'analyse par email (compte rendu PDF en pièce jointe).
+// Tout le texte vient du scan en base et est échappé. Pas d'émoji.
+export function buildB2CResultEmail(name: string, condition: string, score: number | null, url: string, level?: string) {
+  const scoreTxt = typeof score === "number" ? `${score}/100` : "—";
+  const subject = typeof score === "number" ? `Votre analyse GlowScan — Glow Score ${score}/100` : "Votre analyse GlowScan";
   const body = `
-    <p style="font-size:14px;color:#475569;margin:0 0 12px">Bonjour ${name || ""}, votre analyse est prête.</p>
+    <p style="font-size:14px;color:#475569;margin:0 0 12px">Bonjour ${escHtml(name)}, votre compte rendu d'analyse est prêt.</p>
     <div style="background:#F1F5F9;border:1px solid #E2E8F0;border-radius:12px;padding:14px;margin:0 0 12px;font-size:14px;color:#0F172A">
-      <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="color:#64748B">Constat principal</span><strong>${condition || "—"}</strong></div>
-      <div style="display:flex;justify-content:space-between"><span style="color:#64748B">Glow Score</span><strong>${score}/100</strong></div>
-    </div>`;
-  const html = wrap("Votre analyse est prête", body, { label: "Voir mon résultat complet", url });
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="color:#64748B">Constat principal</span><strong>${escHtml(condition) || "—"}</strong></div>
+      <div style="display:flex;justify-content:space-between${level ? ";margin-bottom:6px" : ""}"><span style="color:#64748B">Glow Score</span><strong>${scoreTxt}</strong></div>
+      ${level ? `<div style="display:flex;justify-content:space-between"><span style="color:#64748B">Niveau</span><strong>${escHtml(level)}</strong></div>` : ""}
+    </div>
+    <p style="font-size:12px;color:#64748B;margin:0 0 12px">${RESULT_DISCLAIMER}</p>`;
+  const html = wrap("Votre analyse est prête", body, { label: "Voir mon résultat complet", url }, "GlowScan");
   return { subject, html, text: strip(body) };
 }
 

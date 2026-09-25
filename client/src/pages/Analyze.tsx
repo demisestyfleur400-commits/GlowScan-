@@ -15,10 +15,12 @@ import { TriageBadge } from "@/components/TriageBadge";
 import { classifyTriage } from "@/lib/clinicalRules";
 
 import { ResultB2C } from "@/components/b2c/ResultB2C";
+import { ScanCamera, type LightLevel } from "@/components/b2c/ScanCamera";
+import { useLocation } from "wouter";
+import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Sparkles, Lock, ChevronRight, HelpCircle, Scissors, Camera, User, PersonStanding, ArrowRight } from "lucide-react";
 import { GS, GsButton, GsMono, GsSteps, GsCheck, GsOption, GsMarks } from "@/lib/gs-ui";
-import { PhotoUnusable } from "@/components/AnalysisStates";
 import type { AnalysisResult } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -54,6 +56,8 @@ interface PatientIntake {
   duration: string;
   previousProducts: string;
   allergies: string;
+  /** Consentement explicite à recevoir le compte rendu par email (décoché par défaut). */
+  emailConsent: boolean;
 }
 
 interface Question {
@@ -100,6 +104,10 @@ export default function Analyze() {
   const cancelledRef = useRef(false); // « Annuler l'analyse » — empêche un résultat tardif de forcer la navigation
   const cancelAnalysis = () => { cancelledRef.current = true; setIsAnalyzing(false); setStep("intake"); };
   const [photoUnusable, setPhotoUnusable] = useState(false); // état 05 (photo inexploitable)
+  // Scanner (refonte Organic) : « Ma peau » ou « Un produit », et prise en cours (0..N).
+  const [scanMode, setScanMode] = useState<"skin" | "product">("skin");
+  const [shotIdx, setShotIdx] = useState(0);
+  const [, setLocation] = useLocation();
 
   const [consultationData, setConsultationData] = useState<ConsultationData | null>(null);
   const [answers, setAnswers] = useState<Record<number, string>>({});
@@ -114,8 +122,9 @@ export default function Analyze() {
     duration: "",
     previousProducts: "",
     allergies: "",
+    emailConsent: false,
   });
-  const updateIntake = (k: keyof PatientIntake, v: string) =>
+  const updateIntake = <K extends keyof PatientIntake>(k: K, v: PatientIntake[K]) =>
     setIntake(prev => ({ ...prev, [k]: v }));
 
   // ── Sauvegarde de l'état du questionnaire dans sessionStorage ──────
@@ -199,6 +208,10 @@ export default function Analyze() {
     setStep("upload");
   };
 
+  const shotsNeeded = selectedArea === "face" ? 3 : 1;
+
+  // Range la photo dans son emplacement. Tête tournée à gauche → on voit la joue
+  // DROITE du patient ; tête à droite → joue gauche.
   const handleFileSelect = (base64: string) => {
     if (!base64) return;
     if (!hasUserConsented(user?.id)) {
@@ -206,9 +219,36 @@ export default function Analyze() {
       setNeedsConsent(true);
       return;
     }
-    setUploadedImage(base64);
-    // Aller directement au formulaire patient (plus d'appel generate-consultation)
-    setStep("intake");
+    if (shotIdx === 0) setUploadedImage(base64);
+    else if (shotIdx === 1) setUploadedRight(base64);
+    else setUploadedLeft(base64);
+    const next = shotIdx + 1;
+    setShotIdx(next);
+    if (next >= shotsNeeded) setStep("intake");
+  };
+
+  const handleCapture = (dataUrl: string, light: LightLevel) => {
+    if (light === "dark" || light === "bright") {
+      toast({
+        title: light === "dark" ? "Photo trop sombre" : "Trop de lumière",
+        description: "Placez-vous face à une fenêtre, sans flash, puis reprenez la photo.",
+        variant: "destructive",
+      });
+      return;
+    }
+    handleFileSelect(dataUrl);
+  };
+
+  const skipShot = () => {
+    const next = shotIdx + 1;
+    setShotIdx(next);
+    if (next >= shotsNeeded) setStep("intake");
+  };
+
+  const resetShots = () => {
+    setUploadedImage(null); setUploadedRight(null); setUploadedLeft(null);
+    setShotIdx(0);
+    setStep("select");
   };
 
   // Photo supplémentaire (profil) — compression légère puis stockage.
@@ -229,19 +269,15 @@ export default function Analyze() {
   const handleIntakeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!uploadedImage) return;
-    // Champ produits utilisés = obligatoire (alimente l'IA + l'alerte produits nocifs)
-    if (!intake.previousProducts.trim()) {
-      toast({ title: "Champ requis", description: "Indiquez les produits que vous utilisez actuellement (ou écrivez « Aucun »).", variant: "destructive" });
+    // Formulaire court (refonte Organic) : âge et sexe restent obligatoires, ils
+    // alimentent l'IA et les étiquettes démographiques du dataset. Durée, produits
+    // et allergies sont demandés au moment d'une consultation.
+    if (!intake.age) {
+      toast({ title: "Champ requis", description: "Indiquez votre âge.", variant: "destructive" });
       return;
     }
-    // Sexe + durée passés en choix unique (design 02C) → on garde la validation
-    // que <select required> assurait auparavant.
     if (!intake.sexe) {
-      toast({ title: "Champ requis", description: "Sélectionnez votre sexe.", variant: "destructive" });
-      return;
-    }
-    if (!intake.duration) {
-      toast({ title: "Champ requis", description: "Indiquez depuis combien de temps.", variant: "destructive" });
+      toast({ title: "Champ requis", description: "Indiquez votre sexe.", variant: "destructive" });
       return;
     }
     cancelledRef.current = false;
@@ -405,7 +441,8 @@ export default function Analyze() {
     setConsultationData(null);
     setAnswers({});
     setUploadedImage(null); setUploadedRight(null); setUploadedLeft(null);
-    setIntake({ fullName: user?.firstName || "", phone: "", email: (user as any)?.email || "", age: "", sexe: "", duration: "", previousProducts: "", allergies: "" });
+    setIntake({ fullName: user?.firstName || "", phone: "", email: (user as any)?.email || "", age: "", sexe: "", duration: "", previousProducts: "", allergies: "", emailConsent: false });
+    setShotIdx(0);
     setStep("select");
   };
 
@@ -419,437 +456,194 @@ export default function Analyze() {
     }
   };
 
-  return (
-    <div
-      className="min-h-screen pb-24"
-      style={{
-        background: "#fbfdfb",
-        fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
-      }}
-    >
-      <GsTopBar />
+  const HINTS = selectedArea === "face"
+    ? ["Regardez l'écran, visage dans l'ovale", "Tournez la tête vers la gauche", "Tournez la tête vers la droite"]
+    : selectedArea === "hair"
+      ? ["Cuir chevelu bien dégagé, de près"]
+      : ["Zone bien centrée, de près"];
+  const photoCount = [uploadedImage, uploadedRight, uploadedLeft].filter(Boolean).length;
+  const chip = (on: boolean) => cn(
+    "whitespace-nowrap rounded-pill border px-4 py-[9px] text-[14px] font-semibold",
+    on ? "border-organic-accent bg-organic-accent text-organic-bg" : "border-organic-divider bg-transparent text-organic-text",
+  );
+  const seg = (on: boolean) => cn(
+    "flex-1 rounded-pill border-0 p-2.5 text-[14px] font-bold",
+    on ? "bg-organic-accent text-organic-bg" : "bg-transparent text-organic-text",
+  );
 
-      <main className="max-w-xl mx-auto px-4 pt-8">
+  return (
+    <div className="min-h-screen bg-organic-bg font-body text-organic-text">
+      <main className="mx-auto max-w-[480px] px-5 pb-6 pt-4">
         <AnimatePresence mode="wait">
 
-          {/* ══════════ LOADING SCREEN ══════════ */}
+          {/* ══════════ ANALYSE EN COURS ══════════ */}
           {isAnalyzing && (
             <motion.div
               key="loading"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-50"
-              style={{ background: "#fff", fontFamily: GS.sans, overflowY: "auto" }}
+              className="fixed inset-0 z-[60] flex flex-col items-center justify-center gap-5 bg-organic-bg px-6"
               data-testid="screen-analyzing"
             >
-              <div style={{ maxWidth: 430, margin: "0 auto", minHeight: "100dvh", padding: "22px 24px", boxSizing: "border-box", display: "flex", flexDirection: "column" }}>
-                <GsMono>Dossier en cours d'analyse</GsMono>
-                <div style={{ fontSize: 24, fontWeight: 600, color: GS.ink, letterSpacing: "-.7px", marginTop: 8 }}>Analyse en cours</div>
-
-                {/* Carte de progression (repères +) */}
-                <div style={{ position: "relative", marginTop: 26, border: `1px solid ${GS.line}`, padding: 24 }}>
-                  <GsMarks />
-                  <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 16 }}>
-                    <GsMono style={{ letterSpacing: ".14em" }}>Progression</GsMono>
-                    <span style={{ fontFamily: GS.mono, fontSize: 22, fontWeight: 600, color: GS.ink, fontVariantNumeric: "tabular-nums" }}>{LOADING_STEPS[loadingStep].pct} %</span>
-                  </div>
-                  <div style={{ height: 6, background: GS.panel, border: `1px solid ${GS.line}`, position: "relative" }}>
-                    <motion.div style={{ position: "absolute", top: 0, left: 0, bottom: 0, background: GS.grad }} animate={{ width: `${LOADING_STEPS[loadingStep].pct}%` }} transition={{ duration: 0.4 }} />
-                  </div>
-                  <div style={{ fontFamily: GS.mono, fontSize: 10, color: GS.faint, marginTop: 8 }}>{LOADING_STEPS[loadingStep].msg}</div>
-                </div>
-
-                {/* Étapes du pipeline (état réel selon loadingStep) */}
-                <div style={{ marginTop: 20, display: "flex", flexDirection: "column" }}>
-                  {LOADING_STEPS.map((s, i) => {
-                    const done = i < loadingStep;
-                    const current = i === loadingStep;
-                    return (
-                      <div key={i} style={{ display: "flex", gap: 13, alignItems: "center", padding: "12px 0", borderBottom: i < LOADING_STEPS.length - 1 ? `1px solid ${GS.hair}` : "none" }}>
-                        {done
-                          ? <span style={{ color: GS.teal, fontSize: 15, width: 16, textAlign: "center", flex: "none" }}>✓</span>
-                          : current
-                            ? <span style={{ width: 16, height: 16, border: `1px solid ${GS.accent}`, background: GS.mintTint, flex: "none" }} />
-                            : <span style={{ width: 16, height: 16, border: `1px solid ${GS.line}`, flex: "none" }} />}
-                        <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: done || current ? GS.ink : GS.faint }}>{s.msg}</span>
-                        {done && <span style={{ fontFamily: GS.mono, fontSize: 10, color: GS.teal }}>OK</span>}
-                        {current && <span style={{ fontFamily: GS.mono, fontSize: 10, color: GS.teal }}>EN COURS</span>}
-                      </div>
-                    );
-                  })}
-                </div>
-
-                <div style={{ marginTop: "auto", paddingTop: 20 }}>
-                  <div style={{ borderLeft: `2px solid ${GS.accent}`, paddingLeft: 14, fontSize: 12, lineHeight: 1.6, color: GS.muted, marginBottom: 16 }}>
-                    Vous pouvez fermer l'application. Nous vous prévenons dès que le résultat est prêt.
-                  </div>
-                  <GsButton variant="secondary" onClick={cancelAnalysis}>Annuler l'analyse</GsButton>
-                </div>
+              <div className="flex items-center justify-center gap-3 rounded-pill bg-organic-accent-2-100 px-5 py-3.5 text-[14px] font-bold text-organic-accent-2-900">
+                <span className="h-4 w-4 animate-pulse rounded-pill bg-organic-accent-2-600" />
+                Analyse de vos {photoCount} photo{photoCount > 1 ? "s" : ""}…
               </div>
+              <button type="button" onClick={cancelAnalysis} className="rounded-pill border border-organic-divider bg-transparent px-4 py-2 text-[14px] font-bold hover:bg-organic-text/[.07]">
+                Annuler l'analyse
+              </button>
             </motion.div>
           )}
 
-          {/* ══════════ STEP 1 : AREA SELECTION ══════════ */}
+          {/* ══════════ PHOTO INEXPLOITABLE (refus de l'IA) ══════════ */}
           {photoUnusable && !isAnalyzing && (
             <motion.div key="photo-unusable" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-              <PhotoUnusable
-                onRetry={() => { setPhotoUnusable(false); setStep("upload"); }}
-                scanId={savedScanId || undefined}
-                condition={result?.condition || ""}
-                imageUrl={uploadedImage}
+              <ResultB2C
+                result={{ condition: "Image non exploitable", score: null } as unknown as AnalysisResult}
+                area={selectedArea}
+                photoCount={photoCount}
+                onRetake={() => { setPhotoUnusable(false); resetShots(); }}
               />
             </motion.div>
           )}
 
-          {step === "select" && !isAnalyzing && (
-            <motion.div key="select" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-              style={{ fontFamily: GS.sans, color: GS.ink, paddingTop: 4 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 22 }}>
-                <GsSteps total={3} current={1} />
-                <span style={{ fontFamily: GS.mono, fontSize: 10, fontWeight: 600, color: GS.teal }}>1/3</span>
-              </div>
-              <GsMono style={{ display: "block", marginBottom: 9 }}>Étape 1 · zone</GsMono>
-              <div style={{ fontSize: 26, fontWeight: 600, letterSpacing: "-.85px", lineHeight: 1.15, color: GS.ink }}>Qu'est-ce qu'on analyse ?</div>
-              <div style={{ fontSize: 13, lineHeight: 1.55, color: GS.muted, marginTop: 10 }}>Le modèle et les mesures changent selon la zone. Une analyse porte sur une seule zone.</div>
-              <div style={{ marginTop: 22, display: "flex", flexDirection: "column", gap: 10 }}>
-                {([
-                  { key: "face", Icon: User, title: "Visage", desc: "Acné, taches, pores, âge cutané — grille GEA incluse", shots: "3 PHOTOS · FACE + 2 PROFILS" },
-                  { key: "body", Icon: PersonStanding, title: "Corps", desc: "Lésion isolée, eczéma, psoriasis, grain de beauté", shots: "3 PHOTOS · MACRO + LARGE + PROFIL" },
-                  { key: "hair", Icon: Scissors, title: "Cheveux & cuir chevelu", desc: "Chute, alopécie de traction, pellicules, sécheresse", shots: "3 PHOTOS · RAIE + SOMMET + NUQUE" },
-                ] as const).map((c) => {
-                  const on = selectedArea === c.key;
-                  return (
-                    <button key={c.key} onClick={() => setSelectedArea(c.key)}
-                      style={{ textAlign: "left", cursor: "pointer", background: on ? GS.mintBg : "#fff", border: `1px solid ${on ? GS.ink : GS.line}`, padding: 13, display: "flex", gap: 13, alignItems: "center" }}>
-                      <span style={{ width: 74, height: 74, flex: "none", border: `1px solid ${on ? GS.line : GS.hair}`, background: GS.panel, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        <c.Icon size={30} strokeWidth={1.4} style={{ color: GS.teal }} />
-                      </span>
-                      <span style={{ flex: 1, minWidth: 0 }}>
-                        <span style={{ display: "block", fontSize: 16, fontWeight: 600, color: GS.ink }}>{c.title}</span>
-                        <span style={{ display: "block", fontSize: 11, color: GS.muted, marginTop: 4, lineHeight: 1.45 }}>{c.desc}</span>
-                        <span style={{ display: "block", marginTop: 6 }}><GsMono color={on ? GS.teal : GS.faint} style={{ letterSpacing: ".06em" }}>{c.shots}</GsMono></span>
-                      </span>
-                      <GsCheck checked={on} size={20} />
-                    </button>
-                  );
-                })}
-              </div>
-              <div style={{ marginTop: 16, border: `1px solid ${GS.line}`, padding: 13, display: "flex", gap: 12, alignItems: "flex-start" }}>
-                <HelpCircle size={17} style={{ color: GS.teal, marginTop: 1, flexShrink: 0 }} strokeWidth={1.8} />
-                <div style={{ fontSize: 11, lineHeight: 1.55, color: GS.muted }}>Lésion qui saigne, change vite ou fait mal ? Ne perdez pas de temps avec l'analyse — <a href="/derm" style={{ color: GS.teal, fontWeight: 600 }}>écrivez à un médecin</a>.</div>
-              </div>
-              <div style={{ marginTop: 18 }}>
-                <div style={{ marginBottom: 12 }}><GsMono style={{ letterSpacing: ".05em" }}>Zone choisie · {selectedArea === "face" ? "Visage" : selectedArea === "body" ? "Corps" : "Cheveux"}</GsMono></div>
-                <GsButton onClick={() => handleAreaSelect(selectedArea)} icon={<ArrowRight size={16} style={{ color: GS.accent }} strokeWidth={2} />}>Passer aux photos</GsButton>
-                <p style={{ textAlign: "center", fontSize: 11, color: GS.faint, marginTop: 12 }}>🔒 Confidentiel · aucun humain ne voit votre photo · sans engagement</p>
-              </div>
-            </motion.div>
-          )}
-
-          {/* ══════════ STEP 2 : PHOTO UPLOAD ══════════ */}
-          {step === "upload" && !isAnalyzing && (
-            <motion.div
-              key="upload"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-            >
-              {/* Écran de capture guidée — fond sombre, langage instrument (design 02) */}
-              <div style={{ background: GS.deep, fontFamily: GS.sans }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px" }}>
-                  <button onClick={() => setStep("select")} aria-label="Retour"
-                    style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: "#fff", display: "flex" }}>
-                    <ArrowLeft className="w-5 h-5" />
-                  </button>
-                  <span style={{ fontFamily: GS.mono, fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".14em", color: GS.accent }}>
-                    {selectedArea === "hair" ? "Cuir chevelu · macro" : selectedArea === "body" ? "Lésion · macro" : "Visage · macro"}
-                  </span>
-                  <span style={{ width: 20 }} />
-                </div>
-
-                {/* Conseils de prise de vue — rangées « instrument » */}
-                <div style={{ padding: "0 16px", display: "flex", flexDirection: "column", gap: 7 }}>
-                  {(selectedArea === "hair"
-                    ? ["Montrez le cuir chevelu ou la longueur, bien dégagé", "Lumière du jour, dos à la fenêtre", "Image nette — ni floue ni sombre"]
-                    : ["Zone bien centrée et de près (plan macro)", "Lumière du jour, dos à la fenêtre", "Image nette — ni floue ni filtre"]
-                  ).map((tip, i) => (
-                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, border: "1px solid rgba(18,216,190,.4)", background: "rgba(18,216,190,.08)", padding: "11px 13px" }}>
-                      <span style={{ color: GS.accent, fontSize: 14, lineHeight: 1 }}>✓</span>
-                      <span style={{ fontFamily: GS.sans, fontSize: 12, color: "#9FEFE2", lineHeight: 1.4 }}>{tip}</span>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Viseur caméra (composant existant, déjà sombre) */}
-                <div style={{ padding: "14px 16px 0" }}>
-                  <FileUpload onFileSelect={handleFileSelect} autoStart={true} />
-                </div>
-
-                <div style={{ textAlign: "center", padding: "12px 16px 18px" }}>
-                  <span style={{ fontFamily: GS.mono, fontSize: 9, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".08em", color: "rgba(255,255,255,.55)" }}>
-                    Votre photo n'est envoyée qu'après validation
-                  </span>
-                </div>
-              </div>
-            </motion.div>
-          )}
-
-          {/* ══════════ STEP 3 : FORMULAIRE PATIENT ══════════ */}
-          {step === "intake" && !isAnalyzing && !photoUnusable && (
-            <motion.div
-              key="intake"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="space-y-4"
-            >
-              {/* Header */}
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => setStep("upload")}
-                  className="w-9 h-9 rounded-xl flex items-center justify-center transition-all active:scale-95"
-                  style={{ background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.07)", color: "#4a5a52" }}
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                </button>
-                <div>
-                  <p className="text-sm font-bold" style={{ color: "#1f2a26" }}>Votre dossier de consultation</p>
-                  <p className="text-[10px]" style={{ color: "rgba(0,0,0,0.35)" }}>Pour personnaliser votre diagnostic</p>
-                </div>
+          {/* ══════════ SCANNER ══════════ */}
+          {(step === "select" || step === "upload") && !isAnalyzing && !photoUnusable && (
+            <motion.div key="scanner" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="flex flex-col gap-4">
+              <h1 className="m-0 text-[28px]">Scanner</h1>
+              <div className="flex gap-1.5 rounded-pill bg-organic-surface p-1">
+                <button type="button" onClick={() => setScanMode("skin")} className={seg(scanMode === "skin")}>Ma peau</button>
+                <button type="button" onClick={() => setScanMode("product")} className={seg(scanMode === "product")}>Un produit</button>
               </div>
 
-              {/* Aperçu photo */}
-              {uploadedImage && (
-                <div data-clarity-mask="true" className="flex items-center gap-3 rounded-2xl p-3" style={{ background: "rgba(47,158,110,0.06)", border: "1px solid rgba(47,158,110,0.18)" }}>
-                  <img src={uploadedImage} alt="Photo" className="w-12 h-12 rounded-xl object-cover border-2" style={{ borderColor: "#2f9e6e" }} />
-                  <div>
-                    <p className="text-xs font-bold" style={{ color: "#c4b5fd" }}>Photo reçue ✓</p>
-                    <p className="text-[10px]" style={{ color: "rgba(0,0,0,0.35)" }}>Analyse prête — complète le dossier</p>
-                  </div>
-                </div>
-              )}
-
-              <form onSubmit={handleIntakeSubmit} className="space-y-3">
-                <div className="rounded-2xl p-4 space-y-3" style={{ background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.07)" }}>
-                  <p className="text-[10px] font-bold tracking-wider uppercase" style={{ color: "rgba(0,0,0,0.35)" }}>
-                    Informations personnelles
-                  </p>
-
-                  {/* Nom et Prénom */}
-                  <div>
-                    <label className="text-xs font-bold block mb-1.5" style={{ color: "#1f2a26" }}>
-                      👤 Nom et Prénom <span style={{ color: "rgba(0,0,0,0.35)", fontWeight: 400 }}>(optionnel)</span>
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Ex : Aminata Diallo"
-                      value={intake.fullName}
-                      onChange={e => updateIntake("fullName", e.target.value)}
-                      className="w-full px-3.5 py-2.5 text-xs font-medium outline-none transition-colors"
-                      style={{ background: "#ffffff", border: "1px solid rgba(47,158,110,0.2)", borderRadius: "10px", color: "#1f2a26" }}
-                      onFocus={e => (e.target.style.borderColor = "rgba(47,158,110,0.5)")}
-                      onBlur={e => (e.target.style.borderColor = "rgba(47,158,110,0.2)")}
-                    />
-                  </div>
-
-                  {/* Téléphone */}
-                  <div>
-                    <label className="text-xs font-bold block mb-1.5" style={{ color: "#1f2a26" }}>
-                      📞 Numéro de téléphone <span style={{ color: "rgba(0,0,0,0.35)", fontWeight: 400 }}>(optionnel)</span>
-                    </label>
-                    <input
-                      type="tel"
-                      placeholder="Ex : +237 6XX XXX XXX"
-                      value={intake.phone}
-                      onChange={e => updateIntake("phone", e.target.value)}
-                      className="w-full px-3.5 py-2.5 text-xs font-medium outline-none transition-colors"
-                      style={{ background: "#ffffff", border: "1px solid rgba(47,158,110,0.2)", borderRadius: "10px", color: "#1f2a26" }}
-                      onFocus={e => (e.target.style.borderColor = "rgba(47,158,110,0.5)")}
-                      onBlur={e => (e.target.style.borderColor = "rgba(47,158,110,0.2)")}
-                    />
-                  </div>
-
-                  {/* Email — pour recevoir le rapport automatiquement */}
-                  <div>
-                    <label className="text-xs font-bold block mb-1.5" style={{ color: "#1f2a26" }}>
-                      📧 Email <span style={{ color: "rgba(0,0,0,0.35)", fontWeight: 400 }}>(pour recevoir ton rapport)</span>
-                    </label>
-                    <input
-                      type="email"
-                      inputMode="email"
-                      autoComplete="email"
-                      placeholder="Ex : aminata@email.com"
-                      value={intake.email}
-                      onChange={e => updateIntake("email", e.target.value)}
-                      className="w-full px-3.5 py-2.5 text-xs font-medium outline-none transition-colors"
-                      style={{ background: "#ffffff", border: "1px solid rgba(47,158,110,0.2)", borderRadius: "10px", color: "#1f2a26" }}
-                      onFocus={e => (e.target.style.borderColor = "rgba(47,158,110,0.5)")}
-                      onBlur={e => (e.target.style.borderColor = "rgba(47,158,110,0.2)")}
-                    />
-                  </div>
-
-                  {/* Âge */}
-                  <div>
-                    <label className="text-xs font-bold block mb-1.5" style={{ color: "#1f2a26" }}>
-                      ⏳ Âge <span style={{ color: "#2f9e6e" }}>*</span>
-                    </label>
-                    <select
-                      required
-                      value={intake.age}
-                      onChange={e => updateIntake("age", e.target.value)}
-                      className="w-full px-3.5 py-2.5 text-xs font-medium outline-none transition-colors"
-                      style={{ background: "#ffffff", border: "1px solid rgba(47,158,110,0.2)", borderRadius: "10px", color: intake.age ? "#1f2a26" : "rgba(0,0,0,0.35)" }}
-                    >
-                      <option value="" disabled>Sélectionne ton âge</option>
-                      <option value="moins de 15 ans">Moins de 15 ans</option>
-                      <option value="15-19 ans">15 – 19 ans</option>
-                      <option value="20-25 ans">20 – 25 ans</option>
-                      <option value="26-30 ans">26 – 30 ans</option>
-                      <option value="31-40 ans">31 – 40 ans</option>
-                      <option value="41-50 ans">41 – 50 ans</option>
-                      <option value="plus de 50 ans">Plus de 50 ans</option>
-                    </select>
-                  </div>
-
-                  {/* Sexe — choix unique (gabarit design 02C) */}
-                  <div>
-                    <label className="block mb-2" style={{ fontFamily: GS.mono, fontSize: 9, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".14em", color: GS.faint }}>Sexe *</label>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                      {([["femme", "Femme"], ["homme", "Homme"], ["autre", "Autre / je préfère ne pas dire"]] as const).map(([v, l]) => (
-                        <GsOption key={v} label={l} selected={intake.sexe === v} onClick={() => updateIntake("sexe", v)} />
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="rounded-2xl p-4 space-y-3" style={{ background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.07)" }}>
-                  <p className="text-[10px] font-bold tracking-wider uppercase" style={{ color: "rgba(0,0,0,0.35)" }}>
-                    Antécédents et symptômes
-                  </p>
-
-                  {/* Durée du problème — choix unique (gabarit design 02C) */}
-                  <div>
-                    <label className="block mb-2" style={{ fontFamily: GS.mono, fontSize: 9, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".14em", color: GS.faint }}>Depuis combien de temps ? *</label>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                      {([
-                        ["quelques jours", "Quelques jours (moins d'une semaine)"],
-                        ["quelques semaines (1-3 semaines)", "Quelques semaines (1 – 3 sem.)"],
-                        ["1 à 3 mois", "1 à 3 mois"],
-                        ["3 à 6 mois", "3 à 6 mois"],
-                        ["plus de 6 mois", "Plus de 6 mois"],
-                        ["plus d'un an", "Plus d'un an (chronique)"],
-                        ["depuis toujours (peau naturellement ainsi)", "Depuis toujours"],
-                      ] as const).map(([v, l]) => (
-                        <GsOption key={v} label={l} selected={intake.duration === v} onClick={() => updateIntake("duration", v)} />
+              {scanMode === "skin" ? (
+                <>
+                  <div className="flex flex-col gap-2">
+                    <span className="text-[13px] font-bold">Quelle zone ?</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {([["face", "Visage"], ["body", "Corps"], ["hair", "Cuir chevelu"]] as const).map(([k, l]) => (
+                        <button key={k} type="button" className={chip(selectedArea === k)}
+                          onClick={() => { if (selectedArea !== k) { setSelectedArea(k); setUploadedImage(null); setUploadedRight(null); setUploadedLeft(null); setShotIdx(0); } }}>
+                          {l}
+                        </button>
                       ))}
                     </div>
                   </div>
 
-                  {/* Produits utilisés — OBLIGATOIRE (alimente l'IA + alerte produits nocifs) */}
-                  <div style={{ position: "relative" }}>
-                    <label className="text-xs font-bold block mb-1.5" style={{ color: "#1f2a26" }}>
-                      🛍️ Quels produits utilisez-vous actuellement sur votre peau ? <span style={{ color: "#dc2626" }}>*</span>
-                    </label>
-                    <textarea
-                      placeholder="Ex : Nivea, CeraVe, savon noir, crème de ma tante... (ou « Aucun »)"
-                      value={intake.previousProducts}
-                      onChange={e => { updateIntake("previousProducts", e.target.value); setShowProdSug(true); }}
-                      onFocus={e => { setShowProdSug(true); e.target.style.borderColor = "rgba(47,158,110,0.5)"; }}
-                      onBlur={e => { setTimeout(() => setShowProdSug(false), 150); e.target.style.borderColor = "rgba(47,158,110,0.2)"; }}
-                      rows={2}
-                      className="w-full px-3.5 py-2.5 text-xs font-medium outline-none transition-colors resize-none"
-                      style={{ background: "#ffffff", border: "1px solid rgba(47,158,110,0.2)", borderRadius: "10px", color: "#1f2a26" }}
-                    />
-                    {/* Suggestions d'auto-complétion */}
-                    {showProdSug && (() => {
-                      const q = intake.previousProducts.toLowerCase();
-                      const last = q.split(/[,;]/).pop()?.trim() || "";
-                      const list = PRODUCT_SUGGESTIONS.filter(s => !last || s.toLowerCase().includes(last));
-                      if (list.length === 0) return null;
-                      return (
-                        <div style={{ position: "absolute", zIndex: 20, left: 0, right: 0, marginTop: 4, background: "#fff", border: "1px solid rgba(0,0,0,0.1)", borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", overflow: "hidden", maxHeight: 200, overflowY: "auto" }}>
-                          {list.map(s => (
-                            <button
-                              key={s} type="button"
-                              onMouseDown={(e) => { e.preventDefault(); updateIntake("previousProducts", s === "Aucun produit actuellement" ? "Aucun" : s); setShowProdSug(false); }}
-                              style={{ display: "block", width: "100%", textAlign: "left", padding: "9px 12px", background: "transparent", border: "none", cursor: "pointer", fontSize: 12.5, color: "#1f2a26" }}
-                              onMouseOver={(e) => (e.currentTarget.style.background = "rgba(47,158,110,0.08)")}
-                              onMouseOut={(e) => (e.currentTarget.style.background = "transparent")}
-                            >
-                              {s}
-                            </button>
+                  {shotIdx < shotsNeeded ? (
+                    <>
+                      <ScanCamera
+                        key={`${selectedArea}-${shotIdx}`}
+                        shotLabel={`Photo ${shotIdx + 1} / ${shotsNeeded}`}
+                        hint={HINTS[shotIdx] || HINTS[0]}
+                        oval={selectedArea === "face"}
+                        onCapture={handleCapture}
+                      />
+                      {shotsNeeded > 1 && (
+                        <div className="flex justify-center gap-2.5">
+                          {Array.from({ length: shotsNeeded }, (_, i) => (
+                            <span key={i} className="h-3 w-3 rounded-pill" style={{ background: i < shotIdx ? "var(--color-accent-2-600)" : i === shotIdx ? "var(--color-accent)" : "var(--color-neutral-300)" }} />
                           ))}
                         </div>
-                      );
-                    })()}
-                    {/* Alerte en direct si produit nocif tapé */}
-                    {detectToxicProducts(intake.previousProducts).length > 0 && (
-                      <p style={{ fontSize: 11, fontWeight: 700, color: "#b91c1c", marginTop: 6 }}>
-                        ⚠️ Produit à risque détecté — une alerte détaillée s'affichera avec ton résultat.
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Allergies */}
-                  <div>
-                    <label className="text-xs font-bold block mb-1.5" style={{ color: "#1f2a26" }}>
-                      ⚠️ Avez-vous des allergies cutanées connues ?
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Ex : Allergie au parfum, à la lanoline... (ou écris 'Aucune')"
-                      value={intake.allergies}
-                      onChange={e => updateIntake("allergies", e.target.value)}
-                      className="w-full px-3.5 py-2.5 text-xs font-medium outline-none transition-colors"
-                      style={{ background: "#ffffff", border: "1px solid rgba(47,158,110,0.2)", borderRadius: "10px", color: "#1f2a26" }}
-                      onFocus={e => (e.target.style.borderColor = "rgba(47,158,110,0.5)")}
-                      onBlur={e => (e.target.style.borderColor = "rgba(47,158,110,0.2)")}
-                    />
-                  </div>
-
-                  {/* Photos supplémentaires (profils) — optionnel, pour un meilleur diagnostic */}
-                  <div>
-                    <label className="text-xs font-bold block mb-1.5" style={{ color: "#1f2a26" }}>
-                      📸 Ajouter les profils (optionnel — améliore le diagnostic)
-                    </label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {([
-                        { label: "Profil droit", src: uploadedRight, ref: extraRightRef, slot: "right" as const, clear: () => setUploadedRight(null) },
-                        { label: "Profil gauche", src: uploadedLeft, ref: extraLeftRef, slot: "left" as const, clear: () => setUploadedLeft(null) },
-                      ]).map((s) => (
-                        <div key={s.slot}>
-                          <button type="button" onClick={() => s.ref.current?.click()}
-                            className="w-full rounded-xl overflow-hidden relative"
-                            style={{ aspectRatio: "3/4", border: s.src ? "1px solid rgba(0,0,0,0.1)" : "2px dashed rgba(47,158,110,0.3)", background: "#fff" }}>
-                            {s.src ? <img src={s.src} alt={s.label} className="w-full h-full object-cover" /> : (
-                              <div className="flex flex-col items-center justify-center h-full">
-                                <span style={{ fontSize: 20 }}>＋</span>
-                                <span className="text-[10px] font-extrabold" style={{ color: "#6b7280" }}>{s.label}</span>
-                              </div>
-                            )}
-                          </button>
-                          <input ref={s.ref} type="file" accept="image/*" className="hidden"
-                            onChange={(e) => { handleExtraPhoto(e.target.files?.[0], s.slot); if (e.currentTarget) e.currentTarget.value = ""; }} />
-                          {s.src && <button type="button" onClick={s.clear} className="w-full text-[10px] font-extrabold mt-0.5" style={{ color: "#9ca3af" }}>Retirer</button>}
-                        </div>
-                      ))}
+                      )}
+                      {shotIdx > 0 && (
+                        <button type="button" onClick={skipShot} className="self-center rounded-pill border-0 bg-transparent px-2 py-1 text-[13px] font-bold text-organic-neutral-700 hover:bg-organic-text/[.07]">
+                          Passer cette photo
+                        </button>
+                      )}
+                    </>
+                  ) : (
+                    <div className="flex flex-col gap-2">
+                      <button type="button" onClick={() => setStep("intake")} className="inline-flex items-center justify-center rounded-pill border-0 bg-organic-accent p-4 text-[16px] font-bold text-organic-neutral-100 hover:bg-organic-accent-600">
+                        Continuer
+                      </button>
+                      <button type="button" onClick={resetShots} className="rounded-pill border-0 bg-transparent px-2 py-1 text-[14px] font-bold text-organic-accent hover:bg-organic-accent/10">
+                        Reprendre les photos
+                      </button>
                     </div>
+                  )}
+                  <span className="text-center text-[12px] text-organic-neutral-700">Vos photos restent privées. Résultat indicatif, pas un diagnostic.</span>
+                </>
+              ) : (
+                <>
+                  <div className="flex h-[300px] flex-none items-center justify-center rounded-card bg-organic-neutral-800">
+                    <span className="h-[140px] w-[240px] rounded-[20px] border-[3px] border-organic-accent-300" />
+                  </div>
+                  <span className="text-center text-[14px]">Visez la <b>liste des ingrédients</b> au dos du produit.</span>
+                  <button type="button" onClick={() => setLocation("/product-scan-camera")} className="inline-flex items-center justify-center rounded-pill border-0 bg-organic-accent p-4 text-[16px] font-bold text-organic-neutral-100 hover:bg-organic-accent-600">
+                    Scanner le produit
+                  </button>
+                  {/* Le quota gratuit (3 scans / semaine) arrive avec l'écran Scan produit ;
+                      d'ici là, on affiche l'accès réel. */}
+                  <span className="text-center text-[12px] text-organic-neutral-700">
+                    {isPremium ? "Scans illimités avec Premium" : "Scan produit réservé aux membres Premium"}
+                  </span>
+                </>
+              )}
+            </motion.div>
+          )}
+
+          {/* ══════════ FORMULAIRE COURT (après les photos) ══════════ */}
+          {step === "intake" && !isAnalyzing && !photoUnusable && (
+            <motion.div key="intake" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+              <form onSubmit={handleConsultationSubmit} className="flex flex-col gap-4">
+                <div className="flex items-center gap-2.5">
+                  <button type="button" onClick={() => setStep("select")} aria-label="Retour" className="border-0 bg-transparent p-0 pr-1 text-organic-accent-700">
+                    <ArrowLeft size={21} strokeWidth={1.75} />
+                  </button>
+                  <span className="text-[11px] font-bold uppercase tracking-[.12em] text-organic-neutral-700">
+                    {photoCount} photo{photoCount > 1 ? "s" : ""} prise{photoCount > 1 ? "s" : ""}
+                  </span>
+                </div>
+                <h1 className="m-0 text-[28px]">Encore deux questions</h1>
+
+                <div className="flex flex-col gap-2">
+                  <span className="text-[13px] font-bold">Votre âge</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {([["moins de 15 ans", "Moins de 15 ans"], ["15-19 ans", "15 – 19 ans"], ["20-25 ans", "20 – 25 ans"], ["26-30 ans", "26 – 30 ans"], ["31-40 ans", "31 – 40 ans"], ["41-50 ans", "41 – 50 ans"], ["plus de 50 ans", "Plus de 50 ans"]] as const).map(([v, l]) => (
+                      <button key={v} type="button" className={chip(intake.age === v)} onClick={() => updateIntake("age", v)}>{l}</button>
+                    ))}
                   </div>
                 </div>
 
-                <button
-                  type="submit"
-                  className="w-full py-4 text-sm font-extrabold transition-all active:scale-[0.98] relative overflow-hidden"
-                  style={{ background: "linear-gradient(135deg, #2f9e6e, #f43f5e)", borderRadius: "14px", color: "#fff" }}
-                >
-                  <div className="absolute top-0 left-0 right-0 h-1/2" style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.1), transparent)", borderRadius: "14px 14px 0 0" }} />
-                  <span className="relative z-10">✦ Lancer mon analyse GlowScan</span>
-                </button>
+                <div className="flex flex-col gap-2">
+                  <span className="text-[13px] font-bold">Vous êtes</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {([["femme", "Une femme"], ["homme", "Un homme"], ["autre", "Je préfère ne pas dire"]] as const).map(([v, l]) => (
+                      <button key={v} type="button" className={chip(intake.sexe === v)} onClick={() => updateIntake("sexe", v)}>{l}</button>
+                    ))}
+                  </div>
+                </div>
 
-                <p className="text-center text-[10px]" style={{ color: "rgba(0,0,0,0.25)" }}>
-                  Tes données restent privées · Analyse en 30 secondes
-                </p>
+                <div className="flex flex-col gap-2 rounded-lg bg-organic-surface p-4">
+                  <label htmlFor="intake-email" className="text-[13px] font-bold">Recevoir le compte rendu <span className="font-normal text-organic-neutral-700">(facultatif)</span></label>
+                  <input
+                    id="intake-email"
+                    type="email"
+                    inputMode="email"
+                    autoComplete="email"
+                    placeholder="Votre adresse email"
+                    value={intake.email}
+                    onChange={e => updateIntake("email", e.target.value)}
+                    className="h-11 w-full rounded-pill border border-organic-divider bg-organic-bg px-3.5 text-[15px] text-organic-text caret-organic-accent placeholder:text-organic-text/55 hover:border-organic-text/45 focus-visible:border-organic-accent focus-visible:outline-none"
+                  />
+                  <label className="flex items-start gap-2.5 text-[13px] leading-snug">
+                    <input
+                      type="checkbox"
+                      checked={intake.emailConsent}
+                      onChange={e => updateIntake("emailConsent", e.target.checked)}
+                      className="mt-0.5 h-4 w-4 accent-[var(--color-accent)]"
+                      data-testid="checkbox-email-consent"
+                    />
+                    <span>M'envoyer le compte rendu par email</span>
+                  </label>
+                </div>
+
+                <button type="submit" className="inline-flex items-center justify-center rounded-pill border-0 bg-organic-accent p-4 text-[16px] font-bold text-organic-neutral-100 hover:bg-organic-accent-600">
+                  Voir mon résultat
+                </button>
+                <span className="text-center text-[12px] text-organic-neutral-700">Vos photos restent privées. Résultat indicatif, pas un diagnostic.</span>
               </form>
             </motion.div>
           )}
@@ -912,6 +706,8 @@ export default function Analyze() {
                 imageUrl={uploadedImage}
                 createdAt={new Date()}
                 photoCount={[uploadedImage, uploadedRight, uploadedLeft].filter(Boolean).length}
+                scanId={savedScanId}
+                autoEmailTo={intake.emailConsent ? intake.email : null}
                 onRetake={() => { setResult(null); setStep("upload"); }}
               />
             </motion.div>

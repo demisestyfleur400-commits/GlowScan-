@@ -21,7 +21,7 @@ import { users } from "@shared/models/auth";
 import { eq, and, sql, gte, count, lte, desc, avg, inArray, isNull } from "drizzle-orm";
 import { whatsappClicks, orders, pageVisits } from "@shared/schema";
 import { emitToUser, isUserOnline } from "./ws";
-import { sanitizeFaceZones, faceZonesFromLegacy, score100OrNull, sanitizeUrgentSigns } from "@shared/resultB2C";
+import { sanitizeFaceZones, faceZonesFromLegacy, score100OrNull, sanitizeUrgentSigns, resultStateOf, STATE_LEVEL } from "@shared/resultB2C";
 import { verifyReportToken, buildReportHtml, sendWhatsAppText } from "./whatsapp";
 
 // ── Sélection automatique du provider IA ────────────────────────────────
@@ -925,6 +925,27 @@ export async function registerRoutes(
         const rows = Rows(await db.execute(sql`SELECT id, rating, whatsapp_send_status FROM consultations WHERE user_id = ${userId}`));
         const m = new Map(rows.map((r: any) => [Number(r.id), r]));
         list.forEach((c: any) => { const r = m.get(c.id); c.rating = r?.rating ?? null; c.reportStatus = r?.whatsapp_send_status ?? null; });
+      } catch {}
+      // Accueil patient : nom du médecin et photo de contrôle demandée (à venir, pas encore reçue).
+      try {
+        const ids = list.map((c) => c.id);
+        if (ids.length > 0) {
+          const docs = Rows(await db.execute(sql`
+            SELECT c.id, p.full_name FROM consultations c JOIN pro_accounts p ON p.id = c.pro_account_id
+            WHERE c.user_id = ${userId}`));
+          const dm = new Map(docs.map((r: any) => [Number(r.id), r.full_name as string]));
+          const fus = Rows(await db.execute(sql`
+            SELECT DISTINCT ON (consultation_id) consultation_id, scheduled_date FROM follow_up_reminders
+            WHERE consultation_id = ANY(${sql.raw(`ARRAY[${ids.map(Number).join(",")}]::int[]`)})
+              AND photo_received_at IS NULL AND COALESCE(status, 'pending') <> 'cancelled'
+            ORDER BY consultation_id, created_at DESC`));
+          const fm = new Map(fus.map((r: any) => [Number(r.consultation_id), r.scheduled_date]));
+          list.forEach((c: any) => {
+            c.doctorName = dm.get(c.id) ?? null;
+            const d = fm.get(c.id);
+            c.followUpDate = d ? new Date(d).toISOString() : null;
+          });
+        }
       } catch {}
       res.json({ consultations: list });
     } catch (e) {
@@ -3869,23 +3890,49 @@ Réponds en 2-4 phrases max, sois direct et utile.`;
   // POST /api/scans/email-report — envoi AUTOMATIQUE du rapport PDF à l'email saisi
   // dans le formulaire B2C (anonyme autorisé). Rate-limité (anti-spam) : l'email
   // ne part qu'à l'adresse fournie par l'utilisateur lui-même.
+  // POST /api/scans/email-report — compte rendu du Résultat patient par email.
+  // Sécurité : lié à un scan créé par CETTE session (compte ou session anonyme),
+  // texte de l'email lu en base (jamais fourni par le navigateur), un seul envoi
+  // par scan, et uniquement si le patient a coché le consentement.
   app.post("/api/scans/email-report", emailReportLimiter, async (req: any, res) => {
     try {
       const email = String(req.body?.email || "").trim().toLowerCase();
-      if (!email.includes("@") || email.length < 5) return res.status(400).json({ message: "Email invalide" });
-      // Le PDF est FACULTATIF : la génération PDF côté client échoue sur certains
-      // navigateurs (Chrome). Le corps HTML de l'email est déjà un rapport valide,
-      // donc on envoie le rapport quoi qu'il arrive, avec le PDF en pièce jointe
-      // seulement s'il a bien pu être généré.
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 200) return res.status(400).json({ message: "Email invalide" });
+      if (req.body?.consent !== true) return res.status(400).json({ message: "Consentement requis" });
+      const scanId = parseInt(req.body?.scanId, 10);
+      if (!Number.isFinite(scanId)) return res.status(400).json({ message: "Analyse manquante" });
+
+      const [scan] = await db.select().from(scans).where(eq(scans.id, scanId));
+      const userId = req.session?.userId;
+      const owns = !!scan && ((userId && scan.userId === userId) || (!scan.userId && !!scan.sessionId && scan.sessionId === req.session?.id));
+      if (!owns) return res.status(404).json({ message: "Analyse introuvable" });
+
+      const full: any = (scan.recommendations as any)?._fullResult || {};
+      const state = resultStateOf({ score: scan.score, condition: scan.condition, photo_quality: full.photo_quality, urgent: full.urgent });
+      if (state === "unusable") return res.status(400).json({ message: "Photo inexploitable : pas de compte rendu" });
+
+      // PDF facultatif (la génération échoue sur certains navigateurs). S'il est
+      // fourni, on vérifie que c'est bien un PDF de taille raisonnable.
       let pdf = String(req.body?.pdfBase64 || "");
       if (pdf.startsWith("data:")) pdf = pdf.split(",")[1] || "";
-      const attachments = pdf.length >= 100 ? [{ filename: "analyse-glowscan.pdf", content: pdf }] : undefined;
+      let attachments: { filename: string; content: string }[] | undefined;
+      if (pdf.length >= 100 && pdf.length <= 8_000_000) {
+        const head = Buffer.from(pdf.slice(0, 16), "base64").toString("latin1");
+        if (head.startsWith("%PDF")) attachments = [{ filename: `compte-rendu-glowscan-${scanId}.pdf`, content: pdf }];
+      }
+
+      // Un seul envoi par scan (réservation atomique dans le JSON du scan).
+      const claimed = Rows(await db.execute(sql`
+        UPDATE scans SET recommendations = jsonb_set(COALESCE(recommendations, '{}'::jsonb), '{_emailReportSentAt}', to_jsonb(now()::text))
+        WHERE id = ${scanId} AND NOT (COALESCE(recommendations, '{}'::jsonb) ? '_emailReportSentAt')
+        RETURNING id`));
+      if (claimed.length === 0) return res.json({ success: true, sent: false, already: true });
+
       const { sendEmail, buildB2CResultEmail } = await import("./email");
       const base = (process.env.PUBLIC_BASE_URL || "https://glow-scan.com").replace(/\/$/, "");
-      const name = String(req.body?.name || "").trim();
-      const condition = String(req.body?.condition || "Analyse cutanée").trim();
-      const score = parseInt(req.body?.score) || 0;
-      const e = buildB2CResultEmail(name, condition, score, `${base}/analyze`);
+      let name = "";
+      if (userId) { try { const [u] = await db.select().from(users).where(eq(users.id, userId)); name = (u as any)?.firstName || ""; } catch {} }
+      const e = buildB2CResultEmail(name, scan.condition || "Analyse cutanée", scan.score ?? null, `${base}/profile`, STATE_LEVEL[state]);
       const r = await sendEmail(email, e.subject, e.html, e.text, attachments);
       res.json({ success: r.ok, sent: r.ok, attached: !!attachments });
     } catch (err) {
@@ -3906,7 +3953,9 @@ Réponds en 2-4 phrases max, sois direct et utile.`;
       if (!u?.email || u.email.endsWith("@phone.glowscan.cm")) return res.status(400).json({ message: "Aucun email sur votre compte" });
       const { sendEmail, buildB2CResultEmail } = await import("./email");
       const base = (process.env.PUBLIC_BASE_URL || "https://glow-scan.com").replace(/\/$/, "");
-      const e = buildB2CResultEmail((u as any).firstName || "", scan.condition || "Analyse cutanée", scan.score || 0, `${base}/profile`);
+      const fullR: any = (scan.recommendations as any)?._fullResult || {};
+      const st = resultStateOf({ score: scan.score, condition: scan.condition, photo_quality: fullR.photo_quality, urgent: fullR.urgent });
+      const e = buildB2CResultEmail((u as any).firstName || "", scan.condition || "Analyse cutanée", scan.score ?? null, `${base}/profile`, STATE_LEVEL[st]);
       // Le client peut fournir le PDF du rapport (base64) → on l'attache.
       let pdf = String(req.body?.pdfBase64 || "");
       if (pdf.startsWith("data:")) pdf = pdf.split(",")[1] || "";

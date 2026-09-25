@@ -1,229 +1,16 @@
-import { motion, AnimatePresence, useMotionValue, useTransform, animate, useInView } from "framer-motion";
+import { useEffect } from "react";
 import { useLocation } from "wouter";
+import { Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useScans } from "@/hooks/use-scans";
 import { useProAccount } from "@/hooks/use-pro";
-import { useQuery } from "@tanstack/react-query";
-import { User, ScanLine, Bot, ListChecks, TrendingUp, ChevronRight, X, ShoppingBag, ArrowRight, Menu, Crown, LogOut, Lightbulb, Terminal, Target, ShieldAlert, Loader2 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
 import { trackPageVisit } from "@/lib/analytics";
 import Landing from "@/pages/Landing";
 import { HomeAccueil } from "@/pages/HomeAccueil";
-import { catalog, formatPrice, type Product } from "@shared/catalog";
-import type { FeaturedProduct } from "@shared/schema";
-
-import tipPhoto from "../lib/IMG_0122.webp";
-
-import { productImages } from "@/lib/productImages";
 
 // ─────────────────────────────────────────────────────────────────────────
-//  Design system constants
-// ─────────────────────────────────────────────────────────────────────────
-const DS = {
-  bg: "#fbfdfb",                 // blanc cassé
-  surface: "#ffffff",            // cartes blanches
-  element: "#f1f6f3",            // surface vert-gris très clair
-  textPrimary: "#1f2a26",        // texte foncé
-  textBody: "#4a5a52",           // texte secondaire vert-gris
-  textMuted: "#6b7d76",          // texte atténué
-  textHint: "#9aa8a1",           // texte très atténué
-  violet: "#2f9e6e",             // vert principal (CTA)
-  violetMid: "#3fbf86",          // vert moyen
-  violetLight: "#7fd3a6",        // vert clair
-  pink: "#2f9e6e",               // ancien rose → vert (thème blanc/vert)
-  font: "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, system-ui, sans-serif",
-} as const;
-
-// ─────────────────────────────────────────────────────────────────────────
-//  Scroll animation wrappers
-// ─────────────────────────────────────────────────────────────────────────
-const VIEW = { once: true, margin: "-80px" } as const;
-const EASE = [0.22, 1, 0.36, 1] as const;
-
-function FadeUp({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={VIEW}
-      transition={{ duration: 0.5, delay, ease: EASE }}
-    >
-      {children}
-    </motion.div>
-  );
-}
-
-function SlideLeft({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, x: -40 }}
-      whileInView={{ opacity: 1, x: 0 }}
-      viewport={VIEW}
-      transition={{ duration: 0.5, delay, ease: EASE }}
-    >
-      {children}
-    </motion.div>
-  );
-}
-
-function DropTop({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: -40 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={VIEW}
-      transition={{ duration: 0.5, delay, ease: EASE }}
-    >
-      {children}
-    </motion.div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────
-//  Animated counter 0 → score
-// ─────────────────────────────────────────────────────────────────────────
-function AnimatedCounter({ to, duration = 1.2, start = true }: { to: number; duration?: number; start?: boolean }) {
-  const count = useMotionValue(0);
-  const rounded = useTransform(count, (v) => Math.round(v));
-  const [display, setDisplay] = useState(0);
-
-  useEffect(() => {
-    const unsub = rounded.on("change", (v) => setDisplay(v));
-    return () => unsub();
-  }, [rounded]);
-
-  useEffect(() => {
-    if (!start) return;
-    const controls = animate(count, to, { duration, ease: "easeOut" });
-    return () => controls.stop();
-  }, [start, to, duration, count]);
-
-  return <>{display}</>;
-}
-
-// ─────────────────────────────────────────────────────────────────────────
-//  Circular score gauge
-// ─────────────────────────────────────────────────────────────────────────
-function CircularScore({ score, color }: { score: number; color: string }) {
-  const size = 80;
-  const stroke = 6;
-  const radius = (size - stroke) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { once: true, margin: "-80px" });
-
-  return (
-    <motion.div
-      ref={ref}
-      initial="hidden"
-      animate={inView ? "visible" : "hidden"}
-      className="relative flex-shrink-0"
-      style={{ width: size, height: size, fontFamily: DS.font }}
-      data-testid="circular-score"
-    >
-      <svg width={size} height={size} className="-rotate-90">
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="transparent"
-          stroke="rgba(47,158,110,0.12)"
-          strokeWidth={stroke}
-        />
-        <motion.circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="transparent"
-          stroke={color}
-          strokeWidth={stroke}
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          variants={{
-            hidden: { strokeDashoffset: circumference },
-            visible: {
-              strokeDashoffset: circumference - (score / 100) * circumference,
-              transition: { duration: 1.4, ease: EASE, delay: 0.15 },
-            },
-          }}
-        />
-      </svg>
-      <div className="absolute inset-0 flex items-center justify-center">
-        <div className="text-center">
-          <p
-            className="text-[22px] font-extrabold leading-none tracking-tighter"
-            style={{ color: DS.textPrimary }}
-            data-testid="text-glowscore"
-          >
-            <AnimatedCounter to={score} start={inView} />
-          </p>
-          <p
-            className="text-[9px] font-bold uppercase tracking-[0.15em] mt-0.5"
-            style={{ color: DS.textMuted }}
-          >
-            Index
-          </p>
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
-
-// ─────────────────────────────────────────────────────────────────────────
-//  Knowledge cards data
-// ─────────────────────────────────────────────────────────────────────────
-
-const LOCAL_PRODUCT_IMAGES: Record<string, string> = productImages;
-
-const FALLBACK_FEATURED = [
-  { productId: "gs-serum-vitamine-c", badge: "Éclat & taches" },
-  { productId: "gs-creme-barriere-hydra", badge: "Hydratation" },
-  { productId: "gs-gel-nettoyant-sebum", badge: "Anti-acné" },
-];
-
-type DisplayProduct = {
-  id: string;
-  name: string;
-  brand: string;
-  price: string;
-  image: string;
-  badge: string;
-};
-
-function resolveFeaturedProducts(items: { productId: string; badge?: string | null }[]): DisplayProduct[] {
-  return items
-    .map((it) => {
-      const p: Product | undefined = catalog.find((c) => c.id === it.productId);
-      if (!p) return null;
-      const image = LOCAL_PRODUCT_IMAGES[p.id] || p.image || "";
-      const brand = (p.brand && p.brand.trim()) || (p.name.split(" ")[0]);
-      return {
-        id: p.id,
-        name: p.name,
-        brand,
-        price: typeof p.price === "number" ? formatPrice(p.price) : "—",
-        image,
-        badge: it.badge || (p.targets[0] ?? "Sélection"),
-      } as DisplayProduct;
-    })
-    .filter((x): x is DisplayProduct => x !== null);
-}
-
-function daysSince(date: string | Date) {
-  const d = new Date(date).getTime();
-  const now = Date.now();
-  return Math.floor((now - d) / (1000 * 60 * 60 * 24));
-}
-
-function getScoreColor(score: number) {
-  if (score >= 75) return { hex: "#10b981", stateBg: "rgba(16,185,129,0.08)", stateBorder: "rgba(16,185,129,0.2)", stateText: "#6ee7b7" };
-  if (score >= 50) return { hex: "#f59e0b", stateBg: "rgba(245,158,11,0.08)", stateBorder: "rgba(245,158,11,0.2)", stateText: "#fbbf24" };
-  return { hex: "#2f9e6e", stateBg: "rgba(233,30,140,0.08)", stateBorder: "rgba(233,30,140,0.2)", stateText: "#f9a8d4" };
-}
-
-// ─────────────────────────────────────────────────────────────────────────
-//  HOME PAGE
+//  « / » : landing pour les visiteurs, Accueil patient (refonte Organic) pour
+//  les comptes connectés, tableau de bord DERM pour les médecins.
 // ─────────────────────────────────────────────────────────────────────────
 export default function Home() {
   const { user, isLoading } = useAuth();
@@ -235,83 +22,23 @@ export default function Home() {
     if (!user) return;
     const params = new URLSearchParams(window.location.search);
     if (params.get("as") === "user") return;
-    if (proData?.account) {
-      setLocation("/derm/dashboard");
-    }
+    if (proData?.account) setLocation("/derm/dashboard");
   }, [user, proData, setLocation]);
-
-  const { data: featuredRaw } = useQuery<FeaturedProduct[]>({
-    queryKey: ["/api/featured-products"],
-    staleTime: 60_000,
-  });
-
-  const featuredProducts = useMemo<DisplayProduct[]>(() => {
-    const sorted = featuredRaw && featuredRaw.length > 0
-      ? [...featuredRaw].sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
-      : [];
-    const source = sorted.length > 0
-      ? sorted.map((f) => ({ productId: f.productId, badge: f.badge }))
-      : FALLBACK_FEATURED;
-    const resolved = resolveFeaturedProducts(source);
-    return resolved.length > 0 ? resolved : resolveFeaturedProducts(FALLBACK_FEATURED);
-  }, [featuredRaw]);
 
   useEffect(() => { trackPageVisit("/"); }, []);
 
-  const scanList: any[] = Array.isArray(scans) ? scans : [];
-  const lastScan: any = scanList[0];
-
   if (isLoading) {
     return (
-      <div
-        className="fixed inset-0 flex flex-col items-center justify-center gap-3"
-        style={{ background: DS.bg, fontFamily: DS.font }}
-      >
-        {/* Glow orb — no box-shadow */}
-        <div
-          className="absolute w-64 h-64"
-          style={{ background: "radial-gradient(circle, rgba(47,158,110,0.15), transparent)" }}
-        />
-        <div
-          className="w-12 h-12 relative flex items-center justify-center"
-          style={{
-            background: DS.surface,
-            border: "1px solid rgba(47,158,110,0.2)",
-            borderRadius: "20px",
-          }}
-        >
-          <Loader2 className="w-6 h-6 animate-spin" style={{ color: DS.violetMid }} strokeWidth={1.5} />
-        </div>
-        <p
-          className="text-[10px] font-bold tracking-[0.2em] uppercase"
-          style={{ color: DS.textMuted }}
-        >
-          Chargement…
-        </p>
+      <div className="fixed inset-0 flex items-center justify-center bg-organic-bg">
+        <Loader2 className="h-6 w-6 animate-spin text-organic-accent" strokeWidth={1.75} aria-label="Chargement" />
       </div>
     );
   }
 
   if (!user) return <Landing />;
 
-  const previousScan: any = scanList[1];
-  const firstName = (user.firstName || user.lastName || user.email || "Utilisateur").split(/[\s@]/)[0];
+  const firstName = (user.firstName || user.lastName || user.email || "").split(/[\s@]/)[0];
+  const lastScan: any = Array.isArray(scans) && scans.length > 0 ? scans[0] : null;
 
-  const extractScore = (s: any): number | null => {
-    if (!s) return null;
-    const raw = s.score ?? s.glowScore ?? s.recommendations?._fullResult?.score;
-    return typeof raw === "number" ? raw : null;
-  };
-  const lastScore = extractScore(lastScan);
-  const prevScore = extractScore(previousScan);
-  const delta = lastScore != null && prevScore != null ? lastScore - prevScore : null;
-  const scoreColors = getScoreColor(lastScore ?? 0);
-
-  const now = new Date();
-  const monthCount = scanList.filter((s) => {
-    const d = s?.createdAt ? new Date(s.createdAt) : null;
-    return d && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-  }).length;
-
-  return <HomeAccueil firstName={firstName} monthCount={monthCount} go={setLocation} />;
+  return <HomeAccueil firstName={firstName} lastScan={lastScan} go={setLocation} />;
 }

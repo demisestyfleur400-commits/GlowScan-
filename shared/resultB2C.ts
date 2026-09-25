@@ -7,6 +7,19 @@
 export const SCORE_GOOD = 75;   // ≥ 75 : Bonne santé
 export const SCORE_WATCH = 60;  // 60–74 : À surveiller ; < 60 : Avis médical conseillé
 
+/** Mention obligatoire, sous chaque résultat (écran, PDF, email). */
+export const RESULT_DISCLAIMER =
+  "Analyse indicative, calibrée sur les phototypes IV à VI. Elle ne pose pas de diagnostic et ne remplace pas un examen médical.";
+
+/** Libellé de niveau affiché pour chaque état. */
+export const STATE_LEVEL: Record<"good" | "watch" | "medical" | "urgent" | "unusable", string> = {
+  good: "Bonne santé",
+  watch: "À surveiller",
+  medical: "Avis médical conseillé",
+  urgent: "Examen rapide",
+  unusable: "Photo inexploitable",
+};
+
 export type ResultStateKey = "good" | "watch" | "medical" | "urgent" | "unusable";
 export type ZoneStatus = "ok" | "watch" | "med" | "urgent";
 export type FaceZoneKey = "front" | "joue_droite" | "nez" | "joue_gauche" | "menton";

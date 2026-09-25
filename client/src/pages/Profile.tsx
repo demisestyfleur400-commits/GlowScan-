@@ -9,7 +9,7 @@ import {
   MessageCircle, Package, FileText, ListChecks, GitCompare, Download,
   ShieldCheck, Trash2, Check, X, Calendar,
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import type { AnalysisResult } from "@shared/schema";
@@ -66,6 +66,7 @@ function ScanDetailModal({ scan, onClose }: { scan: ScanRecord; onClose: () => v
           area={scan.area || "face"}
           imageUrl={(scan as any).imageUrl || null}
           createdAt={scan.createdAt}
+          scanId={scan.id}
           onBack={onClose}
         />
       </div>
@@ -196,6 +197,15 @@ export default function Profile() {
   const eveTotal = (evening?.steps || []).length;
 
   const openScan = (s: ScanRecord) => setSelectedScan(s);
+  // ?scan=<id> (depuis la carte Glow Score de l'Accueil) ouvre directement l'analyse.
+  const deepLinked = useRef(false);
+  useEffect(() => {
+    if (deepLinked.current || !Array.isArray(scans)) return;
+    const id = Number(new URLSearchParams(window.location.search).get("scan"));
+    if (!Number.isFinite(id) || id <= 0) return;
+    const found = (scans as any[]).find((s) => s.id === id);
+    if (found) { deepLinked.current = true; setSelectedScan(found as ScanRecord); }
+  }, [scans]);
   const toggleCompare = (id: number) => setCompareSel((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : (prev.length >= 2 ? prev : [...prev, id]));
   const launchCompare = () => {
     if (compareSel.length < 2) return;

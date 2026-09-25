@@ -8,7 +8,11 @@ interface Consult { id: number; condition?: string; status?: string; paymentStat
 export default function MesConsultations() {
   const { user } = useAuth();
   const [list, setList] = useState<Consult[]>([]);
-  const [openId, setOpenId] = useState<number | null>(null);
+  // ?open=<id> (depuis l'Accueil) ouvre directement la conversation.
+  const [openId, setOpenId] = useState<number | null>(() => {
+    const v = Number(new URLSearchParams(window.location.search).get("open"));
+    return Number.isFinite(v) && v > 0 ? v : null;
+  });
   const [loading, setLoading] = useState(true);
 
   const load = () => {
