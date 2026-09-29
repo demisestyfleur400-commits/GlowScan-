@@ -7,6 +7,8 @@ import { buildRelanceMessage, withFollowupFooter } from "@shared/whatsappMessage
 import { productsAllowed, resultStateOf } from "@shared/resultB2C";
 import { normalizeCmPhone } from "@shared/phone";
 import { stopLinkSig, followupsStoppedAt } from "./consents";
+import { refundConsultation, chargeSubscriptionFromEarnings, proBalances, requestWithdrawal } from "./wallet";
+import { PRO_SUBSCRIPTION_FCFA } from "@shared/premium";
 const APP_BASE = (process.env.PUBLIC_BASE_URL || "https://glow-scan.com").replace(/\/$/, "");
 import { sendWhatsAppText, buildFollowUpReminderMessage } from "./whatsapp";
 import { sendEmail, buildTrialReminderEmail, buildDigestEmail, buildReengageEmail, buildB2CReengageEmail } from "./email";
@@ -596,6 +598,8 @@ async function flagConsultationTimeouts() {
       RETURNING id, user_id, pro_account_id, price_fcfa, patient_phone, payment_ref`);
     const rows = (r?.rows ?? r ?? []) as any[];
     for (const row of rows) {
+      // Registre : les parts bloquées (médecin 80 %, GlowScan 20 %) ne sont pas acquises.
+      try { await refundConsultation(Number(row.id)); } catch (e: any) { log(`❌ Registre remboursement #${row.id} (migration 0017 ?) : ${e?.message}`); }
       const amount = `${Number(row.price_fcfa || 0).toLocaleString("fr-FR")} F`;
       let pInfo: any = {}, dInfo: any = {};
       try { pInfo = ((await db.execute(sql`SELECT first_name, email FROM users WHERE id = ${row.user_id}`)) as any)?.rows?.[0] || {}; } catch {}
@@ -620,6 +624,56 @@ async function flagConsultationTimeouts() {
   } catch (err) {
     log(`❌ Remboursements 24 h (migration 0016 appliquée ?) : ${err instanceof Error ? err.message : String(err)}`);
   }
+}
+
+// ── Abonnement payé par les gains (le 1er du mois, étape 3) ──────────────
+// « Payé par vos gains » : si le disponible du médecin couvre l'abonnement
+// (10 000 FCFA), il est prélevé et l'abonnement prolongé d'un mois. Sinon, rien
+// n'est prélevé : le médecin paie normalement.
+async function chargeSubscriptionsFromEarnings() {
+  const period = new Date().toLocaleDateString("fr-CA", { timeZone: "Africa/Douala" }).slice(0, 7); // AAAA-MM
+  try {
+    const r: any = await db.execute(sql`
+      SELECT id, user_id, subscription_expires_at FROM pro_accounts
+      WHERE subscription_status IN ('active', 'trial', 'expired')
+        AND COALESCE(subscription_expires_at, trial_ends_at, NOW()) < NOW() + INTERVAL '7 days'`);
+    let charged = 0;
+    for (const pro of (r?.rows ?? r ?? []) as any[]) {
+      try {
+        if (!(await chargeSubscriptionFromEarnings(Number(pro.id), PRO_SUBSCRIPTION_FCFA, period))) continue;
+        const from = pro.subscription_expires_at && new Date(pro.subscription_expires_at) > new Date() ? new Date(pro.subscription_expires_at) : new Date();
+        from.setMonth(from.getMonth() + 1);
+        await db.execute(sql`UPDATE pro_accounts SET subscription_status = 'active', subscription_expires_at = ${from.toISOString()} WHERE id = ${pro.id}`);
+        if (pro.user_id) await sendPushToUsers(new Set([pro.user_id]), { title: "Abonnement payé par vos gains", body: `${PRO_SUBSCRIPTION_FCFA.toLocaleString("fr-FR")} FCFA prélevés sur votre portefeuille.`, url: "/derm/paiements" });
+        charged++;
+      } catch (e: any) { log(`❌ Abonnement par les gains (pro ${pro.id}) : ${e?.message}`); }
+    }
+    log(`💳 Abonnements payés par les gains (${period}) : ${charged}`);
+  } catch (err) { log(`❌ Abonnements par les gains (migration 0017 ?) : ${err instanceof Error ? err.message : String(err)}`); }
+}
+
+// ── Virement automatique chaque vendredi (étape 3) ────────────────────────
+// Crée une demande de retrait de tout le disponible vers le compte principal ;
+// l'admin fait le virement et saisit l'ID de transaction (pas d'API de
+// décaissement branchée pour l'instant).
+async function requestFridayWithdrawals() {
+  try {
+    const r: any = await db.execute(sql`SELECT pro_id FROM wallet_settings WHERE auto_withdraw = TRUE`);
+    let n = 0;
+    for (const row of (r?.rows ?? r ?? []) as any[]) {
+      try {
+        const { available } = await proBalances(Number(row.pro_id));
+        if (available < 500) continue;
+        await requestWithdrawal(Number(row.pro_id), available, null, "auto");
+        n++;
+      } catch (e: any) { log(`❌ Virement du vendredi (pro ${row.pro_id}) : ${e?.message}`); }
+    }
+    if (n) {
+      const ownerEmail = process.env.OWNER_EMAIL || "demiseessawe12@gmail.com";
+      try { await sendEmail(ownerEmail, `Virements du vendredi : ${n} retrait(s) à verser`, `<p>${n} retrait(s) automatique(s) à verser. Saisissez l'ID de transaction de chaque virement dans /admin (Rapprochement).</p>`, `${n} retrait(s) à verser : /admin`); } catch {}
+    }
+    log(`💸 Virements du vendredi : ${n} demande(s)`);
+  } catch (err) { log(`❌ Virements du vendredi (migration 0017 ?) : ${err instanceof Error ? err.message : String(err)}`); }
 }
 
 // ── RELANCE PROSPECTS (chaque mercredi) ────────────────────────────────
@@ -789,6 +843,8 @@ export function startCronJobs() {
   cron.schedule("30 10 * * *", sendReengagement, { timezone: "Africa/Douala" });   // dermatos inactifs ~15j
   cron.schedule("0 11 * * *", sendB2CReengagement, { timezone: "Africa/Douala" });  // patients B2C inactifs ~15j (plafonné 60/j)
   cron.schedule("0 9 1 * *", sendMonthlyDigest, { timezone: "Africa/Douala" });    // digest le 1er du mois
+  cron.schedule("0 7 1 * *", chargeSubscriptionsFromEarnings, { timezone: "Africa/Douala" }); // abonnement payé par les gains
+  cron.schedule("0 10 * * 5", requestFridayWithdrawals, { timezone: "Africa/Douala" });      // virement automatique du vendredi
   log("✅ Crons emails DERM actifs — essai (8h), ré-engagement (10h30), digest (1er du mois 9h)");
 
   // ✅ Relance prospects — chaque MERCREDI à 9h00 (Douala)

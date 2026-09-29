@@ -66,7 +66,7 @@ export default function Admin() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [period, setPeriod] = useState<Period>("all");
-  const [adminTab, setAdminTab] = useState<"traction" | "stats" | "premium" | "leads" | "partenaires" | "vedettes" | "dataset" | "retention" | "dermatologues" | "iavsdoc" | "consults" | "revenus" | "prospects">("traction");
+  const [adminTab, setAdminTab] = useState<"traction" | "stats" | "premium" | "leads" | "partenaires" | "vedettes" | "dataset" | "retention" | "dermatologues" | "iavsdoc" | "consults" | "revenus" | "prospects" | "rapprochement">("traction");
   const [prospects, setProspects] = useState<any[]>([]);
   const [prospectsMeta, setProspectsMeta] = useState<{ total: number; toRelanceCount: number }>({ total: 0, toRelanceCount: 0 });
   const [prospectsLoading, setProspectsLoading] = useState(false);
@@ -175,6 +175,7 @@ export default function Admin() {
     if (adminTab === "dermatologues") { fetchDermActivity(adminKey); fetchDermCert(adminKey); }
     if (adminTab === "iavsdoc") fetchIaVsDoc(adminKey);
     if (adminTab === "consults") fetchConsults(adminKey);
+    if (adminTab === "rapprochement") fetchRecon(adminKey);
     if (adminTab === "revenus") fetchRevenue(adminKey);
     if (adminTab === "prospects") fetchProspects(adminKey);
   }, [adminTab]);
@@ -207,12 +208,35 @@ export default function Admin() {
       if (res.ok) { const d = await res.json(); setConsults(d.consultations || []); }
     } catch {}
   };
-  const confirmConsult = async (id: number) => {
+  // Aucun crédit sans ID de transaction de l'opérateur : comparez la référence du
+  // patient à votre relevé Mobile Money, puis confirmez l'ID exact.
+  const confirmConsult = async (id: number, patientRef?: string | null) => {
+    const operatorRef = window.prompt("ID de transaction de l'opérateur (vérifié sur votre relevé Mobile Money)", patientRef || "")?.trim();
+    if (!operatorRef) return;
     setConsultsBusy(id);
     try {
-      const res = await fetch(`/api/admin/consultations/${id}/confirm`, { method: "POST", headers: { "x-admin-key": adminKey } });
-      if (res.ok) fetchConsults(adminKey);
+      const res = await fetch(`/api/admin/consultations/${id}/confirm`, { method: "POST", headers: { "Content-Type": "application/json", "x-admin-key": adminKey }, body: JSON.stringify({ operatorRef }) });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) window.alert(d?.message || "Confirmation impossible");
+      fetchConsults(adminKey); fetchRecon(adminKey);
     } catch {} finally { setConsultsBusy(null); }
+  };
+
+  // ── Rapprochement (étape 3) ──
+  const [recon, setRecon] = useState<any>(null);
+  const [platformWithdraw, setPlatformWithdraw] = useState({ amount: "", phone: "" });
+  const fetchRecon = async (key: string) => {
+    try {
+      const res = await fetch("/api/admin/reconciliation", { headers: { "x-admin-key": key } });
+      const d = await res.json().catch(() => ({}));
+      setRecon(res.ok ? d : { error: d?.message || "Registre indisponible" });
+    } catch { setRecon({ error: "Erreur réseau" }); }
+  };
+  const reconPost = async (url: string, body?: unknown) => {
+    const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json", "x-admin-key": adminKey }, body: body ? JSON.stringify(body) : undefined });
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok) window.alert(d?.message || "Action impossible");
+    fetchRecon(adminKey);
   };
 
   const fetchIaVsDoc = async (key: string) => {
@@ -507,6 +531,7 @@ export default function Admin() {
             {[
               { key: "dataset", label: "Dataset", icon: Stethoscope, badge: datasetStats?.pending || 0, activeColor: "#10b981" },
               { key: "iavsdoc", label: "IA vs Médecin", icon: BarChart2, badge: 0, activeColor: "#7c3aed" },
+              { key: "rapprochement", label: "Rapprochement", icon: MessageCircle, badge: (recon?.toVerify?.length || 0) + (recon?.withdrawalsPending?.length || 0), activeColor: "#b45309" },
               { key: "consults", label: "Consultations", icon: MessageCircle, badge: consults.filter((c) => c.paymentStatus !== "paid").length, activeColor: "#10b981" },
               { key: "revenus", label: "Revenus", icon: DollarSign, badge: 0, activeColor: "#22c55e" },
               { key: "prospects", label: "Prospects", icon: Phone, badge: prospectsMeta.toRelanceCount || 0, activeColor: "#25D366" },
@@ -1221,6 +1246,73 @@ export default function Admin() {
           </div>
         )}
 
+        {adminTab === "rapprochement" && (
+          <div className="space-y-4">
+            <h3 className="text-lg font-extrabold" style={{ color: DS.text }}>Rapprochement des paiements</h3>
+            {!recon ? <p className="text-sm" style={{ color: DS.muted }}>Chargement…</p> : recon.error ? <p className="text-sm" style={{ color: "#f43f5e" }}>{recon.error}</p> : (
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-2xl p-4" style={{ background: DS.surface, border: `1px solid ${DS.border}` }}>
+                    <p className="text-xs" style={{ color: DS.muted }}>Part GlowScan disponible</p>
+                    <p className="text-xl font-extrabold" style={{ color: DS.text }}>{(recon.platform?.available || 0).toLocaleString("fr-FR")} FCFA</p>
+                  </div>
+                  <div className="rounded-2xl p-4" style={{ background: DS.surface, border: `1px solid ${DS.border}` }}>
+                    <p className="text-xs" style={{ color: DS.muted }}>Bloqué (réponses attendues)</p>
+                    <p className="text-xl font-extrabold" style={{ color: DS.text }}>{(recon.platform?.held || 0).toLocaleString("fr-FR")} FCFA</p>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl p-4 space-y-2" style={{ background: DS.surface, border: `1px solid ${DS.border}` }}>
+                  <p className="text-sm font-extrabold" style={{ color: DS.text }}>Paiements déclarés à vérifier ({recon.toVerify.length})</p>
+                  {recon.toVerify.length === 0 && <p className="text-xs" style={{ color: DS.muted }}>Rien à vérifier.</p>}
+                  {recon.toVerify.map((c: any) => (
+                    <div key={c.id} className="flex items-center justify-between gap-2 text-sm">
+                      <span style={{ color: DS.body }}>#{c.id} · {c.patientName || "Patient"} → Dr {String(c.dermName || "").replace(/^dr\.?\s*/i, "")} · {(c.priceFcfa || 0).toLocaleString("fr-FR")} FCFA · réf. patient : <b>{c.patientRef}</b></span>
+                      <button onClick={() => confirmConsult(c.id, c.patientRef)} className="px-3 py-1.5 rounded-xl text-xs font-extrabold text-white" style={{ background: "#10b981" }}>Vérifié</button>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="rounded-2xl p-4 space-y-2" style={{ background: DS.surface, border: `1px solid ${DS.border}` }}>
+                  <p className="text-sm font-extrabold" style={{ color: DS.text }}>Retraits à verser ({recon.withdrawalsPending.length})</p>
+                  {recon.withdrawalsPending.length === 0 && <p className="text-xs" style={{ color: DS.muted }}>Aucun retrait en attente.</p>}
+                  {recon.withdrawalsPending.map((w: any) => (
+                    <div key={w.id} className="flex items-center justify-between gap-2 text-sm">
+                      <span style={{ color: DS.body }}>
+                        {w.ownerId === "platform" ? "GlowScan" : `Dr ${String(w.dermName || "").replace(/^dr\.?\s*/i, "")}`} · <b>{Number(w.amount).toLocaleString("fr-FR")} FCFA</b> · {w.operator === "mtn" ? "MTN MoMo" : "Orange Money"} {w.msisdn}{w.requestedBy === "auto" ? " · vendredi" : ""}
+                      </span>
+                      <span className="flex gap-1.5">
+                        <button onClick={() => { const ref = window.prompt("ID de transaction du virement (obligatoire)")?.trim(); if (ref) reconPost(`/api/admin/withdrawals/${w.id}/paid`, { operatorRef: ref }); }} className="px-3 py-1.5 rounded-xl text-xs font-extrabold text-white" style={{ background: "#10b981" }}>Versé</button>
+                        <button onClick={() => { if (window.confirm("Annuler ce retrait ? La somme revient au disponible.")) reconPost(`/api/admin/withdrawals/${w.id}/cancel`); }} className="px-3 py-1.5 rounded-xl text-xs font-extrabold" style={{ color: DS.muted, border: `1px solid ${DS.border}` }}>Annuler</button>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="rounded-2xl p-4 space-y-2" style={{ background: DS.surface, border: `1px solid ${DS.border}` }}>
+                  <p className="text-sm font-extrabold" style={{ color: DS.text }}>Retirer la part GlowScan</p>
+                  <div className="flex gap-2">
+                    <input value={platformWithdraw.amount} onChange={(e) => setPlatformWithdraw({ ...platformWithdraw, amount: e.target.value })} placeholder="Montant" inputMode="numeric" className="flex-1 rounded-xl px-3 py-2 text-sm" style={{ background: "rgba(255,255,255,0.05)", border: `1px solid ${DS.border}`, color: DS.text }} />
+                    <input value={platformWithdraw.phone} onChange={(e) => setPlatformWithdraw({ ...platformWithdraw, phone: e.target.value })} placeholder="Numéro MoMo" inputMode="tel" className="flex-1 rounded-xl px-3 py-2 text-sm" style={{ background: "rgba(255,255,255,0.05)", border: `1px solid ${DS.border}`, color: DS.text }} />
+                    <button onClick={() => reconPost("/api/admin/platform/withdraw", { amount: Number(platformWithdraw.amount.replace(/\D/g, "")), phone: platformWithdraw.phone })} className="px-3 py-2 rounded-xl text-xs font-extrabold text-white" style={{ background: "#b45309" }}>Demander</button>
+                  </div>
+                  <p className="text-[11px]" style={{ color: DS.muted }}>Le retrait apparaît dans « Retraits à verser » : saisissez l'ID de transaction une fois le virement fait.</p>
+                </div>
+
+                <div className="rounded-2xl p-4 space-y-1" style={{ background: DS.surface, border: `1px solid ${DS.border}` }}>
+                  <p className="text-sm font-extrabold" style={{ color: DS.text }}>Registre GlowScan (50 derniers)</p>
+                  {recon.ledger.map((l: any, i: number) => (
+                    <div key={i} className="flex justify-between text-xs" style={{ color: DS.body }}>
+                      <span>{l.type} · {l.sourceId} · {l.status}{l.operatorTxnId ? ` · ${l.operatorTxnId}` : ""}</span>
+                      <b>{Number(l.amount).toLocaleString("fr-FR")} FCFA</b>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
         {adminTab === "consults" && (
           <div className="space-y-3">
             <div>
@@ -1287,7 +1379,7 @@ export default function Admin() {
                   )}
                   {c.paymentStatus !== "paid" && (
                     <button
-                      onClick={() => confirmConsult(c.id)}
+                      onClick={() => confirmConsult(c.id, c.paymentRef)}
                       disabled={consultsBusy === c.id}
                       className="flex-shrink-0 px-4 py-2 rounded-xl text-sm font-extrabold text-white"
                       style={{ background: "#10b981", opacity: consultsBusy === c.id ? 0.6 : 1 }}

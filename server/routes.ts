@@ -27,6 +27,7 @@ import { recordConsent, stopReminders, verifyStopLinkSig, stopFollowups, followu
 import { buildResultWhatsApp, resultRequestText, RESULT_REF_RE, isStopMessage, isFollowupStopMessage } from "@shared/whatsappMessages";
 import { RESULT_DISCLAIMER } from "@shared/resultB2C";
 import { splitConsultation } from "@shared/splits";
+import { recordConsultationPayment, releaseConsultation, WalletError, platformBalances, markWithdrawalPaid, cancelWithdrawal, requestPlatformWithdrawal } from "./wallet";
 import { PREMIUM_PLANS, planOfAmount, type PremiumPlan } from "@shared/premium";
 import { FREE_PRODUCT_SCANS_PER_WEEK, sanitizeIngredients, productVerdict } from "@shared/productSafety";
 import { DELIVERY_FEES, PAY_METHODS, ORDER_WHATSAPP, ORDER_STATUSES, computeOrder, buildOrderWhatsApp, type PayMethod } from "@shared/delivery";
@@ -1030,6 +1031,14 @@ export async function registerRoutes(
     if (!checkDatasetKey(req)) return res.status(403).json({ message: "Accès refusé" });
     try {
       const id = parseInt(req.params.id);
+      // L'admin a comparé la référence du patient à son relevé Mobile Money :
+      // l'ID de transaction de l'opérateur est obligatoire et ne sert qu'une fois.
+      try { await recordConsultationPayment(id, String(req.body?.operatorRef || "")); }
+      catch (e: any) {
+        if (e instanceof WalletError) return res.status(e.code === "TXN_ALREADY_USED" ? 409 : 400).json({ message: e.message });
+        console.error(`[admin/confirm] registre (migration 0017 appliquée ?) : ${e?.message}`);
+        return res.status(503).json({ message: "Registre des paiements indisponible (migration 0017)" });
+      }
       const [c] = await db.update(consultations)
         .set({ paymentStatus: "paid", status: "open" })
         .where(eq(consultations.id, id)).returning();
@@ -1090,10 +1099,18 @@ export async function registerRoutes(
   const markDoctorReply = (id: number) => {
     db.execute(sql`UPDATE consultations SET first_doctor_reply_at = COALESCE(first_doctor_reply_at, NOW()) WHERE id = ${id}`)
       .catch((e: any) => console.error(`[consultations] first_doctor_reply_at non enregistré (migration 0016 appliquée ?) : ${e?.message}`));
+    // Réponse envoyée : fin du blocage, les parts médecin et GlowScan deviennent disponibles.
+    releaseConsultation(id).catch((e: any) => console.error(`[wallet] libération consultation ${id} (migration 0017 appliquée ?) : ${e?.message}`));
   };
 
   // Passe une consultation à "payée + ouverte" et notifie le dermatologue.
-  const markConsultationPaid = async (id: number) => {
+  const markConsultationPaid = async (id: number, operatorTxnId: string) => {
+    // Aucun crédit sans ID de transaction vérifié : parts bloquées au registre d'abord.
+    try { await recordConsultationPayment(id, operatorTxnId); }
+    catch (e: any) {
+      console.error(`[paiement] consultation ${id} NON ouverte : ${e?.message}`);
+      return null;
+    }
     const [c] = await db.update(consultations)
       .set({ paymentStatus: "paid", status: "open" })
       .where(eq(consultations.id, id)).returning();
@@ -1188,8 +1205,8 @@ export async function registerRoutes(
       const j: any = await r.json();
       const st = String(j?.data?.status || "").toUpperCase();
       if (j?.code === "00" && st === "ACCEPTED") {
-        await markConsultationPaid(id);
-        return res.json({ status: "paid" });
+        const opened = await markConsultationPaid(id, String(j?.data?.operator_id || c.paymentRef));
+        return res.json({ status: opened ? "paid" : "pending" });
       }
       if (st === "REFUSED") return res.json({ status: "failed" });
       res.json({ status: "pending" });
@@ -1212,7 +1229,7 @@ export async function registerRoutes(
       const j: any = await r.json();
       if (j?.code === "00" && String(j?.data?.status || "").toUpperCase() === "ACCEPTED") {
         const m = transactionId.match(/^GSCONS-(\d+)-/);
-        if (m) await markConsultationPaid(parseInt(m[1]));
+        if (m) await markConsultationPaid(parseInt(m[1]), String(j?.data?.operator_id || transactionId));
       }
       res.status(200).send("ok");
     } catch (err) {
@@ -1231,6 +1248,7 @@ export async function registerRoutes(
       const itemRef = String(b.item_ref || b.payment_ref || "");
       const paymentId = String(b.paymentId || b.payment_id || "");
       let confirmed = false;
+      let verifiedTxn = "";
       if (paymentId) {
         const r = await fetch("https://api.monetbil.com/payment/v1/checkPayment", {
           method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -1239,13 +1257,12 @@ export async function registerRoutes(
         const j: any = await r.json().catch(() => ({}));
         const st = j?.transaction?.status ?? j?.status;
         confirmed = String(st) === "1";
-      } else {
-        // Fallback moins sûr si pas de paymentId : accepte uniquement "success".
-        confirmed = String(b.status || "").toLowerCase() === "success";
+        verifiedTxn = String(j?.transaction?.operator_transaction_id || paymentId);
       }
+      // Sans paymentId vérifiable auprès de Monetbil : aucun crédit (plus de repli sur « status=success »).
       if (confirmed) {
         const m = itemRef.match(/^GSCONS-(\d+)-/);
-        if (m) await markConsultationPaid(parseInt(m[1]));
+        if (m) await markConsultationPaid(parseInt(m[1]), verifiedTxn);
       }
       res.status(200).send("ok");
     } catch (err) {
@@ -1280,6 +1297,58 @@ export async function registerRoutes(
       console.error(`[admin/refunded] (migration 0016 appliquée ?) : ${e?.message}`);
       res.status(500).json({ message: "Erreur serveur" });
     }
+  });
+
+  // ── Rapprochement des paiements (étape 3, migration 0017) ─────────────
+  // Paiements déclarés à vérifier, retraits à verser, solde de la plateforme.
+  // Rien n'est crédité ni marqué « versé » sans ID de transaction de l'opérateur.
+  const reconFail = (e: any, res: any) => {
+    if (e instanceof WalletError) return res.status(e.code === "TXN_ALREADY_USED" ? 409 : 400).json({ message: e.message });
+    console.error(`[admin/reconciliation] (migration 0017 appliquée ?) : ${e?.message}`);
+    return res.status(503).json({ message: "Registre des paiements indisponible (migration 0017)" });
+  };
+
+  app.get("/api/admin/reconciliation", async (req: any, res) => {
+    if (!checkDatasetKey(req)) return res.status(403).json({ message: "Accès refusé" });
+    try {
+      const toVerify = Rows(await db.execute(sql`
+        SELECT c.id, c.price_fcfa AS "priceFcfa", c.payment_ref AS "patientRef", c.created_at AS "createdAt",
+               u.first_name AS "patientName", p.full_name AS "dermName"
+        FROM consultations c
+        LEFT JOIN users u ON u.id = c.user_id
+        LEFT JOIN pro_accounts p ON p.id = c.pro_account_id
+        WHERE c.payment_status <> 'paid' AND c.payment_ref IS NOT NULL
+        ORDER BY c.created_at DESC LIMIT 100`));
+      const withdrawalsPending = Rows(await db.execute(sql`
+        SELECT w.id, w.owner_id AS "ownerId", w.operator, w.msisdn, w.amount_fcfa AS "amount", w.requested_by AS "requestedBy", w.created_at AS "createdAt",
+               p.full_name AS "dermName"
+        FROM withdrawals w
+        LEFT JOIN pro_accounts p ON w.owner_id = 'pro:' || p.id
+        WHERE w.status = 'pending' ORDER BY w.created_at`));
+      const platform = await platformBalances();
+      const ledger = Rows(await db.execute(sql`
+        SELECT type, amount_fcfa AS "amount", source_id AS "sourceId", operator_txn_id AS "operatorTxnId", status, created_at AS "createdAt"
+        FROM platform_ledger ORDER BY created_at DESC LIMIT 50`));
+      res.json({ toVerify, withdrawalsPending, platform, ledger });
+    } catch (e) { reconFail(e, res); }
+  });
+
+  app.post("/api/admin/withdrawals/:id/paid", async (req: any, res) => {
+    if (!checkDatasetKey(req)) return res.status(403).json({ message: "Accès refusé" });
+    try { await markWithdrawalPaid(parseInt(req.params.id, 10), String(req.body?.operatorRef || "")); res.json({ ok: true }); }
+    catch (e) { reconFail(e, res); }
+  });
+
+  app.post("/api/admin/withdrawals/:id/cancel", async (req: any, res) => {
+    if (!checkDatasetKey(req)) return res.status(403).json({ message: "Accès refusé" });
+    try { await cancelWithdrawal(parseInt(req.params.id, 10)); res.json({ ok: true }); }
+    catch (e) { reconFail(e, res); }
+  });
+
+  app.post("/api/admin/platform/withdraw", async (req: any, res) => {
+    if (!checkDatasetKey(req)) return res.status(403).json({ message: "Accès refusé" });
+    try { const w = await requestPlatformWithdrawal(Number(req.body?.amount), String(req.body?.phone || "")); res.json({ ok: true, withdrawal: w }); }
+    catch (e) { reconFail(e, res); }
   });
 
   app.get("/api/admin/consultations", async (req: any, res) => {

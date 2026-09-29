@@ -15,6 +15,9 @@ import webpush from "web-push";
 import { sendEmail, buildOtpEmail, buildWelcomeEmail, buildSecurityAlertEmail, buildPeerNotifEmail, buildMagicLinkEmail } from "./email";
 import crypto from "crypto";
 import { followupsStoppedAt } from "./consents";
+import { SPLITS, splitConsultation } from "@shared/splits";
+import { PRO_SUBSCRIPTION_FCFA } from "@shared/premium";
+import { WalletError, proBalances, proMoves, payoutAccounts, addPayoutAccount, setPrimaryAccount, requestWithdrawal } from "./wallet";
 import { withFollowupFooter, followupsStoppedNote } from "@shared/whatsappMessages";
 
 // Normalise le résultat de db.execute (postgres-js renvoie un tableau ; d'autres
@@ -356,7 +359,7 @@ async function notifyOwner(subject: string, html: string, text: string) {
     await sendEmail(OWNER_EMAIL, subject, html, text);
   } catch (e) { console.warn("[notifyOwner]", (e as any)?.message); }
 }
-const PRO_PRICE_FCFA = 10000;
+const PRO_PRICE_FCFA = PRO_SUBSCRIPTION_FCFA; // shared/premium.ts
 const TRIAL_DAYS = 14;
 
 // Crée la table du fil IA clinique si absente (résilient : la migration 0011 la
@@ -1852,6 +1855,60 @@ export function registerProRoutes(app: Express) {
   // (price_fcfa), part dermatologue (dermatologue_payout) et part plateforme
   // (platform_commission) uniquement si stockées — aucun recalcul, aucun taux
   // codé en dur, aucun statut de versement inventé. Ne touche à aucun paiement.
+  // ── Portefeuille du médecin (étape 3, migration 0017) ──────────────────
+  // Le secrétariat n'y a pas accès (README §4). Tout passe par server/wallet.ts.
+  const walletGuard = (req: any, res: any) => {
+    if (req.isSecretary) { res.status(403).json({ message: "Accès réservé au médecin" }); return false; }
+    return true;
+  };
+  const walletFail = (e: any, res: any) => {
+    if (e instanceof WalletError) return res.status(e.code === "NOT_FOUND" ? 404 : 400).json({ message: e.message, code: e.code });
+    console.error(`[wallet] (migration 0017 appliquée ?) : ${e?.message}`);
+    return res.status(503).json({ message: "Portefeuille indisponible pour le moment" });
+  };
+
+  app.get("/api/pro/wallet", requireProAccess, async (req: any, res) => {
+    if (!walletGuard(req, res)) return;
+    try {
+      const proId = req.proAccount.id;
+      const [balances, moves, accounts] = await Promise.all([proBalances(proId), proMoves(proId), payoutAccounts(proId)]);
+      let autoWithdraw = false;
+      try { autoWithdraw = (await db.execute(sql`SELECT auto_withdraw FROM wallet_settings WHERE pro_id = ${proId}`) as any).rows?.[0]?.auto_withdraw === true; } catch {}
+      res.json({ ...balances, moves, accounts, autoWithdraw, shares: SPLITS });
+    } catch (e) { walletFail(e, res); }
+  });
+
+  app.post("/api/pro/payout-accounts", requireActivePro, async (req: any, res) => {
+    if (!walletGuard(req, res)) return;
+    try { await addPayoutAccount(req.proAccount.id, String(req.body?.phone || "")); res.json({ ok: true }); }
+    catch (e) { walletFail(e, res); }
+  });
+
+  app.post("/api/pro/payout-accounts/:id/primary", requireActivePro, async (req: any, res) => {
+    if (!walletGuard(req, res)) return;
+    try { await setPrimaryAccount(req.proAccount.id, parseInt(req.params.id, 10)); res.json({ ok: true }); }
+    catch (e) { walletFail(e, res); }
+  });
+
+  app.post("/api/pro/withdrawals", requireActivePro, async (req: any, res) => {
+    if (!walletGuard(req, res)) return;
+    try {
+      const w = await requestWithdrawal(req.proAccount.id, Number(req.body?.amount), req.body?.accountId ? Number(req.body.accountId) : null, "manual");
+      res.json({ ok: true, withdrawal: w });
+    } catch (e) { walletFail(e, res); }
+  });
+
+  app.put("/api/pro/wallet/settings", requireActivePro, async (req: any, res) => {
+    if (!walletGuard(req, res)) return;
+    try {
+      const auto = req.body?.autoWithdraw === true;
+      await db.execute(sql`
+        INSERT INTO wallet_settings (pro_id, auto_withdraw, updated_at) VALUES (${req.proAccount.id}, ${auto}, NOW())
+        ON CONFLICT (pro_id) DO UPDATE SET auto_withdraw = EXCLUDED.auto_withdraw, updated_at = NOW()`);
+      res.json({ ok: true, autoWithdraw: auto });
+    } catch (e) { walletFail(e, res); }
+  });
+
   app.get("/api/pro/payments", requireProAccess, async (req: any, res) => {
     try {
       let rows: any[] = [];
@@ -2312,10 +2369,8 @@ export function registerProRoutes(app: Express) {
         } catch (e) { console.warn("[close] follow-up:", (e as any)?.message); }
       }
 
-      // Part dermatologue : prix consultation − 1 300 FCFA (commission plateforme fixe).
-      // Ex. défaut 4 800 → 3 500 dermato / 1 300 plateforme. Prix flexible par dermato.
-      const PLATFORM_FEE = 1300;
-      const payoutFcfa = Math.max(0, (Number(c.priceFcfa) || 4800) - PLATFORM_FEE);
+      // Part médecin : 80 % du prix qu'il a fixé (shared/splits.ts, constante unique).
+      const payoutFcfa = splitConsultation(Number(c.priceFcfa) || 0).pro;
       // URL du rapport pour que le MÉDECIN le relise avant de l'envoyer.
       let reportUrlStr: string | null = null;
       try { const { reportUrl } = await import("./whatsapp"); reportUrlStr = reportUrl(id); } catch {}

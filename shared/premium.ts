@@ -23,3 +23,6 @@ export const PREMIUM_PERKS = [
   "Comparaison avant / après détaillée",
   "La routine prescrite par votre médecin reste gratuite",
 ];
+
+/** Abonnement GlowScan Derm (médecin) : 10 000 FCFA par mois, payable par les gains. */
+export const PRO_SUBSCRIPTION_FCFA = 10000;

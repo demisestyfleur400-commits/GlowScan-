@@ -31,3 +31,9 @@ CREATE TABLE IF NOT EXISTS record_access_log (
 );
 
 CREATE INDEX IF NOT EXISTS record_access_log_patient_idx ON record_access_log (patient_id, at DESC);
+
+-- Sécurité par ligne activée, sans règle : aucun accès via les clés publiques
+-- (anon / authenticated) de Supabase ; le serveur y accède avec son rôle propriétaire,
+-- comme pour les autres tables de l'application.
+ALTER TABLE consents ENABLE ROW LEVEL SECURITY;
+ALTER TABLE record_access_log ENABLE ROW LEVEL SECURITY;

@@ -1,3 +1,4 @@
+import { SPLITS, splitConsultation } from "@shared/splits";
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
@@ -23,7 +24,6 @@ const PRO_PRICE = 10000;
 
 // Prix consultation en ligne — MODIFIABLE par chaque dermatologue.
 const DEFAULT_CONSULT_PRICE = 4800; // défaut ; chaque dermato peut le modifier
-const PLATFORM_FEE = 1300;          // commission fixe GlowScan par consultation
 
 const DS = {
   surface: DERM.surface,
@@ -272,7 +272,7 @@ export default function ProCabinet() {
           </div>
           {b2cAvailable && (() => {
             const priceNum = Math.max(0, parseInt(consultPrice, 10) || 0);
-            const dermShare = Math.max(0, priceNum - PLATFORM_FEE);
+            const dermShare = splitConsultation(priceNum).pro; // 80 % (shared/splits.ts)
             return (
             <div className="mb-4 rounded-xl p-4" style={{ background: SOFT_BG, border: `1px solid ${SOFT_BORDER}` }}>
               <label className="text-xs font-extrabold block mb-1.5" style={{ color: INK }}>💬 Prix de votre consultation en ligne (FCFA)</label>
@@ -286,7 +286,7 @@ export default function ProCabinet() {
               <p className="text-xs leading-relaxed mt-2" style={{ color: DS.body }}>
                 Vous fixez votre prix. Vous recevez{" "}
                 <strong style={{ color: GREEN }}>{dermShare.toLocaleString("fr-FR")} FCFA</strong> par consultation
-                (GlowScan prend {PLATFORM_FEE.toLocaleString("fr-FR")} FCFA de commission).
+                (GlowScan prend {SPLITS.consultation.platform} % de commission).
               </p>
               <p className="text-[11px] mt-1.5" style={{ color: DS.muted }}>
                 Prix conseillé : 4 800 FCFA. Modifiable à tout moment.

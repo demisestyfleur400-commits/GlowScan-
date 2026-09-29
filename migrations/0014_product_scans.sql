@@ -11,3 +11,8 @@ CREATE TABLE IF NOT EXISTS product_scans (
 );
 
 CREATE INDEX IF NOT EXISTS product_scans_user_created_idx ON product_scans (user_id, created_at DESC);
+
+-- Sécurité par ligne activée, sans règle : aucun accès via les clés publiques
+-- (anon / authenticated) de Supabase ; le serveur y accède avec son rôle propriétaire,
+-- comme pour les autres tables de l'application.
+ALTER TABLE product_scans ENABLE ROW LEVEL SECURITY;
