@@ -21,6 +21,7 @@ import {
   BellRing,
   Send,
   X as XIcon,
+  Phone,
 } from "lucide-react";
 import {
   usePatientDossier,
@@ -35,20 +36,22 @@ import {
 } from "@/hooks/use-pro";
 import { Users, Lock } from "lucide-react";
 import { useLocation as useWouterLocation } from "wouter";
-import { ProLayout, ProCard, ProInput, StatusBadge } from "@/components/ProLayout";
+import { ProLayout, ProCard, ProInput, PATIENT_STATUS, patientStatusOf, type PatientStatus } from "@/components/ProLayout";
+import { Button } from "@/components/ui/button";
+import { formatCmPhone } from "@shared/phone";
 import { CaseAuditTrail } from "@/components/pro/CaseAuditTrail";
 import PDFViewerModal from "@/components/PDFViewerModal";
 import { useToast } from "@/hooks/use-toast";
 import { LoadingScreen } from "./ProDashboard";
 
-const NAVY = "#7c3aed";
-const INK = "#0F172A";
-const GREEN = "#10b981";
+const NAVY = "var(--color-accent)";
+const INK = "var(--color-text)";
+const GREEN = "var(--color-accent-2-600)";
 
 const DS = {
-  body: "#64748B",
-  muted: "#94A3B8",
-  border: "#E2E8F0",
+  body: "var(--color-neutral-800)",
+  muted: "var(--color-neutral-700)",
+  border: "var(--color-divider)",
 };
 
 export default function ProPatient() {
@@ -73,6 +76,8 @@ export default function ProPatient() {
   const [validatingId, setValidatingId] = useState<number | null>(null);
   const [validateNote, setValidateNote] = useState("");
   const [validateCorrection, setValidateCorrection] = useState("");
+  const [noteDraft, setNoteDraft] = useState<string | null>(null);
+  const [noteSaving, setNoteSaving] = useState(false);
 
   if (isLoading || !data) return <LoadingScreen />;
 
@@ -80,6 +85,7 @@ export default function ProPatient() {
   const lastScan = scans[0];
   const previousScan = scans[1];
   const dermato = accData?.account;
+  const isSecretary = accData?.user?.role === "secretary";
 
   // Étape 5 — primauté du diagnostic validé par le médecin. Si le médecin a corrigé
   // (expertCorrectedCondition) on affiche SA correction, sinon le diagnostic IA.
@@ -162,12 +168,12 @@ export default function ProPatient() {
 </div>
 <div class="body">
   <div class="no-print" style="text-align:center;padding:12px 0 4px">
-    <button class="cta-btn" onclick="window.print()">⬇ Télécharger en PDF</button>
+    <button class="cta-btn" onclick="window.print()">Télécharger en PDF</button>
     <p style="font-size:10px;color:#9ca3af">Enregistrer en PDF dans le menu d'impression</p>
   </div>
 
   <div class="section">
-    <div class="sec-title">👤 Informations Patient</div>
+    <div class="sec-title">Informations Patient</div>
     <div class="info-grid">
       <div><div class="lbl">Nom complet</div><div class="val">${p.firstName} ${p.lastName}</div></div>
       <div><div class="lbl">Téléphone</div><div class="val">${p.whatsappNumber || "—"}</div></div>
@@ -180,7 +186,7 @@ export default function ProPatient() {
 
   ${allScans.length >= 2 ? `
   <div class="section">
-    <div class="sec-title">📈 Évolution Glow Score</div>
+    <div class="sec-title">Évolution Glow Score</div>
     <div class="evol-box">
       <div style="text-align:center"><div style="font-size:9px;color:#6b7280">${new Date(allScans[allScans.length-1].createdAt!).toLocaleDateString("fr-FR")}</div><div style="font-size:28px;font-weight:900;color:#7c3aed">${allScans[allScans.length-1].score}</div><div style="font-size:8px;color:#6b7280">J0</div></div>
       <div style="flex:1;text-align:center;font-size:22px;color:#9ca3af">→</div>
@@ -190,7 +196,7 @@ export default function ProPatient() {
   </div>` : ""}
 
   <div class="section">
-    <div class="sec-title">📋 Historique des Analyses</div>
+    <div class="sec-title">Historique des Analyses</div>
     ${allScans.map((s, i) => `
     <div class="scan-row" style="${i===0?"background:rgba(124,58,237,.04);border-color:rgba(124,58,237,.3)":""}">
       <div class="scan-date">${new Date(s.createdAt!).toLocaleDateString("fr-FR", {day:"numeric",month:"short",year:"numeric"})}</div>
@@ -202,7 +208,7 @@ export default function ProPatient() {
 
   ${lastScan ? `
   <div class="section">
-    <div class="sec-title">🔬 Dernier Diagnostic Complet (${new Date(lastScan.createdAt!).toLocaleDateString("fr-FR")})</div>
+    <div class="sec-title">Dernier Diagnostic Complet (${new Date(lastScan.createdAt!).toLocaleDateString("fr-FR")})</div>
     <div style="display:flex;gap:12px;margin-bottom:10px">
       <div style="flex:1;background:#f8f7ff;border:1px solid #e8e3ff;border-radius:8px;padding:10px">
         <div class="lbl">Condition</div>
@@ -237,7 +243,7 @@ export default function ProPatient() {
       if (ex.keloidSymptomes) rows.push(["Chéloïde — symptômes", ex.keloidSymptomes]);
       if (rows.length === 0) return "";
       return `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px;margin-bottom:8px">
-        <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:#059669;margin-bottom:6px">👨‍⚕️ Examen du médecin</div>
+        <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:#059669;margin-bottom:6px">Examen du médecin</div>
         ${rows.map(([k, v]) => `<div style="display:flex;gap:8px;font-size:11px;margin-bottom:3px"><span style="font-weight:800;color:#6b7280;min-width:110px">${k}</span><span style="color:#F6FAFD">${v}</span></div>`).join("")}
       </div>`;
     })()}
@@ -246,15 +252,15 @@ export default function ProPatient() {
 
   ${(morning.length > 0 || evening.length > 0) ? `
   <div class="section">
-    <div class="sec-title">🌿 Protocole de Traitement</div>
-    ${morning.length > 0 ? `<div class="protocol-lbl" style="background:#fffbeb;color:#92400e">☀ Matin</div>${morning.map(renderStep).join("")}` : ""}
-    ${evening.length > 0 ? `<div class="protocol-lbl" style="background:#ede9fe;color:#5b21b6;margin-top:8px">🌙 Soir</div>${evening.map(renderStep).join("")}` : ""}
+    <div class="sec-title">Protocole de Traitement</div>
+    ${morning.length > 0 ? `<div class="protocol-lbl" style="background:#fffbeb;color:#92400e">Matin</div>${morning.map(renderStep).join("")}` : ""}
+    ${evening.length > 0 ? `<div class="protocol-lbl" style="background:#ede9fe;color:#5b21b6;margin-top:8px">Soir</div>${evening.map(renderStep).join("")}` : ""}
   </div>` : ""}
 
-  <div class="validity">📅 <b>Dossier mis à jour le ${date}</b> · Réf : ${refNum} · Cabinet ${dermato?.cabinetName || "GlowScan DERM"}</div>
+  <div class="validity"><b>Dossier mis à jour le ${date}</b> · Réf : ${refNum} · Cabinet ${dermato?.cabinetName || "GlowScan DERM"}</div>
 </div>
 <div class="footer">
-  <div class="f-text">🔒 Document médical confidentiel établi et validé par le praticien soussigné · Réf ${refNum} · À usage strictement professionnel. À conserver dans le dossier médical du patient.</div>
+  <div class="f-text">Document médical confidentiel établi et validé par le praticien soussigné · Réf ${refNum} · À usage strictement professionnel. À conserver dans le dossier médical du patient.</div>
   <div class="f-brand">✦ GlowScan DERM</div>
 </div></body></html>`;
     if (returnHtml) return html;
@@ -304,210 +310,160 @@ export default function ProPatient() {
   const showReminder = daysSinceLast !== null && daysSinceLast >= 30;
   const evolution = lastScan && previousScan ? (lastScan.score || 0) - (previousScan.score || 0) : null;
 
+  const firstScan = scans.length ? scans[scans.length - 1] : null;
+  const scoreOf = (s?: any) => (typeof s?.score === "number" && s.score > 0 ? s.score : null);
+  const current = scoreOf(lastScan);
+  const delta = current != null && scans.length >= 2 && scoreOf(firstScan) != null ? current - (scoreOf(firstScan) as number) : null;
+  const sinceMonth = firstScan?.createdAt ? new Date(firstScan.createdAt).toLocaleDateString("fr-FR", { month: "long" }) : "";
+  const phototype = ((lastScan?.clinicalContext as any)?.examen?.phototype as string | undefined) || null;
+  const phone = p.whatsappNumber ? formatCmPhone(p.whatsappNumber) : null;
+  const meta = [p.age ? `${p.age} ans` : null, p.sex === "F" ? "Femme" : p.sex === "M" ? "Homme" : null, phototype ? `Phototype ${phototype}` : null, phone]
+    .filter(Boolean).join(" · ");
+  const st = patientStatusOf(p.status);
+  const reco: any = (lastScan?.recommendations as any) || {};
+  const steps: any[] = [...(reco?.protocol?.morning || (lastScan as any)?.protocol?.morning || []), ...(reco?.protocol?.evening || (lastScan as any)?.protocol?.evening || [])];
+  const treatment = (steps.length ? steps : (reco?.products || []).map((x: any) => ({ product: x })))
+    .map((x: any) => (typeof x === "object" ? { name: x.product || x.step || "", how: x.product ? x.step || "" : "" } : { name: String(x), how: "" }))
+    .filter((t: any) => t.name)
+    .slice(0, 6);
+  const note = noteDraft ?? (lastScan as any)?.dermatoNote ?? "";
+  const saveNote = async () => {
+    if (!lastScan) return;
+    setNoteSaving(true);
+    try {
+      const r = await fetch(`/api/pro/scans/${(lastScan as any).id}/note`, {
+        method: "PATCH", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ note }),
+      });
+      if (!r.ok) throw new Error((await r.json().catch(() => ({})))?.message || "Note non enregistrée");
+      (lastScan as any).dermatoNote = note;
+      setNoteDraft(null);
+      toast({ title: "Note enregistrée" });
+    } catch (e: any) {
+      toast({ title: "Erreur", description: e.message, variant: "destructive" });
+    } finally { setNoteSaving(false); }
+  };
+  const card = "flex flex-col gap-organic-3 rounded-card bg-organic-surface p-organic-6";
+
   return (
-    <ProLayout
-      title="Dossier patient"
-      back="/derm/patients"
-      rightAction={
-        <button
-          onClick={handleDelete}
-          data-testid="button-delete"
-          className="p-2 rounded-xl transition-colors"
-          style={{ color: DS.muted }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = "#f87171")}
-          onMouseLeave={(e) => (e.currentTarget.style.color = DS.muted)}
-        >
-          <Trash2 className="w-4 h-4" />
-        </button>
-      }
-    >
-      {/* Patient header */}
-      <ProCard className="p-5 mb-4">
-        <div className="flex items-start gap-4 mb-4">
-          <div
-            className="w-14 h-14 rounded-full flex items-center justify-center text-white font-extrabold text-base flex-shrink-0"
-            style={{ background: NAVY }}
-          >
-            {p.firstName[0]}
-            {p.lastName[0]}
-          </div>
-          <div className="flex-1 min-w-0">
-            <h2 className="text-lg font-extrabold" style={{ color: INK }} data-testid="text-patient-name">
-              {p.firstName} {p.lastName}
-            </h2>
-            <p className="text-xs mt-0.5" style={{ color: DS.muted }}>
-              {p.age ? `${p.age} ans · ` : ""}
-              {p.sex || ""}
-              {p.whatsappNumber ? ` · ${p.whatsappNumber}` : ""}
-            </p>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {([
-                { v: "priority", label: "Priorité haute", color: "#ef4444", bg: "rgba(239,68,68,0.1)", border: "rgba(239,68,68,0.3)" },
-                { v: "monitoring", label: "En suivi", color: NAVY, bg: "rgba(124,58,237,0.1)", border: "rgba(124,58,237,0.3)" },
-                { v: "stable", label: "Stable", color: GREEN, bg: "rgba(16,185,129,0.1)", border: "rgba(16,185,129,0.3)" },
-                { v: "resolved", label: "Résolu", color: DS.muted, bg: "#F1F5F9", border: DS.border },
-              ] as { v: string; label: string; color: string; bg: string; border: string }[]).map(opt => {
-                const on = p.status === opt.v;
-                return (
-                  <button
-                    key={opt.v}
-                    onClick={() => updateStatus.mutateAsync({ id: p.id, status: opt.v as any })}
-                    className="text-[10px] font-extrabold px-2.5 py-1 rounded-full transition-all active:scale-95"
-                    style={on
-                      ? { background: opt.bg, border: `1.5px solid ${opt.border}`, color: opt.color }
-                      : { background: "#F1F5F9", border: `1px solid ${DS.border}`, color: DS.muted }
-                    }
-                  >
-                    {opt.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
+    <ProLayout>
+      <Link href="/derm/patients" className="text-[13px] font-bold text-organic-accent-700 no-underline" data-testid="link-back">← Patientèle</Link>
 
-        <div className="grid grid-cols-3 gap-2">
-          <Link
-            href={`/pro/analyse?patient=${p.id}`}
-            data-testid="button-new-scan"
-            className="flex items-center justify-center gap-1.5 py-2.5 rounded-full text-white text-xs font-extrabold transition-all active:scale-[0.97]"
-            style={{ background: NAVY }}
-          >
-            <ScanLine className="w-3.5 h-3.5" />
-            Nouvelle analyse
-          </Link>
-          <button
-            onClick={sendWhatsApp}
-            data-testid="button-whatsapp"
-            className="flex items-center justify-center gap-1.5 py-2.5 rounded-full text-white text-xs font-extrabold transition-all active:scale-[0.97]"
-            style={{ background: "linear-gradient(135deg, #25d366 0%, #128c7e 100%)" }}
-          >
-            <MessageCircle className="w-3.5 h-3.5" />
-            WhatsApp
-          </button>
-          <button
-            onClick={openPdfViewer}
-            data-testid="button-pdf"
-            className="flex items-center justify-center gap-1.5 py-2.5 rounded-full text-xs font-extrabold transition-all active:scale-[0.97]"
-            style={{ background: "#E2E8F0", border: "1px solid #E2E8F0", color: DS.body }}
-          >
-            <FileText className="w-3.5 h-3.5" />
-            Voir rapport
-          </button>
+      <header className="flex flex-wrap items-center gap-organic-4">
+        <span className="flex h-[72px] w-[72px] flex-none items-center justify-center rounded-full bg-organic-accent-200 font-heading text-[26px] text-organic-accent-800">
+          {(p.firstName[0] || "").toUpperCase()}{(p.lastName[0] || "").toUpperCase()}
+        </span>
+        <div className="flex min-w-[220px] flex-1 flex-col gap-1">
+          <h1 className="m-0 text-[clamp(28px,4vw,38px)]" data-testid="text-patient-name">{p.firstName} {p.lastName}</h1>
+          <span className="text-[14px] text-organic-neutral-700">{meta}</span>
         </div>
-      </ProCard>
+        <div className="flex flex-wrap gap-organic-2">
+          <Button variant="secondary" onClick={sendWhatsApp} data-testid="button-whatsapp"><Phone size={16} /> Rappel WhatsApp</Button>
+          <Button onClick={() => setLocation(`/derm/analyse?patient=${p.id}`)} data-testid="button-new-scan"><Camera size={16} /> Photo de contrôle</Button>
+        </div>
+      </header>
 
-      {/* Reminder 30j */}
+      <div className="flex flex-wrap gap-1.5 self-start rounded-card bg-organic-surface p-1 sm:rounded-pill" role="radiogroup" aria-label="Statut du patient">
+        {(Object.keys(PATIENT_STATUS) as PatientStatus[]).map((k) => (
+          <button key={k} type="button" role="radio" aria-checked={st === k} disabled={isSecretary}
+            onClick={() => updateStatus.mutateAsync({ id: p.id, status: k as any })}
+            className={`cursor-pointer rounded-pill border-0 px-4 py-2 font-body text-[13px] font-bold disabled:cursor-default ${st === k ? "bg-organic-accent text-organic-bg" : "bg-transparent text-organic-text"}`}
+            data-testid={`status-${k}`}>
+            {PATIENT_STATUS[k].label}
+          </button>
+        ))}
+      </div>
+
       {showReminder && (
-        <ProCard className="p-4 mb-4" style={{ background: "rgba(251,191,36,0.08)", borderColor: "rgba(251,191,36,0.25)" }}>
-          <div className="flex items-start gap-3">
-            <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: "#fbbf24" }} />
-            <div className="flex-1">
-              <p className="text-sm font-extrabold" style={{ color: "#fbbf24" }}>Pas de suivi depuis {daysSinceLast} jours</p>
-              <p className="text-xs mb-2" style={{ color: DS.body }}>Envoyer un rappel à {p.firstName} ?</p>
-              <button
-                onClick={sendWhatsApp}
-                className="text-xs font-extrabold underline"
-                style={{ color: GREEN }}
-                data-testid="button-send-reminder"
-              >
-                Envoyer un rappel WhatsApp
-              </button>
-            </div>
-          </div>
-        </ProCard>
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-card bg-organic-accent-100 px-organic-4 py-3">
+          <span className="text-[14px] font-semibold text-organic-accent-900">Pas de contrôle depuis {daysSinceLast} jours.</span>
+          <Button variant="ghost" onClick={sendWhatsApp} data-testid="button-send-reminder">Envoyer un rappel WhatsApp</Button>
+        </div>
       )}
 
-      {/* Comparison avant/après */}
-      {lastScan && previousScan && (
-        <ProCard className="p-5 mb-4">
-          <p className="text-[11px] font-extrabold uppercase tracking-wider mb-3" style={{ color: DS.muted }}>
-            Comparaison avant / après
-          </p>
-          <div className="grid grid-cols-2 gap-3">
-            <div
-              className="text-center p-3 rounded-xl"
-              style={{ background: "#F1F5F9", border: `1px solid ${DS.border}` }}
-            >
-              <p className="text-[10px]" style={{ color: DS.muted }}>{new Date(previousScan.createdAt!).toLocaleDateString("fr-FR")}</p>
-              <p className="text-2xl font-extrabold mt-1" style={{ color: INK }}>
-                {previousScan.score}<span className="text-sm" style={{ color: DS.muted }}>/100</span>
-              </p>
-              <p className="text-[10px] truncate mt-1" style={{ color: DS.body }}>{dxOf(previousScan)}</p>
-            </div>
-            <div
-              className="text-center p-3 rounded-xl"
-              style={{
-                background: (evolution || 0) >= 0 ? "rgba(16,185,129,0.1)" : "rgba(251,191,36,0.1)",
-                border: `1px solid ${(evolution || 0) >= 0 ? "rgba(16,185,129,0.25)" : "rgba(251,191,36,0.25)"}`,
-              }}
-            >
-              <p className="text-[10px] font-extrabold" style={{ color: (evolution || 0) >= 0 ? "#6ee7b7" : "#fbbf24" }}>
-                {new Date(lastScan.createdAt!).toLocaleDateString("fr-FR")}
-              </p>
-              <p className="text-2xl font-extrabold mt-1" style={{ color: (evolution || 0) >= 0 ? "#6ee7b7" : "#fbbf24" }}>
-                {lastScan.score}<span className="text-sm opacity-70">/100</span>
-              </p>
-              <p className="text-[10px] truncate mt-1" style={{ color: DS.body }}>{dxOf(lastScan)}</p>
+      <section className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,300px),1fr))] items-start gap-organic-4">
+        <div className={`${card} items-start gap-organic-4`}>
+          <span className="text-[10px] font-bold uppercase tracking-[.1em] text-organic-accent-700">Glow Score actuel</span>
+          <div className="flex h-[180px] w-[180px] items-center justify-center rounded-full"
+            style={{ background: `conic-gradient(var(--color-accent) ${(current ?? 0) * 3.6}deg, var(--color-accent-200) 0)` }}>
+            <div className="flex h-[140px] w-[140px] flex-col items-center justify-center rounded-full bg-organic-surface">
+              <span className="font-heading text-[48px] leading-none">{current ?? "—"}</span>
+              <span className="text-[12px] text-organic-neutral-700">sur 100</span>
             </div>
           </div>
-          <p className="text-xs text-center mt-3" style={{ color: DS.body }}>
-            Évolution :{" "}
-            <span className="font-extrabold" style={{ color: (evolution || 0) >= 0 ? GREEN : "#fbbf24" }}>
-              {(evolution || 0) >= 0 ? "+" : ""}
-              {evolution} pts
+          {delta != null && (
+            <span className={`text-[14px] font-bold ${delta >= 0 ? "text-organic-accent-2-700" : "text-organic-accent-700"}`}>
+              {delta >= 0 ? `+${delta} points depuis ${sinceMonth}` : `${delta} points depuis ${sinceMonth} — à surveiller`}
             </span>
-          </p>
-        </ProCard>
-      )}
+          )}
+          <div className="flex flex-col gap-1.5">
+            <span className="text-[12px] text-organic-neutral-700">Diagnostic principal</span>
+            <span className="font-heading text-[20px] leading-tight">{lastScan ? dxOf(lastScan) : "Pas encore d'analyse"}</span>
+          </div>
+        </div>
 
-      {/* Suivi évolution — photos de contrôle comparées par l'IA */}
-      {lastScan && (
-        <EvolutionSection scan={lastScan as any} patientId={p.id} />
-      )}
+        <div className={card}>
+          <h3 className="m-0 text-[22px]">Historique des analyses</h3>
+          {scans.length === 0 && (
+            <Link href={`/derm/analyse?patient=${p.id}`} className="text-[14px] font-bold text-organic-accent-700" data-testid="link-first-scan">Lancer la première analyse</Link>
+          )}
+          {scans.map((s, i) => (
+            <a key={s.id} href={`#scan-${s.id}`} className="flex items-center gap-3.5 rounded-pill bg-organic-bg px-2.5 py-2 text-organic-text no-underline">
+              <span className={`flex h-[46px] w-[46px] flex-none items-center justify-center rounded-full font-heading text-[17px] ${i === 0 ? "bg-organic-accent text-organic-bg" : "bg-organic-neutral-200"}`}>
+                {scoreOf(s) ?? "—"}
+              </span>
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="text-[14px] font-bold">{s.createdAt ? new Date(s.createdAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" }) : ""}</span>
+                <span className="truncate text-[12px] text-organic-neutral-700">{i === scans.length - 1 && scans.length > 1 ? "Première analyse" : dxOf(s)}</span>
+              </span>
+            </a>
+          ))}
+        </div>
 
-      {/* Rappel de contrôle WhatsApp */}
+        <div className={card}>
+          <h3 className="m-0 text-[22px]">Traitement en cours</h3>
+          {treatment.length === 0 && <span className="text-[14px] text-organic-neutral-700">Aucun traitement enregistré.</span>}
+          {treatment.map((t: any, i: number) => (
+            <div key={i} className="flex items-start gap-3">
+              <span className="mt-1 flex h-[22px] w-[22px] flex-none items-center justify-center rounded-full bg-organic-accent-2-200 text-[11px] font-bold text-organic-accent-2-800">{i + 1}</span>
+              <span className="flex flex-col">
+                <span className="text-[14px] font-bold">{t.name}</span>
+                {t.how && <span className="text-[12px] text-organic-neutral-700">{t.how}</span>}
+              </span>
+            </div>
+          ))}
+          {lastScan && !isSecretary && (
+            <label className="mt-1.5 flex flex-col gap-1.5">
+              <span className="text-[12px] text-organic-neutral-700">Note clinique</span>
+              <textarea value={note} onChange={(e) => setNoteDraft(e.target.value)} rows={3}
+                placeholder="Observation, évolution, prochaine étape…"
+                className="min-h-[90px] resize-y rounded-2xl border border-organic-divider bg-organic-bg px-3.5 py-2.5 font-body text-[14px] text-organic-text outline-none focus:border-organic-accent"
+                data-testid="input-clinical-note" />
+              {noteDraft != null && noteDraft !== ((lastScan as any)?.dermatoNote ?? "") && (
+                <Button onClick={saveNote} isLoading={noteSaving} disabled={noteSaving} className="self-start" data-testid="button-save-note">Enregistrer la note</Button>
+              )}
+            </label>
+          )}
+        </div>
+      </section>
+
+      {lastScan && <EvolutionSection scan={lastScan as any} patientId={p.id} />}
+      {scans.length > 0 && !isSecretary && <FollowUpReminderCard patient={p as any} patientId={p.id} />}
+      {lastScan && !isSecretary && <PeerReviewButton scanId={(lastScan as any).id} condition={dxOf(lastScan)} />}
+
       {scans.length > 0 && (
-        <FollowUpReminderCard patient={p as any} patientId={p.id} />
+        <h3 className="m-0 mt-2 text-[22px]">Détail des analyses</h3>
       )}
-
-      {/* Consentement dataset retiré de la vue : le dermatologue consent déjà via
-          les CGU/confidentialité à l'inscription — inutile et anxiogène ici. */}
-
-      {/* Demander un second avis confrère (cas anonymisé) */}
-      {lastScan && (
-        <PeerReviewButton scanId={(lastScan as any).id} condition={dxOf(lastScan)} />
-      )}
-
-      {/* Timeline */}
-      <p className="text-[11px] font-extrabold uppercase tracking-wider mb-2 px-1" style={{ color: DS.muted }}>
-        Historique ({scans.length})
-      </p>
-
-      {scans.length === 0 ? (
-        <ProCard className="p-8 text-center">
-          <p className="text-sm mb-3" style={{ color: DS.body }}>Aucune analyse encore</p>
-          <Link
-            href={`/pro/analyse?patient=${p.id}`}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-white text-sm font-extrabold active:scale-[0.97] transition-all"
-            style={{ background: NAVY }}
-            data-testid="link-first-scan"
-          >
-            <ScanLine className="w-4 h-4" />
-            Lancer la 1ère analyse
-          </Link>
-        </ProCard>
-      ) : (
-        <div className="space-y-3">
+      {scans.length > 0 && (
+        <div className="flex flex-col gap-organic-3">
           {scans.map((s) => (
-            <ProCard key={s.id} className="p-4">
+            <ProCard key={s.id} className="scroll-mt-6 p-organic-4" id={`scan-${s.id}`}>
               <div className="flex items-start justify-between mb-3">
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-extrabold" style={{ color: INK }} data-testid={`text-condition-${s.id}`}>
                     {(s.expertCorrectedCondition && String(s.expertCorrectedCondition).trim()) || s.condition || "Diagnostic en attente"}
                   </p>
                   {s.expertCorrectedCondition && String(s.expertCorrectedCondition).trim() && (
-                    <p className="text-[10px] mt-0.5" style={{ color: "#6ee7b7" }}>
+                    <p className="text-[10px] mt-0.5" style={{ color: "var(--color-accent-2-700)" }}>
                       ✓ Diagnostic validé par le médecin
                       {s.condition && s.condition !== s.expertCorrectedCondition ? ` · IA : ${s.condition}` : ""}
                     </p>
@@ -562,8 +518,8 @@ export default function ProPatient() {
                     className="rounded-xl p-3 mb-3"
                     style={{ background: "rgba(16,185,129,0.06)", border: "1px solid rgba(16,185,129,0.3)" }}
                   >
-                    <p className="text-[10px] font-extrabold uppercase tracking-wider mb-2" style={{ color: "#6ee7b7" }}>
-                      👨‍⚕️ Examen du médecin
+                    <p className="text-[10px] font-extrabold uppercase tracking-wider mb-2" style={{ color: "var(--color-accent-2-700)" }}>
+                      Examen du médecin
                     </p>
                     {rows.length > 0 && (
                       <div className="space-y-1.5">
@@ -597,18 +553,18 @@ export default function ProPatient() {
                   >
                     <summary
                       className="cursor-pointer text-[11px] font-extrabold px-3 py-2 transition-colors"
-                      style={{ color: DS.body, background: "#F1F5F9" }}
+                      style={{ color: DS.body, background: "var(--color-bg)" }}
                     >
                       Anamnèse ({Object.keys(answers).length} réponses)
                     </summary>
-                    <div className="p-3 pt-0 space-y-1.5" style={{ background: "#F8FAFC" }}>
+                    <div className="p-3 pt-0 space-y-1.5" style={{ background: "var(--color-bg)" }}>
                       {items.map((q) => {
                         const a = answers[q.id];
                         if (!a) return null;
                         const colorMap: any = {
-                          oui: { bg: "rgba(16,185,129,0.1)", border: "rgba(16,185,129,0.25)", text: "#6ee7b7", label: "Oui" },
-                          non: { bg: "rgba(248,113,113,0.1)", border: "rgba(248,113,113,0.25)", text: "#f87171", label: "Non" },
-                          nsp: { bg: "#F1F5F9", border: "#E2E8F0", text: DS.muted, label: "NSP" },
+                          oui: { bg: "rgba(16,185,129,0.1)", border: "rgba(16,185,129,0.25)", text: "var(--color-accent-2-700)", label: "Oui" },
+                          non: { bg: "rgba(248,113,113,0.1)", border: "rgba(248,113,113,0.25)", text: "var(--color-accent-700)", label: "Non" },
+                          nsp: { bg: "var(--color-bg)", border: "var(--color-divider)", text: DS.muted, label: "NSP" },
                         };
                         const c = colorMap[a] || colorMap.nsp;
                         return (
@@ -643,11 +599,11 @@ export default function ProPatient() {
                   >
                     <summary
                       className="cursor-pointer text-[11px] font-extrabold px-3 py-2"
-                      style={{ color: DS.muted, background: "#F1F5F9" }}
+                      style={{ color: DS.muted, background: "var(--color-bg)" }}
                     >
-                      🤖 Analyse IA (indicative)
+                      Analyse IA (indicative)
                     </summary>
-                    <div className="p-3 pt-0 space-y-2" style={{ background: "#F8FAFC" }}>
+                    <div className="p-3 pt-0 space-y-2" style={{ background: "var(--color-bg)" }}>
                       {s.analysis && (
                         <p className="text-[11px] leading-relaxed pt-2" style={{ color: DS.body }}>{s.analysis}</p>
                       )}
@@ -668,7 +624,7 @@ export default function ProPatient() {
                           className="text-[11px] rounded-lg p-2"
                           style={{ background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.25)" }}
                         >
-                          <span className="font-extrabold uppercase tracking-wider" style={{ color: "#fbbf24" }}>Conseil expert</span>
+                          <span className="font-extrabold uppercase tracking-wider" style={{ color: "var(--color-accent-600)" }}>Conseil expert</span>
                           <p className="leading-snug mt-0.5" style={{ color: DS.body }}>{conseil}</p>
                         </div>
                       )}
@@ -677,7 +633,7 @@ export default function ProPatient() {
                 );
               })()}
 
-              {/* 🔒 Brique 2 — Journal d'audit du cas (traçabilité) */}
+              {/* Brique 2 — Journal d'audit du cas (traçabilité) */}
               <div className="mt-2">
                 <CaseAuditTrail scan={s as any} />
               </div>
@@ -685,7 +641,7 @@ export default function ProPatient() {
               {s.isVerified && (
                 <div
                   className="inline-flex items-center gap-1.5 text-[10px] font-extrabold mt-2 px-2 py-1 rounded-full"
-                  style={{ background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.25)", color: "#6ee7b7" }}
+                  style={{ background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.25)", color: "var(--color-accent-2-700)" }}
                 >
                   <CheckCircle2 className="w-3 h-3" />
                   Diagnostic validé {s.expertReviewer ? `· ${s.expertReviewer}` : ""}
@@ -723,7 +679,7 @@ export default function ProPatient() {
                     rows={2}
                     className="w-full px-3 py-2 rounded-xl text-xs outline-none resize-none"
                     style={{
-                      background: "#F1F5F9",
+                      background: "var(--color-bg)",
                       border: "1px solid rgba(167,139,250,0.2)",
                       color: INK,
                     }}
@@ -750,7 +706,7 @@ export default function ProPatient() {
                       disabled={validate.isPending}
                       data-testid={`button-reject-${s.id}`}
                       className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 rounded-full text-xs font-extrabold active:scale-[0.97] transition-all"
-                      style={{ background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.25)", color: "#f87171" }}
+                      style={{ background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.25)", color: "var(--color-accent-700)" }}
                     >
                       <XCircle className="w-3 h-3" />
                       Rejeter
@@ -758,7 +714,7 @@ export default function ProPatient() {
                     <button
                       onClick={() => setValidatingId(null)}
                       className="px-3 py-2 rounded-full text-xs font-extrabold"
-                      style={{ background: "#F1F5F9", color: DS.muted }}
+                      style={{ background: "var(--color-bg)", color: DS.muted }}
                     >
                       Annuler
                     </button>
@@ -769,6 +725,13 @@ export default function ProPatient() {
           ))}
         </div>
       )}
+
+      <div className="flex flex-wrap gap-organic-2">
+        <Button variant="secondary" onClick={openPdfViewer} data-testid="button-pdf"><FileText size={16} /> Voir le dossier PDF</Button>
+        {!isSecretary && (
+          <Button variant="ghost" onClick={handleDelete} data-testid="button-delete"><Trash2 size={16} /> Supprimer le dossier</Button>
+        )}
+      </div>
       {/* ── PDF Viewer Modal ── */}
       <PDFViewerModal
         isOpen={showPdfViewer}
@@ -847,7 +810,7 @@ function EvolutionSection({ scan, patientId }: { scan: any; patientId: number })
         </div>
         <label
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-extrabold cursor-pointer active:scale-95 transition-all"
-          style={{ background: busy ? "#E2E8F0" : NAVY, color: busy ? DS.muted : "#fff" }}
+          style={{ background: busy ? "var(--color-divider)" : NAVY, color: busy ? DS.muted : "#fff" }}
         >
           {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Camera className="w-3.5 h-3.5" />}
           {busy ? "Analyse…" : "+ Photo de contrôle"}
@@ -857,7 +820,7 @@ function EvolutionSection({ scan, patientId }: { scan: any; patientId: number })
       </div>
 
       {followUps.length === 0 ? (
-        <div className="text-center py-6 px-2 rounded-xl" style={{ background: "#F1F5F9", border: `1px solid ${DS.border}` }}>
+        <div className="text-center py-6 px-2 rounded-xl" style={{ background: "var(--color-bg)", border: `1px solid ${DS.border}` }}>
           <p className="text-sm font-bold mb-1" style={{ color: INK }}>Suivez l'évolution dans le temps</p>
           <p className="text-xs" style={{ color: DS.body }}>
             Ajoutez une photo de la même zone à J+30, J+60… GlowScan la compare à la photo initiale
@@ -867,14 +830,14 @@ function EvolutionSection({ scan, patientId }: { scan: any; patientId: number })
       ) : (
         <>
           {/* Comparateur J0 | Jx avec slider */}
-          <div className="relative rounded-xl overflow-hidden select-none" style={{ border: `1px solid ${DS.border}`, aspectRatio: "4/3", background: "#0F172A" }}>
+          <div className="relative rounded-xl overflow-hidden select-none" style={{ border: `1px solid ${DS.border}`, aspectRatio: "4/3", background: "var(--color-text)" }}>
             {j0Url && <img src={j0Url} alt="J0" className="absolute inset-0 w-full h-full object-cover" draggable={false} />}
             {latest?.photoUrl && (
               <img src={latest.photoUrl} alt="Jx" className="absolute inset-0 w-full h-full object-cover" draggable={false}
                 style={{ clipPath: `inset(0 0 0 ${slider}%)` }} />
             )}
             {/* poignée */}
-            <div className="absolute top-0 bottom-0" style={{ left: `${slider}%`, width: 2, background: "#fff", boxShadow: "0 0 0 1px rgba(0,0,0,0.3)" }} />
+            <div className="absolute top-0 bottom-0" style={{ left: `${slider}%`, width: 2, background: "var(--color-bg)", boxShadow: "0 0 0 1px rgba(0,0,0,0.3)" }} />
             <span className="absolute top-2 left-2 text-[9px] font-extrabold px-1.5 py-0.5 rounded" style={{ background: "rgba(15,23,42,0.7)", color: "#fff" }}>J0</span>
             <span className="absolute top-2 right-2 text-[9px] font-extrabold px-1.5 py-0.5 rounded" style={{ background: "rgba(124,58,237,0.85)", color: "#fff" }}>J+{latest?.dayOffset ?? 0}</span>
             <input type="range" min={0} max={100} value={slider} onChange={(e) => setSlider(Number(e.target.value))}
@@ -883,7 +846,7 @@ function EvolutionSection({ scan, patientId }: { scan: any; patientId: number })
 
           {/* Verdict IA */}
           {latest && (
-            <div className="mt-3 p-3 rounded-xl" style={{ background: "#F1F5F9", border: `1px solid ${DS.border}` }}>
+            <div className="mt-3 p-3 rounded-xl" style={{ background: "var(--color-bg)", border: `1px solid ${DS.border}` }}>
               <div className="flex items-center justify-between mb-1.5">
                 <span className="inline-flex items-center gap-1.5 text-sm font-extrabold" style={{ color: evoColor(latest.evolutionScore) }}>
                   <EvoIcon className="w-4 h-4" />
@@ -938,8 +901,8 @@ function DatasetConsentCard({ patientId, initial }: { patientId: number; initial
         </div>
         <button role="switch" aria-checked={consent} onClick={toggle} data-testid="toggle-patient-dataset-consent"
           style={{ flexShrink: 0, width: 44, height: 26, padding: 3, borderRadius: 9999, border: "none", cursor: "pointer",
-            background: consent ? "#059669" : "#CBD5E1", display: "flex", justifyContent: consent ? "flex-end" : "flex-start" }}>
-          <span style={{ width: 20, height: 20, borderRadius: "50%", background: "#fff", display: "block" }} />
+            background: consent ? "#059669" : "var(--color-divider)", display: "flex", justifyContent: consent ? "flex-end" : "flex-start" }}>
+          <span style={{ width: 20, height: 20, borderRadius: "50%", background: "var(--color-bg)", display: "block" }} />
         </button>
       </div>
     </ProCard>
@@ -1025,7 +988,7 @@ function FollowUpReminderCard({ patient, patientId }: { patient: any; patientId:
 
       {scheduledAt ? (
         <p className="text-xs mb-3" style={{ color: DS.body }}>
-          📅 Prochain rappel programmé le{" "}
+          Prochain rappel programmé le{" "}
           <strong style={{ color: INK }}>{new Date(scheduledAt).toLocaleDateString("fr-FR")}</strong>
           {patient.followUpReminderSent ? " · déjà envoyé" : ""}
         </p>
@@ -1036,14 +999,14 @@ function FollowUpReminderCard({ patient, patientId }: { patient: any; patientId:
       )}
 
       {open && (
-        <div className="mb-3 space-y-2 p-3 rounded-xl" style={{ background: "#F1F5F9", border: `1px solid ${DS.border}` }}>
+        <div className="mb-3 space-y-2 p-3 rounded-xl" style={{ background: "var(--color-bg)", border: `1px solid ${DS.border}` }}>
           <label className="block text-[10px] font-extrabold uppercase tracking-wider" style={{ color: DS.muted }}>Date du rappel</label>
           <input type="date" value={date} onChange={(e) => setDate(e.target.value)} data-testid="input-reminder-date"
-            className="w-full px-3 py-2 rounded-lg text-sm outline-none" style={{ background: "#fff", border: `1px solid ${DS.border}`, color: INK }} />
+            className="w-full px-3 py-2 rounded-lg text-sm outline-none" style={{ background: "var(--color-bg)", border: `1px solid ${DS.border}`, color: INK }} />
           <label className="block text-[10px] font-extrabold uppercase tracking-wider mt-2" style={{ color: DS.muted }}>Message (optionnel)</label>
           <textarea value={message} onChange={(e) => setMessage(e.target.value)} rows={2} placeholder="Laisser vide = message par défaut"
             data-testid="input-reminder-message"
-            className="w-full px-3 py-2 rounded-lg text-sm outline-none resize-none" style={{ background: "#fff", border: `1px solid ${DS.border}`, color: INK }} />
+            className="w-full px-3 py-2 rounded-lg text-sm outline-none resize-none" style={{ background: "var(--color-bg)", border: `1px solid ${DS.border}`, color: INK }} />
           <button onClick={scheduleIt} disabled={schedule.isPending}
             className="w-full py-2.5 rounded-full text-white text-sm font-extrabold disabled:opacity-50" style={{ background: NAVY }} data-testid="button-confirm-schedule">
             {schedule.isPending ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Programmer le rappel"}
@@ -1055,7 +1018,7 @@ function FollowUpReminderCard({ patient, patientId }: { patient: any; patientId:
         {!open && (
           <button onClick={() => setOpen(true)}
             className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 rounded-full text-sm font-extrabold active:scale-[0.98] transition-all"
-            style={{ background: "#F1F5F9", border: `1px solid ${DS.border}`, color: INK }} data-testid="button-schedule-reminder">
+            style={{ background: "var(--color-bg)", border: `1px solid ${DS.border}`, color: INK }} data-testid="button-schedule-reminder">
             <Bell className="w-4 h-4" /> {scheduledAt ? "Modifier la date" : "Programmer"}
           </button>
         )}
@@ -1113,14 +1076,14 @@ function PeerReviewButton({ scanId, condition }: { scanId: number; condition: st
           <textarea value={question} onChange={(e) => setQuestion(e.target.value)} rows={3} autoFocus
             placeholder="Ex : Lésion pigmentée évoluant depuis 3 mois, avis sur indication de biopsie ?"
             data-testid="input-peer-question"
-            className="w-full px-3 py-2 rounded-xl text-sm outline-none resize-none" style={{ background: "#F1F5F9", border: `1px solid ${DS.border}`, color: INK }} />
+            className="w-full px-3 py-2 rounded-xl text-sm outline-none resize-none" style={{ background: "var(--color-bg)", border: `1px solid ${DS.border}`, color: INK }} />
           <div className="flex gap-2">
             <button onClick={submit} disabled={create.isPending}
               className="flex-1 py-2.5 rounded-full text-white text-sm font-extrabold disabled:opacity-50" style={{ background: "#0369A1" }} data-testid="button-submit-peer">
               {create.isPending ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Envoyer au réseau"}
             </button>
             <button onClick={() => { setOpen(false); setQuestion(""); }}
-              className="px-4 py-2.5 rounded-full text-sm font-extrabold" style={{ background: "#F1F5F9", border: `1px solid ${DS.border}`, color: DS.body }}>
+              className="px-4 py-2.5 rounded-full text-sm font-extrabold" style={{ background: "var(--color-bg)", border: `1px solid ${DS.border}`, color: DS.body }}>
               Annuler
             </button>
           </div>
@@ -1133,8 +1096,8 @@ function PeerReviewButton({ scanId, condition }: { scanId: number; condition: st
 function TimelineDot({ label, active }: { label: string; active?: boolean }) {
   return (
     <span className="inline-flex flex-col items-center gap-1 flex-shrink-0">
-      <span className="w-2.5 h-2.5 rounded-full" style={{ background: active ? NAVY : "#CBD5E1" }} />
-      <span className="text-[9px] font-extrabold" style={{ color: active ? NAVY : "#94A3B8" }}>{label}</span>
+      <span className="w-2.5 h-2.5 rounded-full" style={{ background: active ? NAVY : "var(--color-divider)" }} />
+      <span className="text-[9px] font-extrabold" style={{ color: active ? NAVY : "var(--color-neutral-600)" }}>{label}</span>
     </span>
   );
 }

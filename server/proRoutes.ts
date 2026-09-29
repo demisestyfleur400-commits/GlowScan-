@@ -1112,7 +1112,27 @@ export function registerProRoutes(app: Express) {
         const r: any = await db.execute(sql`SELECT "id", "report_sent_at" FROM "patients" WHERE "dermatologist_id" = ${req.proAccount.id} AND "report_sent_at" IS NOT NULL`);
         for (const row of (r?.rows ?? r ?? [])) sentMap[row.id] = new Date(row.report_sent_at).toISOString();
       } catch {}
-      const withSent = filtered.map((p) => ({ ...p, reportSentAt: sentMap[p.id] || null }));
+      // Évolution du Glow Score (4 dernières analyses, de la plus ancienne à la plus
+      // récente) et dernier diagnostic (corrigé par le médecin s'il l'a corrigé).
+      const trendMap: Record<number, number[]> = {};
+      const condMap: Record<number, string> = {};
+      try {
+        const r: any = await db.execute(sql`
+          SELECT patient_id, score, cond, rn FROM (
+            SELECT s.patient_id, s.score, COALESCE(s.expert_corrected_condition, s.condition) AS cond,
+                   ROW_NUMBER() OVER (PARTITION BY s.patient_id ORDER BY s.created_at DESC) AS rn
+            FROM scans s JOIN patients p ON p.id = s.patient_id
+            WHERE p.dermatologist_id = ${req.proAccount.id}
+          ) t WHERE rn <= 4 ORDER BY patient_id, rn DESC`);
+        for (const row of (r?.rows ?? r ?? []) as any[]) {
+          const pid = Number(row.patient_id);
+          if (typeof row.score === "number" && row.score > 0) (trendMap[pid] ||= []).push(row.score);
+          if (Number(row.rn) === 1 && row.cond) condMap[pid] = String(row.cond);
+        }
+      } catch {}
+      const withSent = filtered.map((p) => ({
+        ...p, reportSentAt: sentMap[p.id] || null, scoreTrend: trendMap[p.id] || [], lastCondition: condMap[p.id] || null,
+      }));
       res.json({ patients: withSent });
     } catch (err) {
       console.error("[pro/patients list] error:", err);
@@ -1678,6 +1698,25 @@ export function registerProRoutes(app: Express) {
   // ───────────────────────────────────────────
   // POST /api/pro/scans/:id/validate — validation dermato → RLHF dataset
   // ───────────────────────────────────────────
+  // PATCH /api/pro/scans/:id/note — « Note clinique » de la fiche patient (médecin
+  // uniquement, sur un scan d'un de ses patients). Remplace la note du scan.
+  app.patch("/api/pro/scans/:id/note", requireActivePro, async (req: any, res) => {
+    try {
+      const scanId = parseInt(req.params.id);
+      const note = String(req.body?.note ?? "").slice(0, 4000).trim();
+      const [scan] = await db.select().from(scans).where(eq(scans.id, scanId));
+      if (!scan?.patientId) return res.status(404).json({ message: "Analyse introuvable" });
+      const [pat] = await db.select().from(patients)
+        .where(and(eq(patients.id, scan.patientId), eq(patients.dermatologistId, req.proAccount.id)));
+      if (!pat) return res.status(403).json({ message: "Ce dossier ne vous appartient pas" });
+      await db.update(scans).set({ dermatoNote: note || null }).where(eq(scans.id, scanId));
+      res.json({ success: true, note: note || null });
+    } catch (err) {
+      console.error("[pro/scans/note] error:", err);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
   app.post("/api/pro/scans/:id/validate", requireActivePro, async (req: any, res) => {
     try {
       const scanId = parseInt(req.params.id);

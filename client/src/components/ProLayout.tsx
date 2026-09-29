@@ -255,9 +255,9 @@ export function ProLayout({ children, title, back, onBack, hideBottomNav, rightA
 
 // ── Composants partagés du portail (Organic) ───────────────────────────────
 
-export function ProCard({ children, className = "", testid }: { children: ReactNode; className?: string; testid?: string }) {
+export function ProCard({ children, className = "", testid, id, style }: { children: ReactNode; className?: string; testid?: string; id?: string; style?: React.CSSProperties }) {
   return (
-    <div className={`overflow-hidden rounded-card bg-organic-surface ${className}`} data-testid={testid}>
+    <div id={id} style={style} className={`overflow-hidden rounded-card bg-organic-surface ${className}`} data-testid={testid}>
       {children}
     </div>
   );
