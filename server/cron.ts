@@ -653,7 +653,7 @@ async function chargeSubscriptionsFromEarnings() {
         const from = pro.subscription_expires_at && new Date(pro.subscription_expires_at) > new Date() ? new Date(pro.subscription_expires_at) : new Date();
         from.setMonth(from.getMonth() + 1);
         await db.execute(sql`UPDATE pro_accounts SET subscription_status = 'active', subscription_expires_at = ${from.toISOString()} WHERE id = ${pro.id}`);
-        if (pro.user_id) await sendPushToUsers(new Set([pro.user_id]), { title: "Abonnement payé par vos gains", body: `${PRO_SUBSCRIPTION_FCFA.toLocaleString("fr-FR")} FCFA prélevés sur votre portefeuille.`, url: "/derm/paiements" });
+        if (pro.user_id) await sendPushToUsers(new Set([pro.user_id]), { title: "Abonnement payé par vos gains", body: `${PRO_SUBSCRIPTION_FCFA.toLocaleString("fr-FR")} FCFA prélevés sur votre portefeuille.`, url: "/derm/portefeuille" });
         charged++;
       } catch (e: any) { log(`❌ Abonnement par les gains (pro ${pro.id}) : ${e?.message}`); }
     }

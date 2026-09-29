@@ -6,35 +6,37 @@ import { Settings, Download, Crown, CheckCircle2, Loader2, Phone, Clock, UserPlu
 import { useProAccount, useProPatients, useUpdateProAccount, useSecretaries, useCreateSecretary, useDeleteSecretary } from "@/hooks/use-pro";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
-import { ProLayout, ProCard, ProInput, LogoutButton  } from "@/components/ProLayout";
-import { LoadingScreen } from "./ProDashboard";
+import { ProLayout, ProCard, ProInput, LogoutButton, LoadingScreen } from "@/components/ProLayout";
+import { Button } from "@/components/ui/button";
+import { formatF } from "@shared/delivery";
+import { PRO_SUBSCRIPTION_FCFA } from "@shared/premium";
 import { NotifSettingsCard } from "@/components/NotifSettingsCard";
 import { DermSubscribeFlow } from "@/components/DermSubscribeFlow";
 import { DERM } from "@/lib/design-tokens";
 
-const NAVY = "#00937A";        // accent teal (texte / icônes)
-const BLUE = "#2E9FD6";        // accent bleu (texte / icônes)
-const GRADIENT = "linear-gradient(135deg, #00E6B8, #2E9FD6)"; // fonds de boutons/CTA
-const INK = "#0B1220";         // texte principal (foncé sur fond clair)
-const GREEN = "#059669";
+const NAVY = "var(--color-accent-700)";
+const BLUE = "var(--color-accent-2-700)";
+const GRADIENT = "var(--color-accent)";
+const INK = "var(--color-text)";
+const GREEN = "var(--color-accent-2-700)";
 
 const MTN_NUMBER = "674377959";
 const ORANGE_NUMBER = "690501392";
-const PRO_PRICE = 10000;
+const PRO_PRICE = PRO_SUBSCRIPTION_FCFA;
 
 // Prix consultation en ligne — MODIFIABLE par chaque dermatologue.
 const DEFAULT_CONSULT_PRICE = 4800; // défaut ; chaque dermato peut le modifier
 
 const DS = {
-  surface: DERM.surface,
-  border: DERM.border,
-  body: DERM.textBody,
-  muted: DERM.textMuted,
+  surface: "var(--color-surface)",
+  border: "var(--color-divider)",
+  body: "var(--color-neutral-800)",
+  muted: "var(--color-neutral-700)",
 };
 
 // Fonds/bordures légers réutilisés (remplacent les anciens rgba(255,255,255,…) du thème sombre)
-const SOFT_BG = "#F1F5F9";
-const SOFT_BORDER = DERM.border;
+const SOFT_BG = "var(--color-bg)";
+const SOFT_BORDER = "var(--color-divider)";
 
 export default function ProCabinet() {
   const { data: accData } = useProAccount();
@@ -42,7 +44,8 @@ export default function ProCabinet() {
   const updateAcc = useUpdateProAccount();
   const { toast } = useToast();
 
-  const [editing, setEditing] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [exported, setExported] = useState(false);
   const [fullName, setFullName] = useState("");
   const [cabinetName, setCabinetName] = useState("");
   const [phone, setPhone] = useState("");
@@ -87,7 +90,7 @@ export default function ProCabinet() {
       setSecFullName("");
       setSecEmail("");
       setShowSecretaryForm(false);
-      toast({ title: "Secrétaire créée ✅", description: "Communiquez-lui ses identifiants ci-dessous." });
+      toast({ title: "Secrétaire créée", description: "Communiquez-lui ses identifiants ci-dessous." });
     } catch (err: any) {
       toast({ title: "Erreur", description: err.message || "Création impossible", variant: "destructive" });
     }
@@ -139,8 +142,8 @@ export default function ProCabinet() {
         country: country || null,
         licenseNumber: licenseNumber || null,
       });
-      toast({ title: "Profil mis à jour" });
-      setEditing(false);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 1800);
     } catch (err: any) {
       toast({ title: "Erreur", description: err.message, variant: "destructive" });
     }
@@ -169,355 +172,198 @@ export default function ProCabinet() {
     a.download = `glowscan-pro-patients-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    toast({ title: "Export téléchargé", description: `${patients.length} patients exportés` });
+    setExported(true);
+    setTimeout(() => setExported(false), 1800);
   };
 
 
-  // 🔑 SÉCURITÉ : Les secrétaires n'ont pas accès aux paramètres cabinet
+  // Secrétaire : pas d'accès aux réglages du cabinet → ses patients.
   if (accData?.user?.role === "secretary") {
     return (
-      <ProLayout title="Mon cabinet" back="/derm/patients">
-        <div style={{ textAlign: "center", padding: "40px 24px", color: "#475569" }}>
-          <p>Les secrétaires n'ont pas accès aux paramètres cabinet.</p>
-        </div>
+      <ProLayout>
+        <div className="rounded-card bg-organic-surface p-organic-6 text-[14px]">Les réglages du cabinet sont réservés au médecin.</div>
       </ProLayout>
     );
   }
 
+  const card = "flex flex-col gap-organic-3 rounded-card bg-organic-surface p-organic-6";
+  const toggle = (on: boolean, onClick: () => void, testid: string, label: string) => (
+    <button type="button" role="switch" aria-checked={on} aria-label={label} onClick={onClick} data-testid={testid}
+      className={`relative h-7 w-12 flex-none cursor-pointer rounded-pill border-0 transition-colors ${on ? "bg-organic-accent-2-600" : "bg-organic-neutral-400"}`}>
+      <span className={`absolute top-[3px] h-[22px] w-[22px] rounded-full bg-organic-neutral-100 transition-all ${on ? "left-[23px]" : "left-[3px]"}`} />
+    </button>
+  );
+
   return (
-    <ProLayout title="Mon cabinet" back="/derm/dashboard">
-      <div className="space-y-4 max-w-3xl mx-auto">
-        {/* Notifications — réglage permanent (push consultations/messages) */}
-        <NotifSettingsCard />
+    <ProLayout>
+      <header className="flex flex-col gap-1">
+        <span className="text-[11px] font-bold uppercase tracking-[.12em] text-organic-accent-700">Réglages</span>
+        <h1 className="m-0 text-[clamp(30px,4vw,42px)]">Cabinet</h1>
+      </header>
 
-        {/* Profil dermato */}
-        <ProCard className="p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Settings className="w-4 h-4" style={{ color: NAVY }} />
-              <h2 className="font-extrabold text-base" style={{ color: INK }}>Profil dermatologue</h2>
-            </div>
-            {!editing && (
-              <button
-                onClick={() => setEditing(true)}
-                className="text-xs font-extrabold hover:underline"
-                style={{ color: NAVY }}
-                data-testid="button-edit"
-              >
-                Modifier
-              </button>
-            )}
-          </div>
-
-          {!editing ? (
-            <div className="space-y-2.5">
-              <Row label="Nom" value={acc.fullName} testid="text-fullname" />
-              <Row label="Cabinet" value={acc.cabinetName || "—"} testid="text-cabinet" />
-              <Row label="WhatsApp" value={acc.phone || "—"} testid="text-phone" />
-              <Row label="Ville" value={acc.city || "—"} testid="text-city" />
-              <Row label="Pays" value={(acc as any).country || "—"} testid="text-country" />
-              <Row label="N° d'ordre" value={(acc as any).licenseNumber || "—"} testid="text-license" />
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <ProInput label="Nom complet" value={fullName} onChange={(e) => setFullName(e.target.value)} testid="input-fullname" />
-              <ProInput label="Cabinet" value={cabinetName} onChange={(e) => setCabinetName(e.target.value)} testid="input-cabinet" />
-              <ProInput label="WhatsApp" value={phone} onChange={(e) => setPhone(e.target.value)} testid="input-phone" />
+      <section className="grid items-start gap-organic-4 lg:grid-cols-2">
+        <div className="flex flex-col gap-organic-4">
+          {/* Profil du cabinet */}
+          <div className={card}>
+            <h3 className="m-0 text-[22px]">Profil du cabinet</h3>
+            <ProInput label="Nom complet" value={fullName} onChange={(e) => setFullName(e.target.value)} testid="input-fullname" />
+            <ProInput label="Nom du cabinet" value={cabinetName} onChange={(e) => setCabinetName(e.target.value)} testid="input-cabinet" />
+            <div className="grid grid-cols-1 gap-organic-3 sm:grid-cols-2">
               <ProInput label="Ville" value={city} onChange={(e) => setCity(e.target.value)} testid="input-city" />
+              <ProInput label="Téléphone" value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" testid="input-phone" />
+              <ProInput label="N° d'ordre" value={licenseNumber} onChange={(e) => setLicenseNumber(e.target.value)} testid="input-license" />
               <ProInput label="Pays" value={country} onChange={(e) => setCountry(e.target.value)} testid="input-country" />
-              <ProInput label="N° d'ordre (ONMC)" value={licenseNumber} onChange={(e) => setLicenseNumber(e.target.value)} testid="input-license" />
-              <div className="flex gap-2 pt-1">
-                <button
-                  onClick={handleSave}
-                  disabled={updateAcc.isPending}
-                  data-testid="button-save"
-                  className="flex-1 py-2.5 rounded-full text-white text-sm font-extrabold disabled:opacity-50"
-                  style={{ background: GRADIENT }}
-                >
-                  {updateAcc.isPending ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Enregistrer"}
-                </button>
-                <button
-                  onClick={() => setEditing(false)}
-                  className="px-4 py-2.5 rounded-full text-sm font-extrabold transition-all"
-                  style={{ background: SOFT_BG, border: `1px solid ${SOFT_BORDER}`, color: INK }}
-                >
-                  Annuler
-                </button>
-              </div>
             </div>
-          )}
-        </ProCard>
+            <Button onClick={handleSave} isLoading={updateAcc.isPending} disabled={updateAcc.isPending || !fullName.trim()} className="self-start" data-testid="button-save">
+              {saved ? "Enregistré ✓" : "Enregistrer"}
+            </Button>
+          </div>
 
-        {/* Consultation en ligne (B2C) — opt-in */}
-        <ProCard className="p-5">
-          <div className="flex items-center gap-2 mb-1">
-            <span style={{ fontSize: 16 }}>💬</span>
-            <h2 className="font-extrabold text-base" style={{ color: INK }}>Consultation en ligne</h2>
-          </div>
-          <p className="text-xs mb-4" style={{ color: DS.muted }}>
-            Activez-la pour recevoir des patients directement depuis l'app GlowScan (grand public) et discuter en ligne.
-          </p>
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-sm font-extrabold" style={{ color: INK }}>Accepter les consultations à distance</span>
-            <button
-              onClick={() => setB2cAvailable((v) => !v)}
-              data-testid="toggle-b2c"
-              style={{
-                width: 48, height: 28, borderRadius: 9999, border: "none", cursor: "pointer",
-                background: b2cAvailable ? "#10b981" : "#CBD5E1", position: "relative", transition: "background .2s",
-              }}
-            >
-              <span style={{ position: "absolute", top: 3, left: b2cAvailable ? 23 : 3, width: 22, height: 22, borderRadius: "50%", background: "#fff", transition: "left .2s" }} />
-            </button>
-          </div>
-          {b2cAvailable && (() => {
-            const priceNum = Math.max(0, parseInt(consultPrice, 10) || 0);
-            const dermShare = splitConsultation(priceNum).pro; // 80 % (shared/splits.ts)
-            return (
-            <div className="mb-4 rounded-xl p-4" style={{ background: SOFT_BG, border: `1px solid ${SOFT_BORDER}` }}>
-              <label className="text-xs font-extrabold block mb-1.5" style={{ color: INK }}>💬 Prix de votre consultation en ligne (FCFA)</label>
-              <input
-                type="number" inputMode="numeric" value={consultPrice}
-                onChange={(e) => setConsultPrice(e.target.value)}
-                placeholder="4800"
-                className="w-full rounded-xl px-3 py-2.5 text-sm font-extrabold outline-none"
-                style={{ background: "#fff", border: `1px solid ${SOFT_BORDER}`, color: INK }}
-              />
-              <p className="text-xs leading-relaxed mt-2" style={{ color: DS.body }}>
-                Vous fixez votre prix. Vous recevez{" "}
-                <strong style={{ color: GREEN }}>{dermShare.toLocaleString("fr-FR")} FCFA</strong> par consultation
-                (GlowScan prend {SPLITS.consultation.platform} % de commission).
-              </p>
-              <p className="text-[11px] mt-1.5" style={{ color: DS.muted }}>
-                Prix conseillé : 4 800 FCFA. Modifiable à tout moment.
-              </p>
-            </div>
-            );
-          })()}
-          <button
-            onClick={async () => {
-              setSavingB2c(true);
-              try {
-                await updateAcc.mutateAsync({ b2cAvailable, consultPriceFcfa: Math.max(500, parseInt(consultPrice, 10) || DEFAULT_CONSULT_PRICE) });
-                toast({ title: b2cAvailable ? "Consultation en ligne activée ✅" : "Consultation en ligne désactivée" });
-              } catch { toast({ title: "Erreur", variant: "destructive" }); }
-              finally { setSavingB2c(false); }
-            }}
-            disabled={savingB2c}
-            className="w-full py-2.5 rounded-full text-white text-sm font-extrabold disabled:opacity-50"
-            style={{ background: GRADIENT }}
-          >
-            {savingB2c ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Enregistrer"}
-          </button>
-        </ProCard>
-
-        {/* Abonnement */}
-        <ProCard className="p-5">
-          <div className="flex items-center gap-2 mb-3">
-            <Crown className="w-4 h-4" style={{ color: "#fbbf24" }} />
-            <h2 className="font-extrabold text-base" style={{ color: INK }}>Abonnement</h2>
-          </div>
-          {isTrial ? (
-            <>
-              <div className="flex items-center gap-2 mb-3">
-                <Clock className="w-3.5 h-3.5" style={{ color: "#fbbf24" }} />
-                <p className="text-sm" style={{ color: DS.body }}>
-                  Essai gratuit · <strong style={{ color: INK }}>{accData.daysLeftTrial} jours restants</strong>
-                </p>
-              </div>
-              <p className="text-xs mb-4" style={{ color: DS.muted }}>Continuer après l'essai pour 10 000 FCFA / mois.</p>
-              {statusData?.request?.status === "pending" ? (
-                <div
-                  className="rounded-xl p-3"
-                  style={{ background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.3)" }}
-                >
-                  <p className="text-xs" style={{ color: "#fbbf24" }}>
-                    Demande de paiement en attente · <strong>{statusData.request.reference}</strong>
-                  </p>
-                </div>
-              ) : (
-                <button
-                  onClick={() => setShowSubscribe(true)}
-                  data-testid="button-subscribe"
-                  className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-full text-white font-extrabold text-sm active:scale-[0.98] transition-all"
-                  style={{ background: GRADIENT }}
-                >
-                  <Crown className="w-4 h-4" />
-                  S'abonner — 10 000 FCFA / mois
-                </button>
-              )}
-            </>
-          ) : (
-            <p className="text-sm font-extrabold flex items-center gap-2" style={{ color: GREEN }}>
-              <CheckCircle2 className="w-4 h-4" />
-              Abonnement actif
+          {/* Consultation en ligne (B2C) */}
+          <div className={card}>
+            <h3 className="m-0 text-[22px]">Consultation en ligne</h3>
+            <p className="m-0 text-[13px] text-organic-neutral-800">
+              Activez-la pour recevoir des patients directement depuis l'appli GlowScan et échanger avec eux en ligne.
             </p>
-          )}
-        </ProCard>
-
-        {/* Revoir la visite guidée (onboarding) */}
-        <ProCard className="p-5">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <h2 className="font-extrabold text-base" style={{ color: INK }}>Visite guidée</h2>
-              <p className="text-xs mt-0.5" style={{ color: "#64748B" }}>Revoir la présentation de GlowScan DERM en 2 minutes.</p>
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-[14px] font-bold">Accepter les consultations à distance</span>
+              {toggle(b2cAvailable, () => setB2cAvailable((v) => !v), "toggle-b2c", "Accepter les consultations à distance")}
             </div>
-            <button
-              onClick={async () => { try { await updateAcc.mutateAsync({ onboardingDone: false }); } catch {} window.location.href = "/derm/dashboard"; }}
-              className="flex-shrink-0 px-4 py-2 rounded-full text-sm font-extrabold text-white active:scale-95 transition-all"
-              style={{ background: GRADIENT }}
-            >
-              Revoir →
-            </button>
+            {b2cAvailable && (() => {
+              const priceNum = Math.max(0, parseInt(consultPrice, 10) || 0);
+              const dermShare = splitConsultation(priceNum).pro;
+              return (
+                <div className="flex flex-col gap-2 rounded-card bg-organic-bg p-organic-4">
+                  <ProInput label="Prix de votre consultation en ligne (FCFA)" type="number" inputMode="numeric" value={consultPrice}
+                    onChange={(e) => setConsultPrice(e.target.value)} placeholder="4800" testid="input-consult-price" />
+                  <p className="m-0 text-[13px] leading-relaxed text-organic-neutral-800">
+                    Vous fixez votre prix. Vous recevez <b className="text-organic-accent-2-700">{formatF(dermShare)}</b> par consultation
+                    ({SPLITS.consultation.pro} % ; GlowScan garde {SPLITS.consultation.platform} %).
+                  </p>
+                  <p className="m-0 text-[12px] text-organic-neutral-700">Prix conseillé : 4 800 FCFA. Modifiable à tout moment.</p>
+                </div>
+              );
+            })()}
+            <Button
+              onClick={async () => {
+                setSavingB2c(true);
+                try {
+                  await updateAcc.mutateAsync({ b2cAvailable, consultPriceFcfa: Math.max(500, parseInt(consultPrice, 10) || DEFAULT_CONSULT_PRICE) } as any);
+                  toast({ title: b2cAvailable ? "Consultation en ligne activée" : "Consultation en ligne désactivée" });
+                } catch { toast({ title: "Erreur", variant: "destructive" }); }
+                finally { setSavingB2c(false); }
+              }}
+              isLoading={savingB2c} disabled={savingB2c} className="self-start" data-testid="button-save-b2c">
+              Enregistrer
+            </Button>
           </div>
-        </ProCard>
 
-        {/* Mon équipe — secrétaires */}
-        <ProCard className="p-5">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <Users className="w-4 h-4" style={{ color: NAVY }} />
-              <h2 className="font-extrabold text-base" style={{ color: INK }}>Mon équipe ({secretaries.length})</h2>
-            </div>
-            {!showSecretaryForm && (
-              <button
-                onClick={() => { setShowSecretaryForm(true); setCreatedSecretary(null); }}
-                data-testid="button-add-secretary"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-extrabold transition-all active:scale-95"
-                style={{ background: GRADIENT, color: "#fff" }}
-              >
-                <UserPlus className="w-3 h-3" />
-                Ajouter une secrétaire
-              </button>
+          {/* Abonnement */}
+          <div className={card}>
+            <h3 className="m-0 text-[22px]">Abonnement</h3>
+            {isTrial ? (
+              <>
+                <p className="m-0 text-[14px]">Essai gratuit · <b>{accData.daysLeftTrial} jours restants</b></p>
+                <p className="m-0 text-[13px] text-organic-neutral-700">Ensuite {formatF(PRO_PRICE)} / mois via Mobile Money. Vos gains en consultations et en avis sont déduits automatiquement.</p>
+                {statusData?.request?.status === "pending" ? (
+                  <div className="rounded-pill bg-organic-accent-100 px-4 py-2.5 text-[13px] font-semibold text-organic-accent-900">
+                    Demande de paiement en attente · {statusData.request.reference}
+                  </div>
+                ) : (
+                  <Button onClick={() => setShowSubscribe(true)} className="self-start" data-testid="button-subscribe">Activer mon abonnement</Button>
+                )}
+              </>
+            ) : (
+              <p className="m-0 text-[14px] font-bold text-organic-accent-2-700">Abonnement actif</p>
             )}
           </div>
 
-          <p className="text-xs mb-4" style={{ color: DS.muted }}>
-            Une secrétaire peut créer des patients, prendre des photos et remplir les antécédents.
-            Elle ne peut pas lancer d'analyse ni voir le tableau de bord, les statistiques ou le cabinet.
-          </p>
+          <NotifSettingsCard />
+        </div>
 
-          {/* Identifiants générés (après création) */}
-          {createdSecretary && (
-            <div className="rounded-xl p-3 mb-4" style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.25)" }}>
-              <p className="text-xs font-extrabold mb-2" style={{ color: "#047857" }}>
-                ✅ Identifiants à transmettre à votre secrétaire
-              </p>
-              <div className="space-y-1.5">
+        <div className="flex flex-col gap-organic-4">
+          {/* Secrétaires */}
+          <div className={card}>
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="m-0 text-[22px]">Secrétaires</h3>
+              {!showSecretaryForm && (
+                <Button variant="ghost" onClick={() => { setShowSecretaryForm(true); setCreatedSecretary(null); }} data-testid="button-add-secretary">
+                  <UserPlus size={16} /> Ajouter
+                </Button>
+              )}
+            </div>
+
+            {createdSecretary && (
+              <div className="flex flex-col gap-1.5 rounded-card bg-organic-accent-2-100 p-organic-4">
+                <span className="text-[13px] font-bold text-organic-accent-2-900">Identifiants à transmettre à votre secrétaire</span>
                 <IdLine label="Email" value={createdSecretary.email} onCopy={() => { navigator.clipboard.writeText(createdSecretary.email); toast({ title: "Email copié" }); }} />
                 <IdLine label="Mot de passe" value={createdSecretary.password} onCopy={() => { navigator.clipboard.writeText(createdSecretary.password); toast({ title: "Mot de passe copié" }); }} />
+                <span className="text-[12px] text-organic-accent-2-900">Notez ce mot de passe maintenant : il ne sera plus affiché. Elle se connecte sur la page de connexion habituelle.</span>
               </div>
-              <p className="text-[10px] mt-2" style={{ color: DS.muted }}>
-                Notez ce mot de passe maintenant — il ne sera plus affiché. Connexion secrétaire : page de connexion habituelle.
-              </p>
-            </div>
-          )}
+            )}
 
-          {/* Formulaire ajout */}
-          {showSecretaryForm && (
-            <div className="rounded-xl p-4 mb-4 space-y-3" style={{ background: SOFT_BG, border: `1px solid ${DS.border}` }}>
-              <ProInput label="Nom complet" value={secFullName} onChange={(e) => setSecFullName(e.target.value)} placeholder="Marie Mbarga" testid="input-secretary-name" />
-              <ProInput label="Email" type="email" value={secEmail} onChange={(e) => setSecEmail(e.target.value)} placeholder="secretaire@cabinet.com" testid="input-secretary-email" />
-              <p className="text-[11px]" style={{ color: DS.muted }}>🔑 Un mot de passe sécurisé sera généré automatiquement et affiché après création.</p>
-              <div className="flex gap-2">
-                <button
-                  onClick={handleCreateSecretary}
-                  disabled={createSecretary.isPending}
-                  data-testid="button-confirm-secretary"
-                  className="flex-1 py-2.5 rounded-full text-white text-sm font-extrabold disabled:opacity-50"
-                  style={{ background: GRADIENT }}
-                >
-                  {createSecretary.isPending ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Créer l'accès"}
-                </button>
-                <button
-                  onClick={() => { setShowSecretaryForm(false); setSecFullName(""); setSecEmail(""); }}
-                  className="px-4 py-2.5 rounded-full text-sm font-extrabold"
-                  style={{ background: SOFT_BG, border: `1px solid ${SOFT_BORDER}`, color: INK }}
-                >
-                  Annuler
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Liste secrétaires */}
-          {secretaries.length === 0 ? (
-            <p className="text-xs text-center py-2" style={{ color: DS.muted }}>Aucune secrétaire pour le moment</p>
-          ) : (
-            <div className="space-y-1">
-              {secretaries.map((s) => (
-                <div
-                  key={s.id}
-                  data-testid={`secretary-row-${s.id}`}
-                  className="flex items-center justify-between py-2.5 px-1"
-                  style={{ borderBottom: `1px solid ${DS.border}` }}
-                >
-                  <div className="min-w-0">
-                    <p className="text-sm font-extrabold truncate" style={{ color: INK }}>{s.fullName}</p>
-                    <p className="text-[11px] truncate" style={{ color: DS.muted }}>{s.email}</p>
-                  </div>
-                  <button
-                    onClick={() => handleDeleteSecretary(s.id, s.fullName)}
-                    data-testid={`button-delete-secretary-${s.id}`}
-                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[11px] font-extrabold transition-all active:scale-95 flex-shrink-0"
-                    style={{ background: "rgba(220,38,38,0.08)", border: "1px solid rgba(220,38,38,0.2)", color: "#dc2626" }}
-                  >
-                    <Trash2 className="w-3 h-3" />
-                    Supprimer
-                  </button>
+            {showSecretaryForm && (
+              <div className="flex flex-col gap-organic-3 rounded-card bg-organic-bg p-organic-4">
+                <ProInput label="Nom complet" value={secFullName} onChange={(e) => setSecFullName(e.target.value)} placeholder="Marie Mbarga" testid="input-secretary-name" />
+                <ProInput label="Email" type="email" value={secEmail} onChange={(e) => setSecEmail(e.target.value)} placeholder="secretaire@cabinet.cm" testid="input-secretary-email" />
+                <span className="text-[12px] text-organic-neutral-700">Un mot de passe est généré automatiquement et affiché après la création.</span>
+                <div className="flex gap-2">
+                  <Button onClick={handleCreateSecretary} isLoading={createSecretary.isPending} disabled={createSecretary.isPending} data-testid="button-confirm-secretary">Créer l'accès</Button>
+                  <Button variant="ghost" onClick={() => { setShowSecretaryForm(false); setSecFullName(""); setSecEmail(""); }}>Annuler</Button>
                 </div>
-              ))}
-            </div>
-          )}
-        </ProCard>
+              </div>
+            )}
 
-        {/* Liste patients */}
-        <ProCard className="p-5">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="font-extrabold text-base" style={{ color: INK }}>
-              Mes patients ({patients.length})
-            </h2>
-            <button
-              onClick={exportData}
-              disabled={patients.length === 0}
-              data-testid="button-export"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-extrabold disabled:opacity-50 transition-all active:scale-95"
-              style={{ background: SOFT_BG, border: `1px solid ${SOFT_BORDER}`, color: INK }}
-            >
-              <Download className="w-3 h-3" />
-              Exporter CSV
-            </button>
+            {secretaries.length === 0 && !showSecretaryForm && (
+              <span className="text-[13px] text-organic-neutral-700">Aucune secrétaire pour le moment.</span>
+            )}
+            {secretaries.map((s) => (
+              <div key={s.id} className="flex items-center gap-3 rounded-pill bg-organic-bg py-2 pl-2 pr-2" data-testid={`secretary-row-${s.id}`}>
+                <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-organic-accent-2-200 text-[12px] font-bold text-organic-accent-2-800">
+                  {s.fullName.split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase()).join("")}
+                </span>
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <span className="truncate text-[14px] font-bold">{s.fullName}</span>
+                  <span className="truncate text-[12px] text-organic-neutral-700">{s.email}</span>
+                </span>
+                <Button variant="ghost" onClick={() => handleDeleteSecretary(s.id, s.fullName)} data-testid={`button-delete-secretary-${s.id}`}>Retirer</Button>
+              </div>
+            ))}
+            <span className="text-[12px] text-organic-neutral-700">Elles créent les dossiers et prennent les photos. Pas d'accès aux chiffres ni aux paiements.</span>
           </div>
-          {patients.length === 0 ? (
-            <p className="text-xs text-center py-4" style={{ color: DS.muted }}>Aucun patient encore</p>
-          ) : (
-            <div className="max-h-64 overflow-y-auto">
-              {patients.map((p, i) => (
-                <Link
-                  key={p.id}
-                  href={`/derm/patient/${p.id}`}
-                  data-testid={`link-cabinet-patient-${p.id}`}
-                  className="flex items-center justify-between py-2.5 px-1 rounded-lg transition-colors"
-                  style={{ borderBottom: i < patients.length - 1 ? `1px solid ${DS.border}` : "none" }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = SOFT_BG)}
-                  onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                >
-                  <span className="text-sm font-extrabold" style={{ color: INK }}>
-                    {p.firstName} {p.lastName}
-                  </span>
-                  <span className="text-[11px]" style={{ color: DS.muted }}>
-                    {p.lastScanAt ? new Date(p.lastScanAt).toLocaleDateString("fr-FR") : "jamais"}
-                  </span>
-                </Link>
-              ))}
+
+          <SecuritySection currentEmail={(accData?.user as any)?.email} />
+
+          <SignPinCard />
+
+          {/* Données */}
+          <div className={card}>
+            <div className="flex items-center justify-between gap-3">
+              <span className="flex flex-col">
+                <span className="text-[14px] font-bold">Exporter mes patients</span>
+                <span className="text-[12px] text-organic-neutral-700">Fichier CSV · {patients.length} dossier{patients.length > 1 ? "s" : ""}</span>
+              </span>
+              <Button variant="secondary" onClick={exportData} disabled={patients.length === 0} data-testid="button-export">
+                <Download size={16} /> {exported ? "Téléchargé ✓" : "Exporter"}
+              </Button>
             </div>
-          )}
-        </ProCard>
+          </div>
 
-        <SecuritySection currentEmail={(accData?.user as any)?.email} />
+          <div className={card}>
+            <div className="flex items-center justify-between gap-3">
+              <span className="flex flex-col">
+                <span className="text-[14px] font-bold">Visite guidée</span>
+                <span className="text-[12px] text-organic-neutral-700">Revoir la présentation de GlowScan Derm en 2 minutes.</span>
+              </span>
+              <Button variant="secondary" onClick={async () => { try { await updateAcc.mutateAsync({ onboardingDone: false }); } catch {} window.location.href = "/derm/dashboard?stay=1"; }}>
+                Revoir
+              </Button>
+            </div>
+          </div>
 
-        <LogoutButton />
-      </div>
+          <LogoutButton />
+        </div>
+      </section>
 
       {/* Abonnement dermatologue — flux fidèle au design (D1→D4) */}
       {showSubscribe && (
@@ -570,7 +416,7 @@ function SecuritySection({ currentEmail }: { currentEmail?: string }) {
       const d = await r.json();
       if (!r.ok) throw new Error(d.message);
       setEmailStep("confirm");
-      toast({ title: "Code envoyé au nouvel email 📧", description: d.devFallback ? "Mode dev : voir les logs." : `Vérifiez ${d.emailHint}.` });
+      toast({ title: "Code envoyé au nouvel email ", description: d.devFallback ? "Mode dev : voir les logs." : `Vérifiez ${d.emailHint}.` });
     } catch (e: any) { toast({ title: "Erreur", description: e?.message, variant: "destructive" }); }
     finally { setEmailBusy(false); }
   };
@@ -581,7 +427,7 @@ function SecuritySection({ currentEmail }: { currentEmail?: string }) {
       const d = await r.json();
       if (!r.ok) throw new Error(d.message);
       setChangedEmail(d.email); setEmailStep("idle"); setNewEmail(""); setEmailCode("");
-      toast({ title: "Email modifié ✅", description: `Votre email de connexion est maintenant ${d.email}.` });
+      toast({ title: "Email modifié ", description: `Votre email de connexion est maintenant ${d.email}.` });
     } catch (e: any) { toast({ title: "Code incorrect", description: e?.message, variant: "destructive" }); }
     finally { setEmailBusy(false); }
   };
@@ -622,7 +468,7 @@ function SecuritySection({ currentEmail }: { currentEmail?: string }) {
       const d = await r.json();
       if (!r.ok) throw new Error(d.message);
       setHint(d.emailHint || ""); setStep("confirm");
-      toast({ title: "Code envoyé 📧", description: d.devFallback ? "Mode dev : voir les logs serveur." : `Envoyé sur ${d.emailHint}.` });
+      toast({ title: "Code envoyé ", description: d.devFallback ? "Mode dev : voir les logs serveur." : `Envoyé sur ${d.emailHint}.` });
     } catch (e: any) { toast({ title: "Erreur", description: e?.message, variant: "destructive" }); }
     finally { setBusy(false); }
   };
@@ -636,7 +482,7 @@ function SecuritySection({ currentEmail }: { currentEmail?: string }) {
       setEnabled(true); setStep("idle"); setCode("");
       if (Array.isArray(d.backupCodes) && d.backupCodes.length) setNewCodes(d.backupCodes);
       refreshStatus();
-      toast({ title: "Vérification en 2 étapes activée ✅", description: "Un code vous sera demandé à chaque connexion." });
+      toast({ title: "Vérification en 2 étapes activée ", description: "Un code vous sera demandé à chaque connexion." });
     } catch (e: any) { toast({ title: "Code incorrect", description: e?.message, variant: "destructive" }); }
     finally { setBusy(false); }
   };
@@ -676,7 +522,7 @@ function SecuritySection({ currentEmail }: { currentEmail?: string }) {
           {step === "idle" && (
             enabled ? (
               <button onClick={() => setStep("disable")} className="w-full py-2.5 rounded-full text-sm font-extrabold"
-                style={{ background: SOFT_BG, border: `1px solid ${SOFT_BORDER}`, color: "#dc2626" }} data-testid="button-2fa-disable">
+                style={{ background: SOFT_BG, border: `1px solid ${SOFT_BORDER}`, color: "var(--color-accent-800)" }} data-testid="button-2fa-disable">
                 Désactiver la vérification en 2 étapes
               </button>
             ) : (
@@ -708,7 +554,7 @@ function SecuritySection({ currentEmail }: { currentEmail?: string }) {
               <input type="password" value={pwd} onChange={(e) => setPwd(e.target.value)} placeholder="Mot de passe" data-testid="input-2fa-pwd"
                 className="w-full px-3 py-2.5 rounded-xl text-sm outline-none" style={{ background: SOFT_BG, border: `1px solid ${SOFT_BORDER}`, color: INK }} />
               <div className="flex gap-2">
-                <button onClick={disable} disabled={busy || !pwd} className="flex-1 py-2.5 rounded-full text-white text-sm font-extrabold disabled:opacity-50" style={{ background: "#dc2626" }} data-testid="button-2fa-disable-confirm">
+                <button onClick={disable} disabled={busy || !pwd} className="flex-1 py-2.5 rounded-full text-white text-sm font-extrabold disabled:opacity-50" style={{ background: "var(--color-accent-800)" }} data-testid="button-2fa-disable-confirm">
                   {busy ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Désactiver"}
                 </button>
                 <button onClick={() => { setStep("idle"); setPwd(""); }} className="px-4 py-2.5 rounded-full text-sm font-extrabold" style={{ background: SOFT_BG, border: `1px solid ${SOFT_BORDER}`, color: DS.body }}>Annuler</button>
@@ -719,16 +565,16 @@ function SecuritySection({ currentEmail }: { currentEmail?: string }) {
           {/* Codes de secours affichés une fois (après activation / régénération) */}
           {newCodes.length > 0 && (
             <div className="mt-3 rounded-xl p-3" style={{ background: "#FFFBEB", border: "1px solid #FDE68A" }}>
-              <p className="text-[12px] font-extrabold mb-1" style={{ color: "#92400E" }}>🔑 Notez ces codes — ils ne seront plus affichés</p>
+              <p className="text-[12px] font-extrabold mb-1" style={{ color: "var(--color-accent-800)" }}>Notez ces codes — ils ne seront plus affichés</p>
               <div className="grid grid-cols-2 gap-1.5 mb-2" style={{ fontFamily: "monospace" }}>
                 {newCodes.map((c, i) => (
-                  <div key={i} className="text-center text-sm font-bold rounded" style={{ background: "#fff", border: "1px solid #FDE68A", padding: "6px 4px", letterSpacing: 1, color: INK }}>{c}</div>
+                  <div key={i} className="text-center text-sm font-bold rounded" style={{ background: "var(--color-neutral-100)", border: "1px solid #FDE68A", padding: "6px 4px", letterSpacing: 1, color: INK }}>{c}</div>
                 ))}
               </div>
               <div className="flex items-center gap-3">
                 <button onClick={() => { navigator.clipboard.writeText(newCodes.join("\n")); toast({ title: "Codes copiés" }); }}
                   className="text-[12px] font-extrabold" style={{ color: BLUE }}>Copier</button>
-                <button onClick={() => setNewCodes([])} className="text-[12px] font-extrabold" style={{ color: "#92400E" }}>J'ai noté, masquer</button>
+                <button onClick={() => setNewCodes([])} className="text-[12px] font-extrabold" style={{ color: "var(--color-accent-800)" }}>J'ai noté, masquer</button>
               </div>
             </div>
           )}
@@ -736,7 +582,7 @@ function SecuritySection({ currentEmail }: { currentEmail?: string }) {
           {/* Statut des codes de secours + régénération */}
           {enabled && newCodes.length === 0 && (
             <div className="mt-3 flex items-center justify-between">
-              <span className="text-[11px]" style={{ color: remaining !== null && remaining <= 2 ? "#dc2626" : DS.muted }}>
+              <span className="text-[11px]" style={{ color: remaining !== null && remaining <= 2 ? "var(--color-accent-800)" : DS.muted }}>
                 Codes de secours restants : <strong>{remaining ?? "…"}</strong>
               </span>
               <button onClick={regenerateCodes} disabled={busy} className="text-[11px] font-extrabold" style={{ color: BLUE }} data-testid="button-regen-backup">
@@ -785,6 +631,74 @@ function Row({ label, value, testid }: any) {
     <div className="flex items-center justify-between py-1.5" style={{ borderBottom: `1px solid ${DERM.border}` }}>
       <span className="text-[11px] uppercase tracking-wider font-extrabold" style={{ color: DERM.textMuted }}>{label}</span>
       <span className="text-sm font-extrabold" style={{ color: INK }} data-testid={testid}>{value}</span>
+    </div>
+  );
+}
+
+// ── Code de signature à 4 chiffres (signe chaque compte rendu) ─────────────
+function SignPinCard() {
+  const { toast } = useToast();
+  const { data, refetch } = useQuery<{ set: boolean }>({ queryKey: ["/api/pro/sign-pin"] });
+  const [open, setOpen] = useState(false);
+  const [current, setCurrent] = useState("");
+  const [pin, setPin] = useState("");
+  const [pin2, setPin2] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const isSet = data?.set === true;
+  const digits = (v: string) => v.replace(/\D/g, "").slice(0, 4);
+
+  const save = async () => {
+    if (pin.length !== 4) return setErr("Le code doit comporter exactement 4 chiffres.");
+    if (pin !== pin2) return setErr("Les deux codes ne correspondent pas.");
+    setBusy(true); setErr("");
+    try {
+      const r = await fetch("/api/pro/sign-pin", {
+        method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pin, currentPin: isSet ? current : undefined }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.message || "Code non enregistré.");
+      toast({ title: isSet ? "Code de signature modifié" : "Code de signature enregistré" });
+      setOpen(false); setCurrent(""); setPin(""); setPin2("");
+      refetch();
+    } catch (e: any) { setErr(e.message); } finally { setBusy(false); }
+  };
+
+  const pinInput = (label: string, v: string, set: (s: string) => void, testid: string) => (
+    <label className="flex flex-col gap-1.5">
+      <span className="text-[12px] text-organic-neutral-700">{label}</span>
+      <input type="password" inputMode="numeric" autoComplete="off" maxLength={4} value={v} data-testid={testid}
+        onChange={(e) => { set(digits(e.target.value)); setErr(""); }}
+        className="box-border h-11 w-full rounded-pill border border-organic-divider bg-organic-bg px-4 text-center font-body text-[18px] tracking-[.4em] text-organic-text outline-none focus:border-organic-accent" />
+    </label>
+  );
+
+  return (
+    <div className="flex flex-col gap-organic-3 rounded-card bg-organic-surface p-organic-6">
+      <div className="flex items-center justify-between gap-3">
+        <span className="flex flex-col">
+          <span className="text-[14px] font-bold">Code de signature</span>
+          <span className="text-[12px] text-organic-neutral-700">
+            {isSet ? "Votre code à 4 chiffres vaut signature de chaque compte rendu." : "Pas encore choisi : il vous sera demandé au premier compte rendu."}
+          </span>
+        </span>
+        {!open && <Button variant="secondary" onClick={() => setOpen(true)} data-testid="button-sign-pin">{isSet ? "Modifier" : "Choisir"}</Button>}
+      </div>
+      {open && (
+        <div className="flex flex-col gap-organic-3">
+          <div className={`grid gap-organic-3 ${isSet ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
+            {isSet && pinInput("Code actuel", current, setCurrent, "input-current-pin")}
+            {pinInput("Nouveau code", pin, setPin, "input-cab-new-pin")}
+            {pinInput("Confirmez le code", pin2, setPin2, "input-cab-new-pin2")}
+          </div>
+          {err && <div role="alert" className="rounded-pill bg-organic-accent-100 px-4 py-2.5 text-[13px] font-semibold text-organic-accent-900">{err}</div>}
+          <div className="flex gap-2">
+            <Button onClick={save} isLoading={busy} disabled={busy} data-testid="button-save-sign-pin">Enregistrer le code</Button>
+            <Button variant="ghost" onClick={() => { setOpen(false); setErr(""); }}>Annuler</Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

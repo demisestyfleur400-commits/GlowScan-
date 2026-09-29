@@ -52,7 +52,7 @@ export function CaseAuditTrail({ scan, modelLabel }: { scan: ScanLike; modelLabe
   });
   if (scan.expertReviewer) {
     steps.push({
-      icon: isCorrection ? "✍️" : "✅",
+      icon: isCorrection ? "✍️" : "",
       color: isCorrection ? "var(--color-accent-800)" : "var(--color-accent-2-700)",
       title: isCorrection ? `Diagnostic corrigé par ${scan.expertReviewer}` : `Diagnostic validé par ${scan.expertReviewer}`,
       detail: isCorrection ? `IA : ${scan.condition} → Médecin : ${corrected}` : (corrected || scan.condition || undefined),

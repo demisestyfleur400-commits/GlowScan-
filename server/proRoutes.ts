@@ -2347,6 +2347,49 @@ export function registerProRoutes(app: Express) {
 
   // POST /api/pro/consultations/:id/close — le dermatologue clôture la consultation.
   // Le paiement lui est dû sous 24h (payout_status reste 'pending' jusqu'au virement).
+  // ── Paiements des consultations (écran « Paiements », séparé du dossier clinique) ──
+  // Une ligne par consultation payée, en attente ou remboursée. La part du médecin
+  // vient de shared/splits.ts ; l'état du versement vient du registre wallet_ledger.
+  app.get("/api/pro/payments", requireActivePro, async (req: any, res) => {
+    try {
+      const rows = Rows(await db.execute(sql`
+        SELECT c.id, c.price_fcfa, c.payment_status, c.status, c.paid_at, c.refunded_at, c.created_at, c.payment_ref,
+               u.first_name, u.last_name, w.status AS ledger_status
+        FROM consultations c
+        LEFT JOIN users u ON u.id = c.user_id
+        LEFT JOIN wallet_ledger w ON w.pro_id = c.pro_account_id AND w.type = 'consultation' AND w.source_id = 'consultation:' || c.id
+        WHERE c.pro_account_id = ${req.proAccount.id} AND COALESCE(c.is_demo, false) = false
+        ORDER BY COALESCE(c.paid_at, c.created_at) DESC
+        LIMIT 200`));
+      const items = (rows as any[]).map((r) => {
+        const price = Number(r.price_fcfa) || 0;
+        const refunded = !!r.refunded_at || r.ledger_status === "refunded";
+        const paid = r.payment_status === "paid";
+        const payment = refunded ? "refunded" : paid ? "paid" : "pending";
+        const payout = refunded ? null
+          : !paid ? "awaiting_patient"
+          : r.ledger_status === "escrow" ? "in_progress"
+          : "to_pay";
+        return {
+          id: r.id,
+          name: [r.first_name, (r.last_name || "").charAt(0) ? `${String(r.last_name).charAt(0)}.` : ""].filter(Boolean).join(" ") || "Patient",
+          ref: `GS-C-${String(r.id).padStart(4, "0")}`,
+          at: r.paid_at || r.created_at,
+          price,
+          dermShare: splitConsultation(price).pro,
+          payment,
+          payout,
+        };
+      });
+      const paidTotal = items.filter((i) => i.payment === "paid").reduce((s, i) => s + i.price, 0);
+      const toPay = items.filter((i) => i.payout === "to_pay").reduce((s, i) => s + i.dermShare, 0);
+      res.json({ items, paidTotal, toPay, sharePct: SPLITS.consultation.pro });
+    } catch (err) {
+      console.error("[pro/payments] error:", err);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
   // ── Code de signature à 4 chiffres (médecin uniquement) ──
   app.get("/api/pro/sign-pin", requireActivePro, async (req: any, res) => {
     try { res.json({ set: await hasSignPin(req.proAccount.id) }); }
@@ -3139,7 +3182,8 @@ Affine ton analyse selon tes règles.`;
       for (const s of allScans) {
         const cond = s.expertCorrectedCondition || s.condition || "Inconnu";
         condCount[cond] = (condCount[cond] || 0) + 1;
-        if (typeof s.score === "number") { totalScore += s.score; scoreCount++; }
+        // score = 0 est la valeur par défaut de la colonne (pas de score) : exclu de la moyenne.
+        if (typeof s.score === "number" && s.score > 0) { totalScore += s.score; scoreCount++; }
         const recs = s.recommendations as any;
         if (recs?.products && Array.isArray(recs.products)) {
           for (const p of recs.products) {
@@ -3163,7 +3207,10 @@ Affine ton analyse selon tes règles.`;
       // Répartition par phototype (Fitzpatrick IV/V/VI) — extrait du skinType.
       const phototype: Record<string, number> = { IV: 0, V: 0, VI: 0, Autre: 0 };
       for (const s of allScans) {
-        const t = String(s.skinType || "").toLowerCase();
+        // Priorité au phototype saisi par le médecin à l'examen, sinon le texte skinType.
+        const ex = String(((s.clinicalContext as any)?.examen?.phototype) || "").toUpperCase();
+        if (ex === "IV" || ex === "V" || ex === "VI") { phototype[ex]++; continue; }
+        const t = String((s as any).skinType || "").toLowerCase();
         if (/\bvi\b|phototype\s*6|type\s*vi/.test(t)) phototype.VI++;
         else if (/\biv\b|phototype\s*4|type\s*iv/.test(t)) phototype.IV++;
         else if (/\bv\b|phototype\s*5|type\s*v/.test(t)) phototype.V++;
@@ -3172,19 +3219,26 @@ Affine ton analyse selon tes règles.`;
       const phototypeDist = Object.entries(phototype).filter(([, n]) => n > 0).map(([name, count]) => ({ name, count }));
 
       // Consultations en ligne : nb + revenus (payout dermato) par mois. Résilient.
+      // Part du médecin = 80 % (shared/splits.ts), consultations payées et non remboursées.
       let onlineConsultations = 0, onlineRevenue = 0;
       let onlineRevenueMonthly: { month: string; revenue: number }[] = [];
+      let onlineQuarter: { current: number; previous: number } = { current: 0, previous: 0 };
       try {
         const rows = Rows(await db.execute(sql`
-          SELECT to_char(created_at,'YYYY-MM') AS month, COUNT(*) AS n,
-                 COALESCE(SUM(COALESCE(dermatologue_payout, price_fcfa - COALESCE(platform_commission,0), price_fcfa)),0) AS revenue
-          FROM consultations
-          WHERE pro_account_id = ${dermatoId} AND payment_status = 'paid'
-          GROUP BY 1 ORDER BY 1`));
-        onlineRevenueMonthly = rows.map((r: any) => ({ month: r.month, revenue: Number(r.revenue) || 0 }));
-        onlineConsultations = rows.reduce((s: number, r: any) => s + Number(r.n || 0), 0);
-        onlineRevenue = onlineRevenueMonthly.reduce((s, r) => s + r.revenue, 0);
-      } catch {}
+          SELECT price_fcfa, COALESCE(paid_at, created_at) AS at FROM consultations
+          WHERE pro_account_id = ${dermatoId} AND payment_status = 'paid' AND refunded_at IS NULL`));
+        const byMonth: Record<string, number> = {};
+        const q0 = Date.now() - 91 * 86400000, q1 = Date.now() - 182 * 86400000;
+        for (const r of rows as any[]) {
+          const share = splitConsultation(Number(r.price_fcfa) || 0).pro;
+          const at = new Date(r.at);
+          const k = at.toISOString().slice(0, 7);
+          byMonth[k] = (byMonth[k] || 0) + share;
+          onlineConsultations++; onlineRevenue += share;
+          if (+at >= q0) onlineQuarter.current++; else if (+at >= q1) onlineQuarter.previous++;
+        }
+        onlineRevenueMonthly = Object.entries(byMonth).sort().map(([month, revenue]) => ({ month, revenue }));
+      } catch (e) { console.warn("[pro/stats] consultations en ligne :", (e as any)?.message); }
 
       res.json({
         totalPatients: allPatients.length,
@@ -3197,6 +3251,7 @@ Affine ton analyse selon tes règles.`;
         onlineConsultations,
         onlineRevenue,
         onlineRevenueMonthly,
+        onlineQuarter,
         // Schéma de statut unifié : priority/monitoring/stable/resolved.
         // On mappe l'ancien schéma (red/yellow/green) pour rétro-compat.
         statusBreakdown: (() => {

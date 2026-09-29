@@ -163,9 +163,9 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
   const COACH: { t: string; b: string }[] = [
     { t: "Les photos", b: "Ces photos ont été prises par le patient lors de son analyse. Appuyez pour agrandir." },
     { t: "Le diagnostic IA", b: "Ceci est une suggestion indicative. Votre diagnostic prime toujours." },
-    { t: "✅ Vos actions", b: "Validez si vous êtes d'accord. Corrigez si vous avez un autre avis." },
+    { t: "Vos actions", b: "Validez si vous êtes d'accord. Corrigez si vous avez un autre avis." },
     { t: "La prescription", b: "Dictez ou écrivez votre prescription. Elle apparaîtra dans le rapport final." },
-    { t: "✓ Valider et envoyer le compte rendu", b: "Vous relisez votre avis, vous validez, puis le compte rendu part au patient (e-mail / WhatsApp). Vous êtes payé sur Mobile Money." },
+    { t: "Valider et rédiger le compte rendu", b: "Vous relisez votre avis, vous signez avec votre code à 4 chiffres, puis le compte rendu part au patient (e-mail / WhatsApp). Vous êtes payé sur Mobile Money." },
   ];
   const advanceCoach = () => {
     setCoachStep((s) => {
@@ -290,7 +290,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
     const html = `<!doctype html><html><head><meta charset="utf-8"><title>Rapport consultation GlowScan</title></head>
       <body style="font-family:-apple-system,system-ui,sans-serif;max-width:640px;margin:0 auto;padding:24px;color:#1a1a2e">
         <div style="display:flex;align-items:center;gap:10px;border-bottom:2px solid #0A6E72;padding-bottom:12px;margin-bottom:16px">
-          <div style="font-size:22px">✨</div>
+          <div style="font-size:22px"></div>
           <div><div style="font-size:18px;font-weight:900">GlowScan</div><div style="font-size:11px;color:#6b7280">Rapport de consultation dermatologique</div></div>
           <div style="margin-left:auto;font-size:11px;color:#6b7280">${dateStr}</div>
         </div>
@@ -322,7 +322,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
     const html = `<!doctype html><html><head><meta charset="utf-8"><title>Analyse GlowScan — ${esc(p?.firstName || "Patient")}</title></head>
       <body style="font-family:-apple-system,system-ui,sans-serif;max-width:640px;margin:0 auto;padding:24px;color:#1f2937">
         <div style="display:flex;align-items:center;gap:10px;border-bottom:3px solid #0A6E72;padding-bottom:12px;margin-bottom:16px">
-          <div style="font-size:22px">✨</div>
+          <div style="font-size:22px"></div>
           <div><div style="font-size:18px;font-weight:900">GlowScan</div><div style="font-size:11px;color:#6b7280">Analyse cutanée indicative · ne remplace pas l'avis d'un dermatologue</div></div>
           <div style="margin-left:auto;font-size:11px;color:#6b7280">${dateStr}</div>
         </div>
@@ -883,7 +883,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
                   <span style={{ fontSize: 11, color: MUTED, display: "block", marginBottom: 4 }}>Diagnostic retenu</span>
                   {dossier.scan?.isVerified ? (
                     <div style={{ display: "flex", alignItems: "center", gap: 6, background: dark ? "rgba(16,185,129,0.15)" : "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.3)", borderRadius: 10, padding: "8px 10px" }}>
-                      <span style={{ fontSize: 13 }}>✅</span>
+                      <span style={{ fontSize: 13 }}></span>
                       <span style={{ fontSize: 12, fontWeight: 800, color: dark ? "#6ee7b7" : "#047857" }}>
                         Avis médical validé{(dossier.scan?.expertCorrectedCondition || dossier.scan?.condition) ? ` — ${dossier.scan.expertCorrectedCondition || dossier.scan.condition}` : ""}
                       </span>
@@ -972,7 +972,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
             </>
           ) : (
             <>
-              <p style={{ fontSize: 13, fontWeight: 800, color: dark ? "#6ee7b7" : "#047857", margin: 0 }}>✅ Consultation validée</p>
+              <p style={{ fontSize: 13, fontWeight: 800, color: dark ? "#6ee7b7" : "#047857", margin: 0 }}>Consultation validée</p>
               <p style={{ fontSize: 11.5, color: MUTED, margin: "4px 0 8px", lineHeight: 1.6 }}>
                 {closedInfo.at ? `Le ${new Date(closedInfo.at).toLocaleDateString("fr-FR")} à ${new Date(closedInfo.at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}.` : ""}
                 {closedInfo.payoutFcfa ? ` Paiement de ${closedInfo.payoutFcfa.toLocaleString("fr-FR")} FCFA en cours.` : ""}
@@ -998,7 +998,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
                   Ouvrir le dossier
                 </button>
                 {reportSent ? (
-                  <span style={{ flex: "1 1 auto", textAlign: "center", color: "#047857", fontSize: 12.5, fontWeight: 800, padding: "10px 14px" }}>✅ Envoyé</span>
+                  <span style={{ flex: "1 1 auto", textAlign: "center", color: "#047857", fontSize: 12.5, fontWeight: 800, padding: "10px 14px" }}>Envoyé</span>
                 ) : (
                   <button onClick={sendReport} disabled={reportSending}
                     style={{ flex: "1 1 auto", background: "#10b981", color: "#fff", border: "none", borderRadius: 9999, padding: "10px 14px", fontSize: 12.5, fontWeight: 800, cursor: "pointer", opacity: reportSending ? 0.6 : 1 }}>

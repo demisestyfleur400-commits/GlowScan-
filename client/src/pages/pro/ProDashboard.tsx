@@ -10,6 +10,7 @@ import { DermNotifPrompt } from "@/components/DermNotifPrompt";
 import { Button } from "@/components/ui/button";
 import { PRO_SUBSCRIPTION_FCFA } from "@shared/premium";
 import { formatF } from "@shared/delivery";
+import { APPT_TYPES, apptTypeOf } from "@/lib/apptTypes";
 
 export { LoadingScreen };
 
@@ -27,13 +28,6 @@ const shortDate = (d: string | Date | null | undefined) =>
   d ? new Date(d).toLocaleDateString("fr-FR", { timeZone: TZ, day: "numeric", month: "short" }) : "";
 const initials = (first?: string | null, last?: string | null) =>
   `${(first || "").trim()[0] || ""}${(last || "").trim()[0] || ""}`.toUpperCase() || "?";
-
-// Types de rendez-vous (colonne appointments.type) : pastille de couleur + libellé.
-export const APPT_TYPES: Record<string, { label: string; dot: string }> = {
-  consultation: { label: "Consultation", dot: "var(--color-accent)" },
-  suivi: { label: "Suivi", dot: "var(--color-accent-2-600)" },
-  urgence: { label: "Urgence", dot: "var(--color-accent-800)" },
-};
 
 type PendingValidation = { scanId: number; patientId: number; condition: string | null; createdAt: string; firstName: string; lastName: string };
 
@@ -269,7 +263,7 @@ export default function ProDashboard() {
           </div>
           {appts.length === 0 && <span className="text-[14px] text-organic-neutral-700">Aucun rendez-vous aujourd'hui.</span>}
           {appts.map((a) => {
-            const t = APPT_TYPES[a.type] || APPT_TYPES.consultation;
+            const t = APPT_TYPES[apptTypeOf(a.type)];
             return (
               <div key={a.id} className="flex items-center gap-3.5 py-2">
                 <span className="w-[52px] flex-none font-heading text-[17px]">{hhmm(new Date(a.appointment_date))}</span>

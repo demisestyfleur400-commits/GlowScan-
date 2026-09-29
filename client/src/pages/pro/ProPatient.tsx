@@ -790,7 +790,7 @@ function EvolutionSection({ scan, patientId }: { scan: any; patientId: number })
     try {
       const image = await compressForFollowUp(file);
       await addPhoto.mutateAsync({ scanId: scan.id, image });
-      toast({ title: "Photo de contrôle ajoutée ✅", description: "Comparaison IA générée." });
+      toast({ title: "Photo de contrôle ajoutée ", description: "Comparaison IA générée." });
     } catch (err: any) {
       toast({ title: "Erreur", description: err?.message || "Ajout impossible", variant: "destructive" });
     } finally { setBusy(false); }
@@ -928,7 +928,7 @@ function FollowUpReminderCard({ patient, patientId }: { patient: any; patientId:
       const r = await schedule.mutateAsync({ sendNow: true, message: message || undefined });
       if (r.sent) {
         if (holder) holder.close();
-        toast({ title: "Rappel envoyé ✅", description: "Le patient a reçu le message WhatsApp." });
+        toast({ title: "Rappel envoyé ", description: "Le patient a reçu le message WhatsApp." });
       } else if (r.waLink) {
         if (holder) holder.location.href = r.waLink; else window.open(r.waLink, "_blank");
         toast({ title: "WhatsApp ouvert", description: "Vérifiez le message puis appuyez sur Envoyer." });
@@ -959,7 +959,7 @@ function FollowUpReminderCard({ patient, patientId }: { patient: any; patientId:
   const scheduleIt = async () => {
     try {
       await schedule.mutateAsync({ date: new Date(date).toISOString(), message: message || undefined });
-      toast({ title: "Rappel programmé ✅", description: `Le patient sera relancé le ${new Date(date).toLocaleDateString("fr-FR")}.` });
+      toast({ title: "Rappel programmé ", description: `Le patient sera relancé le ${new Date(date).toLocaleDateString("fr-FR")}.` });
       setOpen(false);
     } catch (e: any) { toast({ title: "Erreur", description: e?.message, variant: "destructive" }); }
   };
@@ -1044,7 +1044,7 @@ function PeerReviewButton({ scanId, condition }: { scanId: number; condition: st
     if (question.trim().length < 3) { toast({ title: "Précisez votre question", variant: "destructive" }); return; }
     try {
       await create.mutateAsync({ scanId, question: question.trim() });
-      toast({ title: "Cas envoyé au réseau ✅", description: "Vous serez notifié des réponses des confrères." });
+      toast({ title: "Cas envoyé au réseau ", description: "Vous serez notifié des réponses des confrères." });
       setOpen(false); setQuestion("");
       navigate("/derm/confreres");
     } catch (e: any) { toast({ title: "Erreur", description: e?.message, variant: "destructive" }); }

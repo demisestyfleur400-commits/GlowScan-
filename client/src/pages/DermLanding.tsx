@@ -142,13 +142,6 @@ export default function DermLanding() {
         </div>
       </section>
 
-      <section className={`${wrap} pb-[clamp(40px,6vw,64px)]`}>
-        <div className="flex flex-wrap justify-center gap-2.5">
-          <span className="rounded-pill bg-organic-surface px-4 py-2 text-center text-[13px] font-semibold">Dermatologues actifs au Cameroun, au Bénin et en RDC</span>
-          <span className="rounded-pill bg-organic-accent-2-200 px-4 py-2 text-center text-[13px] font-semibold text-organic-accent-2-900">Présenté au Congrès SODAF — Ouagadougou 2026</span>
-        </div>
-      </section>
-
       {/* Constat */}
       <section className="bg-organic-surface py-[clamp(56px,8vw,104px)]">
         <div className={`${wrap} flex flex-col gap-[clamp(28px,4vw,44px)]`}>
@@ -312,7 +305,7 @@ export default function DermLanding() {
       <section className="bg-organic-accent px-[clamp(16px,4vw,40px)] py-[clamp(56px,8vw,104px)] text-center">
         <div className="mx-auto flex max-w-[760px] flex-col items-center gap-5">
           <h2 className="m-0 text-[clamp(28px,3.8vw,46px)] leading-[1.15] text-organic-bg [text-wrap:balance]">
-            Rejoignez les dermatologues qui consultent déjà toute l'Afrique depuis leur cabinet.
+            Consultez toute l'Afrique depuis votre cabinet.
           </h2>
           <Link href={SIGNUP} className="inline-flex rounded-pill bg-organic-bg px-[30px] py-[15px] text-[16px] font-bold text-organic-accent-800 no-underline" data-testid="cta-final">
             Créer mon profil — 14 jours gratuits

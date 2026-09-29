@@ -59,14 +59,14 @@ export default function ProPublicProfile() {
         body: JSON.stringify({ bio, specialties, photoUrl, whatsapp, consultPriceFcfa: price, b2cAvailable: available, publicProfileEnabled: publicEnabled }),
       });
       const d = await res.json();
-      if (res.ok) { if (d.profile?.slug) setSlug(d.profile.slug); toast({ title: "Profil enregistré ✅" }); load(); }
+      if (res.ok) { if (d.profile?.slug) setSlug(d.profile.slug); toast({ title: "Profil enregistré " }); load(); }
       else toast({ title: d.message || "Échec de l'enregistrement", variant: "destructive" });
     } catch { toast({ title: "Erreur réseau", variant: "destructive" }); }
     finally { setSaving(false); }
   };
 
   const publicUrl = slug ? `https://glow-scan.com/dr/${slug}` : null;
-  const copyLink = () => { if (publicUrl) { navigator.clipboard.writeText(publicUrl); toast({ title: "Lien copié 📋" }); } };
+  const copyLink = () => { if (publicUrl) { navigator.clipboard.writeText(publicUrl); toast({ title: "Lien copié " }); } };
 
   if (loading) return <ProLayout title="Mon profil public" back="/derm/dashboard"><div style={{ display: "flex", justifyContent: "center", padding: 40 }}><Loader2 className="animate-spin" style={{ color: DERM.violetMid }} /></div></ProLayout>;
 
@@ -99,7 +99,7 @@ export default function ProPublicProfile() {
               {photoUrl ? (
                 <img src={photoUrl} alt="" style={{ width: 72, height: 72, borderRadius: "50%", objectFit: "cover" }} />
               ) : (
-                <div style={{ width: 72, height: 72, borderRadius: "50%", background: "rgba(124,58,237,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28 }}>👩🏾‍⚕️</div>
+                <div style={{ width: 72, height: 72, borderRadius: "50%", background: "rgba(124,58,237,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28 }}></div>
               )}
               <div style={{ position: "absolute", bottom: 0, right: 0, background: DERM.violet, borderRadius: "50%", width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <Camera style={{ width: 13, height: 13, color: "#fff" }} />
@@ -123,7 +123,7 @@ export default function ProPublicProfile() {
 
         {/* Spécialités */}
         <ProCard className="p-5">
-          <label style={lbl}>Spécialités (cochées = visibles sur ton profil)</label>
+          <label style={lbl}>Spécialités (cochées = visibles sur votre profil)</label>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
             {SPECIALTIES.map((s) => {
               const on = specialties.includes(s.key);

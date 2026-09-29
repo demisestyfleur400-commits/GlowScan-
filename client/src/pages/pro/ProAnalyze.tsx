@@ -204,7 +204,7 @@ function QuickAnnotate({ scanId, condition }: { scanId?: number; condition?: str
   if (submitted) {
     return (
       <div className="rounded-2xl p-3 mb-3 text-center" style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)" }}>
-        <p className="text-xs font-extrabold" style={{ color: "var(--color-accent-2-600)" }}>✅ Données cliniques enregistrées</p>
+        <p className="text-xs font-extrabold" style={{ color: "var(--color-accent-2-600)" }}>Données cliniques enregistrées</p>
         {score !== null && <p className="text-[10px] mt-0.5" style={{ color: "#6b7280" }}>Score annotation : {score}/100</p>}
       </div>
     );
@@ -441,7 +441,7 @@ export default function ProAnalyze() {
   const userRole = accountData?.user?.role;
   const isDoctor = userRole === "doctor";
 
-  // ✅ NOW safe to use: useRealtimeScans(patientId), useQrCode(result), etc.
+  // NOW safe to use: useRealtimeScans(patientId), useQrCode(result), etc.
   // Real-time sync: subscribe to scans updates
   useRealtimeScans(patientId || undefined);
 
@@ -509,7 +509,7 @@ export default function ProAnalyze() {
         try {
           await fetch(`/api/pro/patients/${r.patient.id}/submit-for-review`, { method: "POST", credentials: "include" });
         } catch {}
-        toast({ title: "Dossier envoyé au médecin ✅", description: `${firstName} ${lastName} est en attente d'analyse.` });
+        toast({ title: "Dossier envoyé au médecin ", description: `${firstName} ${lastName} est en attente d'analyse.` });
         resetAll();
         return;
       }
@@ -677,7 +677,7 @@ export default function ProAnalyze() {
     setStep(5);
     setSavingDossier(true);
     if (!patientId) {
-      console.error("[pro/save] ❌ patientId manquant");
+      console.error("[pro/save] patientId manquant");
       setSavingDossier(false);
       setDossierSaved(true);
       return;
@@ -758,7 +758,7 @@ export default function ProAnalyze() {
 
     setSavingDossier(false);
     setDossierSaved(true);
-    toast({ title: `Dossier de ${firstName || lastName} mis à jour ✅`, description: "Visible dans Patients > Dossier" });
+    toast({ title: `Dossier de ${firstName || lastName} mis à jour `, description: "Visible dans Patients > Dossier" });
   };
 
   // ─── Actions finales ──────────────────────────────────────────────
@@ -2013,7 +2013,7 @@ export default function ProAnalyze() {
                     <CheckCircle2 className="w-8 h-8" style={{ color: "var(--color-accent-2-700)" }} />
                   </div>
                   <h2 className="text-xl font-extrabold mb-2" style={{ color: INK }} data-testid="text-confirmation-title">
-                    Dossier de {patientLabel} mis à jour ✅
+                    Dossier de {patientLabel} mis à jour 
                   </h2>
                   <p className="text-sm mb-1" style={{ color: DS.body }}>
                     Photo, diagnostic, anamnèse et produits enregistrés.

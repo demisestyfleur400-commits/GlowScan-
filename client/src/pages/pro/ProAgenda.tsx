@@ -1,212 +1,255 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
 import { ProLayout } from "@/components/ProLayout";
-import { Plus, ChevronLeft, ChevronRight, X, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { APPT_TYPES, apptTypeOf, dayKeyOf, doualaIso, hhmmOf, type ApptType } from "@/lib/apptTypes";
 
 // ════════════════════════════════════════════════════════════════════════
-// AGENDA DERM — Vue Jour (mobile-first). Timeline des RDV colorés par type,
-// création rapide avec classification auto + détection de conflit.
+// Agenda (refonte Organic) — maquette « Derm Portal », écran Agenda.
+// Semaine (lundi → dimanche) avec pastilles, journée de 8 h à 18 h, création
+// d'un rendez-vous (classement automatique : « urgent » / « douleur » dans les
+// notes passent le RDV en urgence, côté serveur) et détection de conflit.
+// Géré par le médecin ou la secrétaire.
 // ════════════════════════════════════════════════════════════════════════
-
-const INK = "#0F172A";
-const MUTED = "#64748B";
-const BORDER = "#E2E8F0";
 
 interface Appt {
-  id: number; patient_name?: string; patient_contact?: string;
-  appointment_date: string; duration_minutes?: number;
-  type?: string; priority?: string; notes?: string; status?: string;
+  id: number; patient_name?: string; patient_contact?: string; appointment_date: string;
+  duration_minutes?: number; type?: string; notes?: string; status?: string;
 }
 
-const TYPE_META: Record<string, { label: string; color: string; dot: string }> = {
-  glowscan: { label: "Consultation en ligne", color: "#7c3aed", dot: "🟣" },
-  consultation: { label: "Consultation", color: "#2563eb", dot: "🔵" },
-  suivi: { label: "Suivi", color: "#d97706", dot: "🟡" },
-  urgence: { label: "Urgence", color: "#dc2626", dot: "🔴" },
-};
+const START_H = 8;
+const END_H = 18;
+const PX_PER_MIN = 1;
+const DOW = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 
-function ymd(d: Date) { return d.toISOString().slice(0, 10); }
-function frDay(d: Date) { return d.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" }); }
+function mondayOf(key: string) {
+  const d = new Date(`${key}T12:00:00+01:00`);
+  const dow = (d.getUTCDay() + 6) % 7; // 0 = lundi
+  d.setUTCDate(d.getUTCDate() - dow);
+  return d;
+}
+const addDays = (d: Date, n: number) => { const x = new Date(d); x.setUTCDate(x.getUTCDate() + n); return x; };
 
 export default function ProAgenda() {
-  const [day, setDay] = useState(new Date());
-  const [appts, setAppts] = useState<Appt[]>([]);
+  const [day, setDay] = useState(() => dayKeyOf(new Date()));
+  const [week, setWeek] = useState<Appt[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
+  const [dlg, setDlg] = useState(false);
+
+  const monday = useMemo(() => mondayOf(day), [day]);
+  const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(monday, i)), [monday]);
 
   const load = () => {
-    setLoading(true);
-    fetch(`/api/pro/appointments?date=${ymd(day)}`, { credentials: "include" })
-      .then((r) => r.json()).then((d) => setAppts(d.appointments || []))
-      .catch(() => setAppts([])).finally(() => setLoading(false));
+    const from = doualaIso(dayKeyOf(days[0]), "00:00");
+    const to = doualaIso(dayKeyOf(addDays(days[0], 7)), "00:00");
+    fetch(`/api/pro/appointments?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`, { credentials: "include" })
+      .then((r) => r.json()).then((d) => setWeek((d.appointments || []).filter((a: Appt) => a.status !== "cancelled")))
+      .catch(() => setWeek([])).finally(() => setLoading(false));
   };
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [day]);
+  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [monday.getTime()]);
 
-  const shift = (n: number) => { const d = new Date(day); d.setDate(d.getDate() + n); setDay(d); };
-  const isToday = ymd(day) === ymd(new Date());
+  const byDay = (key: string) => week
+    .filter((a) => dayKeyOf(new Date(a.appointment_date)) === key)
+    .sort((a, b) => +new Date(a.appointment_date) - +new Date(b.appointment_date));
+  const dayAppts = byDay(day);
+  const totalMin = dayAppts.reduce((s, a) => s + (a.duration_minutes || 30), 0);
+  const dayDate = new Date(`${day}T12:00:00+01:00`);
+  const dayTitle = dayDate.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", timeZone: "Africa/Douala" });
+  const monthTitle = dayDate.toLocaleDateString("fr-FR", { month: "long", year: "numeric", timeZone: "Africa/Douala" });
+  const today = dayKeyOf(new Date());
+
+  // Ligne « maintenant » (uniquement aujourd'hui, pendant les heures affichées).
+  const [now, setNow] = useState(new Date());
+  useEffect(() => { const t = setInterval(() => setNow(new Date()), 60000); return () => clearInterval(t); }, []);
+  const [nh, nm] = hhmmOf(now).split(":").map(Number);
+  const nowTop = ((nh - START_H) * 60 + nm) * PX_PER_MIN;
+  const showNow = day === today && nh >= START_H && nh < END_H;
+
+  const cancel = async (a: Appt) => {
+    if (!confirm(`Annuler le rendez-vous de ${a.patient_name || "ce patient"} ?`)) return;
+    await fetch(`/api/pro/appointments/${a.id}`, { method: "DELETE", credentials: "include" }).catch(() => {});
+    load();
+  };
+
+  const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
   return (
     <ProLayout>
-      <div style={{ position: "relative", minHeight: "70vh" }}>
-        {/* En-tête jour */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 4 }}>
-          <h1 style={{ fontSize: 20, fontWeight: 900, color: INK, margin: 0, textTransform: "capitalize" }}>{frDay(day)}</h1>
-          {!isToday && <button onClick={() => setDay(new Date())} style={{ fontSize: 12, fontWeight: 800, color: "#7c3aed", background: "transparent", border: "none", cursor: "pointer" }}>Aujourd'hui</button>}
+      <header className="flex flex-wrap items-end justify-between gap-organic-4">
+        <div className="flex flex-col gap-1">
+          <span className="text-[11px] font-bold uppercase tracking-[.12em] text-organic-accent-700">{cap(monthTitle)}</span>
+          <h1 className="m-0 text-[clamp(30px,4vw,42px)]">{cap(dayTitle)}</h1>
+          <p className="m-0 text-[15px] text-organic-neutral-700">
+            {dayAppts.length ? `${dayAppts.length} rendez-vous · ${totalMin} min de consultation` : "Aucun rendez-vous ce jour."}
+          </p>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-          <button onClick={() => shift(-1)} style={{ padding: 6, borderRadius: 10, background: "#F1F5F9", border: "none", cursor: "pointer" }}><ChevronLeft size={18} color={INK} /></button>
-          <button onClick={() => shift(1)} style={{ padding: 6, borderRadius: 10, background: "#F1F5F9", border: "none", cursor: "pointer" }}><ChevronRight size={18} color={INK} /></button>
-          <input type="date" value={ymd(day)} onChange={(e) => e.target.value && setDay(new Date(e.target.value))}
-            style={{ marginLeft: "auto", padding: "7px 10px", borderRadius: 10, border: `1px solid ${BORDER}`, fontSize: 13, color: INK }} />
-        </div>
+        <Button onClick={() => setDlg(true)} className="h-auto px-[22px] py-3 text-[15px]" data-testid="button-new-appt">
+          <Plus size={16} /> Nouveau rendez-vous
+        </Button>
+      </header>
 
-        {loading && <p style={{ fontSize: 13, color: MUTED }}>Chargement…</p>}
-        {!loading && appts.length === 0 && (
-          <div style={{ background: "#F1F5F9", borderRadius: 16, padding: 24, textAlign: "center" }}>
-            <p style={{ fontSize: 13, color: MUTED, margin: 0 }}>Aucun rendez-vous ce jour. Appuyez sur ＋ pour en ajouter.</p>
-          </div>
-        )}
-
-        {/* Timeline */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {appts.map((a) => {
-            const meta = TYPE_META[a.type || "consultation"] || TYPE_META.consultation;
-            const time = new Date(a.appointment_date).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+      <div className="flex items-center gap-2">
+        <button type="button" aria-label="Semaine précédente" onClick={() => setDay(dayKeyOf(addDays(monday, -7)))}
+          className="flex h-10 w-10 flex-none cursor-pointer items-center justify-center rounded-full border-0 bg-organic-surface text-organic-text">
+          <ChevronLeft size={18} />
+        </button>
+        <div className="grid flex-1 grid-cols-7 gap-1.5">
+          {days.map((d, i) => {
+            const key = dayKeyOf(d);
+            const on = key === day;
+            const dots = byDay(key).slice(0, 4);
             return (
-              <div key={a.id} style={{ display: "flex", gap: 12, background: "#fff", border: `1px solid ${BORDER}`, borderLeft: `4px solid ${meta.color}`, borderRadius: 14, padding: "12px 14px" }}>
-                <div style={{ flexShrink: 0, textAlign: "center", minWidth: 48 }}>
-                  <p style={{ fontSize: 15, fontWeight: 900, color: INK, margin: 0 }}>{time}</p>
-                  <p style={{ fontSize: 10, color: MUTED, margin: 0 }}>{a.duration_minutes || 30} min</p>
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontSize: 14, fontWeight: 800, color: INK, margin: 0, display: "flex", alignItems: "center", gap: 6 }}>
-                    {a.patient_name || "Patient"}
-                    <span style={{ fontSize: 10, fontWeight: 800, color: meta.color, background: `${meta.color}18`, borderRadius: 9999, padding: "1px 8px" }}>{meta.dot} {meta.label}</span>
-                  </p>
-                  {a.notes && <p style={{ fontSize: 12, color: MUTED, margin: "3px 0 0", lineHeight: 1.4 }}>{a.notes}</p>}
-                  {a.patient_contact && <p style={{ fontSize: 11, color: MUTED, margin: "2px 0 0" }}>📞 {a.patient_contact}</p>}
-                </div>
-                <button onClick={async () => { if (confirm("Annuler ce RDV ?")) { await fetch(`/api/pro/appointments/${a.id}`, { method: "DELETE", credentials: "include" }); load(); } }}
-                  style={{ flexShrink: 0, padding: 6, borderRadius: 8, background: "rgba(244,63,94,0.1)", border: "none", cursor: "pointer", alignSelf: "flex-start" }} title="Annuler">
-                  <Trash2 size={14} color="#f43f5e" />
+              <button key={key} type="button" onClick={() => setDay(key)} aria-pressed={on}
+                className={`flex cursor-pointer flex-col items-center gap-1 rounded-card border-0 px-1 py-2.5 font-body ${on ? "bg-organic-accent text-organic-bg" : "bg-organic-surface text-organic-text"}`}
+                data-testid={`day-${key}`}>
+                <span className="text-[11px] font-bold uppercase">{DOW[i]}</span>
+                <span className={`font-heading text-[20px] leading-none ${key === today && !on ? "text-organic-accent-700" : ""}`}>{d.getUTCDate()}</span>
+                <span className="flex h-1.5 gap-[3px]">
+                  {dots.map((a) => <span key={a.id} className="h-1.5 w-1.5 rounded-full" style={{ background: on ? "var(--color-bg)" : APPT_TYPES[apptTypeOf(a.type)].dot }} />)}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        <button type="button" aria-label="Semaine suivante" onClick={() => setDay(dayKeyOf(addDays(monday, 7)))}
+          className="flex h-10 w-10 flex-none cursor-pointer items-center justify-center rounded-full border-0 bg-organic-surface text-organic-text">
+          <ChevronRight size={18} />
+        </button>
+      </div>
+
+      <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+        {(Object.keys(APPT_TYPES) as ApptType[]).map((k) => (
+          <span key={k} className="flex items-center gap-1.5 text-[12px] font-semibold">
+            <span className="h-2.5 w-2.5 rounded-full" style={{ background: APPT_TYPES[k].dot }} />{APPT_TYPES[k].label}
+          </span>
+        ))}
+      </div>
+
+      <div className="flex gap-3 overflow-hidden rounded-card bg-organic-surface p-organic-4">
+        <div className="flex flex-none flex-col" style={{ width: 40 }}>
+          {Array.from({ length: END_H - START_H + 1 }, (_, i) => (
+            <span key={i} className="text-[11px] text-organic-neutral-700" style={{ height: i === END_H - START_H ? "auto" : 60 * PX_PER_MIN }}>{START_H + i} h</span>
+          ))}
+        </div>
+        <div className="relative min-w-0 flex-1" style={{ height: (END_H - START_H) * 60 * PX_PER_MIN }}>
+          {Array.from({ length: END_H - START_H }, (_, i) => (
+            <span key={i} className="absolute inset-x-0 border-t border-organic-divider" style={{ top: i * 60 * PX_PER_MIN + 7 }} />
+          ))}
+          {showNow && (
+            <span className="absolute inset-x-0 z-10 h-0.5 bg-organic-accent" style={{ top: nowTop + 7 }}>
+              <span className="absolute -left-1 -top-[3px] h-2 w-2 rounded-full bg-organic-accent" />
+            </span>
+          )}
+          {!loading && dayAppts.length === 0 && (
+            <span className="absolute left-3 top-4 text-[14px] text-organic-neutral-700">Aucun rendez-vous ce jour.</span>
+          )}
+          {dayAppts.map((a) => {
+            const t = APPT_TYPES[apptTypeOf(a.type)];
+            const d = new Date(a.appointment_date);
+            const [h, m] = hhmmOf(d).split(":").map(Number);
+            const top = Math.max(0, ((h - START_H) * 60 + m) * PX_PER_MIN) + 7;
+            const dur = a.duration_minutes || 30;
+            return (
+              <div key={a.id} className="absolute inset-x-0 flex items-start gap-3 overflow-hidden rounded-2xl px-3 py-1.5"
+                style={{ top, height: Math.max(28, dur * PX_PER_MIN - 4), background: t.bg, color: t.fg }} data-testid={`appt-${a.id}`}>
+                <span className="flex-none font-heading text-[14px]">{hhmmOf(d)}</span>
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <span className="truncate text-[13px] font-bold">{a.patient_name || "Patient"}</span>
+                  {dur >= 30 && (
+                    <span className="truncate text-[12px] opacity-80">{t.label} · {dur} min{a.notes ? ` · ${a.notes}` : ""}</span>
+                  )}
+                </span>
+                <button type="button" onClick={() => cancel(a)} title="Annuler" aria-label="Annuler le rendez-vous"
+                  className="flex-none cursor-pointer border-0 bg-transparent p-1 opacity-70 hover:opacity-100" style={{ color: t.fg }}>
+                  <Trash2 size={14} />
                 </button>
               </div>
             );
           })}
         </div>
-
-        {/* FAB + */}
-        <button onClick={() => setShowForm(true)}
-          style={{ position: "fixed", right: 20, bottom: 84, width: 56, height: 56, borderRadius: "50%", background: "#7c3aed", color: "#fff", border: "none", boxShadow: "0 8px 24px rgba(124,58,237,0.4)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 30 }}>
-          <Plus size={26} />
-        </button>
-
-        {showForm && <ApptForm day={day} onClose={() => setShowForm(false)} onCreated={() => { setShowForm(false); load(); }} />}
       </div>
+
+      {dlg && <ApptDialog day={day} onClose={() => setDlg(false)} onCreated={() => { setDlg(false); load(); }} />}
     </ProLayout>
   );
 }
 
-function ApptForm({ day, onClose, onCreated }: { day: Date; onClose: () => void; onCreated: () => void }) {
+function ApptDialog({ day, onClose, onCreated }: { day: string; onClose: () => void; onCreated: () => void }) {
   const [name, setName] = useState("");
-  const [contact, setContact] = useState("");
-  const [email, setEmail] = useState("");
-  const [date, setDate] = useState(ymd(day));
   const [time, setTime] = useState("09:00");
-  const [type, setType] = useState("consultation");
-  const [duration, setDuration] = useState("30");
+  const [contact, setContact] = useState("");
+  const [type, setType] = useState<"consultation" | "suivi" | "urgence">("consultation");
+  const [dur, setDur] = useState(30);
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
-  const submit = async (force = false) => {
-    if (busy) return;
+  const create = async (force = false) => {
+    if (!name.trim()) return setErr("Indiquez le nom du patient.");
     setBusy(true); setErr("");
     try {
-      const appointmentDate = new Date(`${date}T${time}:00`).toISOString();
       const res = await fetch("/api/pro/appointments", {
         method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ patientName: name.trim(), patientContact: contact.trim(), patientEmail: email.trim(), appointmentDate, type, durationMinutes: parseInt(duration, 10), notes: notes.trim(), forceConflict: force }),
+        body: JSON.stringify({ patientName: name.trim(), patientContact: contact.trim(), appointmentDate: doualaIso(day, time), type, durationMinutes: dur, notes: notes.trim(), forceConflict: force }),
       });
-      if (res.status === 409) {
-        const d = await res.json();
-        const ex = d.existing ? new Date(d.existing.appointment_date).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : "";
-        if (confirm(`⚠️ Vous avez déjà un RDV à cette heure${ex ? ` (${ex})` : ""}.\nVoulez-vous quand même confirmer ?`)) { setBusy(false); return submit(true); }
-        setBusy(false); return;
-      }
-      if (res.ok) { onCreated(); return; }
       const d = await res.json().catch(() => ({}));
-      setErr(d.message || "Erreur");
-    } catch { setErr("Erreur réseau"); } finally { setBusy(false); }
+      if (res.status === 409) {
+        const ex = d.existing ? hhmmOf(new Date(d.existing.appointment_date)) : "";
+        if (confirm(`Vous avez déjà un rendez-vous à cette heure${ex ? ` (${ex})` : ""}. Voulez-vous quand même le créer ?`)) return create(true);
+        return;
+      }
+      if (!res.ok) throw new Error(d.message || "Rendez-vous non créé.");
+      onCreated();
+    } catch (e: any) { setErr(e.message || "Erreur réseau."); } finally { setBusy(false); }
   };
 
-  const field = { width: "100%", boxSizing: "border-box" as const, padding: "10px 12px", borderRadius: 10, border: `1px solid ${BORDER}`, fontSize: 14, color: INK };
+  const chip = (on: boolean) =>
+    `cursor-pointer rounded-pill border px-3.5 py-1.5 font-body text-[13px] font-semibold ${on ? "border-organic-accent bg-organic-accent text-organic-bg" : "border-organic-divider bg-transparent text-organic-text"}`;
 
   return (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 90, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 460, background: "#fff", borderRadius: "20px 20px 0 0", padding: 20, maxHeight: "88vh", overflowY: "auto" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-          <p style={{ fontSize: 17, fontWeight: 900, color: INK, margin: 0 }}>Nouveau rendez-vous</p>
-          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer" }}><X size={22} color={MUTED} /></button>
+    <div className="fixed inset-0 z-[70] flex items-end justify-center bg-organic-neutral-900/45 p-0 sm:items-center sm:p-4" onClick={onClose}>
+      <div role="dialog" aria-modal="true" aria-labelledby="appt-title" onClick={(e) => e.stopPropagation()}
+        className="flex max-h-[92vh] w-full max-w-[480px] flex-col gap-organic-3 overflow-auto rounded-t-[32px] bg-organic-bg p-organic-6 sm:rounded-card">
+        <span id="appt-title" className="font-heading text-[22px]">Nouveau rendez-vous</span>
+        <label className="flex flex-col gap-1.5">
+          <span className="text-[12px] text-organic-neutral-700">Patient</span>
+          <Input className="h-11 bg-organic-surface" value={name} onChange={(e) => setName(e.target.value)} placeholder="Nom du patient" data-testid="input-appt-name" />
+        </label>
+        <div className="flex gap-3">
+          <label className="flex w-[120px] flex-col gap-1.5">
+            <span className="text-[12px] text-organic-neutral-700">Heure</span>
+            <Input className="h-11 bg-organic-surface" type="time" value={time} onChange={(e) => setTime(e.target.value)} data-testid="input-appt-time" />
+          </label>
+          <label className="flex min-w-0 flex-1 flex-col gap-1.5">
+            <span className="text-[12px] text-organic-neutral-700">Contact WhatsApp</span>
+            <Input className="h-11 bg-organic-surface" inputMode="tel" value={contact} onChange={(e) => setContact(e.target.value)} placeholder="6XX XXX XXX" data-testid="input-appt-contact" />
+          </label>
         </div>
-        {err && <p style={{ fontSize: 12, color: "#dc2626", marginBottom: 10 }}>{err}</p>}
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <div>
-            <label style={{ fontSize: 12, fontWeight: 700, color: MUTED, display: "block", marginBottom: 4 }}>Patient</label>
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nom du patient" style={field} />
+        <div className="flex flex-col gap-1.5">
+          <span className="text-[12px] text-organic-neutral-700">Type</span>
+          <div className="flex flex-wrap gap-1.5">
+            {(["consultation", "suivi", "urgence"] as const).map((k) => (
+              <button key={k} type="button" className={chip(type === k)} onClick={() => setType(k)}>{APPT_TYPES[k].label}</button>
+            ))}
           </div>
-          <div>
-            <label style={{ fontSize: 12, fontWeight: 700, color: MUTED, display: "block", marginBottom: 4 }}>Contact (WhatsApp)</label>
-            <input value={contact} onChange={(e) => setContact(e.target.value)} placeholder="6XX XXX XXX" inputMode="tel" style={field} />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <span className="text-[12px] text-organic-neutral-700">Durée</span>
+          <div className="flex flex-wrap gap-1.5">
+            {[15, 30, 45, 60].map((m) => (
+              <button key={m} type="button" className={chip(dur === m)} onClick={() => setDur(m)}>{m} min</button>
+            ))}
           </div>
-          <div>
-            <label style={{ fontSize: 12, fontWeight: 700, color: MUTED, display: "block", marginBottom: 4 }}>Email <span style={{ fontWeight: 500 }}>(secours si le rappel push ne passe pas)</span></label>
-            <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="patient@email.com" inputMode="email" type="email" style={field} />
-          </div>
-          <div style={{ display: "flex", gap: 10 }}>
-            <div style={{ flex: 1 }}>
-              <label style={{ fontSize: 12, fontWeight: 700, color: MUTED, display: "block", marginBottom: 4 }}>Date</label>
-              <input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={field} />
-            </div>
-            <div style={{ width: 120 }}>
-              <label style={{ fontSize: 12, fontWeight: 700, color: MUTED, display: "block", marginBottom: 4 }}>Heure</label>
-              <input type="time" value={time} onChange={(e) => setTime(e.target.value)} style={field} />
-            </div>
-          </div>
-          <div>
-            <label style={{ fontSize: 12, fontWeight: 700, color: MUTED, display: "block", marginBottom: 6 }}>Type</label>
-            <div style={{ display: "flex", gap: 6 }}>
-              {(["consultation", "suivi", "urgence"] as const).map((t) => {
-                const meta = TYPE_META[t];
-                return (
-                  <button key={t} onClick={() => setType(t)}
-                    style={{ flex: 1, padding: "9px 0", borderRadius: 10, fontSize: 12, fontWeight: 800, cursor: "pointer",
-                      background: type === t ? `${meta.color}18` : "#F1F5F9", color: type === t ? meta.color : MUTED, border: type === t ? `1.5px solid ${meta.color}` : `1px solid ${BORDER}` }}>
-                    {meta.dot} {meta.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-          <div>
-            <label style={{ fontSize: 12, fontWeight: 700, color: MUTED, display: "block", marginBottom: 6 }}>Durée</label>
-            <div style={{ display: "flex", gap: 6 }}>
-              {["15", "30", "45", "60"].map((d) => (
-                <button key={d} onClick={() => setDuration(d)}
-                  style={{ flex: 1, padding: "9px 0", borderRadius: 10, fontSize: 12, fontWeight: 800, cursor: "pointer",
-                    background: duration === d ? "rgba(124,58,237,0.1)" : "#F1F5F9", color: duration === d ? "#7c3aed" : MUTED, border: duration === d ? "1.5px solid #7c3aed" : `1px solid ${BORDER}` }}>
-                  {d} min
-                </button>
-              ))}
-            </div>
-          </div>
-          <div>
-            <label style={{ fontSize: 12, fontWeight: 700, color: MUTED, display: "block", marginBottom: 4 }}>Notes <span style={{ fontWeight: 500 }}>(mots comme « urgent », « douleur » → priorité auto)</span></label>
-            <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="Motif, précisions…" style={{ ...field, resize: "vertical", fontFamily: "inherit" }} />
-          </div>
-          <button onClick={() => submit(false)} disabled={busy || !date || !time}
-            style={{ width: "100%", background: "#7c3aed", color: "#fff", border: "none", borderRadius: 9999, padding: "13px", fontSize: 15, fontWeight: 800, cursor: "pointer", opacity: busy || !date || !time ? 0.5 : 1 }}>
-            {busy ? "Enregistrement…" : "Créer le rendez-vous"}
-          </button>
+        </div>
+        <label className="flex flex-col gap-1.5">
+          <span className="text-[12px] text-organic-neutral-700">Notes — « urgent » ou « douleur » passent le RDV en urgence</span>
+          <Input className="h-11 bg-organic-surface" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Motif, précisions…" data-testid="input-appt-notes" />
+        </label>
+        {err && <div role="alert" className="rounded-pill bg-organic-accent-100 px-4 py-2.5 text-[13px] font-semibold text-organic-accent-900">{err}</div>}
+        <div className="flex justify-end gap-2">
+          <Button variant="ghost" onClick={onClose}>Annuler</Button>
+          <Button onClick={() => create()} isLoading={busy} disabled={busy} data-testid="button-create-appt">Créer le rendez-vous</Button>
         </div>
       </div>
     </div>

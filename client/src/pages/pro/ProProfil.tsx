@@ -61,7 +61,7 @@ export default function ProProfil() {
         licenseNumber: licenseNumber.trim() || null,
         cabinetName: cabinetName.trim() || null,
       } as any);
-      toast({ title: "Profil enregistré ✅", description: score >= 100 ? "Profil complet — vous êtes visible par les patients." : "Vous pouvez compléter le reste plus tard." });
+      toast({ title: "Profil enregistré ", description: score >= 100 ? "Profil complet — vous êtes visible par les patients." : "Vous pouvez compléter le reste plus tard." });
       setLocation("/derm/dashboard");
     } catch (e: any) {
       toast({ title: "Erreur", description: e?.message, variant: "destructive" });

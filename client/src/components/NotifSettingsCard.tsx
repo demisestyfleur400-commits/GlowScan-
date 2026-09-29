@@ -23,13 +23,13 @@ type NotifState = "loading" | "unsupported" | "ios-install" | "denied" | "enable
 export function NotifSettingsCard({ audience = "derm" }: { audience?: "derm" | "patient" }) {
   const [state, setState] = useState<NotifState>("loading");
   const [busy, setBusy] = useState(false);
-  // Textes contextualisés selon le destinataire.
+  // Textes contextualisés selon le destinataire (vouvoiement, sans emoji).
   const enabledMsg = audience === "patient"
-    ? "✅ Notifications activées — tu seras prévenu dès que ton dermatologue répond à ta consultation."
-    : "✅ Notifications activées sur cet appareil — tu seras alerté dès qu'un patient te consulte ou t'écrit.";
+    ? "Notifications activées : vous serez prévenu dès que votre dermatologue répond à votre consultation."
+    : "Notifications activées sur cet appareil : vous serez alerté dès qu'un patient vous consulte ou vous écrit.";
   const availableMsg = audience === "patient"
-    ? "Active les notifications pour être prévenu dès que ton dermatologue te répond, même app fermée."
-    : "Active les notifications pour être alerté d'une nouvelle consultation ou d'un nouveau message, même app fermée.";
+    ? "Activez les notifications pour être prévenu dès que votre dermatologue vous répond, même appli fermée."
+    : "Activez les notifications pour être alerté d'une nouvelle consultation ou d'un nouveau message, même appli fermée.";
 
   const isIos = typeof navigator !== "undefined" && /iphone|ipad|ipod/i.test(navigator.userAgent);
   const isStandalone = typeof window !== "undefined" &&
@@ -74,51 +74,35 @@ export function NotifSettingsCard({ audience = "derm" }: { audience?: "derm" | "
     finally { setBusy(false); }
   };
 
-  const NAVY = "#7c3aed";
-  const card: React.CSSProperties = { background: "#fff", border: "1px solid #E2E8F0", borderRadius: 18, padding: "16px 18px" };
-  const title = (
-    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-      <span style={{ fontSize: 18 }}>🔔</span>
-      <h2 style={{ fontWeight: 800, fontSize: 15, color: "#0F172A", margin: 0 }}>Notifications</h2>
-    </div>
-  );
-
   if (state === "loading") return null;
 
+  const text = "m-0 text-[13px] leading-normal text-organic-neutral-800";
   return (
-    <div style={card} data-testid="notif-settings">
-      {title}
-      {state === "enabled" && (
-        <p style={{ fontSize: 12.5, color: "#047857", margin: 0, lineHeight: 1.5 }}>
-          {enabledMsg}
-        </p>
-      )}
+    <div className="flex flex-col gap-2 rounded-card bg-organic-surface p-organic-6" data-testid="notif-settings">
+      <h3 className="m-0 text-[22px]">Notifications</h3>
+      {state === "enabled" && <p className="m-0 text-[13px] leading-normal text-organic-accent-2-800">{enabledMsg}</p>}
       {state === "available" && (
-        <div>
-          <p style={{ fontSize: 12.5, color: "#475569", margin: "0 0 10px", lineHeight: 1.5 }}>
-            {availableMsg}
-          </p>
-          <button onClick={enable} disabled={busy} data-testid="button-enable-notif"
-            style={{ background: NAVY, color: "#fff", border: "none", borderRadius: 9999, padding: "9px 16px", fontSize: 12.5, fontWeight: 800, cursor: busy ? "wait" : "pointer", opacity: busy ? 0.6 : 1 }}>
+        <>
+          <p className={text}>{availableMsg}</p>
+          <button type="button" onClick={enable} disabled={busy} data-testid="button-enable-notif"
+            className="self-start cursor-pointer rounded-pill border-0 bg-organic-accent px-4 py-2 font-body text-[14px] font-bold text-organic-neutral-100 hover:bg-organic-accent-600 disabled:opacity-50">
             {busy ? "Activation…" : "Activer les notifications"}
           </button>
-        </div>
+        </>
       )}
       {state === "denied" && (
-        <p style={{ fontSize: 12.5, color: "#475569", margin: 0, lineHeight: 1.5 }}>
-          🔕 Les notifications sont <strong style={{ color: "#b91c1c" }}>bloquées</strong> pour ce site. Réactive-les dans les réglages de ton navigateur
-          (icône 🔒 / « aA » à côté de l'adresse → Notifications → Autoriser), puis reviens ici.
+        <p className={text}>
+          Les notifications sont <b className="text-organic-accent-800">bloquées</b> pour ce site. Réactivez-les dans les réglages de votre navigateur
+          (icône du cadenas ou « aA » à côté de l'adresse, puis Notifications, puis Autoriser), puis revenez ici.
         </p>
       )}
       {state === "ios-install" && (
-        <p style={{ fontSize: 12.5, color: "#475569", margin: 0, lineHeight: 1.5 }}>
-          📱 Sur iPhone, les notifications ne fonctionnent qu'avec l'app installée. Dans Safari : bouton <strong style={{ color: "#0F172A" }}>Partager</strong> → <strong style={{ color: "#0F172A" }}>« Sur l'écran d'accueil »</strong>, ouvre GlowScan depuis l'icône, puis reviens ici pour activer.
+        <p className={text}>
+          Sur iPhone, les notifications ne fonctionnent qu'avec l'appli installée. Dans Safari : bouton <b>Partager</b>, puis <b>« Sur l'écran d'accueil »</b> ; ouvrez GlowScan depuis l'icône, puis revenez ici pour activer.
         </p>
       )}
       {state === "unsupported" && (
-        <p style={{ fontSize: 12.5, color: "#475569", margin: 0, lineHeight: 1.5 }}>
-          Ton navigateur ne prend pas en charge les notifications push. Essaie Chrome (Android/ordinateur) ou installe l'app.
-        </p>
+        <p className={text}>Votre navigateur ne prend pas en charge les notifications. Essayez Chrome (Android ou ordinateur) ou installez l'appli.</p>
       )}
     </div>
   );

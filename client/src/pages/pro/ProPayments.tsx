@@ -63,7 +63,7 @@ export default function ProPayments() {
   const name = (pro as any)?.account?.fullName as string | undefined;
 
   return (
-    <ProLayout title="Paiements" back="/derm/dashboard">
+    <ProLayout title="Portefeuille" back="/derm/paiements">
       <div className="mx-auto flex max-w-[640px] flex-col gap-4 bg-organic-bg p-4 font-body text-organic-text">
         <span className="text-[12px] text-organic-neutral-700">
           {name ? `${/^(dr|pr)\.?\s/i.test(name) ? name : `Dr ${name}`} · ` : ""}consultations B2C ({w?.shares.consultation.pro ?? 80} %)

@@ -127,7 +127,7 @@ export function LesionArgumentation({ scanId, condition, score, fitzpatrick, age
       {scanId ? (
         confirmed ? (
           <div style={{ marginTop: 14, background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.3)", borderRadius: 12, padding: "12px 14px" }}>
-            <p style={{ fontSize: 13, fontWeight: 800, color: "var(--color-accent-2-700)", margin: 0 }}>✅ Diagnostic confirmé</p>
+            <p style={{ fontSize: 13, fontWeight: 800, color: "var(--color-accent-2-700)", margin: 0 }}>Diagnostic confirmé</p>
             <p style={{ fontSize: 12, color: INK, margin: "3px 0 0" }}>
               {confirmed.isCorrection ? "Corrigé par vous : " : "Validé : "}<strong>{confirmed.finalDiagnosis}</strong>
             </p>
@@ -139,7 +139,7 @@ export function LesionArgumentation({ scanId, condition, score, fitzpatrick, age
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               <button onClick={() => setMode("validate")}
                 style={{ textAlign: "left", display: "flex", alignItems: "center", gap: 8, background: mode === "validate" ? "rgba(16,185,129,0.08)" : "var(--color-bg)", border: `1px solid ${mode === "validate" ? "rgba(16,185,129,0.4)" : BORDER}`, borderRadius: 10, padding: "10px 12px", cursor: "pointer" }}>
-                <span style={{ fontSize: 15 }}>✅</span>
+                <span style={{ fontSize: 15 }}></span>
                 <span style={{ fontSize: 12.5, fontWeight: 700, color: INK }}>Je valide le diagnostic{condition ? ` — ${condition}` : ""}</span>
               </button>
               <button onClick={() => { setMode("correct"); if (!correction) setCorrection(condition || ""); }}
