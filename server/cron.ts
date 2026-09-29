@@ -1,4 +1,5 @@
 import cron from "node-cron";
+import { ensureRls } from "./ensureRls";
 import webpush from "web-push";
 import { storage } from "./storage";
 import { db } from "./db";
@@ -393,6 +394,8 @@ async function sendConsultationFollowUps() {
       push_sent_at timestamptz, email_sent_at timestamptz, whatsapp_sent_at timestamptz,
       photo_received_at timestamptz, created_at timestamptz DEFAULT now()
     )`).catch(() => {});
+    // Sécurité par ligne (migration 0018), une fois par démarrage : aucun accès via les clés publiques Supabase.
+    await ensureRls("follow_up_reminders");
     const r: any = await db.execute(sql`
       SELECT f.id, f.consultation_id, f.patient_id,
              c.condition, c.patient_phone,
@@ -469,6 +472,8 @@ async function sendAppointmentH2Reminders() {
       type varchar(20) DEFAULT 'consultation', priority varchar(10) DEFAULT 'normal', notes text,
       status varchar(20) DEFAULT 'scheduled', reminder_h2_sent boolean DEFAULT false, created_at timestamptz DEFAULT now()
     )`).catch(() => {});
+    // Sécurité par ligne (migration 0018), une fois par démarrage : aucun accès via les clés publiques Supabase.
+    await ensureRls("appointments");
     await db.execute(sql`ALTER TABLE appointments ADD COLUMN IF NOT EXISTS patient_email varchar(120)`).catch(() => {});
     const r: any = await db.execute(sql`
       SELECT a.*, p.full_name AS derm_name, p.user_id AS derm_user_id
@@ -519,6 +524,8 @@ async function sendB2CRemindLater() {
       id serial PRIMARY KEY, scan_id integer, user_id text,
       remind_at timestamptz NOT NULL, sent boolean DEFAULT false, created_at timestamptz DEFAULT now()
     )`).catch(() => {});
+    // Sécurité par ligne (migration 0018), une fois par démarrage : aucun accès via les clés publiques Supabase.
+    await ensureRls("b2c_reminders");
     const r: any = await db.execute(sql`
       SELECT b.id, b.user_id, u.email, u.first_name
       FROM b2c_reminders b LEFT JOIN users u ON u.id = b.user_id

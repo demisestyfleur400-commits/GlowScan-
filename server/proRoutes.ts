@@ -1,4 +1,5 @@
 import type { Express } from "express";
+import { ensureRls } from "./ensureRls";
 import { db } from "./db";
 import { proAccounts, patients, scans, premiumRequests, users, secretaryAccounts, insertProAccountSchema, insertPatientSchema, insertSecretaryAccountSchema, pageVisits, trainingData, consultations } from "@shared/schema";
 import { eq, and, desc, sql, count, gte, isNotNull, isNull } from "drizzle-orm";
@@ -377,6 +378,8 @@ async function ensureClinicalAiExchangesTable() {
     answer text NOT NULL,
     created_at timestamp DEFAULT now()
   )`);
+  // Sécurité par ligne (migration 0018), une fois par démarrage : aucun accès via les clés publiques Supabase.
+  await ensureRls("clinical_ai_exchanges");
   _clinicalAiTableReady = true;
 }
 
@@ -2361,6 +2364,8 @@ export function registerProRoutes(app: Express) {
             push_sent_at timestamptz, email_sent_at timestamptz, whatsapp_sent_at timestamptz,
             photo_received_at timestamptz, created_at timestamptz DEFAULT now()
           )`);
+          // Sécurité par ligne (migration 0018), une fois par démarrage : aucun accès via les clés publiques Supabase.
+          await ensureRls("follow_up_reminders");
           const rows = Rows(await db.execute(sql`
             INSERT INTO follow_up_reminders (consultation_id, patient_id, dermatologue_id, scheduled_date, option)
             VALUES (${id}, ${c.userId}, ${req.proAccount.id}, (CURRENT_DATE + ${DAYS[fu]} * INTERVAL '1 day')::date, ${fu})
@@ -2763,6 +2768,8 @@ Affine ton analyse selon tes règles.`;
         reminder_h2_sent boolean DEFAULT false,
         created_at timestamptz DEFAULT now()
       )`);
+      // Sécurité par ligne (migration 0018), une fois par démarrage : aucun accès via les clés publiques Supabase.
+      await ensureRls("appointments");
       // Email patient (canal de secours si le push ne passe pas) — ajout résilient.
       await db.execute(sql`ALTER TABLE appointments ADD COLUMN IF NOT EXISTS patient_email varchar(120)`).catch(() => {});
     } catch (e) { console.warn("[agenda] create table:", (e as any)?.message); }

@@ -1,4 +1,5 @@
 import type { Express } from "express";
+import { ensureRls } from "./ensureRls";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth } from "./replit_integrations/auth";
@@ -1389,6 +1390,8 @@ export async function registerRoutes(
         status varchar(20) NOT NULL DEFAULT 'encaisse',
         created_at timestamptz DEFAULT now()
       )`);
+      // Sécurité par ligne (migration 0018), une fois par démarrage : aucun accès via les clés publiques Supabase.
+      await ensureRls("revenue_entries");
     } catch (e) { console.warn("[revenue] create table:", (e as any)?.message); }
   }
 
@@ -1922,6 +1925,8 @@ export async function registerRoutes(
         id serial PRIMARY KEY, scan_id integer, user_id text,
         remind_at timestamptz NOT NULL, sent boolean DEFAULT false, created_at timestamptz DEFAULT now()
       )`).catch(() => {});
+      // Sécurité par ligne (migration 0018), une fois par démarrage : aucun accès via les clés publiques Supabase.
+      await ensureRls("b2c_reminders");
       // On ne programme un rappel que si on a un canal (compte connecté).
       if (userId) {
         await db.execute(sql`INSERT INTO b2c_reminders (scan_id, user_id, remind_at)

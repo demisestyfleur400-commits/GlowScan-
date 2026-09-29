@@ -6,9 +6,9 @@ Analyse de peau par IA pour les peaux africaines (appli patient) et portail Glow
 
 Les migrations SQL de `migrations/` s'appliquent **à la main, avant le déploiement** du code qui en dépend. Le serveur ne modifie pas ces tables au démarrage. Toutes sont idempotentes : on peut les relancer sans risque.
 
-Refonte Organic (étape 2), dans cet ordre : 0013 → 0014 → 0015 → 0016 → 0017.
+Refonte Organic (étape 2), dans cet ordre : 0013 → 0014 → 0015 → 0016 → 0017 → 0018.
 
-**État : 0013 à 0017 appliquées en production (projet Supabase `atjvlnzrwdeqhilvssyd`) le 29/09/2026**, après un essai complet dans une transaction annulée. Les relancer ne change rien (idempotentes).
+**État : 0013 à 0018 appliquées en production (projet Supabase `atjvlnzrwdeqhilvssyd`) le 29/09/2026**, après un essai complet dans une transaction annulée. Les relancer ne change rien (idempotentes).
 
 | Ordre | Fichier | Contenu |
 |---|---|---|
@@ -17,11 +17,12 @@ Refonte Organic (étape 2), dans cet ordre : 0013 → 0014 → 0015 → 0016 →
 | 3 | `0015_orders_followups.sql` | Colonnes `followups` de `consents` (ARRÊT SUIVI), colonnes de commande de `orders` (total figé, livraison, paiement, capture), anciens statuts convertis (`envoyée` → `received`, `livrée` → `delivered`) |
 | 4 | `0016_consultation_refunds.sql` | Consultations : date de paiement, première réponse du médecin, décision de remboursement à 24 h, ID de transaction du remboursement, alerte 2 h |
 | 5 | `0017_wallets.sql` | Étape 3 — registres `wallet_ledger` (médecins) et `platform_ledger` (GlowScan), `withdrawals`, `payout_accounts`, `wallet_settings` (virement du vendredi) |
+| 6 | `0018_rls_runtime_tables.sql` | Sécurité par ligne sur `revenue_entries`, `appointments`, `follow_up_reminders`, `clinical_ai_exchanges`, `b2c_reminders` (alerte Supabase) |
 
 Commande (base Postgres / Supabase, variable `DATABASE_URL` ou `SUPABASE_URL`) :
 
 ```bash
-for f in 0013_consents 0014_product_scans 0015_orders_followups 0016_consultation_refunds 0017_wallets; do
+for f in 0013_consents 0014_product_scans 0015_orders_followups 0016_consultation_refunds 0017_wallets 0018_rls_runtime_tables; do
   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "migrations/$f.sql" || break
 done
 ```
