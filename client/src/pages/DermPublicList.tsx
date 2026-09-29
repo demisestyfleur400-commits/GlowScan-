@@ -1,117 +1,118 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "wouter";
+import { useLocation } from "wouter";
+import { ArrowLeft, Star } from "lucide-react";
 import { useSEO } from "@/hooks/useSEO";
+import { useScans } from "@/hooks/use-scans";
+import { SPECIALTY_LABEL } from "@shared/dermSpecialties";
+import { formatF } from "@shared/delivery";
+import { cn } from "@/lib/utils";
 
-// Annuaire public des dermatologues certifiés — /dermatologues. Sans auth, indexable.
-interface Derm {
-  slug: string; fullName: string; city?: string; photoUrl?: string | null;
-  specialties: string[]; certified: boolean; available: boolean; price: number;
-}
+// ════════════════════════════════════════════════════════════════════════
+// Dermatologues (refonte Organic) — maquette « GlowScan App » › Dermatologues.
+// Filtre par spécialité, délai de réponse RÉEL (médiane, affiché à partir de
+// 3 consultations), prix fixé par chaque médecin. Mène à « Réserver » (/dr/:slug).
+// ════════════════════════════════════════════════════════════════════════
 
-const SPECIALTY_LABELS: Record<string, string> = {
-  acne: "Acné", taches: "Taches", hyperpigmentation: "Hyperpigmentation", cheloides: "Chéloïdes",
-  eczema: "Eczéma", cheveux: "Cheveux", peaux_melanisees: "Peaux mélanisées",
-  anti_age: "Anti-âge", pediatrie: "Pédiatrie", esthetique: "Esthétique",
+type Derm = {
+  id: number; fullName: string; city: string | null; price: number; slug: string | null;
+  specialties: string[]; recommendedFor: boolean; rating: number; ratingsCount: number;
+  responseHours: number | null; certified: boolean; photoUrl: string | null;
 };
-const specLabel = (s: string) => SPECIALTY_LABELS[s] || s.replace(/_/g, " ");
+
+const initials = (n: string) => n.replace(/^(dr|pr)\.?\s+/i, "").split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join("");
+const drName = (n: string) => (/^(dr|pr)\.?\s/i.test(n) ? n : `Dr ${n}`);
+const AVATAR_BG = ["var(--color-accent-2-500)", "var(--color-accent)", "var(--color-accent-700)"];
 
 export default function DermPublicList() {
+  const [, setLocation] = useLocation();
+  const { data: scans } = useScans();
   const [derms, setDerms] = useState<Derm[]>([]);
+  const [recoLabel, setRecoLabel] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [q, setQ] = useState("");
-  const [spec, setSpec] = useState<string>("");
+  const [spec, setSpec] = useState<string>("all");
+  const urgent = new URLSearchParams(window.location.search).get("urgent") === "1";
 
   useSEO({
     title: "Dermatologues certifiés — Peaux africaines | GlowScan",
-    description: "Trouvez un dermatologue certifié GlowScan spécialiste des peaux mélanisées (Fitzpatrick IV–VI). Consultation en ligne dès 2 000 FCFA.",
+    description: "Trouvez un dermatologue spécialiste des peaux mélanisées (phototypes IV à VI). Consultation en ligne, paiement Mobile Money.",
     canonical: "https://glow-scan.com/dermatologues",
   });
 
+  const lastCondition: string | null = Array.isArray(scans) && scans.length ? (scans[0] as any).condition || null : null;
   useEffect(() => {
-    fetch("/api/public/dermatologues").then((r) => r.json())
-      .then((d) => setDerms(d.dermatologues || [])).catch(() => setDerms([])).finally(() => setLoading(false));
-  }, []);
+    setLoading(true);
+    fetch(`/api/b2c/dermatologists${lastCondition ? `?condition=${encodeURIComponent(lastCondition)}` : ""}`)
+      .then((r) => r.json())
+      .then((d) => { setDerms(Array.isArray(d.dermatologists) ? d.dermatologists : []); setRecoLabel(d.recommendedLabel || null); })
+      .catch(() => setDerms([]))
+      .finally(() => setLoading(false));
+  }, [lastCondition]);
 
-  const allSpecs = useMemo(() => {
-    const s = new Set<string>(); derms.forEach((d) => d.specialties.forEach((x) => s.add(x))); return Array.from(s);
+  const specs = useMemo(() => {
+    const set = new Set<string>();
+    derms.forEach((d) => d.specialties.forEach((s) => set.add(s)));
+    return Array.from(set).filter((s) => SPECIALTY_LABEL[s]);
   }, [derms]);
-
-  const filtered = derms.filter((d) => {
-    if (spec && !d.specialties.includes(spec)) return false;
-    if (q.trim()) { const t = `${d.fullName} ${d.city || ""}`.toLowerCase(); if (!t.includes(q.toLowerCase())) return false; }
-    return true;
-  });
+  const list = derms.filter((d) => spec === "all" || d.specialties.includes(spec));
+  const chip = (on: boolean) => cn(
+    "whitespace-nowrap rounded-pill border px-4 py-[9px] text-[14px] font-semibold",
+    on ? "border-organic-accent bg-organic-accent text-organic-bg" : "border-organic-divider bg-transparent text-organic-text",
+  );
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f6f7fb", fontFamily: '-apple-system, system-ui, sans-serif' }}>
-      {/* Bandeau */}
-      <div style={{ background: "linear-gradient(135deg,#7c3aed,#a78bfa)", padding: "28px 18px 22px", color: "#fff" }}>
-        <div style={{ maxWidth: 640, margin: "0 auto" }}>
-          <h1 style={{ fontSize: 22, fontWeight: 900, margin: 0 }}>Dermatologues certifiés</h1>
-          <p style={{ fontSize: 13, opacity: 0.9, margin: "4px 0 0" }}>Spécialistes des peaux africaines (Fitzpatrick IV–VI) · Consultation en ligne</p>
-        </div>
-      </div>
-
-      <div style={{ maxWidth: 640, margin: "0 auto", padding: "16px 18px 60px" }}>
-        {/* Recherche + filtres */}
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Rechercher par nom ou ville…"
-          style={{ width: "100%", boxSizing: "border-box", padding: "12px 14px", borderRadius: 12, border: "1px solid rgba(0,0,0,0.1)", fontSize: 13, marginBottom: 10 }} />
-        {allSpecs.length > 0 && (
-          <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 6, marginBottom: 12 }}>
-            <button onClick={() => setSpec("")} style={chip(spec === "")}>Tous</button>
-            {allSpecs.map((s) => <button key={s} onClick={() => setSpec(s)} style={chip(spec === s)}>{specLabel(s)}</button>)}
+    <div className="min-h-screen bg-organic-bg font-body text-organic-text">
+      <main className="mx-auto flex max-w-[480px] flex-col gap-4 px-5 pb-6 pt-4">
+        <button type="button" onClick={() => setLocation("/consultations")} className="flex items-center gap-1 self-start border-0 bg-transparent p-0 font-bold text-organic-accent-700">
+          <ArrowLeft size={18} strokeWidth={1.75} /> Messages
+        </button>
+        <h1 className="m-0 text-[28px]">Dermatologues</h1>
+        {urgent && (
+          <div className="rounded-lg bg-organic-accent-800 p-4 text-[13px] text-organic-neutral-100">
+            Choisissez un médecin qui répond vite : votre analyse demande un examen rapide.
+          </div>
+        )}
+        {specs.length > 0 && (
+          <div className="-mx-5 flex gap-1.5 overflow-x-auto px-5 pb-1">
+            <button type="button" className={chip(spec === "all")} onClick={() => setSpec("all")}>Tous</button>
+            {specs.map((s) => <button key={s} type="button" className={chip(spec === s)} onClick={() => setSpec(s)}>{SPECIALTY_LABEL[s]}</button>)}
           </div>
         )}
 
-        {loading && <p style={{ color: "#9ca3af", fontSize: 13, textAlign: "center", padding: 20 }}>Chargement…</p>}
-        {!loading && filtered.length === 0 && (
-          <div style={{ background: "#fff", borderRadius: 16, padding: 24, textAlign: "center" }}>
-            <div style={{ fontSize: 34 }}>👩🏾‍⚕️</div>
-            <p style={{ fontSize: 13, color: "#6b7280", margin: "8px 0 0" }}>Aucun dermatologue certifié pour l'instant. Reviens bientôt !</p>
-          </div>
+        {loading ? (
+          <span className="text-[13px] text-organic-neutral-700">Chargement…</span>
+        ) : list.length === 0 ? (
+          <span className="text-[13px] text-organic-neutral-700">Aucun dermatologue disponible pour le moment.</span>
+        ) : (
+          (urgent ? [...list].sort((a, b) => (a.responseHours ?? 999) - (b.responseHours ?? 999)) : list).map((d, i) => (
+            <button
+              key={d.id}
+              type="button"
+              disabled={!d.slug}
+              onClick={() => d.slug && setLocation(`/dr/${d.slug}${urgent ? "?urgent=1" : ""}`)}
+              className="flex flex-col gap-2.5 rounded-lg border-0 bg-organic-surface p-4 text-left text-organic-text disabled:opacity-60"
+            >
+              <span className="flex items-center gap-3">
+                {d.photoUrl
+                  ? <img src={d.photoUrl} alt="" className="h-12 w-12 flex-none rounded-pill object-cover" />
+                  : <span className="flex h-12 w-12 flex-none items-center justify-center rounded-pill text-[15px] font-bold text-organic-bg" style={{ background: AVATAR_BG[i % AVATAR_BG.length] }}>{initials(d.fullName)}</span>}
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <span className="text-[15px] font-bold">{drName(d.fullName)}</span>
+                  <span className="text-[12px] text-organic-neutral-700">
+                    {d.city}
+                    {d.ratingsCount > 0 && <span className="ml-1 inline-flex items-center gap-0.5">{d.city ? "· " : ""}<Star size={12} strokeWidth={1.75} className="text-organic-accent-400" /> {String(d.rating).replace(".", ",")}</span>}
+                  </span>
+                </span>
+                <span className="flex-none text-[14px] font-bold">{formatF(d.price)}</span>
+              </span>
+              <span className="flex flex-wrap gap-1.5">
+                {d.recommendedFor && recoLabel && <span className="rounded-pill bg-organic-accent-2-100 px-2.5 py-[3px] text-[11px] text-organic-accent-2-800">Adapté à votre cas</span>}
+                {d.specialties.slice(0, 2).map((s) => SPECIALTY_LABEL[s] && <span key={s} className="rounded-pill bg-organic-neutral-100 px-2.5 py-[3px] text-[11px] text-organic-neutral-800">{SPECIALTY_LABEL[s]}</span>)}
+                {d.responseHours !== null && <span className="rounded-pill bg-organic-accent-100 px-2.5 py-[3px] text-[11px] text-organic-accent-800">Répond en {d.responseHours} h environ</span>}
+              </span>
+            </button>
+          ))
         )}
-
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {filtered.map((d) => (
-            <Link key={d.slug} href={`/dr/${d.slug}`} style={{ textDecoration: "none" }}>
-              <div style={{ background: "#fff", borderRadius: 16, padding: 14, display: "flex", gap: 12, alignItems: "center" }}>
-                {d.photoUrl ? (
-                  <img src={d.photoUrl} alt={d.fullName} style={{ width: 56, height: 56, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
-                ) : (
-                  <div style={{ width: 56, height: 56, borderRadius: "50%", background: "linear-gradient(135deg,#a78bfa,#7c3aed)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, flexShrink: 0 }}>👩🏾‍⚕️</div>
-                )}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontSize: 14, fontWeight: 800, color: "#1a1a2e", margin: 0, display: "flex", alignItems: "center", gap: 5 }}>
-                    Dr {d.fullName.replace(/^dr\.?\s*/i, "")}
-                    {d.certified && <span title="Certifié GlowScan" style={{ color: "#7c3aed", fontSize: 13 }}>✦</span>}
-                  </p>
-                  <p style={{ fontSize: 11.5, color: "#6b7280", margin: "2px 0 0" }}>
-                    {d.city ? `${d.city} · ` : ""}{d.available ? <span style={{ color: "#059669" }}>🟢 Disponible</span> : <span style={{ color: "#dc2626" }}>🔴 Indisponible</span>}
-                  </p>
-                  {d.specialties.length > 0 && (
-                    <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 5 }}>
-                      {d.specialties.slice(0, 3).map((s) => (
-                        <span key={s} style={{ fontSize: 10, fontWeight: 700, color: "#7c3aed", background: "rgba(124,58,237,0.08)", borderRadius: 9999, padding: "2px 8px" }}>{specLabel(s)}</span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <div style={{ textAlign: "right", flexShrink: 0 }}>
-                  <p style={{ fontSize: 13, fontWeight: 800, color: "#7c3aed", margin: 0 }}>{d.price.toLocaleString("fr-FR")}</p>
-                  <p style={{ fontSize: 9, color: "#9ca3af", margin: 0 }}>FCFA</p>
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </div>
+      </main>
     </div>
   );
-}
-
-function chip(active: boolean): React.CSSProperties {
-  return {
-    flexShrink: 0, fontSize: 12, fontWeight: 700, padding: "7px 13px", borderRadius: 9999, cursor: "pointer", whiteSpace: "nowrap",
-    background: active ? "#7c3aed" : "#fff", color: active ? "#fff" : "#4b5563", border: `1px solid ${active ? "#7c3aed" : "rgba(0,0,0,0.1)"}`,
-  };
 }

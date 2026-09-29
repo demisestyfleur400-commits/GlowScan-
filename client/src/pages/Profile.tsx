@@ -1,473 +1,219 @@
-import { useAuth } from "@/hooks/use-auth";
-import { useScans } from "@/hooks/use-scans";
-import { useSubscription } from "@/hooks/use-subscription";
-import { GsTopBar } from "@/components/GsTopBar";
-import { ResultB2C } from "@/components/b2c/ResultB2C";
-import { GS, GsMono, GsMarks, useGsFonts } from "@/lib/gs-ui";
-import {
-  Loader2, ArrowLeft, ArrowRight, ChevronRight, Settings, ScanFace,
-  MessageCircle, Package, FileText, ListChecks, GitCompare, Download,
-  ShieldCheck, Trash2, Check, X, Calendar,
-} from "lucide-react";
-import { useState, useEffect, useRef } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
-import type { AnalysisResult } from "@shared/schema";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Lock } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
+import { useSubscription } from "@/hooks/use-subscription";
+import { useToast } from "@/hooks/use-toast";
+import { setUserConsent } from "@/components/ConsentBanner";
+import { formatF } from "@shared/delivery";
+import { cn } from "@/lib/utils";
 
 // ════════════════════════════════════════════════════════════════════════
-// PROFIL PATIENT — refonte fidèle au design (Profil.dc.html) : trois écrans
-//   PR1 Profil       — état de la peau + prochaine action + raccourcis
-//   PR2 Historique   — timeline analyses / consultations / achats + comparaison
-//   PR3 Réglages     — compte, rappels, données de santé (RGPD)
-// Langage gs-ui (encre/turquoise, IBM Plex, angles droits). Tout est câblé aux
-// vraies données/endpoints — aucun bouton mort. Fidélité/parrainage retirés.
+// Profil (refonte Organic) — maquette « GlowScan App » › Profil.
+// Consentements séparés (soins verrouillé, recherche, rappels WhatsApp),
+// rappels de suivi (réactivables par le patient seul), journal « Qui a
+// consulté mon dossier », commandes, export et suppression des données.
 // ════════════════════════════════════════════════════════════════════════
 
-const AREA_LABELS: Record<string, string> = { face: "Visage", body: "Corps", hair: "Cheveux" };
-
-type ScanRecord = {
-  id: number; area: string; condition: string | null; analysis: string | null;
-  recommendations: unknown; score: number | null; motivation: string | null;
-  createdAt: Date | null; imageUrl: string | null;
+type Consents = {
+  care: true; research: boolean; reminders: boolean; remindersStoppedAt: string | null; phone: string | null;
+  followups: { enabled: boolean; stoppedAt: string | null };
 };
+type AccessEntry = { at: string; role: string; name: string | null };
+type OrderRow = { orderNumber: string; totalPrice: number; status: string; createdAt: string; payMethod?: string | null };
 
-function scanToAnalysisResult(scan: ScanRecord): AnalysisResult {
-  const recs = (scan.recommendations as any) || {};
-  if (recs._fullResult) return recs._fullResult as AnalysisResult;
-  return {
-    // Ancien scan sans résultat complet : on n'invente aucune mesure
-    // (type de peau et indicateurs absents → masqués dans le Résultat).
-    condition: scan.condition || "Analyse", severity: "", score: scan.score as number, // null reste null → état « unusable »
-    skinType: "", details: scan.analysis || "", motivation: scan.motivation || "",
-    stats: { lesions: "–", zones: "–", pores: "–", marks: "–" },
-    balance: undefined as unknown as AnalysisResult["balance"],
-    recommendations: {
-      products: Array.isArray(recs.products) ? recs.products : [],
-      morning: Array.isArray(recs.morning) ? recs.morning : [],
-      evening: Array.isArray(recs.evening) ? recs.evening : [],
-      weekly: recs.weekly || "",
-    },
-  };
-}
+const ORDER_LABEL: Record<string, string> = { received: "Reçue", paid_verified: "Paiement vérifié", shipping: "En livraison", delivered: "Livrée" };
+const ROLE_LABEL: Record<string, string> = { derm: "Dermatologue", secretary: "Secrétariat du cabinet", relay: "Relais de santé" };
+const fmtDate = (d: string, withTime = false) => new Date(d).toLocaleDateString("fr-FR", withTime ? { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" } : { day: "numeric", month: "long" });
+const drName = (n: string) => (/^(dr|pr)\.?\s/i.test(n) ? n : `Dr ${n}`);
 
-const fmtDate = (d: Date | string | null | undefined, opts?: Intl.DateTimeFormatOptions) =>
-  d ? new Date(d).toLocaleDateString("fr-FR", opts || { day: "2-digit", month: "short" }) : "";
-const fmtShort = (d: Date | string | null | undefined) =>
-  d ? new Date(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" }) : "";
-
-// ── Modale : détail d'une analyse (Résultat patient Organic) ─────────────
-function ScanDetailModal({ scan, onClose }: { scan: ScanRecord; onClose: () => void }) {
-  const result = scanToAnalysisResult(scan);
+function Switch({ on, locked, onClick, label }: { on: boolean; locked?: boolean; onClick?: () => void; label: string }) {
   return (
-    <div data-clarity-mask="true" className="fixed inset-0 z-[300] overflow-y-auto bg-organic-bg">
-      <div className="mx-auto max-w-[640px] px-5 pb-10 pt-4">
-        <ResultB2C
-          result={result}
-          area={scan.area || "face"}
-          imageUrl={(scan as any).imageUrl || null}
-          createdAt={scan.createdAt}
-          scanId={scan.id}
-          onBack={onClose}
-        />
-      </div>
-    </div>
-  );
-}
-
-// ── Modale : comparaison de deux analyses ─────────────────────────────────
-function CompareModal({ scanA, scanB, onClose }: { scanA: ScanRecord; scanB: ScanRecord; onClose: () => void }) {
-  const delta = (scanB.score || 0) - (scanA.score || 0);
-  const deltaColor = delta > 0 ? GS.teal : delta < 0 ? GS.red : GS.muted;
-  return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 300, background: GS.mintBg, overflowY: "auto", fontFamily: GS.sans }}>
-      <div style={{ position: "sticky", top: 0, zIndex: 10, display: "flex", alignItems: "center", gap: 14, padding: "12px 16px", background: "#fff", borderBottom: `1px solid ${GS.line}` }}>
-        <button onClick={onClose} aria-label="Retour" style={{ background: "none", border: "none", cursor: "pointer", color: GS.ink, display: "flex", padding: 0 }}><ArrowLeft className="w-5 h-5" /></button>
-        <div style={{ fontSize: 15, fontWeight: 600, color: GS.ink }}>Comparaison</div>
-      </div>
-      <div style={{ maxWidth: 560, margin: "0 auto", padding: "18px 16px 40px", display: "flex", flexDirection: "column", gap: 14 }}>
-        <div style={{ border: `1px solid ${GS.line}`, padding: 16 }}>
-          <GsMono style={{ display: "block", marginBottom: 14 }}>Évolution du Glow Score</GsMono>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-            <div style={{ flex: 1, textAlign: "center" }}>
-              <GsMono style={{ letterSpacing: 0 }}>{fmtDate(scanA.createdAt, { day: "numeric", month: "short", year: "numeric" })}</GsMono>
-              <div style={{ fontFamily: GS.mono, fontSize: 34, fontWeight: 600, color: GS.ink, letterSpacing: "-1px", marginTop: 4 }}>{scanA.score ?? 0}</div>
-              <div style={{ fontSize: 11, color: GS.muted, marginTop: 2 }}>{AREA_LABELS[scanA.area] || scanA.area}</div>
-            </div>
-            <div style={{ textAlign: "center", flex: "none" }}>
-              <div style={{ fontFamily: GS.mono, fontSize: 22, fontWeight: 600, color: deltaColor }}>{delta > 0 ? `+${delta}` : delta}</div>
-              <GsMono style={{ letterSpacing: 0 }}>PTS</GsMono>
-            </div>
-            <div style={{ flex: 1, textAlign: "center" }}>
-              <GsMono style={{ letterSpacing: 0 }}>{fmtDate(scanB.createdAt, { day: "numeric", month: "short", year: "numeric" })}</GsMono>
-              <div style={{ fontFamily: GS.mono, fontSize: 34, fontWeight: 600, color: GS.ink, letterSpacing: "-1px", marginTop: 4 }}>{scanB.score ?? 0}</div>
-              <div style={{ fontSize: 11, color: GS.muted, marginTop: 2 }}>{AREA_LABELS[scanB.area] || scanB.area}</div>
-            </div>
-          </div>
-        </div>
-        <div style={{ border: `1px solid ${GS.line}`, padding: 16 }}>
-          <GsMono style={{ display: "block", marginBottom: 12 }}>Condition détectée</GsMono>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1, background: GS.line, border: `1px solid ${GS.line}` }}>
-            <div style={{ background: "#fff", padding: 12 }}><GsMono style={{ letterSpacing: 0 }}>{fmtDate(scanA.createdAt)}</GsMono><div style={{ fontSize: 13, fontWeight: 600, color: GS.ink, marginTop: 4 }}>{scanA.condition || "–"}</div></div>
-            <div style={{ background: GS.mintBg, padding: 12 }}><GsMono color={GS.teal} style={{ letterSpacing: 0 }}>{fmtDate(scanB.createdAt)}</GsMono><div style={{ fontSize: 13, fontWeight: 600, color: GS.ink, marginTop: 4 }}>{scanB.condition || "–"}</div></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Interrupteur (toggle) au langage design ───────────────────────────────
-function Toggle({ on, onClick }: { on: boolean; onClick: () => void }) {
-  return (
-    <button onClick={onClick} aria-pressed={on} style={{ width: 36, height: 20, flex: "none", padding: 0, cursor: "pointer", position: "relative", background: on ? GS.ink : "#fff", border: on ? "none" : `1px solid ${GS.disabled}`, boxSizing: "border-box" }}>
-      <span style={{ position: "absolute", top: on ? 3 : 2, [on ? "right" : "left"]: on ? 3 : 2, width: 14, height: 14, background: on ? GS.accent : GS.disabled } as React.CSSProperties} />
+    <button type="button" role="switch" aria-checked={on} aria-label={label} disabled={locked} onClick={onClick}
+      className="flex h-7 w-12 flex-none items-center rounded-pill border-0 p-1 disabled:cursor-not-allowed"
+      style={{ justifyContent: on ? "flex-end" : "flex-start", background: on ? "var(--color-accent-2-600)" : "var(--color-neutral-400)" }}>
+      <span className="flex h-5 w-5 items-center justify-center rounded-pill bg-organic-neutral-100">{locked && <Lock size={11} strokeWidth={2} className="text-organic-neutral-700" />}</span>
     </button>
   );
 }
 
 export default function Profile() {
-  const { user, isLoading: authLoading, logout } = useAuth();
-  const { data: scans, isLoading: scansLoading } = useScans();
-  const { isPremium, data: subData } = useSubscription();
   const [, setLocation] = useLocation();
-  useGsFonts();
+  const qc = useQueryClient();
+  const { toast } = useToast();
+  const { user, isLoading: authLoading, logout } = useAuth();
+  const { isPremium } = useSubscription();
+  const { data: consents, isError: consentsError } = useQuery<Consents>({ queryKey: ["/api/me/consents"], enabled: !!user, retry: false });
+  const { data: access } = useQuery<{ entries: AccessEntry[] }>({ queryKey: ["/api/me/access-log"], enabled: !!user });
+  const { data: orders } = useQuery<OrderRow[]>({ queryKey: ["/api/orders"], enabled: !!user, retry: false });
+  const [busy, setBusy] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState("");
 
-  const [view, setView] = useState<"profil" | "history" | "settings">("profil");
-  const [histFilter, setHistFilter] = useState<"tout" | "analyses" | "consult" | "achats">("tout");
-  const [selectedScan, setSelectedScan] = useState<ScanRecord | null>(null);
-  const [compareMode, setCompareMode] = useState(false);
-  const [compareSel, setCompareSel] = useState<number[]>([]);
-  const [compareScans, setCompareScans] = useState<{ a: ScanRecord; b: ScanRecord } | null>(null);
-  const [deleting, setDeleting] = useState(false);
-
-  // Préférences de rappel (par appareil).
-  const [remRoutine, setRemRoutine] = useState(true);
-  const [remRescan, setRemRescan] = useState(true);
-  const [remWhatsapp, setRemWhatsapp] = useState(false);
+  useEffect(() => { if (!authLoading && !user) setLocation("/auth"); }, [authLoading, user, setLocation]);
+  // Ancien lien profond ?scan=<id> : l'historique vit désormais dans Ma peau.
   useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("scan");
+    if (id) setLocation(`/ma-peau?scan=${id}`);
+  }, [setLocation]);
+
+  const save = async (key: "research" | "reminders", value: boolean) => {
+    setBusy(key);
     try {
-      const r = localStorage.getItem("gs_rem_routine"); if (r != null) setRemRoutine(r === "1");
-      const s = localStorage.getItem("gs_rem_rescan"); if (s != null) setRemRescan(s === "1");
-      const w = localStorage.getItem("gs_rem_whatsapp"); if (w != null) setRemWhatsapp(w === "1");
-    } catch {}
-  }, []);
-  const persist = (k: string, v: boolean, set: (b: boolean) => void) => { set(v); try { localStorage.setItem(k, v ? "1" : "0"); } catch {} };
-
-  const { data: consultData } = useQuery<{ consultations: any[] }>({ queryKey: ["/api/consultations/mine"], enabled: !!user });
-  const { data: ordersData } = useQuery<any[]>({ queryKey: ["/api/orders"], enabled: !!user });
-  const { data: routineData } = useQuery<any>({ queryKey: ["/api/routines"], enabled: !!user });
-
-  if (authLoading || scansLoading) {
-    return (
-      <div style={{ minHeight: "100dvh", background: GS.mintBg, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: GS.sans }}>
-        <Loader2 className="w-8 h-8 animate-spin" style={{ color: GS.teal }} />
-      </div>
-    );
-  }
-  if (!user) { window.location.href = "/auth"; return null; }
-
-  const scanList: ScanRecord[] = Array.isArray(scans) ? (scans as any[]) : [];
-  const consultations: any[] = consultData?.consultations || [];
-  const orders: any[] = Array.isArray(ordersData) ? ordersData : [];
-  const routines: any[] = routineData?.routines || [];
-  const evening = routines.find((r) => r.period === "evening");
-  const morning = routines.find((r) => r.period === "morning");
-  const todayCompletions: number[] = routineData?.todayCompletions || [];
-  const streak = routineData?.stats?.streak || 0;
-
-  // ── Métriques dérivées (PR1) ──
-  const scored = scanList.filter((s) => typeof s.score === "number");
-  const latest = scored[0];
-  const latestScore = latest?.score ?? 0;
-  const prevScore = scored[1]?.score ?? null;
-  const scoreDelta = prevScore != null ? latestScore - prevScore : null;
-  const last3 = scored.slice(0, 3).reverse(); // ancien → récent
-  const lastFull: any = (latest?.recommendations as any)?._fullResult || {};
-  const phototype = lastFull.fitzpatrick || lastFull.phototype || null;
-  const skinType = lastFull.skinType || null;
-  const phototypeLine = [phototype ? `PHOTOTYPE ${String(phototype).toUpperCase()}` : null, skinType ? String(skinType).toUpperCase() : null].filter(Boolean).join(" · ") || "PROFIL PATIENT";
-  const daysSince = latest?.createdAt ? Math.floor((Date.now() - new Date(latest.createdAt).getTime()) / 86400000) : null;
-  const nextIn = daysSince != null ? Math.max(0, 7 - daysSince) : null;
-
-  const consultOngoing = consultations.filter((c) => c.status && c.status !== "closed").length;
-  const ordersInDelivery = orders.filter((o) => /livr|shipp|delivery|cours/i.test(String(o.status || ""))).length;
-  const ordonnancesCount = consultations.filter((c) => c.status === "closed" || c.reportStatus).length;
-
-  const eveDone = (evening?.steps || []).filter((s: any) => todayCompletions.includes(s.id)).length;
-  const eveTotal = (evening?.steps || []).length;
-
-  const openScan = (s: ScanRecord) => setSelectedScan(s);
-  // ?scan=<id> (depuis la carte Glow Score de l'Accueil) ouvre directement l'analyse.
-  const deepLinked = useRef(false);
-  useEffect(() => {
-    if (deepLinked.current || !Array.isArray(scans)) return;
-    const id = Number(new URLSearchParams(window.location.search).get("scan"));
-    if (!Number.isFinite(id) || id <= 0) return;
-    const found = (scans as any[]).find((s) => s.id === id);
-    if (found) { deepLinked.current = true; setSelectedScan(found as ScanRecord); }
-  }, [scans]);
-  const toggleCompare = (id: number) => setCompareSel((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : (prev.length >= 2 ? prev : [...prev, id]));
-  const launchCompare = () => {
-    if (compareSel.length < 2) return;
-    const a = scanList.find((s) => s.id === compareSel[0]);
-    const b = scanList.find((s) => s.id === compareSel[1]);
-    if (a && b) {
-      const [x, y] = [a, b].sort((m, n) => new Date(m.createdAt!).getTime() - new Date(n.createdAt!).getTime());
-      setCompareScans({ a: x as ScanRecord, b: y as ScanRecord });
-    }
+      const r = await fetch("/api/me/consents", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ [key]: value }) });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d?.message);
+      // Le choix « recherche » vaut aussi pour les prochaines analyses de cet appareil.
+      if (key === "research") setUserConsent(value ? "accepted" : "declined", user?.id);
+      qc.invalidateQueries({ queryKey: ["/api/me/consents"] });
+    } catch (e: any) {
+      toast({ title: "Réglage non enregistré", description: e?.message || "Réessayez dans un instant.", variant: "destructive" });
+    } finally { setBusy(null); }
   };
-  const doDelete = async () => {
-    if (!confirm("Supprimer définitivement votre compte et toutes vos données ? Cette action est irréversible.")) return;
-    setDeleting(true);
+
+  const resumeFollowups = async () => {
+    setBusy("followups");
     try {
-      const res = await fetch("/api/user/me", { method: "DELETE", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ confirm: "SUPPRIMER" }) });
-      if (res.ok) { window.location.href = "/"; return; }
-      alert("Suppression impossible. Réessayez ou contactez le support.");
-    } catch { alert("Erreur réseau."); } finally { setDeleting(false); }
+      const r = await fetch("/api/me/followups/resume", { method: "POST", credentials: "include" });
+      if (!r.ok) throw new Error();
+      qc.invalidateQueries({ queryKey: ["/api/me/consents"] });
+      toast({ title: "Rappels de suivi réactivés" });
+    } catch { toast({ title: "Réactivation impossible", description: "Réessayez dans un instant.", variant: "destructive" }); }
+    finally { setBusy(null); }
   };
-  const doLogout = () => { try { logout(); } catch {} setLocation("/auth"); };
 
-  const shell = (children: React.ReactNode) => (
-    <div style={{ minHeight: "100dvh", background: GS.mintBg, fontFamily: GS.sans, color: GS.ink }}>
-      <GsTopBar />
-      <div style={{ width: "100%", maxWidth: 460, margin: "0 auto", padding: "16px 24px 40px", boxSizing: "border-box" }}>{children}</div>
-    </div>
-  );
+  const exportData = async () => {
+    setBusy("export");
+    try {
+      const r = await fetch("/api/user/me/export", { credentials: "include" });
+      if (!r.ok) throw new Error();
+      const blob = await r.blob();
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `glowscan-mes-donnees-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    } catch { toast({ title: "Export impossible", description: "Réessayez ou contactez le support.", variant: "destructive" }); }
+    finally { setBusy(null); }
+  };
 
-  // ════════ PR3 · RÉGLAGES & DONNÉES ════════
-  if (view === "settings") {
-    const rowLine: React.CSSProperties = { padding: 12, borderBottom: `1px solid ${GS.hair}`, display: "flex", alignItems: "center", gap: 10, justifyContent: "space-between" };
-    return shell(<>
-      <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 18 }}>
-        <button onClick={() => setView("profil")} aria-label="Retour" style={{ background: "none", border: "none", cursor: "pointer", color: GS.ink, display: "flex", padding: 0 }}><ArrowLeft className="w-5 h-5" /></button>
-        <div style={{ fontSize: 19, fontWeight: 600, letterSpacing: "-.4px" }}>Réglages</div>
-      </div>
+  const deleteAccount = async () => {
+    if (confirmDelete !== "SUPPRIMER") return;
+    setBusy("delete");
+    try {
+      const r = await fetch("/api/user/me", { method: "DELETE", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ confirm: "SUPPRIMER" }) });
+      if (!r.ok) throw new Error();
+      toast({ title: "Compte supprimé", description: "Toutes vos données ont été effacées." });
+      setTimeout(() => { window.location.href = "/"; }, 1200);
+    } catch { toast({ title: "Suppression impossible", description: "Réessayez ou contactez le support.", variant: "destructive" }); setBusy(null); }
+  };
 
-      <GsMono style={{ display: "block", marginBottom: 8 }}>Compte</GsMono>
-      <div style={{ border: `1px solid ${GS.line}`, marginBottom: 16 }}>
-        <div style={rowLine}><span style={{ fontSize: 12, color: GS.muted }}>Téléphone</span><span style={{ fontFamily: GS.mono, fontSize: 12, color: GS.ink }}>{(user as any).phone || "—"}</span></div>
-        <div style={rowLine}><span style={{ fontSize: 12, color: GS.muted }}>Email</span><span style={{ fontSize: 12, color: GS.ink, wordBreak: "break-all" }}>{(user as any).email || "—"}</span></div>
-        <div style={{ ...rowLine, borderBottom: "none" }}><span style={{ fontSize: 12, color: GS.muted }}>Mot de passe · 2FA email</span><GsMono color={GS.teal} style={{ letterSpacing: 0 }}>ACTIVÉE</GsMono></div>
-      </div>
+  const name = [user?.firstName, user?.lastName].filter(Boolean).join(" ") || user?.email || "";
+  const card = "flex flex-col gap-3 rounded-lg bg-organic-surface p-4";
+  const row = "flex items-center gap-3";
 
-      <GsMono style={{ display: "block", marginBottom: 8 }}>Rappels</GsMono>
-      <div style={{ border: `1px solid ${GS.line}`, marginBottom: 16 }}>
-        <div style={rowLine}><span style={{ flex: 1, fontSize: 12, color: GS.ink }}>Routine matin et soir</span><Toggle on={remRoutine} onClick={() => persist("gs_rem_routine", !remRoutine, setRemRoutine)} /></div>
-        <div style={rowLine}><span style={{ flex: 1, fontSize: 12, color: GS.ink }}>Nouvelle analyse conseillée</span><Toggle on={remRescan} onClick={() => persist("gs_rem_rescan", !remRescan, setRemRescan)} /></div>
-        <div style={{ ...rowLine, borderBottom: "none" }}><span style={{ flex: 1, fontSize: 12, color: GS.ink }}>Messages sur WhatsApp</span><Toggle on={remWhatsapp} onClick={() => persist("gs_rem_whatsapp", !remWhatsapp, setRemWhatsapp)} /></div>
-      </div>
+  return (
+    <div className="min-h-screen bg-organic-bg font-body text-organic-text">
+      <main className="mx-auto flex max-w-[480px] flex-col gap-4 px-5 pb-6 pt-4">
+        <div className="flex items-center gap-3">
+          <span className="flex h-14 w-14 flex-none items-center justify-center rounded-pill bg-organic-accent-200 text-[20px] font-bold text-organic-accent-800">{(name || "U").charAt(0).toUpperCase()}</span>
+          <span className="flex flex-col">
+            <h1 className="m-0 text-[26px]">{name}</h1>
+            {user?.email && !String(user.email).endsWith("@phone.glowscan.cm") && <span className="text-[12px] text-organic-neutral-700">{user.email}</span>}
+          </span>
+        </div>
 
-      <GsMono style={{ display: "block", marginBottom: 8 }}>Mes données de santé</GsMono>
-      <div style={{ border: `1px solid ${GS.line}`, marginBottom: 24 }}>
-        <a href="/api/user/me/export" style={{ ...rowLine, textDecoration: "none" }}><Download size={16} style={{ color: GS.ink, flex: "none" }} /><span style={{ flex: 1, fontSize: 12, color: GS.ink }}>Exporter mon dossier (données + photos)</span><ChevronRight size={15} style={{ color: GS.faint, flex: "none" }} /></a>
-        <a href="/confidentialite" style={{ ...rowLine, textDecoration: "none" }}><ShieldCheck size={16} style={{ color: GS.ink, flex: "none" }} /><span style={{ flex: 1, fontSize: 12, color: GS.ink }}>Consentements &amp; confidentialité</span><ChevronRight size={15} style={{ color: GS.faint, flex: "none" }} /></a>
-        <button onClick={doDelete} disabled={deleting} style={{ ...rowLine, borderBottom: "none", width: "100%", background: "none", border: "none", cursor: "pointer", textAlign: "left" }}><Trash2 size={16} style={{ color: GS.red, flex: "none" }} /><span style={{ flex: 1, fontSize: 12, color: GS.red }}>{deleting ? "Suppression…" : "Supprimer mon compte"}</span><ChevronRight size={15} style={{ color: GS.faint, flex: "none" }} /></button>
-      </div>
+        <button type="button" onClick={() => setLocation("/premium")} className="flex items-center gap-3 rounded-lg border-0 bg-organic-surface p-4 text-left text-organic-text">
+          <span className="flex flex-1 flex-col">
+            <span className="text-[12px] text-organic-neutral-700">Formule</span>
+            <span className="text-[16px] font-bold">{isPremium ? "Premium" : "Gratuit"}</span>
+            <span className="text-[12px] text-organic-neutral-700">{isPremium ? "Analyses et scans produit illimités, Assistant" : "1 analyse et 3 scans produit par semaine"}</span>
+          </span>
+          <span className="rounded-pill bg-organic-accent-100 px-2.5 py-[3px] text-[11px] text-organic-accent-800">{isPremium ? "Gérer" : "Passer Premium"}</span>
+        </button>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        <a href="https://wa.me/237674377959" target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", gap: 11, border: `1px solid ${GS.line}`, padding: 12, textDecoration: "none" }}>
-          <MessageCircle size={16} style={{ color: GS.teal, flex: "none" }} /><span style={{ flex: 1, fontSize: 12, color: GS.ink }}>Aide · WhatsApp GlowScan</span><ArrowRight size={15} style={{ color: GS.ink, flex: "none" }} />
-        </a>
-        <button onClick={doLogout} style={{ background: "#fff", border: `1px solid ${GS.ink}`, color: GS.ink, padding: 14, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>Se déconnecter</button>
-      </div>
-    </>);
-  }
-
-  // ════════ PR2 · HISTORIQUE ════════
-  if (view === "history") {
-    type Item = { kind: "analyse" | "consult" | "achat"; date: Date | null; scan?: ScanRecord; node: React.ReactNode };
-    const items: Item[] = [];
-    if (histFilter === "tout" || histFilter === "achats") {
-      orders.forEach((o) => {
-        const first = Array.isArray(o.items) && o.items[0] ? (typeof o.items[0] === "string" ? o.items[0] : o.items[0]?.name) : "Commande";
-        const amount = o.total ?? o.amount ?? o.totalFcfa;
-        items.push({ kind: "achat", date: o.createdAt ? new Date(o.createdAt) : null, node: (
-          <div style={{ position: "relative", border: `1px solid ${GS.line}`, padding: 12 }}>
-            <span style={{ position: "absolute", left: -22, top: 15, width: 9, height: 9, background: GS.accent }} />
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}><GsMono color={GS.teal} style={{ letterSpacing: ".06em" }}>COMMANDE{o.status ? ` · ${String(o.status).toUpperCase()}` : ""}</GsMono><GsMono style={{ letterSpacing: 0 }}>{fmtShort(o.createdAt)}</GsMono></div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: GS.ink, marginTop: 5 }}>{first}</div>
-            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}><GsMono style={{ letterSpacing: 0 }}>{o.orderNumber || ""}</GsMono>{amount != null && <span style={{ fontFamily: GS.mono, fontSize: 11, fontWeight: 600, color: GS.ink }}>{Number(amount).toLocaleString("fr-FR")} F</span>}</div>
+        {/* Consentements séparés */}
+        <div className={card}>
+          <span className="text-[13px] font-bold">Mes consentements</span>
+          {consentsError && <span className="text-[12px] text-organic-accent-700">Réglages indisponibles pour le moment.</span>}
+          <div className={row}>
+            <span className="flex flex-1 flex-col"><span className="text-[14px] font-semibold">Partager avec mes médecins</span><span className="text-[12px] text-organic-neutral-700">Nécessaire pour consulter</span></span>
+            <Switch on locked label="Partager avec mes médecins (obligatoire)" />
           </div>
-        ) });
-      });
-    }
-    if (histFilter === "tout" || histFilter === "consult") {
-      consultations.forEach((c) => {
-        items.push({ kind: "consult", date: c.createdAt ? new Date(c.createdAt) : null, node: (
-          <div style={{ position: "relative", border: `1px solid ${GS.line}`, padding: 12 }}>
-            <span style={{ position: "absolute", left: -22, top: 15, width: 9, height: 9, border: `1px solid ${GS.accent}`, background: GS.mintTint }} />
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}><GsMono color={GS.teal} style={{ letterSpacing: ".06em" }}>CONSULTATION{c.status ? ` · ${String(c.status).toUpperCase()}` : ""}</GsMono><GsMono style={{ letterSpacing: 0 }}>{fmtShort(c.createdAt)}</GsMono></div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: GS.ink, marginTop: 5 }}>{c.condition || "Consultation dermatologue"}</div>
-            {c.reportStatus && <div style={{ fontSize: 11, color: GS.muted, marginTop: 3 }}>Compte rendu transmis</div>}
+          <div className={row}>
+            <span className="flex flex-1 flex-col"><span className="text-[14px] font-semibold">Aider la recherche</span><span className="text-[12px] text-organic-neutral-700">Photos anonymisées pour l'atlas des peaux africaines</span></span>
+            <Switch on={!!consents?.research} label="Aider la recherche" onClick={() => consents && busy !== "research" && save("research", !consents.research)} />
           </div>
-        ) });
-      });
-    }
-    if (histFilter === "tout" || histFilter === "analyses") {
-      scanList.forEach((s) => {
-        items.push({ kind: "analyse", date: s.createdAt ? new Date(s.createdAt) : null, scan: s, node: (
-          <button onClick={() => openScan(s)} style={{ position: "relative", border: `1px solid ${GS.line}`, padding: 12, display: "flex", gap: 12, alignItems: "center", width: "100%", background: "#fff", cursor: "pointer", textAlign: "left" }}>
-            <span style={{ position: "absolute", left: -22, top: 15, width: 9, height: 9, border: `1px solid ${GS.disabled}`, background: "#fff" }} />
-            <div style={{ width: 46, height: 46, flex: "none", background: GS.panel, border: `1px solid ${GS.line}`, overflow: "hidden" }}>{s.imageUrl && <img src={s.imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}><GsMono style={{ letterSpacing: ".06em" }}>ANALYSE · {(AREA_LABELS[s.area] || s.area).toUpperCase()}</GsMono><GsMono style={{ letterSpacing: 0 }}>{fmtShort(s.createdAt)}</GsMono></div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: 5 }}><span style={{ fontSize: 13, fontWeight: 600, color: GS.ink }}>{s.condition || "Analyse"}</span><span style={{ fontFamily: GS.mono, fontSize: 13, fontWeight: 600, color: GS.ink }}>{s.score ?? "–"}</span></div>
-            </div>
-          </button>
-        ) });
-      });
-    }
-    items.sort((a, b) => (b.date?.getTime() || 0) - (a.date?.getTime() || 0));
-    const filters: { k: typeof histFilter; label: string }[] = [
-      { k: "tout", label: "TOUT" }, { k: "analyses", label: "ANALYSES" }, { k: "consult", label: "CONSULT." }, { k: "achats", label: "ACHATS" },
-    ];
-    return shell(<>
-      <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 16 }}>
-        <button onClick={() => { setView("profil"); setCompareMode(false); setCompareSel([]); }} aria-label="Retour" style={{ background: "none", border: "none", cursor: "pointer", color: GS.ink, display: "flex", padding: 0 }}><ArrowLeft className="w-5 h-5" /></button>
-        <div style={{ fontSize: 19, fontWeight: 600, letterSpacing: "-.4px" }}>Historique</div>
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", border: `1px solid ${GS.ink}`, marginBottom: 16 }}>
-        {filters.map((f, i) => {
-          const on = histFilter === f.k;
-          return <button key={f.k} onClick={() => setHistFilter(f.k)} style={{ padding: "10px 0", textAlign: "center", fontFamily: GS.mono, fontSize: 9, fontWeight: 600, letterSpacing: ".06em", cursor: "pointer", border: "none", borderLeft: i > 0 ? `1px solid ${GS.ink}` : "none", background: on ? GS.ink : "#fff", color: on ? "#fff" : GS.ink }}>{f.label}</button>;
-        })}
-      </div>
-
-      {compareMode && (
-        <div style={{ border: `1px solid ${GS.accent}`, background: GS.mintBg, padding: 12, marginBottom: 14, display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ flex: 1, fontSize: 12, color: GS.ink }}>Sélectionnez 2 analyses · {compareSel.length}/2</span>
-          <button disabled={compareSel.length < 2} onClick={launchCompare} style={{ background: compareSel.length < 2 ? GS.disabled : GS.ink, color: "#fff", border: "none", fontFamily: GS.mono, fontSize: 10, fontWeight: 600, padding: "8px 12px", cursor: compareSel.length < 2 ? "not-allowed" : "pointer" }}>COMPARER</button>
-          <button onClick={() => { setCompareMode(false); setCompareSel([]); }} aria-label="Annuler" style={{ background: "none", border: "none", cursor: "pointer", color: GS.muted, display: "flex" }}><X size={16} /></button>
+          <div className={row}>
+            <span className="flex flex-1 flex-col">
+              <span className="text-[14px] font-semibold">Rappels WhatsApp</span>
+              <span className="text-[12px] text-organic-neutral-700">{consents?.phone ? `Au ${consents.phone} · routine, nouvelle analyse` : "Ajoutez un numéro WhatsApp lors d'une analyse"}</span>
+            </span>
+            <Switch on={!!consents?.reminders} locked={!consents?.phone} label="Rappels WhatsApp" onClick={() => consents && busy !== "reminders" && save("reminders", !consents.reminders)} />
+          </div>
         </div>
-      )}
 
-      {items.length === 0 ? (
-        <div style={{ border: `1px solid ${GS.line}`, padding: 24, textAlign: "center", fontSize: 12.5, color: GS.muted }}>Rien pour l'instant dans cette catégorie.</div>
-      ) : (
-        <div style={{ borderLeft: `1px solid ${GS.line}`, paddingLeft: 16, marginLeft: 5, display: "flex", flexDirection: "column", gap: 12 }}>
-          {items.map((it, i) => (
-            compareMode && it.kind === "analyse" && it.scan ? (
-              <button key={i} onClick={() => toggleCompare(it.scan!.id)} style={{ position: "relative", border: `1px solid ${compareSel.includes(it.scan.id) ? GS.ink : GS.line}`, background: compareSel.includes(it.scan.id) ? GS.mintBg : "#fff", padding: 12, display: "flex", gap: 12, alignItems: "center", width: "100%", cursor: "pointer", textAlign: "left" }}>
-                <span style={{ position: "absolute", left: -22, top: 15, width: 9, height: 9, border: `1px solid ${GS.disabled}`, background: "#fff" }} />
-                <span style={{ width: 22, height: 22, flex: "none", border: `1px solid ${GS.ink}`, display: "flex", alignItems: "center", justifyContent: "center", background: compareSel.includes(it.scan.id) ? GS.ink : "#fff" }}>{compareSel.includes(it.scan.id) && <Check size={13} style={{ color: GS.accent }} strokeWidth={3} />}</span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}><GsMono style={{ letterSpacing: ".06em" }}>ANALYSE · {(AREA_LABELS[it.scan.area] || it.scan.area).toUpperCase()}</GsMono><GsMono style={{ letterSpacing: 0 }}>{fmtShort(it.scan.createdAt)}</GsMono></div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: 5 }}><span style={{ fontSize: 13, fontWeight: 600, color: GS.ink }}>{it.scan.condition || "Analyse"}</span><span style={{ fontFamily: GS.mono, fontSize: 13, fontWeight: 600, color: GS.ink }}>{it.scan.score ?? "–"}</span></div>
-                </div>
-              </button>
-            ) : <div key={i}>{it.node}</div>
-          ))}
-        </div>
-      )}
-
-      {scored.length >= 2 && !compareMode && (
-        <div style={{ marginTop: 22 }}>
-          <button onClick={() => { setCompareMode(true); setCompareSel([]); setHistFilter("analyses"); }} style={{ width: "100%", background: "#fff", border: `1px solid ${GS.ink}`, color: GS.ink, padding: 15, display: "flex", alignItems: "center", justifyContent: "center", gap: 10, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
-            <GitCompare size={16} /> Comparer deux analyses
-          </button>
-        </div>
-      )}
-
-      {selectedScan && <ScanDetailModal scan={selectedScan} onClose={() => setSelectedScan(null)} />}
-      {compareScans && <CompareModal scanA={compareScans.a} scanB={compareScans.b} onClose={() => { setCompareScans(null); setCompareMode(false); setCompareSel([]); }} />}
-    </>);
-  }
-
-  // ════════ PR1 · PROFIL ════════
-  const tiles = [
-    { icon: ScanFace, label: "Analyses", meta: `${scanList.length} RAPPORT${scanList.length > 1 ? "S" : ""}`, metaColor: GS.muted, onClick: () => { setHistFilter("analyses"); setView("history"); } },
-    { icon: MessageCircle, label: "Consultations", meta: consultOngoing > 0 ? `${consultOngoing} EN COURS` : `${consultations.length} AU TOTAL`, metaColor: consultOngoing > 0 ? GS.teal : GS.muted, onClick: () => setLocation("/consultations") },
-    { icon: Package, label: "Commandes", meta: ordersInDelivery > 0 ? `${ordersInDelivery} EN LIVRAISON` : `${orders.length} AU TOTAL`, metaColor: GS.muted, onClick: () => { setHistFilter("achats"); setView("history"); } },
-    { icon: FileText, label: "Ordonnances", meta: `${ordonnancesCount} VALABLE${ordonnancesCount > 1 ? "S" : ""}`, metaColor: GS.muted, onClick: () => { setHistFilter("consult"); setView("history"); } },
-  ];
-
-  return shell(<>
-    {/* En-tête profil */}
-    <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-      <div style={{ width: 58, height: 58, flex: "none", border: `1px solid ${GS.line}`, background: GS.panel, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: GS.mono, fontSize: 22, fontWeight: 600, color: GS.ink }}>
-        {(user.firstName || "U").charAt(0).toUpperCase()}
-      </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 19, fontWeight: 600, color: GS.ink, letterSpacing: "-.4px" }}>{user.firstName || "Mon profil"}</div>
-        <GsMono style={{ letterSpacing: 0, marginTop: 3, display: "block" }}>{phototypeLine}</GsMono>
-      </div>
-      <button onClick={() => setView("settings")} aria-label="Réglages" style={{ background: "none", border: "none", cursor: "pointer", color: GS.ink, display: "flex", padding: 4 }}><Settings size={20} /></button>
-    </div>
-
-    {/* Carte Glow Score */}
-    <div style={{ position: "relative", marginTop: 18, border: `1px solid ${GS.ink}`, padding: 16 }}>
-      <GsMarks />
-      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
-        <GsMono style={{ letterSpacing: ".14em" }}>Glow Score · {scored.length} analyse{scored.length > 1 ? "s" : ""}</GsMono>
-        {scoreDelta != null && scoreDelta !== 0 && <GsMono color={GS.teal} style={{ letterSpacing: 0 }}>{scoreDelta > 0 ? `+${scoreDelta}` : scoreDelta} PTS</GsMono>}
-      </div>
-      <div style={{ display: "flex", alignItems: "flex-end", gap: 14, marginTop: 10 }}>
-        <div style={{ fontFamily: GS.mono, fontSize: 40, fontWeight: 600, color: GS.ink, letterSpacing: "-1.5px", lineHeight: 1 }}>{latestScore}<span style={{ fontSize: 14, color: GS.muted }}>/100</span></div>
-        {last3.length >= 2 && (
-          <div style={{ flex: 1, display: "flex", alignItems: "flex-end", gap: 6, height: 44 }}>
-            {last3.map((s, i) => {
-              const isLast = i === last3.length - 1;
-              const h = Math.max(8, Math.round(((s.score || 0) / 100) * 40));
-              return <div key={s.id} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
-                <div style={{ width: "100%", height: h, background: isLast ? GS.grad : (i === last3.length - 2 ? GS.accentMint : "#C9EFE8") }} />
-                <span style={{ fontFamily: GS.mono, fontSize: 8, fontWeight: isLast ? 600 : 400, color: isLast ? GS.ink : GS.muted }}>{s.score}</span>
-              </div>;
-            })}
+        {/* Rappels de suivi du médecin : seul le patient peut les réactiver */}
+        {consents && !consents.followups.enabled && (
+          <div className={card}>
+            <span className="text-[14px] font-semibold">Rappels de suivi désactivés</span>
+            <span className="text-[12px] text-organic-neutral-700">
+              Vous avez répondu ARRÊT SUIVI{consents.followups.stoppedAt ? ` le ${fmtDate(consents.followups.stoppedAt)}` : ""}. Votre médecin ne peut plus vous envoyer de rappel de photo de contrôle.
+            </span>
+            <button type="button" onClick={resumeFollowups} disabled={busy === "followups"} className="self-start rounded-pill border-0 bg-organic-accent px-4 py-2.5 text-[14px] font-bold text-organic-neutral-100 disabled:opacity-45">
+              Réactiver mes rappels de suivi
+            </button>
           </div>
         )}
-      </div>
-      {nextIn != null && (
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 12, paddingTop: 11, borderTop: `1px solid ${GS.line}` }}>
-          <span style={{ fontSize: 12, color: GS.ink }}>Prochaine analyse conseillée</span>
-          <GsMono style={{ letterSpacing: 0, color: GS.ink }}>{nextIn === 0 ? "MAINTENANT" : `DANS ${nextIn} J`}</GsMono>
-        </div>
-      )}
-    </div>
 
-    {/* Bandeau Premium */}
-    {isPremium ? (
-      <button onClick={() => setLocation("/premium")} style={{ marginTop: 12, width: "100%", border: `1px solid ${GS.accent}`, background: GS.mintBg, padding: 13, display: "flex", alignItems: "center", gap: 12, cursor: "pointer", textAlign: "left" }}>
-        <span style={{ background: GS.grad, padding: "4px 8px", fontFamily: GS.mono, fontSize: 9, fontWeight: 700, letterSpacing: ".1em", color: GS.deep, flex: "none" }}>PREMIUM</span>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: GS.ink }}>Actif{subData?.subscription?.expiresAt ? ` jusqu'au ${fmtShort(subData.subscription.expiresAt)}` : ""}</div>
+        {/* Journal d'accès */}
+        <div className={card}>
+          <span className="text-[13px] font-bold">Qui a consulté mon dossier</span>
+          {(access?.entries ?? []).length === 0
+            ? <span className="text-[12px] text-organic-neutral-700">Personne n'a encore ouvert votre dossier.</span>
+            : access!.entries.slice(0, 10).map((e, i) => (
+              <div key={i} className="flex justify-between gap-2 text-[13px]">
+                <span>{e.name ? (e.role === "derm" ? drName(e.name) : e.name) : ROLE_LABEL[e.role] || "Professionnel de santé"}</span>
+                <span className="text-organic-neutral-700">{fmtDate(e.at, true)}</span>
+              </div>
+            ))}
         </div>
-        <GsMono style={{ letterSpacing: 0, color: GS.ink }}>GÉRER</GsMono>
-      </button>
-    ) : (
-      <button onClick={() => setLocation("/premium")} style={{ marginTop: 12, width: "100%", border: `1px solid ${GS.accent}`, background: GS.mintBg, padding: 13, display: "flex", alignItems: "center", gap: 12, cursor: "pointer", textAlign: "left" }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: GS.ink }}>Passer Premium · 2 000 F/mois</div>
-          <GsMono style={{ letterSpacing: 0, marginTop: 3, display: "block" }}>SCAN PRODUIT · ROUTINE · SUIVI</GsMono>
-        </div>
-        <span style={{ background: GS.ink, color: "#fff", padding: "10px 14px", fontSize: 12, fontWeight: 600, flex: "none" }}>Voir</span>
-      </button>
-    )}
 
-    {/* Tuiles */}
-    <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1, background: GS.line, border: `1px solid ${GS.line}` }}>
-      {tiles.map((t) => {
-        const Icon = t.icon;
-        return (
-          <button key={t.label} onClick={t.onClick} style={{ background: "#fff", padding: 13, border: "none", cursor: "pointer", textAlign: "left" }}>
-            <Icon size={18} style={{ color: GS.teal }} />
-            <div style={{ fontSize: 13, fontWeight: 600, color: GS.ink, marginTop: 7 }}>{t.label}</div>
-            <GsMono color={t.metaColor} style={{ letterSpacing: 0, marginTop: 2, display: "block" }}>{t.meta}</GsMono>
+        {/* Commandes */}
+        {Array.isArray(orders) && orders.length > 0 && (
+          <div className={card}>
+            <span className="text-[13px] font-bold">Mes commandes</span>
+            {orders.slice(0, 5).map((o) => (
+              <div key={o.orderNumber} className="flex items-center justify-between gap-2 text-[13px]">
+                <span className="flex flex-col"><b>{o.orderNumber}</b><span className="text-[12px] text-organic-neutral-700">{fmtDate(o.createdAt)} · {formatF(o.totalPrice)}</span></span>
+                <span className={cn("rounded-pill px-2.5 py-[3px] text-[11px]", o.status === "delivered" ? "bg-organic-accent-2-100 text-organic-accent-2-800" : "bg-organic-accent-100 text-organic-accent-800")}>
+                  {o.payMethod === "cash" && o.status === "paid_verified" ? "Confirmée" : ORDER_LABEL[o.status] || o.status}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Mes données */}
+        <div className={card}>
+          <span className="text-[13px] font-bold">Mes données</span>
+          <button type="button" onClick={exportData} disabled={busy === "export"} className="self-start rounded-pill border border-organic-divider bg-transparent px-4 py-2.5 text-[14px] font-bold disabled:opacity-45">
+            Télécharger toutes mes données
           </button>
-        );
-      })}
+          <div className="flex flex-col gap-2 border-t border-organic-divider pt-3">
+            <span className="text-[12px] text-organic-neutral-700">Supprimer mon compte efface définitivement vos analyses, photos et consultations. Tapez SUPPRIMER pour confirmer.</span>
+            <div className="flex gap-2">
+              <input value={confirmDelete} onChange={(e) => setConfirmDelete(e.target.value)} aria-label="Confirmation de suppression"
+                className="h-10 flex-1 rounded-pill border border-organic-divider bg-organic-bg px-3.5 text-[14px] focus-visible:border-organic-accent focus-visible:outline-none" />
+              <button type="button" onClick={deleteAccount} disabled={confirmDelete !== "SUPPRIMER" || busy === "delete"}
+                className="rounded-pill border-0 bg-organic-accent-700 px-4 text-[14px] font-bold text-organic-neutral-100 disabled:opacity-45">Supprimer mon compte</button>
+            </div>
+          </div>
+        </div>
+
+        <button type="button" onClick={() => { try { logout(); } catch { /* ignoré */ } setLocation("/auth"); }}
+          className="rounded-pill border border-organic-divider bg-transparent p-3 text-[14px] font-bold">Se déconnecter</button>
+      </main>
     </div>
-
-    {/* Routine du soir */}
-    <button onClick={() => setLocation("/routine")} style={{ marginTop: 12, width: "100%", border: `1px solid ${GS.line}`, background: "#fff", padding: 13, display: "flex", alignItems: "center", gap: 12, cursor: "pointer", textAlign: "left" }}>
-      <ListChecks size={18} style={{ color: GS.teal, flex: "none" }} />
-      <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 12, fontWeight: 600, color: GS.ink }}>Routine du soir · {eveDone} / {eveTotal}</div>
-        <GsMono style={{ letterSpacing: 0, marginTop: 2, display: "block" }}>{streak > 0 ? `SÉRIE ${streak} JOUR${streak > 1 ? "S" : ""}` : "À COMMENCER"}</GsMono>
-      </div>
-      <ArrowRight size={16} style={{ color: GS.ink, flex: "none" }} />
-    </button>
-
-    {selectedScan && <ScanDetailModal scan={selectedScan} onClose={() => setSelectedScan(null)} />}
-  </>);
+  );
 }

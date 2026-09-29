@@ -6,18 +6,19 @@ Analyse de peau par IA pour les peaux africaines (appli patient) et portail Glow
 
 Les migrations SQL de `migrations/` s'appliquent **à la main, avant le déploiement** du code qui en dépend. Le serveur ne modifie pas ces tables au démarrage. Toutes sont idempotentes : on peut les relancer sans risque.
 
-Refonte Organic (étape 2), dans cet ordre :
+Refonte Organic (étape 2), dans cet ordre : 0013 → 0014 → 0015 → 0016.
 
 | Ordre | Fichier | Contenu |
 |---|---|---|
 | 1 | `0013_consents.sql` | Tables `consents` (consentements séparés, WhatsApp, STOP) et `record_access_log` (« Qui a consulté mon dossier ») |
 | 2 | `0014_product_scans.sql` | Table `product_scans` (quota de 3 scans produit gratuits par semaine) |
 | 3 | `0015_orders_followups.sql` | Colonnes `followups` de `consents` (ARRÊT SUIVI), colonnes de commande de `orders` (total figé, livraison, paiement, capture), anciens statuts convertis (`envoyée` → `received`, `livrée` → `delivered`) |
+| 4 | `0016_consultation_refunds.sql` | Consultations : date de paiement, première réponse du médecin, décision de remboursement à 24 h, ID de transaction du remboursement, alerte 2 h |
 
 Commande (base Postgres / Supabase, variable `DATABASE_URL` ou `SUPABASE_URL`) :
 
 ```bash
-for f in 0013_consents 0014_product_scans 0015_orders_followups; do
+for f in 0013_consents 0014_product_scans 0015_orders_followups 0016_consultation_refunds; do
   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "migrations/$f.sql" || break
 done
 ```

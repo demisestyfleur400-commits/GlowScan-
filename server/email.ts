@@ -185,7 +185,7 @@ export function buildTrialReminderEmail(name: string, daysLeft: number) {
 
 // 5 · Reçu d'abonnement.
 export function buildReceiptEmail(name: string, amountFcfa: number, reference: string, expiresAt: Date) {
-  const subject = `Reçu GlowScan — abonnement activé ✅`;
+  const subject = `Reçu GlowScan — abonnement activé`;
   const body = `
     <p style="font-size:14px;color:#475569;margin:0 0 12px">Merci ${name}, votre abonnement GlowScan est actif.</p>
     <div style="background:#F1F5F9;border:1px solid #E2E8F0;border-radius:12px;padding:14px;margin:0 0 12px;font-size:13px;color:#0F172A">

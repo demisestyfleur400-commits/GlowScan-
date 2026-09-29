@@ -26,6 +26,8 @@ import { isMissingColumnError, ORDERS_MIGRATION_HINT } from "./dbErrors";
 import { recordConsent, stopReminders, verifyStopLinkSig, stopFollowups, followupsStoppedAt, resumeFollowups } from "./consents";
 import { buildResultWhatsApp, resultRequestText, RESULT_REF_RE, isStopMessage, isFollowupStopMessage } from "@shared/whatsappMessages";
 import { RESULT_DISCLAIMER } from "@shared/resultB2C";
+import { splitConsultation } from "@shared/splits";
+import { PREMIUM_PLANS, planOfAmount, type PremiumPlan } from "@shared/premium";
 import { FREE_PRODUCT_SCANS_PER_WEEK, sanitizeIngredients, productVerdict } from "@shared/productSafety";
 import { DELIVERY_FEES, PAY_METHODS, ORDER_WHATSAPP, ORDER_STATUSES, computeOrder, buildOrderWhatsApp, type PayMethod } from "@shared/delivery";
 
@@ -536,7 +538,7 @@ export async function registerRoutes(
       // ── Patient ──
       if (c.userId) {
         emitToUser(c.userId, "consultation:opened", { consultationId: c.id });
-        pushToUser(c.userId, "Consultation activée ✅", "Ton paiement est confirmé — tu peux échanger avec le dermatologue.", "/consultations");
+        pushToUser(c.userId, "Consultation ouverte", "Votre paiement est confirmé : vous pouvez échanger avec le dermatologue.", "/consultations");
         try {
           const pu = Rows(await db.execute(sql`SELECT email, name FROM users WHERE id = ${c.userId}`));
           if (pu[0]?.email) {
@@ -582,6 +584,21 @@ export async function registerRoutes(
         const rr = Rows(await db.execute(sql`SELECT pro_account_id AS id, ROUND(AVG(rating)::numeric,1) AS avg, COUNT(rating) AS n FROM consultations WHERE rating IS NOT NULL GROUP BY pro_account_id`));
         rr.forEach((r: any) => ratings.set(Number(r.id), { avg: Number(r.avg) || 0, n: Number(r.n) || 0 }));
       } catch {}
+      // Délai de réponse RÉEL : médiane (en heures) entre l'ouverture et la première
+      // réponse du médecin, sur ses consultations payées. Affiché à partir de 3 cas.
+      const responseHours = new Map<number, number>();
+      try {
+        const rh = Rows(await db.execute(sql`
+          SELECT c.pro_account_id AS id,
+                 percentile_cont(0.5) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (m.first_at - c.created_at)) / 3600) AS h,
+                 COUNT(*) AS n
+          FROM consultations c
+          JOIN (SELECT consultation_id, MIN(created_at) AS first_at FROM consultation_messages WHERE sender_type = 'doctor' GROUP BY consultation_id) m
+            ON m.consultation_id = c.id
+          WHERE c.payment_status = 'paid'
+          GROUP BY c.pro_account_id`));
+        rh.forEach((r: any) => { if (Number(r.n) >= 3) responseHours.set(Number(r.id), Math.max(1, Math.round(Number(r.h)))); });
+      } catch {}
       let list = rows.map((r) => {
         const e = extra.get(Number(r.id)) || {};
         const rt = ratings.get(Number(r.id)) || { avg: 0, n: 0 };
@@ -594,6 +611,7 @@ export async function registerRoutes(
           // Recommandé pour le cas du patient si sa spécialité correspond.
           recommendedFor: !!(recoSpec && specialties.includes(recoSpec)),
           rating: rt.avg, ratingsCount: rt.n,
+          responseHours: responseHours.get(Number(r.id)) ?? null,
         };
       });
       // Les dermatos recommandés (spécialité adaptée) d'abord.
@@ -827,10 +845,10 @@ export async function registerRoutes(
         paymentStatus: "unpaid",
         priceFcfa: price,
       }).returning();
-      // Modèle éco : 20% plateforme, le reste au dermatologue (SQL brut résilient).
+      // Répartition 80/20 (shared/splits.ts, constante unique). SQL brut résilient.
       try {
-        const commission = Math.round(price * 0.20);
-        await db.execute(sql`UPDATE consultations SET platform_commission = ${commission}, dermatologue_payout = ${price - commission} WHERE id = ${c.id}`);
+        const split = splitConsultation(price);
+        await db.execute(sql`UPDATE consultations SET platform_commission = ${split.platform}, dermatologue_payout = ${split.pro} WHERE id = ${c.id}`);
       } catch (e) { console.warn("[consultations] commission non enregistrée (ALTER v2 appliqué ?):", (e as any)?.message); }
       res.json({ consultation: c });
     } catch (err) {
@@ -914,6 +932,9 @@ export async function registerRoutes(
         duration: clean(b.duration, 80),
         products: clean(b.products, 300),
         allergies: clean(b.allergies, 300),
+        // Réserver (refonte Organic) : 3 questions en boutons.
+        itching: clean(b.itching, 20) ?? existing.itching ?? null,
+        lightener: clean(b.lightener, 20) ?? existing.lightener ?? null,
       };
       // Consentement patient (partage photos/données) — enregistré UNIQUEMENT si
       // accepté explicitement. On ne dégrade jamais un consentement déjà donné.
@@ -1013,6 +1034,9 @@ export async function registerRoutes(
         .set({ paymentStatus: "paid", status: "open" })
         .where(eq(consultations.id, id)).returning();
       if (!c) return res.status(404).json({ message: "Consultation introuvable" });
+      // Début du blocage du paiement : 24 h pour la réponse du médecin (migration 0016).
+      try { await db.execute(sql`UPDATE consultations SET paid_at = COALESCE(paid_at, NOW()) WHERE id = ${id}`); }
+      catch (e: any) { console.error(`[consultations] paid_at non enregistré (migration 0016 appliquée ?) : ${e?.message}`); }
       // Notifie les DEUX parties (dermatologue + patient) : WS + push + email.
       await notifyConsultationOpened(c);
       // Meta Conversions API — événement Purchase (serveur→serveur). Fire-and-forget :
@@ -1051,12 +1075,32 @@ export async function registerRoutes(
   const PAYMENT_PROVIDER = PAYMENT_MANUAL_ONLY ? "simulated" : MONETBIL_ON ? "monetbil" : CINETPAY_ON ? "cinetpay" : "simulated";
   const PUBLIC_BASE_URL = (process.env.PUBLIC_BASE_URL || "https://glow-scan.com").replace(/\/$/, "");
 
+  // Journal « Qui a consulté mon dossier » (migration 0013) : au plus une ligne
+  // par heure et par personne, pour ne pas noyer le patient sous les ouvertures répétées.
+  const logRecordAccess = (patientId: string | null | undefined, viewerId: string, role: "derm" | "secretary" | "relay") => {
+    if (!patientId || patientId === viewerId) return;
+    db.execute(sql`
+      INSERT INTO record_access_log (patient_id, viewer_id, viewer_role)
+      SELECT ${patientId}, ${viewerId}, ${role}
+      WHERE NOT EXISTS (SELECT 1 FROM record_access_log WHERE patient_id = ${patientId} AND viewer_id = ${viewerId} AND at > NOW() - INTERVAL '1 hour')`)
+      .catch((e: any) => console.warn(`[access-log] (migration 0013 appliquée ?) : ${e?.message}`));
+  };
+
+  // Première réponse du médecin (migration 0016) : sort la consultation du blocage.
+  const markDoctorReply = (id: number) => {
+    db.execute(sql`UPDATE consultations SET first_doctor_reply_at = COALESCE(first_doctor_reply_at, NOW()) WHERE id = ${id}`)
+      .catch((e: any) => console.error(`[consultations] first_doctor_reply_at non enregistré (migration 0016 appliquée ?) : ${e?.message}`));
+  };
+
   // Passe une consultation à "payée + ouverte" et notifie le dermatologue.
   const markConsultationPaid = async (id: number) => {
     const [c] = await db.update(consultations)
       .set({ paymentStatus: "paid", status: "open" })
       .where(eq(consultations.id, id)).returning();
     if (!c) return null;
+    // Début du blocage du paiement : le médecin a 24 h pour répondre (migration 0016).
+    try { await db.execute(sql`UPDATE consultations SET paid_at = COALESCE(paid_at, NOW()) WHERE id = ${id}`); }
+    catch (e: any) { console.error(`[consultations] paid_at non enregistré (migration 0016 appliquée ?) : ${e?.message}`); }
     // Notifie les DEUX parties (dermatologue + patient) : WS + push + email.
     await notifyConsultationOpened(c);
     return c;
@@ -1213,6 +1257,31 @@ export async function registerRoutes(
   app.get("/api/payments/monetbil/notify", monetbilNotify);
 
   // Admin : liste des consultations en attente de confirmation de paiement.
+  // Admin : remboursement effectué (après la décision automatique à 24 h).
+  // L'ID de transaction de l'opérateur est OBLIGATOIRE : rien n'est marqué
+  // « remboursé » sans preuve du virement.
+  app.post("/api/admin/consultations/:id/refunded", async (req: any, res) => {
+    if (!checkDatasetKey(req)) return res.status(403).json({ message: "Accès refusé" });
+    const id = parseInt(req.params.id, 10);
+    const ref = String(req.body?.operatorRef || "").trim();
+    if (!/^[A-Za-z0-9._-]{6,40}$/.test(ref)) return res.status(400).json({ message: "ID de transaction de l'opérateur requis (6 à 40 caractères)" });
+    try {
+      const r = Rows(await db.execute(sql`
+        UPDATE consultations SET status = 'refunded', refunded_at = NOW(), refund_operator_ref = ${ref}
+        WHERE id = ${id} AND status = 'refund_due'
+        RETURNING id, user_id, price_fcfa, patient_phone`));
+      if (r.length === 0) return res.status(409).json({ message: "Cette consultation n'est pas en attente de remboursement" });
+      const row: any = r[0];
+      const msg = `Votre remboursement GlowScan de ${Number(row.price_fcfa || 0).toLocaleString("fr-FR")} F a été effectué (réf. opérateur ${ref}).`;
+      try { if (row.patient_phone) await sendWhatsAppText(row.patient_phone, msg); } catch {}
+      try { emitToUser(row.user_id, "consultation:refunded", { consultationId: id }); } catch {}
+      res.json({ ok: true });
+    } catch (e: any) {
+      console.error(`[admin/refunded] (migration 0016 appliquée ?) : ${e?.message}`);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
   app.get("/api/admin/consultations", async (req: any, res) => {
     if (!checkDatasetKey(req)) return res.status(403).json({ message: "Accès refusé" });
     try {
@@ -1221,7 +1290,9 @@ export async function registerRoutes(
         SELECT c.id, c.condition, c.status, c.payment_status AS "paymentStatus",
                c.price_fcfa AS "priceFcfa", c.payment_ref AS "paymentRef", c.created_at AS "createdAt",
                c.whatsapp_send_status AS "reportStatus", c.whatsapp_sent_at AS "reportSentAt", c.closed_at AS "closedAt",
-               u.first_name AS "patientName", p.full_name AS "dermName"
+               u.first_name AS "patientName", p.full_name AS "dermName",
+               c.patient_phone AS "patientPhone", c.refund_due_at AS "refundDueAt",
+               c.refunded_at AS "refundedAt", c.refund_operator_ref AS "refundOperatorRef"
         FROM consultations c
         LEFT JOIN users u ON u.id = c.user_id
         LEFT JOIN pro_accounts p ON p.id = c.pro_account_id
@@ -1412,6 +1483,7 @@ export async function registerRoutes(
       // Côté médecin : note « Rappels de suivi désactivés par le patient le JJ/MM » (lecture seule).
       let followupsStoppedAtIso: string | null = null;
       if (side === "doctor") {
+        logRecordAccess(c.userId, userId, "derm");
         let phone: string | null = null;
         try { phone = (Rows(await db.execute(sql`SELECT patient_phone FROM consultations WHERE id = ${id}`))[0] as any)?.patient_phone ?? null; } catch {}
         const at = await followupsStoppedAt({ phone, userId: c.userId });
@@ -1535,6 +1607,10 @@ export async function registerRoutes(
       const { side, doctorUserId } = await consultAccess(c, userId);
       if (!side) return res.status(403).json({ message: "Accès refusé" });
       if (c.paymentStatus !== "paid") return res.status(402).json({ message: "Consultation non encore confirmée." });
+      // Remboursée (24 h sans réponse) : la consultation est close pour les deux parties.
+      if (c.status === "refund_due" || c.status === "refunded") return res.status(409).json({ message: "Consultation remboursée : elle est close." });
+      // Première réponse du médecin : fin du blocage du paiement (versement à l'étape Paiements).
+      if (side === "doctor") markDoctorReply(id);
 
       const [m] = await db.insert(consultationMessages).values({
         consultationId: id, senderType: side, senderId: userId,
@@ -1554,7 +1630,7 @@ export async function registerRoutes(
       // Notification push au DESTINATAIRE (l'autre partie).
       const preview = (body || "📷 Image").slice(0, 90);
       if (side === "patient") pushToUser(doctorUserId, "Nouveau message patient", preview, "/derm/consultations");
-      else pushToUser(c.userId, "Réponse de votre dermatologue 👩🏾‍⚕️", preview, "/consultations");
+      else pushToUser(c.userId, "Réponse de votre dermatologue", preview, "/consultations");
 
       res.json({ message: m });
     } catch (err) {
@@ -1582,6 +1658,10 @@ export async function registerRoutes(
       const { side, doctorUserId } = await consultAccess(c, userId);
       if (!side) return res.status(403).json({ message: "Accès refusé" });
       if (c.paymentStatus !== "paid") return res.status(402).json({ message: "Consultation non encore confirmée." });
+      // Remboursée (24 h sans réponse) : la consultation est close pour les deux parties.
+      if (c.status === "refund_due" || c.status === "refunded") return res.status(409).json({ message: "Consultation remboursée : elle est close." });
+      // Première réponse du médecin : fin du blocage du paiement (versement à l'étape Paiements).
+      if (side === "doctor") markDoctorReply(id);
 
       const url = await uploadConsultationFile(dataUrl, mime);
       if (!url) return res.status(500).json({ message: "Échec de l'envoi du fichier." });
@@ -1624,6 +1704,10 @@ export async function registerRoutes(
       const { side, doctorUserId } = await consultAccess(c, userId);
       if (!side) return res.status(403).json({ message: "Accès refusé" });
       if (c.paymentStatus !== "paid") return res.status(402).json({ message: "Consultation non encore confirmée." });
+      // Remboursée (24 h sans réponse) : la consultation est close pour les deux parties.
+      if (c.status === "refund_due" || c.status === "refunded") return res.status(409).json({ message: "Consultation remboursée : elle est close." });
+      // Première réponse du médecin : fin du blocage du paiement (versement à l'étape Paiements).
+      if (side === "doctor") markDoctorReply(id);
 
       const room = `glowscan-consult-${id}-${randomUUID().slice(0, 8)}`;
       const roomUrl = `https://meet.jit.si/${room}`;
@@ -1636,7 +1720,7 @@ export async function registerRoutes(
       try { if (c.userId) emitToUser(c.userId, "consultation:message", payload); } catch {}
       try { if (doctorUserId) emitToUser(doctorUserId, "consultation:message", payload); } catch {}
       // Notification URGENTE à l'autre partie (reste affichée, vibration longue).
-      if (side === "doctor") pushToUser(c.userId, "📞 Votre dermatologue vous appelle", "Appuyez pour rejoindre l'appel vidéo.", "/consultations", true);
+      if (side === "doctor") pushToUser(c.userId, "Votre dermatologue vous appelle", "Appuyez pour rejoindre l'appel vidéo.", "/consultations", true);
       else pushToUser(doctorUserId, "📞 Le patient vous appelle", "Appuyez pour rejoindre l'appel vidéo.", "/derm/consultations?c=" + id, true);
 
       res.json({ roomUrl, message: m });
@@ -3509,12 +3593,12 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
       const subs = await storage.getAllActivePushSubscriptions();
       const messages: Record<string, { title: string; body: string; url: string }> = {
         morning: {
-          title: "☀️ Routine du Matin",
+          title: "Routine du matin",
           body: "Bonjour ! N'oubliez pas votre routine skincare du matin pour une peau éclatante toute la journée.",
           url: "/analyze",
         },
         evening: {
-          title: "🌙 Routine du Soir",
+          title: "Routine du soir",
           body: "Bonne soirée ! C'est le moment de votre routine de soin avant de dormir.",
           url: "/analyze",
         },
@@ -3618,8 +3702,8 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
           await webpush.sendNotification(
             { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
             JSON.stringify({
-              title: "🔬 Ta peau t'attend !",
-              body: "7 jours se sont écoulés depuis ton analyse. Rescanne pour voir tes progrès !",
+              title: "Votre prochaine analyse",
+              body: "7 jours se sont écoulés depuis votre analyse. Refaites-la pour suivre l'évolution de votre peau.",
               icon: "/icon-192.png",
               url: "/analyze",
             })
@@ -3644,7 +3728,7 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
     const { message, history = [], scanContext } = req.body;
     if (!message) return res.status(400).json({ message: "Message requis" });
 
-    const systemPrompt = `Tu es SkinBot, un assistant dermatologique IA bienveillant de GlowScan. Tu réponds en français, en langage simple et chaleureux. Tu donnes des conseils basés sur les dermatologie moderne. Tu ne remplace pas un dermatologue mais tu aides à comprendre la peau.
+    const systemPrompt = `Tu es l'Assistant GlowScan, un assistant IA bienveillant qui aide à comprendre la peau. Tu réponds en français, en langage simple, et tu VOUVOIES toujours la personne. Aucun émoji. Tu donnes des conseils fondés sur la dermatologie moderne. Tu ne remplaces pas un dermatologue et tu ne poses pas de diagnostic : en cas de doute, de lésion qui change ou de score sous 60, tu conseilles de consulter un dermatologue et tu ne recommandes aucun produit.
 ${scanContext ? `\nContexte du dernier scan de l'utilisateur :\n- Diagnostic : ${scanContext.condition}\n- Score Glow : ${scanContext.score}/100\n- Type de peau : ${scanContext.skinType}\n- Zone : ${scanContext.area}\n- Détails : ${scanContext.details}` : ""}
 Réponds en 2-4 phrases max, sois direct et utile.`;
 
@@ -3976,6 +4060,10 @@ Réponds en 2-4 phrases max, sois direct et utile.`;
 
     const { method, phone } = req.body;
     if (!method || !phone) return res.status(400).json({ message: "Méthode et téléphone requis" });
+    // Formule choisie : le montant est fixé ICI (500 F / semaine, 2 000 F / mois).
+    const plan = String(req.body?.plan || "month") as PremiumPlan;
+    if (!(plan in PREMIUM_PLANS)) return res.status(400).json({ message: "Formule inconnue" });
+    const planAmount = PREMIUM_PLANS[plan].amountFcfa;
 
     try {
       // Vérifier si demande déjà en attente
@@ -3994,7 +4082,7 @@ Réponds en 2-4 phrases max, sois direct et utile.`;
         reference: ref,
         method,
         phone,
-        amount: PREMIUM_PRICE,
+        amount: planAmount,
         status: "pending",
       }).returning();
 
@@ -4010,7 +4098,7 @@ Réponds en 2-4 phrases max, sois direct et utile.`;
         `📱 Téléphone paiement : ${phone}\n` +
         `💰 Méthode : ${methodLabel}\n` +
         `🔑 Référence : ${ref}\n` +
-        `💵 Montant : ${PREMIUM_PRICE} FCFA\n\n` +
+        `💵 Montant : ${planAmount} FCFA (${PREMIUM_PLANS[plan].label.toLowerCase()})\n\n` +
         `➡️ Confirmer via le dashboard Admin GlowScan`
       );
 
@@ -4238,6 +4326,83 @@ Réponds en 2-4 phrases max, sois direct et utile.`;
     catch (e) { res.status(500).json({ message: "Erreur serveur" }); }
   });
 
+  // ── Profil : consentements séparés (table consents, migration 0013) ────
+  // « care » (partage avec mes médecins) est toujours vrai et non modifiable.
+  app.get("/api/me/consents", async (req: any, res) => {
+    const userId = getUID(req);
+    if (!userId) return res.status(401).json({ message: "Connexion requise" });
+    try {
+      const row: any = Rows(await db.execute(sql`SELECT research, reminders, stopped_at, phone FROM consents WHERE user_id = ${userId} LIMIT 1`))[0] || {};
+      const phones = await knownPhonesOf(userId);
+      const phone = normalizeCmPhone(row.phone) || phones[0] || null;
+      const dates = [await followupsStoppedAt({ userId })];
+      for (const ph of phones) dates.push(await followupsStoppedAt({ phone: ph }));
+      const fuAt = dates.filter(Boolean).sort((a, b) => b!.getTime() - a!.getTime())[0] ?? null;
+      res.json({
+        care: true,
+        research: row.research === true,
+        reminders: row.reminders === true,
+        remindersStoppedAt: row.stopped_at ?? null,
+        phone: phone ? formatCmPhone(phone) : null,
+        followups: { enabled: !fuAt, stoppedAt: fuAt ? fuAt.toISOString() : null },
+      });
+    } catch (e: any) {
+      console.error(`[me/consents] (migration 0013 appliquée ?) : ${e?.message}`);
+      res.status(503).json({ message: "Réglages indisponibles pour le moment" });
+    }
+  });
+
+  app.post("/api/me/consents", async (req: any, res) => {
+    const userId = getUID(req);
+    if (!userId) return res.status(401).json({ message: "Connexion requise" });
+    const b = req.body || {};
+    try {
+      if (typeof b.research === "boolean") {
+        await db.execute(sql`
+          INSERT INTO consents (user_id, research, updated_at) VALUES (${userId}, ${b.research}, NOW())
+          ON CONFLICT (user_id) WHERE user_id IS NOT NULL DO UPDATE SET research = EXCLUDED.research, updated_at = NOW()`);
+      }
+      if (typeof b.reminders === "boolean") {
+        if (b.reminders) {
+          // Activer demande un numéro WhatsApp connu ; c'est un nouveau choix explicite (efface un ancien STOP).
+          const phone = (await knownPhonesOf(userId))[0] ?? null;
+          if (!phone) return res.status(400).json({ message: "Ajoutez d'abord un numéro WhatsApp lors d'une analyse." });
+          await recordConsent({ userId, phone, reminders: true });
+        } else {
+          await db.execute(sql`
+            INSERT INTO consents (user_id, reminders, updated_at) VALUES (${userId}, FALSE, NOW())
+            ON CONFLICT (user_id) WHERE user_id IS NOT NULL DO UPDATE SET reminders = FALSE, updated_at = NOW()`);
+          for (const ph of await knownPhonesOf(userId)) {
+            await db.execute(sql`UPDATE consents SET reminders = FALSE, updated_at = NOW() WHERE phone = ${ph}`);
+          }
+        }
+      }
+      res.json({ ok: true });
+    } catch (e: any) {
+      console.error(`[me/consents] (migration 0013 appliquée ?) : ${e?.message}`);
+      res.status(503).json({ message: "Réglages indisponibles pour le moment" });
+    }
+  });
+
+  // ── Profil : « Qui a consulté mon dossier » ──────────────────────────
+  app.get("/api/me/access-log", async (req: any, res) => {
+    const userId = getUID(req);
+    if (!userId) return res.status(401).json({ message: "Connexion requise" });
+    try {
+      const rows = Rows(await db.execute(sql`
+        SELECT l.at, l.viewer_role, COALESCE(p.full_name, s.full_name) AS name
+        FROM record_access_log l
+        LEFT JOIN pro_accounts p ON p.user_id = l.viewer_id
+        LEFT JOIN secretary_accounts s ON s.user_id = l.viewer_id
+        WHERE l.patient_id = ${userId}
+        ORDER BY l.at DESC LIMIT 50`));
+      res.json({ entries: rows.map((r: any) => ({ at: r.at, role: r.viewer_role, name: r.name || null })) });
+    } catch (e: any) {
+      console.error(`[me/access-log] (migration 0013 appliquée ?) : ${e?.message}`);
+      res.json({ entries: [] });
+    }
+  });
+
   // ── STOP depuis l'admin (onglet Prospects) ──────────────────────────────
   app.post("/api/admin/consents/stop", async (req: any, res) => {
     if (!checkDatasetKey(req)) return res.status(403).json({ message: "Accès refusé" });
@@ -4318,26 +4483,30 @@ Réponds en 2-4 phrases max, sois direct et utile.`;
     try {
       const [pr] = await db.select().from(premiumRequests).where(eq(premiumRequests.id, requestId)).limit(1);
       if (!pr) return res.status(404).json({ message: "Demande introuvable" });
+      // Aucune activation sans ID de transaction de l'opérateur (preuve du paiement).
+      const operatorRef = String(req.body?.operatorRef || "").trim();
+      if (!/^[A-Za-z0-9._-]{6,40}$/.test(operatorRef)) return res.status(400).json({ message: "ID de transaction de l'opérateur requis (6 à 40 caractères)" });
+      const planInfo = PREMIUM_PLANS[planOfAmount(pr.amount)];
 
       // Marquer comme confirmée
       await db.update(premiumRequests).set({
         status: "confirmed",
         processedAt: new Date(),
         processedBy: "admin",
-        note: req.body.note || "Paiement confirmé",
+        note: `Paiement confirmé · réf. opérateur ${operatorRef}`,
       }).where(eq(premiumRequests.id, requestId));
 
-      // Activer l'abonnement premium (30 jours)
+      // Activer l'abonnement premium : 7 ou 30 jours selon la formule payée.
       const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + 30);
+      expiresAt.setDate(expiresAt.getDate() + planInfo.days);
       await db.update(subscriptions).set({ status: "expired" }).where(eq(subscriptions.userId, pr.userId));
       const [sub] = await db.insert(subscriptions).values({
         userId: pr.userId,
         status: "active",
-        plan: "monthly",
+        plan: planInfo.subscriptionPlan,
         expiresAt,
         activatedBy: "admin",
-        note: `Paiement ${pr.method} - ref ${pr.reference}`,
+        note: `Paiement ${pr.method} - ref ${pr.reference} - opérateur ${operatorRef}`,
       }).returning();
 
       // +100 pts fidélité

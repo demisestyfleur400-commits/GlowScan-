@@ -132,7 +132,7 @@ async function pushReport(userId: string, dermatologistName: string, url: string
       try {
         await webpush.sendNotification(
           { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-          JSON.stringify({ title: "Votre rapport de consultation est prêt 📋", body: `Dr ${dermatologistName} — appuyez pour télécharger.`, url }),
+          JSON.stringify({ title: "Votre rapport de consultation est prêt", body: `Dr ${dermatologistName} — appuyez pour télécharger.`, url }),
         );
         ok++;
       } catch (err: any) {

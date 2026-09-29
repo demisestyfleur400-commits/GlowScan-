@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { db } from "./db";
 import { sql } from "drizzle-orm";
 import { buildRelanceMessage, withFollowupFooter } from "@shared/whatsappMessages";
+import { productsAllowed, resultStateOf } from "@shared/resultB2C";
 import { normalizeCmPhone } from "@shared/phone";
 import { stopLinkSig, followupsStoppedAt } from "./consents";
 const APP_BASE = (process.env.PUBLIC_BASE_URL || "https://glow-scan.com").replace(/\/$/, "");
@@ -198,8 +199,8 @@ async function sendDay2Reminders() {
     }
 
     const { sent, failed } = await sendPushToUsers(ids, {
-      title: "🌸 Ta peau a évolué",
-      body: "Viens voir ! 2 jours se sont écoulés depuis ton dernier scan.",
+      title: "Votre suivi de peau",
+      body: "2 jours se sont écoulés depuis votre dernière analyse. Suivez l'évolution de votre peau.",
       url: "/analyze",
     });
     log(`✅ J+2 : ${sent} envoyés, ${failed} échecs (${day2Only.length} utilisateurs)`);
@@ -224,8 +225,8 @@ async function sendDay7SkinBotReminders() {
     }
 
     const { sent, failed } = await sendPushToUsers(ids, {
-      title: "🤖 SkinBot t'attend",
-      body: "Tu n'as pas encore essayé SkinBot — pose ta première question gratuite !",
+      title: "L'Assistant GlowScan",
+      body: "Posez votre première question sur votre peau ou votre routine.",
       url: "/chat",
     });
     log(`✅ J+7 SkinBot : ${sent} envoyés, ${failed} échecs (${day7Only.length} utilisateurs)`);
@@ -250,9 +251,9 @@ async function sendDay14Reminders() {
     }
 
     const { sent, failed } = await sendPushToUsers(ids, {
-      title: "📈 Ton suivi de 2 semaines est prêt",
-      body: "Reviens voir tes progrès — ta peau a sûrement changé en 14 jours.",
-      url: "/profile?tab=evolution",
+      title: "Votre suivi de 2 semaines",
+      body: "14 jours depuis votre analyse : comparez l'évolution de votre peau.",
+      url: "/ma-peau",
     });
     log(`✅ J+14 : ${sent} envoyés, ${failed} échecs (${day14Only.length} utilisateurs)`);
   } catch (err) {
@@ -265,7 +266,18 @@ async function sendProductReminders() {
   log("🛍️ Envoi des rappels produits 72h...");
   try {
     const usersList = await storage.getUsersWithScansBetweenHours(60, 84);
-    const filteredUsers = usersList.filter((u) => u.userId && !u.userId.includes(":"));
+    const candidates = usersList.filter((u) => u.userId && !u.userId.includes(":"));
+    // Sous 60 et en urgent, aucun produit n'est proposé : on ne relance que les
+    // patients dont la DERNIÈRE analyse autorise les produits (bonne santé / à surveiller).
+    const filteredUsers: typeof candidates = [];
+    for (const u of candidates) {
+      try {
+        const r: any = await db.execute(sql`SELECT score, condition, recommendations FROM scans WHERE user_id = ${u.userId} ORDER BY created_at DESC LIMIT 1`);
+        const last = (r?.rows ?? r ?? [])[0];
+        const full = last?.recommendations?._fullResult;
+        if (last && productsAllowed(resultStateOf(full ?? { score: last.score, condition: last.condition }))) filteredUsers.push(u);
+      } catch { /* dans le doute, pas de relance produit */ }
+    }
     const userIds = new Set(filteredUsers.map((u) => u.userId));
 
     if (userIds.size === 0) {
@@ -274,9 +286,9 @@ async function sendProductReminders() {
     }
 
     const { sent, failed } = await sendPushToUsers(userIds, {
-      title: "🌟 Tes produits t'attendent !",
-      body: "Tu as reçu ta routine il y a 3 jours. Tes produits sont encore disponibles — commande maintenant !",
-      url: "/",
+      title: "Votre routine conseillée",
+      body: "Les produits conseillés par votre analyse sont disponibles dans la Boutique.",
+      url: "/shop",
     });
     log(`✅ Rappels produits 72h : ${sent} envoyés, ${failed} échecs (${filteredUsers.length} utilisateurs)`);
   } catch (err) {
@@ -352,8 +364,8 @@ async function sendEveningMissedReminders() {
         const doneCount = completions.filter((c) => stepIds.has(c.stepId)).length;
         if (doneCount < r.steps.length) {
           await sendPushToUsers(new Set([r.userId]), {
-            title: "Tu n'as pas fait ta routine ce soir 🌙",
-            body: "Ta peau en a besoin — coche tes étapes maintenant.",
+            title: "Votre routine du soir",
+            body: "Pensez à cocher les étapes de votre routine.",
             url: "/routine",
           });
           sent++;
@@ -520,9 +532,9 @@ async function sendB2CRemindLater() {
         if (row.email && !String(row.email).endsWith("@phone.glowscan.cm")) {
           try {
             const base = (process.env.PUBLIC_BASE_URL || "https://glow-scan.com").replace(/\/$/, "");
-            await sendEmail(row.email, "Ton analyse GlowScan t'attend 🩺",
-              `<p>Bonjour ${fn(row.first_name || "")},</p><p>Ton analyse est prête et un dermatologue certifié est disponible pour l'évaluer. Ça ne prend que quelques minutes.</p><p><a href="${base}/consultations">Consulter un dermatologue →</a></p>`,
-              `Ton analyse GlowScan t'attend. Consulte : ${base}/consultations`);
+            await sendEmail(row.email, "Votre analyse GlowScan vous attend",
+              `<p>Bonjour ${fn(row.first_name || "")},</p><p>Votre analyse est prête et un dermatologue peut l'examiner. Cela ne prend que quelques minutes.</p><p><a href="${base}/dermatologues">Consulter un dermatologue</a></p>`,
+              `Votre analyse GlowScan vous attend. Consulter : ${base}/dermatologues`);
           } catch {}
         }
       }
@@ -533,8 +545,20 @@ async function sendB2CRemindLater() {
   } catch (err) { log(`❌ Erreur rappels B2C plus tard : ${err}`); }
 }
 
-// ── Garantie « réponse sous 2 h » : marque en timeout + alerte propriétaire. ──
+// ── Consultations payées sans réponse du médecin (migration 0016) ────────
+// Le paiement reste bloqué jusqu'à la première réponse du médecin.
+//  - À 2 h : alerte au fondateur pour relancer le médecin (aucune promesse au patient).
+//  - À 24 h : décision AUTOMATIQUE de remboursement. La consultation est close
+//    (le médecin ne peut plus répondre ni être payé), le patient est prévenu,
+//    le fondateur reçoit le numéro et le montant. Le virement Mobile Money est
+//    fait par l'admin, qui saisit l'ID de transaction de l'opérateur : aucun
+//    remboursement n'est marqué « fait » sans cet ID.
 async function flagConsultationTimeouts() {
+  const base = (process.env.PUBLIC_BASE_URL || "https://glow-scan.com").replace(/\/$/, "");
+  const ownerEmail = process.env.OWNER_EMAIL || "demiseessawe12@gmail.com";
+  const dr = (n: any) => String(n || "").replace(/^dr\.?\s*/i, "");
+
+  // 1) Alerte 2 h (une seule fois par consultation)
   try {
     const r: any = await db.execute(sql`
       SELECT c.id, u.first_name, p.full_name AS derm_name
@@ -542,23 +566,60 @@ async function flagConsultationTimeouts() {
       LEFT JOIN users u ON u.id = c.user_id
       LEFT JOIN pro_accounts p ON p.id = c.pro_account_id
       WHERE c.payment_status = 'paid' AND c.status = 'open'
-        AND c.last_message_at IS NULL
-        AND c.created_at < (NOW() - INTERVAL '2 hours')
+        AND c.first_doctor_reply_at IS NULL AND c.owner_alert_2h_at IS NULL
+        AND c.paid_at < (NOW() - INTERVAL '2 hours')
       LIMIT 100`);
     const rows = (r?.rows ?? r ?? []) as any[];
-    if (!rows.length) return;
-    const ownerEmail = process.env.OWNER_EMAIL || "demiseessawe12@gmail.com";
     for (const row of rows) {
-      try { await db.execute(sql`UPDATE consultations SET status = 'timeout' WHERE id = ${row.id}`); } catch {}
+      try { await db.execute(sql`UPDATE consultations SET owner_alert_2h_at = NOW() WHERE id = ${row.id}`); } catch {}
       try {
-        const base = (process.env.PUBLIC_BASE_URL || "https://glow-scan.com").replace(/\/$/, "");
-        await sendEmail(ownerEmail, `⏱️ Remboursement à traiter — consultation #${row.id} sans réponse (2 h)`,
-          `<p>La consultation <strong>#${row.id}</strong> (${fn(row.first_name || "Patient")} → Dr ${String(row.derm_name || "").replace(/^dr\.?\s*/i, "")}) est payée mais <strong>aucun dermatologue n'a répondu en 2 h</strong>.</p><p>Conformément à la garantie affichée au patient, procède au <strong>remboursement Mobile Money</strong>. Détails : <a href="${base}/admin">/admin</a></p>`,
-          `Consultation #${row.id} sans réponse 2h → remboursement à traiter. ${base}/admin`);
+        await sendEmail(ownerEmail, `Consultation #${row.id} sans réponse depuis 2 h — relancer le médecin`,
+          `<p>La consultation <strong>#${row.id}</strong> (${fn(row.first_name || "Patient")} → Dr ${dr(row.derm_name)}) est payée et le médecin n'a pas encore répondu.</p><p>Relancez-le. Sans réponse à 24 h, le remboursement est décidé automatiquement. <a href="${base}/admin">/admin</a></p>`,
+          `Consultation #${row.id} sans réponse depuis 2 h : relancer Dr ${dr(row.derm_name)}. ${base}/admin`);
       } catch {}
     }
-    log(`⏱️ Consultations en timeout (2 h) : ${rows.length} signalée(s) au propriétaire`);
-  } catch (err) { log(`❌ Erreur timeout consultations : ${err}`); }
+    if (rows.length) log(`⏱️ Consultations sans réponse (2 h) : ${rows.length} alerte(s) au propriétaire`);
+  } catch (err) {
+    log(`❌ Alerte 2 h consultations (migration 0016 appliquée ?) : ${err instanceof Error ? err.message : String(err)}`);
+  }
+
+  // 2) Décision de remboursement à 24 h
+  try {
+    const r: any = await db.execute(sql`
+      UPDATE consultations SET status = 'refund_due', refund_due_at = NOW()
+      WHERE id IN (
+        SELECT id FROM consultations
+        WHERE payment_status = 'paid' AND status = 'open'
+          AND first_doctor_reply_at IS NULL AND refund_due_at IS NULL
+          AND paid_at < (NOW() - INTERVAL '24 hours')
+        LIMIT 100)
+      RETURNING id, user_id, pro_account_id, price_fcfa, patient_phone, payment_ref`);
+    const rows = (r?.rows ?? r ?? []) as any[];
+    for (const row of rows) {
+      const amount = `${Number(row.price_fcfa || 0).toLocaleString("fr-FR")} F`;
+      let pInfo: any = {}, dInfo: any = {};
+      try { pInfo = ((await db.execute(sql`SELECT first_name, email FROM users WHERE id = ${row.user_id}`)) as any)?.rows?.[0] || {}; } catch {}
+      try { dInfo = ((await db.execute(sql`SELECT full_name, user_id FROM pro_accounts WHERE id = ${row.pro_account_id}`)) as any)?.rows?.[0] || {}; } catch {}
+      const patientMsg = `Bonjour${pInfo.first_name ? ` ${fn(pInfo.first_name)}` : ""}, le dermatologue n'a pas répondu sous 24 h à votre consultation GlowScan. Votre remboursement de ${amount} est en cours sur votre numéro Mobile Money. Vous serez prévenu dès qu'il est effectué.`;
+      // Patient : push, WhatsApp, email (sans émoji).
+      if (row.user_id) await sendPushToUsers(new Set([row.user_id]), { title: "Remboursement en cours", body: patientMsg, url: "/consultations" });
+      if (row.patient_phone) { try { await sendWhatsAppText(row.patient_phone, patientMsg); } catch {} }
+      if (pInfo.email && !String(pInfo.email).endsWith("@phone.glowscan.cm")) {
+        try { await sendEmail(pInfo.email, "Votre consultation GlowScan est remboursée", `<p>${patientMsg}</p>`, patientMsg); } catch {}
+      }
+      // Médecin : la consultation est close.
+      if (dInfo.user_id) await sendPushToUsers(new Set([dInfo.user_id]), { title: "Consultation close", body: `Consultation #${row.id} remboursée au patient : aucune réponse sous 24 h.`, url: "/derm/consultations" });
+      // Fondateur : virement à faire, avec l'ID de transaction à saisir dans l'admin.
+      try {
+        await sendEmail(ownerEmail, `Remboursement à faire — consultation #${row.id} · ${amount}`,
+          `<p>La consultation <strong>#${row.id}</strong> (Dr ${dr(dInfo.full_name)}) n'a pas eu de réponse sous 24 h : le remboursement est décidé.</p><p>Montant : <strong>${amount}</strong><br>Numéro du patient : <strong>${row.patient_phone || "—"}</strong><br>Référence de paiement : ${row.payment_ref || "—"}</p><p>Faites le virement Mobile Money, puis saisissez l'ID de transaction de l'opérateur dans <a href="${base}/admin">/admin</a> (onglet Consultations).</p>`,
+          `Remboursement consultation #${row.id} : ${amount} au ${row.patient_phone || "—"}. Saisir l'ID de transaction dans ${base}/admin`);
+      } catch {}
+    }
+    if (rows.length) log(`💸 Remboursements décidés (24 h sans réponse) : ${rows.length}`);
+  } catch (err) {
+    log(`❌ Remboursements 24 h (migration 0016 appliquée ?) : ${err instanceof Error ? err.message : String(err)}`);
+  }
 }
 
 // ── RELANCE PROSPECTS (chaque mercredi) ────────────────────────────────

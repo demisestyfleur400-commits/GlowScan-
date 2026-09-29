@@ -322,9 +322,13 @@ export default function Admin() {
   };
 
   const confirmPremiumRequest = async (id: number) => {
+    // Aucune activation sans l'ID de transaction de l'opérateur (preuve du paiement).
+    const operatorRef = window.prompt("ID de transaction de l'opérateur (obligatoire pour activer)")?.trim();
+    if (!operatorRef) return;
     try {
-      const res = await fetch(`/api/admin/premium/confirm/${id}`, { method: "POST", headers: { "Content-Type": "application/json", "x-admin-key": adminKey }, body: JSON.stringify({ note: "Paiement confirmé via admin" }) });
-      setPremiumReqMsg(res.ok ? "✅ Premium activé avec succès" : "❌ Erreur lors de l'activation");
+      const res = await fetch(`/api/admin/premium/confirm/${id}`, { method: "POST", headers: { "Content-Type": "application/json", "x-admin-key": adminKey }, body: JSON.stringify({ operatorRef }) });
+      const d = await res.json().catch(() => ({}));
+      setPremiumReqMsg(res.ok ? "✅ Premium activé avec succès" : `❌ ${d?.message || "Erreur lors de l'activation"}`);
       if (res.ok) { fetchPremiumRequests(adminKey); fetchSubscribers(adminKey); }
     } catch { setPremiumReqMsg("❌ Erreur réseau"); }
     setTimeout(() => setPremiumReqMsg(""), 4000);
@@ -1246,8 +1250,11 @@ export default function Admin() {
                           background: c.status === "closed" ? "rgba(16,185,129,0.15)" : c.status === "answered" ? "rgba(59,130,246,0.15)" : "rgba(245,158,11,0.15)",
                           color: c.status === "closed" ? "#047857" : c.status === "answered" ? "#2563eb" : "#b45309",
                         }}>
-                          {c.status === "closed" ? "✅ Terminée" : c.status === "answered" ? "💬 Répondue" : "🟢 Ouverte"}
+                          {c.status === "closed" ? "✅ Terminée" : c.status === "answered" ? "💬 Répondue" : c.status === "refund_due" ? "💸 Remboursement à faire" : c.status === "refunded" ? "Remboursée" : "🟢 Ouverte"}
                         </span>
+                        {c.status === "refunded" && c.refundOperatorRef && (
+                          <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full" style={{ background: "rgba(148,163,184,0.2)", color: DS.muted }}>réf. opérateur {c.refundOperatorRef}</span>
+                        )}
                         {/* Statut du rapport (PDF) */}
                         {c.reportStatus === "sent" ? (
                           <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full" style={{ background: "rgba(16,185,129,0.15)", color: "#047857" }}>
@@ -1259,6 +1266,25 @@ export default function Admin() {
                       </div>
                     )}
                   </div>
+                  {c.status === "refund_due" && (
+                    <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                      <span className="text-[11px]" style={{ color: DS.muted }}>{(c.priceFcfa || 0).toLocaleString("fr-FR")} F au {c.patientPhone || "—"}</span>
+                      <button
+                        onClick={async () => {
+                          const ref = window.prompt(`Remboursement #${c.id} : ID de transaction de l'opérateur (obligatoire)`);
+                          if (!ref) return;
+                          const r = await fetch(`/api/admin/consultations/${c.id}/refunded`, { method: "POST", headers: { "Content-Type": "application/json", "x-admin-key": adminKey }, body: JSON.stringify({ operatorRef: ref.trim() }) });
+                          const d = await r.json().catch(() => ({}));
+                          if (!r.ok) { window.alert(d?.message || "Échec"); return; }
+                          fetchConsults(adminKey);
+                        }}
+                        className="px-4 py-2 rounded-xl text-sm font-extrabold text-white" style={{ background: "#b45309" }}
+                        data-testid={`button-refunded-${c.id}`}
+                      >
+                        Marquer remboursé
+                      </button>
+                    </div>
+                  )}
                   {c.paymentStatus !== "paid" && (
                     <button
                       onClick={() => confirmConsult(c.id)}

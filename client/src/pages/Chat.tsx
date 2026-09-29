@@ -139,8 +139,8 @@ export default function Chat() {
     {
       role: "assistant",
       content: lastScan
-        ? `Bonjour. Assistant GlowScan AI initialisé. J'ai analysé les métriques de votre dernier diagnostic (${lastScan.condition}, index ${lastScan.score}/100). Posez-moi vos questions sur votre épiderme ou votre protocole de soin.`
-        : "Bonjour. Assistant GlowScan AI connecté. Formulez vos questions relatives à vos problématiques cutanées ou à vos analyses de formulations.",
+        ? `Bonjour, je suis l'Assistant GlowScan. Je connais votre dernière analyse (${String(lastScan.condition || "").split("(")[0].trim()}, Glow Score ${lastScan.score}). Posez-moi vos questions sur votre peau ou votre routine.`
+        : "Bonjour, je suis l'Assistant GlowScan. Posez-moi vos questions sur votre peau ou votre routine.",
     },
   ]);
   const [input, setInput] = useState("");
