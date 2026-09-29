@@ -549,6 +549,8 @@ export function registerProRoutes(app: Express) {
         consent: z.literal(true),
         consentVersion: z.string().optional(), // version des CGU/Confidentialité acceptée
         ref: z.union([z.string(), z.number()]).optional().nullable(), // parrainage confrère
+        // Profil choisi à l'inscription (migration 0019) : décide de la page d'arrivée.
+        profile: z.enum(["derm", "relay", "ngo"]).optional().default("derm"),
       });
       const data = schema.parse(req.body);
       const emailLower = data.email.toLowerCase().trim();
@@ -571,7 +573,7 @@ export function registerProRoutes(app: Express) {
         userId = existing.id;
         const existingPro = await getProAccountForUser(userId);
         if (existingPro) {
-          return res.status(409).json({ message: "Tu as déjà un compte Pro." });
+          return res.status(409).json({ message: "Vous avez déjà un compte GlowScan Derm. Connectez-vous." });
         }
       } else {
         const passwordHash = await bcrypt.hash(data.password, 10);
@@ -596,6 +598,7 @@ export function registerProRoutes(app: Express) {
         trialEndsAt,
         subscriptionStatus: "trial",
         consentSignedAt: new Date(),
+        profile: data.profile,
       }).returning();
 
       // Pays — écrit en SQL brut (colonne hors schéma Drizzle, no-op si absente)
@@ -712,7 +715,7 @@ export function registerProRoutes(app: Express) {
             res.json({ success: true, role: "secretary" });
           });
         }
-        return res.status(403).json({ message: "Aucun compte Pro lié à cet email. Inscris-toi d'abord." });
+        return res.status(403).json({ message: "Aucun compte GlowScan Derm lié à cet email. Créez d'abord votre compte." });
       }
 
       req.session.userId = user.id; touchLastLogin(user.id);
@@ -739,7 +742,7 @@ export function registerProRoutes(app: Express) {
   app.post("/api/pro/login/2fa", async (req: any, res) => {
     try {
       const pendingId = (req.session as any)?.pending2faUserId;
-      if (!pendingId) return res.status(440).json({ message: "Session de connexion expirée. Reconnecte-toi." });
+      if (!pendingId) return res.status(440).json({ message: "Session de connexion expirée. Reconnectez-vous." });
       const raw = String(req.body?.code || "");
       const digits = raw.replace(/\D/g, "");
 
@@ -748,7 +751,7 @@ export function registerProRoutes(app: Express) {
       if (digits.length === 6) {
         const v = await verifyEmailOtp(pendingId, digits);
         ok = v.ok;
-        if (!ok && v.reason === "locked") return res.status(429).json({ message: "Trop de tentatives — demande un nouveau code." });
+        if (!ok && v.reason === "locked") return res.status(429).json({ message: "Trop de tentatives. Demandez un nouveau code." });
       }
       if (!ok) ok = await verifyBackupCode(pendingId, raw); // fallback code de secours
       if (!ok) {

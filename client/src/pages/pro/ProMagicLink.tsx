@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
+import { proHomeOf } from "@shared/proProfile";
 import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, XCircle } from "lucide-react";
 
@@ -21,7 +22,7 @@ export default function ProMagicLink() {
         if (!res.ok) throw new Error(data.message || "Lien expiré");
         await qc.invalidateQueries({ queryKey: ["/api/pro/account"] });
         await qc.invalidateQueries({ queryKey: ["/api/auth/user"] });
-        setLocation(data.role === "secretary" ? "/derm/patients" : "/derm/dashboard");
+        setLocation(proHomeOf(data.account?.profile, data.role));
       } catch (e: any) {
         setError(e?.message || "Lien invalide ou expiré");
       }

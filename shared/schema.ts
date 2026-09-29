@@ -368,6 +368,7 @@ export const proAccounts = pgTable("pro_accounts", {
   subscriptionExpiresAt: timestamp("subscription_expires_at"),
   onboardingDone: boolean("onboarding_done").default(false),
   consentSignedAt: timestamp("consent_signed_at").notNull(),
+  profile: varchar("profile", { length: 10 }).notNull().default("derm"), // derm | relay | ngo (migration 0019)
   createdAt: timestamp("created_at").defaultNow(),
 });
 

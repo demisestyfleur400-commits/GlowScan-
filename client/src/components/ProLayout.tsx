@@ -3,6 +3,7 @@ import { ReactNode, useState, useEffect } from "react";
 import { Home, Users, ScanLine, BarChart3, Settings, ArrowLeft, LogOut, Clock, MessageCircle, Calendar, Wallet } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useProAccount } from "@/hooks/use-pro";
+import { asProProfile, proHomeOf } from "@shared/proProfile";
 import { useProNotifications } from "@/hooks/use-realtime";
 
 // Thème CLAIR médical (blanc + dégradé teal→bleu, identité du logo).
@@ -45,6 +46,11 @@ export function ProLayout({ children, title, back, onBack, hideBottomNav, rightA
   useProNotifications((accData?.user as any)?.id);
 
   const isSecretary = accData?.user?.role === "secretary";
+
+  // Profils Relais et ONG : le portail cabinet n'est pas le leur → leur page d'arrivée.
+  const [, navigate] = useLocation();
+  const profile = asProProfile((acc as any)?.profile);
+  useEffect(() => { if (acc && profile !== "derm") navigate(proHomeOf(profile, "doctor")); }, [acc, profile, navigate]);
   const navItems = isSecretary
     ? [
         { href: "/derm/analyse", icon: ScanLine, label: "Nouveau patient", primary: true },

@@ -23,6 +23,7 @@ async function sendTrialReminders() {
       SELECT p."full_name", p."trial_ends_at", u."email", u."first_name"
       FROM "pro_accounts" p JOIN "users" u ON u."id" = p."user_id"
       WHERE p."subscription_status" = 'trial' AND p."trial_ends_at" > NOW()
+        AND COALESCE(p."profile", 'derm') = 'derm' -- relais et ONG : pas d'abonnement
         AND p."trial_ends_at" < NOW() + INTERVAL '4 days'`);
     const rows = (r?.rows ?? r ?? []) as any[];
     let sent = 0;
@@ -643,6 +644,7 @@ async function chargeSubscriptionsFromEarnings() {
     const r: any = await db.execute(sql`
       SELECT id, user_id, subscription_expires_at FROM pro_accounts
       WHERE subscription_status IN ('active', 'trial', 'expired')
+        AND COALESCE(profile, 'derm') = 'derm' -- relais et ONG : pas d'abonnement
         AND COALESCE(subscription_expires_at, trial_ends_at, NOW()) < NOW() + INTERVAL '7 days'`);
     let charged = 0;
     for (const pro of (r?.rows ?? r ?? []) as any[]) {

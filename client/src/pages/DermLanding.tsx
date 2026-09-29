@@ -1,399 +1,340 @@
-import { useEffect, useState, type ReactNode } from "react";
-import { motion } from "framer-motion";
-import { useLocation, Link } from "wouter";
+import { useEffect, useState } from "react";
+import { Link, useLocation } from "wouter";
 import { useSEO } from "@/hooks/useSEO";
 import { useProAccount } from "@/hooks/use-pro";
+import { DermBrand } from "@/components/pro/DermAuthShell";
+import { proHomeOf } from "@shared/proProfile";
+import { SPLITS } from "@shared/splits";
+import { PRO_SUBSCRIPTION_FCFA } from "@shared/premium";
 
-// ════════════════════════════════════════════════════════════════════════════
-// Landing GlowScan DERM — glow-scan.com/derm
-// Thème clair, médical (blanc + dégradé teal→bleu, identité logo).
-// Illustrations SVG dessinées (pas d'emoji-icônes). Mobile-first.
-// ════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════
+// Landing GlowScan Derm (refonte Organic) — maquette « Derm Landing ».
+// glow-scan.com/derm. Libellés repris mot pour mot. Les parts affichées
+// viennent de shared/splits.ts, le prix de shared/premium.ts.
+// ════════════════════════════════════════════════════════════════════════
 
-const C = {
-  white: "#FFFFFF",
-  paleTeal: "#F6FBFA",
-  paleTeal2: "#E4FBF5",
-  paleTeal3: "#F1FBF9",
-  accentFrom: "#00E6B8",
-  accentTo: "#2E9FD6",
-  gradient: "linear-gradient(135deg, #00E6B8, #2E9FD6)",
-  teal: "#00937A",
-  tealIcon: "#00B894",
-  ink: "#0B1220",
-  inkMuted: "#475569",
-  inkSoft: "#64748B",
-  border: "#E7EEF0",
-  borderSoft: "#EEF2F2",
-  neutralBorder: "#E2E8ED",
-  alertBg: "#FEF3F0",
-  alertText: "#C2410C",
-  successBg: "#ECFDF5",
-  successText: "#059669",
-};
+const SIGNUP = "/derm/inscription";
+const LOGIN = "/derm/connexion";
+const WA_SUPPORT = "https://wa.me/237674377959";
 
-const sora = "'Sora', -apple-system, BlinkMacSystemFont, system-ui, sans-serif";
-const jakarta = "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, system-ui, sans-serif";
-
-const fade = (delay = 0) => ({
-  initial: { opacity: 0, y: 22 },
-  whileInView: { opacity: 1, y: 0 },
-  viewport: { once: true, margin: "-60px" },
-  transition: { duration: 0.5, delay },
-});
-
-// ── Icônes ligne (dessinées, style Monetbil) ─────────────────────────────────
-function Ico({ name, size = 24, color = C.teal }: { name: string; size?: number; color?: string }) {
-  const paths: Record<string, ReactNode> = {
-    folder: <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z" />,
-    mic: <><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3" /></>,
-    shield: <><path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z" /><path d="M9 12l2 2 4-4" /></>,
-    doc: <><path d="M7 3h7l4 4v14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" /><path d="M14 3v4h4M9 13h6M9 17h6" /></>,
-    chat: <path d="M4 5h16v11H9l-4 3v-3H4z" />,
-    users: <><circle cx="9" cy="8" r="3" /><path d="M3 20a6 6 0 0 1 12 0M16 6a3 3 0 0 1 0 6M21 20a6 6 0 0 0-4-5.6" /></>,
-    clock: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,
-    globe: <><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18" /></>,
-    pin: <><path d="M12 21s6-5.3 6-10a6 6 0 1 0-12 0c0 4.7 6 10 6 10z" /><circle cx="12" cy="11" r="2.4" /></>,
-    star: <path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9 6.8 19.1l1-5.8L3.5 9.2l5.9-.9z" />,
-    check: <path d="M4 12l5 5 11-11" />,
-    arrow: <path d="M5 12h14M13 6l6 6-6 6" />,
-    phone: <><rect x="7" y="3" width="10" height="18" rx="3" /><path d="M11 18h2" /></>,
-    money: <><rect x="3" y="6" width="18" height="12" rx="2" /><circle cx="12" cy="12" r="2.5" /></>,
-  };
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      {paths[name]}
-    </svg>
-  );
-}
-
-function IcoBox({ name, tone = "teal" }: { name: string; tone?: "teal" | "orange" }) {
-  const col = tone === "orange" ? C.alertText : C.teal;
-  const bg = tone === "orange" ? C.alertBg : C.paleTeal2;
-  return <div style={{ width: 48, height: 48, borderRadius: 14, background: bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Ico name={name} color={col} size={24} /></div>;
-}
-
-// ── Logo GlowScan (marque officielle) ─────────────────────────────────────
-function LogoMark({ showDerm = true }: { showDerm?: boolean }) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 7, flexShrink: 0 }}>
-      <img src="/glowscan-mark.png" width={26} height={26} alt="GlowScan" style={{ display: "block", flexShrink: 0 }} />
-      <span style={{ fontFamily: sora, fontSize: "clamp(14px, 2vw, 16px)", fontWeight: 800, color: C.ink, whiteSpace: "nowrap" }}>
-        GlowScan{showDerm && <span style={{ color: C.inkMuted, fontWeight: 700 }}> DERM</span>}
-      </span>
-    </div>
-  );
-}
-
-// ── Photo héro : visuel de marque GlowScan Africa (bords fondus dans la page) ─
-function HeroArt() {
-  return (
-    <img
-      src="/glowscan-derm-hero-full.webp"
-      alt="GlowScan Africa — la HealthTech africaine n'est plus une promesse, c'est un mouvement"
-      style={{ display: "block", width: "100%", maxWidth: 640, height: "auto" }}
-    />
-  );
-}
+const PAINS = [
+  ["30 min", "par compte rendu écrit à la main", "Temps pris sur vos consultations."],
+  ["20 h", "et encore des questions WhatsApp", "Gratuitement, sans structure."],
+  ["5 ans", "de carnets à feuilleter", "Pour retrouver un ancien dossier."],
+] as const;
 
 const FEATURES = [
-  { icon: "folder", title: "Dossier patient numérisé", text: "Créez et retrouvez chaque dossier en 10 secondes." },
-  { icon: "mic", title: "Dictée vocale", text: "Parlez, GlowScan transcrit vos notes cliniques." },
-  { icon: "shield", title: "Aide au diagnostic", text: "Suggestion indicative — vous restez décisionnaire." },
-  { icon: "doc", title: "Rapport PDF automatique", text: "Rapport professionnel généré en 1 clic, à votre nom." },
-  { icon: "chat", title: "Envoi WhatsApp", text: "Le patient reçoit son rapport automatiquement." },
-  { icon: "globe", title: "Profil public sur Google", text: "Vos patients vous trouvent. Vos confrères vous rejoignent." },
-  { icon: "users", title: "Second avis entre confrères", text: "Un cas difficile ? Envoyez-le, anonymisé, à un confrère du réseau." },
+  ["Dossier patient numérisé", "Créé et retrouvé en 10 secondes, photos incluses."],
+  ["Diagnostic IA déjà proposé", "Calibré sur les phototypes IV à VI. Vous validez ou corrigez."],
+  ["Compte rendu signé en 1 clic", "Pré-rempli, relu, signé avec votre code, envoyé sur WhatsApp ou par email."],
+  ["Consultations en ligne", "Des patients de Douala à Kinshasa, payés sur Mobile Money."],
+  ["Second avis entre confrères", "Un cas difficile, anonymisé, discuté dans l'appli."],
+  ["Profil public sur Google", "Vos patients vous trouvent. Vos confrères vous rejoignent."],
+] as const;
+
+const FLOWS = {
+  b2c: {
+    label: "Patients GlowScan",
+    note: "Tout se fait depuis votre téléphone. Sans déplacement, sans paperasse.",
+    steps: [
+      ["Le patient fait son analyse", "Photo de peau et Glow Score gratuits sur son téléphone."],
+      ["GlowScan repère un cas sérieux", "Un score faible déclenche la recommandation de consulter."],
+      ["Il choisit votre profil et paie", "Orange Money ou MTN MoMo. L'argent est bloqué jusqu'à votre réponse."],
+      ["Vous répondez, le PDF part signé", `Le diagnostic IA est déjà proposé : vous validez, signez, ${SPLITS.consultation.pro} % pour vous.`],
+    ],
+  },
+  relais: {
+    label: "Relais de terrain",
+    note: "Vous formez les soignants des zones sans dermatologue, à chaque cas.",
+    steps: [
+      ["Le patient est chez le relais", "Infirmier ou médecin d'un centre de santé éloigné."],
+      ["Le relais propose son diagnostic", "Avant de voir l'IA, pour apprendre vraiment."],
+      ["Vous validez ou corrigez", "Une phrase suffit : le signe qui aurait dû l'orienter."],
+      ["Le relais progresse", "À 85 % d'accord sur 20 cas, il traite seul cette maladie."],
+    ],
+  },
+} as const;
+
+const NETWORK = [
+  "Des cas réels envoyés par des relais de votre région",
+  "Un avis simple ou urgent, payé sur Mobile Money",
+  "Chaque validation enrichit l'atlas des peaux africaines",
+  "Des programmes financés par des ONG et des districts",
+];
+
+const INCLUDED = [
+  "Dossiers patients illimités",
+  "Diagnostic IA indicatif",
+  "Comptes rendus signés sur WhatsApp",
+  "Consultations en ligne",
+  "Avis confrères et relais",
+  "Profil public sur Google",
 ];
 
 const FAQS = [
-  { q: "L'IA va-t-elle remplacer mon diagnostic ?", a: "Non. Le diagnostic IA est marqué « indicatif » dans GlowScan. Seule votre validation apparaît dans le rapport final signé de votre nom. Vous êtes et restez le médecin décisionnaire." },
-  { q: "Comment mes patients me trouvent-ils ?", a: "Via votre profil public GlowScan visible sur Google, et via les patients B2C dont le score est faible — GlowScan les oriente automatiquement vers un dermatologue disponible dans leur région." },
-  { q: "Est-ce que je peux consulter des patients hors de ma ville ?", a: "Oui. Les consultations en ligne vous permettent de recevoir des patients de Douala, Yaoundé, Cotonou, Kinshasa — partout où GlowScan est actif. Vous consultez, vous signez, vous êtes payé directement sur Mobile Money." },
-  { q: "Le « second avis entre confrères », c'est quoi exactement ?", a: "Quand un cas vous laisse un doute, vous l'envoyez à un confrère dermatologue du réseau GlowScan pour avoir son avis. Vous partagez seulement la photo, l'âge et le sexe du patient — jamais son nom ni son téléphone. Le confrère vous répond dans l'application. Vous restez le médecin traitant : c'est un deuxième regard entre spécialistes, pas une délégation. Rien n'est visible du patient." },
-  { q: "Que se passe-t-il après les 14 jours gratuits ?", a: "Vous choisissez de continuer. Aucun prélèvement automatique. Aucune carte bancaire. Vous payez quand vous voulez, par Mobile Money." },
-];
+  ["L'IA va-t-elle remplacer mon diagnostic ?", "Non. La suggestion de l'IA est marquée « indicative ». Seule votre validation apparaît dans le compte rendu signé de votre nom."],
+  ["Comment mes patients me trouvent-ils ?", "Par votre profil public visible sur Google, et par les patients GlowScan dont le score est faible : ils sont orientés vers un dermatologue disponible dans leur région."],
+  ["Qu'est-ce qu'un relais ?", "Un infirmier ou un médecin d'une zone sans dermatologue. Il vous envoie ses cas, vous validez, il apprend. Vous êtes payé à chaque avis."],
+  ["Le second avis entre confrères, c'est quoi ?", "Un cas difficile ? Envoyez-le à un confrère du réseau. Seules la photo, l'âge et le sexe sont partagés, jamais le nom ni le téléphone. Vous restez le médecin traitant."],
+  ["Comment suis-je payé ?", "Vos gains arrivent dans votre portefeuille GlowScan. Retrait vers Orange Money ou MTN MoMo à la demande ou chaque vendredi."],
+  ["Que se passe-t-il après les 14 jours ?", "Vous choisissez de continuer. Aucun prélèvement automatique, aucune carte bancaire."],
+] as const;
 
-function Faq({ q, a }: { q: string; a: string }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div style={{ borderBottom: `1px solid ${C.border}` }}>
-      <button onClick={() => setOpen((v) => !v)} style={{ width: "100%", background: "transparent", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "16px 2px", textAlign: "left" }}>
-        <span style={{ fontSize: 14.5, fontWeight: 700, color: C.ink }}>{q}</span>
-        <span style={{ fontSize: 18, color: C.teal, transform: open ? "rotate(180deg)" : "none", transition: "transform .2s", flexShrink: 0 }}>⌄</span>
-      </button>
-      {open && <p style={{ fontSize: 13.5, color: C.inkMuted, lineHeight: 1.65, margin: "0 2px 16px" }}>{a}</p>}
-    </div>
-  );
-}
+const wrap = "mx-auto max-w-[1160px] px-[clamp(16px,4vw,40px)]";
+const kicker = "text-[12px] font-bold uppercase tracking-[.14em] text-organic-accent-700";
+const h2 = "m-0 text-[clamp(28px,3.4vw,42px)] leading-[1.15] [text-wrap:balance]";
+const btnPrimary = "inline-flex items-center justify-center rounded-pill bg-organic-accent px-[26px] py-3.5 text-[16px] font-bold text-organic-neutral-100 no-underline hover:bg-organic-accent-600";
+const btnSecondary = "inline-flex items-center justify-center rounded-pill border border-organic-divider px-[22px] py-3.5 text-[16px] font-bold text-organic-text no-underline hover:bg-organic-text/[.07]";
 
 export default function DermLanding() {
   useSEO({
-    title: "GlowScan DERM — Vos patients viennent à vous, partout en Afrique",
-    description: "L'outil des dermatologues africains : dossier patient numérisé, rapport PDF en 1 clic envoyé sur WhatsApp, profil public sur Google et consultations en ligne dans toute l'Afrique. 14 jours gratuits.",
+    title: "GlowScan Derm — Vos patients viennent à vous, partout en Afrique",
+    description: "GlowScan Derm numérise votre cabinet, rédige votre compte rendu en 3 minutes et l'envoie signé sur le WhatsApp du patient. 14 jours gratuits, sans carte bancaire.",
     canonical: "https://glow-scan.com/derm",
   });
 
+  // Déjà connecté : on va directement à la page de son rôle.
   const [, setLocation] = useLocation();
   const { data: accData } = useProAccount();
   useEffect(() => {
-    if (accData?.account) setLocation("/derm/dashboard");
-    else if (accData?.user?.role === "secretary") setLocation("/derm/patients");
-  }, [accData]);
+    if (accData?.account) setLocation(proHomeOf((accData.account as any).profile, "doctor"));
+    else if (accData?.user?.role === "secretary") setLocation(proHomeOf(null, "secretary"));
+  }, [accData, setLocation]);
 
-  const [dermCount, setDermCount] = useState<number>(4);
-  useEffect(() => {
-    fetch("/api/pro/partners-count").then((r) => r.json()).then((d) => { if (typeof d.count === "number" && d.count > 0) setDermCount(d.count); }).catch(() => {});
-  }, []);
-
-  const wrap: React.CSSProperties = { maxWidth: 1120, margin: "0 auto", padding: "0 clamp(14px, 4vw, 40px)" };
-  const cardGrid = (min = 260): React.CSSProperties => ({ display: "grid", gap: "clamp(14px, 2vw, 22px)", gridTemplateColumns: `repeat(auto-fit, minmax(${min}px, 1fr))` });
-  const btnPrimary: React.CSSProperties = { display: "inline-block", background: C.gradient, color: "#fff", fontWeight: 800, fontSize: 15, padding: "14px 24px", borderRadius: 12, textDecoration: "none", textAlign: "center", boxShadow: "0 14px 26px -10px rgba(0,150,128,.5)" };
-  const btnOutline: React.CSSProperties = { display: "inline-block", background: "#fff", color: C.ink, fontWeight: 800, fontSize: 15, padding: "14px 24px", borderRadius: 12, border: `1.5px solid ${C.neutralBorder}`, textDecoration: "none", textAlign: "center" };
-  const kicker = (t: string): React.CSSProperties => ({ fontSize: 11, fontWeight: 800, letterSpacing: "0.14em", textTransform: "uppercase", color: C.teal });
-  const h2: React.CSSProperties = { fontFamily: sora, fontSize: "clamp(24px, 3vw, 34px)", fontWeight: 900, color: C.ink, letterSpacing: "-0.5px", lineHeight: 1.2 };
-  const gradientText: React.CSSProperties = { background: C.gradient, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" };
+  const [flow, setFlow] = useState<keyof typeof FLOWS>("b2c");
+  const [faq, setFaq] = useState(0);
+  const F = FLOWS[flow];
 
   return (
-    <div style={{ fontFamily: jakarta, background: C.white, color: C.ink, overflowX: "hidden" }}>
-
-      {/* Header */}
-      <div style={{ ...wrap, display: "flex", alignItems: "center", justifyContent: "space-between", height: "clamp(62px, 7vw, 78px)", position: "sticky", top: 0, zIndex: 50, background: "rgba(255,255,255,0.9)", backdropFilter: "blur(10px)" }}>
-        <LogoMark />
-        <div style={{ display: "flex", alignItems: "center", gap: "clamp(8px, 2vw, 22px)" }}>
-          <Link href="/derm/connexion"><span style={{ fontSize: "clamp(12px, 1.6vw, 13.5px)", fontWeight: 700, color: C.inkMuted, cursor: "pointer", whiteSpace: "nowrap" }}>Connexion</span></Link>
-          <Link href="/derm/inscription"><span style={{ ...btnPrimary, padding: "9px clamp(10px, 2vw, 16px)", fontSize: "clamp(11.5px, 1.6vw, 13px)", whiteSpace: "nowrap" }}>14 jours gratuits</span></Link>
+    <div className="overflow-x-hidden bg-organic-bg font-body text-organic-text">
+      <header className="sticky top-0 z-50 bg-organic-bg/90 backdrop-blur-[10px]">
+        <div className={`${wrap} flex items-center justify-between gap-4 py-3.5`}>
+          <Link href="/derm" className="text-organic-text no-underline"><DermBrand size={34} /></Link>
+          <nav className="flex items-center gap-[clamp(8px,2vw,24px)]">
+            <a href="#reseau" className="hidden whitespace-nowrap text-[14px] font-semibold text-organic-text no-underline sm:inline">Le réseau</a>
+            <a href="#tarif" className="hidden whitespace-nowrap text-[14px] font-semibold text-organic-text no-underline sm:inline">Tarif</a>
+            <Link href={LOGIN} className="whitespace-nowrap text-[14px] font-bold text-organic-text no-underline">Connexion</Link>
+            <Link href={SIGNUP} className="inline-flex whitespace-nowrap rounded-pill bg-organic-accent px-4 py-2 text-[14px] font-bold text-organic-neutral-100 no-underline hover:bg-organic-accent-600">
+              14 jours gratuits
+            </Link>
+          </nav>
         </div>
-      </div>
+      </header>
 
-      {/* ══ 1. HERO ══ */}
-      <section style={{ background: C.white, paddingTop: "clamp(32px, 7vw, 96px)", paddingBottom: "clamp(48px, 9vw, 120px)" }}>
-        <div style={{ ...wrap, display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: "clamp(24px, 4vw, 40px)" }}>
-          <motion.div {...fade()} style={{ maxWidth: 720 }}>
-            <p style={kicker("")}>Dermatologie numérique · Afrique</p>
-            <h1 style={{ fontFamily: sora, fontSize: "clamp(34px, 4.5vw, 54px)", lineHeight: 1.14, fontWeight: 900, margin: "16px 0 18px", letterSpacing: "-1px", color: C.ink }}>
-              Vos patients viennent à vous.<br /><span style={gradientText}>Votre expertise va partout en Afrique.</span>
-            </h1>
-            <p style={{ fontSize: 15.5, lineHeight: 1.65, color: C.inkMuted, maxWidth: 640, margin: "0 auto" }}>
-              GlowScan DERM numérise votre cabinet et génère votre rapport médical en 3 minutes — envoyé sur le WhatsApp du patient. Vous consultez, GlowScan documente.
-            </p>
-          </motion.div>
-          <motion.div {...fade(0.1)} style={{ display: "flex", flexWrap: "wrap", gap: 12, justifyContent: "center" }}>
-            <Link href="/derm/inscription"><span style={btnPrimary}>Créer mon profil gratuitement</span></Link>
-          </motion.div>
-          <motion.div {...fade(0.2)}><HeroArt /></motion.div>
+      {/* Héros */}
+      <section className={`${wrap} flex flex-wrap items-center gap-[clamp(28px,5vw,56px)] pb-[clamp(40px,6vw,72px)] pt-[clamp(32px,6vw,80px)]`}>
+        <div className="flex min-w-0 flex-[1_1_440px] flex-col gap-5">
+          <span className={kicker}>Dermatologie numérique · Afrique</span>
+          <h1 className="m-0 text-[clamp(38px,5.2vw,64px)] leading-[1.05] [text-wrap:balance]">
+            Vos patients viennent à vous. <span className="text-organic-accent">Votre expertise va partout en Afrique.</span>
+          </h1>
+          <p className="m-0 max-w-[540px] text-[17px] leading-relaxed text-organic-neutral-800">
+            GlowScan Derm numérise votre cabinet, rédige votre compte rendu en 3 minutes et l'envoie signé sur le WhatsApp du patient. Vous consultez, GlowScan documente.
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <Link href={SIGNUP} className={btnPrimary} data-testid="cta-hero">Créer mon profil gratuitement</Link>
+            <a href="#comment" className={btnSecondary}>Comment ça marche</a>
+          </div>
+          <span className="text-[13px] text-organic-neutral-700">Sans carte bancaire · paiement Orange Money ou MTN MoMo</span>
         </div>
-      </section>
-
-      {/* ══ 2. BARRE DE CONFIANCE ══ */}
-      <section style={{ background: C.white, padding: "clamp(18px, 3vw, 28px) 0" }}>
-        <div style={{ ...wrap, display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center", justifyContent: "center", textAlign: "center" }}>
-          <span style={{ fontSize: 13, fontWeight: 800, color: C.ink }}>{dermCount} dermatologues actifs</span>
-          <span style={{ color: "#cbd5e1" }}>·</span>
-          <span style={{ fontSize: 13, fontWeight: 800, color: C.ink }}>Cameroun · Bénin · RDC</span>
-          <span style={{ color: "#cbd5e1" }}>·</span>
-          <span style={{ fontSize: 13, fontWeight: 700, color: C.teal }}>Présenté au Congrès SODAF — Ouagadougou 2026</span>
+        <div className="flex min-w-0 flex-[1_1_380px] justify-center">
+          <img src="/glowscan-derm-hero-full.webp" alt="GlowScan Africa" className="block h-auto w-full max-w-[560px] rounded-card" />
         </div>
       </section>
 
-      {/* ══ 3. LE PROBLÈME ══ */}
-      <section style={{ background: C.paleTeal, padding: "clamp(48px, 8vw, 96px) 0" }}>
-        <div style={wrap}>
-          <motion.h2 {...fade()} style={{ ...h2, textAlign: "center", margin: "0 0 8px" }}>Il est 19h. Il vous reste 3 dossiers à écrire à la main.</motion.h2>
-          <motion.p {...fade(0.05)} style={{ textAlign: "center", fontSize: 14.5, color: C.inkMuted, margin: "0 auto clamp(28px, 4vw, 44px)", maxWidth: 560 }}>Chaque jour, l'administratif vous vole du temps que vous devriez passer avec vos patients.</motion.p>
-          <div style={cardGrid(280)}>
-            {[
-              { i: "doc", t: "Rédiger vos comptes-rendus à la main", s: "30 minutes par dossier en moyenne." },
-              { i: "chat", t: "Répondre aux questions WhatsApp de vos patients", s: "Après 20h, gratuitement, sans structure." },
-              { i: "folder", t: "Retrouver un ancien dossier patient", s: "Dans des carnets illisibles depuis 5 ans." },
-            ].map((b, k) => (
-              <motion.div key={k} {...fade(k * 0.08)} style={{ display: "flex", gap: 14, alignItems: "center", background: "#fff", border: `1px solid ${C.border}`, borderRadius: 16, padding: "clamp(16px, 2vw, 22px)" }}>
-                <IcoBox name={b.i} tone="orange" />
-                <div><p style={{ fontSize: 15, fontWeight: 800, color: C.ink, margin: 0 }}>{b.t}</p><p style={{ fontSize: 13, color: C.inkMuted, margin: "3px 0 0" }}>{b.s}</p></div>
-              </motion.div>
+      <section className={`${wrap} pb-[clamp(40px,6vw,64px)]`}>
+        <div className="flex flex-wrap justify-center gap-2.5">
+          <span className="rounded-pill bg-organic-surface px-4 py-2 text-center text-[13px] font-semibold">Dermatologues actifs au Cameroun, au Bénin et en RDC</span>
+          <span className="rounded-pill bg-organic-accent-2-200 px-4 py-2 text-center text-[13px] font-semibold text-organic-accent-2-900">Présenté au Congrès SODAF — Ouagadougou 2026</span>
+        </div>
+      </section>
+
+      {/* Constat */}
+      <section className="bg-organic-surface py-[clamp(56px,8vw,104px)]">
+        <div className={`${wrap} flex flex-col gap-[clamp(28px,4vw,44px)]`}>
+          <div className="flex max-w-[640px] flex-col gap-2.5">
+            <h2 className={h2}>Il est 19 h. Il vous reste 3 dossiers à écrire à la main.</h2>
+            <p className="m-0 text-[16px] text-organic-neutral-800">Chaque jour, l'administratif vous prend le temps que vous devriez passer avec vos patients.</p>
+          </div>
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,260px),1fr))] gap-organic-3">
+            {PAINS.map(([big, t, s]) => (
+              <div key={big} className="flex flex-col gap-1.5 rounded-card bg-organic-accent-100 p-organic-6">
+                <span className="font-heading text-[34px] leading-none text-organic-accent-800">{big}</span>
+                <span className="text-[15px] font-bold">{t}</span>
+                <span className="text-[13px] text-organic-neutral-800">{s}</span>
+              </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ══ 4. LA SOLUTION — 6 FEATURES ══ */}
-      <section style={{ background: C.white, padding: "clamp(52px, 9vw, 104px) 0" }}>
-        <div style={wrap}>
-          <motion.div {...fade()} style={{ textAlign: "center", marginBottom: "clamp(28px, 4vw, 44px)" }}>
-            <p style={kicker("")}>Ce que GlowScan DERM fait pour vous</p>
-            <h2 style={{ ...h2, margin: "10px 0 0" }}>Tout votre cabinet. Dans votre téléphone.</h2>
-          </motion.div>
-          <div style={cardGrid(260)}>
-            {FEATURES.map((f, i) => (
-              <motion.div key={i} {...fade((i % 2) * 0.06)} style={{ display: "flex", gap: 14, alignItems: "flex-start", background: "#fff", border: `1px solid ${C.border}`, borderRadius: 16, padding: "clamp(16px, 2vw, 22px)" }}>
-                <IcoBox name={f.icon} />
-                <div><p style={{ fontSize: 15, fontWeight: 800, color: C.ink, margin: 0 }}>{f.title}</p><p style={{ fontSize: 13, color: C.inkMuted, margin: "3px 0 0", lineHeight: 1.5 }}>{f.text}</p></div>
-              </motion.div>
-            ))}
-          </div>
+      {/* Fonctions */}
+      <section className={`${wrap} flex flex-col gap-[clamp(28px,4vw,44px)] py-[clamp(56px,8vw,104px)]`}>
+        <div className="flex flex-col items-center gap-2.5 text-center">
+          <span className={kicker}>Ce que GlowScan Derm fait pour vous</span>
+          <h2 className={h2}>Tout votre cabinet. Dans votre téléphone.</h2>
         </div>
-      </section>
-
-      {/* ══ 8. COMMENT ÇA MARCHE — FLUX 4 ÉTAPES ══ */}
-      <section style={{ background: C.white, padding: "clamp(52px, 9vw, 104px) 0" }}>
-        <div style={wrap}>
-          <motion.h2 {...fade()} style={{ ...h2, textAlign: "center", margin: "0 0 clamp(28px, 4vw, 44px)" }}>Comment ça marche</motion.h2>
-          <div style={cardGrid(260)}>
-            {[
-              { n: "1", i: "phone", t: "Le patient fait son analyse (gratuit)", d: "Photo de peau + Glow Score sur son téléphone." },
-              { n: "2", i: "shield", t: "GlowScan détecte un cas sérieux", d: "Score faible → recommandation de consulter un dermatologue." },
-              { n: "3", i: "pin", t: "Le patient consulte VOTRE profil et paie", d: "Il vous trouve, voit vos avis, et réserve sa consultation." },
-              { n: "4", i: "chat", t: "Vous consultez, le PDF part sur WhatsApp", d: "Vous documentez, signez, le patient reçoit son rapport." },
-            ].map((s, k) => (
-              <motion.div key={k} {...fade(k * 0.07)} style={{ display: "flex", gap: 14, alignItems: "center", background: C.paleTeal, borderRadius: 16, padding: "clamp(16px, 2vw, 22px)" }}>
-                <div style={{ width: 34, height: 34, borderRadius: "50%", background: C.gradient, color: "#fff", fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{s.n}</div>
-                <IcoBox name={s.i} />
-                <div><p style={{ fontSize: 14.5, fontWeight: 800, color: C.ink, margin: 0 }}>{s.t}</p><p style={{ fontSize: 12.5, color: C.inkMuted, margin: "2px 0 0" }}>{s.d}</p></div>
-              </motion.div>
-            ))}
-          </div>
-          <motion.p {...fade(0.1)} style={{ textAlign: "center", fontSize: 15, fontWeight: 800, color: C.teal, marginTop: "clamp(22px, 3vw, 32px)" }}>
-            Tout ça depuis votre téléphone. Sans vous déplacer. Sans paperasse.
-          </motion.p>
-        </div>
-      </section>
-
-      {/* ══ 7. PROFIL PUBLIC DERMATOLOGUE ══ */}
-      <section style={{ background: C.paleTeal, padding: "clamp(52px, 9vw, 104px) 0" }}>
-        <div style={wrap}>
-          <motion.div {...fade()} style={{ textAlign: "center", marginBottom: "clamp(26px, 4vw, 40px)" }}>
-            <p style={kicker("")}>Inclus dans l'abonnement</p>
-            <h2 style={{ ...h2, margin: "10px 0 8px" }}>Votre page professionnelle sur internet</h2>
-            <p style={{ fontSize: 14.5, color: C.inkMuted, maxWidth: 580, margin: "0 auto", lineHeight: 1.6 }}>
-              Chaque dermatologue GlowScan DERM reçoit une page publique visible sur Google. Vos patients vous trouvent. Vos confrères vous rejoignent.
-            </p>
-          </motion.div>
-
-          {/* Mockup page profil */}
-          <motion.div {...fade(0.08)} style={{ maxWidth: 400, margin: "0 auto clamp(26px, 4vw, 40px)", background: "#fff", borderRadius: 20, overflow: "hidden", border: `1px solid ${C.border}`, boxShadow: "0 16px 40px rgba(3,105,161,0.1)" }}>
-            <div style={{ height: 70, background: C.gradient }} />
-            <div style={{ padding: "0 18px 18px", marginTop: -34 }}>
-              <div style={{ display: "flex", gap: 12, alignItems: "flex-end" }}>
-                <div style={{ width: 68, height: 68, borderRadius: "50%", background: C.gradient, border: "3px solid #fff", display: "flex", alignItems: "center", justifyContent: "center" }}><Ico name="users" color="#fff" size={30} /></div>
-                <div style={{ paddingBottom: 4 }}>
-                  <p style={{ fontSize: 15, fontWeight: 900, color: C.ink, margin: 0 }}>Dr [Votre nom]</p>
-                  <p style={{ fontSize: 11, color: C.inkMuted, margin: "2px 0 0" }}>Dermatologie · Douala 🇨🇲</p>
-                </div>
-              </div>
-              <div style={{ marginTop: 12, background: C.paleTeal2, border: "1px solid rgba(0,147,122,0.22)", borderRadius: 10, padding: "8px 10px" }}>
-                <p style={{ fontSize: 12, fontWeight: 800, color: C.teal, margin: 0 }}>✦ Dermatologue Certifié GlowScan</p>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 10 }}>
-                <span style={{ color: "#f59e0b", letterSpacing: 1 }}>★★★★★</span>
-                <span style={{ fontSize: 11, color: C.inkMuted }}>4,9 · 37 avis</span>
-              </div>
-              <div style={{ marginTop: 12, background: C.gradient, color: "#fff", textAlign: "center", borderRadius: 10, padding: "11px", fontSize: 13, fontWeight: 800 }}>Consulter en ligne</div>
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,300px),1fr))] gap-organic-3">
+          {FEATURES.map(([t, s], i) => (
+            <div key={t} className="flex flex-col gap-2.5 rounded-card bg-organic-surface p-organic-6">
+              <span className={`flex h-11 w-11 items-center justify-center rounded-full font-heading text-[18px] ${i % 2 ? "bg-organic-accent-2-200 text-organic-accent-2-800" : "bg-organic-accent-200 text-organic-accent-800"}`}>{i + 1}</span>
+              <span className="font-heading text-[19px] leading-tight">{t}</span>
+              <span className="text-[14px] leading-normal text-organic-neutral-800">{s}</span>
             </div>
-          </motion.div>
-
-          {/* Bénéfices */}
-          <motion.div {...fade(0.12)} style={{ maxWidth: 680, margin: "0 auto" }}>
-            {[
-              "Visible sur Google quand un patient cherche « dermatologue [ville] »",
-              "Les patients GlowScan B2C vous sont envoyés selon votre région",
-              "Vos confrères vous trouvent et rejoignent le réseau GlowScan",
-              "Badge « Dermatologue Certifié GlowScan » affiché",
-              "Statistiques de votre activité chaque mois",
-            ].map((b) => (
-              <div key={b} style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 9 }}>
-                <span style={{ marginTop: 2, flexShrink: 0 }}><Ico name="check" color={C.tealIcon} size={18} /></span>
-                <span style={{ fontSize: 13.5, color: C.ink, fontWeight: 600 }}>{b}</span>
-              </div>
-            ))}
-          </motion.div>
-
-          {/* 3 étapes */}
-          <motion.div {...fade(0.16)} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, maxWidth: 680, margin: "clamp(22px, 3vw, 32px) auto 0" }}>
-            {[["1", "Créer son compte", "2 minutes"], ["2", "Compléter son profil", "photo, spécialités"], ["3", "La page est live", "patients & confrères arrivent"]].map(([n, t, s]) => (
-              <div key={n} style={{ background: "#fff", border: `1px solid ${C.border}`, borderRadius: 14, padding: "14px 10px", textAlign: "center" }}>
-                <div style={{ width: 28, height: 28, borderRadius: "50%", background: C.gradient, color: "#fff", fontWeight: 900, fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 8px" }}>{n}</div>
-                <p style={{ fontSize: 12.5, fontWeight: 800, color: C.ink, margin: 0 }}>{t}</p>
-                <p style={{ fontSize: 10.5, color: C.inkMuted, margin: "2px 0 0" }}>{s}</p>
-              </div>
-            ))}
-          </motion.div>
+          ))}
         </div>
       </section>
 
-      {/* ══ 12. DÉSARMER LA PEUR DE L'IA ══ */}
-      <section style={{ background: C.white, padding: "clamp(40px, 7vw, 80px) 0" }}>
-        <div style={wrap}>
-          <motion.div {...fade()} style={{ maxWidth: 620, margin: "0 auto", background: C.paleTeal2, border: "1.5px solid rgba(0,230,184,0.35)", borderRadius: 20, padding: "clamp(26px, 4vw, 40px) clamp(24px, 4vw, 36px)", textAlign: "center" }}>
-            <p style={{ fontFamily: sora, fontSize: 22, fontWeight: 900, color: C.ink, lineHeight: 1.35, margin: 0 }}>
-              GlowScan ne diagnostique pas.<br /><span style={gradientText}>GlowScan documente.</span>
-            </p>
-            <p style={{ fontSize: 16, fontWeight: 800, color: C.teal, margin: "10px 0 0" }}>Vous restez le médecin. Toujours.</p>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* ══ 11. TARIFICATION ══ */}
-      <section style={{ background: C.paleTeal, padding: "clamp(52px, 9vw, 104px) 0" }}>
-        <div style={wrap}>
-          <motion.div {...fade()} style={{ maxWidth: 520, margin: "0 auto", background: "#fff", border: "1.5px solid rgba(46,159,214,0.35)", borderRadius: 22, padding: "clamp(26px, 4vw, 40px)", textAlign: "center" }}>
-            <p style={{ fontFamily: sora, fontSize: 30, fontWeight: 900, color: C.ink, margin: 0, letterSpacing: "-0.5px" }}>Tout votre cabinet numérique</p>
-            <p style={{ fontSize: 13.5, color: C.inkMuted, margin: "4px 0 0" }}>Commencez avec <strong style={{ color: C.ink }}>14 jours gratuits</strong>.</p>
-            <div style={{ background: C.successBg, border: "1px solid rgba(5,150,105,0.25)", borderRadius: 12, padding: "10px 12px", margin: "16px 0" }}>
-              <p style={{ fontSize: 13, fontWeight: 800, color: C.successText, margin: 0 }}>Rentabilisé dès votre première consultation en ligne.</p>
-            </div>
-            <div style={{ textAlign: "left", display: "flex", flexDirection: "column", gap: 8, marginBottom: 18 }}>
-              {FEATURES.map((f) => (
-                <div key={f.title} style={{ display: "flex", alignItems: "center", gap: 9 }}>
-                  <Ico name="check" color={C.tealIcon} size={17} />
-                  <span style={{ fontSize: 13.5, color: C.ink, fontWeight: 600 }}>{f.title}</span>
-                </div>
+      {/* Comment ça marche */}
+      <section id="comment" className="scroll-mt-20 bg-organic-accent-2-100 py-[clamp(56px,8vw,104px)]">
+        <div className={`${wrap} flex flex-col gap-[clamp(24px,4vw,40px)]`}>
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <h2 className={`${h2} text-organic-accent-2-900`}>Comment ça marche</h2>
+            <div className="flex gap-1.5 rounded-pill bg-organic-surface p-1" role="tablist">
+              {(Object.keys(FLOWS) as (keyof typeof FLOWS)[]).map((k) => (
+                <button key={k} type="button" role="tab" aria-selected={flow === k} onClick={() => setFlow(k)}
+                  className={`cursor-pointer rounded-pill border-0 px-4 py-2.5 font-body text-[13px] font-bold ${flow === k ? "bg-organic-accent-2-600 text-organic-bg" : "bg-transparent text-organic-text"}`}>
+                  {FLOWS[k].label}
+                </button>
               ))}
             </div>
-            <Link href="/derm/inscription"><span style={{ ...btnPrimary, width: "100%", boxSizing: "border-box" }}>Commencer 14 jours gratuits</span></Link>
-            <p style={{ fontSize: 11.5, color: C.inkSoft, margin: "12px 0 0", lineHeight: 1.5 }}>Sans carte bancaire. Sans engagement. Paiement Mobile Money MTN ou Orange.</p>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* ══ 14. FAQ ══ */}
-      <section style={{ background: C.white, padding: "clamp(44px, 7vw, 88px) 0" }}>
-        <div style={{ ...wrap, maxWidth: 720 }}>
-          <motion.h2 {...fade()} style={{ ...h2, textAlign: "center", fontSize: "clamp(20px, 2.4vw, 26px)", margin: "0 0 clamp(18px, 3vw, 28px)" }}>Questions fréquentes</motion.h2>
-          <motion.div {...fade(0.05)}>{FAQS.map((f, i) => <Faq key={i} q={f.q} a={f.a} />)}</motion.div>
-        </div>
-      </section>
-
-      {/* ══ 13. CTA FINAL ══ */}
-      <section style={{ background: C.gradient, padding: "clamp(50px, 9vw, 110px) 0", textAlign: "center" }}>
-        <div style={wrap}>
-          <motion.div {...fade()}>
-            <h2 style={{ fontFamily: sora, fontSize: "clamp(25px, 3.5vw, 38px)", fontWeight: 900, color: "#fff", margin: "0 0 clamp(20px, 3vw, 28px)", letterSpacing: "-0.5px", lineHeight: 1.3 }}>
-              Rejoignez les dermatologues qui consultent<br />déjà toute l'Afrique depuis leur cabinet.
-            </h2>
-            <Link href="/derm/inscription"><span style={{ display: "inline-block", background: "#fff", color: C.teal, fontWeight: 900, fontSize: 15, padding: "15px 30px", borderRadius: 12, textDecoration: "none" }}>Créer mon profil gratuitement — 14 jours</span></Link>
-            <p style={{ fontSize: 12.5, color: "rgba(255,255,255,0.85)", margin: "16px auto 0", maxWidth: 420, lineHeight: 1.5 }}>
-              Votre profil est en ligne en moins de 5 minutes. Paiement Mobile Money après les 14 jours gratuits.
-            </p>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer style={{ background: C.white, padding: "clamp(30px, 5vw, 56px) 0", borderTop: `1px solid ${C.border}` }}>
-        <div style={{ ...wrap, textAlign: "center" }}>
-          <div style={{ display: "flex", justifyContent: "center", marginBottom: 12 }}><LogoMark /></div>
-          <div style={{ display: "flex", gap: 16, justifyContent: "center", flexWrap: "wrap", marginBottom: 14 }}>
-            <Link href="/derm/connexion"><span style={{ fontSize: 12.5, color: C.inkMuted, cursor: "pointer" }}>Connexion</span></Link>
-            <a href="https://wa.me/237674377959" target="_blank" rel="noopener noreferrer" style={{ fontSize: 12.5, color: C.inkMuted, textDecoration: "none" }}>Support</a>
-            <a href="https://glow-scan.com" style={{ fontSize: 12.5, color: C.inkMuted, textDecoration: "none" }}>glow-scan.com</a>
           </div>
-          <p style={{ fontSize: 11, color: C.inkSoft, lineHeight: 1.6, maxWidth: 560, margin: "0 auto" }}>
-            GlowScan DERM est un outil d'aide à la pratique médicale. Il ne se substitue pas au diagnostic médical et à la responsabilité du praticien.
-          </p>
-          <p style={{ fontSize: 11, color: C.inkSoft, margin: "12px 0 0" }}>
-            © {new Date().getFullYear()} <strong>GlowScan Africa</strong> · GlowScan DERM est un produit GlowScan Africa.
-          </p>
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,230px),1fr))] gap-organic-3">
+            {F.steps.map(([t, d], i) => (
+              <div key={t} className="flex flex-col gap-2.5 rounded-card bg-organic-surface p-organic-6">
+                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-organic-accent-2-600 font-heading text-[18px] text-organic-bg">{i + 1}</span>
+                <span className="text-[16px] font-bold">{t}</span>
+                <span className="text-[13px] leading-normal text-organic-neutral-800">{d}</span>
+              </div>
+            ))}
+          </div>
+          <p className="m-0 text-[16px] font-bold text-organic-accent-2-900">{F.note}</p>
         </div>
+      </section>
+
+      {/* Réseau */}
+      <section id="reseau" className={`${wrap} flex scroll-mt-20 flex-wrap items-center gap-[clamp(28px,5vw,56px)] py-[clamp(56px,8vw,104px)]`}>
+        <div className="flex min-w-0 flex-[1_1_400px] flex-col gap-4">
+          <span className={kicker}>Le réseau GlowScan Derm</span>
+          <h2 className={h2}>Là où il n'y a pas de dermatologue, vous devenez le référent.</h2>
+          <p className="m-0 text-[16px] leading-relaxed text-organic-neutral-800">
+            Des infirmiers et des médecins de terrain vous envoient leurs cas. Vous validez ou corrigez, et votre correction devient leur leçon. Vous êtes payé pour chaque avis.
+          </p>
+          <div className="flex flex-col gap-2.5">
+            {NETWORK.map((t) => (
+              <div key={t} className="flex items-start gap-3">
+                <span className="mt-1.5 h-2.5 w-2.5 flex-none rounded-full bg-organic-accent-2-600" />
+                <span className="text-[15px] leading-normal">{t}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="flex min-w-0 flex-[1_1_360px] flex-col gap-organic-3">
+          <div className="flex flex-col gap-2.5 rounded-card bg-organic-surface p-organic-6">
+            <span className="text-[10px] font-bold uppercase tracking-[.1em] text-organic-accent-700">Avis relais · CSI de Mokolo</span>
+            <span className="text-[15px] font-bold">Plaques du cuir chevelu, garçon de 7 ans</span>
+            <div className="flex flex-wrap gap-1.5">
+              <span className="rounded-pill bg-organic-bg px-3 py-1 text-[12px] font-semibold">Relais : pelade</span>
+              <span className="rounded-pill bg-organic-bg px-3 py-1 text-[12px] font-semibold">IA : teigne 82 %</span>
+            </div>
+            <div className="rounded-card bg-organic-accent-2-100 px-4 py-3 text-[14px] leading-normal text-organic-accent-2-900">
+              <b>Votre correction :</b> plaques rondes + squames + fratrie touchée = teigne jusqu'à preuve du contraire.
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-organic-2">
+            {([
+              [SPLITS.relay.derm, "pour vous", "bg-organic-accent-100"],
+              [SPLITS.relay.relay, "pour le relais", "bg-organic-accent-2-100"],
+              [SPLITS.relay.platform, "pour GlowScan", "bg-organic-surface"],
+            ] as const).map(([pct, l, bg]) => (
+              <div key={l} className={`flex flex-col items-center gap-1 rounded-card px-2 py-organic-4 ${bg}`}>
+                <span className="font-heading text-[24px]">{pct} %</span>
+                <span className="text-center text-[12px]">{l}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="px-[clamp(16px,4vw,40px)] pb-[clamp(56px,8vw,104px)]">
+        <div className="mx-auto flex max-w-[760px] flex-col gap-2.5 rounded-card bg-organic-accent-2-600 p-[clamp(32px,5vw,56px)] text-center text-organic-bg">
+          <span className="font-heading text-[clamp(28px,3.6vw,44px)] leading-[1.15]">GlowScan ne diagnostique pas. GlowScan documente.</span>
+          <span className="text-[17px] font-bold">Vous restez le médecin. Toujours.</span>
+        </div>
+      </section>
+
+      {/* Tarif */}
+      <section id="tarif" className="scroll-mt-20 bg-organic-surface py-[clamp(56px,8vw,104px)]">
+        <div className={`${wrap} flex flex-wrap items-center gap-[clamp(28px,5vw,56px)]`}>
+          <div className="flex min-w-0 flex-[1_1_360px] flex-col gap-3.5">
+            <span className={kicker}>Un seul tarif</span>
+            <h2 className={h2}>Votre abonnement se paie avec vos avis.</h2>
+            <p className="m-0 text-[16px] leading-relaxed text-organic-neutral-800">
+              Vos gains en consultations et en avis sont déduits automatiquement. Avec 6 avis par mois, vous ne payez plus rien.
+            </p>
+          </div>
+          <div className="flex min-w-0 flex-[1_1_380px] flex-col gap-3.5 rounded-card bg-organic-bg p-[clamp(24px,4vw,40px)]">
+            <div className="flex flex-wrap items-baseline gap-2">
+              <span className="font-heading text-[48px] leading-none">{PRO_SUBSCRIPTION_FCFA.toLocaleString("fr-FR").replace(/ /g, " ")}</span>
+              <span className="text-[16px] font-bold">FCFA / mois</span>
+            </div>
+            <span className="self-start rounded-pill bg-organic-accent-2-200 px-3 py-1 text-[12px] font-semibold text-organic-accent-2-900">14 jours gratuits · sans engagement</span>
+            <div className="flex flex-col gap-2">
+              {INCLUDED.map((t) => (
+                <span key={t} className="flex gap-2.5 text-[14px] font-semibold"><span className="font-bold text-organic-accent-2-700">✓</span>{t}</span>
+              ))}
+            </div>
+            <Link href={SIGNUP} className={`${btnPrimary} px-6`} data-testid="cta-pricing">Commencer 14 jours gratuits</Link>
+            <span className="text-[12px] text-organic-neutral-700">Aucune carte bancaire. Paiement Orange Money ou MTN MoMo après l'essai.</span>
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section className="mx-auto flex max-w-[760px] flex-col gap-organic-4 px-[clamp(16px,4vw,40px)] py-[clamp(56px,8vw,96px)]">
+        <h2 className="m-0 text-center text-[clamp(26px,3vw,36px)]">Questions fréquentes</h2>
+        <div className="flex flex-col gap-organic-2">
+          {FAQS.map(([q, a], i) => {
+            const open = faq === i;
+            return (
+              <div key={q} className={`rounded-card ${open ? "bg-organic-surface" : "bg-transparent"}`}>
+                <button type="button" onClick={() => setFaq(open ? -1 : i)} aria-expanded={open}
+                  className="flex w-full cursor-pointer items-center justify-between gap-3 border-0 bg-transparent px-5 py-4 text-left font-body text-[15px] font-bold text-organic-text">
+                  {q}<span className="flex-none text-[20px] text-organic-accent-700">{open ? "−" : "+"}</span>
+                </button>
+                {open && <p className="m-0 px-5 pb-[18px] text-[14px] leading-relaxed text-organic-neutral-800">{a}</p>}
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="bg-organic-accent px-[clamp(16px,4vw,40px)] py-[clamp(56px,8vw,104px)] text-center">
+        <div className="mx-auto flex max-w-[760px] flex-col items-center gap-5">
+          <h2 className="m-0 text-[clamp(28px,3.8vw,46px)] leading-[1.15] text-organic-bg [text-wrap:balance]">
+            Rejoignez les dermatologues qui consultent déjà toute l'Afrique depuis leur cabinet.
+          </h2>
+          <Link href={SIGNUP} className="inline-flex rounded-pill bg-organic-bg px-[30px] py-[15px] text-[16px] font-bold text-organic-accent-800 no-underline" data-testid="cta-final">
+            Créer mon profil — 14 jours gratuits
+          </Link>
+          <span className="text-[14px] text-organic-bg">Votre profil est en ligne en moins de 5 minutes.</span>
+        </div>
+      </section>
+
+      <footer className={`${wrap} flex flex-col items-center gap-3.5 py-[clamp(32px,5vw,56px)] text-center`}>
+        <span className="flex items-center gap-2.5">
+          <img src="/glowscan-mark.png" alt="" width={28} height={28} className="rounded-full" />
+          <span className="font-heading text-[17px]">GlowScan Derm</span>
+        </span>
+        <div className="flex flex-wrap justify-center gap-[18px] text-[13px]">
+          <Link href={LOGIN} className="text-organic-accent-700">Connexion</Link>
+          <a href={WA_SUPPORT} className="text-organic-accent-700">Support WhatsApp</a>
+          <a href="https://glow-scan.com" className="text-organic-accent-700">glow-scan.com</a>
+        </div>
+        <p className="m-0 max-w-[560px] text-[12px] leading-relaxed text-organic-neutral-700">
+          GlowScan Derm est un outil d'aide à la pratique médicale. Il ne remplace ni le diagnostic ni la responsabilité du praticien.
+        </p>
+        <p className="m-0 text-[12px] text-organic-neutral-700">© 2026 GlowScan Africa</p>
       </footer>
     </div>
   );
