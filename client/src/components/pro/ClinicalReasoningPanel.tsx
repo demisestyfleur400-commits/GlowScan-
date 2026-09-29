@@ -177,7 +177,7 @@ export function ClinicalReasoningPanel({
       {/* ── En-tête ── */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "10px 12px", borderBottom: `1px solid ${T.border}` }}>
         <span style={{ fontSize: 12, fontWeight: 800, color: T.accent, display: "flex", alignItems: "center", gap: 6 }}>
-          🧠 Raisonnement clinique IA
+          Raisonnement clinique IA
           {result?.groundingUsed && <span style={{ fontSize: 9.5, fontWeight: 700, color: DERM.green }}>· Recherche web ✓</span>}
         </span>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -191,10 +191,10 @@ export function ClinicalReasoningPanel({
 
       {open && (
         <div style={{ padding: 12 }}>
-          {/* ⚠️ Incohérence détectée — priorité visuelle */}
+          {/* Incohérence détectée — priorité visuelle */}
           {result?.contradiction?.detectee && !ignored && (
             <div style={{ marginBottom: 12, background: withAlpha(DERM.red, dark ? 0.16 : 0.08), border: `1px solid ${withAlpha(DERM.red, 0.35)}`, borderRadius: 10, padding: "10px 12px" }}>
-              <p style={{ fontSize: 12, fontWeight: 800, color: DERM.red, margin: "0 0 4px" }}>⚠️ Incohérence détectée</p>
+              <p style={{ fontSize: 12, fontWeight: 800, color: DERM.red, margin: "0 0 4px" }}>Incohérence détectée</p>
               {result.contradiction.explication && <p style={{ fontSize: 12, color: T.body, margin: "0 0 6px", lineHeight: 1.5 }}>{result.contradiction.explication}</p>}
               {result.contradiction.suggestion && <p style={{ fontSize: 12, color: T.ink, margin: "0 0 8px", lineHeight: 1.5 }}><strong>Suggestion :</strong> {result.contradiction.suggestion}</p>}
               <button onClick={() => setIgnored(true)}
@@ -266,7 +266,7 @@ export function ClinicalReasoningPanel({
             <div style={{ marginBottom: 10 }}>
               <p style={{ ...S.label, margin: "0 0 4px" }}>Source web consultée</p>
               <a href={result.sourceWeb.url} target="_blank" rel="noreferrer" style={{ fontSize: 11.5, color: T.accent, textDecoration: "none", wordBreak: "break-word" }}>
-                🔗 {result.sourceWeb.titre} <span style={{ color: T.muted }}>· {result.sourceWeb.date}</span>
+                {result.sourceWeb.titre} <span style={{ color: T.muted }}>· {result.sourceWeb.date}</span>
               </a>
             </div>
           )}

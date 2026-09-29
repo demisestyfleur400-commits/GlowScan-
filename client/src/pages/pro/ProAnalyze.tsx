@@ -60,15 +60,15 @@ import { ClinicalRulesPanel } from "@/components/pro/ClinicalRulesPanel";
 import { evaluateRules } from "@/lib/clinicalRules";
 import { ConfidenceEscalation } from "@/components/pro/ConfidenceEscalation";
 
-const NAVY = "#7c3aed";
-const INK = "#0F172A";
-const GREEN = "#10b981";
+const NAVY = "var(--color-accent)";
+const INK = "var(--color-text)";
+const GREEN = "var(--color-accent-2-600)";
 
 const DS = {
-  surface: "#FFFFFF",
-  body: "#64748B",
-  muted: "#94A3B8",
-  border: "#E2E8F0",
+  surface: "var(--color-surface)",
+  body: "var(--color-neutral-800)",
+  muted: "var(--color-neutral-700)",
+  border: "var(--color-divider)",
 };
 
 type Step = 1 | 2 | 3 | 4 | 5;
@@ -204,16 +204,16 @@ function QuickAnnotate({ scanId, condition }: { scanId?: number; condition?: str
   if (submitted) {
     return (
       <div className="rounded-2xl p-3 mb-3 text-center" style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)" }}>
-        <p className="text-xs font-extrabold" style={{ color: "#10b981" }}>✅ Données cliniques enregistrées</p>
+        <p className="text-xs font-extrabold" style={{ color: "var(--color-accent-2-600)" }}>✅ Données cliniques enregistrées</p>
         {score !== null && <p className="text-[10px] mt-0.5" style={{ color: "#6b7280" }}>Score annotation : {score}/100</p>}
       </div>
     );
   }
 
   return (
-    <div className="rounded-2xl p-4 mb-3 text-left" style={{ background: "#F1F5F9", border: "1px solid #F1F5F9" }}>
+    <div className="rounded-2xl p-4 mb-3 text-left" style={{ background: "var(--color-bg)", border: "1px solid #F1F5F9" }}>
       <p className="text-[11px] font-extrabold mb-3" style={{ color: "#0891B2" }}>
-        🧬 Données cliniques complémentaires
+        Données cliniques complémentaires
       </p>
 
       {/* Phototype */}
@@ -226,8 +226,8 @@ function QuickAnnotate({ scanId, condition }: { scanId?: number; condition?: str
             onClick={() => setPhototype(p.id)}
             className="flex-1 py-2 rounded-xl text-xs font-extrabold transition-all"
             style={{
-              background: phototype === p.id ? p.bg : "#F1F5F9",
-              color: phototype === p.id ? "#fff" : "#9ca3af",
+              background: phototype === p.id ? p.bg : "var(--color-bg)",
+              color: phototype === p.id ? "var(--color-neutral-100)" : "#9ca3af",
               border: phototype === p.id ? `2px solid ${p.bg}` : "1px solid #E2E8F0",
             }}
           >
@@ -245,7 +245,7 @@ function QuickAnnotate({ scanId, condition }: { scanId?: number; condition?: str
             onClick={() => setLesions(prev => toggleArr(prev, l.id))}
             className="px-2.5 py-1 rounded-full text-[10px] font-bold transition-all"
             style={{
-              background: lesions.includes(l.id) ? "rgba(139,92,246,0.3)" : "#F1F5F9",
+              background: lesions.includes(l.id) ? "rgba(139,92,246,0.3)" : "var(--color-bg)",
               color: lesions.includes(l.id) ? "#0891B2" : "#6b7280",
               border: lesions.includes(l.id) ? "1px solid #7c3aed" : "1px solid #F1F5F9",
             }}
@@ -262,7 +262,7 @@ function QuickAnnotate({ scanId, condition }: { scanId?: number; condition?: str
             onClick={() => setZones(prev => toggleArr(prev, z.id))}
             className="px-2.5 py-1 rounded-full text-[10px] font-bold transition-all"
             style={{
-              background: zones.includes(z.id) ? "rgba(59,130,246,0.3)" : "#F1F5F9",
+              background: zones.includes(z.id) ? "rgba(59,130,246,0.3)" : "var(--color-bg)",
               color: zones.includes(z.id) ? "#93c5fd" : "#6b7280",
               border: zones.includes(z.id) ? "1px solid #3b82f6" : "1px solid #F1F5F9",
             }}
@@ -279,8 +279,8 @@ function QuickAnnotate({ scanId, condition }: { scanId?: number; condition?: str
               <button key={r} onClick={() => setPihRisk(r)}
                 className="flex-1 py-1 rounded-lg text-[9px] font-bold transition-all"
                 style={{
-                  background: pihRisk === r ? (r === "high" ? "rgba(239,68,68,0.3)" : r === "medium" ? "rgba(245,158,11,0.3)" : "rgba(16,185,129,0.2)") : "#F1F5F9",
-                  color: pihRisk === r ? (r === "high" ? "#f87171" : r === "medium" ? "#fcd34d" : "#6ee7b7") : "#6b7280",
+                  background: pihRisk === r ? (r === "high" ? "rgba(239,68,68,0.3)" : r === "medium" ? "rgba(245,158,11,0.3)" : "rgba(16,185,129,0.2)") : "var(--color-bg)",
+                  color: pihRisk === r ? (r === "high" ? "var(--color-accent-700)" : r === "medium" ? "var(--color-accent-300)" : "var(--color-accent-2-700)") : "#6b7280",
                   border: "1px solid #F1F5F9",
                 }}
               >{r === "low" ? "Faible" : r === "medium" ? "Moyen" : "Élevé"}</button>
@@ -294,8 +294,8 @@ function QuickAnnotate({ scanId, condition }: { scanId?: number; condition?: str
               <button key={r} onClick={() => setKeloidRisk(r)}
                 className="flex-1 py-1 rounded-lg text-[9px] font-bold transition-all"
                 style={{
-                  background: keloidRisk === r ? (r === "high" ? "rgba(239,68,68,0.3)" : r === "medium" ? "rgba(245,158,11,0.3)" : "rgba(16,185,129,0.2)") : "#F1F5F9",
-                  color: keloidRisk === r ? (r === "high" ? "#f87171" : r === "medium" ? "#fcd34d" : "#6ee7b7") : "#6b7280",
+                  background: keloidRisk === r ? (r === "high" ? "rgba(239,68,68,0.3)" : r === "medium" ? "rgba(245,158,11,0.3)" : "rgba(16,185,129,0.2)") : "var(--color-bg)",
+                  color: keloidRisk === r ? (r === "high" ? "var(--color-accent-700)" : r === "medium" ? "var(--color-accent-300)" : "var(--color-accent-2-700)") : "#6b7280",
                   border: "1px solid #F1F5F9",
                 }}
               >{r === "low" ? "Faible" : r === "medium" ? "Moyen" : "Élevé"}</button>
@@ -309,8 +309,8 @@ function QuickAnnotate({ scanId, condition }: { scanId?: number; condition?: str
         disabled={!phototype || submitting}
         className="w-full py-2 rounded-xl text-xs font-extrabold transition-all"
         style={{
-          background: phototype ? "linear-gradient(135deg,#7c3aed,#4f46e5)" : "#F1F5F9",
-          color: phototype ? "#fff" : "#4b5563",
+          background: phototype ? "linear-gradient(135deg,#7c3aed,#4f46e5)" : "var(--color-bg)",
+          color: phototype ? "var(--color-neutral-100)" : "#4b5563",
           opacity: submitting ? 0.7 : 1,
         }}
       >
@@ -346,7 +346,7 @@ export default function ProAnalyze() {
   const { data: patientsData } = useProPatients("");
   const { data: accountData } = useProAccount();
 
-  // ⚠️ IMPORTANT: TOUS les useState DOIVENT être déclarés AVANT les hooks qui les utilisent
+  // IMPORTANT: TOUS les useState DOIVENT être déclarés AVANT les hooks qui les utilisent
   // Sinon : temporal dead zone error dans les hooks
 
   // Step 1 : choix patient
@@ -437,7 +437,7 @@ export default function ProAnalyze() {
   // Classification (TÂCHE 4)
   const [selectedStatus, setSelectedStatus] = useState<PatientStatus | null>(null);
 
-  // 🔑 Détecter le rôle de l'utilisateur : doctor ou secretary
+  // Détecter le rôle de l'utilisateur : doctor ou secretary
   const userRole = accountData?.user?.role;
   const isDoctor = userRole === "doctor";
 
@@ -859,7 +859,7 @@ export default function ProAnalyze() {
     const overrideBadge = overrideType === "partial"
       ? `<span style="display:inline-block;background:#7c3aed;color:#fff;font-size:8px;font-weight:700;padding:2px 8px;border-radius:4px;margin-left:6px">✓ Révisé par Dr. ${firstName || lastName || "..."}</span>`
       : overrideType === "full"
-      ? `<span style="display:inline-block;background:#1a3a3a;color:#fff;font-size:8px;font-weight:700;padding:2px 8px;border-radius:4px;margin-left:6px">📝 Diagnostic établi par Dr. ${firstName || lastName || "..."}</span>`
+      ? `<span style="display:inline-block;background:#1a3a3a;color:#fff;font-size:8px;font-weight:700;padding:2px 8px;border-radius:4px;margin-left:6px">Diagnostic établi par Dr. ${firstName || lastName || "..."}</span>`
       : "";
 
     const TEAL = "#1a3a3a";
@@ -875,8 +875,8 @@ export default function ProAnalyze() {
       `<div style="display:flex;gap:0;margin-bottom:6px"><div style="width:200px;font-size:10px;font-weight:700;color:#374151;flex-shrink:0">${label}</div><div style="font-size:10px;color:#1a1a1a;flex:1">${value}</div></div>`;
 
     const zoneRow = (z: any, i: number) => {
-      const statusColor = z.status === "Sévèrement affecté" ? "#dc2626" : z.status === "Modérément affecté" ? "#d97706" : z.status === "Légèrement affecté" ? "#2563eb" : "#059669";
-      return `<div style="margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid #e5e7eb"><div style="font-size:10.5px;font-weight:800;color:#1a1a1a;margin-bottom:4px"><span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;background:${TEAL};color:#fff;font-size:9px;font-weight:800;border-radius:50%;margin-right:6px">${i+1}</span>${z.zone || ""} — <span style="color:${statusColor}">${z.status || ""}</span></div>${z.findings ? `<div style="font-size:10px;color:#374151;line-height:1.8;margin-left:26px">${z.findings}</div>` : ""}${z.risk ? `<div style="font-size:9.5px;color:#dc2626;font-weight:700;margin-top:5px;margin-left:26px;padding:5px 8px;background:#fef2f2;border-left:3px solid #dc2626;border-radius:0 4px 4px 0">⚠ Risque : ${z.risk}</div>` : ""}</div>`;
+      const statusColor = z.status === "Sévèrement affecté" ? "var(--color-accent-800)" : z.status === "Modérément affecté" ? "var(--color-accent-600)" : z.status === "Légèrement affecté" ? "var(--color-accent-600)" : "var(--color-accent-2-700)";
+      return `<div style="margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid #e5e7eb"><div style="font-size:10.5px;font-weight:800;color:#1a1a1a;margin-bottom:4px"><span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;background:${TEAL};color:#fff;font-size:9px;font-weight:800;border-radius:50%;margin-right:6px">${i+1}</span>${z.zone || ""} — <span style="color:${statusColor}">${z.status || ""}</span></div>${z.findings ? `<div style="font-size:10px;color:#374151;line-height:1.8;margin-left:26px">${z.findings}</div>` : ""}${z.risk ? `<div style="font-size:9.5px;color:#dc2626;font-weight:700;margin-top:5px;margin-left:26px;padding:5px 8px;background:#fef2f2;border-left:3px solid #dc2626;border-radius:0 4px 4px 0">Risque : ${z.risk}</div>` : ""}</div>`;
     };
 
     const toxicRow = (t: any) => {
@@ -920,9 +920,9 @@ export default function ProAnalyze() {
     );
     const wProto: any = r.clinicalProtocol || {};
     const treatHtml = [
-      morning.length ? `<div style="font-weight:800;color:${TEAL};font-size:9px;text-transform:uppercase;letter-spacing:.4px;margin:0 0 6px">🌞 Matin</div>` + morning.map((s: any, i: number) => stepRow(s, i, i)).join("") : "",
-      evening.length ? `<div style="font-weight:800;color:${TEAL};font-size:9px;text-transform:uppercase;letter-spacing:.4px;margin:10px 0 6px">🌙 Soir</div>` + evening.map((s: any, i: number) => stepRow(s, i, morning.length + i)).join("") : "",
-      wProto.weekly ? `<div style="font-weight:800;color:${TEAL};font-size:9px;text-transform:uppercase;letter-spacing:.4px;margin:10px 0 6px">📅 Hebdomadaire</div><div style="font-size:10px;color:#374151;line-height:1.7">${wProto.weekly}</div>` : "",
+      morning.length ? `<div style="font-weight:800;color:${TEAL};font-size:9px;text-transform:uppercase;letter-spacing:.4px;margin:0 0 6px">Matin</div>` + morning.map((s: any, i: number) => stepRow(s, i, i)).join("") : "",
+      evening.length ? `<div style="font-weight:800;color:${TEAL};font-size:9px;text-transform:uppercase;letter-spacing:.4px;margin:10px 0 6px">Soir</div>` + evening.map((s: any, i: number) => stepRow(s, i, morning.length + i)).join("") : "",
+      wProto.weekly ? `<div style="font-weight:800;color:${TEAL};font-size:9px;text-transform:uppercase;letter-spacing:.4px;margin:10px 0 6px">Hebdomadaire</div><div style="font-size:10px;color:#374151;line-height:1.7">${wProto.weekly}</div>` : "",
     ].filter(Boolean).join("") || undefined;
 
     const obs: ObservationData = {
@@ -1013,7 +1013,7 @@ export default function ProAnalyze() {
     </div>
   </div>
   <div style="text-align:right">
-    <div style="display:inline-block;background:#dc2626;color:#fff;font-size:7.5px;font-weight:800;padding:3px 9px;border-radius:4px;letter-spacing:.5px;text-transform:uppercase;margin-bottom:5px">🔒 Document médical confidentiel</div>
+    <div style="display:inline-block;background:#dc2626;color:#fff;font-size:7.5px;font-weight:800;padding:3px 9px;border-radius:4px;letter-spacing:.5px;text-transform:uppercase;margin-bottom:5px">Document médical confidentiel</div>
     <div style="font-size:10px;color:rgba(255,255,255,0.95);font-weight:700">Réf : ${refNum}</div>
     <div style="font-size:8.5px;color:rgba(255,255,255,0.65)">Date : ${date}</div>
   </div>
@@ -1047,7 +1047,7 @@ export default function ProAnalyze() {
   ${sectionWrap("Anamnèse &amp; Antécédents", `
     ${problemDuration ? infoRowClin("Durée du problème", problemDuration) : ""}
     ${previousProducts ? infoRowClin("Produits déjà utilisés", previousProducts) : ""}
-    ${allergies ? "<div style='display:flex;gap:0;margin-bottom:6px'><div style='width:200px;font-size:10px;font-weight:700;color:#374151;flex-shrink:0'>Allergies</div><div style='font-size:10px;color:#dc2626;flex:1;font-weight:700'>⚠ " + allergies + "</div></div>" : ""}
+    ${allergies ? "<div style='display:flex;gap:0;margin-bottom:6px'><div style='width:200px;font-size:10px;font-weight:700;color:#374151;flex-shrink:0'>Allergies</div><div style='font-size:10px;color:#dc2626;flex:1;font-weight:700'>" + allergies + "</div></div>" : ""}
     ${consultMotif ? infoRowClin("Motif (mots du patient)", "« " + consultMotif + " »") : ""}
     ${antecedentsIntegration ? infoRowClin("Intégration clinique", antecedentsIntegration) : ""}
     ${questionnaire.filter((q:any)=>answers[q.id] !== undefined && answers[q.id] !== null && answers[q.id] !== "").map((q:any)=>infoRowClin(q.label, String(answers[q.id]))).join("")}
@@ -1118,14 +1118,14 @@ export default function ProAnalyze() {
   <!-- PRONOSTIC & SUIVI -->
   ${(prognostic || followUp) ? sectionWrap("Pronostic &amp; Suivi Recommandé", `
     ${prognostic ? "<p style='font-size:10px;color:#374151;line-height:1.8;margin-bottom:" + (followUp ? "8px" : "0") + "'>" + prognostic + "</p>" : ""}
-    ${followUp ? "<div style='font-size:10px;font-weight:700;color:" + TEAL + ";padding:8px 12px;background:#f0fafa;border-left:3px solid " + TEAL + ";border-radius:0 4px 4px 0'>📅 " + followUp + "</div>" : ""}
+    ${followUp ? "<div style='font-size:10px;font-weight:700;color:" + TEAL + ";padding:8px 12px;background:#f0fafa;border-left:3px solid " + TEAL + ";border-radius:0 4px 4px 0'>" + followUp + "</div>" : ""}
   `) : ""}
 
   <!-- NOTES PRATICIEN (si remplies) -->
   ${practitionerNotes.trim() ? `
   <div style="margin-bottom:16px;border:1px solid #7c3aed;border-radius:4px;overflow:hidden">
     <div style="background:#7c3aed;padding:9px 16px">
-      <span style="font-size:10.5px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:.5px">📝 Notes du Praticien</span>
+      <span style="font-size:10.5px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:.5px">Notes du Praticien</span>
     </div>
     <div style="background:#faf5ff;padding:14px 16px">
       <p style="font-size:10.5px;color:#4c1d95;line-height:1.8;font-style:italic"><span data-edit="notes">${practitionerNotes.replace(/\n/g, "<br>")}</span></p>
@@ -1179,7 +1179,7 @@ export default function ProAnalyze() {
     </div>
 
     <div style="margin-top:10px;padding-top:8px;border-top:1px solid #e5e7eb;font-size:8px;color:#9ca3af;line-height:1.7">
-      🔒 Document médical confidentiel établi et validé par le praticien soussigné · Réf ${refNum} · À usage strictement professionnel et personnel au patient. GlowScan DERM © ${new Date().getFullYear()}.
+      Document médical confidentiel établi et validé par le praticien soussigné · Réf ${refNum} · À usage strictement professionnel et personnel au patient. GlowScan DERM © ${new Date().getFullYear()}.
     </div>
   </div>
 
@@ -1309,7 +1309,7 @@ export default function ProAnalyze() {
   ].filter(Boolean).join(" · ") || undefined;
 
   return (
-    <ProLayout title="Analyser un patient" onBack={() => {
+    <ProLayout onBack={() => {
       // Retour ÉTAPE PAR ÉTAPE (ne quitte le wizard que depuis la 1re étape).
       if (step > 1) { setStep(step - 1); return; }
       if (patientMode !== "choice") { setPatientMode("choice"); return; }
@@ -1317,7 +1317,11 @@ export default function ProAnalyze() {
     }}>
       <div className="max-w-3xl mx-auto print:max-w-full">
         <SubscriptionExpiredBanner />
-        <ProgressBar current={step} />
+        <header className="mb-organic-4 flex flex-col gap-1 print:hidden">
+          <span className="text-[11px] font-bold uppercase tracking-[.12em] text-organic-accent-700">Nouvelle analyse · étape {step} sur 5</span>
+          <h1 className="m-0 text-[clamp(28px,4vw,38px)]">{STEPS[step - 1].label}</h1>
+        </header>
+        <ProgressBar current={step} onGo={(n) => { if (n < step) setStep(n); }} />
 
         {/* ════════ STEP 1 : Patient ════════ */}
         {step === 1 && (
@@ -1331,7 +1335,7 @@ export default function ProAnalyze() {
                     onClick={() => setPatientMode("new")}
                     data-testid="button-new-patient"
                     className="group p-5 rounded-2xl text-left transition-all active:scale-[0.98]"
-                    style={{ background: "#F1F5F9", border: "1px solid #E2E8F0" }}
+                    style={{ background: "var(--color-bg)", border: "1px solid #E2E8F0" }}
                     onMouseEnter={(e) => (e.currentTarget.style.borderColor = NAVY)}
                     onMouseLeave={(e) => (e.currentTarget.style.borderColor = DS.border)}
                   >
@@ -1349,7 +1353,7 @@ export default function ProAnalyze() {
                     data-testid="button-existing-patient"
                     disabled={(patientsData?.patients?.length || 0) === 0}
                     className="group p-5 rounded-2xl text-left transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
-                    style={{ background: "#F1F5F9", border: "1px solid #E2E8F0" }}
+                    style={{ background: "var(--color-bg)", border: "1px solid #E2E8F0" }}
                     onMouseEnter={(e) => { if (!e.currentTarget.disabled) e.currentTarget.style.borderColor = NAVY; }}
                     onMouseLeave={(e) => (e.currentTarget.style.borderColor = DS.border)}
                   >
@@ -1391,7 +1395,7 @@ export default function ProAnalyze() {
                         onChange={(e) => setSex(e.target.value as any)}
                         data-testid="select-sex"
                         className="w-full px-3 py-2 rounded-xl text-sm outline-none"
-                        style={{ background: "#F1F5F9", border: "1px solid rgba(167,139,250,0.2)", color: INK }}
+                        style={{ background: "var(--color-bg)", border: "1px solid rgba(167,139,250,0.2)", color: INK }}
                       >
                         <option value="—">—</option>
                         <option value="F">Femme</option>
@@ -1402,8 +1406,8 @@ export default function ProAnalyze() {
                   </div>
                   {/* ─── Dossier clinique structuré (démarche médicale) ─── */}
                   <div>
-                    <p className="text-xs font-extrabold mb-2 px-1" style={{ color: "#0369A1" }}>
-                      🩺 Dossier clinique
+                    <p className="text-xs font-extrabold mb-2 px-1" style={{ color: "var(--color-accent-700)" }}>
+                      Dossier clinique
                     </p>
                     <ClinicalDossierForm value={clinicalRecord} onChange={setClinicalRecord} sex={sex} />
                   </div>
@@ -1440,7 +1444,7 @@ export default function ProAnalyze() {
                     placeholder="Rechercher Mbarga, Marie, 677..."
                     data-testid="input-search-patient"
                     className="w-full pl-9 pr-3 py-2 rounded-xl text-sm outline-none"
-                    style={{ background: "#F1F5F9", border: "1px solid rgba(167,139,250,0.2)", color: INK }}
+                    style={{ background: "var(--color-bg)", border: "1px solid rgba(167,139,250,0.2)", color: INK }}
                   />
                 </div>
                 <div className="space-y-1.5 max-h-80 overflow-y-auto">
@@ -1453,7 +1457,7 @@ export default function ProAnalyze() {
                         onClick={() => selectExisting(p)}
                         data-testid={`row-pick-patient-${p.id}`}
                         className="w-full flex items-center gap-3 p-3 rounded-xl transition-all text-left active:scale-[0.99]"
-                        style={{ border: "1px solid #E2E8F0", background: "#F1F5F9" }}
+                        style={{ border: "1px solid #E2E8F0", background: "var(--color-bg)" }}
                         onMouseEnter={(e) => (e.currentTarget.style.borderColor = NAVY)}
                         onMouseLeave={(e) => (e.currentTarget.style.borderColor = DS.border)}
                       >
@@ -1505,14 +1509,14 @@ export default function ProAnalyze() {
               if (rows.length === 0) return null;
               return (
                 <details className="mb-4 rounded-xl overflow-hidden" style={{ border: "1px solid rgba(16,185,129,0.3)", background: "rgba(16,185,129,0.06)" }}>
-                  <summary className="cursor-pointer text-[12px] font-extrabold px-3 py-2.5" style={{ color: "#6ee7b7" }}>
-                    📋 Dossier déjà rempli — {rows.length} champ{rows.length > 1 ? "s" : ""} (relire avant l'examen)
+                  <summary className="cursor-pointer text-[12px] font-extrabold px-3 py-2.5" style={{ color: "var(--color-accent-2-700)" }}>
+                    Dossier déjà rempli — {rows.length} champ{rows.length > 1 ? "s" : ""} (relire avant l'examen)
                   </summary>
                   <div className="px-3 pb-3 space-y-1.5">
                     {rows.map(([k, label]) => (
                       <div key={k} className="flex gap-2 text-[11.5px]">
-                        <span className="font-extrabold flex-shrink-0" style={{ color: "#64748B", minWidth: 130 }}>{label}</span>
-                        <span style={{ color: "#0F172A" }}>{cr[k]}</span>
+                        <span className="font-extrabold flex-shrink-0" style={{ color: "var(--color-neutral-700)", minWidth: 130 }}>{label}</span>
+                        <span style={{ color: "var(--color-text)" }}>{cr[k]}</span>
                       </div>
                     ))}
                   </div>
@@ -1536,19 +1540,19 @@ export default function ProAnalyze() {
 
             {/* Rubrique : Visage ou Corps */}
             <div className="flex gap-2 mb-3">
-              {([["face", "🙂 Visage"], ["body", "🧍 Corps"]] as const).map(([v, lab]) => (
+              {([["face", "Visage"], ["body", "Corps"]] as const).map(([v, lab]) => (
                 <button key={v} type="button" onClick={() => setExamArea(v)}
                   className="flex-1 py-2 rounded-xl text-xs font-extrabold transition-all"
                   style={examArea === v
                     ? { background: "rgba(124,58,237,0.18)", border: "1.5px solid rgba(124,58,237,0.5)", color: "#0891B2" }
-                    : { background: "#F1F5F9", border: `1px solid ${DS.border}`, color: DS.muted }}>
+                    : { background: "var(--color-bg)", border: `1px solid ${DS.border}`, color: DS.muted }}>
                   {lab}
                 </button>
               ))}
             </div>
 
-            <p className="text-xs font-extrabold mb-2 px-1" style={{ color: "#0369A1" }}>
-              📷 Photos cliniques <span style={{ color: DS.muted }}>— portrait requis, profils recommandés</span>
+            <p className="text-xs font-extrabold mb-2 px-1" style={{ color: "var(--color-accent-700)" }}>
+              Photos cliniques <span style={{ color: DS.muted }}>— portrait requis, profils recommandés</span>
             </p>
             <div className="grid grid-cols-3 gap-2 mb-3">
               {([
@@ -1559,17 +1563,17 @@ export default function ProAnalyze() {
                 <div key={slot.key}>
                   <button type="button" onClick={() => slot.ref.current?.click()}
                     className="w-full rounded-xl overflow-hidden relative"
-                    style={{ aspectRatio: "3/4", border: slot.src ? `1px solid ${DS.border}` : "2px dashed rgba(167,139,250,0.3)", background: "#F1F5F9" }}>
+                    style={{ aspectRatio: "3/4", border: slot.src ? `1px solid ${DS.border}` : "2px dashed rgba(167,139,250,0.3)", background: "var(--color-bg)" }}>
                     {slot.src ? (
                       <img src={slot.src} alt={slot.label} className="w-full h-full object-cover" />
                     ) : (
                       <div className="flex flex-col items-center justify-center h-full">
-                        <Upload className="w-5 h-5 mb-1" style={{ color: "#94A3B8" }} />
+                        <Upload className="w-5 h-5 mb-1" style={{ color: "var(--color-neutral-600)" }} />
                         <span className="text-[10px] font-extrabold" style={{ color: DS.muted }}>+ {slot.label}</span>
                       </div>
                     )}
                   </button>
-                  <p className="text-[10px] text-center mt-1 font-extrabold" style={{ color: slot.src ? "#6ee7b7" : DS.muted }}>
+                  <p className="text-[10px] text-center mt-1 font-extrabold" style={{ color: slot.src ? "var(--color-accent-2-700)" : DS.muted }}>
                     {slot.label}{slot.src ? " ✓" : ""}
                   </p>
                   <input ref={slot.ref} type="file" accept="image/*" className="hidden"
@@ -1587,7 +1591,7 @@ export default function ProAnalyze() {
               <button
                 onClick={() => setStep(1)}
                 className="px-4 py-2.5 rounded-full text-sm font-extrabold inline-flex items-center gap-1 transition-all active:scale-[0.97]"
-                style={{ background: "#E2E8F0", border: "1px solid #E2E8F0", color: DS.body }}
+                style={{ background: "var(--color-divider)", border: "1px solid #E2E8F0", color: DS.body }}
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
                 Retour
@@ -1625,7 +1629,7 @@ export default function ProAnalyze() {
               <ScanLoader photo={photoBase64} />
             ) : (
               <>
-                {/* ⚠️ Produit nocif identifié dans l'anamnèse (produits déclarés) */}
+                {/* Produit nocif identifié dans l'anamnèse (produits déclarés) */}
                 <ToxicAlert
                   title="Produit nocif identifié dans l'anamnèse"
                   products={detectToxicProducts([previousProducts, clinicalRecord?.atcdCosmeto].filter(Boolean).join(", "))}
@@ -1636,7 +1640,7 @@ export default function ProAnalyze() {
 
                 {/* Tooltip contextuel — premier diagnostic IA */}
                 <ContextualTip tipKey="analyse_ia"
-                  title="💡 Suggestion indicative"
+                  title="Suggestion indicative"
                   body="Ceci est une suggestion de l'IA. Votre diagnostic prime toujours — validez ou corrigez en un clic." />
 
 
@@ -1704,10 +1708,10 @@ export default function ProAnalyze() {
                 </Suspense>
 
                 {/* Notes cliniques praticien */}
-                <div className="mt-5 rounded-2xl p-4" style={{ background: "#F1F5F9", border: "1px solid rgba(167,139,250,0.15)" }}>
+                <div className="mt-5 rounded-2xl p-4" style={{ background: "var(--color-bg)", border: "1px solid rgba(167,139,250,0.15)" }}>
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-[10px] font-extrabold uppercase tracking-wider" style={{ color: "rgba(167,139,250,0.5)" }}>
-                      📝 Notes cliniques du praticien (optionnel) — incluses dans le PDF du patient
+                      Notes cliniques du praticien (optionnel) — incluses dans le PDF du patient
                     </p>
                     <VoiceButton value={practitionerNotes} onChange={(t) => setPractitionerNotes(t)} />
                   </div>
@@ -1718,12 +1722,12 @@ export default function ProAnalyze() {
                     rows={4}
                     className="w-full outline-none resize-none"
                     style={{
-                      background: "#F1F5F9",
+                      background: "var(--color-bg)",
                       border: "1px solid rgba(167,139,250,0.2)",
                       borderRadius: 12,
                       padding: "12px 16px",
                       fontSize: 13,
-                      color: "#0F172A",
+                      color: "var(--color-text)",
                       minHeight: 100,
                       lineHeight: 1.6,
                     }}
@@ -1735,10 +1739,10 @@ export default function ProAnalyze() {
                   {/* Header */}
                   <div className="px-4 py-3 flex items-center justify-between" style={{ background: "rgba(124,58,237,0.08)" }}>
                     <div>
-                      <p className="text-xs font-extrabold" style={{ color: "#0369A1" }}>
+                      <p className="text-xs font-extrabold" style={{ color: "var(--color-accent-700)" }}>
                         ✏️ Clinical Override
                         {overrideType !== "none" && (
-                          <span className="ml-2 text-[10px] px-2 py-0.5 rounded-full font-bold" style={{ background: "#7c3aed", color: "#fff" }}>
+                          <span className="ml-2 text-[10px] px-2 py-0.5 rounded-full font-bold" style={{ background: "var(--color-accent)", color: "var(--color-neutral-100)" }}>
                             {overrideType === "partial" ? "Corrigé partiellement" : "Diagnostic manuel"}
                           </span>
                         )}
@@ -1759,16 +1763,16 @@ export default function ProAnalyze() {
                       <button
                         onClick={() => { setShowPartialOverride(true); setOverrideCondition(result?.condition || ""); setOverrideScore(result?.score || 70); setOverrideSummary((result as any)?.clinicalSummary || result?.details || ""); }}
                         className="flex-1 text-xs font-extrabold py-2 rounded-xl transition-all active:scale-95"
-                        style={{ background: "rgba(124,58,237,0.1)", border: "1px solid rgba(124,58,237,0.3)", color: "#0369A1" }}
+                        style={{ background: "rgba(124,58,237,0.1)", border: "1px solid rgba(124,58,237,0.3)", color: "var(--color-accent-700)" }}
                       >
                         ✏️ Corriger le diagnostic IA
                       </button>
                       <button
                         onClick={() => { setShowFullManual(true); }}
                         className="flex-1 text-xs font-extrabold py-2 rounded-xl transition-all active:scale-95"
-                        style={{ background: "#F1F5F9", border: "1px solid #E2E8F0", color: DS.muted }}
+                        style={{ background: "var(--color-bg)", border: "1px solid #E2E8F0", color: DS.muted }}
                       >
-                        📝 Diagnostic manuel complet
+                        Diagnostic manuel complet
                       </button>
                     </div>
                   )}
@@ -1780,38 +1784,38 @@ export default function ProAnalyze() {
                         <label className="text-[10px] font-bold block mb-1" style={{ color: DS.muted }}>Condition corrigée</label>
                         <input type="text" value={overrideCondition} onChange={e => setOverrideCondition(e.target.value)}
                           className="w-full rounded-xl px-3 py-2 text-sm outline-none"
-                          style={{ background: "#F1F5F9", border: "1px solid rgba(167,139,250,0.2)", color: "#0F172A" }} />
+                          style={{ background: "var(--color-bg)", border: "1px solid rgba(167,139,250,0.2)", color: "var(--color-text)" }} />
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <label className="text-[10px] font-bold block mb-1" style={{ color: DS.muted }}>Sévérité</label>
                           <select value={overrideSeverity} onChange={e => setOverrideSeverity(e.target.value)}
                             className="w-full rounded-xl px-3 py-2 text-sm outline-none"
-                            style={{ background: "#F1F5F9", border: "1px solid rgba(167,139,250,0.2)", color: "#0F172A" }}>
+                            style={{ background: "var(--color-bg)", border: "1px solid rgba(167,139,250,0.2)", color: "var(--color-text)" }}>
                             {["Légère", "Modérée", "Sévère", "Critique"].map(s => <option key={s}>{s}</option>)}
                           </select>
                         </div>
                         <div>
                           <label className="text-[10px] font-bold block mb-1" style={{ color: DS.muted }}>Score ({overrideScore}/100)</label>
                           <input type="range" min={0} max={100} value={overrideScore} onChange={e => setOverrideScore(Number(e.target.value))}
-                            className="w-full mt-2" style={{ accentColor: "#7c3aed" }} />
+                            className="w-full mt-2" style={{ accentColor: "var(--color-accent)" }} />
                         </div>
                       </div>
                       <div>
                         <label className="text-[10px] font-bold block mb-1" style={{ color: DS.muted }}>Évaluation clinique corrigée</label>
                         <textarea value={overrideSummary} onChange={e => setOverrideSummary(e.target.value)}
                           rows={3} className="w-full rounded-xl px-3 py-2 text-sm outline-none resize-none"
-                          style={{ background: "#F1F5F9", border: "1px solid rgba(167,139,250,0.2)", color: "#0F172A" }} />
+                          style={{ background: "var(--color-bg)", border: "1px solid rgba(167,139,250,0.2)", color: "var(--color-text)" }} />
                       </div>
                       <div>
                         <label className="text-[10px] font-bold block mb-1" style={{ color: DS.muted }}>Motif de correction (optionnel)</label>
                         <input type="text" value={overrideReason} onChange={e => setOverrideReason(e.target.value)}
                           placeholder="Ex: aspect clinique non capté par la photo..."
                           className="w-full rounded-xl px-3 py-2 text-sm outline-none"
-                          style={{ background: "#F1F5F9", border: "1px solid rgba(167,139,250,0.2)", color: "#0F172A" }} />
+                          style={{ background: "var(--color-bg)", border: "1px solid rgba(167,139,250,0.2)", color: "var(--color-text)" }} />
                       </div>
                       <button onClick={() => { setOverrideType("partial"); setShowPartialOverride(false); }}
-                        className="w-full py-2.5 rounded-full text-sm font-extrabold" style={{ background: "#7c3aed", color: "#fff" }}>
+                        className="w-full py-2.5 rounded-full text-sm font-extrabold" style={{ background: "var(--color-accent)", color: "var(--color-neutral-100)" }}>
                         ✓ Valider ma correction
                       </button>
                     </div>
@@ -1820,29 +1824,29 @@ export default function ProAnalyze() {
                   {/* Formulaire diagnostic manuel complet */}
                   {showFullManual && overrideType !== "partial" && (
                     <div className="px-4 py-4 space-y-3">
-                      <p className="text-[11px] font-bold" style={{ color: "#fbbf24" }}>
-                        📝 Votre diagnostic remplace entièrement celui de l'IA dans le PDF
+                      <p className="text-[11px] font-bold" style={{ color: "var(--color-accent-600)" }}>
+                        Votre diagnostic remplace entièrement celui de l'IA dans le PDF
                       </p>
                       <div>
                         <label className="text-[10px] font-bold block mb-1" style={{ color: DS.muted }}>Diagnostic principal</label>
                         <input type="text" value={overrideCondition} onChange={e => setOverrideCondition(e.target.value)}
                           placeholder="Ex: Dermatite séborrhéique modérée..."
                           className="w-full rounded-xl px-3 py-2 text-sm outline-none"
-                          style={{ background: "#F1F5F9", border: "1px solid rgba(167,139,250,0.2)", color: "#0F172A" }} />
+                          style={{ background: "var(--color-bg)", border: "1px solid rgba(167,139,250,0.2)", color: "var(--color-text)" }} />
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <label className="text-[10px] font-bold block mb-1" style={{ color: DS.muted }}>Sévérité</label>
                           <select value={overrideSeverity} onChange={e => setOverrideSeverity(e.target.value)}
                             className="w-full rounded-xl px-3 py-2 text-sm outline-none"
-                            style={{ background: "#F1F5F9", border: "1px solid rgba(167,139,250,0.2)", color: "#0F172A" }}>
+                            style={{ background: "var(--color-bg)", border: "1px solid rgba(167,139,250,0.2)", color: "var(--color-text)" }}>
                             {["Légère", "Modérée", "Sévère", "Critique"].map(s => <option key={s}>{s}</option>)}
                           </select>
                         </div>
                         <div>
                           <label className="text-[10px] font-bold block mb-1" style={{ color: DS.muted }}>Score ({overrideScore}/100)</label>
                           <input type="range" min={0} max={100} value={overrideScore} onChange={e => setOverrideScore(Number(e.target.value))}
-                            className="w-full mt-2" style={{ accentColor: "#7c3aed" }} />
+                            className="w-full mt-2" style={{ accentColor: "var(--color-accent)" }} />
                         </div>
                       </div>
                       <div>
@@ -1850,10 +1854,10 @@ export default function ProAnalyze() {
                         <textarea value={overrideSummary} onChange={e => setOverrideSummary(e.target.value)}
                           rows={5} className="w-full rounded-xl px-3 py-2 text-sm outline-none resize-none"
                           placeholder="Rédigez votre diagnostic complet ici..."
-                          style={{ background: "#F1F5F9", border: "1px solid rgba(167,139,250,0.2)", color: "#0F172A" }} />
+                          style={{ background: "var(--color-bg)", border: "1px solid rgba(167,139,250,0.2)", color: "var(--color-text)" }} />
                       </div>
                       <button onClick={() => { setOverrideType("full"); setShowFullManual(false); }}
-                        className="w-full py-2.5 rounded-full text-sm font-extrabold" style={{ background: "#7c3aed", color: "#fff" }}>
+                        className="w-full py-2.5 rounded-full text-sm font-extrabold" style={{ background: "var(--color-accent)", color: "var(--color-neutral-100)" }}>
                         ✓ Valider mon diagnostic
                       </button>
                     </div>
@@ -1862,8 +1866,8 @@ export default function ProAnalyze() {
                   {/* Confirmation override validé */}
                   {overrideType !== "none" && !showPartialOverride && !showFullManual && (
                     <div className="px-4 py-3 flex items-center gap-2" style={{ background: "rgba(16,185,129,0.06)", borderTop: "1px solid rgba(16,185,129,0.2)" }}>
-                      <span style={{ color: "#6ee7b7", fontSize: 14 }}>✓</span>
-                      <p className="text-xs font-bold" style={{ color: "#6ee7b7" }}>
+                      <span style={{ color: "var(--color-accent-2-700)", fontSize: 14 }}>✓</span>
+                      <p className="text-xs font-bold" style={{ color: "var(--color-accent-2-700)" }}>
                         {overrideType === "partial" ? `Corrigé partiellement — "${overrideCondition}"` : `Diagnostic manuel — "${overrideCondition}"`}
                       </p>
                     </div>
@@ -1874,7 +1878,7 @@ export default function ProAnalyze() {
                   <button
                     onClick={() => setStep(3)}
                     className="px-4 py-2.5 rounded-full text-sm font-extrabold inline-flex items-center gap-1 transition-all active:scale-[0.97]"
-                    style={{ background: "#E2E8F0", border: "1px solid #E2E8F0", color: DS.body }}
+                    style={{ background: "var(--color-divider)", border: "1px solid #E2E8F0", color: DS.body }}
                   >
                     <ArrowLeft className="w-3.5 h-3.5" />
                     Retour
@@ -1916,7 +1920,7 @@ export default function ProAnalyze() {
                 <p className="text-sm font-extrabold" style={{ color: INK }}>Aucune question générée</p>
                 <p className="text-xs mt-1 mb-4" style={{ color: DS.muted }}>Vous pouvez lancer l'analyse directement.</p>
                 <div className="flex gap-2">
-                  <button onClick={() => setStep(2)} className="px-4 py-2.5 rounded-full text-sm font-extrabold inline-flex items-center gap-1" style={{ background: "#E2E8F0", color: DS.body }}>
+                  <button onClick={() => setStep(2)} className="px-4 py-2.5 rounded-full text-sm font-extrabold inline-flex items-center gap-1" style={{ background: "var(--color-divider)", color: DS.body }}>
                     <ArrowLeft className="w-3.5 h-3.5" /> Retour
                   </button>
                   <button onClick={launchAnalysis} data-testid="button-launch-analysis-skip" className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-full text-white text-sm font-extrabold" style={{ background: NAVY }}>
@@ -1931,7 +1935,7 @@ export default function ProAnalyze() {
                     <div
                       key={q.id}
                       className="p-3 rounded-xl"
-                      style={{ background: "#F1F5F9", border: `1px solid ${DS.border}` }}
+                      style={{ background: "var(--color-bg)", border: `1px solid ${DS.border}` }}
                     >
                       <div className="flex items-start gap-2 mb-2">
                         <span
@@ -1945,9 +1949,9 @@ export default function ProAnalyze() {
                       <p className="text-[10px] uppercase font-extrabold mb-2" style={{ color: DS.muted }}>{q.axis}</p>
                       <div className="grid grid-cols-3 gap-1.5">
                         {([
-                          { v: "oui" as AnswerValue, label: "Oui", icon: Check, activeBg: "rgba(5,150,105,0.12)", activeBorder: "#059669", activeColor: "#047857" },
-                          { v: "non" as AnswerValue, label: "Non", icon: X, activeBg: "rgba(220,38,38,0.10)", activeBorder: "#dc2626", activeColor: "#dc2626" },
-                          { v: "nsp" as AnswerValue, label: "Ne sait pas", icon: HelpCircle, activeBg: "#EEF2F7", activeBorder: "#CBD5E1", activeColor: "#64748B" },
+                          { v: "oui" as AnswerValue, label: "Oui", icon: Check, activeBg: "rgba(5,150,105,0.12)", activeBorder: "var(--color-accent-2-700)", activeColor: "var(--color-accent-2-700)" },
+                          { v: "non" as AnswerValue, label: "Non", icon: X, activeBg: "rgba(220,38,38,0.10)", activeBorder: "var(--color-accent-800)", activeColor: "var(--color-accent-800)" },
+                          { v: "nsp" as AnswerValue, label: "Ne sait pas", icon: HelpCircle, activeBg: "#EEF2F7", activeBorder: "var(--color-neutral-400)", activeColor: "var(--color-neutral-700)" },
                         ]).map((opt) => {
                           const on = answers[q.id] === opt.v;
                           const Icon = opt.icon;
@@ -1959,7 +1963,7 @@ export default function ProAnalyze() {
                               className="px-2 py-2 rounded-xl text-xs font-extrabold border-2 transition-all inline-flex items-center justify-center gap-1 active:scale-[0.97]"
                               style={on
                                 ? { background: opt.activeBg, borderColor: opt.activeBorder, color: opt.activeColor }
-                                : { background: "#F1F5F9", borderColor: DS.border, color: DS.muted }
+                                : { background: "var(--color-bg)", borderColor: DS.border, color: DS.muted }
                               }
                             >
                               <Icon className="w-3 h-3" />
@@ -1976,7 +1980,7 @@ export default function ProAnalyze() {
                   <button
                     onClick={() => setStep(2)}
                     className="px-4 py-2.5 rounded-full text-sm font-extrabold inline-flex items-center gap-1 transition-all active:scale-[0.97]"
-                    style={{ background: "#E2E8F0", border: "1px solid #E2E8F0", color: DS.body }}
+                    style={{ background: "var(--color-divider)", border: "1px solid #E2E8F0", color: DS.body }}
                   >
                     <ArrowLeft className="w-3.5 h-3.5" />
                     Retour
@@ -2006,7 +2010,7 @@ export default function ProAnalyze() {
                     className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
                     style={{ background: "rgba(16,185,129,0.12)", border: "1px solid rgba(16,185,129,0.25)" }}
                   >
-                    <CheckCircle2 className="w-8 h-8" style={{ color: "#6ee7b7" }} />
+                    <CheckCircle2 className="w-8 h-8" style={{ color: "var(--color-accent-2-700)" }} />
                   </div>
                   <h2 className="text-xl font-extrabold mb-2" style={{ color: INK }} data-testid="text-confirmation-title">
                     Dossier de {patientLabel} mis à jour ✅
@@ -2022,7 +2026,7 @@ export default function ProAnalyze() {
                   {/* Récap dossier */}
                   <div
                     className="rounded-2xl p-4 mb-5 text-left"
-                    style={{ background: "#F1F5F9", border: `1px solid ${DS.border}` }}
+                    style={{ background: "var(--color-bg)", border: `1px solid ${DS.border}` }}
                   >
                     <div className="grid grid-cols-3 gap-3 mb-3">
                       {photoBase64 && (
@@ -2034,16 +2038,16 @@ export default function ProAnalyze() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 text-[11px]" style={{ color: DS.muted }}>
-                      <CheckCircle2 className="w-3 h-3" style={{ color: "#6ee7b7" }} />
+                      <CheckCircle2 className="w-3 h-3" style={{ color: "var(--color-accent-2-700)" }} />
                       Anamnèse complète : {Object.keys(answers).length} réponses
                     </div>
                     <div className="flex items-center gap-2 text-[11px] mt-1" style={{ color: DS.muted }}>
-                      <CheckCircle2 className="w-3 h-3" style={{ color: "#6ee7b7" }} />
+                      <CheckCircle2 className="w-3 h-3" style={{ color: "var(--color-accent-2-700)" }} />
                       Photo archivée · {new Date().toLocaleString("fr-FR")}
                     </div>
                     {getProtocolProducts(result).length > 0 && (
                       <div className="flex items-center gap-2 text-[11px] mt-1" style={{ color: DS.muted }}>
-                        <CheckCircle2 className="w-3 h-3" style={{ color: "#6ee7b7" }} />
+                        <CheckCircle2 className="w-3 h-3" style={{ color: "var(--color-accent-2-700)" }} />
                         {getProtocolProducts(result).length} produit(s) recommandé(s)
                       </div>
                     )}
@@ -2064,7 +2068,7 @@ export default function ProAnalyze() {
                                   <div
                                     key={z}
                                     className="text-[10px] rounded-lg p-1.5"
-                                    style={{ background: "#F1F5F9", border: `1px solid ${DS.border}` }}
+                                    style={{ background: "var(--color-bg)", border: `1px solid ${DS.border}` }}
                                   >
                                     <span className="font-extrabold uppercase" style={{ color: DS.muted }}>{z}</span>
                                     <p className="leading-tight" style={{ color: DS.body }}>{d}</p>
@@ -2083,7 +2087,7 @@ export default function ProAnalyze() {
                               className="text-[11px] rounded-lg p-2"
                               style={{ background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.25)" }}
                             >
-                              <span className="font-extrabold uppercase tracking-wider text-[10px]" style={{ color: "#fbbf24" }}>Conseil expert</span>
+                              <span className="font-extrabold uppercase tracking-wider text-[10px]" style={{ color: "var(--color-accent-600)" }}>Conseil expert</span>
                               <p className="leading-snug mt-0.5" style={{ color: DS.body }}>{conseil}</p>
                             </div>
                           )}
@@ -2103,14 +2107,14 @@ export default function ProAnalyze() {
                   />
 
                   {/* ─── Classification patient (TÂCHE 4) ─── */}
-                  <div className="rounded-2xl p-4 mb-4" style={{ background: "#F1F5F9", border: "1px solid rgba(167,139,250,0.15)" }}>
+                  <div className="rounded-2xl p-4 mb-4" style={{ background: "var(--color-bg)", border: "1px solid rgba(167,139,250,0.15)" }}>
                     <p className="text-[11px] font-extrabold uppercase tracking-wider mb-3" style={{ color: DS.muted }}>Classer ce patient :</p>
                     <div className="grid grid-cols-2 gap-2">
                       {([
-                        { v: "priority" as PatientStatus, label: "Priorité haute", color: "#ef4444", bg: "rgba(239,68,68,0.1)", border: "rgba(239,68,68,0.3)" },
+                        { v: "priority" as PatientStatus, label: "Priorité haute", color: "var(--color-accent-700)", bg: "rgba(239,68,68,0.1)", border: "rgba(239,68,68,0.3)" },
                         { v: "monitoring" as PatientStatus, label: "En suivi", color: NAVY, bg: "rgba(124,58,237,0.1)", border: "rgba(124,58,237,0.3)" },
                         { v: "stable" as PatientStatus, label: "Stable", color: GREEN, bg: "rgba(16,185,129,0.1)", border: "rgba(16,185,129,0.3)" },
-                        { v: "resolved" as PatientStatus, label: "Résolu", color: DS.muted, bg: "#F1F5F9", border: DS.border },
+                        { v: "resolved" as PatientStatus, label: "Résolu", color: DS.muted, bg: "var(--color-bg)", border: DS.border },
                       ]).map(opt => {
                         const on = selectedStatus === opt.v;
                         return (
@@ -2126,7 +2130,7 @@ export default function ProAnalyze() {
                             className="py-2 px-3 rounded-xl text-xs font-extrabold transition-all active:scale-[0.97]"
                             style={on
                               ? { background: opt.bg, border: `1.5px solid ${opt.border}`, color: opt.color }
-                              : { background: "#F1F5F9", border: `1px solid ${DS.border}`, color: DS.muted }
+                              : { background: "var(--color-bg)", border: `1px solid ${DS.border}`, color: DS.muted }
                             }
                           >
                             {opt.label}
@@ -2143,7 +2147,7 @@ export default function ProAnalyze() {
 
                   {/* Tooltip contextuel — premier rapport PDF */}
                   <ContextualTip tipKey="rapport_pdf"
-                    title="📄 Rapport à votre nom"
+                    title="Rapport à votre nom"
                     body="Ce rapport est généré avec votre nom et votre numéro d'ordre. Il part automatiquement sur le WhatsApp de votre patient à la clôture." />
 
                   {/* Actions — Rapport clinique = observation médicale UNIQUEMENT
@@ -2168,7 +2172,7 @@ export default function ProAnalyze() {
                       onClick={() => patientId && setLocation(`/derm/patient/${patientId}`)}
                       data-testid="button-view-dossier"
                       className="inline-flex items-center justify-center gap-1.5 py-2.5 rounded-full text-xs font-extrabold active:scale-[0.97] transition-all"
-                      style={{ background: "#E2E8F0", border: "1px solid #E2E8F0", color: DS.body }}
+                      style={{ background: "var(--color-divider)", border: "1px solid #E2E8F0", color: DS.body }}
                     >
                       <FileText className="w-3.5 h-3.5" />
                       Voir le dossier
@@ -2177,7 +2181,7 @@ export default function ProAnalyze() {
                       onClick={resetAll}
                       data-testid="button-new"
                       className="inline-flex items-center justify-center gap-1.5 py-2.5 rounded-full text-xs font-extrabold active:scale-[0.97] transition-all"
-                      style={{ background: "#E2E8F0", border: "1px solid #E2E8F0", color: DS.body }}
+                      style={{ background: "var(--color-divider)", border: "1px solid #E2E8F0", color: DS.body }}
                     >
                       <RefreshCw className="w-3.5 h-3.5" />
                       Nouvelle analyse
@@ -2219,44 +2223,33 @@ export default function ProAnalyze() {
 }
 
 // ─── Sub-components ────────────────────────────────────────────────────
-function ProgressBar({ current }: { current: Step }) {
+function ProgressBar({ current, onGo }: { current: Step; onGo?: (n: Step) => void }) {
   return (
-    <div className="print:hidden">
-      <div className="flex items-center gap-1.5 mb-1.5">
-        {STEPS.map((s) => {
-          const done = s.n < current;
-          const active = s.n === current;
-          return (
-            <div key={s.n} className="flex-1 flex items-center gap-1">
-              <div
-                className="flex-1 h-1 rounded-full transition-all"
-                style={{ background: done || active ? NAVY : "#E2E8F0" }}
-              />
-            </div>
-          );
-        })}
-      </div>
-      <div className="flex items-center justify-between text-[10px] font-extrabold uppercase tracking-wider">
-        {STEPS.map((s) => (
-          <span
-            key={s.n}
-            className="flex-1 text-center"
-            style={{ color: s.n <= current ? NAVY : "#CBD5E1" }}
-          >
-            {s.n}. {s.label}
-          </span>
-        ))}
-      </div>
+    <div className="flex flex-wrap gap-1.5 print:hidden" role="list">
+      {STEPS.map((s) => {
+        const done = s.n < current;
+        const active = s.n === current;
+        return (
+          <button key={s.n} type="button" role="listitem" onClick={() => onGo?.(s.n as Step)} disabled={!done}
+            aria-current={active ? "step" : undefined}
+            className={`flex items-center gap-2 rounded-pill border-0 py-1.5 pl-1.5 pr-3.5 font-body text-[13px] font-bold ${active ? "bg-organic-surface" : "bg-transparent"} ${active || done ? "text-organic-text" : "text-organic-neutral-700"} ${done ? "cursor-pointer" : "cursor-default"}`}>
+            <span className={`flex h-6 w-6 items-center justify-center rounded-full text-[12px] ${active ? "bg-organic-accent text-organic-bg" : done ? "bg-organic-accent-2-600 text-organic-bg" : "bg-organic-neutral-200 text-organic-neutral-800"}`}>
+              {done ? "✓" : s.n}
+            </span>
+            {s.label}
+          </button>
+        );
+      })}
     </div>
   );
 }
 
 function StepHeader({ n, title, subtitle }: { n: number; title: string; subtitle?: string }) {
   return (
-    <div className="mb-5 pb-4" style={{ borderBottom: "1px solid #E2E8F0" }}>
-      <p className="text-[10px] uppercase tracking-wider font-extrabold" style={{ color: NAVY }}>Étape {n}</p>
-      <h2 className="text-base font-extrabold mt-1" style={{ color: INK }}>{title}</h2>
-      {subtitle && <p className="text-xs mt-0.5" style={{ color: "#94A3B8" }}>{subtitle}</p>}
+    <div className="mb-5 pb-4" style={{ borderBottom: "1px solid var(--color-divider)" }}>
+      <p className="text-[10px] font-bold uppercase tracking-[.1em]" style={{ color: "var(--color-accent-700)" }}>Étape {n}</p>
+      <h2 className="mt-1 font-heading text-[22px] leading-tight" style={{ color: INK }}>{title}</h2>
+      {subtitle && <p className="text-xs mt-0.5" style={{ color: "var(--color-neutral-600)" }}>{subtitle}</p>}
     </div>
   );
 }
@@ -2294,7 +2287,7 @@ function ScanLoader({ photo }: { photo: string | null }) {
         {photo ? (
           <img src={photo} alt="" className="absolute inset-0 w-full h-full object-cover" />
         ) : (
-          <div className="absolute inset-0" style={{ background: "#F1F5F9" }} />
+          <div className="absolute inset-0" style={{ background: "var(--color-bg)" }} />
         )}
         <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, rgba(124,58,237,0.15), transparent, rgba(124,58,237,0.2))" }} />
         <span className="absolute top-2 left-2 w-5 h-5 border-t-2 border-l-2" style={{ borderColor: NAVY }} />
@@ -2316,18 +2309,18 @@ function ScanLoader({ photo }: { photo: string | null }) {
           style={{ background: "rgba(124,58,237,0.12)", border: "1px solid rgba(124,58,237,0.3)" }}
         >
           <ScanLine className="w-3.5 h-3.5 animate-pulse" style={{ color: NAVY }} />
-          <span className="text-xs font-extrabold" style={{ color: "#0369A1" }}>{phases[phase]}</span>
+          <span className="text-xs font-extrabold" style={{ color: "var(--color-accent-700)" }}>{phases[phase]}</span>
         </div>
 
         {/* Barre de progression */}
-        <div className="w-full max-w-xs mx-auto h-1.5 rounded-full overflow-hidden mb-2" style={{ background: "#F1F5F9" }}>
+        <div className="w-full max-w-xs mx-auto h-1.5 rounded-full overflow-hidden mb-2" style={{ background: "var(--color-bg)" }}>
           <div
             className="h-full rounded-full"
             style={{ width: `${Math.min(92, Math.round(progress))}%`, background: "linear-gradient(90deg, #7c3aed, #0369A1)", transition: "width 0.4s ease-out" }}
           />
         </div>
 
-        <p className="text-[11px]" style={{ color: "#94A3B8" }}>Analyse Llama 4 · peut prendre jusqu'à 1 minute</p>
+        <p className="text-[11px]" style={{ color: "var(--color-neutral-600)" }}>L'analyse peut prendre jusqu'à 1 minute</p>
       </div>
 
       <style>{`
@@ -2343,8 +2336,8 @@ function ScanLoader({ photo }: { photo: string | null }) {
 
 function Mini({ label, value, accent }: { label: string; value: string; accent?: string }) {
   return (
-    <div className="p-2 rounded-lg" style={{ background: "#F1F5F9", border: "1px solid #E2E8F0" }}>
-      <p className="text-[9px] uppercase tracking-wider font-extrabold" style={{ color: "#94A3B8" }}>{label}</p>
+    <div className="p-2 rounded-lg" style={{ background: "var(--color-bg)", border: "1px solid #E2E8F0" }}>
+      <p className="text-[9px] uppercase tracking-wider font-extrabold" style={{ color: "var(--color-neutral-600)" }}>{label}</p>
       <p className="text-xs font-extrabold mt-0.5 truncate" style={{ color: accent || INK }}>{value}</p>
     </div>
   );

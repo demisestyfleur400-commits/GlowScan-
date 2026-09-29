@@ -796,7 +796,7 @@ function EvolutionSection({ scan, patientId }: { scan: any; patientId: number })
     } finally { setBusy(false); }
   };
 
-  const evoColor = (s: number) => (s > 8 ? GREEN : s < -8 ? "#dc2626" : "#d97706");
+  const evoColor = (s: number) => (s > 8 ? GREEN : s < -8 ? "var(--color-accent-800)" : "var(--color-accent-600)");
   const EvoIcon = latest ? (latest.evolutionScore > 8 ? TrendingUp : latest.evolutionScore < -8 ? TrendingDown : Minus) : Minus;
 
   return (
@@ -810,7 +810,7 @@ function EvolutionSection({ scan, patientId }: { scan: any; patientId: number })
         </div>
         <label
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-extrabold cursor-pointer active:scale-95 transition-all"
-          style={{ background: busy ? "var(--color-divider)" : NAVY, color: busy ? DS.muted : "#fff" }}
+          style={{ background: busy ? "var(--color-divider)" : NAVY, color: busy ? DS.muted : "var(--color-neutral-100)" }}
         >
           {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Camera className="w-3.5 h-3.5" />}
           {busy ? "Analyse…" : "+ Photo de contrôle"}
@@ -838,8 +838,8 @@ function EvolutionSection({ scan, patientId }: { scan: any; patientId: number })
             )}
             {/* poignée */}
             <div className="absolute top-0 bottom-0" style={{ left: `${slider}%`, width: 2, background: "var(--color-bg)", boxShadow: "0 0 0 1px rgba(0,0,0,0.3)" }} />
-            <span className="absolute top-2 left-2 text-[9px] font-extrabold px-1.5 py-0.5 rounded" style={{ background: "rgba(15,23,42,0.7)", color: "#fff" }}>J0</span>
-            <span className="absolute top-2 right-2 text-[9px] font-extrabold px-1.5 py-0.5 rounded" style={{ background: "rgba(124,58,237,0.85)", color: "#fff" }}>J+{latest?.dayOffset ?? 0}</span>
+            <span className="absolute top-2 left-2 text-[9px] font-extrabold px-1.5 py-0.5 rounded" style={{ background: "rgba(15,23,42,0.7)", color: "var(--color-neutral-100)" }}>J0</span>
+            <span className="absolute top-2 right-2 text-[9px] font-extrabold px-1.5 py-0.5 rounded" style={{ background: "rgba(124,58,237,0.85)", color: "var(--color-neutral-100)" }}>J+{latest?.dayOffset ?? 0}</span>
             <input type="range" min={0} max={100} value={slider} onChange={(e) => setSlider(Number(e.target.value))}
               className="absolute bottom-2 left-1/2 -translate-x-1/2 w-[85%]" data-testid="slider-evolution" />
           </div>
@@ -901,7 +901,7 @@ function DatasetConsentCard({ patientId, initial }: { patientId: number; initial
         </div>
         <button role="switch" aria-checked={consent} onClick={toggle} data-testid="toggle-patient-dataset-consent"
           style={{ flexShrink: 0, width: 44, height: 26, padding: 3, borderRadius: 9999, border: "none", cursor: "pointer",
-            background: consent ? "#059669" : "var(--color-divider)", display: "flex", justifyContent: consent ? "flex-end" : "flex-start" }}>
+            background: consent ? "var(--color-accent-2-700)" : "var(--color-divider)", display: "flex", justifyContent: consent ? "flex-end" : "flex-start" }}>
           <span style={{ width: 20, height: 20, borderRadius: "50%", background: "var(--color-bg)", display: "block" }} />
         </button>
       </div>
@@ -974,14 +974,14 @@ function FollowUpReminderCard({ patient, patientId }: { patient: any; patientId:
           </p>
         </div>
         {scheduledAt && (
-          <button onClick={() => cancel.mutate()} className="inline-flex items-center gap-1 text-[11px] font-extrabold" style={{ color: "#dc2626" }} data-testid="button-cancel-reminder">
+          <button onClick={() => cancel.mutate()} className="inline-flex items-center gap-1 text-[11px] font-extrabold" style={{ color: "var(--color-accent-800)" }} data-testid="button-cancel-reminder">
             <XIcon className="w-3 h-3" /> Annuler
           </button>
         )}
       </div>
 
       {!hasPhone && (
-        <div className="mb-3 p-2.5 rounded-lg text-[11px]" style={{ background: "rgba(217,119,6,0.08)", border: "1px solid rgba(217,119,6,0.25)", color: "#b45309" }}>
+        <div className="mb-3 p-2.5 rounded-lg text-[11px]" style={{ background: "rgba(217,119,6,0.08)", border: "1px solid rgba(217,119,6,0.25)", color: "var(--color-accent-700)" }}>
           Ce patient n'a pas de numéro WhatsApp. Ajoutez-en un pour activer les rappels.
         </div>
       )}
@@ -1053,7 +1053,7 @@ function PeerReviewButton({ scanId, condition }: { scanId: number; condition: st
   return (
     <ProCard className="p-5 mb-4">
       <div className="flex items-center gap-2 mb-1">
-        <Users className="w-4 h-4" style={{ color: "#0369A1" }} />
+        <Users className="w-4 h-4" style={{ color: "var(--color-accent-700)" }} />
         <p className="text-[11px] font-extrabold uppercase tracking-wider" style={{ color: DS.muted }}>Second avis confrère</p>
       </div>
       {!open ? (
@@ -1064,13 +1064,13 @@ function PeerReviewButton({ scanId, condition }: { scanId: number; condition: st
           </p>
           <button onClick={() => setOpen(true)} data-testid="button-ask-peer"
             className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full text-white text-sm font-extrabold active:scale-[0.98] transition-all"
-            style={{ background: "#0369A1" }}>
+            style={{ background: "var(--color-accent-700)" }}>
             <Users className="w-4 h-4" /> Demander un 2ᵉ avis
           </button>
         </>
       ) : (
         <div className="space-y-2">
-          <div className="inline-flex items-center gap-1.5 text-[11px] font-bold mb-1" style={{ color: "#047857" }}>
+          <div className="inline-flex items-center gap-1.5 text-[11px] font-bold mb-1" style={{ color: "var(--color-accent-2-700)" }}>
             <Lock className="w-3 h-3" /> Cas anonymisé — {condition}
           </div>
           <textarea value={question} onChange={(e) => setQuestion(e.target.value)} rows={3} autoFocus
@@ -1079,7 +1079,7 @@ function PeerReviewButton({ scanId, condition }: { scanId: number; condition: st
             className="w-full px-3 py-2 rounded-xl text-sm outline-none resize-none" style={{ background: "var(--color-bg)", border: `1px solid ${DS.border}`, color: INK }} />
           <div className="flex gap-2">
             <button onClick={submit} disabled={create.isPending}
-              className="flex-1 py-2.5 rounded-full text-white text-sm font-extrabold disabled:opacity-50" style={{ background: "#0369A1" }} data-testid="button-submit-peer">
+              className="flex-1 py-2.5 rounded-full text-white text-sm font-extrabold disabled:opacity-50" style={{ background: "var(--color-accent-700)" }} data-testid="button-submit-peer">
               {create.isPending ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Envoyer au réseau"}
             </button>
             <button onClick={() => { setOpen(false); setQuestion(""); }}

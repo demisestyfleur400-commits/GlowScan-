@@ -44,9 +44,9 @@ const PHOTOTYPES = [
 const LESION_OPTS = ["Macule", "Papule", "Pustule", "Nodule", "Comédon", "Plaque", "Squame", "Vésicule", "Bulle", "Cicatrice/PIH", "Chéloïde"];
 const ZONE_OPTS = ["Front", "Joue D", "Joue G", "Nez/Zone T", "Menton", "Cou", "Cuir chevelu", "Tronc", "Membres", "Mains", "Pieds"];
 
-const INK = "#0F172A";
-const MUTED = "#64748B";
-const fieldBg = "#F1F5F9";
+const INK = "var(--color-text)";
+const MUTED = "var(--color-neutral-700)";
+const fieldBg = "var(--color-bg)";
 const fieldBorder = "1px solid rgba(167,139,250,0.2)";
 
 // ── Champs définis AU NIVEAU MODULE (jamais dans le render) : sinon React
@@ -76,10 +76,10 @@ function RiskRow({ k, label, value, set }: { k: "pihRisk" | "keloidRisk"; label:
     <div>
       <p style={{ fontSize: 10, fontWeight: 700, color: MUTED, marginBottom: 4 }}>{label}</p>
       <div style={{ display: "flex", gap: 4 }}>
-        {[["low", "Faible", "#047857"], ["medium", "Moyen", "#fcd34d"], ["high", "Élevé", "#dc2626"]].map(([v, l, c]) => (
+        {[["low", "Faible", "var(--color-accent-2-700)"], ["medium", "Moyen", "var(--color-accent-300)"], ["high", "Élevé", "var(--color-accent-800)"]].map(([v, l, c]) => (
           <button key={v} type="button" onClick={() => set({ [k]: value[k] === v ? "" : v } as any)}
             style={{ flex: 1, padding: "6px 0", borderRadius: 8, fontSize: 10, fontWeight: 700, cursor: "pointer",
-              background: value[k] === v ? `${c}33` : fieldBg, color: value[k] === v ? (c as string) : "#64748B", border: "1px solid #E2E8F0" }}>
+              background: value[k] === v ? `${c}33` : fieldBg, color: value[k] === v ? (c as string) : "var(--color-neutral-700)", border: "1px solid #E2E8F0" }}>
             {l}
           </button>
         ))}
@@ -97,8 +97,8 @@ export function ExamenPhysiqueForm({ value, onChange }: { value: ExamenData; onC
     <div style={{ borderRadius: 16, overflow: "hidden", background: "rgba(124,58,237,0.06)", border: "1px solid rgba(124,58,237,0.2)" }}>
       <button type="button" onClick={() => setOpen(!open)}
         style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", background: "transparent", border: "none", cursor: "pointer", color: INK, fontSize: 13, fontWeight: 800 }}>
-        <span>🔬 Examen physique</span>
-        <span style={{ fontSize: 16, color: "#a78bfa" }}>{open ? "−" : "+"}</span>
+        <span>Examen physique</span>
+        <span style={{ fontSize: 16, color: "var(--color-accent-400)" }}>{open ? "−" : "+"}</span>
       </button>
       {open && (
         <div style={{ padding: "0 14px 14px", display: "flex", flexDirection: "column", gap: 12 }}>
@@ -109,7 +109,7 @@ export function ExamenPhysiqueForm({ value, onChange }: { value: ExamenData; onC
               {PHOTOTYPES.map((p) => (
                 <button key={p.id} type="button" title={p.title} onClick={() => set({ phototype: value.phototype === p.id ? "" : p.id })}
                   style={{ flex: 1, padding: "8px 0", borderRadius: 10, fontSize: 12, fontWeight: 800, cursor: "pointer",
-                    background: value.phototype === p.id ? p.bg : "#F1F5F9", color: value.phototype === p.id ? "#fff" : "#64748B",
+                    background: value.phototype === p.id ? p.bg : "var(--color-bg)", color: value.phototype === p.id ? "var(--color-neutral-100)" : "var(--color-neutral-700)",
                     border: value.phototype === p.id ? `2px solid ${p.bg}` : "1px solid #E2E8F0" }}>
                   {p.label}
                 </button>
@@ -126,7 +126,7 @@ export function ExamenPhysiqueForm({ value, onChange }: { value: ExamenData; onC
                 return (
                   <button key={l} type="button" onClick={() => set({ lesions: toggle(value.lesions, l) })}
                     style={{ padding: "5px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700, cursor: "pointer",
-                      background: on ? "rgba(139,92,246,0.3)" : "#F1F5F9", color: on ? "#7c3aed" : "#64748B",
+                      background: on ? "rgba(139,92,246,0.3)" : "var(--color-bg)", color: on ? "var(--color-accent)" : "var(--color-neutral-700)",
                       border: on ? "1px solid #7c3aed" : "1px solid #E2E8F0" }}>
                     {l}
                   </button>
@@ -148,7 +148,7 @@ export function ExamenPhysiqueForm({ value, onChange }: { value: ExamenData; onC
                 return (
                   <button key={z} type="button" onClick={() => set({ zones: toggle(value.zones, z) })}
                     style={{ padding: "5px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700, cursor: "pointer",
-                      background: on ? "rgba(59,130,246,0.3)" : "#F1F5F9", color: on ? "#2563eb" : "#64748B",
+                      background: on ? "rgba(59,130,246,0.3)" : "var(--color-bg)", color: on ? "var(--color-accent-600)" : "var(--color-neutral-700)",
                       border: on ? "1px solid #3b82f6" : "1px solid #E2E8F0" }}>
                     {z}
                   </button>
@@ -174,7 +174,7 @@ export function ExamenPhysiqueForm({ value, onChange }: { value: ExamenData; onC
               est Moyen/Élevé ou si « Chéloïde » est coché en lésion élémentaire. */}
           {(value.keloidRisk === "medium" || value.keloidRisk === "high" || value.lesions.includes("Chéloïde")) && (
             <div style={{ borderRadius: 12, padding: 12, background: "rgba(248,113,113,0.06)", border: "1px solid rgba(248,113,113,0.25)", display: "flex", flexDirection: "column", gap: 10 }}>
-              <p style={{ fontSize: 11, fontWeight: 800, color: "#dc2626", margin: 0 }}>⚠️ Documentation chéloïde</p>
+              <p style={{ fontSize: 11, fontWeight: 800, color: "var(--color-accent-800)", margin: 0 }}>Documentation chéloïde</p>
               <TextField value={value} set={set} k="keloidAntecedents" label="Antécédents (personnels / familiaux)" ph="ex : chéloïde après piercing, antécédents familiaux…" />
               <TextField value={value} set={set} k="keloidLocalisation" label="Localisation des chéloïdes" ph="ex : lobe oreille, thorax, épaules…" />
               <TextField value={value} set={set} k="keloidAnciennete" label="Ancienneté / évolution" ph="ex : apparue il y a 2 ans, extension progressive…" />

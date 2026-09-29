@@ -29,10 +29,10 @@ export function ContextualTip({ tipKey, title, body }: { tipKey: string; title: 
 
   return (
     <div style={{ background: "rgba(124,58,237,0.08)", border: "1px solid rgba(124,58,237,0.3)", borderRadius: 12, padding: "11px 13px", margin: "10px 0" }}>
-      <p style={{ fontSize: 12.5, fontWeight: 800, color: "#7c3aed", margin: "0 0 3px" }}>{title}</p>
-      <p style={{ fontSize: 12, color: "#475569", margin: "0 0 8px", lineHeight: 1.5 }}>{body}</p>
+      <p style={{ fontSize: 12.5, fontWeight: 800, color: "var(--color-accent)", margin: "0 0 3px" }}>{title}</p>
+      <p style={{ fontSize: 12, color: "var(--color-neutral-800)", margin: "0 0 8px", lineHeight: 1.5 }}>{body}</p>
       <button onClick={dismiss}
-        style={{ background: "#7c3aed", color: "#fff", border: "none", borderRadius: 9999, padding: "6px 14px", fontSize: 12, fontWeight: 800, cursor: "pointer" }}>
+        style={{ background: "var(--color-accent)", color: "var(--color-neutral-100)", border: "none", borderRadius: 9999, padding: "6px 14px", fontSize: 12, fontWeight: 800, cursor: "pointer" }}>
         Compris →
       </button>
     </div>

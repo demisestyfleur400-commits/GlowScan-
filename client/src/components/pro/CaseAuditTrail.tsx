@@ -42,10 +42,10 @@ export function CaseAuditTrail({ scan, modelLabel }: { scan: ScanLike; modelLabe
   const steps: { icon: string; color: string; title: string; detail?: string; date?: any }[] = [];
 
   if (hasExam) {
-    steps.push({ icon: "📋", color: "#a78bfa", title: "Examen & dossier documentés", detail: "par le praticien / la secrétaire", date: scan.createdAt });
+    steps.push({ icon: "", color: "var(--color-accent-400)", title: "Examen & dossier documentés", detail: "par le praticien / la secrétaire", date: scan.createdAt });
   }
   steps.push({
-    icon: "🤖", color: "#fbbf24",
+    icon: "", color: "var(--color-accent-600)",
     title: `Diagnostic proposé par l'${resolvedModel}`,
     detail: scan.condition || "—",
     date: scan.createdAt,
@@ -53,19 +53,19 @@ export function CaseAuditTrail({ scan, modelLabel }: { scan: ScanLike; modelLabe
   if (scan.expertReviewer) {
     steps.push({
       icon: isCorrection ? "✍️" : "✅",
-      color: isCorrection ? "#dc2626" : "#047857",
+      color: isCorrection ? "var(--color-accent-800)" : "var(--color-accent-2-700)",
       title: isCorrection ? `Diagnostic corrigé par ${scan.expertReviewer}` : `Diagnostic validé par ${scan.expertReviewer}`,
       detail: isCorrection ? `IA : ${scan.condition} → Médecin : ${corrected}` : (corrected || scan.condition || undefined),
       date: scan.expertReviewedAt || scan.createdAt,
     });
   } else {
-    steps.push({ icon: "⏳", color: "#94A3B8", title: "En attente de validation médecin", detail: "le diagnostic IA reste indicatif" });
+    steps.push({ icon: "⏳", color: "var(--color-neutral-600)", title: "En attente de validation médecin", detail: "le diagnostic IA reste indicatif" });
   }
 
   return (
-    <details className="rounded-xl overflow-hidden" style={{ border: "1px solid #E2E8F0", background: "#F8FAFC" }}>
-      <summary className="cursor-pointer text-[11px] font-extrabold px-3 py-2.5" style={{ color: "#64748B" }}>
-        🔒 Journal d'audit du cas
+    <details className="rounded-xl overflow-hidden" style={{ border: "1px solid #E2E8F0", background: "var(--color-bg)" }}>
+      <summary className="cursor-pointer text-[11px] font-extrabold px-3 py-2.5" style={{ color: "var(--color-neutral-700)" }}>
+        Journal d'audit du cas
       </summary>
       <div className="px-3 pb-3">
         <div style={{ position: "relative", paddingLeft: 4 }}>
@@ -73,20 +73,20 @@ export function CaseAuditTrail({ scan, modelLabel }: { scan: ScanLike; modelLabe
             <div key={i} style={{ display: "flex", gap: 10, paddingBottom: i < steps.length - 1 ? 12 : 0, position: "relative" }}>
               {/* Ligne verticale */}
               {i < steps.length - 1 && (
-                <span style={{ position: "absolute", left: 9, top: 22, bottom: 0, width: 1, background: "#E2E8F0" }} />
+                <span style={{ position: "absolute", left: 9, top: 22, bottom: 0, width: 1, background: "var(--color-divider)" }} />
               )}
               <span style={{ flexShrink: 0, width: 20, height: 20, borderRadius: "50%", background: `${s.color}22`, border: `1px solid ${s.color}55`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, zIndex: 1 }}>
                 {s.icon}
               </span>
               <div style={{ minWidth: 0 }}>
-                <p style={{ fontSize: 11.5, fontWeight: 700, color: "#0F172A", margin: 0 }}>{s.title}</p>
-                {s.detail && <p style={{ fontSize: 10.5, color: "#475569", margin: "1px 0 0", lineHeight: 1.5 }}>{s.detail}</p>}
-                {s.date && <p style={{ fontSize: 9.5, color: "#94A3B8", margin: "1px 0 0" }}>{fmt(s.date)}</p>}
+                <p style={{ fontSize: 11.5, fontWeight: 700, color: "var(--color-text)", margin: 0 }}>{s.title}</p>
+                {s.detail && <p style={{ fontSize: 10.5, color: "var(--color-neutral-800)", margin: "1px 0 0", lineHeight: 1.5 }}>{s.detail}</p>}
+                {s.date && <p style={{ fontSize: 9.5, color: "var(--color-neutral-600)", margin: "1px 0 0" }}>{fmt(s.date)}</p>}
               </div>
             </div>
           ))}
         </div>
-        <p style={{ fontSize: 9, color: "#94A3B8", marginTop: 10, lineHeight: 1.5 }}>
+        <p style={{ fontSize: 9, color: "var(--color-neutral-600)", marginTop: 10, lineHeight: 1.5 }}>
           Chronologie horodatée à valeur de traçabilité — le diagnostic validé par le médecin fait foi.
         </p>
       </div>
