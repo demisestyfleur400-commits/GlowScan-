@@ -4338,9 +4338,13 @@ Réponds en 2-4 phrases max, sois direct et utile.`;
       const dates = [await followupsStoppedAt({ userId })];
       for (const ph of phones) dates.push(await followupsStoppedAt({ phone: ph }));
       const fuAt = dates.filter(Boolean).sort((a, b) => b!.getTime() - a!.getTime())[0] ?? null;
+      // « Aider la recherche » : la source de vérité est users.dataset_consent,
+      // lue par l'export du dataset (consents.research n'en est qu'une copie).
+      let research = row.research === true;
+      try { research = (Rows(await db.execute(sql`SELECT dataset_consent FROM users WHERE id = ${userId}`))[0] as any)?.dataset_consent === true; } catch {}
       res.json({
         care: true,
-        research: row.research === true,
+        research,
         reminders: row.reminders === true,
         remindersStoppedAt: row.stopped_at ?? null,
         phone: phone ? formatCmPhone(phone) : null,
@@ -4358,6 +4362,7 @@ Réponds en 2-4 phrases max, sois direct et utile.`;
     const b = req.body || {};
     try {
       if (typeof b.research === "boolean") {
+        await db.execute(sql`UPDATE users SET dataset_consent = ${b.research}, dataset_consent_at = ${b.research ? new Date().toISOString() : null} WHERE id = ${userId}`);
         await db.execute(sql`
           INSERT INTO consents (user_id, research, updated_at) VALUES (${userId}, ${b.research}, NOW())
           ON CONFLICT (user_id) WHERE user_id IS NOT NULL DO UPDATE SET research = EXCLUDED.research, updated_at = NOW()`);

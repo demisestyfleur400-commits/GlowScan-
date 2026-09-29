@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
 import { useToast } from "@/hooks/use-toast";
 import { setUserConsent } from "@/components/ConsentBanner";
+import { TwoFASettings } from "@/components/TwoFASettings";
 import { formatF } from "@shared/delivery";
 import { cn } from "@/lib/utils";
 
@@ -193,6 +194,12 @@ export default function Profile() {
             ))}
           </div>
         )}
+
+        {/* Sécurité : double authentification par code email (facultative en B2C) */}
+        <div className={card}>
+          <span className="text-[13px] font-bold">Sécurité</span>
+          <TwoFASettings />
+        </div>
 
         {/* Mes données */}
         <div className={card}>
