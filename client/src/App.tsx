@@ -133,6 +133,7 @@ function Router() {
       <Route path="/derm/analyse" component={ProAnalyze} />
       <Route path="/derm/statistiques" component={ProStats} />
       <Route path="/derm/paiements" component={ProPayments} />
+      <Route path="/derm/portefeuille" component={ProPayments} />
       <Route path="/derm/cabinet" component={ProCabinet} />
       <Route path="/derm/profil-public" component={ProPublicProfile} />
       <Route path="/derm/consultations" component={ProConsultations} />

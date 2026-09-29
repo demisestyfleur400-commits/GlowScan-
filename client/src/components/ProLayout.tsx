@@ -1,221 +1,263 @@
 import { Link, useLocation } from "wouter";
 import { ReactNode, useState, useEffect } from "react";
-import { Home, Users, ScanLine, BarChart3, Settings, ArrowLeft, LogOut, Clock, MessageCircle, Calendar, Wallet } from "lucide-react";
+import {
+  Home, Users, ScanLine, BarChart3, Settings, ArrowLeft, LogOut, MessageCircle, Calendar, Wallet,
+  ArrowLeftRight, Coins, Plus, ChevronRight,
+} from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useProAccount } from "@/hooks/use-pro";
 import { asProProfile, proHomeOf } from "@shared/proProfile";
 import { useProNotifications } from "@/hooks/use-realtime";
 
-// Thème CLAIR médical (blanc + dégradé teal→bleu, identité du logo).
-const BLUE = "#00937A";
-const GRADIENT = "linear-gradient(135deg, #00E6B8, #2E9FD6)";
-const INK = "#0B1220";
-const BODY = "#475569";
-const MUTED = "#64748B";
-const BORDER = "#E2E8F0";
-const PAGE = "#F6FAFD";
-const CARD = "#FFFFFF";
+// ════════════════════════════════════════════════════════════════════════
+// Cadre du portail GlowScan Derm (refonte Organic) — maquette « Derm Portal ».
+// Ordinateur : barre latérale (8 écrans + section Réseau), carte du praticien
+// en bas. Mobile (< 768 px) : barre du bas à 5 onglets (Accueil, Patients,
+// Analyse au centre, Messages, Plus) ; « Plus » ouvre une feuille.
+// La secrétaire ne voit que Nouveau patient, Mes patients et Agenda.
+// ════════════════════════════════════════════════════════════════════════
 
-const NAV_ITEMS = [
+type NavItem = { href: string; icon: typeof Home; label: string; badge?: "consultations" | "patients" };
+
+const PAGES: NavItem[] = [
   { href: "/derm/dashboard", icon: Home, label: "Tableau de bord" },
-  { href: "/derm/patients", icon: Users, label: "Patientèle" },
-  { href: "/derm/analyse", icon: ScanLine, label: "Analyse", primary: true },
-  { href: "/derm/consultations", icon: MessageCircle, label: "Consultations" },
+  { href: "/derm/patients", icon: Users, label: "Patientèle", badge: "patients" },
+  { href: "/derm/analyse", icon: ScanLine, label: "Analyse" },
+  { href: "/derm/consultations", icon: MessageCircle, label: "Consultations", badge: "consultations" },
   { href: "/derm/agenda", icon: Calendar, label: "Agenda" },
   { href: "/derm/statistiques", icon: BarChart3, label: "Performances" },
   { href: "/derm/paiements", icon: Wallet, label: "Paiements" },
   { href: "/derm/cabinet", icon: Settings, label: "Cabinet" },
 ];
 
+const SEC_PAGES: NavItem[] = [
+  { href: "/derm/analyse", icon: Plus, label: "Nouveau patient" },
+  { href: "/derm/patients", icon: Users, label: "Mes patients", badge: "patients" },
+  { href: "/derm/agenda", icon: Calendar, label: "Agenda" },
+];
+
+// Section « Réseau » (médecin). Réseau & formation (étape 5) et Pilotage
+// (étape 6) s'ajouteront ici quand leurs écrans existeront.
+const NETWORK: NavItem[] = [
+  { href: "/derm/confreres", icon: ArrowLeftRight, label: "Téléexpertise" },
+  { href: "/derm/portefeuille", icon: Coins, label: "Portefeuille" },
+];
+
+const MOBILE: (NavItem | { href: "more"; icon: typeof Home; label: string })[] = [
+  { href: "/derm/dashboard", icon: Home, label: "Accueil" },
+  { href: "/derm/patients", icon: Users, label: "Patients", badge: "patients" },
+  { href: "/derm/analyse", icon: ScanLine, label: "Analyse" },
+  { href: "/derm/consultations", icon: MessageCircle, label: "Messages", badge: "consultations" },
+  { href: "more", icon: Settings, label: "Plus" },
+];
+
+const MORE: NavItem[] = [
+  { href: "/derm/agenda", icon: Calendar, label: "Agenda" },
+  { href: "/derm/statistiques", icon: BarChart3, label: "Performances" },
+  { href: "/derm/paiements", icon: Wallet, label: "Paiements" },
+  { href: "/derm/cabinet", icon: Settings, label: "Cabinet" },
+  ...NETWORK,
+];
+
+const initialsOf = (name: string) =>
+  name.replace(/^dr\.?\s+/i, "").split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase()).join("") || "GS";
+
+function isActive(location: string, href: string) {
+  if (href === "/derm/patients") return location === href || location.startsWith("/derm/patient/");
+  return location === href || location.startsWith(href + "?") || location.startsWith(href + "/");
+}
+
 interface ProLayoutProps {
   children: ReactNode;
   title?: string;
   back?: string;
-  onBack?: () => void; // si fourni, le ← du header appelle ce callback (retour étape par étape)
+  onBack?: () => void; // si fourni, le ← appelle ce callback (retour étape par étape)
   hideBottomNav?: boolean;
   rightAction?: ReactNode;
 }
 
 export function ProLayout({ children, title, back, onBack, hideBottomNav, rightAction }: ProLayoutProps) {
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
   const { logout } = useAuth();
   const { data: accData } = useProAccount();
-  const acc = accData?.account;
-  const isTrial = acc?.subscriptionStatus === "trial";
+  const acc = accData?.account as any;
   // Notifications temps réel (second avis confrères, etc.)
   useProNotifications((accData?.user as any)?.id);
 
   const isSecretary = accData?.user?.role === "secretary";
+  const pages = isSecretary ? SEC_PAGES : PAGES;
 
   // Profils Relais et ONG : le portail cabinet n'est pas le leur → leur page d'arrivée.
-  const [, navigate] = useLocation();
-  const profile = asProProfile((acc as any)?.profile);
+  const profile = asProProfile(acc?.profile);
   useEffect(() => { if (acc && profile !== "derm") navigate(proHomeOf(profile, "doctor")); }, [acc, profile, navigate]);
-  const navItems = isSecretary
-    ? [
-        { href: "/derm/analyse", icon: ScanLine, label: "Nouveau patient", primary: true },
-        { href: "/derm/patients", icon: Users, label: "Mes patients" },
-      ]
-    : NAV_ITEMS;
 
-  // Compteur de patients à traiter (consultations payées ouvertes) → badge sur
-  // l'onglet Consultations, pour repérer les nouveaux patients sans email/push.
-  const [consultCount, setConsultCount] = useState(0);
+  // Badges : consultations payées à traiter, dossiers préparés en attente d'analyse.
+  const [badges, setBadges] = useState<{ consultations: number; patients: number }>({ consultations: 0, patients: 0 });
   useEffect(() => {
-    if (isSecretary) return;
+    if (!accData) return;
     let stop = false;
-    const load = () => fetch("/api/pro/consultations/unread-count", { credentials: "include" })
-      .then((r) => (r.ok ? r.json() : { count: 0 }))
-      .then((d) => { if (!stop) setConsultCount(d?.count || 0); })
-      .catch(() => {});
+    const get = (url: string) => fetch(url, { credentials: "include" }).then((r) => (r.ok ? r.json() : {})).catch(() => ({}));
+    const load = async () => {
+      const [c, p]: any[] = await Promise.all([
+        isSecretary ? Promise.resolve({}) : get("/api/pro/consultations/unread-count"),
+        get("/api/pro/pending-patients"),
+      ]);
+      if (!stop) setBadges({ consultations: Number(c?.count) || 0, patients: Number(p?.count) || 0 });
+    };
     load();
     const iv = setInterval(load, 30000);
     const onVis = () => { if (document.visibilityState === "visible") load(); };
     document.addEventListener("visibilitychange", onVis);
     return () => { stop = true; clearInterval(iv); document.removeEventListener("visibilitychange", onVis); };
-  }, [isSecretary]);
+  }, [accData, isSecretary]);
+
+  const [moreOpen, setMoreOpen] = useState(false);
+  useEffect(() => setMoreOpen(false), [location]);
+
+  const meName = isSecretary
+    ? [accData?.user?.firstName, accData?.user?.lastName].filter(Boolean).join(" ") || "Secrétaire"
+    : acc?.fullName || "";
+  const meSub = isSecretary
+    ? "Secrétaire"
+    : [acc?.cabinetName, acc?.city].filter(Boolean).join(" · ") || "GlowScan Derm";
+
+  const badgeOf = (item: { badge?: "consultations" | "patients" }) => (item.badge ? badges[item.badge] : 0);
+
+  const sideLink = (item: NavItem) => {
+    const on = isActive(location, item.href);
+    const b = badgeOf(item);
+    const Icon = item.icon;
+    return (
+      <Link key={item.href} href={item.href}
+        className={`flex items-center gap-3 rounded-pill px-3.5 py-2.5 text-[14px] font-semibold no-underline transition-colors hover:bg-organic-neutral-200 ${on ? "bg-organic-surface text-organic-accent-700" : "text-organic-text"}`}
+        data-testid={`nav-${item.href.split("/").pop()}`}>
+        <Icon size={18} strokeWidth={1.75} className="flex-none" />
+        <span className="flex-1">{item.label}</span>
+        {b > 0 && <span className="flex h-5 min-w-5 items-center justify-center rounded-pill bg-organic-accent px-1.5 text-[11px] font-bold text-organic-bg" data-testid={`badge-${item.badge}`}>{b}</span>}
+      </Link>
+    );
+  };
+
+  const hasHeader = !!(title || back || onBack || rightAction);
 
   return (
-    <div
-      className="min-h-screen flex flex-col md:flex-row antialiased"
-      style={{ background: PAGE, fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif', color: INK }}
-    >
-      {/* ── SIDEBAR DESKTOP ── */}
-      <aside
-        className="hidden md:flex md:w-60 md:flex-col md:fixed md:inset-y-0 z-40"
-        style={{ background: CARD, borderRight: `1px solid ${BORDER}` }}
-      >
-        <div className="flex flex-col flex-1 min-h-0">
-          <div className="flex items-center h-16 flex-shrink-0 px-5" style={{ borderBottom: `1px solid ${BORDER}` }}>
-            <Link href="/derm/dashboard" className="flex items-center gap-3">
-              <img src="/glowscan-mark.png" alt="GlowScan" className="w-8 h-8" />
-              <div className="leading-tight">
-                <p className="text-sm font-extrabold" style={{ color: INK }}>GlowScan DERM</p>
-                <p className="text-[9px] uppercase tracking-widest font-bold" style={{ color: BLUE }}>Clinical Engine</p>
-              </div>
-            </Link>
+    <div className="flex min-h-screen bg-organic-bg font-body text-organic-text">
+      {/* ── Barre latérale (ordinateur) ── */}
+      <aside className="sticky top-0 hidden h-screen w-[232px] flex-none flex-col gap-organic-6 overflow-y-auto px-organic-4 py-organic-6 md:flex">
+        <Link href="/derm/dashboard?stay=1" className="flex items-center gap-2.5 text-organic-text no-underline">
+          <img src="/glowscan-mark.png" alt="GlowScan" width={36} height={36} className="rounded-full object-cover" />
+          <span className="flex flex-col">
+            <span className="font-heading text-[18px] leading-[1.1]">GlowScan</span>
+            <span className="text-[10px] font-bold uppercase tracking-[.14em] text-organic-accent-2-700">Derm</span>
+          </span>
+        </Link>
+        <nav className="flex flex-col gap-0.5">
+          {pages.map(sideLink)}
+          {!isSecretary && (
+            <>
+              <span className="mx-3.5 mb-1 mt-3 text-[10px] font-bold uppercase tracking-[.14em] text-organic-neutral-700">Réseau</span>
+              {NETWORK.map(sideLink)}
+            </>
+          )}
+        </nav>
+        <div className="mt-auto flex flex-col gap-2">
+          <div className="flex items-center gap-2.5 rounded-pill bg-organic-surface p-2.5">
+            <span className="flex h-[34px] w-[34px] flex-none items-center justify-center rounded-full bg-organic-accent-2-500 text-[13px] font-bold text-organic-bg">{initialsOf(meName)}</span>
+            <span className="flex min-w-0 flex-col">
+              <span className="truncate text-[13px] font-bold">{meName}</span>
+              <span className="truncate text-[11px] text-organic-neutral-700">{meSub}</span>
+            </span>
           </div>
-
-          <div className="flex-1 flex flex-col overflow-y-auto px-3 py-4 space-y-1">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = location === item.href || (item.href === "/derm/analyse" && location.startsWith("/derm/analyse"));
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="flex items-center gap-3 px-4 py-3 text-xs font-bold rounded-xl transition-all"
-                  style={isActive
-                    ? { background: "rgba(0,147,122,0.1)", border: "1px solid rgba(0,147,122,0.25)", color: BLUE }
-                    : { color: BODY }
-                  }
-                >
-                  <Icon className="w-4 h-4 flex-shrink-0" />
-                  <span>{item.label}</span>
-                  {item.href === "/derm/consultations" && consultCount > 0 && (
-                    <span data-testid="badge-consultations" style={{ marginLeft: "auto", minWidth: 18, height: 18, padding: "0 5px", borderRadius: 9999, background: "#dc2626", color: "#fff", fontSize: 10, fontWeight: 800, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>{consultCount}</span>
-                  )}
-                </Link>
-              );
-            })}
-          </div>
-
-          <div className="p-4 space-y-3" style={{ borderTop: `1px solid ${BORDER}` }}>
-            {isTrial && accData && (
-              <div className="p-3 rounded-xl flex items-center gap-2" style={{ background: "rgba(217,119,6,0.08)", border: "1px solid rgba(217,119,6,0.25)" }}>
-                <Clock className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "#b45309" }} />
-                <p className="text-[10px] font-extrabold uppercase tracking-wider" style={{ color: "#b45309" }}>
-                  Essai : {accData.daysLeftTrial} jours
-                </p>
-              </div>
-            )}
-            <button onClick={() => logout()} className="w-full flex items-center gap-3 px-4 py-3 text-xs font-bold rounded-xl transition-opacity hover:opacity-70" style={{ color: MUTED }}>
-              <LogOut className="w-4 h-4" />
-              <span>Déconnexion</span>
-            </button>
-          </div>
+          <button type="button" onClick={() => logout()}
+            className="flex cursor-pointer items-center gap-3 rounded-pill border-0 bg-transparent px-3.5 py-2 font-body text-[13px] font-semibold text-organic-neutral-700 hover:bg-organic-neutral-200"
+            data-testid="button-logout-side">
+            <LogOut size={16} strokeWidth={1.75} /> Déconnexion
+          </button>
         </div>
       </aside>
 
-      {/* ── MAIN CONTENT ── */}
-      <div className="flex-1 flex flex-col md:pl-60 min-w-0">
-        <header className="sticky top-0 z-30 h-16 flex items-center px-4 sm:px-6" style={{ background: "rgba(255,255,255,0.92)", backdropFilter: "blur(12px)", borderBottom: `1px solid ${BORDER}` }}>
-          <div className="w-full max-w-6xl mx-auto flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3 min-w-0">
+      {/* ── Contenu ── */}
+      <main className={`flex min-w-0 max-w-[1180px] flex-1 flex-col gap-organic-6 px-4 pt-4 md:px-organic-8 md:pl-organic-4 md:pt-organic-6 ${hideBottomNav ? "pb-10" : "pb-[110px] md:pb-organic-8"}`}>
+        {hasHeader && (
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-3">
               {onBack ? (
-                <button onClick={onBack} data-testid="link-back" className="p-2 rounded-xl transition-opacity hover:opacity-70 active:scale-95" style={{ background: "#F1F5F9", border: `1px solid ${BORDER}`, color: BODY }}>
-                  <ArrowLeft className="w-4 h-4" />
+                <button type="button" onClick={onBack} data-testid="link-back" aria-label="Retour"
+                  className="flex h-10 w-10 flex-none cursor-pointer items-center justify-center rounded-full border-0 bg-organic-surface text-organic-text">
+                  <ArrowLeft size={18} strokeWidth={1.75} />
                 </button>
               ) : back ? (
-                <Link href={back} data-testid="link-back" className="p-2 rounded-xl transition-opacity hover:opacity-70 active:scale-95" style={{ background: "#F1F5F9", border: `1px solid ${BORDER}`, color: BODY }}>
-                  <ArrowLeft className="w-4 h-4" />
+                <Link href={back} data-testid="link-back" aria-label="Retour"
+                  className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-organic-surface text-organic-text">
+                  <ArrowLeft size={18} strokeWidth={1.75} />
                 </Link>
-              ) : (
-                <Link href="/derm/dashboard" className="md:hidden flex items-center justify-center">
-                  <img src="/glowscan-mark.png" alt="GlowScan" className="w-8 h-8" />
-                </Link>
-              )}
-              {title && <h1 className="text-sm font-extrabold truncate" style={{ color: INK }}>{title}</h1>}
+              ) : null}
+              {title && <h1 className="m-0 truncate text-[clamp(24px,3vw,32px)] leading-tight">{title}</h1>}
             </div>
-
-            <div className="flex items-center gap-2.5">
-              {rightAction}
-              {isTrial && accData && (
-                <Link href="/derm/cabinet" data-testid="badge-trial" className="inline-flex md:hidden items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-extrabold uppercase tracking-wider" style={{ background: "rgba(217,119,6,0.08)", border: "1px solid rgba(217,119,6,0.25)", color: "#b45309" }}>
-                  <Clock className="w-3 h-3" />
-                  {accData.daysLeftTrial}j restants
-                </Link>
-              )}
-            </div>
+            {rightAction && <div className="flex items-center gap-2.5">{rightAction}</div>}
           </div>
-        </header>
+        )}
+        {children}
+      </main>
 
-        <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8 pb-28 md:pb-10">
-          {children}
-        </main>
-      </div>
-
-      {/* ── BOTTOM NAV MOBILE ── */}
+      {/* ── Barre du bas (mobile) ── */}
       {!hideBottomNav && (
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40" style={{ background: "rgba(255,255,255,0.96)", backdropFilter: "blur(12px)", borderTop: `1px solid ${BORDER}` }}>
-          <div className="max-w-md mx-auto grid h-16 px-1" style={{ gridTemplateColumns: `repeat(${navItems.length}, 1fr)` }}>
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const active = location === item.href || (item.href === "/derm/analyse" && location.startsWith("/derm/analyse"));
-              if (item.primary) {
-                return (
-                  <Link key={item.href} href={item.href} className="flex items-center justify-center" data-testid={`navlink-${item.label.toLowerCase()}`}>
-                    <div className="flex flex-col items-center justify-center w-12 h-12 rounded-2xl -mt-5 transition-transform active:scale-90" style={{ background: GRADIENT, boxShadow: "0 6px 16px rgba(0,150,128,0.35)" }}>
-                      <Icon className="w-4 h-4 text-white" />
-                    </div>
-                  </Link>
-                );
-              }
-              const showBadge = item.href === "/derm/consultations" && consultCount > 0;
+        <nav className="fixed inset-x-0 bottom-0 z-[45] flex items-end justify-around border-t border-organic-divider bg-organic-surface px-1 pb-3 pt-1.5 md:hidden">
+          {(isSecretary ? SEC_PAGES : MOBILE).map((item) => {
+            const more = item.href === "more";
+            const mid = item.href === "/derm/analyse" && !isSecretary;
+            const on = more ? moreOpen : isActive(location, item.href);
+            const b = badgeOf(item as NavItem);
+            const Icon = item.icon;
+            const inner = (
+              <>
+                <span className={`relative flex items-center justify-center rounded-full ${mid ? "h-12 w-12 bg-organic-accent text-organic-bg" : `h-[30px] w-[52px] ${on ? "bg-organic-accent-100" : ""}`}`}>
+                  <Icon size={mid ? 22 : 20} strokeWidth={1.75} />
+                  {b > 0 && <span className="absolute -top-[3px] right-1 flex h-4 min-w-4 items-center justify-center rounded-pill bg-organic-accent px-1 text-[10px] font-bold text-organic-bg">{b}</span>}
+                </span>
+                <span className="text-[11px] font-bold">{item.label}</span>
+              </>
+            );
+            const cls = `flex flex-1 flex-col items-center gap-[3px] border-0 bg-transparent py-1 font-body no-underline ${on ? "text-organic-accent-700" : "text-organic-neutral-700"}`;
+            return more ? (
+              <button key="more" type="button" onClick={() => setMoreOpen(true)} className={`${cls} cursor-pointer`} data-testid="navlink-plus">{inner}</button>
+            ) : (
+              <Link key={item.href} href={item.href} className={cls} data-testid={`navlink-${item.href.split("/").pop()}`}>{inner}</Link>
+            );
+          })}
+        </nav>
+      )}
+
+      {moreOpen && (
+        <div className="fixed inset-0 z-[60] flex items-end bg-organic-neutral-900/45 md:hidden" onClick={() => setMoreOpen(false)}>
+          <div className="box-border flex max-h-[80vh] w-full flex-col gap-0.5 overflow-auto rounded-t-[32px] bg-organic-bg px-4 pb-7 pt-3" onClick={(e) => e.stopPropagation()}>
+            <span className="mb-2 h-1 w-10 self-center rounded-pill bg-organic-neutral-300" />
+            {MORE.map((m) => {
+              const Icon = m.icon;
               return (
-                <Link key={item.href} href={item.href} data-testid={`navlink-${item.label.toLowerCase()}`} className="flex flex-col items-center justify-center gap-1 transition-all" style={{ color: active ? BLUE : MUTED }}>
-                  <span style={{ position: "relative", display: "inline-flex" }}>
-                    <Icon className="w-4 h-4" />
-                    {showBadge && (
-                      <span data-testid="badge-consultations-mobile" style={{ position: "absolute", top: -6, right: -8, minWidth: 15, height: 15, padding: "0 4px", borderRadius: 9999, background: "#dc2626", color: "#fff", fontSize: 8.5, fontWeight: 800, display: "inline-flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>{consultCount}</span>
-                    )}
-                  </span>
-                  <span className="text-[9px] font-bold">{item.label.split(" ")[0]}</span>
+                <Link key={m.href} href={m.href} className="flex items-center gap-3.5 rounded-pill px-3 py-3.5 text-[15px] font-semibold text-organic-text no-underline hover:bg-organic-surface">
+                  <Icon size={18} strokeWidth={1.75} className="text-organic-accent-700" />
+                  <span className="flex-1">{m.label}</span>
+                  <ChevronRight size={16} className="text-organic-neutral-500" />
                 </Link>
               );
             })}
+            <button type="button" onClick={() => logout()}
+              className="flex cursor-pointer items-center gap-3.5 rounded-pill border-0 bg-transparent px-3 py-3.5 font-body text-[15px] font-semibold text-organic-neutral-700">
+              <LogOut size={18} strokeWidth={1.75} /> Déconnexion
+            </button>
           </div>
-        </nav>
+        </div>
       )}
     </div>
   );
 }
 
-// ── Helper components ──────────────────────────────────────────────────────
+// ── Composants partagés du portail (Organic) ───────────────────────────────
 
 export function ProCard({ children, className = "", testid }: { children: ReactNode; className?: string; testid?: string }) {
   return (
-    <div className={`rounded-2xl overflow-hidden ${className}`} style={{ background: CARD, border: `1px solid ${BORDER}`, boxShadow: "0 1px 3px rgba(15,23,42,0.04)" }} data-testid={testid}>
+    <div className={`overflow-hidden rounded-card bg-organic-surface ${className}`} data-testid={testid}>
       {children}
     </div>
   );
@@ -224,15 +266,15 @@ export function ProCard({ children, className = "", testid }: { children: ReactN
 export function ProButton({
   children, variant = "primary", className = "", ...props
 }: { children: ReactNode; variant?: "primary" | "secondary" | "ghost" | "success" | "danger"; className?: string; } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
-  const styles: Record<string, React.CSSProperties> = {
-    primary: { background: GRADIENT, color: "#fff" },
-    secondary: { background: "#F1F5F9", border: `1px solid ${BORDER}`, color: INK },
-    ghost: { color: BLUE },
-    success: { background: "rgba(5,150,105,0.1)", border: "1px solid rgba(5,150,105,0.25)", color: "#047857" },
-    danger: { background: "rgba(220,38,38,0.08)", border: "1px solid rgba(220,38,38,0.2)", color: "#dc2626" },
+  const styles: Record<string, string> = {
+    primary: "bg-organic-accent text-organic-neutral-100 hover:bg-organic-accent-600",
+    secondary: "border border-organic-divider bg-transparent text-organic-text hover:bg-organic-text/[.07]",
+    ghost: "bg-transparent text-organic-accent hover:bg-organic-accent/10",
+    success: "bg-organic-accent-2-600 text-organic-bg hover:bg-organic-accent-2-700",
+    danger: "bg-organic-accent-700 text-organic-neutral-100 hover:bg-organic-accent-800",
   };
   return (
-    <button {...props} className={`inline-flex items-center justify-center gap-2 px-4 py-3 rounded-full text-xs font-extrabold transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed ${className}`} style={styles[variant]}>
+    <button {...props} className={`inline-flex cursor-pointer items-center justify-center gap-2 rounded-pill border-0 px-4 py-2.5 font-body text-[14px] font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-45 ${styles[variant]} ${className}`}>
       {children}
     </button>
   );
@@ -240,34 +282,49 @@ export function ProButton({
 
 export function ProInput({ label, testid, ...props }: { label?: string; testid?: string } & React.InputHTMLAttributes<HTMLInputElement>) {
   return (
-    <div className="w-full">
-      {label && <label className="block text-[10px] font-extrabold uppercase tracking-wider mb-1.5" style={{ color: MUTED }}>{label}</label>}
-      <input {...props} data-testid={testid} className={`w-full px-4 py-3 rounded-xl text-sm outline-none transition-all ${props.className || ""}`} style={{ background: CARD, border: `1px solid #CBD5E1`, color: INK }} />
-    </div>
+    <label className="flex w-full flex-col gap-1.5">
+      {label && <span className="text-[12px] text-organic-neutral-700">{label}</span>}
+      <input {...props} data-testid={testid}
+        className={`box-border h-11 w-full rounded-pill border border-organic-divider bg-organic-bg px-4 font-body text-[15px] text-organic-text outline-none placeholder:text-organic-neutral-500 focus:border-organic-accent ${props.className || ""}`} />
+    </label>
   );
 }
 
-export function StatusBadge({ status }: { status: "red" | "yellow" | "green" | string | null | undefined }) {
-  const map: Record<string, { label: string; style: React.CSSProperties; dot: string }> = {
-    red: { label: "Suivi critique", style: { background: "rgba(220,38,38,0.08)", border: "1px solid rgba(220,38,38,0.2)", color: "#dc2626" }, dot: "#dc2626" },
-    yellow: { label: "Vigilance requise", style: { background: "rgba(217,119,6,0.08)", border: "1px solid rgba(217,119,6,0.25)", color: "#b45309" }, dot: "#d97706" },
-    green: { label: "Évolution stable", style: { background: "rgba(5,150,105,0.1)", border: "1px solid rgba(5,150,105,0.25)", color: "#047857" }, dot: "#059669" },
-  };
-  const s = map[status || "green"] || map.green;
-  return (
-    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[9px] font-extrabold uppercase tracking-wider" style={s.style}>
-      <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: s.dot }} />
-      {s.label}
-    </span>
-  );
+// Statuts patient. Ancien système red/yellow/green conservé en base, affiché
+// avec les libellés de la maquette (Priorité haute / En suivi / Stable / Résolu).
+export type PatientStatus = "priority" | "monitoring" | "stable" | "resolved";
+export function patientStatusOf(s: string | null | undefined): PatientStatus {
+  if (s === "red" || s === "priority") return "priority";
+  if (s === "yellow" || s === "monitoring") return "monitoring";
+  if (s === "resolved") return "resolved";
+  return "stable";
+}
+export const PATIENT_STATUS: Record<PatientStatus, { label: string; tag: string }> = {
+  priority: { label: "Priorité haute", tag: "bg-organic-accent-200 text-organic-accent-900" },
+  monitoring: { label: "En suivi", tag: "bg-organic-neutral-200 text-organic-neutral-900" },
+  stable: { label: "Stable", tag: "bg-organic-accent-2-200 text-organic-accent-2-900" },
+  resolved: { label: "Résolu", tag: "border border-organic-divider text-organic-text" },
+};
+
+export function StatusBadge({ status }: { status: string | null | undefined }) {
+  const s = PATIENT_STATUS[patientStatusOf(status)];
+  return <span className={`inline-flex items-center rounded-pill px-2.5 py-1 text-[12px] font-semibold ${s.tag}`}>{s.label}</span>;
 }
 
 export function LogoutButton() {
   const { logout } = useAuth();
   return (
-    <button onClick={() => logout()} data-testid="button-logout" className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-full text-xs font-extrabold transition-opacity hover:opacity-70" style={{ background: "#F1F5F9", border: `1px solid ${BORDER}`, color: MUTED }}>
-      <LogOut className="w-4 h-4" />
-      Se déconnecter
-    </button>
+    <ProButton variant="secondary" onClick={() => logout()} data-testid="button-logout" className="w-full">
+      <LogOut size={16} /> Se déconnecter
+    </ProButton>
+  );
+}
+
+export function LoadingScreen() {
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-organic-bg font-body text-organic-text">
+      <img src="/glowscan-mark.png" alt="GlowScan" width={56} height={56} className="animate-pulse rounded-full" />
+      <span className="font-heading text-[18px]">GlowScan <span className="text-organic-accent-2-700">Derm</span></span>
+    </div>
   );
 }

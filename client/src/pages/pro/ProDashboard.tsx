@@ -1,100 +1,77 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-  ArrowRight,
-  Users,
-  ScanLine,
-  BarChart3,
-  Crown,
-  X,
-  ChevronRight,
-  Sparkles,
-  Activity,
-  TrendingUp,
-  Clock,
-} from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Plus } from "lucide-react";
 import { useProAccount, useProPatients, useUpdateProAccount, useProStats, useProPendingPatients, useLastOpenedPatient } from "@/hooks/use-pro";
-import { ProLayout, ProCard } from "@/components/ProLayout";
+import { ProLayout, LoadingScreen, patientStatusOf } from "@/components/ProLayout";
 import { SubscriptionExpiredBanner } from "@/components/pro/SubscriptionExpiredBanner";
 import { DermOnboarding } from "@/components/pro/DermOnboarding";
 import { DermNotifPrompt } from "@/components/DermNotifPrompt";
-import { DERM, DERM_LOGO } from "@/lib/design-tokens";
-import { computeProfileScore, profileLabel } from "@/lib/profile-score";
-import { SUB_SPECIALTIES } from "@shared/dermSpecialties";
-const SUBSPEC_KEYS = new Set(SUB_SPECIALTIES.map((s) => s.key));
+import { Button } from "@/components/ui/button";
+import { PRO_SUBSCRIPTION_FCFA } from "@shared/premium";
+import { formatF } from "@shared/delivery";
 
-const DS = {
-  bg: DERM.bg,
-  surface: DERM.surface,
-  violet: DERM.violet,
-  violetMid: DERM.violetMid,
-  violetLight: DERM.violetLight,
-  gradient: DERM.gradient,
-  pink: DERM.pink,
-  textPrimary: DERM.text,
-  textBody: DERM.textBody,
-  textMuted: DERM.textMuted,
-  cardBorder: DERM.border,
-  cardVioletBg: "rgba(0,147,122,0.06)",
-  cardVioletBorder: "rgba(0,147,122,0.20)",
-  subtleBg: "#F1F5F9",
-  statBg: "#F1F5F9",
-  statBorder: DERM.border,
-  successBg: "rgba(5,150,105,0.08)",
-  successBorder: "rgba(5,150,105,0.25)",
-  successText: "#047857",
-  warningBg: "rgba(217,119,6,0.08)",
-  warningBorder: "rgba(217,119,6,0.25)",
-  warningText: "#b45309",
-  soft: "#F1F5F9",
-  blue: "#00937A",
-  font: `-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif`,
+export { LoadingScreen };
+
+// ════════════════════════════════════════════════════════════════════════
+// Tableau de bord GlowScan Derm (refonte Organic) — maquette « Derm Portal »,
+// écran « Tableau de bord ». Chiffres réels uniquement : patients, analyses,
+// dossiers préparés (secrétaire), diagnostics IA à valider, rendez-vous du jour.
+// Conserve la reprise automatique du dernier dossier ouvert (< 4 h).
+// ════════════════════════════════════════════════════════════════════════
+
+const TZ = "Africa/Douala";
+const dayKey = (d: Date) => d.toLocaleDateString("fr-CA", { timeZone: TZ }); // AAAA-MM-JJ
+const hhmm = (d: Date) => d.toLocaleTimeString("fr-FR", { timeZone: TZ, hour: "2-digit", minute: "2-digit" });
+const shortDate = (d: string | Date | null | undefined) =>
+  d ? new Date(d).toLocaleDateString("fr-FR", { timeZone: TZ, day: "numeric", month: "short" }) : "";
+const initials = (first?: string | null, last?: string | null) =>
+  `${(first || "").trim()[0] || ""}${(last || "").trim()[0] || ""}`.toUpperCase() || "?";
+
+// Types de rendez-vous (colonne appointments.type) : pastille de couleur + libellé.
+export const APPT_TYPES: Record<string, { label: string; dot: string }> = {
+  consultation: { label: "Consultation", dot: "var(--color-accent)" },
+  suivi: { label: "Suivi", dot: "var(--color-accent-2-600)" },
+  urgence: { label: "Urgence", dot: "var(--color-accent-800)" },
 };
 
-// Étapes d'onboarding — cliquables, disparaissent quand tout est fait
-function computeOnboarding(acc: any, patientCount: number) {
-  const cabinetDone = !!(acc?.cabinetName && acc?.phone && acc?.city);
-  const publicDone = acc?.b2cAvailable === true;
-  const firstPatientDone = patientCount > 0;
-  const steps = [
-    { key: "cabinet", label: "Complétez votre profil cabinet", hint: "2 min", to: "/derm/cabinet", done: cabinetDone },
-    { key: "public", label: "Activez votre profil public", hint: "recevez des patients", to: "/derm/profil-public", done: publicDone },
-    { key: "patient", label: "Analysez votre premier patient", hint: "3 min", to: "/derm/analyse?nouveau=1", done: firstPatientDone },
-  ];
-  const doneCount = steps.filter((s) => s.done).length;
-  return { steps, doneCount, allDone: doneCount === steps.length, pct: Math.round((doneCount / steps.length) * 100) };
-}
-
+type PendingValidation = { scanId: number; patientId: number; condition: string | null; createdAt: string; firstName: string; lastName: string };
 
 export default function ProDashboard() {
   const [, setLocation] = useLocation();
   const { data: accData, isLoading } = useProAccount();
   const { data: patientsData } = useProPatients("");
   const { data: stats } = useProStats();
-  const { data: pendingData } = useProPendingPatients();
+  const { data: waitingData } = useProPendingPatients();
   const updateAcc = useUpdateProAccount();
+  const role = accData?.user?.role;
+  const isDoctor = !!accData?.account && role !== "secretary";
+
   const [tourOpen, setTourOpen] = useState(false);
-  const [tourStep, setTourStep] = useState(0);
-  // File d'attente de validation (fait croître le volume de données GOLD réelles)
-  const [pending, setPending] = useState<any[]>([]);
+  const [pending, setPending] = useState<PendingValidation[]>([]);
   const [validatingId, setValidatingId] = useState<number | null>(null);
-  const [referral, setReferral] = useState<{ code: number; count: number } | null>(null);
-  const refLink = referral ? `${window.location.origin}/derm/inscription?ref=${referral.code}` : "";
+  const [copied, setCopied] = useState(false);
+
+  const today = dayKey(new Date());
+  const { data: apptData } = useQuery<{ appointments: any[] }>({
+    queryKey: ["/api/pro/appointments", today],
+    queryFn: async () => {
+      const r = await fetch(`/api/pro/appointments?date=${today}`, { credentials: "include" });
+      return r.ok ? r.json() : { appointments: [] };
+    },
+    enabled: isDoctor,
+  });
+  const { data: referral } = useQuery<{ code: number | null; count: number }>({ queryKey: ["/api/pro/referral"], enabled: isDoctor });
 
   const loadPending = async () => {
     try {
       const res = await fetch("/api/pro/pending-validations", { credentials: "include" });
-      if (res.ok) { const d = await res.json(); setPending(d.items || []); }
+      if (res.ok) setPending((await res.json()).items || []);
     } catch {}
   };
-  useEffect(() => { if (accData?.account) loadPending(); }, [accData?.account?.id]);
-  useEffect(() => {
-    if (!accData?.account) return;
-    fetch("/api/pro/referral", { credentials: "include" }).then((r) => r.ok ? r.json() : null).then((d) => d && setReferral(d)).catch(() => {});
-  }, [accData?.account?.id]);
+  useEffect(() => { if (isDoctor) loadPending(); }, [isDoctor, accData?.account?.id]);
 
-  const validatePending = async (scanId: number) => {
+  const validate = async (scanId: number) => {
     setValidatingId(scanId);
     try {
       const res = await fetch(`/api/pro/scans/${scanId}/validate`, {
@@ -110,746 +87,255 @@ export default function ProDashboard() {
     if (accData?.account && !accData.account.onboardingDone) setTourOpen(true);
   }, [accData?.account?.onboardingDone]);
 
-  const role = accData?.user?.role;
-
+  // Secrétaire : pas de tableau de bord → ses patients. Sans compte → landing.
   useEffect(() => {
-    // Redirige vers la landing uniquement les visiteurs SANS compte ET non-secrétaires.
-    // La secrétaire a une session valide (mais pas de proAccount) → écran dédié ci-dessous.
-    if (!isLoading && !accData?.account && role !== "secretary") setLocation("/derm");
-  }, [isLoading, accData, role]);
+    if (isLoading) return;
+    if (role === "secretary") setLocation("/derm/patients");
+    else if (!accData?.account) setLocation("/derm");
+  }, [isLoading, accData, role, setLocation]);
 
   // ── REPRISE AUTOMATIQUE DU DERNIER DOSSIER (médecin uniquement) ──────────
-  // Comme un éditeur qui rouvre le dernier fichier : si le médecin a ouvert un
-  // dossier dans les 4 dernières heures, on l'y renvoie directement au lieu du
-  // KPI. Jamais pour la secrétaire. Anti-enfermement : le lien « Tableau de
-  // bord » pointe vers ?stay=1 (jamais de rebond), et un drapeau one-shot par
-  // onglet (réinitialisé à la connexion) évite tout aller-retour en boucle.
-  const isDoctor = !!accData?.account && role !== "secretary";
+  // Si le médecin a ouvert un dossier dans les 4 dernières heures, on l'y
+  // renvoie. Anti-enfermement : « ?stay=1 » (lien du logo) et un drapeau
+  // one-shot par onglet, réinitialisé à la connexion.
   const { data: lastOpened, isLoading: lastOpenedLoading } = useLastOpenedPatient(isDoctor);
-
   const resumeAllowed = (() => {
     if (!isDoctor) return false;
     try {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get("stay") === "1") return false;                 // retour volontaire au dashboard
-      if (sessionStorage.getItem("derm_autoresumed") === "1") return false; // déjà repris dans cet onglet
+      if (new URLSearchParams(window.location.search).get("stay") === "1") return false;
+      if (sessionStorage.getItem("derm_autoresumed") === "1") return false;
     } catch {}
     return true;
   })();
-
   const resumePatient = resumeAllowed ? lastOpened?.patient : null;
   const resumeTarget = resumePatient
-    ? (resumePatient.intakePending
-        ? `/derm/analyse?patient=${resumePatient.id}`   // analyse en cours (non finalisée)
-        : `/derm/patient/${resumePatient.id}`)          // dossier déjà finalisé
+    ? (resumePatient.intakePending ? `/derm/analyse?patient=${resumePatient.id}` : `/derm/patient/${resumePatient.id}`)
     : null;
-
-  // Si le médecin reste volontairement (stay=1), on mémorise pour ne plus rebondir.
   useEffect(() => {
     try {
-      const params = new URLSearchParams(window.location.search);
-      if (isDoctor && params.get("stay") === "1") sessionStorage.setItem("derm_autoresumed", "1");
+      if (isDoctor && new URLSearchParams(window.location.search).get("stay") === "1") sessionStorage.setItem("derm_autoresumed", "1");
     } catch {}
   }, [isDoctor]);
-
   useEffect(() => {
     if (!resumeTarget) return;
     try { sessionStorage.setItem("derm_autoresumed", "1"); } catch {}
     setLocation(resumeTarget);
-  }, [resumeTarget]);
-
-  // Anti-enfermement : dès que le médecin voit réellement le dashboard (pas de
-  // reprise à faire), on ne le rebondira plus dans cet onglet — même s'il ouvre
-  // ensuite un dossier puis revient ici via « Tableau de bord ». Réinitialisé à
-  // la prochaine connexion (goAfterLogin efface le drapeau).
+  }, [resumeTarget, setLocation]);
   useEffect(() => {
     if (isDoctor && !lastOpenedLoading && !resumeTarget) {
       try { sessionStorage.setItem("derm_autoresumed", "1"); } catch {}
     }
   }, [isDoctor, lastOpenedLoading, resumeTarget]);
 
-  if (isLoading) {
-    return <LoadingScreen />;
-  }
-
-  // Éviter le flash du dashboard KPI pendant qu'on décide de reprendre ou non.
+  if (isLoading || !accData?.account || role === "secretary") return <LoadingScreen />;
   if (resumeAllowed && lastOpenedLoading) return <LoadingScreen />;
   if (resumeTarget) return <LoadingScreen />;
 
-  // 🔑 SÉCURITÉ : Les secrétaires n'ont pas accès au tableau de bord (vérifié AVANT
-  // la garde account-null, car une secrétaire n'a pas de proAccount).
-  if (role === "secretary") {
-    return (
-      <div style={{
-        minHeight: "100vh",
-        background: DS.bg,
-        color: DS.textPrimary,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        flexDirection: "column",
-        gap: 24,
-        padding: "24px",
-        fontFamily: DS.font,
-      }}>
-        <div style={{ textAlign: "center", maxWidth: 400 }}>
-          <h1 style={{ fontSize: 24, fontWeight: 800, marginBottom: 12 }}>Accès refusé</h1>
-          <p style={{ color: DS.textBody, marginBottom: 24, lineHeight: 1.6 }}>
-            Les secrétaires ont accès à la création de patients et la prise de photos.
-            Le tableau de bord est réservé aux médecins.
-          </p>
-          <button
-            onClick={() => setLocation("/derm/patients")}
-            style={{
-              padding: "12px 24px",
-              background: DS.violet,
-              color: "#fff",
-              border: "none",
-              borderRadius: 9999,
-              fontWeight: 700,
-              cursor: "pointer",
-            }}
-          >
-            Aller aux patients
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // Pas de compte (et pas secrétaire) → l'effet ci-dessus redirige vers /derm ;
-  // on affiche le loader le temps que la navigation se fasse.
-  if (!accData?.account) {
-    return <LoadingScreen />;
-  }
-
-  const acc = accData.account;
+  const acc: any = accData.account;
   const patients = patientsData?.patients || [];
-  const patientCount = patients.length;
+  const waiting = waitingData?.patients || [];
+  const appts = (apptData?.appointments || []).filter((a) => a.status !== "cancelled");
+  const counts = patients.reduce((m, p) => { const k = patientStatusOf(p.status); m[k] = (m[k] || 0) + 1; return m; }, {} as Record<string, number>);
+  const thisMonth = new Date().toISOString().slice(0, 7);
+  const newThisMonth = patients.filter((p) => p.createdAt && new Date(p.createdAt).toISOString().slice(0, 7) === thisMonth).length;
+  const scansThisMonth = stats?.monthly?.find((m) => m.month === thisMonth)?.count ?? 0;
+  const todo = pending.length + waiting.length;
+  const firstName = String(acc.fullName || "").replace(/^dr\.?\s+/i, "").split(/\s+/)[0] || "";
+
+  const profileFields = [acc.fullName, acc.cabinetName, acc.phone, acc.city, acc.photoUrl || acc.avatarUrl, acc.bio, acc.specialties?.length || acc.specialty, acc.licenseNumber];
+  const profilePct = Math.round((profileFields.filter(Boolean).length / profileFields.length) * 100);
+
   const isTrial = acc.subscriptionStatus === "trial";
+  const isActive = acc.subscriptionStatus === "active";
+  const refLink = referral?.code ? `${window.location.origin}/derm/inscription?ref=${referral.code}` : "";
+  const waInvite = refLink
+    ? `https://wa.me/?text=${encodeURIComponent(`Je vous invite sur GlowScan Derm, l'outil des dermatologues africains : ${refLink}`)}`
+    : "";
 
-  const recentPatients = patients.slice(0, 4);
-  // Compatibilité ancien système (red/yellow/green) + nouveau (priority/monitoring/stable/resolved)
-  const statusCounts = patients.reduce(
-    (acc, p) => {
-      const s = p.status || "stable";
-      // Mapper ancien → nouveau
-      const mapped = s === "red" ? "priority" : s === "yellow" ? "monitoring" : s === "green" ? "stable" : s;
-      acc[mapped] = (acc[mapped] || 0) + 1;
-      return acc;
-    },
-    { priority: 0, monitoring: 0, stable: 0, resolved: 0 } as Record<string, number>
-  );
+  const kpis = [
+    { label: "Patients", value: patients.length, note: `+${newThisMonth} ce mois-ci`, to: "/derm/patients", bg: "bg-organic-surface", ink: "text-organic-neutral-700" },
+    { label: "Analyses", value: stats?.totalScans ?? "—", note: `${scansThisMonth} ce mois-ci`, to: "/derm/statistiques", bg: "bg-organic-surface", ink: "text-organic-neutral-700" },
+    { label: "Priorité haute", value: counts.priority || 0, note: "à revoir cette semaine", to: "/derm/patients?filtre=priority", bg: "bg-organic-accent-100", ink: "text-organic-accent-800" },
+    { label: "En suivi", value: counts.monitoring || 0, note: "rappels programmés", to: "/derm/patients?filtre=monitoring", bg: "bg-organic-accent-2-100", ink: "text-organic-accent-2-800" },
+  ];
 
-  const today = new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
-
-  // ── Onboarding + complétion profil public ──
-  const onboarding = computeOnboarding(acc as any, patientCount);
-  const a: any = acc;
-  const profileFields = [a.fullName, a.cabinetName, a.phone, a.city, a.photoUrl || a.avatarUrl, a.bio, (a.specialties?.length || a.specialty), a.licenseNumber];
-  const profileFilled = profileFields.filter(Boolean).length;
-  const profilePct = Math.round((profileFilled / profileFields.length) * 100);
-  const profileComplete = profilePct >= 100;
-
-  const closeTour = async () => {
-    setTourOpen(false);
-    await updateAcc.mutateAsync({ onboardingDone: true });
-  };
-
-  const profileScore = computeProfileScore({
-    email: (accData?.user as any)?.email,
-    fullName: (acc as any).fullName, city: (acc as any).city, phone: (acc as any).phone,
-    country: (acc as any).country, licenseNumber: (acc as any).licenseNumber, cabinetName: (acc as any).cabinetName,
-  });
+  const sectionLabel = "text-[11px] font-bold uppercase tracking-[.1em] text-organic-neutral-700";
 
   return (
     <ProLayout>
-      {/* ══ BANNIÈRE ABONNEMENT EXPIRÉ (priorité max — explique le blocage) ══ */}
       <SubscriptionExpiredBanner />
-      {/* ══ RAPPEL SOUS-SPÉCIALITÉS (pour être proposé aux bons patients) ══ */}
-      {accData?.account && !((acc as any)?.specialties || []).some((k: string) => SUBSPEC_KEYS.has(k)) && (
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, background: DS.surface, border: "1px solid #E2E8F0", borderRadius: 16, padding: "12px 14px", marginBottom: 16 }}>
-          <div style={{ minWidth: 0 }}>
-            <p style={{ fontSize: 13, fontWeight: 800, color: DS.textPrimary, margin: 0 }}>Précisez vos sous-spécialités 🩺</p>
-            <p style={{ fontSize: 11.5, color: DS.textMuted, margin: "2px 0 0", lineHeight: 1.5 }}>Indiquez vos domaines (esthétique, pédiatrie, trichologie…) pour être proposé aux patients qui cherchent votre expertise.</p>
-          </div>
-          <Link href="/derm/profil-public" style={{ flexShrink: 0, background: DS.gradient, color: "#fff", borderRadius: 9999, padding: "9px 16px", fontSize: 12.5, fontWeight: 800, textDecoration: "none" }}>Choisir →</Link>
-        </div>
-      )}
-      {/* ══ BANNIÈRE COMPLÉTION PROFIL (priorité absolue — disparaît à 100%) ══ */}
-      {profileScore < 100 && (
-        <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: 16 }}>
-          <div style={{ borderRadius: 18, padding: "16px 18px", background: DS.surface, border: "1px solid #E2E8F0" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 10 }}>
-              <p style={{ fontSize: 13, fontWeight: 800, color: DS.textPrimary, margin: 0 }}>{profileLabel(profileScore)}</p>
-              <span style={{ fontSize: 13, fontWeight: 900, color: "#00937A", fontVariantNumeric: "tabular-nums" }}>{profileScore}%</span>
-            </div>
-            <div style={{ height: 8, borderRadius: 9999, background: "#E2E8F0", overflow: "hidden", marginBottom: 12 }}>
-              <div style={{ height: "100%", width: `${profileScore}%`, borderRadius: 9999, background: DS.gradient, transition: "width .4s" }} />
-            </div>
-            <Link href="/derm/profil" data-testid="link-complete-profile"
-              style={{ display: "inline-flex", alignItems: "center", gap: 6, background: DS.gradient, color: "#fff", borderRadius: 9999, padding: "9px 18px", fontSize: 13, fontWeight: 800, textDecoration: "none" }}>
-              Compléter maintenant <ArrowRight size={14} />
-            </Link>
-          </div>
-        </motion.div>
-      )}
 
-      {/* Badge vert "Profil certifié" quand 100% (brief étape 5) */}
-      {profileScore >= 100 && (
-        <div style={{ display: "inline-flex", alignItems: "center", gap: 7, marginBottom: 14, padding: "7px 14px", borderRadius: 9999, background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.3)" }}>
-          <span style={{ width: 8, height: 8, borderRadius: "50%", background: DERM.green }} />
-          <span style={{ fontSize: 12, fontWeight: 800, color: "#047857" }}>✓ Profil certifié</span>
-        </div>
-      )}
-
-      {/* ══ WELCOME WIDGET ══ */}
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: 16 }}>
-        <div style={{
-          background: DS.surface,
-          border: "1px solid #E2E8F0",
-          borderRadius: 24, padding: "20px 22px",
-        }}>
-          <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".8px", textTransform: "uppercase", color: DS.textMuted, marginBottom: 4 }}>
-            {today}
+      <header className="flex flex-wrap items-end justify-between gap-organic-4">
+        <div className="flex flex-col gap-1">
+          <span className="text-[11px] font-bold uppercase tracking-[.12em] text-organic-accent-700">
+            {new Date().toLocaleDateString("fr-FR", { timeZone: TZ, weekday: "long", day: "numeric", month: "long" })}
+          </span>
+          <h1 className="m-0 text-[clamp(30px,4vw,42px)]">Bonjour, Dr {firstName}</h1>
+          <p className="m-0 text-[15px] text-organic-neutral-700">
+            {todo} dossier{todo > 1 ? "s" : ""} vous attend{todo > 1 ? "ent" : ""} et {appts.length} rendez-vous aujourd'hui.
           </p>
-          <h2 style={{ fontSize: 22, fontWeight: 900, color: DS.textPrimary, margin: "0 0 14px" }}>
-            Bonjour, Dr {acc.fullName.split(" ")[0]} 👋
-          </h2>
-
-          {/* Stats rapides */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 16 }}>
-            {[
-              { label: "Patients total", value: patientCount, color: DS.violetMid },
-              { label: "Priorité haute", value: statusCounts.priority, color: "#f87171" },
-              { label: "En suivi", value: statusCounts.monitoring, color: "#fbbf24" },
-            ].map((s, i) => (
-              <div key={i} style={{ background: "#F1F5F9", borderRadius: 12, padding: "10px 12px" }}>
-                <p style={{ fontSize: 22, fontWeight: 900, color: s.color, margin: 0 }}>{s.value}</p>
-                <p style={{ fontSize: 10, color: DS.textMuted, margin: "2px 0 0", fontWeight: 600 }}>{s.label}</p>
-              </div>
-            ))}
-          </div>
-
-          <Link href="/derm/analyse?nouveau=1"
-            style={{
-              display: "inline-flex", alignItems: "center", gap: 6,
-              background: DS.violet, color: "#fff", borderRadius: 9999,
-              padding: "10px 20px", fontSize: 13, fontWeight: 800, textDecoration: "none",
-            }}>
-            <ScanLine size={14} /> + Nouveau patient
-          </Link>
         </div>
-      </motion.div>
+        <div className="flex flex-wrap gap-organic-2">
+          <Button variant="secondary" onClick={() => setLocation("/derm/patients")} className="h-auto px-5 py-3">Mes patients</Button>
+          <Button onClick={() => setLocation("/derm/analyse?nouveau=1")} className="h-auto px-[22px] py-3 text-[15px]" data-testid="button-new-patient">
+            <Plus size={16} /> Nouveau patient
+          </Button>
+        </div>
+      </header>
+
+      {profilePct < 100 && (
+        <div className="flex flex-wrap items-center gap-organic-4 rounded-card bg-organic-accent-2-100 px-organic-4 py-organic-3">
+          <span className="font-heading text-[22px] text-organic-accent-2-800">{profilePct}%</span>
+          <div className="flex min-w-[200px] flex-1 flex-col gap-1.5">
+            <span className="text-[13px] font-bold text-organic-accent-2-900">Profil public presque prêt — ajoutez votre bio et votre photo pour recevoir des patients GlowScan.</span>
+            <div className="h-2 overflow-hidden rounded-pill bg-organic-accent-2-200">
+              <div className="h-full rounded-pill bg-organic-accent-2-600" style={{ width: `${profilePct}%` }} />
+            </div>
+          </div>
+          <Button variant="secondary" onClick={() => setLocation("/derm/profil-public")} className="border-organic-accent-2-600 text-organic-accent-2-900" data-testid="link-complete-profile">
+            Compléter
+          </Button>
+        </div>
+      )}
 
       <DermNotifPrompt />
 
-      {/* ══ 2 · PROFIL PUBLIC — remonté sous le greeting, avec barre de complétion ══ */}
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: 16 }}>
-        <Link href="/derm/profil-public" data-testid="link-public-profile-top"
-          style={{ display: "block", padding: "16px 18px", borderRadius: 20, textDecoration: "none",
-            background: DS.surface, border: `1px solid ${profileComplete ? DS.successBorder : DS.cardVioletBorder}` }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-            <span style={{ fontSize: 22, flexShrink: 0 }}>✦</span>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ fontSize: 14, fontWeight: 800, color: DS.textPrimary, margin: 0 }}>Mon profil public</p>
-              <p style={{ fontSize: 11.5, color: DS.textBody, margin: "2px 0 0" }}>
-                Photo, bio, spécialités + votre lien à partager pour attirer des patients.
-              </p>
+      <section className="grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-organic-3">
+        {kpis.map((k) => (
+          <Link key={k.label} href={k.to} className={`flex flex-col gap-1.5 rounded-card p-organic-4 text-organic-text no-underline hover:shadow-organic-md ${k.bg}`} data-testid={`kpi-${k.label}`}>
+            <span className={`text-[12px] font-bold ${k.ink}`}>{k.label}</span>
+            <span className="font-heading text-[40px] leading-none">{k.value}</span>
+            <span className="text-[12px] text-organic-neutral-700">{k.note}</span>
+          </Link>
+        ))}
+      </section>
+
+      <section className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,420px),1fr))] items-start gap-organic-4">
+        <div className="flex flex-col gap-organic-4 rounded-card bg-organic-surface p-organic-6">
+          <div className="flex items-baseline justify-between gap-3">
+            <h3 className="m-0 text-[22px]">À faire aujourd'hui</h3>
+            <span className="rounded-pill bg-organic-accent-200 px-2.5 py-1 text-[12px] font-semibold text-organic-accent-900">{todo} en attente</span>
+          </div>
+
+          {waiting.length > 0 && (
+            <div className="flex flex-col gap-organic-2">
+              <span className={sectionLabel}>Dossiers préparés par la secrétaire</span>
+              {waiting.map((w) => (
+                <Link key={w.id} href={`/derm/analyse?patient=${w.id}`}
+                  className="flex items-center gap-3 rounded-pill bg-organic-bg py-2.5 pl-2.5 pr-3 text-organic-text no-underline hover:bg-organic-neutral-100">
+                  <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-organic-accent-200 text-[12px] font-bold text-organic-accent-800">{initials(w.firstName, w.lastName)}</span>
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="truncate text-[14px] font-bold">{w.firstName} {w.lastName}</span>
+                    <span className="text-[12px] text-organic-neutral-700">
+                      {[w.age ? `${w.age} ans` : null, w.createdAt ? `photos prises à ${hhmm(new Date(w.createdAt))}` : null].filter(Boolean).join(" · ")}
+                    </span>
+                  </span>
+                  <span className="text-[13px] font-bold text-organic-accent-700">Continuer →</span>
+                </Link>
+              ))}
             </div>
-            <span style={{ color: profileComplete ? DS.successText : DS.violet, fontSize: 18, flexShrink: 0 }}>→</span>
-          </div>
-          {/* Barre de complétion */}
-          <div style={{ height: 8, borderRadius: 9999, background: DS.soft, overflow: "hidden" }}>
-            <div style={{ height: "100%", width: `${profilePct}%`, borderRadius: 9999,
-              background: profileComplete ? DERM.green : DS.violet, transition: "width .3s" }} />
-          </div>
-          <p style={{ fontSize: 11.5, fontWeight: 700, margin: "8px 0 0",
-            color: profileComplete ? DS.successText : DS.violet }}>
-            {profileComplete
-              ? "✓ Profil complet — vous êtes visible par les patients GlowScan"
-              : `Profil complété à ${profilePct}% — Complétez pour recevoir des patients GlowScan`}
-          </p>
-        </Link>
-      </motion.div>
+          )}
 
-      {/* ══ 3 · CARTE PATIENTS GLOWSCAN B2C ══ */}
-      {!(acc as any).b2cAvailable && (
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.04 }} style={{ marginBottom: 16 }}>
-          <div style={{ padding: "16px 18px", borderRadius: 20,
-            background: DS.surface,
-            border: "1px solid #E2E8F0" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-              <span style={{ fontSize: 18 }}>📱</span>
-              <p style={{ fontSize: 14, fontWeight: 800, color: DS.textPrimary, margin: 0 }}>Patients GlowScan</p>
-            </div>
-            <p style={{ fontSize: 12, color: DS.textBody, margin: "0 0 12px", lineHeight: 1.6 }}>
-              Des patients font leur analyse sur glow-scan.com. Quand leur score est bas, GlowScan les oriente
-              vers vous. Activez votre profil public pour commencer à en recevoir.
+          <div className="flex flex-col gap-organic-2">
+            <span className={sectionLabel}>Diagnostics IA à valider</span>
+            {pending.slice(0, 5).map((p) => (
+              <div key={p.scanId} className="flex flex-wrap items-center gap-2.5 rounded-card bg-organic-bg py-2.5 pl-4 pr-2.5 sm:rounded-pill">
+                <span className="flex min-w-[160px] flex-1 flex-col">
+                  <span className="text-[14px] font-bold">{p.condition}</span>
+                  <span className="text-[12px] text-organic-neutral-700">{p.firstName} {p.lastName} · {shortDate(p.createdAt)}</span>
+                </span>
+                <Button variant="ghost" onClick={() => setLocation(`/derm/patient/${p.patientId}`)} className="px-3">Corriger</Button>
+                <Button onClick={() => validate(p.scanId)} disabled={validatingId === p.scanId}
+                  className="bg-organic-accent-2-600 px-4 text-organic-bg hover:bg-organic-accent-2-700" data-testid={`button-validate-${p.scanId}`}>
+                  Valider
+                </Button>
+              </div>
+            ))}
+            {pending.length > 5 && (
+              <Link href="/derm/patients" className="text-[13px] font-bold text-organic-accent-700">+ {pending.length - 5} autres diagnostics à valider</Link>
+            )}
+            {pending.length === 0 && (
+              <div className="rounded-pill bg-organic-accent-2-100 px-[18px] py-3.5 text-[13px] font-semibold text-organic-accent-2-800">
+                Tout est validé. Chaque validation rend l'IA plus précise.
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-organic-3 rounded-card bg-organic-surface p-organic-6">
+          <div className="flex items-baseline justify-between gap-3">
+            <h3 className="m-0 text-[22px]">Aujourd'hui à l'agenda</h3>
+            <Link href="/derm/agenda" className="text-[13px] font-bold text-organic-accent-700">Voir l'agenda</Link>
+          </div>
+          {appts.length === 0 && <span className="text-[14px] text-organic-neutral-700">Aucun rendez-vous aujourd'hui.</span>}
+          {appts.map((a) => {
+            const t = APPT_TYPES[a.type] || APPT_TYPES.consultation;
+            return (
+              <div key={a.id} className="flex items-center gap-3.5 py-2">
+                <span className="w-[52px] flex-none font-heading text-[17px]">{hhmm(new Date(a.appointment_date))}</span>
+                <span className="h-2.5 w-2.5 flex-none rounded-full" style={{ background: t.dot }} />
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <span className="truncate text-[14px] font-bold">{a.patient_name || "Patient"}</span>
+                  <span className="text-[12px] text-organic-neutral-700">{t.label} · {a.duration_minutes || 30} min</span>
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,280px),1fr))] gap-organic-4">
+        {isTrial && (
+          <div className="flex flex-col gap-organic-2 rounded-card bg-organic-accent-100 p-organic-6">
+            <span className="text-[10px] font-bold uppercase tracking-[.1em] text-organic-accent-700">Essai gratuit</span>
+            <span className="font-heading text-[40px] leading-none">{accData.daysLeftTrial ?? 0} <span className="text-[18px]">jours restants</span></span>
+            <p className="m-0 text-[13px] text-organic-accent-900">Ensuite {formatF(PRO_SUBSCRIPTION_FCFA)} / mois via Mobile Money. Résiliable à tout moment.</p>
+            <Button onClick={() => setLocation("/derm/cabinet")} className="mt-1.5 self-start">Activer mon abonnement</Button>
+          </div>
+        )}
+        {isActive && (
+          <div className="flex flex-col gap-organic-2 rounded-card bg-organic-accent-2-100 p-organic-6">
+            <span className="text-[10px] font-bold uppercase tracking-[.1em] text-organic-accent-2-700">Abonnement actif</span>
+            <span className="font-heading text-[28px] leading-[1.1]">Plan Pro</span>
+            <p className="m-0 text-[13px] text-organic-accent-2-900">
+              Toutes les fonctionnalités cliniques activées.
+              {acc.subscriptionExpiresAt ? ` Prochain paiement le ${new Date(acc.subscriptionExpiresAt).toLocaleDateString("fr-FR", { timeZone: TZ, day: "numeric", month: "long" })}.` : ""}
             </p>
-            <Link href="/derm/profil-public" data-testid="link-activate-b2c"
-              style={{ display: "inline-flex", alignItems: "center", gap: 6, background: DS.blue, color: "#fff",
-                borderRadius: 9999, padding: "9px 18px", fontSize: 13, fontWeight: 800, textDecoration: "none" }}>
-              Activer mon profil <ArrowRight size={14} />
-            </Link>
+            <Button variant="secondary" onClick={() => setLocation("/derm/cabinet")} className="mt-1.5 self-start">Gérer mon cabinet</Button>
           </div>
-        </motion.div>
-      )}
-
-      {/* ══ Réseau confrères — second avis ══ */}
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} style={{ marginBottom: 16 }}>
-        <Link href="/derm/confreres" data-testid="link-peer-reviews"
-          style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", borderRadius: 20, textDecoration: "none",
-            background: DS.surface, border: `1px solid ${DS.border}` }}>
-          <span style={{ flexShrink: 0, width: 40, height: 40, borderRadius: 12, background: "rgba(3,105,161,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <Users style={{ width: 18, height: 18, color: DS.blue }} />
-          </span>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ fontSize: 13.5, fontWeight: 800, color: DS.textPrimary, margin: 0 }}>Second avis entre confrères</p>
-            <p style={{ fontSize: 11.5, color: DS.textBody, margin: "2px 0 0" }}>Un cas difficile ? Demandez l'avis d'un confrère (anonymisé).</p>
-          </div>
-          <span style={{ color: DS.blue, fontSize: 18 }}>→</span>
-        </Link>
-
-        {/* ── Parrainage : inviter un confrère ── */}
-        {referral && (
-          <div style={{ marginTop: 12, padding: "14px 16px", borderRadius: 20, background: DS.surface, border: "1px solid #E2E8F0" }}>
-            <p style={{ fontSize: 13.5, fontWeight: 800, color: DS.textPrimary, margin: 0 }}>Invitez un confrère 🤝</p>
-            <p style={{ fontSize: 11.5, color: DS.textBody, margin: "2px 0 10px" }}>
-              Partagez GlowScan DERM à un dermatologue.{referral.count > 0 ? ` Déjà ${referral.count} confrère${referral.count > 1 ? "s" : ""} invité${referral.count > 1 ? "s" : ""} 🎉` : ""}
+        )}
+        <div className="flex flex-col gap-organic-2 rounded-card bg-organic-surface p-organic-6">
+          <span className="text-[10px] font-bold uppercase tracking-[.1em] text-organic-accent-700">Réseau</span>
+          <span className="font-heading text-[20px] leading-tight">Second avis entre confrères</span>
+          <p className="m-0 text-[13px] text-organic-neutral-800">Un cas difficile ? Partagez-le anonymisé avec un dermatologue du réseau.</p>
+          <Button variant="secondary" onClick={() => setLocation("/derm/confreres")} className="mt-1.5 self-start">Demander un avis</Button>
+        </div>
+        {refLink && (
+          <div className="flex flex-col gap-organic-2 rounded-card bg-organic-surface p-organic-6">
+            <span className="text-[10px] font-bold uppercase tracking-[.1em] text-organic-accent-700">Parrainage</span>
+            <span className="font-heading text-[20px] leading-tight">Invitez un confrère</span>
+            <p className="m-0 text-[13px] text-organic-neutral-800">
+              {referral?.count ? `Déjà ${referral.count} confrère${referral.count > 1 ? "s" : ""} invité${referral.count > 1 ? "s" : ""}.` : "Partagez votre lien d'inscription."}
             </p>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <button onClick={() => { try { navigator.clipboard.writeText(refLink); } catch {} }}
-                style={{ flex: "1 1 auto", background: "#fff", color: "#00937A", border: "1px solid rgba(0,147,122,0.3)", borderRadius: 9999, padding: "9px 14px", fontSize: 12.5, fontWeight: 800, cursor: "pointer" }}>
-                📋 Copier mon lien
-              </button>
-              <a href={`https://wa.me/?text=${encodeURIComponent(`Bonjour, je t'invite à rejoindre GlowScan DERM (dossiers patients + rapports IA en 3 min). Inscris-toi ici : ${refLink}`)}`} target="_blank" rel="noreferrer"
-                style={{ flex: "1 1 auto", textAlign: "center", background: "#25D366", color: "#fff", borderRadius: 9999, padding: "9px 14px", fontSize: 12.5, fontWeight: 800, textDecoration: "none" }}>
-                📲 Inviter sur WhatsApp
+            <div className="mt-1.5 flex flex-wrap gap-organic-2">
+              <Button variant="secondary" onClick={() => { navigator.clipboard?.writeText(refLink).catch(() => {}); setCopied(true); setTimeout(() => setCopied(false), 1800); }}>
+                {copied ? "Lien copié ✓" : "Copier mon lien"}
+              </Button>
+              <a href={waInvite} target="_blank" rel="noreferrer"
+                className="inline-flex items-center justify-center rounded-pill bg-organic-accent-2-600 px-4 py-2 text-[14px] font-bold text-organic-bg no-underline hover:bg-organic-accent-2-700">
+                Inviter sur WhatsApp
               </a>
             </div>
           </div>
         )}
-      </motion.div>
+      </section>
 
-      {/* ══ 4 · ONBOARDING — checklist 3 étapes (disparaît quand tout est fait) ══ */}
-      {!onboarding.allDone && (
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }} style={{ marginBottom: 16 }}>
-          <div style={{ padding: "16px 18px", borderRadius: 20, background: DS.surface, border: `1px solid ${DS.cardVioletBorder}` }}>
-            <p style={{ fontSize: 13.5, fontWeight: 800, color: DS.textPrimary, margin: "0 0 4px" }}>
-              Pour recevoir vos premiers patients :
-            </p>
-            <p style={{ fontSize: 11, color: DS.textMuted, margin: "0 0 12px" }}>
-              {onboarding.doneCount}/{onboarding.steps.length} étapes complétées
-            </p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {onboarding.steps.map((s) => (
-                <Link key={s.key} href={s.to} data-testid={`onboarding-${s.key}`}
-                  style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 12px", borderRadius: 12,
-                    textDecoration: "none", background: DS.soft,
-                    border: `1px solid ${s.done ? DS.successBorder : DS.border}` }}>
-                  <span style={{ flexShrink: 0, width: 22, height: 22, borderRadius: 9999,
-                    display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 900,
-                    background: s.done ? DERM.green : "#fff",
-                    border: `1px solid ${s.done ? DERM.green : DS.border}`, color: s.done ? "#fff" : DS.textMuted }}>
-                    {s.done ? "✓" : ""}
-                  </span>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ fontSize: 12.5, fontWeight: 700, margin: 0,
-                      color: s.done ? DS.textMuted : DS.textPrimary,
-                      textDecoration: s.done ? "line-through" : "none" }}>{s.label}</p>
-                    <p style={{ fontSize: 10.5, color: DS.textMuted, margin: "1px 0 0" }}>{s.hint}</p>
-                  </div>
-                  {!s.done && <ChevronRight style={{ width: 16, height: 16, color: DS.violet, flexShrink: 0 }} />}
-                </Link>
-              ))}
-            </div>
-          </div>
-        </motion.div>
-      )}
-
-      {/* ══ PATIENTS EN ATTENTE D'ANALYSE (dossiers préparés par la secrétaire) ══ */}
-      {(pendingData?.patients?.length || 0) > 0 && (
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: 16 }}>
-          <div style={{ background: DS.surface, border: "1px solid #E2E8F0", borderRadius: 20, padding: "16px 18px" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-              <p style={{ fontSize: 13, fontWeight: 800, color: DS.textPrimary, margin: 0 }}>
-                📋 {pendingData!.patients.length} patient{pendingData!.patients.length > 1 ? "s" : ""} en attente d'analyse
-              </p>
-              <span style={{ fontSize: 10, color: DS.textMuted }}>Dossier prêt · reprends l'examen</span>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {pendingData!.patients.slice(0, 6).map((p) => (
-                <Link
-                  key={p.id}
-                  href={`/derm/analyse?patient=${p.id}`}
-                  style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, background: "#F1F5F9", borderRadius: 12, padding: "10px 12px", textDecoration: "none" }}
-                >
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <p style={{ fontSize: 13, fontWeight: 700, color: DS.textPrimary, margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                      {[p.firstName, p.lastName].filter(Boolean).join(" ") || "Patient"}
-                    </p>
-                    <p style={{ fontSize: 10, color: DS.textMuted, margin: "1px 0 0" }}>
-                      {p.age ? `${p.age} ans · ` : ""}{p.createdAt ? new Date(p.createdAt).toLocaleDateString("fr-FR") : ""}
-                    </p>
-                  </div>
-                  <span style={{ flexShrink: 0, background: DS.violet, color: "#fff", borderRadius: 9999, padding: "6px 14px", fontSize: 11, fontWeight: 800 }}>
-                    Continuer →
-                  </span>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </motion.div>
-      )}
-
-      {/* ══ FILE D'ATTENTE DE VALIDATION (données GOLD) ══ */}
-      {pending.length > 0 && (
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: 16 }}>
-          <div style={{ background: DS.warningBg, border: `1px solid ${DS.warningBorder}`, borderRadius: 20, padding: "16px 18px" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-              <p style={{ fontSize: 13, fontWeight: 800, color: DS.textPrimary, margin: 0 }}>
-                🩺 {pending.length} diagnostic{pending.length > 1 ? "s" : ""} à valider
-              </p>
-              <span style={{ fontSize: 10, color: DS.textMuted }}>Valider améliore la précision de l'IA</span>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {pending.slice(0, 5).map((s) => (
-                <div key={s.scanId} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, background: "#F1F5F9", borderRadius: 12, padding: "9px 12px" }}>
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <p style={{ fontSize: 12, fontWeight: 700, color: DS.textPrimary, margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                      {s.condition || "Diagnostic"}
-                    </p>
-                    <p style={{ fontSize: 10, color: DS.textMuted, margin: "1px 0 0" }}>
-                      {[s.firstName, s.lastName].filter(Boolean).join(" ") || "Patient"}
-                      {s.createdAt ? ` · ${new Date(s.createdAt).toLocaleDateString("fr-FR")}` : ""}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => validatePending(s.scanId)}
-                    disabled={validatingId === s.scanId}
-                    style={{ flexShrink: 0, background: "#10b981", color: "#fff", border: "none", borderRadius: 9999, padding: "6px 12px", fontSize: 11, fontWeight: 800, cursor: "pointer", opacity: validatingId === s.scanId ? 0.6 : 1 }}
-                  >
-                    {validatingId === s.scanId ? "…" : "✓ Valider"}
-                  </button>
-                  <Link href={`/derm/patient/${s.patientId}`} style={{ flexShrink: 0, background: "#F1F5F9", color: DS.textBody, borderRadius: 9999, padding: "6px 12px", fontSize: 11, fontWeight: 800, textDecoration: "none" }}>
-                    Corriger
-                  </Link>
-                </div>
-              ))}
-            </div>
-            {pending.length > 5 && (
-              <p style={{ fontSize: 10, color: DS.textMuted, margin: "8px 0 0", textAlign: "center" }}>
-                + {pending.length - 5} autre{pending.length - 5 > 1 ? "s" : ""} — voir les fiches patients
-              </p>
-            )}
-          </div>
-        </motion.div>
-      )}
-
-      {/* Primary CTA */}
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
-        <Link
-          href="/derm/analyse?nouveau=1"
-          data-testid="button-analyze-patient"
-          style={{
-            display: "block",
-            background: DS.surface,
-            border: "1px solid #E2E8F0",
-            borderRadius: 24,
-            padding: 20,
-            textDecoration: "none",
-            transition: "border-color 0.15s",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-            <div
-              style={{
-                width: 48,
-                height: 48,
-                borderRadius: 14,
-                background: DS.gradient,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
-              }}
-            >
-              <ScanLine style={{ width: 22, height: 22, color: "#fff" }} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <p style={{ fontWeight: 800, fontSize: 15, color: DS.textPrimary, margin: "0 0 3px" }}>Analyser un patient</p>
-              <p style={{ fontSize: 12, color: DS.textBody, margin: 0 }}>Patient → photo → IA → questionnaire → dossier en 5 étapes</p>
-            </div>
-            <ArrowRight style={{ width: 18, height: 18, color: DS.violetMid, flexShrink: 0 }} />
-          </div>
-        </Link>
-      </motion.div>
-
-      {/* KPI grid */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "clamp(10px, 1.5vw, 16px)", marginTop: 16 }}
-      >
-        <KpiCard to="/derm/patients" icon={<Users style={{ width: 16, height: 16, color: DS.violetMid }} />} value={patientCount} label="Patients" testid="kpi-patients" />
-        <KpiCard to="/derm/statistiques" icon={<BarChart3 style={{ width: 16, height: 16, color: DS.successText }} />} value={stats?.totalScans ?? 0} label="Analyses" testid="kpi-stats" />
-        <KpiCard to="/derm/patients" icon={<Activity style={{ width: 16, height: 16, color: "#f87171" }} />} value={statusCounts.priority} label="Priorité haute" testid="kpi-urgent" />
-      </motion.div>
-
-      {/* 2-col grid — passe en 2 colonnes sur les écrans larges */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 16, marginTop: 16 }}>
-        {/* Recent patients */}
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
-          <ProCard style={{ padding: 20 }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-              <div>
-                <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: DS.textMuted, margin: "0 0 3px" }}>
-                  Activité récente
-                </p>
-                <h3 style={{ fontSize: 15, fontWeight: 800, color: DS.textPrimary, margin: 0 }}>Derniers patients</h3>
-              </div>
-              <Link
-                href="/derm/patients"
-                data-testid="link-all-patients"
-                style={{ fontSize: 12, fontWeight: 700, color: DS.violetMid, textDecoration: "none" }}
-              >
-                Voir tout
-              </Link>
-            </div>
-
-            {recentPatients.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "32px 0" }}>
-                <Users style={{ width: 32, height: 32, color: DS.textMuted, margin: "0 auto 10px", display: "block" }} />
-                <p style={{ fontSize: 13, color: DS.textBody, marginBottom: 14 }}>Aucun patient encore enregistré</p>
-                <Link
-                  href="/derm/analyse?nouveau=1"
-                  data-testid="link-add-first"
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 8,
-                    padding: "10px 18px",
-                    borderRadius: 9999,
-                    background: DS.violet,
-                    color: "#fff",
-                    fontSize: 13,
-                    fontWeight: 800,
-                    textDecoration: "none",
-                  }}
-                >
-                  <ScanLine style={{ width: 14, height: 14 }} />
-                  Analyser un patient
-                </Link>
-              </div>
-            ) : (
-              <div>
-                {recentPatients.map((p, i) => (
-                  <Link
-                    key={p.id}
-                    href={`/derm/patient/${p.id}`}
-                    data-testid={`row-patient-${p.id}`}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 12,
-                      padding: "12px 0",
-                      borderBottom: i < recentPatients.length - 1 ? `1px solid #E2E8F0` : "none",
-                      textDecoration: "none",
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: 36,
-                        height: 36,
-                        borderRadius: 9999,
-                        background: "rgba(0,147,122,0.12)",
-                        border: "1px solid rgba(0,147,122,0.25)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        color: DS.violetLight,
-                        fontSize: 11,
-                        fontWeight: 800,
-                        flexShrink: 0,
-                      }}
-                    >
-                      {p.firstName[0]}{p.lastName[0]}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontSize: 13, fontWeight: 700, color: DS.textPrimary, margin: "0 0 2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {p.firstName} {p.lastName}
-                      </p>
-                      <p style={{ fontSize: 11, color: DS.textMuted, margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {p.age ? `${p.age} ans · ` : ""}
-                        {p.lastScanAt ? `dernier scan ${new Date(p.lastScanAt).toLocaleDateString("fr-FR")}` : "jamais analysé"}
-                      </p>
-                    </div>
-                    <ChevronRight style={{ width: 16, height: 16, color: DS.textMuted, flexShrink: 0 }} />
-                  </Link>
-                ))}
-              </div>
-            )}
-          </ProCard>
-        </motion.div>
-
-        {/* Subscription */}
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-          {isTrial ? (
-            <ProCard testid="card-trial" style={{ padding: 20 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-                <Clock style={{ width: 15, height: 15, color: DS.warningText }} />
-                <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: DS.warningText, margin: 0 }}>
-                  Essai en cours
-                </p>
-              </div>
-              <p style={{ fontSize: 32, fontWeight: 800, color: DS.textPrimary, margin: "0 0 2px" }}>
-                {accData.daysLeftTrial}
-                <span style={{ fontSize: 15, fontWeight: 600, color: DS.textBody }}> jours</span>
-              </p>
-              <p style={{ fontSize: 12, color: DS.textMuted, marginBottom: 14 }}>restants sur votre essai gratuit</p>
-              <div
-                style={{
-                  background: DS.warningBg,
-                  border: `1px solid ${DS.warningBorder}`,
-                  borderRadius: 12,
-                  padding: 12,
-                  marginBottom: 14,
-                }}
-              >
-                <p style={{ fontSize: 12, color: DS.warningText, margin: 0 }}>
-                  Continuez après l'essai pour <strong>10 000 FCFA / mois</strong>. Mobile Money, résiliable à tout moment.
-                </p>
-              </div>
-              <Link
-                href="/derm/cabinet"
-                data-testid="link-subscribe"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 8,
-                  padding: "11px 20px",
-                  borderRadius: 9999,
-                  background: DS.pink,
-                  color: "#fff",
-                  fontSize: 13,
-                  fontWeight: 800,
-                  textDecoration: "none",
-                }}
-              >
-                <Crown style={{ width: 14, height: 14 }} />
-                Activer mon abonnement
-              </Link>
-            </ProCard>
-          ) : (
-            <ProCard style={{ padding: 20 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-                <span style={{ width: 8, height: 8, borderRadius: 9999, background: DS.successText, display: "inline-block" }} />
-                <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: DS.successText, margin: 0 }}>
-                  Abonnement actif
-                </p>
-              </div>
-              <p style={{ fontSize: 22, fontWeight: 800, color: DS.textPrimary, margin: "0 0 4px" }}>Plan Pro</p>
-              <p style={{ fontSize: 12, color: DS.textBody, marginBottom: 16 }}>Toutes les fonctionnalités cliniques activées</p>
-              <Link
-                href="/derm/cabinet"
-                data-testid="link-cabinet"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 8,
-                  padding: "11px 20px",
-                  borderRadius: 9999,
-                  background: "#F1F5F9",
-                  border: "1px solid #E2E8F0",
-                  color: DS.textPrimary,
-                  fontSize: 13,
-                  fontWeight: 700,
-                  textDecoration: "none",
-                }}
-              >
-                Gérer mon cabinet
-                <ChevronRight style={{ width: 14, height: 14 }} />
-              </Link>
-            </ProCard>
-          )}
-        </motion.div>
-      </div>
-
-      {/* Onboarding — écran de bienvenue + tour guidé 6 étapes (non bloquant) */}
       {tourOpen && (
         <DermOnboarding
-          dermName={(acc as any)?.fullName || accData?.user?.firstName}
-          onDone={closeTour}
+          dermName={acc.fullName || accData?.user?.firstName}
+          onDone={async () => { setTourOpen(false); await updateAcc.mutateAsync({ onboardingDone: true }); }}
         />
       )}
     </ProLayout>
-  );
-}
-
-function KpiCard({ to, icon, value, label, testid }: any) {
-  return (
-    <Link
-      href={to}
-      data-testid={testid}
-      style={{
-        display: "block",
-        background: "#F1F5F9",
-        border: "1px solid #E2E8F0",
-        borderRadius: 16,
-        padding: 14,
-        textDecoration: "none",
-        transition: "border-color 0.15s",
-      }}
-    >
-      <div style={{ marginBottom: 10 }}>{icon}</div>
-      {value !== undefined && value !== null && (
-        <p style={{ fontSize: 24, fontWeight: 800, color: DERM.text, margin: "0 0 2px" }}>{value}</p>
-      )}
-      <p style={{ fontSize: 11, fontWeight: 700, color: DERM.textMuted, margin: value !== undefined && value !== null ? 0 : "4px 0 0" }}>{label}</p>
-    </Link>
-  );
-}
-
-export function LoadingScreen() {
-  return (
-    <div
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 20,
-        background: "#FFFFFF",
-        fontFamily: `-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif`,
-      }}
-    >
-      {/* Logo GlowScan DERM — pulse doux */}
-      <div style={{ textAlign: "center", animation: "gs-pulse 1.6s ease-in-out infinite" }}>
-        <img
-          src={DERM_LOGO}
-          alt="GlowScan"
-          width={56}
-          height={56}
-          style={{ display: "block", margin: "0 auto 10px" }}
-        />
-        <p style={{ fontSize: 15, fontWeight: 900, color: "#0B1220", margin: 0 }}>GlowScan DERM</p>
-        <p style={{ fontSize: 9, fontWeight: 800, letterSpacing: "2px", textTransform: "uppercase", color: "#00937A", margin: "2px 0 0" }}>
-          Clinical Engine
-        </p>
-      </div>
-      {/* Barre de progression teal→bleu */}
-      <div style={{ width: 160, height: 3, borderRadius: 9999, background: "#E4FBF5", overflow: "hidden" }}>
-        <div style={{ height: "100%", width: "40%", borderRadius: 9999, background: "linear-gradient(90deg, #00E6B8, #2E9FD6)", animation: "gs-bar 1.2s ease-in-out infinite" }} />
-      </div>
-      <style>{`
-        @keyframes gs-pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .6; transform: scale(.97); } }
-        @keyframes gs-bar { 0% { margin-left: -40%; } 100% { margin-left: 100%; } }
-      `}</style>
-    </div>
   );
 }
