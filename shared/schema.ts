@@ -664,6 +664,7 @@ export const consultations = pgTable("consultations", {
   paymentStatus: varchar("payment_status", { length: 20 }).default("unpaid"), // unpaid | paid
   paymentRef: text("payment_ref"),                                       // réf. Mobile Money / preuve
   priceFcfa: integer("price_fcfa").default(0),
+  signedAt: timestamp("signed_at"),                                      // signature du compte rendu (code à 4 chiffres, migration 0020)
   // Compteurs de non-lus par côté (pour les badges d'inbox)
   unreadPatient: integer("unread_patient").default(0),
   unreadDoctor: integer("unread_doctor").default(0),

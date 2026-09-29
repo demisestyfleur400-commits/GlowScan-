@@ -17,6 +17,7 @@ import { sendEmail, buildOtpEmail, buildWelcomeEmail, buildSecurityAlertEmail, b
 import crypto from "crypto";
 import { followupsStoppedAt } from "./consents";
 import { SPLITS, splitConsultation } from "@shared/splits";
+import { hasSignPin, setSignPin, verifySignPin, PIN_MESSAGES } from "./signPin";
 import { PRO_SUBSCRIPTION_FCFA } from "@shared/premium";
 import { WalletError, proBalances, proMoves, payoutAccounts, addPayoutAccount, setPrimaryAccount, requestWithdrawal } from "./wallet";
 import { withFollowupFooter, followupsStoppedNote } from "@shared/whatsappMessages";
@@ -2346,12 +2347,37 @@ export function registerProRoutes(app: Express) {
 
   // POST /api/pro/consultations/:id/close — le dermatologue clôture la consultation.
   // Le paiement lui est dû sous 24h (payout_status reste 'pending' jusqu'au virement).
+  // ── Code de signature à 4 chiffres (médecin uniquement) ──
+  app.get("/api/pro/sign-pin", requireActivePro, async (req: any, res) => {
+    try { res.json({ set: await hasSignPin(req.proAccount.id) }); }
+    catch { res.status(500).json({ message: "Erreur serveur" }); }
+  });
+  app.post("/api/pro/sign-pin", requireActivePro, async (req: any, res) => {
+    try {
+      const r = await setSignPin(req.proAccount.id, String(req.body?.pin ?? ""), req.body?.currentPin != null ? String(req.body.currentPin) : undefined);
+      if (r !== "ok") { const m = PIN_MESSAGES[r]; return res.status(m.status).json({ code: m.code, message: m.message }); }
+      res.json({ success: true });
+    } catch (err) {
+      console.error("[pro/sign-pin] error:", err);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
   app.post("/api/pro/consultations/:id/close", requireProAccess, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       const [c] = await db.select().from(consultations)
         .where(and(eq(consultations.id, id), eq(consultations.proAccountId, req.proAccount.id)));
       if (!c) return res.status(404).json({ message: "Consultation introuvable" });
+      // La secrétaire ne valide jamais un diagnostic (README §4, point 3).
+      if (req.isSecretary) return res.status(403).json({ message: "Réservé au médecin." });
+      // Signature : code à 4 chiffres vérifié AVANT toute écriture (sauf consultation de démo).
+      let demoFlag = false;
+      try { demoFlag = (Rows(await db.execute(sql`SELECT is_demo FROM consultations WHERE id = ${id}`))[0] as any)?.is_demo === true; } catch {}
+      if (!demoFlag) {
+        const chk = await verifySignPin(req.proAccount.id, String(req.body?.pin ?? ""));
+        if (chk !== "ok") { const m = PIN_MESSAGES[chk]; return res.status(m.status).json({ code: m.code, message: m.message }); }
+      }
       // Prescription dictée/écrite par le dermatologue (facultative) → persistée et
       // injectée dans le rapport final envoyé au patient.
       const prescription = typeof req.body?.prescription === "string" ? req.body.prescription.trim().slice(0, 4000) : "";
@@ -2378,6 +2404,7 @@ export function registerProRoutes(app: Express) {
       try { isDemo = (Rows(await db.execute(sql`SELECT is_demo FROM consultations WHERE id = ${id}`))[0] as any)?.is_demo === true; } catch {}
       await db.update(consultations).set({ status: "closed" }).where(eq(consultations.id, id));
       try { await db.execute(sql`UPDATE consultations SET closed_at = NOW() WHERE id = ${id}`); } catch {}
+      if (!isDemo) { try { await db.execute(sql`UPDATE consultations SET signed_at = NOW() WHERE id = ${id}`); } catch {} }
       if (isDemo) {
         // Marque la démo comme faite (une seule fois) — colonne best-effort.
         try { await db.execute(sql`ALTER TABLE pro_accounts ADD COLUMN IF NOT EXISTS demo_completed boolean DEFAULT false`).catch(() => {}); } catch {}

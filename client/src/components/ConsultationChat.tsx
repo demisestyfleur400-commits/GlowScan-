@@ -3,6 +3,9 @@ import { useEffect, useRef, useState } from "react";
 import { useConsultationSocket } from "@/hooks/use-consultation-socket";
 import { ClinicalReasoningPanel } from "@/components/pro/ClinicalReasoningPanel";
 import { GS, useGsFonts } from "@/lib/gs-ui";
+import { splitConsultation } from "@shared/splits";
+import { Zap, Camera, Phone, Mic, SendHorizontal, Bot, FileText, MessageCircle, Stethoscope } from "lucide-react";
+import { formatF } from "@shared/delivery";
 
 // ════════════════════════════════════════════════════════════════════════
 // Fil de discussion d'une consultation (temps réel). Utilisé côté patient (clair)
@@ -64,6 +67,12 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
   const [summaryBusy, setSummaryBusy] = useState(false);
   const [addedToSummary, setAddedToSummary] = useState<Set<number>>(new Set()); // messages ajoutés au résumé (session)
   const [closing, setClosing] = useState(false);
+  // Signature du compte rendu : code à 4 chiffres (vérifié par le serveur à la clôture).
+  const [signPin, setSignPin] = useState("");
+  const [pinSetup, setPinSetup] = useState(false);
+  const [newPin, setNewPin] = useState("");
+  const [newPin2, setNewPin2] = useState("");
+  const [pinError, setPinError] = useState("");
   const [closedInfo, setClosedInfo] = useState<{ payoutFcfa?: number; demo?: boolean; followUpDate?: string; reportUrl?: string; at?: string } | null>(null);
   const [reportSending, setReportSending] = useState(false);
   const [reportSent, setReportSent] = useState(false);
@@ -152,10 +161,10 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
   }, [side, dossier]);
 
   const COACH: { t: string; b: string }[] = [
-    { t: "📸 Les photos", b: "Ces photos ont été prises par le patient lors de son analyse. Appuyez pour agrandir." },
-    { t: "🤖 Le diagnostic IA", b: "Ceci est une suggestion indicative. Votre diagnostic prime toujours." },
+    { t: "Les photos", b: "Ces photos ont été prises par le patient lors de son analyse. Appuyez pour agrandir." },
+    { t: "Le diagnostic IA", b: "Ceci est une suggestion indicative. Votre diagnostic prime toujours." },
     { t: "✅ Vos actions", b: "Validez si vous êtes d'accord. Corrigez si vous avez un autre avis." },
-    { t: "💊 La prescription", b: "Dictez ou écrivez votre prescription. Elle apparaîtra dans le rapport final." },
+    { t: "La prescription", b: "Dictez ou écrivez votre prescription. Elle apparaîtra dans le rapport final." },
     { t: "✓ Valider et envoyer le compte rendu", b: "Vous relisez votre avis, vous validez, puis le compte rendu part au patient (e-mail / WhatsApp). Vous êtes payé sur Mobile Money." },
   ];
   const advanceCoach = () => {
@@ -471,7 +480,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
 
   // Clôture / validation de la consultation. Renvoie la réponse serveur (ou null si
   // la validation échoue) — l'envoi du compte rendu n'a lieu QUE si la validation réussit.
-  const doClose = async (followUp: string): Promise<any | null> => {
+  const doClose = async (followUp: string, pinOverride?: string): Promise<any | null> => {
     if (closing) return null;
     setClosing(true);
     try { recognitionRef.current?.stop(); } catch {}
@@ -479,10 +488,16 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
     try {
       const res = await fetch(`/api/pro/consultations/${consultationId}/close`, {
         method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prescription: prescription.trim() || undefined, followUp: followUp === "none" ? undefined : followUp, doctorMessage: doctorMessage.trim() || undefined, isPrescription }),
+        body: JSON.stringify({ prescription: prescription.trim() || undefined, followUp: followUp === "none" ? undefined : followUp, doctorMessage: doctorMessage.trim() || undefined, isPrescription, pin: pinOverride ?? signPin }),
       });
       const d = await res.json().catch(() => ({}));
+      if (!res.ok && typeof d?.code === "string" && d.code.startsWith("SIGN_PIN")) {
+        if (d.code === "SIGN_PIN_SETUP") setPinSetup(true);
+        setPinError(d.message || "Code de signature requis.");
+        return null;
+      }
       if (res.ok) {
+        setPinError(""); setSignPin("");
         setClosedInfo({ payoutFcfa: d.payoutFcfa, demo: d.demo, followUpDate: d.followUpDate, reportUrl: d.reportUrl, at: new Date().toISOString() });
         setReportSent(false); setReportError(false); load();
         return d;
@@ -507,20 +522,37 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
 
   // Action principale « Valider et envoyer le compte rendu » : on valide d'abord,
   // puis on n'envoie au patient QUE si la validation a réussi (démo = pas d'envoi réel).
-  const validateAndSend = async () => {
-    const d = await doClose(followUpOpt);
+  const validateAndSend = async (pinOverride?: string) => {
+    const d = await doClose(followUpOpt, pinOverride);
     if (!d) return; // validation échouée → on reste sur la revue, rien n'est envoyé
     setConfirmSend(false); setShowFollowUp(false);
     if (!d.demo) await sendReport();
   };
 
-  const BG = dark ? "#05262B" : "#F4FEFC";
-  const CARD = dark ? "rgba(255,255,255,0.04)" : "#fff";
-  const INK = dark ? "#F4FEFC" : "#0B1719";
-  const MUTED = dark ? "rgba(255,255,255,0.45)" : "#8C9C9E";
-  const BORDER = dark ? "rgba(255,255,255,0.08)" : "#DCE4E5";
-  const MINE = "#0B1719";
-  const THEIRS = dark ? "rgba(255,255,255,0.08)" : "#EEF4F4";
+  // Premier compte rendu : le médecin choisit son code, puis on signe avec.
+  const setupAndSend = async () => {
+    if (!/^\d{4}$/.test(newPin)) { setPinError("Le code doit comporter exactement 4 chiffres."); return; }
+    if (newPin !== newPin2) { setPinError("Les deux codes ne correspondent pas."); return; }
+    try {
+      const r = await fetch("/api/pro/sign-pin", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pin: newPin }) });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) { setPinError(d.message || "Code non enregistré."); return; }
+    } catch { setPinError("Erreur réseau. Réessayez."); return; }
+    setPinSetup(false); setPinError("");
+    await validateAndSend(newPin);
+    setNewPin(""); setNewPin2("");
+  };
+  const isDemoConsult = ctx?.isDemo === true || ctx?.is_demo === true;
+  const price = Number(ctx?.priceFcfa ?? ctx?.price_fcfa) || 0;
+  const split = price > 0 ? splitConsultation(price) : null;
+
+  const BG = dark ? "#05262B" : "var(--color-bg)";
+  const CARD = dark ? "rgba(255,255,255,0.04)" : "var(--color-surface)";
+  const INK = dark ? "#F4FEFC" : "var(--color-text)";
+  const MUTED = dark ? "rgba(255,255,255,0.45)" : "var(--color-neutral-700)";
+  const BORDER = dark ? "rgba(255,255,255,0.08)" : "var(--color-divider)";
+  const MINE = dark ? "#0B1719" : "var(--color-accent)";
+  const THEIRS = dark ? "rgba(255,255,255,0.08)" : "var(--color-surface)";
 
   const mineMsgs = messages.filter((m) => m.senderType === side);
   // Statut clair de la consultation (jamais "Hors ligne", ambigu) — mappé sur l'état réel.
@@ -548,10 +580,10 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
           doctor?.photoUrl ? (
             <img src={doctor.photoUrl} alt="" style={{ width: 38, height: 38, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
           ) : (
-            <div style={{ width: 38, height: 38, borderRadius: "50%", background: "linear-gradient(135deg,#12D8BE,#0A6E72)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>👩🏾‍⚕️</div>
+            <div style={{ width: 38, height: 38, borderRadius: "50%", background: "var(--color-accent-2-600)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: "var(--color-bg)" }}><Stethoscope size={18} strokeWidth={1.75} /></div>
           )
         ) : (
-          <div style={{ width: 38, height: 38, borderRadius: "50%", background: "linear-gradient(135deg,#12D8BE,#0A6E72)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 800, color: "#fff", flexShrink: 0 }}>
+          <div style={{ width: 38, height: 38, borderRadius: "50%", background: "var(--color-accent-2-600)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 800, color: "#fff", flexShrink: 0 }}>
             {(dossier?.patient?.firstName || "P").charAt(0).toUpperCase()}
           </div>
         )}
@@ -559,7 +591,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
           <p style={{ fontSize: 13, fontWeight: 800, color: INK, margin: 0, display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
             {side === "patient" ? (doctor?.fullName ? `Dr ${doctor.fullName.replace(/^dr\.?\s*/i, "")}` : "Consultation") : (dossier?.patient?.firstName || "Patient")}
             {side === "patient" && doctor?.certified && (
-              <span title="Dermatologue Certifié GlowScan" style={{ color: "#0A6E72", fontSize: 12 }}>✦</span>
+              <span title="Dermatologue Certifié GlowScan" style={{ color: "var(--color-accent-2-700)", fontSize: 12 }}>✦</span>
             )}
           </p>
           <p style={{ fontSize: 11, margin: 0, display: "flex", alignItems: "center", gap: 5, color: statusColor }}>
@@ -571,16 +603,16 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
         {ctx?.status === "closed" && (
           <button
             onClick={downloadConsultationPdf}
-            style={{ flexShrink: 0, background: dark ? "rgba(255,255,255,0.08)" : "rgba(10,110,114,0.08)", color: dark ? "#0AF5C2" : "#0A6E72", border: `1px solid ${dark ? "rgba(255,255,255,0.15)" : "rgba(10,110,114,0.2)"}`, borderRadius: 9999, padding: "6px 12px", fontSize: 11, fontWeight: 800, cursor: "pointer" }}
+            style={{ flexShrink: 0, background: dark ? "rgba(255,255,255,0.08)" : "rgba(10,110,114,0.08)", color: dark ? "#0AF5C2" : "var(--color-accent-2-700)", border: `1px solid ${dark ? "rgba(255,255,255,0.15)" : "rgba(10,110,114,0.2)"}`, borderRadius: 9999, padding: "6px 12px", fontSize: 11, fontWeight: 800, cursor: "pointer" }}
           >
-            📄 Rapport
+            Rapport
           </button>
         )}
         {/* Dermatologue : ouvrir/masquer le résumé (dossier) */}
         {side === "doctor" && dossier && (
           <button
             onClick={() => setDossierCollapsed((v) => !v)}
-            style={{ flexShrink: 0, background: dark ? "rgba(255,255,255,0.08)" : "rgba(10,110,114,0.08)", color: dark ? "#0AF5C2" : "#0A6E72", border: `1px solid ${dark ? "rgba(255,255,255,0.15)" : "rgba(10,110,114,0.2)"}`, borderRadius: 9999, padding: "6px 12px", fontSize: 11, fontWeight: 800, cursor: "pointer" }}
+            style={{ flexShrink: 0, background: dark ? "rgba(255,255,255,0.08)" : "rgba(10,110,114,0.08)", color: dark ? "#0AF5C2" : "var(--color-accent-2-700)", border: `1px solid ${dark ? "rgba(255,255,255,0.15)" : "rgba(10,110,114,0.2)"}`, borderRadius: 9999, padding: "6px 12px", fontSize: 11, fontWeight: 800, cursor: "pointer" }}
           >
             {dossierCollapsed ? "Voir le résumé" : "Masquer le résumé"}
           </button>
@@ -595,7 +627,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
                 if (res.ok && d.patientId) window.location.href = `/derm/patient/${d.patientId}`;
               } catch {}
             }}
-            style={{ flexShrink: 0, background: "rgba(10,110,114,0.2)", color: "#0AF5C2", border: "1px solid rgba(10,110,114,0.4)", borderRadius: 9999, padding: "6px 12px", fontSize: 11, fontWeight: 800, cursor: "pointer" }}
+            style={{ flexShrink: 0, background: "transparent", color: dark ? "#0AF5C2" : "var(--color-text)", border: `1px solid ${dark ? "rgba(10,110,114,0.4)" : "var(--color-divider)"}`, borderRadius: 9999, padding: "6px 12px", fontSize: 11, fontWeight: 800, cursor: "pointer" }}
           >
             + Dossier patient
           </button>
@@ -604,9 +636,9 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
           <button
             onClick={() => setShowFollowUp(true)}
             disabled={closing}
-            style={{ flexShrink: 0, background: "rgba(16,185,129,0.2)", color: "#6ee7b7", border: "1px solid rgba(16,185,129,0.4)", borderRadius: 9999, padding: "6px 12px", fontSize: 11, fontWeight: 800, cursor: "pointer", opacity: closing ? 0.6 : 1 }}
+            style={{ flexShrink: 0, background: dark ? "rgba(16,185,129,0.2)" : "var(--color-accent-2-600)", color: dark ? "#6ee7b7" : "var(--color-bg)", border: dark ? "1px solid rgba(16,185,129,0.4)" : "none", borderRadius: 9999, padding: "6px 12px", fontSize: 11, fontWeight: 800, cursor: "pointer", opacity: closing ? 0.6 : 1 }}
           >
-            {closing ? "…" : "✓ Valider et envoyer le compte rendu"}
+            {closing ? "…" : "Valider et rédiger le compte rendu"}
           </button>
         )}
       </div>
@@ -618,7 +650,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
             style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 70 }} />
           <div role="dialog" aria-label="Résumé du patient"
             style={{
-              position: "absolute", zIndex: 71, background: dark ? "#05262B" : "#fff",
+              position: "absolute", zIndex: 71, background: dark ? "#05262B" : "var(--color-bg)",
               display: "flex", flexDirection: "column", boxShadow: "0 -8px 40px rgba(0,0,0,0.4)",
               ...(isWide
                 ? { top: 0, right: 0, bottom: 0, width: 400, maxWidth: "92%", borderLeft: `1px solid ${BORDER}` }
@@ -635,13 +667,13 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
             <div style={{ overflowY: "auto", padding: "14px 16px", display: "flex", flexDirection: "column", gap: 14 }}>
               {dossier.consultation?.isDemo && (
                 <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(245,158,11,0.15)", border: "1px solid rgba(245,158,11,0.4)", borderRadius: 9999, padding: "4px 10px", alignSelf: "flex-start" }}>
-                  <span style={{ fontSize: 11, fontWeight: 800, color: dark ? "#fbbf24" : "#b45309" }}>🎯 Démonstration — patient fictif</span>
+                  <span style={{ fontSize: 11, fontWeight: 800, color: dark ? "#fbbf24" : "#b45309" }}>Démonstration — patient fictif</span>
                 </div>
               )}
 
               {/* Identité patient */}
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <div style={{ width: 40, height: 40, borderRadius: "50%", background: "linear-gradient(135deg,#12D8BE,#0A6E72)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, fontWeight: 800, color: "#fff", flexShrink: 0 }}>
+                <div style={{ width: 40, height: 40, borderRadius: "50%", background: "var(--color-accent-2-600)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, fontWeight: 800, color: "#fff", flexShrink: 0 }}>
                   {(dossier.patient?.firstName || "P").charAt(0).toUpperCase()}
                 </div>
                 <div style={{ minWidth: 0, flex: 1 }}>
@@ -668,7 +700,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
                   <span style={{ color: dark ? "#6ee7b7" : "#047857", fontWeight: 700 }}>
                     ✓ Consentement patient enregistré{dossier.intake.consent.at ? ` le ${new Date(dossier.intake.consent.at).toLocaleDateString("fr-FR")}` : ""}
                   </span>
-                  <a href="/confidentialite" target="_blank" rel="noreferrer" style={{ color: "#0A6E72", fontWeight: 700 }}>Voir les informations de confidentialité</a>
+                  <a href="/confidentialite" target="_blank" rel="noreferrer" style={{ color: "var(--color-accent-2-700)", fontWeight: 700 }}>Voir les informations de confidentialité</a>
                 </div>
               )}
 
@@ -677,7 +709,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
                   d'urgence : signale au médecin des éléments à vérifier vite. */}
               {Array.isArray(dossier.rich?.redFlags) && dossier.rich.redFlags.length > 0 && (
                 <div style={{ background: dark ? "rgba(239,68,68,0.12)" : "#fef2f2", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 12, padding: "10px 12px" }}>
-                  <p style={{ fontSize: 12, fontWeight: 800, color: dark ? "#fca5a5" : "#b91c1c", margin: "0 0 4px" }}>⚠️ Signaux à vérifier rapidement</p>
+                  <p style={{ fontSize: 12, fontWeight: 800, color: dark ? "#fca5a5" : "#b91c1c", margin: "0 0 4px" }}>Signaux à vérifier rapidement</p>
                   <p style={{ fontSize: 12.5, color: dark ? "#fecaca" : "#991b1b", margin: 0, lineHeight: 1.5 }}>
                     {dossier.rich.redFlags.filter(Boolean).join(" · ")}
                   </p>
@@ -748,9 +780,9 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
                 <div style={{ border: `1px solid ${BORDER}`, borderRadius: 12, overflow: "hidden" }}>
                   <button onClick={() => setAiOpen((v) => !v)}
                     style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", background: dark ? "rgba(10,110,114,0.12)" : "rgba(10,110,114,0.06)", border: "none", padding: "10px 12px", cursor: "pointer", textAlign: "left" }}>
-                    <span style={{ fontSize: 14 }}>🤖</span>
+                    <Bot size={15} strokeWidth={1.75} />
                     <span style={{ flex: 1, fontSize: 12.5, fontWeight: 800, color: INK }}>Aide GlowScan — à vérifier</span>
-                    <span style={{ color: "#0A6E72", fontSize: 12, fontWeight: 800 }}>{aiOpen ? "▲" : "▼"}</span>
+                    <span style={{ color: "var(--color-accent-2-700)", fontSize: 12, fontWeight: 800 }}>{aiOpen ? "▲" : "▼"}</span>
                   </button>
                   {aiOpen && (
                     <div style={{ padding: 12, display: "flex", flexDirection: "column", gap: 10 }}>
@@ -767,7 +799,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
                       )}
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                         {dossier.scan?.score != null && (
-                          <span style={{ fontSize: 12, fontWeight: 800, color: "#0A6E72", background: dark ? "rgba(10,110,114,0.2)" : "rgba(10,110,114,0.08)", borderRadius: 8, padding: "3px 8px" }}>Score {dossier.scan.score}/100</span>
+                          <span style={{ fontSize: 12, fontWeight: 800, color: "var(--color-accent-2-700)", background: dark ? "rgba(10,110,114,0.2)" : "rgba(10,110,114,0.08)", borderRadius: 8, padding: "3px 8px" }}>Score {dossier.scan.score}/100</span>
                         )}
                         {dossier.rich?.fitzpatrick && (
                           <span style={{ fontSize: 12, fontWeight: 700, color: INK, background: dark ? "rgba(255,255,255,0.08)" : "#f1f5f9", borderRadius: 8, padding: "3px 8px" }}>Fitzpatrick {dossier.rich.fitzpatrick}</span>
@@ -787,7 +819,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
                       {/* Alerte produit à risque */}
                       {Array.isArray(dossier.rich?.riskyIngredients) && dossier.rich.riskyIngredients.length > 0 && (
                         <div style={{ background: dark ? "rgba(239,68,68,0.12)" : "#fef2f2", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 10, padding: "7px 10px" }}>
-                          <span style={{ fontSize: 11.5, fontWeight: 800, color: dark ? "#fca5a5" : "#b91c1c" }}>⚠️ Produit à risque : </span>
+                          <span style={{ fontSize: 11.5, fontWeight: 800, color: dark ? "#fca5a5" : "#b91c1c" }}>Produit à risque : </span>
                           <span style={{ fontSize: 11.5, color: dark ? "#fecaca" : "#991b1b" }}>{dossier.rich.riskyIngredients.map((x: any) => x.name).filter(Boolean).join(" · ")}</span>
                         </div>
                       )}
@@ -796,7 +828,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
                       {(dossier.rich?.metrics || (Array.isArray(dossier.rich?.zones) && dossier.rich.zones.length) || dossier.rich?.advice) && (
                         <>
                           <button onClick={() => setShowFull((v) => !v)}
-                            style={{ alignSelf: "flex-start", background: "transparent", border: "none", color: "#0A6E72", fontSize: 12, fontWeight: 800, cursor: "pointer", padding: 0 }}>
+                            style={{ alignSelf: "flex-start", background: "transparent", border: "none", color: "var(--color-accent-2-700)", fontSize: 12, fontWeight: 800, cursor: "pointer", padding: 0 }}>
                             {showFull ? "▲ Masquer le détail" : "▼ Voir le détail"}
                           </button>
                           {showFull && (
@@ -833,18 +865,18 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
               {(dossier.scan || dossier.consultation) && (
                 <button onClick={openDossierPdf}
                   style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", background: dark ? "rgba(255,255,255,0.04)" : "#F4FEFC", border: `1px solid ${dark ? "rgba(255,255,255,0.1)" : "rgba(10,110,114,0.18)"}`, borderRadius: 12, padding: "10px 12px", cursor: "pointer", textAlign: "left" }}>
-                  <span style={{ fontSize: 22, flexShrink: 0 }}>📄</span>
+                  <FileText size={22} strokeWidth={1.75} style={{ flexShrink: 0 }} />
                   <span style={{ flex: 1, minWidth: 0 }}>
                     <span style={{ display: "block", fontSize: 12.5, fontWeight: 800, color: INK }}>Analyse GlowScan complète</span>
                     <span style={{ display: "block", fontSize: 11, color: MUTED }}>Toucher pour ouvrir le rapport</span>
                   </span>
-                  <span style={{ color: "#0A6E72", fontSize: 16, flexShrink: 0 }}>→</span>
+                  <span style={{ color: "var(--color-accent-2-700)", fontSize: 16, flexShrink: 0 }}>→</span>
                 </button>
               )}
 
               {/* ── VOTRE AVIS MÉDICAL — autorité clinique, prioritaire sur l'IA ── */}
               <div style={{ border: `1px solid ${dark ? "rgba(10,110,114,0.35)" : "rgba(10,110,114,0.25)"}`, borderRadius: 12, padding: 12, display: "flex", flexDirection: "column", gap: 12 }}>
-                <span style={{ fontSize: 13, fontWeight: 900, color: INK }}>🩺 Votre avis médical</span>
+                <span style={{ fontSize: 13, fontWeight: 900, color: INK }}>Votre avis médical</span>
 
                 {/* Diagnostic retenu */}
                 <div>
@@ -861,11 +893,11 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
                   ) : (
                     <>
                       <textarea value={correctText} onChange={(e) => setCorrectText(e.target.value)} rows={2} placeholder="Votre diagnostic…"
-                        style={{ width: "100%", boxSizing: "border-box", padding: "8px 10px", borderRadius: 10, border: `1px solid ${BORDER}`, background: dark ? "rgba(255,255,255,0.05)" : "#fff", color: INK, fontSize: 13, outline: "none", resize: "vertical" }} />
+                        style={{ width: "100%", boxSizing: "border-box", padding: "8px 10px", borderRadius: 10, border: `1px solid ${BORDER}`, background: dark ? "rgba(255,255,255,0.05)" : "var(--color-bg)", color: INK, fontSize: 13, outline: "none", resize: "vertical" }} />
                       <button
                         onClick={() => { const ia = dossier.scan?.condition || dossier.consultation?.condition || ""; const v = correctText.trim(); submitDiagnosis(v && v !== ia ? v : null); }}
                         disabled={diagBusy}
-                        style={{ marginTop: 6, width: "100%", background: "#0A6E72", color: "#fff", border: "none", borderRadius: 9999, padding: "9px", fontSize: 12.5, fontWeight: 800, cursor: "pointer", opacity: diagBusy ? 0.6 : 1 }}>
+                        style={{ marginTop: 6, width: "100%", background: "var(--color-accent-2-700)", color: "#fff", border: "none", borderRadius: 9999, padding: "9px", fontSize: 12.5, fontWeight: 800, cursor: "pointer", opacity: diagBusy ? 0.6 : 1 }}>
                         {diagBusy ? "…" : "Confirmer mon avis médical"}
                       </button>
                       <p style={{ fontSize: 10, color: MUTED, margin: "4px 2px 0", lineHeight: 1.5 }}>Prérempli avec la piste GlowScan — modifiez librement. C'est votre diagnostic qui sera transmis au patient.</p>
@@ -879,15 +911,15 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 6 }}>
                       <span style={{ fontSize: 11, color: MUTED }}>Observations, conseils, traitement et suivi</span>
                       <button onClick={toggleDictation}
-                        style={{ display: "flex", alignItems: "center", gap: 5, background: dictating ? "#ef4444" : (dark ? "rgba(10,110,114,0.2)" : "rgba(10,110,114,0.08)"), color: dictating ? "#fff" : "#0A6E72", border: `1px solid ${dictating ? "#ef4444" : "rgba(10,110,114,0.25)"}`, borderRadius: 9999, padding: "5px 11px", fontSize: 11, fontWeight: 800, cursor: "pointer" }}>
-                        {dictating ? "● Écoute…" : "🎙️ Dicter"}
+                        style={{ display: "flex", alignItems: "center", gap: 5, background: dictating ? "#ef4444" : (dark ? "rgba(10,110,114,0.2)" : "rgba(10,110,114,0.08)"), color: dictating ? "#fff" : "var(--color-accent-2-700)", border: `1px solid ${dictating ? "#ef4444" : "rgba(10,110,114,0.25)"}`, borderRadius: 9999, padding: "5px 11px", fontSize: 11, fontWeight: 800, cursor: "pointer" }}>
+                        {dictating ? "● Écoute…" : "Dicter"}
                       </button>
                     </div>
                     <textarea value={prescription} onChange={(e) => { setPrescription(e.target.value); setPrescriptionTouched(true); }} rows={6}
                       placeholder={"Ce que vous avez observé…\nConseils pour la suite…\nTraitement, si nécessaire…\nSuivi recommandé…"}
-                      style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: `1px solid ${BORDER}`, background: dark ? "rgba(255,255,255,0.05)" : "#fff", color: INK, fontSize: 13, lineHeight: 1.6, outline: "none", resize: "vertical" }} />
+                      style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: `1px solid ${BORDER}`, background: dark ? "rgba(255,255,255,0.05)" : "var(--color-bg)", color: INK, fontSize: 13, lineHeight: 1.6, outline: "none", resize: "vertical" }} />
                     <label style={{ display: "flex", alignItems: "center", gap: 8, margin: "8px 2px 0", cursor: "pointer" }}>
-                      <input type="checkbox" checked={isPrescription} onChange={(e) => setIsPrescription(e.target.checked)} style={{ width: 15, height: 15, accentColor: "#0A6E72" }} />
+                      <input type="checkbox" checked={isPrescription} onChange={(e) => setIsPrescription(e.target.checked)} style={{ width: 15, height: 15, accentColor: "var(--color-accent-2-700)" }} />
                       <span style={{ fontSize: 11.5, color: INK }}>C'est une ordonnance (sinon : « Conseils » dans le compte rendu)</span>
                     </label>
                     <p style={{ fontSize: 10, color: MUTED, margin: "4px 2px 0" }}>Inclus dans le compte rendu envoyé au patient à la clôture.</p>
@@ -900,11 +932,11 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
                     <span style={{ fontSize: 11, color: MUTED, display: "block", marginBottom: 6 }}>Message personnel au patient (optionnel)</span>
                     <textarea value={doctorMessage} onChange={(e) => setDoctorMessage(e.target.value)} rows={3}
                       placeholder="Ex : Bonjour, merci pour vos photos. Voici mes recommandations…"
-                      style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: `1px solid ${BORDER}`, background: dark ? "rgba(255,255,255,0.05)" : "#fff", color: INK, fontSize: 13, lineHeight: 1.6, outline: "none", resize: "vertical" }} />
+                      style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: `1px solid ${BORDER}`, background: dark ? "rgba(255,255,255,0.05)" : "var(--color-bg)", color: INK, fontSize: 13, lineHeight: 1.6, outline: "none", resize: "vertical" }} />
                     <p style={{ fontSize: 10, color: MUTED, margin: "4px 2px 0" }}>Apparaît en tête du compte rendu, tel quel.</p>
                     <button onClick={saveDraft} disabled={draftSaving}
-                      style={{ marginTop: 8, background: "transparent", color: "#0A6E72", border: `1px solid ${dark ? "rgba(255,255,255,0.15)" : "rgba(10,110,114,0.3)"}`, borderRadius: 9999, padding: "7px 14px", fontSize: 11.5, fontWeight: 800, cursor: "pointer", opacity: draftSaving ? 0.6 : 1 }}>
-                      {draftSaving ? "Enregistrement…" : "💾 Enregistrer le brouillon"}
+                      style={{ marginTop: 8, background: "transparent", color: "var(--color-accent-2-700)", border: `1px solid ${dark ? "rgba(255,255,255,0.15)" : "rgba(10,110,114,0.3)"}`, borderRadius: 9999, padding: "7px 14px", fontSize: 11.5, fontWeight: 800, cursor: "pointer", opacity: draftSaving ? 0.6 : 1 }}>
+                      {draftSaving ? "Enregistrement…" : "Enregistrer le brouillon"}
                     </button>
                   </div>
                 )}
@@ -933,7 +965,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
         <div style={{ padding: "12px 14px", borderBottom: `1px solid ${BORDER}`, background: dark ? "rgba(16,185,129,0.12)" : "rgba(16,185,129,0.08)" }}>
           {closedInfo.demo ? (
             <>
-              <p style={{ fontSize: 13, fontWeight: 800, color: dark ? "#6ee7b7" : "#047857", margin: 0 }}>🎉 Parfait. Vous êtes prêt.</p>
+              <p style={{ fontSize: 13, fontWeight: 800, color: dark ? "#6ee7b7" : "#047857", margin: 0 }}>Parfait. Vous êtes prêt.</p>
               <p style={{ fontSize: 11.5, color: MUTED, margin: "4px 0 0", lineHeight: 1.6 }}>
                 C'était une démonstration. Votre prochain patient sera un vrai patient — vous savez maintenant exactement quoi faire.
               </p>
@@ -944,33 +976,33 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
               <p style={{ fontSize: 11.5, color: MUTED, margin: "4px 0 8px", lineHeight: 1.6 }}>
                 {closedInfo.at ? `Le ${new Date(closedInfo.at).toLocaleDateString("fr-FR")} à ${new Date(closedInfo.at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}.` : ""}
                 {closedInfo.payoutFcfa ? ` Paiement de ${closedInfo.payoutFcfa.toLocaleString("fr-FR")} FCFA en cours.` : ""}
-                {closedInfo.followUpDate ? ` 📅 Suivi programmé pour le ${new Date(closedInfo.followUpDate).toLocaleDateString("fr-FR")}.` : ""}
+                {closedInfo.followUpDate ? ` Suivi programmé pour le ${new Date(closedInfo.followUpDate).toLocaleDateString("fr-FR")}.` : ""}
               </p>
               {/* État de livraison du compte rendu */}
               {reportSent ? (
-                <p style={{ fontSize: 11.5, color: dark ? "#6ee7b7" : "#047857", fontWeight: 700, margin: "0 0 8px" }}>📲 Compte rendu envoyé au patient (e-mail / WhatsApp selon les canaux disponibles).</p>
+                <p style={{ fontSize: 11.5, color: dark ? "#6ee7b7" : "#047857", fontWeight: 700, margin: "0 0 8px" }}>Compte rendu envoyé au patient (e-mail / WhatsApp selon les canaux disponibles).</p>
               ) : reportError ? (
-                <p style={{ fontSize: 11.5, color: dark ? "#fca5a5" : "#b91c1c", fontWeight: 700, margin: "0 0 8px" }}>⚠️ L'envoi du compte rendu a échoué. La consultation reste validée — vous pouvez réessayer l'envoi ci-dessous.</p>
+                <p style={{ fontSize: 11.5, color: dark ? "#fca5a5" : "#b91c1c", fontWeight: 700, margin: "0 0 8px" }}>L'envoi du compte rendu a échoué. La consultation reste validée — vous pouvez réessayer l'envoi ci-dessous.</p>
               ) : reportSending ? (
                 <p style={{ fontSize: 11.5, color: MUTED, margin: "0 0 8px" }}>Envoi du compte rendu en cours…</p>
               ) : null}
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 {closedInfo.reportUrl && (
                   <a href={closedInfo.reportUrl} target="_blank" rel="noreferrer"
-                    style={{ flex: "1 1 auto", textAlign: "center", textDecoration: "none", background: dark ? "rgba(255,255,255,0.1)" : "#fff", color: "#0A6E72", border: "1px solid rgba(10,110,114,0.3)", borderRadius: 9999, padding: "10px 14px", fontSize: 12.5, fontWeight: 800 }}>
-                    📄 Voir le compte rendu
+                    style={{ flex: "1 1 auto", textAlign: "center", textDecoration: "none", background: dark ? "rgba(255,255,255,0.1)" : "#fff", color: "var(--color-accent-2-700)", border: "1px solid rgba(10,110,114,0.3)", borderRadius: 9999, padding: "10px 14px", fontSize: 12.5, fontWeight: 800 }}>
+                    Voir le compte rendu
                   </a>
                 )}
                 <button onClick={() => setDossierCollapsed(false)}
-                  style={{ flex: "1 1 auto", background: dark ? "rgba(255,255,255,0.1)" : "#fff", color: "#0A6E72", border: "1px solid rgba(10,110,114,0.3)", borderRadius: 9999, padding: "10px 14px", fontSize: 12.5, fontWeight: 800, cursor: "pointer" }}>
-                  🗂️ Ouvrir le dossier
+                  style={{ flex: "1 1 auto", background: dark ? "rgba(255,255,255,0.1)" : "#fff", color: "var(--color-accent-2-700)", border: "1px solid rgba(10,110,114,0.3)", borderRadius: 9999, padding: "10px 14px", fontSize: 12.5, fontWeight: 800, cursor: "pointer" }}>
+                  Ouvrir le dossier
                 </button>
                 {reportSent ? (
                   <span style={{ flex: "1 1 auto", textAlign: "center", color: "#047857", fontSize: 12.5, fontWeight: 800, padding: "10px 14px" }}>✅ Envoyé</span>
                 ) : (
                   <button onClick={sendReport} disabled={reportSending}
                     style={{ flex: "1 1 auto", background: "#10b981", color: "#fff", border: "none", borderRadius: 9999, padding: "10px 14px", fontSize: 12.5, fontWeight: 800, cursor: "pointer", opacity: reportSending ? 0.6 : 1 }}>
-                    {reportSending ? "Envoi…" : reportError ? "🔁 Réessayer l'envoi" : "📲 Envoyer au patient"}
+                    {reportSending ? "Envoi…" : reportError ? "Réessayer l'envoi" : "Envoyer au patient"}
                   </button>
                 )}
               </div>
@@ -1011,7 +1043,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
         {loading && <p style={{ fontSize: 12, color: MUTED, textAlign: "center" }}>Chargement…</p>}
         {!loading && messages.length === 0 && (
           <div style={{ margin: "auto", textAlign: "center", padding: "24px 16px", maxWidth: 260 }}>
-            <div style={{ fontSize: 30, marginBottom: 8 }}>💬</div>
+            <div style={{ marginBottom: 8, display: "flex", justifyContent: "center" }}><MessageCircle size={30} strokeWidth={1.5} /></div>
             <p style={{ fontSize: 13, fontWeight: 800, color: INK, margin: "0 0 4px" }}>
               {side === "doctor" ? "Aucun message pour l'instant" : "Démarrez la conversation"}
             </p>
@@ -1034,13 +1066,13 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
                 // Carte d'appel vidéo
                 <a href={body.replace("§CALL§", "")} target="_blank" rel="noreferrer"
                   style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none", background: "#10b981", color: "#fff", padding: "11px 14px", borderRadius: 14, fontWeight: 800, fontSize: 13 }}>
-                  📞 {mine ? "Appel lancé — rejoindre" : "Rejoindre l'appel vidéo"}
+                  {mine ? "Appel lancé — rejoindre" : "Rejoindre l'appel vidéo"}
                 </a>
               ) : fileMatch ? (
                 // Carte fichier PDF — style WhatsApp : icône + nom + taille + 2 actions.
                 <div style={{ background: mine ? MINE : THEIRS, color: mine ? "#fff" : INK, padding: "11px 12px", borderRadius: 14, minWidth: 210 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 9 }}>
-                    <span style={{ fontSize: 26, flexShrink: 0 }}>📄</span>
+                    <FileText size={26} strokeWidth={1.75} style={{ flexShrink: 0 }} />
                     <span style={{ minWidth: 0 }}>
                       <span style={{ display: "block", fontSize: 12.5, fontWeight: 800, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 180 }}>{fileName || "Document.pdf"}</span>
                       <span style={{ display: "block", fontSize: 10.5, opacity: 0.85 }}>PDF · {kb}</span>
@@ -1048,9 +1080,9 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
                   </div>
                   <div style={{ display: "flex", gap: 6 }}>
                     <a href={m.imageUrl || "#"} target="_blank" rel="noreferrer"
-                      style={{ flex: 1, textAlign: "center", textDecoration: "none", background: mine ? "rgba(255,255,255,0.2)" : "rgba(10,110,114,0.12)", color: mine ? "#fff" : "#0A6E72", borderRadius: 9999, padding: "6px 0", fontSize: 11.5, fontWeight: 800 }}>Ouvrir</a>
+                      style={{ flex: 1, textAlign: "center", textDecoration: "none", background: mine ? "rgba(255,255,255,0.2)" : "rgba(10,110,114,0.12)", color: mine ? "#fff" : "var(--color-accent-2-700)", borderRadius: 9999, padding: "6px 0", fontSize: 11.5, fontWeight: 800 }}>Ouvrir</a>
                     <a href={m.imageUrl || "#"} download={fileName || "document.pdf"}
-                      style={{ flex: 1, textAlign: "center", textDecoration: "none", background: mine ? "rgba(255,255,255,0.2)" : "rgba(10,110,114,0.12)", color: mine ? "#fff" : "#0A6E72", borderRadius: 9999, padding: "6px 0", fontSize: 11.5, fontWeight: 800 }}>Télécharger</a>
+                      style={{ flex: 1, textAlign: "center", textDecoration: "none", background: mine ? "rgba(255,255,255,0.2)" : "rgba(10,110,114,0.12)", color: mine ? "#fff" : "var(--color-accent-2-700)", borderRadius: 9999, padding: "6px 0", fontSize: 11.5, fontWeight: 800 }}>Télécharger</a>
                   </div>
                 </div>
               ) : (m.imageUrl && !m.body) ? (
@@ -1082,7 +1114,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
                       {([["duree", "Depuis quand ?"], ["symptomes", "Symptômes"], ["zone", "Zone"], ["produits", "Produits essayés"], ["evolution", "Évolution"], ["allergies", "Allergies"], ["antecedents", "Antécédents"]] as [string, string][]).map(([cat, label]) => (
                         <button key={cat} disabled={summaryBusy} onClick={() => addToSummary(m.id, cat, m.body || "")}
-                          style={{ background: dark ? "rgba(10,110,114,0.2)" : "rgba(10,110,114,0.08)", color: "#0A6E72", border: "1px solid rgba(10,110,114,0.25)", borderRadius: 9999, padding: "4px 9px", fontSize: 10.5, fontWeight: 700, cursor: summaryBusy ? "wait" : "pointer" }}>
+                          style={{ background: dark ? "rgba(10,110,114,0.2)" : "rgba(10,110,114,0.08)", color: "var(--color-accent-2-700)", border: "1px solid rgba(10,110,114,0.25)", borderRadius: 9999, padding: "4px 9px", fontSize: 10.5, fontWeight: 700, cursor: summaryBusy ? "wait" : "pointer" }}>
                           {label}
                         </button>
                       ))}
@@ -1092,7 +1124,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
                   </div>
                 ) : (
                   <button onClick={() => setSummaryFor(m.id)}
-                    style={{ background: "transparent", border: "none", color: "#0A6E72", fontSize: 10.5, fontWeight: 700, cursor: "pointer", padding: "2px 4px", margin: "1px 0 0" }}>
+                    style={{ background: "transparent", border: "none", color: "var(--color-accent-2-700)", fontSize: 10.5, fontWeight: 700, cursor: "pointer", padding: "2px 4px", margin: "1px 0 0" }}>
                     ＋ Ajouter au résumé
                   </button>
                 )
@@ -1122,7 +1154,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
         <div style={{ display: "flex", gap: 6, overflowX: "auto", padding: "8px 12px", borderTop: `1px solid ${BORDER}`, background: CARD, WebkitOverflowScrolling: "touch" }}>
           {QUICK_REPLIES.map((q, i) => (
             <button key={i} onClick={() => useQuickReply(q)}
-              style={{ flexShrink: 0, maxWidth: 230, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", background: dark ? "rgba(10,110,114,0.18)" : "rgba(10,110,114,0.08)", color: dark ? "#0AF5C2" : "#0A6E72", border: "1px solid rgba(10,110,114,0.25)", borderRadius: 9999, padding: "6px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+              style={{ flexShrink: 0, maxWidth: 230, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", background: dark ? "rgba(10,110,114,0.18)" : "rgba(10,110,114,0.08)", color: dark ? "#0AF5C2" : "var(--color-accent-2-700)", border: "1px solid rgba(10,110,114,0.25)", borderRadius: 9999, padding: "6px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
               {q}
             </button>
           ))}
@@ -1142,18 +1174,18 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
           <button
             onClick={() => setQuickOpen((v) => !v)}
             title="Réponses rapides"
-            style={{ background: quickOpen ? MINE : "transparent", border: quickOpen ? "none" : `1px solid ${BORDER}`, color: quickOpen ? "#fff" : "#0A6E72", cursor: "pointer", fontSize: 15, flexShrink: 0, borderRadius: 9999, width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center" }}
+            style={{ background: quickOpen ? MINE : "transparent", border: quickOpen ? "none" : `1px solid ${BORDER}`, color: quickOpen ? "#fff" : "var(--color-accent-2-700)", cursor: "pointer", fontSize: 15, flexShrink: 0, borderRadius: 9999, width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center" }}
           >
-            ⚡
+            <Zap size={16} strokeWidth={1.75} />
           </button>
         )}
         <button
           onClick={() => fileRef.current?.click()}
           disabled={sending}
           title="Envoyer une photo ou un PDF"
-          style={{ background: "transparent", border: "none", cursor: "pointer", fontSize: 20, flexShrink: 0, opacity: sending ? 0.5 : 1, color: "#0A6E72" }}
+          style={{ background: "transparent", border: "none", cursor: "pointer", fontSize: 20, flexShrink: 0, opacity: sending ? 0.5 : 1, color: "var(--color-accent-2-700)" }}
         >
-          📷
+          <Camera size={20} strokeWidth={1.75} />
         </button>
         <button
           onClick={startCall}
@@ -1161,32 +1193,32 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
           title="Démarrer un appel vidéo"
           style={{ background: "transparent", border: "none", cursor: "pointer", fontSize: 19, flexShrink: 0, opacity: sending ? 0.5 : 1, color: "#10b981" }}
         >
-          📞
+          <Phone size={19} strokeWidth={1.75} />
         </button>
         <input
           value={text}
           onChange={(e) => { setText(e.target.value); if (e.target.value.trim()) notifyTyping(); }}
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
-          placeholder={msgDictating ? "🎙️ Dictée en cours…" : (side === "doctor" ? "Écrire au patient…" : "Écrire au dermatologue…")}
-          style={{ flex: 1, minWidth: 0, padding: "10px 14px", borderRadius: 9999, border: `1px solid ${BORDER}`, background: dark ? "rgba(255,255,255,0.05)" : "#fff", color: INK, fontSize: 13, outline: "none" }}
+          placeholder={msgDictating ? "Dictée en cours…" : (side === "doctor" ? "Écrire au patient…" : "Écrire au dermatologue…")}
+          style={{ flex: 1, minWidth: 0, padding: "10px 14px", borderRadius: 9999, border: `1px solid ${BORDER}`, background: dark ? "rgba(255,255,255,0.05)" : "var(--color-bg)", color: INK, fontSize: 13, outline: "none" }}
         />
         <button
           onClick={toggleMsgDictation}
           title={msgDictating ? "Arrêter la dictée" : "Dicter le message"}
-          style={{ background: msgDictating ? "#ef4444" : "transparent", border: msgDictating ? "none" : `1px solid ${BORDER}`, color: msgDictating ? "#fff" : "#0A6E72", cursor: "pointer", fontSize: 16, flexShrink: 0, borderRadius: 9999, width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center" }}
+          style={{ background: msgDictating ? "#ef4444" : "transparent", border: msgDictating ? "none" : `1px solid ${BORDER}`, color: msgDictating ? "#fff" : "var(--color-accent-2-700)", cursor: "pointer", fontSize: 16, flexShrink: 0, borderRadius: 9999, width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center" }}
         >
-          {msgDictating ? "●" : "🎙️"}
+          {msgDictating ? "●" : <Mic size={16} strokeWidth={1.75} />}
         </button>
         <button onClick={send} disabled={sending || !text.trim()}
           style={{ background: MINE, color: "#fff", border: "none", borderRadius: "50%", width: 42, height: 42, cursor: "pointer", fontSize: 18, opacity: sending || !text.trim() ? 0.5 : 1, flexShrink: 0 }}>
-          ➤
+          <SendHorizontal size={18} strokeWidth={1.75} />
         </button>
       </div>
 
       {/* ── Onboarding : bulle d'aide séquentielle (1re consultation, non bloquant) ── */}
       {side === "doctor" && coachStep >= 0 && coachStep < COACH.length && (
         <div style={{ position: "absolute", left: 0, right: 0, bottom: 78, display: "flex", justifyContent: "center", padding: "0 16px", zIndex: 60, pointerEvents: "none" }}>
-          <div style={{ pointerEvents: "auto", maxWidth: 360, width: "100%", background: "#0A6E72", color: "#fff", borderRadius: 16, padding: "14px 16px", boxShadow: "0 10px 30px rgba(0,0,0,0.35)" }}>
+          <div style={{ pointerEvents: "auto", maxWidth: 360, width: "100%", background: "var(--color-accent-2-700)", color: "#fff", borderRadius: 16, padding: "14px 16px", boxShadow: "0 10px 30px rgba(0,0,0,0.35)" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 6 }}>
               <span style={{ fontSize: 13, fontWeight: 900 }}>{COACH[coachStep].t}</span>
               <span style={{ fontSize: 10.5, opacity: 0.8, fontWeight: 700 }}>{coachStep + 1}/{COACH.length}</span>
@@ -1198,7 +1230,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
                 Passer
               </button>
               <button onClick={advanceCoach}
-                style={{ background: "#fff", color: "#0A6E72", border: "none", borderRadius: 9999, padding: "8px 16px", fontSize: 12.5, fontWeight: 800, cursor: "pointer" }}>
+                style={{ background: "#fff", color: "var(--color-accent-2-700)", border: "none", borderRadius: 9999, padding: "8px 16px", fontSize: 12.5, fontWeight: 800, cursor: "pointer" }}>
                 {coachStep === COACH.length - 1 ? "Compris — Je termine →" : "OK →"}
               </button>
             </div>
@@ -1210,7 +1242,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
       {showFollowUp && (
         <div onClick={() => { if (!closing) { setShowFollowUp(false); setConfirmSend(false); } }}
           style={{ position: "fixed", inset: 0, zIndex: 85, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-          <div onClick={(e) => e.stopPropagation()} style={{ maxWidth: 380, width: "100%", maxHeight: "88vh", overflowY: "auto", background: dark ? "#05262B" : "#fff", borderRadius: 20, padding: 20, boxShadow: "0 20px 50px rgba(0,0,0,0.4)" }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ maxWidth: 380, width: "100%", maxHeight: "88vh", overflowY: "auto", background: dark ? "#05262B" : "var(--color-bg)", borderRadius: 20, padding: 20, boxShadow: "0 20px 50px rgba(0,0,0,0.4)" }}>
             {!confirmSend ? (
               <>
                 {/* Étape 1 — revue du compte rendu (réutilise l'avis médical + le dossier) */}
@@ -1245,7 +1277,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
                         </div>
                       ))}
                       {!dossier?.scan?.isVerified && (
-                        <p style={{ fontSize: 11, color: dark ? "#fbbf24" : "#b45309", margin: 0 }}>⚠️ Diagnostic non confirmé — le compte rendu indiquera « surveillance / examen complémentaire ».</p>
+                        <p style={{ fontSize: 11, color: dark ? "#fbbf24" : "#b45309", margin: 0 }}>Diagnostic non confirmé — le compte rendu indiquera « surveillance / examen complémentaire ».</p>
                       )}
                       {masked.length > 0 && (
                         <p style={{ fontSize: 10.5, color: MUTED, margin: "2px 0 0", lineHeight: 1.5 }}>Sections masquées (vides) : {masked.join(" · ")}</p>
@@ -1262,9 +1294,9 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
                   { v: "none", l: "Pas de suivi" },
                 ].map((o) => (
                   <button key={o.v} onClick={() => setFollowUpOpt(o.v)}
-                    style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left", background: followUpOpt === o.v ? (dark ? "rgba(10,110,114,0.2)" : "rgba(10,110,114,0.08)") : "transparent", border: `1px solid ${followUpOpt === o.v ? "#0A6E72" : BORDER}`, borderRadius: 12, padding: "11px 14px", marginBottom: 8, cursor: "pointer" }}>
-                    <span style={{ width: 18, height: 18, borderRadius: "50%", border: `2px solid ${followUpOpt === o.v ? "#0A6E72" : MUTED}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      {followUpOpt === o.v && <span style={{ width: 9, height: 9, borderRadius: "50%", background: "#0A6E72" }} />}
+                    style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left", background: followUpOpt === o.v ? (dark ? "rgba(10,110,114,0.2)" : "rgba(10,110,114,0.08)") : "transparent", border: `1px solid ${followUpOpt === o.v ? "var(--color-accent-2-700)" : BORDER}`, borderRadius: 12, padding: "11px 14px", marginBottom: 8, cursor: "pointer" }}>
+                    <span style={{ width: 18, height: 18, borderRadius: "50%", border: `2px solid ${followUpOpt === o.v ? "var(--color-accent-2-700)" : MUTED}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      {followUpOpt === o.v && <span style={{ width: 9, height: 9, borderRadius: "50%", background: "var(--color-accent-2-700)" }} />}
                     </span>
                     <span style={{ fontSize: 14, fontWeight: 700, color: INK }}>{o.l}</span>
                   </button>
@@ -1275,21 +1307,52 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
                     ← Modifier
                   </button>
                   <button onClick={() => setConfirmSend(true)}
-                    style={{ flex: 1, background: "#0A6E72", color: "#fff", border: "none", borderRadius: 9999, padding: "13px", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>
+                    style={{ flex: 1, background: "var(--color-accent-2-700)", color: "#fff", border: "none", borderRadius: 9999, padding: "13px", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>
                     Continuer →
                   </button>
                 </div>
               </>
             ) : (
               <>
-                {/* Étape 2 — confirmation d'envoi */}
-                <p style={{ fontSize: 16, fontWeight: 900, color: INK, margin: "0 0 8px" }}>Prêt à envoyer le compte rendu ?</p>
-                <p style={{ fontSize: 12.5, color: MUTED, margin: "0 0 18px", lineHeight: 1.6 }}>
+                {/* Étape 2 — signature et envoi */}
+                <p style={{ fontSize: 16, fontWeight: 900, color: INK, margin: "0 0 8px" }}>Compte rendu · {dossier?.patient?.firstName || "Patient"}</p>
+                <p style={{ fontSize: 12.5, color: MUTED, margin: "0 0 14px", lineHeight: 1.6 }}>
                   Le patient recevra le compte rendu validé par vous par e-mail et/ou WhatsApp selon les canaux disponibles. Le dossier restera accessible dans votre historique.
                 </p>
-                <button onClick={validateAndSend} disabled={closing || reportSending}
-                  style={{ width: "100%", background: "#10b981", color: "#fff", border: "none", borderRadius: 9999, padding: "14px", fontSize: 14, fontWeight: 800, cursor: "pointer", opacity: (closing || reportSending) ? 0.6 : 1 }}>
-                  {closing ? "Validation…" : reportSending ? "Envoi…" : "Valider et envoyer"}
+                {split && !isDemoConsult && (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 12, justifyContent: "space-between", fontSize: 13, color: INK, background: dark ? "rgba(255,255,255,0.06)" : "var(--color-surface)", borderRadius: 9999, padding: "10px 16px", marginBottom: 14 }}>
+                    <span>Honoraires <b>{formatF(price)}</b></span><span>Vous <b>{formatF(split.pro)}</b></span><span>GlowScan <b>{formatF(split.platform)}</b></span>
+                  </div>
+                )}
+                {!isDemoConsult && !pinSetup && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+                    <input type="password" inputMode="numeric" autoComplete="off" maxLength={4} value={signPin} placeholder="Code" aria-label="Code de signature"
+                      onChange={(e) => { setSignPin(e.target.value.replace(/\D/g, "").slice(0, 4)); setPinError(""); }}
+                      data-testid="input-sign-pin"
+                      style={{ width: 110, textAlign: "center", letterSpacing: "0.4em", fontSize: 18, padding: "10px 12px", borderRadius: 9999, border: `1px solid ${BORDER}`, background: dark ? "transparent" : "var(--color-bg)", color: INK }} />
+                    <span style={{ fontSize: 12.5, color: MUTED }}>Votre code à 4 chiffres vaut signature.</span>
+                  </div>
+                )}
+                {!isDemoConsult && pinSetup && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
+                    <span style={{ fontSize: 12.5, color: INK, fontWeight: 700 }}>Choisissez votre code de signature à 4 chiffres. Il vous sera demandé à chaque compte rendu.</span>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      {[{ v: newPin, set: setNewPin, l: "Nouveau code", t: "input-new-pin" }, { v: newPin2, set: setNewPin2, l: "Confirmez le code", t: "input-new-pin2" }].map((f) => (
+                        <input key={f.t} type="password" inputMode="numeric" autoComplete="off" maxLength={4} value={f.v} placeholder={f.l} aria-label={f.l}
+                          onChange={(e) => { f.set(e.target.value.replace(/\D/g, "").slice(0, 4)); setPinError(""); }} data-testid={f.t}
+                          style={{ flex: 1, minWidth: 0, textAlign: "center", letterSpacing: "0.3em", fontSize: 16, padding: "10px 12px", borderRadius: 9999, border: `1px solid ${BORDER}`, background: dark ? "transparent" : "var(--color-bg)", color: INK }} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {pinError && (
+                  <p role="alert" style={{ fontSize: 12.5, fontWeight: 700, color: dark ? "#fca5a5" : "var(--color-accent-900)", background: dark ? "transparent" : "var(--color-accent-100)", borderRadius: 9999, padding: "8px 14px", margin: "0 0 12px" }}>{pinError}</p>
+                )}
+                <button onClick={() => (pinSetup ? setupAndSend() : validateAndSend())}
+                  disabled={closing || reportSending || (!isDemoConsult && (pinSetup ? newPin.length !== 4 || newPin2.length !== 4 : signPin.length !== 4))}
+                  data-testid="button-sign-send"
+                  style={{ width: "100%", background: dark ? "#10b981" : "var(--color-accent)", color: "#fff", border: "none", borderRadius: 9999, padding: "14px", fontSize: 14, fontWeight: 800, cursor: "pointer", opacity: (closing || reportSending || (!isDemoConsult && (pinSetup ? newPin.length !== 4 || newPin2.length !== 4 : signPin.length !== 4))) ? 0.5 : 1 }}>
+                  {closing ? "Signature…" : reportSending ? "Envoi…" : "Signer et envoyer"}
                 </button>
                 <button onClick={() => setConfirmSend(false)} disabled={closing || reportSending}
                   style={{ width: "100%", marginTop: 8, background: "transparent", color: MUTED, border: `1px solid ${BORDER}`, borderRadius: 9999, padding: "12px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
