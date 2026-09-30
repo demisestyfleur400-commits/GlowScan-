@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ProLayout } from "@/components/ProLayout";
 import { OPERATORS, formatCmPhone, opOf } from "@shared/phone";
 import { PRO_SUBSCRIPTION_FCFA } from "@shared/premium";
+import { SPLITS } from "@shared/splits";
 
 // ════════════════════════════════════════════════════════════════════════
 // Portefeuille du médecin (étape 3) — maquette « Derm Encaissement » (rôle
@@ -26,6 +27,11 @@ function moveLabel(m: Move): { label: string; sub: string } {
       return {
         label: `Consultation B2C${m.patient_first ? ` · ${m.patient_first}` : ""}`,
         sub: m.status === "escrow" ? "Bloqué jusqu'à votre réponse" : m.status === "refunded" ? "Remboursée au patient (24 h sans réponse)" : `GlowScan patient · ${m.share_pct ?? ""} %`,
+      };
+    case "relay_review":
+      return {
+        label: "Avis de télé-expertise",
+        sub: m.status === "escrow" ? "Bloqué jusqu'à la réponse du dermatologue" : m.status === "refunded" ? "Remboursé (délai dépassé)" : `${m.share_pct ?? ""} % de l'avis`,
       };
     case "withdrawal": return { label: "Retrait Mobile Money", sub: m.status === "pending" ? "En cours de virement" : d };
     case "subscription": return { label: "Abonnement GlowScan Derm", sub: "Payé par vos gains" };
@@ -63,10 +69,12 @@ export default function ProPayments() {
   const name = (pro as any)?.account?.fullName as string | undefined;
 
   return (
-    <ProLayout title="Portefeuille" back="/derm/paiements">
-      <div className="mx-auto flex max-w-[640px] flex-col gap-4 bg-organic-bg p-4 font-body text-organic-text">
+    <ProLayout title="Portefeuille" back={(pro as any)?.account?.profile === "relay" ? "/derm/relais" : "/derm/paiements"}>
+      <div className="flex w-full max-w-[900px] flex-col gap-4 font-body text-organic-text">
         <span className="text-[12px] text-organic-neutral-700">
-          {name ? `${/^(dr|pr)\.?\s/i.test(name) ? name : `Dr ${name}`} · ` : ""}consultations B2C ({w?.shares.consultation.pro ?? 80} %)
+          {(pro as any)?.account?.profile === "relay"
+            ? `${name ? `${name} · ` : ""}avis de télé-expertise (${SPLITS.relay.relay} %)`
+            : `${name ? `${/^(dr|pr)\.?\s/i.test(name) ? name : `Dr ${name}`} · ` : ""}consultations B2C (${w?.shares.consultation.pro ?? 80} %)`}
         </span>
 
         {isLoading ? <span className="text-[13px] text-organic-neutral-700">Chargement…</span>

@@ -311,7 +311,7 @@ export default function ProDashboard() {
               const t = p.scoreTrend as number[];
               const up = t[t.length - 1] >= t[0];
               return (
-                <Link key={p.id} href={`/derm/patient/${p.id}`} className="flex items-center justify-between gap-3 text-[14px] text-organic-text no-underline">
+                <Link key={p.id} href={`/derm/patient/${p.id}`} className="flex min-h-[40px] items-center justify-between gap-3 text-[14px] text-organic-text no-underline">
                   <span className="truncate font-semibold">{p.firstName} {p.lastName}</span>
                   <span className={`flex-none font-bold ${up ? "text-organic-accent-2-700" : "text-organic-accent-700"}`}>{t[0]} → {t[t.length - 1]}</span>
                 </Link>

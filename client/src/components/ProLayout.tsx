@@ -51,6 +51,12 @@ const MOBILE: (NavItem | { href: "more"; icon: typeof Home; label: string })[] =
   { href: "more", icon: Settings, label: "Plus" },
 ];
 
+// Relais : son espace et son portefeuille (20 % de chaque avis).
+const RELAY_PAGES: NavItem[] = [
+  { href: "/derm/relais", icon: Home, label: "Mon espace" },
+  { href: "/derm/portefeuille", icon: Coins, label: "Portefeuille" },
+];
+
 const MORE: NavItem[] = [
   { href: "/derm/agenda", icon: Calendar, label: "Agenda" },
   { href: "/derm/statistiques", icon: BarChart3, label: "Performances" },
@@ -85,11 +91,17 @@ export function ProLayout({ children, title, back, onBack, hideBottomNav, rightA
   useProNotifications((accData?.user as any)?.id);
 
   const isSecretary = accData?.user?.role === "secretary";
-  const pages = isSecretary ? SEC_PAGES : PAGES;
+  const isRelay = asProProfile(acc?.profile) === "relay";
+  const pages = isSecretary ? SEC_PAGES : isRelay ? RELAY_PAGES : PAGES;
 
   // Profils Relais et ONG : le portail cabinet n'est pas le leur → leur page d'arrivée.
   const profile = asProProfile(acc?.profile);
-  useEffect(() => { if (acc && profile !== "derm") navigate(proHomeOf(profile, "doctor")); }, [acc, profile, navigate]);
+  // (Seul écran du portail ouvert au relais : son portefeuille.)
+  useEffect(() => {
+    if (!acc || profile === "derm") return;
+    if (profile === "relay" && location.startsWith("/derm/portefeuille")) return;
+    navigate(proHomeOf(profile, "doctor"));
+  }, [acc, profile, location, navigate]);
 
   // Badges : consultations payées à traiter, dossiers préparés en attente d'analyse.
   const [badges, setBadges] = useState<{ consultations: number; patients: number }>({ consultations: 0, patients: 0 });
@@ -153,7 +165,7 @@ export function ProLayout({ children, title, back, onBack, hideBottomNav, rightA
         </Link>
         <nav className="flex flex-col gap-0.5">
           {pages.map(sideLink)}
-          {!isSecretary && (
+          {!isSecretary && !isRelay && (
             <>
               <span className="mx-3.5 mb-1 mt-3 text-[10px] font-bold uppercase tracking-[.14em] text-organic-neutral-700">Réseau</span>
               {NETWORK.map(sideLink)}
@@ -203,7 +215,7 @@ export function ProLayout({ children, title, back, onBack, hideBottomNav, rightA
       {/* ── Barre du bas (mobile) ── */}
       {!hideBottomNav && (
         <nav className="fixed inset-x-0 bottom-0 z-[45] flex items-end justify-around border-t border-organic-divider bg-organic-surface px-1 pb-3 pt-1.5 md:hidden">
-          {(isSecretary ? SEC_PAGES : MOBILE).map((item) => {
+          {(isSecretary ? SEC_PAGES : isRelay ? RELAY_PAGES : MOBILE).map((item) => {
             const more = item.href === "more";
             const mid = item.href === "/derm/analyse" && !isSecretary;
             const on = more ? moreOpen : isActive(location, item.href);

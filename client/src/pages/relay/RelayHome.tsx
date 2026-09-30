@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Camera, Check } from "lucide-react";
+import { Camera, Check, Coins, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProInput, LoadingScreen } from "@/components/ProLayout";
 import { DermBrand } from "@/components/pro/DermAuthShell";
@@ -90,7 +90,14 @@ export default function RelayHome() {
     <div className="min-h-screen bg-organic-bg font-body text-organic-text">
       <header className="mx-auto box-border flex w-full max-w-[1160px] items-center justify-between gap-3 px-4 py-3.5 md:px-organic-8">
         <DermBrand />
-        <Button variant="ghost" size="sm" onClick={() => logout()}>Déconnexion</Button>
+        <span className="flex items-center gap-1">
+          <Button variant="secondary" size="sm" onClick={() => setLocation("/derm/portefeuille")} aria-label="Portefeuille" data-testid="relay-wallet">
+            <Coins size={16} /><span className="hidden sm:inline">Portefeuille</span>
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => logout()} aria-label="Déconnexion">
+            <LogOut size={16} /><span className="hidden sm:inline">Déconnexion</span>
+          </Button>
+        </span>
       </header>
       <main className="mx-auto box-border flex w-full max-w-[1160px] flex-col gap-organic-6 px-4 pb-16 md:px-organic-8">
         <header className="flex flex-col gap-1">

@@ -52,7 +52,7 @@ export default function ProReseau() {
         <p className="m-0 text-[15px] text-organic-neutral-700">Votre correction devient la leçon du relais. Une phrase suffit : le signe qui aurait dû l'orienter.</p>
       </header>
 
-      <section className="grid items-start gap-organic-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+      <section className="grid grid-cols-1 items-start gap-organic-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
         <div className={card}>
           <div className="flex items-baseline justify-between gap-3">
             <h3 className="m-0 text-[22px]">À valider</h3>
@@ -107,11 +107,11 @@ function QueueItem({ c, onDone }: { c: QCase; onDone: () => void }) {
   };
 
   return (
-    <div className="flex flex-col gap-2.5 rounded-card bg-organic-bg p-organic-4" data-testid={`queue-${c.id}`}>
+    <div className="flex min-w-0 flex-col gap-2.5 rounded-card bg-organic-bg p-organic-4" data-testid={`queue-${c.id}`}>
       <div className="flex items-start gap-3">
         {c.photos?.[0] && <img src={c.photos[0]} alt="Photo du cas" className="h-16 w-14 flex-none rounded-xl object-cover" />}
         <span className="flex min-w-0 flex-1 flex-col">
-          <span className="text-[14px] font-bold">
+          <span className="break-words text-[14px] font-bold">
             {[c.zone, [c.patient_sex === "F" ? "fille / femme" : c.patient_sex === "M" ? "garçon / homme" : null, c.patient_age != null ? `${c.patient_age} ans` : null].filter(Boolean).join(", ")].filter(Boolean).join(" · ") || "Cas relais"}
           </span>
           <span className="text-[12px] text-organic-neutral-700">

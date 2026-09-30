@@ -63,7 +63,7 @@ export default function ProPaiements() {
       </section>
       <p className="m-0 text-[13px] text-organic-neutral-700">
         Montants issus des enregistrements de la plateforme. Les versements sont réglés par GlowScan selon le barème en vigueur.{" "}
-        <Link href="/derm/portefeuille" className="font-bold text-organic-accent-700">Ouvrir mon portefeuille</Link>
+        <Link href="/derm/portefeuille" className="inline-block py-2 font-bold text-organic-accent-700">Ouvrir mon portefeuille</Link>
       </p>
 
       {isLoading ? (

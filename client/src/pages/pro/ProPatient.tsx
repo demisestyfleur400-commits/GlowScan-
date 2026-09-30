@@ -346,7 +346,7 @@ export default function ProPatient() {
 
   return (
     <ProLayout>
-      <Link href="/derm/patients" className="text-[13px] font-bold text-organic-accent-700 no-underline" data-testid="link-back">← Patientèle</Link>
+      <Link href="/derm/patients" className="inline-flex min-h-[40px] items-center self-start text-[13px] font-bold text-organic-accent-700 no-underline" data-testid="link-back">← Patientèle</Link>
 
       <header className="flex flex-wrap items-center gap-organic-4">
         <span className="flex h-[72px] w-[72px] flex-none items-center justify-center rounded-full bg-organic-accent-200 font-heading text-[26px] text-organic-accent-800">
@@ -655,11 +655,10 @@ export default function ProPatient() {
                     setValidateCorrection(s.expertCorrectedCondition || s.condition || "");
                   }}
                   data-testid={`button-validate-${s.id}`}
-                  className="mt-3 inline-flex items-center gap-1.5 text-[11px] font-extrabold hover:underline"
-                  style={{ color: NAVY }}
+                  className="mt-3 inline-flex min-h-[40px] cursor-pointer items-center gap-1.5 rounded-pill border-0 bg-organic-accent-2-600 px-4 font-body text-[14px] font-bold text-organic-bg hover:bg-organic-accent-2-700"
                 >
-                  <Sparkles className="w-3 h-3" />
-                  Valider le diagnostic
+                  <Sparkles className="w-4 h-4" />
+                  Valider ou corriger le diagnostic
                 </button>
               )}
 

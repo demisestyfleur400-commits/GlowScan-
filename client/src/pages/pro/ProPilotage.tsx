@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
+import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LoadingScreen } from "@/components/ProLayout";
 import { DermBrand } from "@/components/pro/DermAuthShell";
@@ -45,7 +46,9 @@ export default function ProPilotage() {
           <DermBrand />
           <span className="hidden text-[10px] font-bold uppercase tracking-[.14em] text-organic-accent-2-700 sm:inline">Pilotage</span>
         </span>
-        <Button variant="ghost" size="sm" onClick={() => logout()}>Déconnexion</Button>
+        <Button variant="ghost" size="sm" onClick={() => logout()} aria-label="Déconnexion">
+          <LogOut size={16} /><span className="hidden sm:inline">Déconnexion</span>
+        </Button>
       </header>
       <main className="mx-auto box-border flex w-full max-w-[1160px] flex-col gap-organic-4 px-4 pb-16 md:px-organic-8">
         {me.programs.length > 1 && (

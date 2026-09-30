@@ -164,7 +164,7 @@ export default function ProAgenda() {
                   )}
                 </span>
                 <button type="button" onClick={() => cancel(a)} title="Annuler" aria-label="Annuler le rendez-vous"
-                  className="flex-none cursor-pointer border-0 bg-transparent p-1 opacity-70 hover:opacity-100" style={{ color: t.fg }}>
+                  className="flex h-8 w-8 flex-none cursor-pointer items-center justify-center border-0 bg-transparent opacity-70 hover:opacity-100" style={{ color: t.fg }}>
                   <Trash2 size={14} />
                 </button>
               </div>
