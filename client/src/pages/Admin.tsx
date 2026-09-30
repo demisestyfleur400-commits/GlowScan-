@@ -545,7 +545,7 @@ export default function Admin() {
             {[
               { key: "dataset", label: "Dataset", icon: Stethoscope, badge: datasetStats?.pending || 0, activeColor: "#10b981" },
               { key: "iavsdoc", label: "IA vs Médecin", icon: BarChart2, badge: 0, activeColor: "#7c3aed" },
-              { key: "rapprochement", label: "Rapprochement", icon: MessageCircle, badge: (recon?.toVerify?.length || 0) + (recon?.withdrawalsPending?.length || 0) + relayCases.filter((c: any) => c.operator_txn_id || c.status === "refund_due").length, activeColor: "#b45309" },
+              { key: "rapprochement", label: "Rapprochement", icon: MessageCircle, badge: (recon?.toVerify?.length || 0) + (recon?.withdrawalsPending?.length || 0) + relayCases.filter((c: any) => c.operator_txn_id || c.status === "refund_due" || c.payment_status === "program_pending").length, activeColor: "#b45309" },
               { key: "consults", label: "Consultations", icon: MessageCircle, badge: consults.filter((c) => c.paymentStatus !== "paid").length, activeColor: "#10b981" },
               { key: "revenus", label: "Revenus", icon: DollarSign, badge: 0, activeColor: "#22c55e" },
               { key: "prospects", label: "Prospects", icon: Phone, badge: prospectsMeta.toRelanceCount || 0, activeColor: "#25D366" },
@@ -1294,9 +1294,11 @@ export default function Admin() {
                     <div key={c.id} className="flex items-center justify-between gap-2 text-sm">
                       <span style={{ color: DS.body }}>
                         #{c.id} · {c.relay_name} → Dr {String(c.derm_name || "").replace(/^dr\.?\s*/i, "")} · {c.tier === "urgent" ? "urgent" : "simple"} · {(c.price_fcfa || 0).toLocaleString("fr-FR")} FCFA
-                        {c.status === "refund_due" ? " · délai dépassé, à rembourser" : c.operator_txn_id ? <> · ID déclaré : <b>{c.operator_txn_id}</b></> : " · ID pas encore saisi par le relais"}
+                        {c.payment_status === "program_pending" ? " · payé par un programme, à activer" : c.status === "refund_due" ? " · délai dépassé, à rembourser" : c.operator_txn_id ? <> · ID déclaré : <b>{c.operator_txn_id}</b></> : " · ID pas encore saisi par le relais"}
                       </span>
-                      {c.status === "refund_due" ? (
+                      {c.payment_status === "program_pending" ? (
+                        <button onClick={() => reconPost(`/api/admin/relay-cases/${c.id}/approve-program`)} className="px-3 py-1.5 rounded-xl text-xs font-extrabold text-white" style={{ background: "#2563eb" }}>Activer (programme)</button>
+                      ) : c.status === "refund_due" ? (
                         <button onClick={() => refundRelay(c.id)} className="px-3 py-1.5 rounded-xl text-xs font-extrabold text-white" style={{ background: "#b45309" }}>Remboursé</button>
                       ) : c.operator_txn_id ? (
                         <button onClick={() => confirmRelay(c.id, c.operator_txn_id)} className="px-3 py-1.5 rounded-xl text-xs font-extrabold text-white" style={{ background: "#10b981" }}>Vérifié</button>

@@ -144,7 +144,8 @@ export function registerRelayRoutes(app: Express, deps: { checkAdmin: (req: any)
       if (!urls.length) return res.status(400).json({ message: "Photo illisible. Reprenez-la." });
 
       const tier = RELAY_TIERS[data.tier];
-      const status = autonomousCase ? "autonomous" : data.payer === "program" ? "awaiting_review" : "awaiting_payment";
+      // Cas « programme » (gratuit pour la patiente) : bloqué tant que GlowScan ne l'a pas activé.
+      const status = autonomousCase ? "autonomous" : "awaiting_payment";
       const [row] = Rows(await db.execute(sql`
         INSERT INTO relay_cases (relay_id, derm_id, center_name, patient_age, patient_sex, zone, symptoms, photos,
           relay_diagnosis, relay_disease_code, tier, price_fcfa, payer, program_id, status, payment_status, due_at)
@@ -152,15 +153,10 @@ export function registerRelayRoutes(app: Express, deps: { checkAdmin: (req: any)
           ${data.zone || null}, ${data.symptoms || null}, ${JSON.stringify(urls)}::jsonb,
           ${data.relayDiagnosis.trim()}, ${code}, ${data.tier}, ${autonomousCase ? 0 : tier.priceFcfa},
           ${autonomousCase ? "none" : data.payer}, ${programId}, ${status},
-          ${autonomousCase ? "pending" : data.payer === "program" ? "program" : "pending"},
-          ${status === "awaiting_review" ? sql`NOW() + make_interval(hours => ${tier.hours})` : null})
+          ${autonomousCase ? "pending" : data.payer === "program" ? "program_pending" : "pending"},
+          NULL)
         RETURNING id, status, price_fcfa`));
-      if (status === "awaiting_review") {
-        notifyProAccount(Number(link.derm_id), {
-          title: data.tier === "urgent" ? "Avis urgent demandé (2 h)" : "Nouvel avis relais",
-          body: `${me.fullName} : ${data.relayDiagnosis.trim()}`, url: "/derm/reseau",
-        }).catch(() => {});
-      }
+      // Le délai de réponse démarre à la vérification du paiement ou à l'activation du cas programme.
       res.json({ case: { id: row.id, status: row.status, priceFcfa: Number(row.price_fcfa) } });
     } catch (e: any) {
       if (e?.name === "ZodError") return res.status(400).json({ message: "Cas incomplet : photo et hypothèse obligatoires." });
@@ -344,6 +340,8 @@ export function registerRelayRoutes(app: Express, deps: { checkAdmin: (req: any)
       const id = Number(req.params.id);
       const c = Rows(await db.execute(sql`SELECT id, tier, derm_id, relay_id, relay_diagnosis, status FROM relay_cases WHERE id = ${id}`))[0];
       if (!c || c.status !== "awaiting_payment") return res.status(409).json({ message: "Ce cas n'attend pas de paiement." });
+      const ps = Rows(await db.execute(sql`SELECT payment_status FROM relay_cases WHERE id = ${id}`))[0];
+      if (ps?.payment_status !== "pending") return res.status(409).json({ message: "Cas payé par un programme : utilisez « Activer »." });
       // L'admin a comparé l'ID saisi par le relais à son relevé : ID opérateur obligatoire, unique.
       try { await recordRelayPayment(id, String(req.body?.operatorRef || "")); }
       catch (e: any) {
@@ -363,6 +361,29 @@ export function registerRelayRoutes(app: Express, deps: { checkAdmin: (req: any)
       res.json({ success: true });
     } catch (e) {
       console.error("[admin/relay-cases/confirm]", e);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // Cas payé par un programme (ONG) : activé par GlowScan avant d'aller au dermatologue.
+  app.post("/api/admin/relay-cases/:id/approve-program", async (req: any, res) => {
+    if (!deps.checkAdmin(req)) return res.status(403).json({ message: "Accès refusé" });
+    try {
+      const id = Number(req.params.id);
+      const c = Rows(await db.execute(sql`SELECT id, tier, derm_id, relay_id, relay_diagnosis FROM relay_cases WHERE id = ${id} AND status = 'awaiting_payment' AND payment_status = 'program_pending'`))[0];
+      if (!c) return res.status(409).json({ message: "Ce cas n'attend pas d'activation." });
+      const hours = RELAY_TIERS[c.tier as "simple" | "urgent"]?.hours || 24;
+      await db.execute(sql`
+        UPDATE relay_cases SET status = 'awaiting_review', payment_status = 'program', due_at = NOW() + make_interval(hours => ${hours})
+        WHERE id = ${id}`);
+      notifyProAccount(Number(c.derm_id), {
+        title: c.tier === "urgent" ? "Avis urgent demandé (2 h)" : "Nouvel avis relais",
+        body: String(c.relay_diagnosis || "Cas à valider"), url: "/derm/reseau",
+      }).catch(() => {});
+      notifyProAccount(Number(c.relay_id), { title: "Cas activé", body: "Votre cas est transmis au dermatologue.", url: "/derm/relais" }).catch(() => {});
+      res.json({ success: true });
+    } catch (e) {
+      console.error("[admin/relay-cases/approve-program]", e);
       res.status(500).json({ message: "Erreur serveur" });
     }
   });

@@ -398,7 +398,7 @@ function NewCase({ me, onSent }: { me: Me; onSent: () => void }) {
               ? "Vous maîtrisez cette affection : vous traitez ce cas seul."
               : result.status === "awaiting_payment"
                 ? `Encaissez ${formatF(result.priceFcfa)} de la patiente par Mobile Money, puis saisissez l'ID de transaction dans « Vos cas en cours ».`
-                : "Le programme prend le cas en charge : le dermatologue a été prévenu."}
+                : "Cas pris en charge par le programme : il sera transmis au dermatologue dès que GlowScan l'aura activé."}
           </p>
           <Button onClick={reset} className="self-start" data-testid="relay-next-case">Cas suivant</Button>
         </>
@@ -411,7 +411,7 @@ function PendingCase({ c, onChange }: { c: Case; onChange: () => void }) {
   const [txn, setTxn] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-  const needsTxn = c.status === "awaiting_payment" && !c.operator_txn_id;
+  const needsTxn = c.status === "awaiting_payment" && c.payment_status === "pending" && !c.operator_txn_id;
   const save = async () => {
     setBusy(true); setErr("");
     try { await post(`/api/relay/cases/${c.id}/payment`, { operatorTxnId: txn.trim() }); onChange(); } catch (e: any) { setErr(e.message); } finally { setBusy(false); }
@@ -421,7 +421,8 @@ function PendingCase({ c, onChange }: { c: Case; onChange: () => void }) {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="text-[14px] font-bold">{c.relay_diagnosis}</span>
         <span className="rounded-pill bg-organic-neutral-200 px-2.5 py-0.5 text-[12px] font-semibold">
-          {c.status === "awaiting_payment" && c.operator_txn_id ? "Paiement en cours de vérification" : STATUS[c.status] || c.status}
+          {c.payment_status === "program_pending" ? "En attente d'activation (programme)"
+            : c.status === "awaiting_payment" && c.operator_txn_id ? "Paiement en cours de vérification" : STATUS[c.status] || c.status}
         </span>
       </div>
       <span className="text-[12px] text-organic-neutral-700">
