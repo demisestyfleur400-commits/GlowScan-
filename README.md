@@ -6,9 +6,9 @@ Analyse de peau par IA pour les peaux africaines (appli patient) et portail Glow
 
 Les migrations SQL de `migrations/` s'appliquent **à la main, avant le déploiement** du code qui en dépend. Le serveur ne modifie pas ces tables au démarrage. Toutes sont idempotentes : on peut les relancer sans risque.
 
-Refonte Organic (étape 2), dans cet ordre : 0013 → 0014 → 0015 → 0016 → 0017 → 0018 → 0019 → 0020 → 0021 → 0022.
+Refonte Organic (étape 2), dans cet ordre : 0013 → 0014 → 0015 → 0016 → 0017 → 0018 → 0019 → 0020 → 0021 → 0022 → 0023.
 
-**État : 0013 à 0022 appliquées en production (projet Supabase `atjvlnzrwdeqhilvssyd`) le 29/09/2026**, après un essai complet dans une transaction annulée. Les relancer ne change rien (idempotentes).
+**État : 0013 à 0023 appliquées en production (projet Supabase `atjvlnzrwdeqhilvssyd`) le 29/09/2026**, après un essai complet dans une transaction annulée. Les relancer ne change rien (idempotentes).
 
 | Ordre | Fichier | Contenu |
 |---|---|---|
@@ -22,11 +22,12 @@ Refonte Organic (étape 2), dans cet ordre : 0013 → 0014 → 0015 → 0016 →
 | 8 | `0020_sign_pin.sql` | Étape 4b — code de signature à 4 chiffres du médecin (`pro_accounts.sign_pin_hash`, haché bcrypt, hors schéma Drizzle), `consultations.signed_at` |
 | 9 | `0021_intake_reminders.sql` | Étape 4c — agenda : `appointments` (créée si absente) + `patient_record_id`, `created_by`, `confirmed_at` (réponse « 1 »), `reminder_j1_sent_at`, `report_reminder_sent_at`, RLS |
 | 10 | `0022_relay_network.sql` | Étape 5 — `relay_cases`, `relay_progress`, `relay_links`, `programs`, `program_members`, `pro_accounts.relay_level`, urgence et avis structuré sur `peer_reviews`, RLS |
+| 11 | `0023_programs_pilotage.sql` | Étape 6 — programmes : budget, email du bailleur, statut ; `program_managers` (comptes ONG), partage de progression des relais, `program_reports` (rapports envoyés), RLS |
 
 Commande (base Postgres / Supabase, variable `DATABASE_URL` ou `SUPABASE_URL`) :
 
 ```bash
-for f in 0013_consents 0014_product_scans 0015_orders_followups 0016_consultation_refunds 0017_wallets 0018_rls_runtime_tables 0019_pro_profile 0020_sign_pin 0021_intake_reminders 0022_relay_network; do
+for f in 0013_consents 0014_product_scans 0015_orders_followups 0016_consultation_refunds 0017_wallets 0018_rls_runtime_tables 0019_pro_profile 0020_sign_pin 0021_intake_reminders 0022_relay_network 0023_programs_pilotage; do
   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "migrations/$f.sql" || break
 done
 ```

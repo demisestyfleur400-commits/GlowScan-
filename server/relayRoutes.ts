@@ -374,7 +374,7 @@ export function registerRelayRoutes(app: Express, deps: { checkAdmin: (req: any)
       if (!c) return res.status(409).json({ message: "Ce cas n'attend pas d'activation." });
       const hours = RELAY_TIERS[c.tier as "simple" | "urgent"]?.hours || 24;
       await db.execute(sql`
-        UPDATE relay_cases SET status = 'awaiting_review', payment_status = 'program', due_at = NOW() + make_interval(hours => ${hours})
+        UPDATE relay_cases SET status = 'awaiting_review', payment_status = 'program', paid_at = NOW(), due_at = NOW() + make_interval(hours => ${hours})
         WHERE id = ${id}`);
       notifyProAccount(Number(c.derm_id), {
         title: c.tier === "urgent" ? "Avis urgent demandé (2 h)" : "Nouvel avis relais",

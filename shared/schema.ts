@@ -754,14 +754,35 @@ export const programs = pgTable("programs", {
   name: text("name").notNull(),
   funder: text("funder"),
   district: text("district"),
+  budgetFcfa: integer("budget_fcfa").notNull().default(0),            // migration 0023
+  funderEmail: text("funder_email"),                                   // destinataire du rapport mensuel
+  status: varchar("status", { length: 10 }).notNull().default("active"), // active | paused
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 export const programMembers = pgTable("program_members", {
   programId: integer("program_id").notNull().references(() => programs.id, { onDelete: "cascade" }),
   relayId: integer("relay_id").notNull().references(() => proAccounts.id, { onDelete: "cascade" }),
+  shareProgress: boolean("share_progress").notNull().default(false),  // le relais accepte que le programme voie sa progression
   createdAt: timestamp("created_at").notNull().defaultNow(),
 }, (t) => ({ pk: primaryKey({ columns: [t.programId, t.relayId] }) }));
+
+// Comptes ONG (profile = ngo) qui consultent le tableau de bord d'un programme (migration 0023).
+export const programManagers = pgTable("program_managers", {
+  programId: integer("program_id").notNull().references(() => programs.id, { onDelete: "cascade" }),
+  proId: integer("pro_id").notNull().references(() => proAccounts.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (t) => ({ pk: primaryKey({ columns: [t.programId, t.proId] }) }));
+
+// Rapports mensuels envoyés au bailleur (relus puis envoyés par GlowScan).
+export const programReports = pgTable("program_reports", {
+  id: serial("id").primaryKey(),
+  programId: integer("program_id").notNull().references(() => programs.id, { onDelete: "cascade" }),
+  month: varchar("month", { length: 7 }).notNull(),
+  sentTo: text("sent_to"),
+  sentAt: timestamp("sent_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
 
 // Le relais choisit son dermatologue référent.
 export const relayLinks = pgTable("relay_links", {
