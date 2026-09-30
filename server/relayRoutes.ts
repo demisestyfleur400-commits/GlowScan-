@@ -1,3 +1,4 @@
+import { teleFieldsSchema } from "@shared/teleexpertise";
 import type { Express } from "express";
 import { z } from "zod";
 import { sql } from "drizzle-orm";
@@ -206,10 +207,16 @@ export function registerRelayRoutes(app: Express, deps: { checkAdmin: (req: any)
   app.get("/api/relay/cases", ...relayOnly, async (req: any, res) => {
     try {
       const rows = Rows(await db.execute(sql`
-        SELECT c.*, p.full_name AS derm_name FROM relay_cases c LEFT JOIN pro_accounts p ON p.id = c.derm_id
+        SELECT c.*, p.full_name AS derm_name, p.license_number AS derm_onmc FROM relay_cases c LEFT JOIN pro_accounts p ON p.id = c.derm_id
         WHERE c.relay_id = ${req.proAccount.id} ORDER BY c.created_at DESC LIMIT 100`));
       res.json({ cases: rows });
     } catch { res.json({ cases: [] }); }
+  });
+
+  // « Marquer comme lu » : l'avis du dermatologue a été lu par le relais.
+  app.post("/api/relay/cases/:id/read", ...relayOnly, async (req: any, res) => {
+    await db.execute(sql`UPDATE relay_cases SET relay_read_at = NOW() WHERE id = ${Number(req.params.id)} AND relay_id = ${req.proAccount.id} AND relay_read_at IS NULL`);
+    res.json({ success: true });
   });
 
   // ── Dermatologue référent ─────────────────────────────────────────────
@@ -260,7 +267,7 @@ export function registerRelayRoutes(app: Express, deps: { checkAdmin: (req: any)
         dermDiseaseCode: z.string().max(40).optional().nullable(),
         note: z.string().max(1500).optional().nullable(),
         tip: z.string().max(40).optional().nullable(),
-      }).parse(req.body);
+      }).merge(teleFieldsSchema).parse(req.body);
       const c = Rows(await db.execute(sql`
         SELECT * FROM relay_cases WHERE id = ${id} AND derm_id = ${req.proAccount.id} AND status = 'awaiting_review'`))[0];
       if (!c) return res.status(404).json({ message: "Cas introuvable ou déjà traité." });
@@ -273,7 +280,9 @@ export function registerRelayRoutes(app: Express, deps: { checkAdmin: (req: any)
       await db.execute(sql`
         UPDATE relay_cases SET status = 'answered', derm_verdict = ${data.verdict},
           derm_diagnosis = ${data.verdict === "confirm" ? c.relay_diagnosis : data.dermDiagnosis!.trim()},
-          derm_disease_code = ${finalCode}, derm_note = ${(data.note || "").trim() || null}, lesson_tip = ${tip}, answered_at = NOW()
+          derm_disease_code = ${finalCode}, derm_note = ${(data.note || "").trim() || null}, lesson_tip = ${tip},
+          derm_ddx = ${data.ddx || null}, derm_plan = ${data.plan}, orientation = ${data.orientation || null}, review_in = ${data.reviewIn || null},
+          photo_quality = ${data.photoQuality || null}, photos_sharp = ${data.photosSharp ?? null}, answered_at = NOW()
         WHERE id = ${id}`);
 
       // Formation : on compte le cas sur la maladie RETENUE par le dermatologue.
@@ -298,7 +307,7 @@ export function registerRelayRoutes(app: Express, deps: { checkAdmin: (req: any)
       const share = c.payment_status === "verified" ? splitRelay(Number(c.price_fcfa) || 0).derm : 0;
       res.json({ success: true, dermShare: share });
     } catch (e: any) {
-      if (e?.name === "ZodError") return res.status(400).json({ message: "Verdict invalide." });
+      if (e?.name === "ZodError") return res.status(400).json({ message: "Avis incomplet : indiquez au moins la conduite à tenir." });
       console.error("[relay/verdict]", e);
       res.status(500).json({ message: "Erreur serveur" });
     }

@@ -141,6 +141,23 @@ async function prefill(proId: number, source: "visit" | "consultation", target: 
   return p;
 }
 
+/** Ajoute un paragraphe à l'examen du brouillon de visite du patient (créé si besoin, prérempli). */
+export async function appendToVisitDraft(proId: number, patientId: number, text: string): Promise<number> {
+  let r = Rows(await db.execute(sql`
+    SELECT id, payload FROM consult_reports WHERE pro_account_id = ${proId} AND patient_id = ${patientId} AND source = 'visit' AND signed_at IS NULL
+    ORDER BY created_at DESC LIMIT 1`))[0];
+  if (!r) {
+    const payload = await prefill(proId, "visit", patientId);
+    r = Rows(await db.execute(sql`
+      INSERT INTO consult_reports (pro_account_id, source, patient_id, payload) VALUES (${proId}, 'visit', ${patientId}, ${JSON.stringify(payload)}::jsonb)
+      RETURNING id, payload`))[0];
+  }
+  const p = reportPayloadSchema.parse(r.payload || {});
+  p.exam = [p.exam, text].filter(Boolean).join("\n\n").slice(0, 1500);
+  await db.execute(sql`UPDATE consult_reports SET payload = ${JSON.stringify(p)}::jsonb, updated_at = NOW() WHERE id = ${r.id}`);
+  return Number(r.id);
+}
+
 // ── Signature (appelée aussi à la clôture d'une consultation en ligne) ──
 /** Ce qui empêche la signature, sinon []. Lecture seule. */
 export async function reportBlockers(reportId: number, proId: number): Promise<string[]> {

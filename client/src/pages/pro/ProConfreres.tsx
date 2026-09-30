@@ -9,6 +9,8 @@ import { useProPatients } from "@/hooks/use-pro";
 import { PEER_TIERS, PEER_SHARED, PEER_HIDDEN, PEER_QUESTION_SUGGESTIONS, PEER_QUICK_REPLIES, PEER_QUESTION_MIN, type PeerTier } from "@shared/peer";
 import { SPLITS, GLOWSCAN_MOMO } from "@shared/splits";
 import { formatF } from "@shared/delivery";
+import { answeredIn } from "@shared/teleexpertise";
+import { TeleexpertiseReport, TeleFieldsForm, emptyTeleFields, type TeleFields } from "@/components/pro/TeleexpertiseReport";
 
 // ════════════════════════════════════════════════════════════════════════
 // Confrères (étape 8) — maquette « Derm Confreres ». Messages (cas complexe
@@ -137,7 +139,8 @@ function ThreadView({ id, onChange }: { id: number; onChange: () => void }) {
   const qc = useQueryClient();
   const { data, isLoading } = useQuery<any>({ queryKey: [`/api/peer/threads/${id}`], refetchInterval: 20_000 });
   const [draft, setDraft] = useState("");
-  const [avis, setAvis] = useState({ answer: "", dx: "", ddx: "", plan: "" });
+  const [avis, setAvis] = useState({ answer: "", dx: "", lesson: "" });
+  const [tele, setTele] = useState<TeleFields>(emptyTeleFields());
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const bottom = useRef<HTMLDivElement | null>(null);
@@ -190,22 +193,27 @@ function ThreadView({ id, onChange }: { id: number; onChange: () => void }) {
 
       <div className="flex max-h-[420px] flex-col gap-2 overflow-y-auto">
         {messages.map((m: any) => m.kind === "avis" ? (
-          <div key={m.id} className="flex flex-col gap-1.5 rounded-card bg-organic-accent-2-100 p-organic-4 text-[13px] text-organic-accent-2-900">
-            <span className="text-[11px] font-bold uppercase tracking-[.08em]">Avis structuré · {m.mine ? "Vous" : other ? dr(other.name) : ""}</span>
-            <span><b>Réponse :</b> {m.structured?.answer}</span>
-            <span><b>Diagnostic retenu :</b> {m.structured?.dx}</span>
-            {m.structured?.ddx && <span><b>À écarter :</b> {m.structured.ddx}</span>}
-            <span><b>Conduite à tenir :</b> {m.structured?.plan}</span>
-            {thread.mine && (
-              <div className="mt-1 flex flex-wrap gap-2">
-                <Button disabled={!!c?.integratedAt || busy} onClick={() => run(() => api(`/api/peer/cases/${c.id}/integrate`, {}))}
-                  className="bg-organic-accent-2-600 text-organic-bg hover:bg-organic-accent-2-700" data-testid="peer-integrate">
-                  {c?.integratedAt ? "Ajouté au compte rendu ✓" : "Intégrer à mon compte rendu"}
-                </Button>
-                {c?.patientId && <Link href={`/derm/patient/${c.patientId}`} className="inline-flex items-center rounded-pill px-3 text-[13px] font-bold text-organic-accent-700">Voir le compte rendu</Link>}
-              </div>
-            )}
-          </div>
+          <TeleexpertiseReport key={m.id} r={{
+            caseRef: c?.ref || "",
+            from: thread.mine
+              ? `De ${other ? dr(other.name) : "votre confrère"}${other?.onmc ? ` (ONMC ${other.onmc})` : ""} à vous`
+              : `De vous à ${other ? dr(other.name) : "votre confrère"}`,
+            answeredIn: answeredIn(c?.createdAt, c?.answeredAt),
+            tags: [who, "Anonymisé"],
+            question: c?.question,
+            answer: m.structured?.answer || "",
+            finalDx: m.structured?.dx || "",
+            ddx: m.structured?.ddx, plan: m.structured?.plan, orientation: m.structured?.orientation, reviewIn: m.structured?.reviewIn,
+            lesson: m.structured?.lesson, photoQuality: m.structured?.photoQuality, photosSharp: m.structured?.photosSharp, photosTotal: snap.photos?.length || 0,
+          }} actions={thread.mine ? (
+            <>
+              <Button disabled={!!c?.integratedAt || busy} onClick={() => run(() => api(`/api/peer/cases/${c.id}/integrate`, {}))}
+                className="bg-organic-accent-2-600 text-organic-bg hover:bg-organic-accent-2-700" data-testid="peer-integrate">
+                {c?.integratedAt ? "Ajouté au compte rendu ✓" : "Intégrer à mon compte rendu"}
+              </Button>
+              {c?.patientId && <Link href={`/derm/patient/${c.patientId}`} className="inline-flex items-center rounded-pill px-3 text-[13px] font-bold text-organic-accent-700">Voir le compte rendu</Link>}
+            </>
+          ) : undefined} />
         ) : (
           <div key={m.id} className={`flex ${m.mine ? "justify-end" : "justify-start"}`}>
             <div className={`max-w-[80%] rounded-card px-4 py-2.5 text-[13px] ${m.mine ? "bg-organic-accent text-organic-bg" : "bg-organic-bg"}`}>
@@ -222,14 +230,10 @@ function ThreadView({ id, onChange }: { id: number; onChange: () => void }) {
           <span className="text-[13px] font-bold">Votre avis structuré</span>
           <ProInput label="Réponse à la question" value={avis.answer} onChange={(e) => setAvis({ ...avis, answer: e.target.value })} testid="peer-avis-answer" />
           <ProInput label="Diagnostic retenu" value={avis.dx} onChange={(e) => setAvis({ ...avis, dx: e.target.value })} testid="peer-avis-dx" />
-          <ProInput label="À écarter" value={avis.ddx} onChange={(e) => setAvis({ ...avis, ddx: e.target.value })} testid="peer-avis-ddx" />
-          <label className="flex flex-col gap-1.5">
-            <span className="text-[12px] text-organic-neutral-700">Conduite à tenir</span>
-            <textarea value={avis.plan} onChange={(e) => setAvis({ ...avis, plan: e.target.value })} rows={3}
-              className="min-h-[80px] resize-y rounded-2xl border border-organic-divider bg-organic-surface px-3.5 py-2.5 font-body text-[14px] outline-none focus:border-organic-accent" data-testid="peer-avis-plan" />
-          </label>
-          <Button disabled={busy || !avis.answer.trim() || !avis.dx.trim() || !avis.plan.trim()} className="self-start"
-            onClick={() => run(async () => { await api(`/api/peer/cases/${c.id}/avis`, avis); setAvis({ answer: "", dx: "", ddx: "", plan: "" }); })} data-testid="peer-avis-send">
+          <TeleFieldsForm v={tele} onChange={setTele} photosTotal={c?.snapshot?.photos?.length || 0} idPrefix="peer-avis" />
+          <ProInput label="La leçon de ce cas (facultatif)" value={avis.lesson} onChange={(e) => setAvis({ ...avis, lesson: e.target.value })} testid="peer-avis-lesson" />
+          <Button disabled={busy || !avis.answer.trim() || !avis.dx.trim() || tele.plan.trim().length < 2} className="self-start"
+            onClick={() => run(async () => { await api(`/api/peer/cases/${c.id}/avis`, { ...avis, ...tele }); setAvis({ answer: "", dx: "", lesson: "" }); setTele(emptyTeleFields()); })} data-testid="peer-avis-send">
             Envoyer l'avis ({formatF(Math.round((c?.priceFcfa || 0) * SPLITS.peer.peer / 100))} pour vous)
           </Button>
         </div>

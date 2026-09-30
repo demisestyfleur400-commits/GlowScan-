@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { RELAY_LEVELS, RELAY_TIERS, RELAY_DISEASES, LESSON_TIPS, diseaseLabel, type RelayTier } from "@shared/relay";
 import { splitRelay } from "@shared/splits";
 import { formatF } from "@shared/delivery";
+import { relayCaseRef } from "@shared/teleexpertise";
+import { TeleFieldsForm, emptyTeleFields, type TeleFields } from "@/components/pro/TeleexpertiseReport";
 
 // ════════════════════════════════════════════════════════════════════════
 // Réseau & formation — vue du dermatologue référent (maquette « Derm Reseau »,
@@ -85,23 +87,30 @@ export default function ProReseau() {
 }
 
 function QueueItem({ c, onDone }: { c: QCase; onDone: () => void }) {
-  const [open, setOpen] = useState(false);
+  // Format 1b : le verdict ouvre l'avis complet (réponse, conduite à tenir, orientation, délai, photos, leçon).
+  const [verdictSel, setVerdictSel] = useState<"confirm" | "correct" | null>(null);
   const [tip, setTip] = useState<string | null>(null);
   const [note, setNote] = useState("");
   const [code, setCode] = useState("");
   const [dx, setDx] = useState("");
+  const [tele, setTele] = useState<TeleFields>(emptyTeleFields());
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const urgent = c.tier === "urgent";
   const share = c.payment_status === "verified" ? splitRelay(c.price_fcfa).derm : 0;
   const chip = (on: boolean) => `cursor-pointer rounded-pill border px-3 py-1 font-body text-[12px] font-semibold ${on ? "border-organic-accent bg-organic-accent text-organic-bg" : "border-organic-divider bg-transparent text-organic-text"}`;
 
-  const verdict = async (v: "confirm" | "correct") => {
+  const send = async () => {
+    const v = verdictSel!;
     const finalDx = code === "autre" ? dx.trim() : diseaseLabel(code);
     if (v === "correct" && !finalDx) return setErr("Indiquez le bon diagnostic.");
+    if (tele.plan.trim().length < 2) return setErr("Indiquez la conduite à tenir.");
     setBusy(true); setErr("");
     try {
-      await post(`/api/relay/cases/${c.id}/verdict`, { verdict: v, dermDiagnosis: v === "correct" ? finalDx : null, dermDiseaseCode: v === "correct" ? code : null, note: note.trim() || null, tip });
+      await post(`/api/relay/cases/${c.id}/verdict`, {
+        verdict: v, dermDiagnosis: v === "correct" ? finalDx : null, dermDiseaseCode: v === "correct" ? code : null, note: note.trim() || null, tip,
+        ddx: tele.ddx.trim(), plan: tele.plan.trim(), orientation: tele.orientation, reviewIn: tele.reviewIn, photoQuality: tele.photoQuality, photosSharp: tele.photosSharp,
+      });
       onDone();
     } catch (e: any) { setErr(e.message); } finally { setBusy(false); }
   };
@@ -115,35 +124,54 @@ function QueueItem({ c, onDone }: { c: QCase; onDone: () => void }) {
             {[c.zone, [c.patient_sex === "F" ? "fille / femme" : c.patient_sex === "M" ? "garçon / homme" : null, c.patient_age != null ? `${c.patient_age} ans` : null].filter(Boolean).join(", ")].filter(Boolean).join(" · ") || "Cas relais"}
           </span>
           <span className="text-[12px] text-organic-neutral-700">
-            {c.relay_name} · {c.center_name || c.relay_city || ""} · {RELAY_TIERS[c.tier].label}{c.due_at ? ` · ${left(c.due_at)}` : ""}
+            {relayCaseRef(c.id)} · {c.relay_name} · {c.center_name || c.relay_city || ""} · {RELAY_TIERS[c.tier].label}{c.due_at ? ` · ${left(c.due_at)}` : ""}
           </span>
         </span>
         {urgent && <span className="flex-none rounded-pill bg-organic-accent-200 px-2.5 py-0.5 text-[12px] font-semibold text-organic-accent-900">Urgent</span>}
       </div>
+      {c.photos?.length > 1 && (
+        <div className="flex gap-2 overflow-x-auto">{c.photos.slice(1).map((u, i) => <img key={i} src={u} alt={`Photo ${i + 2}`} className="h-16 w-14 flex-none rounded-xl object-cover" />)}</div>
+      )}
       {c.symptoms && <span className="text-[13px]">{c.symptoms}</span>}
       <div className="flex flex-wrap gap-1.5">
         <span className="rounded-pill bg-organic-surface px-2.5 py-1 text-[12px] font-semibold">Relais : {c.relay_diagnosis}</span>
-        <span className="rounded-pill bg-organic-surface px-2.5 py-1 text-[12px] font-semibold">IA : {c.ai_diagnosis || "indisponible"}</span>
+        <span className="rounded-pill bg-organic-surface px-2.5 py-1 text-[12px] font-semibold">IA (indicative) : {c.ai_diagnosis || "indisponible"}</span>
       </div>
-      {open && (
-        <div className="flex flex-col gap-2">
-          <div className="flex flex-wrap gap-1.5">
-            {RELAY_DISEASES.map((d) => <button key={d.code} type="button" className={chip(code === d.code)} onClick={() => setCode(d.code)}>{d.label}</button>)}
-          </div>
-          {code === "autre" && <ProInput label="Bon diagnostic" value={dx} onChange={(e) => setDx(e.target.value)} testid={`queue-dx-${c.id}`} />}
+      {verdictSel && (
+        <div className="flex flex-col gap-2 rounded-card bg-organic-surface p-organic-3">
+          <span className="text-[13px] font-bold">
+            Réponse : {verdictSel === "confirm" ? `je confirme ${c.relay_diagnosis}` : "je corrige le diagnostic"}
+          </span>
+          {verdictSel === "correct" && (
+            <>
+              <div className="flex flex-wrap gap-1.5">
+                {RELAY_DISEASES.map((d) => <button key={d.code} type="button" className={chip(code === d.code)} onClick={() => setCode(d.code)}>{d.label}</button>)}
+              </div>
+              {code === "autre" && <ProInput label="Bon diagnostic" value={dx} onChange={(e) => setDx(e.target.value)} testid={`queue-dx-${c.id}`} />}
+            </>
+          )}
+          <TeleFieldsForm v={tele} onChange={setTele} photosTotal={c.photos?.length || 0} idPrefix={`queue-${c.id}`} />
+          <span className="text-[12px] font-semibold text-organic-neutral-800">La leçon de ce cas</span>
           <div className="flex flex-wrap gap-1.5">
             {LESSON_TIPS.map((t) => <button key={t} type="button" className={chip(tip === t)} onClick={() => setTip(tip === t ? null : t)}>{t}</button>)}
           </div>
           <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} placeholder="Le signe qui aurait dû l'orienter…"
-            className="min-h-[70px] resize-y rounded-2xl border border-organic-divider bg-organic-surface px-3.5 py-2.5 font-body text-[14px] text-organic-text outline-none focus:border-organic-accent" data-testid={`queue-note-${c.id}`} />
+            className="min-h-[70px] resize-y rounded-2xl border border-organic-divider bg-organic-bg px-3.5 py-2.5 font-body text-[14px] text-organic-text outline-none focus:border-organic-accent" data-testid={`queue-note-${c.id}`} />
         </div>
       )}
       {err && <div role="alert" className="rounded-pill bg-organic-accent-100 px-4 py-2 text-[13px] font-semibold text-organic-accent-900">{err}</div>}
       <div className="flex flex-wrap items-center gap-2">
-        <Button onClick={() => verdict("confirm")} disabled={busy} className="bg-organic-accent-2-600 text-organic-bg hover:bg-organic-accent-2-700" data-testid={`queue-ok-${c.id}`}>Relais a raison</Button>
-        <Button variant="secondary" onClick={() => (open ? verdict("correct") : setOpen(true))} disabled={busy} data-testid={`queue-fix-${c.id}`}>
-          {open ? "Envoyer la correction" : "Corriger"}
-        </Button>
+        {!verdictSel ? (
+          <>
+            <Button onClick={() => setVerdictSel("confirm")} className="bg-organic-accent-2-600 text-organic-bg hover:bg-organic-accent-2-700" data-testid={`queue-ok-${c.id}`}>Relais a raison</Button>
+            <Button variant="secondary" onClick={() => setVerdictSel("correct")} data-testid={`queue-fix-${c.id}`}>Corriger</Button>
+          </>
+        ) : (
+          <>
+            <Button onClick={send} disabled={busy} data-testid={`queue-send-${c.id}`}>Envoyer l'avis</Button>
+            <Button variant="ghost" onClick={() => { setVerdictSel(null); setErr(""); }} disabled={busy}>Retour</Button>
+          </>
+        )}
         {share > 0 && <span className="text-[12px] text-organic-neutral-700">{formatF(share)} pour vous</span>}
       </div>
     </div>

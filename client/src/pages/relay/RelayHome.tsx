@@ -11,6 +11,8 @@ import { asProProfile, proHomeOf } from "@shared/proProfile";
 import { RELAY_TIERS, RELAY_LEVELS, RELAY_DISEASES, AUTONOMY_MIN_CASES, diseaseLabel, type RelayTier } from "@shared/relay";
 import { splitRelay } from "@shared/splits";
 import { formatF } from "@shared/delivery";
+import { relayCaseRef, answeredIn, relayAnswer, type PhotoQuality } from "@shared/teleexpertise";
+import { TeleexpertiseReport } from "@/components/pro/TeleexpertiseReport";
 
 // ════════════════════════════════════════════════════════════════════════
 // Espace relais (infirmier / médecin d'un CSI) — maquette « Derm Reseau »,
@@ -29,6 +31,10 @@ type Case = {
   id: number; status: string; tier: RelayTier; price_fcfa: number; relay_diagnosis: string; relay_disease_code: string | null;
   ai_diagnosis: string | null; derm_verdict: "confirm" | "correct" | null; derm_diagnosis: string | null; derm_note: string | null;
   lesson_tip: string | null; derm_name: string | null; operator_txn_id: string | null; payment_status: string; created_at: string; answered_at: string | null;
+  // Avis au format 1b (étape 9b)
+  derm_disease_code: string | null; derm_onmc: string | null; derm_ddx: string | null; derm_plan: string | null; orientation: string | null;
+  review_in: string | null; photo_quality: PhotoQuality | null; photos_sharp: number | null; relay_read_at: string | null; paid_at: string | null;
+  patient_age: number | null; patient_sex: string | null; zone: string | null; symptoms: string | null; photos: string[];
 };
 
 const CONF: Record<string, string> = { high: "confiance élevée", medium: "confiance moyenne", low: "confiance faible" };
@@ -157,19 +163,30 @@ export default function RelayHome() {
             <div className={card}>
               <h3 className="m-0 text-[22px]">Retours des dermatologues</h3>
               {feedback.length === 0 && <span className="text-[14px] text-organic-neutral-700">Aucun retour pour l'instant.</span>}
-              <div className="grid gap-organic-3 md:grid-cols-2">
-                {feedback.map((f) => (
-                  <div key={f.id} className="flex flex-col gap-1.5 rounded-card bg-organic-bg p-organic-4">
-                    <span className="flex items-center justify-between gap-2">
-                      <span className="text-[14px] font-bold">{f.derm_verdict === "confirm" ? f.relay_diagnosis : `${f.relay_diagnosis} → ${f.derm_diagnosis}`}</span>
-                      <span className={`flex-none rounded-pill px-2.5 py-0.5 text-[12px] font-semibold ${f.derm_verdict === "confirm" ? "bg-organic-accent-2-200 text-organic-accent-2-900" : "bg-organic-accent-200 text-organic-accent-900"}`}>
-                        {f.derm_verdict === "confirm" ? "Confirmé" : "Corrigé"}
-                      </span>
-                    </span>
-                    {f.derm_note && <span className="text-[13px] leading-normal">« {f.derm_note} »</span>}
-                    <span className="text-[12px] text-organic-neutral-700">{f.derm_name ? `Dr ${String(f.derm_name).replace(/^dr\.?\s*/i, "")}` : ""}{f.lesson_tip ? ` · ${f.lesson_tip}` : ""}</span>
-                  </div>
-                ))}
+              <div className="grid gap-organic-3 lg:grid-cols-2">
+                {feedback.map((f) => {
+                  const prog = me.progress.find((x) => x.code === f.derm_disease_code);
+                  const dermLabel = f.derm_name ? `Dr ${String(f.derm_name).replace(/^dr\.?\s*/i, "")}` : "Le dermatologue";
+                  return (
+                    <TeleexpertiseReport key={f.id} r={{
+                      caseRef: relayCaseRef(f.id),
+                      from: `De ${dermLabel}${f.derm_onmc ? ` (ONMC ${f.derm_onmc})` : ""} à ${acc.fullName}${me.center ? `, ${me.center}` : ""}`,
+                      answeredIn: answeredIn(f.paid_at || f.created_at, f.answered_at),
+                      tags: [[f.patient_sex, f.patient_age != null ? `${f.patient_age} ans` : null].filter(Boolean).join(" · "), f.zone || "", "Anonymisé"],
+                      question: [f.symptoms, `Je pense à ${f.relay_diagnosis.charAt(0).toLowerCase()}${f.relay_diagnosis.slice(1)}. Confirmez-vous ?`].filter(Boolean).join(" "),
+                      answer: relayAnswer(f.derm_verdict, f.relay_diagnosis, f.derm_diagnosis),
+                      requesterDx: f.relay_diagnosis,
+                      finalDx: f.derm_diagnosis || f.relay_diagnosis,
+                      corrected: f.derm_verdict === "correct",
+                      ddx: f.derm_ddx, plan: f.derm_plan, orientation: f.orientation, reviewIn: f.review_in,
+                      lesson: [f.lesson_tip, f.derm_note].filter(Boolean).join(" : ") || null,
+                      photoQuality: f.photo_quality, photosSharp: f.photos_sharp, photosTotal: f.photos?.length || 0,
+                      stat: prog && prog.cases > 0 ? `${prog.label} : ${prog.agreements}/${prog.cases} cas justes · ${Math.round((prog.agreements / prog.cases) * 100)} %` : null,
+                    }} actions={f.relay_read_at
+                      ? <span className="text-[12px] text-organic-neutral-700">Lu</span>
+                      : <Button variant="secondary" size="sm" onClick={async () => { await fetch(`/api/relay/cases/${f.id}/read`, { method: "POST", credentials: "include" }).catch(() => {}); refresh(); }}>Marquer comme lu</Button>} />
+                  );
+                })}
               </div>
             </div>
           </>

@@ -827,6 +827,14 @@ export const relayCases = pgTable("relay_cases", {
   dermDiseaseCode: varchar("derm_disease_code", { length: 40 }),
   dermNote: text("derm_note"),                                         // la leçon du relais
   lessonTip: varchar("lesson_tip", { length: 40 }),
+  // Avis au format 1b (migration 0026)
+  dermDdx: text("derm_ddx"),
+  dermPlan: text("derm_plan"),
+  orientation: text("orientation"),
+  reviewIn: varchar("review_in", { length: 40 }),
+  photoQuality: varchar("photo_quality", { length: 12 }),
+  photosSharp: smallint("photos_sharp"),
+  relayReadAt: timestamp("relay_read_at"),
   answeredAt: timestamp("answered_at"),
   refundedAt: timestamp("refunded_at"),
   refundOperatorRef: text("refund_operator_ref"),
@@ -868,7 +876,7 @@ export const peerMessages = pgTable("peer_messages", {
   authorPro: integer("author_pro").notNull().references(() => proAccounts.id, { onDelete: "cascade" }),
   kind: varchar("kind", { length: 10 }).notNull().default("text"), // text | avis | system
   body: text("body"),
-  structured: jsonb("structured"),                                   // { answer, dx, ddx, plan }
+  structured: jsonb("structured"),                                   // { answer, dx, ddx, plan, orientation, reviewIn, lesson, photoQuality, photosSharp }
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

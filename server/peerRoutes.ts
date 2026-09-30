@@ -5,6 +5,7 @@ import { db } from "./db";
 import { requireActivePro, notifyProAccount } from "./proRoutes";
 import { uploadScanImageToStorage } from "./routes";
 import { reservePeerReview, recordPeerMomoPayment, settlePeerReview, refundPeerReview, WalletError, isOperatorTxnId } from "./wallet";
+import { teleFieldsSchema } from "@shared/teleexpertise";
 import { PEER_TIERS, PEER_OFFER_COUNT, PEER_QUESTION_MIN, type PeerTier } from "@shared/peer";
 
 // ════════════════════════════════════════════════════════════════════════
@@ -127,20 +128,20 @@ export function registerPeerRoutes(app: Express, deps: { checkAdmin: (req: any) 
         const c = Rows(await db.execute(sql`SELECT * FROM peer_reviews WHERE id = ${t.case_id}`))[0];
         if (c) caseData = {
           id: c.id, ref: `GS-SA-${String(c.id).padStart(4, "0")}`, question: c.question, tier: c.tier, priceFcfa: c.price_fcfa,
-          status: c.status, paymentStatus: c.payment_status, dueAt: c.due_at, answeredAt: c.answered_at,
+          status: c.status, paymentStatus: c.payment_status, dueAt: c.due_at, answeredAt: c.answered_at, createdAt: c.created_at,
           integratedAt: c.integrated_at, snapshot: c.snapshot || null,
           // Le lien vers le dossier du patient n'est visible que du médecin traitant.
           patientId: c.requester_account_id === me ? c.patient_id : null,
         };
       }
       const others = Rows(await db.execute(sql`
-        SELECT id, full_name, city, country, specialties FROM pro_accounts WHERE id = ${t.from_pro === me ? t.to_pro : t.from_pro}`))[0];
+        SELECT id, full_name, city, country, specialties, license_number FROM pro_accounts WHERE id = ${t.from_pro === me ? t.to_pro : t.from_pro}`))[0];
       const msgs = Rows(await db.execute(sql`SELECT id, author_pro, kind, body, structured, created_at FROM peer_messages WHERE thread_id = ${t.id} ORDER BY created_at ASC`));
       if (t.from_pro === me) await db.execute(sql`UPDATE peer_threads SET unread_from = 0 WHERE id = ${t.id}`);
       else if (t.to_pro === me) await db.execute(sql`UPDATE peer_threads SET unread_to = 0 WHERE id = ${t.id}`);
       res.json({
         thread: { id: t.id, kind: t.kind, mine: t.from_pro === me, offered: t.offered, canAnswer: t.kind === "case" && t.to_pro === me && caseData?.status === "open" },
-        other: others ? { id: others.id, name: others.full_name, city: others.city, country: others.country, expertise: others.specialties || [] } : null,
+        other: others ? { id: others.id, name: others.full_name, city: others.city, country: others.country, expertise: others.specialties || [], onmc: others.license_number || null } : null,
         case: caseData,
         messages: msgs.map((m: any) => ({ id: m.id, mine: m.author_pro === me, kind: m.kind, body: m.body, structured: m.structured, at: m.created_at })),
       });
@@ -291,8 +292,8 @@ export function registerPeerRoutes(app: Express, deps: { checkAdmin: (req: any) 
       const me = req.proAccount.id, id = Number(req.params.id);
       const a = z.object({
         answer: z.string().min(2).max(600), dx: z.string().min(2).max(400),
-        ddx: z.string().max(400).optional().default(""), plan: z.string().min(2).max(1500),
-      }).parse(req.body);
+        lesson: z.string().trim().max(600).optional().default(""),
+      }).merge(teleFieldsSchema).parse(req.body);
       const c = Rows(await db.execute(sql`SELECT * FROM peer_reviews WHERE id = ${id}`))[0];
       if (!c || c.target_account_id !== me) return res.status(404).json({ message: "Cas introuvable" });
       if (c.status !== "open") return res.status(409).json({ message: "Cet avis a déjà été rendu ou le délai est dépassé." });
@@ -310,24 +311,38 @@ export function registerPeerRoutes(app: Express, deps: { checkAdmin: (req: any) 
     }
   });
 
-  // « Intégrer à mon compte rendu » (repris à l'étape 9).
+  // « Intégrer à mon compte rendu » : l'avis rejoint l'examen du brouillon de compte rendu du patient.
   app.post("/api/peer/cases/:id/integrate", ...guard, async (req: any, res) => {
-    const r = Rows(await db.execute(sql`
-      UPDATE peer_reviews SET integrated_at = NOW() WHERE id = ${Number(req.params.id)} AND requester_account_id = ${req.proAccount.id} AND status = 'answered'
-      RETURNING id`));
-    if (!r.length) return res.status(404).json({ message: "Avis introuvable" });
-    res.json({ success: true });
-  });
-
-  // Réglage du cabinet : « Disponible pour les avis confrères ».
-  app.get("/api/peer/settings", ...guard, async (req: any, res) => {
-    const r = Rows(await db.execute(sql`SELECT peer_available FROM pro_accounts WHERE id = ${req.proAccount.id}`))[0];
-    res.json({ available: r?.peer_available !== false });
-  });
-  app.post("/api/peer/settings", ...guard, async (req: any, res) => {
-    const available = req.body?.available === true;
-    await db.execute(sql`UPDATE pro_accounts SET peer_available = ${available} WHERE id = ${req.proAccount.id}`);
-    res.json({ available });
+    try {
+      const id = Number(req.params.id), me = req.proAccount.id;
+      const c = Rows(await db.execute(sql`
+        SELECT pr.id, pr.patient_id, pr.integrated_at, a.full_name, a.license_number FROM peer_reviews pr
+        LEFT JOIN pro_accounts a ON a.id = pr.accepted_by
+        WHERE pr.id = ${id} AND pr.requester_account_id = ${me} AND pr.status = 'answered'`))[0];
+      if (!c) return res.status(404).json({ message: "Avis introuvable" });
+      const avis = Rows(await db.execute(sql`
+        SELECT m.structured FROM peer_messages m JOIN peer_threads t ON t.id = m.thread_id
+        WHERE t.case_id = ${id} AND m.kind = 'avis' ORDER BY m.created_at DESC LIMIT 1`))[0]?.structured || {};
+      let reportId: number | null = null;
+      if (c.patient_id && !c.integrated_at) {
+        const { appendToVisitDraft } = await import("./reportRoutes");
+        const who = `Dr ${clean(c.full_name)}${c.license_number ? ` (ONMC ${c.license_number})` : ""}`;
+        const text = [
+          `Avis de télé-expertise de ${who}, cas GS-SA-${String(id).padStart(4, "0")} : ${avis.answer || ""}`,
+          avis.dx ? `Diagnostic retenu : ${avis.dx}.` : "",
+          avis.ddx ? `À écarter : ${avis.ddx}.` : "",
+          avis.plan ? `Conduite à tenir : ${String(avis.plan).replace(/\n+/g, " ; ")}.` : "",
+          avis.orientation ? `Orientation : ${avis.orientation}.` : "",
+          avis.reviewIn ? `Revoir : ${avis.reviewIn}.` : "",
+        ].filter(Boolean).join(" ");
+        reportId = await appendToVisitDraft(me, Number(c.patient_id), text);
+      }
+      await db.execute(sql`UPDATE peer_reviews SET integrated_at = COALESCE(integrated_at, NOW()) WHERE id = ${id}`);
+      res.json({ success: true, reportId });
+    } catch (e) {
+      console.error("[peer/integrate]", e);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
   });
 
   // ── Annuaire du réseau ───────────────────────────────────────────────
