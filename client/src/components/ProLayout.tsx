@@ -38,7 +38,7 @@ const SEC_PAGES: NavItem[] = [
 
 // Section « Réseau » (médecin). Pilotage (étape 6) s'ajoutera ici.
 const NETWORK: NavItem[] = [
-  { href: "/derm/confreres", icon: ArrowLeftRight, label: "Téléexpertise" },
+  { href: "/derm/confreres", icon: ArrowLeftRight, label: "Confrères" },
   { href: "/derm/reseau", icon: Network, label: "Réseau & formation" },
   { href: "/derm/portefeuille", icon: Coins, label: "Portefeuille" },
 ];

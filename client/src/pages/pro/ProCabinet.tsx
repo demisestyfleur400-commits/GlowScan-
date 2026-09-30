@@ -336,6 +336,8 @@ export default function ProCabinet() {
 
           <SignPinCard />
 
+          {((accData?.account as any)?.profile || "derm") === "derm" && <PeerAvailabilityCard />}
+
           {/* Données */}
           <div className={card}>
             <div className="flex items-center justify-between gap-3">
@@ -636,6 +638,34 @@ function Row({ label, value, testid }: any) {
 }
 
 // ── Code de signature à 4 chiffres (signe chaque compte rendu) ─────────────
+// Confrères : visible dans l'annuaire et proposé pour « premier disponible ».
+function PeerAvailabilityCard() {
+  const { data, refetch } = useQuery<{ available: boolean }>({ queryKey: ["/api/peer/settings"] });
+  const [busy, setBusy] = useState(false);
+  const on = data?.available !== false;
+  const toggle = async () => {
+    setBusy(true);
+    try {
+      await fetch("/api/peer/settings", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ available: !on }) });
+      await refetch();
+    } finally { setBusy(false); }
+  };
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-card bg-organic-surface p-organic-6">
+      <span className="flex flex-col">
+        <span className="text-[14px] font-bold">Disponible pour les avis confrères</span>
+        <span className="text-[12px] text-organic-neutral-700">
+          Les confrères peuvent vous envoyer des cas complexes ({formatF(3000)} ou {formatF(5000)}, {SPLITS.peer.peer} % pour vous). Votre pays et vos expertises apparaissent dans l'annuaire.
+        </span>
+      </span>
+      <button type="button" role="switch" aria-checked={on} onClick={toggle} disabled={busy || !data} data-testid="toggle-peer-available"
+        className={`relative h-7 w-12 flex-none cursor-pointer rounded-pill border-0 transition-colors ${on ? "bg-organic-accent-2-600" : "bg-organic-neutral-400"}`}>
+        <span className={`absolute top-1 h-5 w-5 rounded-full bg-white transition-all ${on ? "left-6" : "left-1"}`} />
+      </button>
+    </div>
+  );
+}
+
 function SignPinCard() {
   const { toast } = useToast();
   const { data, refetch } = useQuery<{ set: boolean }>({ queryKey: ["/api/pro/sign-pin"] });

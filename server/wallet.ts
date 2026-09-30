@@ -13,7 +13,7 @@
 // ════════════════════════════════════════════════════════════════════════
 import { sql } from "drizzle-orm";
 import { db } from "./db";
-import { SPLITS, splitConsultation, splitRelay } from "@shared/splits";
+import { SPLITS, splitConsultation, splitRelay, splitPeer } from "@shared/splits";
 import { normalizeCmPhone, opOf } from "@shared/phone";
 
 const rows = (x: any): any[] => (x?.rows ?? x ?? []) as any[];
@@ -111,12 +111,81 @@ export async function refundRelayCase(caseId: number): Promise<void> {
   await db.execute(sql`UPDATE platform_ledger SET status = 'refunded', updated_at = NOW() WHERE type = 'relay_review' AND source_id = ${source} AND status = 'escrow'`);
 }
 
+// ── Avis entre confrères : 80 % au confrère, 20 % à GlowScan ─────────────
+// Payé depuis le portefeuille du demandeur (argent déjà vérifié) : réservé à
+// l'envoi, débité à la réponse, rendu si le délai est dépassé. Portefeuille
+// insuffisant : Mobile Money, crédité seulement après vérification de l'ID.
+
+/** Réserve le prix sur le portefeuille du demandeur. Refus si le disponible est insuffisant. */
+export async function reservePeerReview(reviewId: number, requesterId: number, priceFcfa: number): Promise<void> {
+  const { available } = await proBalances(requesterId);
+  if (available < priceFcfa) throw new WalletError("INSUFFICIENT", `Solde disponible insuffisant (${available} FCFA)`);
+  await db.execute(sql`
+    INSERT INTO wallet_ledger (pro_id, type, gross_fcfa, share_pct, amount_fcfa, source_id, status)
+    VALUES (${requesterId}, 'peer_review', ${priceFcfa}, NULL, ${-priceFcfa}, ${`peer_review:${reviewId}:request`}, 'reserved')
+    ON CONFLICT (pro_id, type, source_id) DO NOTHING`);
+}
+
+/** Paiement Mobile Money VÉRIFIÉ d'un avis confrère (portefeuille insuffisant). */
+export async function recordPeerMomoPayment(reviewId: number, operatorTxnId: string): Promise<void> {
+  const txn = String(operatorTxnId || "").trim();
+  if (!isOperatorTxnId(txn)) throw new WalletError("TXN_REQUIRED", "ID de transaction de l'opérateur requis");
+  const r: any = rows(await db.execute(sql`SELECT id, price_fcfa FROM peer_reviews WHERE id = ${reviewId}`))[0];
+  if (!r) throw new WalletError("NOT_FOUND", "Avis introuvable");
+  const used: any = rows(await db.execute(sql`
+    SELECT source_id FROM platform_ledger WHERE operator_txn_id = ${txn} AND type <> 'withdrawal' LIMIT 1`))[0];
+  const source = `peer_review:${reviewId}`;
+  if (used && used.source_id !== source) throw new WalletError("TXN_ALREADY_USED", `Cet ID de transaction a déjà servi (${used.source_id})`);
+  const gross = Number(r.price_fcfa) || 0;
+  // Argent reçu, bloqué jusqu'à la réponse : la part GlowScan porte l'ID de transaction.
+  await db.execute(sql`
+    INSERT INTO platform_ledger (type, gross_fcfa, share_pct, amount_fcfa, source_id, operator_txn_id, status)
+    VALUES ('peer_review', ${gross}, ${SPLITS.peer.platform}, ${splitPeer(gross).platform}, ${source}, ${txn}, 'escrow')
+    ON CONFLICT (type, source_id) DO NOTHING`);
+}
+
+/** Avis rendu : débit définitif du demandeur, 80 % au confrère, 20 % à GlowScan. */
+export async function settlePeerReview(reviewId: number, requesterId: number, answererId: number): Promise<{ peer: number }> {
+  const r: any = rows(await db.execute(sql`SELECT price_fcfa, payment_status FROM peer_reviews WHERE id = ${reviewId}`))[0];
+  if (!r) throw new WalletError("NOT_FOUND", "Avis introuvable");
+  const gross = Number(r.price_fcfa) || 0;
+  const split = splitPeer(gross);
+  const source = `peer_review:${reviewId}`;
+  if (r.payment_status === "reserved") {
+    await db.execute(sql`UPDATE wallet_ledger SET status = 'settled', updated_at = NOW()
+      WHERE pro_id = ${requesterId} AND type = 'peer_review' AND source_id = ${`${source}:request`} AND status = 'reserved'`);
+    await db.execute(sql`
+      INSERT INTO platform_ledger (type, gross_fcfa, share_pct, amount_fcfa, source_id, status)
+      VALUES ('peer_review', ${gross}, ${SPLITS.peer.platform}, ${split.platform}, ${source}, 'available')
+      ON CONFLICT (type, source_id) DO NOTHING`);
+  } else if (r.payment_status === "paid") {
+    await db.execute(sql`UPDATE platform_ledger SET status = 'available', updated_at = NOW()
+      WHERE type = 'peer_review' AND source_id = ${source} AND status = 'escrow'`);
+  } else {
+    throw new WalletError("BAD_STATE", "Avis non payé");
+  }
+  await db.execute(sql`
+    INSERT INTO wallet_ledger (pro_id, type, gross_fcfa, share_pct, amount_fcfa, source_id, status)
+    VALUES (${answererId}, 'peer_review', ${gross}, ${SPLITS.peer.peer}, ${split.peer}, ${source}, 'available')
+    ON CONFLICT (pro_id, type, source_id) DO NOTHING`);
+  return { peer: split.peer };
+}
+
+/** Délai dépassé : la réservation est rendue (ou le Mobile Money est à rembourser). */
+export async function refundPeerReview(reviewId: number, requesterId: number): Promise<void> {
+  const source = `peer_review:${reviewId}`;
+  await db.execute(sql`UPDATE wallet_ledger SET status = 'refunded', updated_at = NOW()
+    WHERE pro_id = ${requesterId} AND type = 'peer_review' AND source_id = ${`${source}:request`} AND status = 'reserved'`);
+  await db.execute(sql`UPDATE platform_ledger SET status = 'refunded', updated_at = NOW()
+    WHERE type = 'peer_review' AND source_id = ${source} AND status = 'escrow'`);
+}
+
 // ── Soldes et mouvements ──────────────────────────────────────────────────
 
 export async function proBalances(proId: number): Promise<{ available: number; held: number }> {
   const r: any = rows(await db.execute(sql`
     SELECT
-      COALESCE(SUM(amount_fcfa) FILTER (WHERE status = 'available' OR (amount_fcfa < 0 AND status IN ('pending', 'paid_out'))), 0)::int AS available,
+      COALESCE(SUM(amount_fcfa) FILTER (WHERE status = 'available' OR (amount_fcfa < 0 AND status IN ('pending', 'paid_out', 'reserved', 'settled'))), 0)::int AS available,
       COALESCE(SUM(amount_fcfa) FILTER (WHERE status = 'escrow'), 0)::int AS held
     FROM wallet_ledger WHERE pro_id = ${proId}`))[0] || {};
   return { available: Number(r.available) || 0, held: Number(r.held) || 0 };

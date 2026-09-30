@@ -31,7 +31,6 @@ import {
   useUpdatePatientStatus,
   useAddFollowUpPhoto,
   useFollowUpReminder,
-  useCreatePeerReview,
   useTrackPatientOpen,
 } from "@/hooks/use-pro";
 import { Users, Lock } from "lucide-react";
@@ -448,7 +447,7 @@ export default function ProPatient() {
 
       {lastScan && <EvolutionSection scan={lastScan as any} patientId={p.id} />}
       {scans.length > 0 && !isSecretary && <FollowUpReminderCard patient={p as any} patientId={p.id} />}
-      {lastScan && !isSecretary && <PeerReviewButton scanId={(lastScan as any).id} condition={dxOf(lastScan)} />}
+      {lastScan && !isSecretary && <PeerReviewButton patientId={p.id} />}
 
       {scans.length > 0 && (
         <h3 className="m-0 mt-2 text-[22px]">Détail des analyses</h3>
@@ -1032,62 +1031,23 @@ function FollowUpReminderCard({ patient, patientId }: { patient: any; patientId:
 }
 
 // ── Demander un second avis à un confrère (cas anonymisé) ──────────────────
-function PeerReviewButton({ scanId, condition }: { scanId: number; condition: string }) {
-  const { toast } = useToast();
+function PeerReviewButton({ patientId }: { patientId: number }) {
   const [, navigate] = useWouterLocation();
-  const create = useCreatePeerReview();
-  const [open, setOpen] = useState(false);
-  const [question, setQuestion] = useState("");
-
-  const submit = async () => {
-    if (question.trim().length < 3) { toast({ title: "Précisez votre question", variant: "destructive" }); return; }
-    try {
-      await create.mutateAsync({ scanId, question: question.trim() });
-      toast({ title: "Cas envoyé au réseau ", description: "Vous serez notifié des réponses des confrères." });
-      setOpen(false); setQuestion("");
-      navigate("/derm/confreres");
-    } catch (e: any) { toast({ title: "Erreur", description: e?.message, variant: "destructive" }); }
-  };
-
   return (
     <ProCard className="p-5 mb-4">
       <div className="flex items-center gap-2 mb-1">
         <Users className="w-4 h-4" style={{ color: "var(--color-accent-700)" }} />
         <p className="text-[11px] font-extrabold uppercase tracking-wider" style={{ color: DS.muted }}>Second avis confrère</p>
       </div>
-      {!open ? (
-        <>
-          <p className="text-xs mb-3" style={{ color: DS.body }}>
-            Cas difficile ? Demandez l'avis d'un confrère du réseau GlowScan. Seuls la photo, l'âge/sexe et
-            votre question sont partagés — <strong style={{ color: INK }}>jamais le nom du patient</strong>.
-          </p>
-          <button onClick={() => setOpen(true)} data-testid="button-ask-peer"
-            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full text-white text-sm font-extrabold active:scale-[0.98] transition-all"
-            style={{ background: "var(--color-accent-700)" }}>
-            <Users className="w-4 h-4" /> Demander un 2ᵉ avis
-          </button>
-        </>
-      ) : (
-        <div className="space-y-2">
-          <div className="inline-flex items-center gap-1.5 text-[11px] font-bold mb-1" style={{ color: "var(--color-accent-2-700)" }}>
-            <Lock className="w-3 h-3" /> Cas anonymisé — {condition}
-          </div>
-          <textarea value={question} onChange={(e) => setQuestion(e.target.value)} rows={3} autoFocus
-            placeholder="Ex : Lésion pigmentée évoluant depuis 3 mois, avis sur indication de biopsie ?"
-            data-testid="input-peer-question"
-            className="w-full px-3 py-2 rounded-xl text-sm outline-none resize-none" style={{ background: "var(--color-bg)", border: `1px solid ${DS.border}`, color: INK }} />
-          <div className="flex gap-2">
-            <button onClick={submit} disabled={create.isPending}
-              className="flex-1 py-2.5 rounded-full text-white text-sm font-extrabold disabled:opacity-50" style={{ background: "var(--color-accent-700)" }} data-testid="button-submit-peer">
-              {create.isPending ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Envoyer au réseau"}
-            </button>
-            <button onClick={() => { setOpen(false); setQuestion(""); }}
-              className="px-4 py-2.5 rounded-full text-sm font-extrabold" style={{ background: "var(--color-bg)", border: `1px solid ${DS.border}`, color: DS.body }}>
-              Annuler
-            </button>
-          </div>
-        </div>
-      )}
+      <p className="text-xs mb-3" style={{ color: DS.body }}>
+        Cas difficile ? Envoyez-le anonymisé à un confrère du réseau GlowScan. Le nom et le téléphone du patient sont masqués ;
+        vous floutez les photos avant l'envoi.
+      </p>
+      <button onClick={() => navigate(`/derm/confreres?envoyer=${patientId}`)} data-testid="button-ask-peer"
+        className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full text-white text-sm font-extrabold active:scale-[0.98] transition-all"
+        style={{ background: "var(--color-accent-700)" }}>
+        <Users className="w-4 h-4" /> Demander un second avis
+      </button>
     </ProCard>
   );
 }

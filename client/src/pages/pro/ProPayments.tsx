@@ -33,6 +33,10 @@ function moveLabel(m: Move): { label: string; sub: string } {
         label: "Avis de télé-expertise",
         sub: m.status === "escrow" ? "Bloqué jusqu'à la réponse du dermatologue" : m.status === "refunded" ? "Remboursé (délai dépassé)" : `${m.share_pct ?? ""} % de l'avis`,
       };
+    case "peer_review":
+      return m.amount_fcfa < 0
+        ? { label: "Avis demandé à un confrère", sub: m.status === "reserved" ? "Réservé jusqu'à la réponse" : m.status === "refunded" ? "Rendu (délai dépassé)" : "Payé au confrère" }
+        : { label: "Avis rendu à un confrère", sub: `${m.share_pct ?? ""} % de l'avis` };
     case "withdrawal": return { label: "Retrait Mobile Money", sub: m.status === "pending" ? "En cours de virement" : d };
     case "subscription": return { label: "Abonnement GlowScan Derm", sub: "Payé par vos gains" };
     default: return { label: m.type, sub: d };

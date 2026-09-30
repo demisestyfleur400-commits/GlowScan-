@@ -8,6 +8,7 @@ import { buildRelanceMessage, withFollowupFooter, buildApptJ1Message, buildApptH
 import { productsAllowed, resultStateOf } from "@shared/resultB2C";
 import { normalizeCmPhone } from "@shared/phone";
 import { stopLinkSig, followupsStoppedAt } from "./consents";
+import { runPeerDeadlines } from "./peerRoutes";
 import { refundConsultation, refundRelayCase, chargeSubscriptionFromEarnings, proBalances, requestWithdrawal } from "./wallet";
 import { PRO_SUBSCRIPTION_FCFA } from "@shared/premium";
 const APP_BASE = (process.env.PUBLIC_BASE_URL || "https://glow-scan.com").replace(/\/$/, "");
@@ -971,6 +972,11 @@ export function startCronJobs() {
   cron.schedule("*/30 * * * *", sendVisitReportReminders, { timezone: "Africa/Douala" });
   // Réseau : délais des avis relais (simple 24 h, urgent 2 h).
   cron.schedule("*/10 * * * *", flagRelayDeadlines, { timezone: "Africa/Douala" });
+  // Confrères : premier disponible sans preneur, rappel avant échéance, délai dépassé → remboursement.
+  cron.schedule("*/10 * * * *", async () => {
+    try { const r = await runPeerDeadlines(); if (r.reoffered || r.expired) log(`🤝 Avis confrères : ${r.reoffered} reproposé(s), ${r.expired} hors délai`); }
+    catch (e) { log(`❌ Erreur délais avis confrères : ${e}`); }
+  }, { timezone: "Africa/Douala" });
   log("✅ Cron rappels RDV H-2 actif — toutes les 15 min (Douala)");
 
   // ✅ Rappel B2C « plus tard » (score bas) — toutes les heures

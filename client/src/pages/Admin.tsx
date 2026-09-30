@@ -237,7 +237,13 @@ export default function Admin() {
       const r = await fetch("/api/admin/relay-cases", { headers: { "x-admin-key": key } });
       if (r.ok) setRelayCases((await r.json()).cases || []);
     } catch {}
+    // Avis confrères (étape 8) : Mobile Money à vérifier, remboursements à faire.
+    try {
+      const r = await fetch("/api/admin/peer-momo", { headers: { "x-admin-key": key } });
+      if (r.ok) setPeerMomo((await r.json()).items || []);
+    } catch {}
   };
+  const [peerMomo, setPeerMomo] = useState<any[]>([]);
   const [relayCases, setRelayCases] = useState<any[]>([]);
   const confirmRelay = async (id: number, declared?: string | null) => {
     const operatorRef = window.prompt("ID de transaction de l'opérateur (vérifié sur votre relevé Mobile Money)", declared || "")?.trim();
@@ -546,7 +552,7 @@ export default function Admin() {
             {[
               { key: "dataset", label: "Dataset", icon: Stethoscope, badge: datasetStats?.pending || 0, activeColor: "#10b981" },
               { key: "iavsdoc", label: "IA vs Médecin", icon: BarChart2, badge: 0, activeColor: "#7c3aed" },
-              { key: "rapprochement", label: "Rapprochement", icon: MessageCircle, badge: (recon?.toVerify?.length || 0) + (recon?.withdrawalsPending?.length || 0) + relayCases.filter((c: any) => c.operator_txn_id || c.status === "refund_due" || c.payment_status === "program_pending").length, activeColor: "#b45309" },
+              { key: "rapprochement", label: "Rapprochement", icon: MessageCircle, badge: (recon?.toVerify?.length || 0) + (recon?.withdrawalsPending?.length || 0) + relayCases.filter((c: any) => c.operator_txn_id || c.status === "refund_due" || c.payment_status === "program_pending").length + peerMomo.length, activeColor: "#b45309" },
               { key: "programmes", label: "Programmes", icon: Store, badge: 0, activeColor: "#10b981" },
               { key: "consults", label: "Consultations", icon: MessageCircle, badge: consults.filter((c) => c.paymentStatus !== "paid").length, activeColor: "#10b981" },
               { key: "revenus", label: "Revenus", icon: DollarSign, badge: 0, activeColor: "#22c55e" },
@@ -1307,6 +1313,24 @@ export default function Admin() {
                       ) : c.operator_txn_id ? (
                         <button onClick={() => confirmRelay(c.id, c.operator_txn_id)} className="px-3 py-1.5 rounded-xl text-xs font-extrabold text-white" style={{ background: "#10b981" }}>Vérifié</button>
                       ) : null}
+                    </div>
+                  ))}
+                </div>
+
+                <div className="rounded-2xl p-4 space-y-2" style={{ background: DS.surface, border: `1px solid ${DS.border}` }}>
+                  <p className="text-sm font-extrabold" style={{ color: DS.text }}>Avis confrères ({peerMomo.length})</p>
+                  {peerMomo.length === 0 && <p className="text-xs" style={{ color: DS.muted }}>Rien à vérifier.</p>}
+                  {peerMomo.map((c: any) => (
+                    <div key={c.id} className="flex items-center justify-between gap-2 text-sm">
+                      <span style={{ color: DS.body }}>
+                        #{c.id} · Dr {String(c.requester || "").replace(/^dr\.?\s*/i, "")} · {c.tier === "urgent" ? "urgent" : "simple"} · {(c.price_fcfa || 0).toLocaleString("fr-FR")} FCFA
+                        {c.payment_status === "refund_due" ? " · délai dépassé, à rembourser" : <> · ID déclaré : <b>{c.operator_txn_id}</b></>}
+                      </span>
+                      {c.payment_status === "refund_due" ? (
+                        <button onClick={() => { const ref = window.prompt("ID de transaction du remboursement")?.trim(); if (ref) reconPost(`/api/admin/peer-momo/${c.id}/refunded`, { operatorRef: ref }); }} className="px-3 py-1.5 rounded-xl text-xs font-extrabold text-white" style={{ background: "#b45309" }}>Remboursé</button>
+                      ) : (
+                        <button onClick={() => { const ref = window.prompt("ID de transaction de l'opérateur (vérifié sur votre relevé Mobile Money)", c.operator_txn_id || "")?.trim(); if (ref) reconPost(`/api/admin/peer-momo/${c.id}/confirm`, { operatorRef: ref }); }} className="px-3 py-1.5 rounded-xl text-xs font-extrabold text-white" style={{ background: "#10b981" }}>Vérifié</button>
+                      )}
                     </div>
                   ))}
                 </div>

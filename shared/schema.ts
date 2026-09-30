@@ -369,7 +369,9 @@ export const proAccounts = pgTable("pro_accounts", {
   onboardingDone: boolean("onboarding_done").default(false),
   consentSignedAt: timestamp("consent_signed_at").notNull(),
   profile: varchar("profile", { length: 10 }).notNull().default("derm"), // derm | relay | ngo (migration 0019)
-  relayLevel: smallint("relay_level").notNull().default(0),            // 3 = Formateur (promu par le référent), migration 0022
+  relayLevel: smallint("relay_level").notNull().default(0),
+  peerAvailable: boolean("peer_available").notNull().default(true),     // disponible pour les avis confrères (migration 0024)
+  country: varchar("country", { length: 40 }),            // 3 = Formateur (promu par le référent), migration 0022
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -838,3 +840,30 @@ export const relayProgress = pgTable("relay_progress", {
 
 export type RelayCase = typeof relayCases.$inferSelect;
 export type RelayProgress = typeof relayProgress.$inferSelect;
+
+// ════════════════════════════════════════════════════════════════════════
+// Confrères (migration 0024) — conversations entre dermatologues.
+// « case » : lié à un avis payant sur cas complexe (table peer_reviews, SQL brut) ;
+// « chat » : discussion libre. to_pro NULL tant qu'un « premier disponible » n'a pas accepté.
+// ════════════════════════════════════════════════════════════════════════
+export const peerThreads = pgTable("peer_threads", {
+  id: serial("id").primaryKey(),
+  fromPro: integer("from_pro").notNull().references(() => proAccounts.id, { onDelete: "cascade" }),
+  toPro: integer("to_pro").references(() => proAccounts.id, { onDelete: "cascade" }),
+  kind: varchar("kind", { length: 10 }).notNull(),
+  caseId: integer("case_id"),
+  unreadFrom: integer("unread_from").notNull().default(0),
+  unreadTo: integer("unread_to").notNull().default(0),
+  lastMessageAt: timestamp("last_message_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const peerMessages = pgTable("peer_messages", {
+  id: serial("id").primaryKey(),
+  threadId: integer("thread_id").notNull().references(() => peerThreads.id, { onDelete: "cascade" }),
+  authorPro: integer("author_pro").notNull().references(() => proAccounts.id, { onDelete: "cascade" }),
+  kind: varchar("kind", { length: 10 }).notNull().default("text"), // text | avis | system
+  body: text("body"),
+  structured: jsonb("structured"),                                   // { answer, dx, ddx, plan }
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});

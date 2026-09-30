@@ -68,7 +68,7 @@ const ProStats = lazyWithRetry(() => import("@/pages/pro/ProStats"));
 const ProPayments = lazyWithRetry(() => import("@/pages/pro/ProPayments"));
 const ProCabinet = lazyWithRetry(() => import("@/pages/pro/ProCabinet"));
 const ProPublicProfile = lazyWithRetry(() => import("@/pages/pro/ProPublicProfile"));
-const ProPeerReviews = lazyWithRetry(() => import("@/pages/pro/ProPeerReviews"));
+const ProConfreres = lazyWithRetry(() => import("@/pages/pro/ProConfreres"));
 const ProProfil = lazyWithRetry(() => import("@/pages/pro/ProProfil"));
 const ProMagicLink = lazyWithRetry(() => import("@/pages/pro/ProMagicLink"));
 const DermOnboarding = lazyWithRetry(() => import("@/pages/pro/DermOnboarding"));
@@ -143,7 +143,7 @@ function Router() {
       <Route path="/derm/consultations" component={ProConsultations} />
       <Route path="/derm/agenda" component={ProAgenda} />
       <Route path="/derm/accueil" component={ProAccueil} />
-      <Route path="/derm/confreres" component={ProPeerReviews} />
+      <Route path="/derm/confreres" component={ProConfreres} />
       <Route path="/derm/profil" component={ProProfil} />
       <Route path="/derm/magic" component={ProMagicLink} />
       <Route path="/derm/relais" component={RelayHome} />

@@ -100,7 +100,7 @@ export function useProNotifications(userId?: string | null) {
           import("@/hooks/use-toast").then(({ toast }) => {
             toast({ title: n.title || "Nouvelle notification", description: n.body || "" });
           }).catch(() => {});
-          queryClient.invalidateQueries({ queryKey: ["/api/pro/peer-reviews"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/peer/threads"] });
         }
       } catch {}
     };
