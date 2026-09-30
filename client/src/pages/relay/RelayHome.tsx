@@ -13,6 +13,7 @@ import { splitRelay } from "@shared/splits";
 import { formatF } from "@shared/delivery";
 import { relayCaseRef, answeredIn, relayAnswer, type PhotoQuality } from "@shared/teleexpertise";
 import { TeleexpertiseReport } from "@/components/pro/TeleexpertiseReport";
+import { RelayOnboarding, type Onboarding } from "@/components/relay/RelayOnboarding";
 
 // ════════════════════════════════════════════════════════════════════════
 // Espace relais (infirmier / médecin d'un CSI) — maquette « Derm Reseau »,
@@ -81,10 +82,13 @@ export default function RelayHome() {
   }, [accLoading, acc, accData, isRelay, setLocation]);
 
   const { data: me } = useQuery<Me>({ queryKey: ["/api/relay/me"], enabled: isRelay });
+  const { data: onb } = useQuery<Onboarding | { status: "missing" }>({ queryKey: ["/api/relay/onboarding"], enabled: isRelay });
   const { data: casesData } = useQuery<{ cases: Case[] }>({ queryKey: ["/api/relay/cases"], enabled: isRelay });
-  const refresh = () => { qc.invalidateQueries({ queryKey: ["/api/relay/me"] }); qc.invalidateQueries({ queryKey: ["/api/relay/cases"] }); };
+  const refresh = () => { qc.invalidateQueries({ queryKey: ["/api/relay/me"] }); qc.invalidateQueries({ queryKey: ["/api/relay/cases"] }); qc.invalidateQueries({ queryKey: ["/api/relay/onboarding"] }); };
 
-  if (accLoading || !isRelay || !me) return <LoadingScreen />;
+  if (accLoading || !isRelay || !me || !onb) return <LoadingScreen />;
+  // Étape 10 : tant que carte, parrain et module photo ne sont pas validés, écran R2.
+  const onboarding = onb.status !== "missing" && onb.status !== "active" ? (onb as Onboarding) : null;
 
   const cases = casesData?.cases || [];
   const pending = cases.filter((c) => c.status !== "answered" && c.status !== "autonomous");
@@ -114,7 +118,9 @@ export default function RelayHome() {
           <p className="m-0 text-[15px] text-organic-neutral-700">Chaque cas que vous envoyez est validé par un dermatologue. Chaque validation vous apprend quelque chose.</p>
         </header>
 
-        {!me.referent ? (
+        {onboarding ? (
+          <RelayOnboarding o={onboarding} onChange={refresh} />
+        ) : !me.referent ? (
           <ReferentPicker onDone={refresh} />
         ) : (
           <>

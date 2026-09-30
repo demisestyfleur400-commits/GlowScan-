@@ -8,6 +8,7 @@ import { registerRelayRoutes } from "./relayRoutes";
 import { registerProgramRoutes } from "./programRoutes";
 import { registerPeerRoutes } from "./peerRoutes";
 import { registerReportRoutes } from "./reportRoutes";
+import { registerRelayOnboardingRoutes } from "./relayOnboarding";
 import { registerProRoutes } from "./proRoutes";
 import { analyzeLimiter, consultationLimiter, paymentLimiter, emailReportLimiter } from "./rateLimit";
 import { objectStorageClient } from "./replit_integrations/object_storage/objectStorage";
@@ -421,6 +422,7 @@ export async function registerRoutes(
   registerProgramRoutes(app, { checkAdmin: checkDatasetKey });
   registerPeerRoutes(app, { checkAdmin: checkDatasetKey });
   registerReportRoutes(app);
+  registerRelayOnboardingRoutes(app, { checkAdmin: checkDatasetKey });
 
   // ══ Diagnostic santé IA — ouvrir /api/ai-health dans le navigateur ══
   // Teste un appel minimal au modèle courant et renvoie l'erreur BRUTE du fournisseur

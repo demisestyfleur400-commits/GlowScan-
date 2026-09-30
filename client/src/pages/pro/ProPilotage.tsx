@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { LoadingScreen } from "@/components/ProLayout";
 import { DermBrand } from "@/components/pro/DermAuthShell";
 import { PilotageView, type ProgramDashboard } from "@/components/pro/PilotageView";
+import { InviteRelays, CsvInvite } from "@/components/relay/InviteRelays";
 import { useAuth } from "@/hooks/use-auth";
 import { useProAccount } from "@/hooks/use-pro";
 import { asProProfile, proHomeOf } from "@shared/proProfile";
@@ -73,6 +74,12 @@ export default function ProPilotage() {
         ) : (
           <>
             <PilotageView d={dash} range={range} onRange={setRange} />
+            {pid && (
+              <section className="grid items-start gap-organic-4 lg:grid-cols-2">
+                <InviteRelays programId={pid} />
+                <CsvInvite programId={pid} />
+              </section>
+            )}
             <div className="flex flex-col gap-1 rounded-card bg-organic-surface p-organic-6">
               <span className="font-heading text-[20px]">Rapport au bailleur</span>
               <span className="text-[13px] text-organic-neutral-800">Chaque mois, GlowScan relit puis envoie le rapport (chiffres clés, districts, progression des agents qui l'acceptent) à l'email du bailleur.</span>

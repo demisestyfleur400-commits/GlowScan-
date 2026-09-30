@@ -106,7 +106,10 @@ export default function ProConnexion({ initialMode = "signin" }: { initialMode?:
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.includes("@")) return setError("Entrez un email valide.");
+    // Relais : inscription par téléphone sur /rejoindre (écran R1).
+    if (signup && profile === "relay") { setLocation("/rejoindre"); return; }
+    // Connexion : email, ou téléphone pour les relais.
+    if (!email.includes("@") && (signup || email.replace(/\D/g, "").length < 9)) return setError(signup ? "Entrez un email valide." : "Entrez votre email ou, pour un relais, votre téléphone.");
     if (pw.length < (signup ? 8 : 1)) return setError(signup ? "Mot de passe trop court : 8 caractères minimum." : "Entrez votre mot de passe.");
     if (signup && !fullName.trim()) return setError("Entrez votre nom complet.");
     if (signup && !consent) return setError("Acceptez les conditions d'utilisation pour continuer.");
@@ -201,6 +204,12 @@ export default function ProConnexion({ initialMode = "signin" }: { initialMode?:
                     })}
                   </div>
                 </div>
+                {profile === "relay" && (
+                  <div className="flex flex-col gap-2 rounded-card bg-organic-accent-2-100 p-organic-3 text-[13px] text-organic-accent-2-900" data-testid="relay-signup-hint">
+                    Les relais s'inscrivent avec leur téléphone, leur carte professionnelle et un code SMS.
+                    <Link href="/rejoindre" className="font-bold text-organic-accent-2-800 underline">Continuer avec mon téléphone</Link>
+                  </div>
+                )}
                 <AuthField label="Nom complet">
                   <Input className={authInput} value={fullName} onChange={(e) => { setFullName(e.target.value); setError(""); }}
                     placeholder="Dr Aïcha Nkemdirim" autoComplete="name" data-testid="input-name" />
@@ -208,9 +217,9 @@ export default function ProConnexion({ initialMode = "signin" }: { initialMode?:
               </>
             )}
 
-            <AuthField label="Email professionnel">
-              <Input className={authInput} type="email" value={email} onChange={(e) => { setEmail(e.target.value); setError(""); }}
-                placeholder="vous@cabinet.cm" autoComplete="email" data-testid="input-email" />
+            <AuthField label={signup ? "Email professionnel" : "Email (ou téléphone pour les relais)"}>
+              <Input className={authInput} type={signup ? "email" : "text"} value={email} onChange={(e) => { setEmail(e.target.value); setError(""); }}
+                placeholder={signup ? "vous@cabinet.cm" : "vous@cabinet.cm ou +237 6XX XX XX XX"} autoComplete={signup ? "email" : "username"} data-testid="input-email" />
             </AuthField>
             <AuthField label="Mot de passe">
               <div className="relative">

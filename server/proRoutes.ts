@@ -1,3 +1,4 @@
+import { intlPhone, phoneAccountEmail, maskPhone } from "@shared/relayOnboarding";
 import type { Express } from "express";
 import { ensureRls } from "./ensureRls";
 import { db } from "./db";
@@ -76,6 +77,22 @@ export async function issueEmailOtp(userId: string, email: string, name?: string
   lastOtpSentAt.set(userId, Date.now());
   return { ok: r.ok, provider: r.provider, error: r.error };
 }
+
+// Même code que ci-dessus, envoyé par SMS (relais : comptes téléphone, étape 10). Aucun émoji.
+export async function issueSmsOtp(userId: string, phoneDigits: string): Promise<{ ok: boolean; provider: string; throttled?: boolean }> {
+  const last = lastOtpSentAt.get(userId) || 0;
+  if (Date.now() - last < OTP_SEND_COOLDOWN_MS) return { ok: true, provider: "throttled", throttled: true };
+  const code = gen6();
+  const hash = await bcrypt.hash(code, 10);
+  const expires = new Date(Date.now() + OTP_TTL_MS);
+  await db.execute(sql`UPDATE "users" SET "twofa_code_hash" = ${hash}, "twofa_code_expires" = ${expires.toISOString()}, "twofa_attempts" = 0 WHERE "id" = ${userId}`);
+  const { sendSmsText } = await import("./whatsapp");
+  const r = await sendSmsText(`+${phoneDigits}`, `GlowScan : votre code de connexion est ${code}. Il expire dans 10 minutes. Ne le communiquez à personne.`);
+  if (!r.ok && process.env.NODE_ENV !== "production") console.log(`[sms-otp] (dev) code pour ${phoneDigits} : ${code}`);
+  lastOtpSentAt.set(userId, Date.now());
+  return { ok: r.ok, provider: r.ok ? "sms" : process.env.NODE_ENV !== "production" ? "dev" : "none" };
+}
+const phoneOfAccountEmail = (email: string) => (/^tel-(\d+)@phone\.glowscan\.cm$/.exec(email || "") || [])[1] || null;
 
 // ── Codes de secours 2FA (usage unique) ────────────────────────────────────
 const BACKUP_CODE_COUNT = 8;
@@ -355,7 +372,7 @@ Réponds en texte simple (pas de JSON, pas de Markdown lourd).`;
 const OWNER_WHATSAPP = "237674377959";
 // Email du propriétaire de la plateforme (notifications d'activité). Surchargeable.
 const OWNER_EMAIL = process.env.OWNER_EMAIL || "demiseessawe12@gmail.com";
-async function notifyOwner(subject: string, html: string, text: string) {
+export async function notifyOwner(subject: string, html: string, text: string) {
   try {
     const { sendEmail } = await import("./email");
     await sendEmail(OWNER_EMAIL, subject, html, text);
@@ -556,6 +573,8 @@ export function registerProRoutes(app: Express) {
         profile: z.enum(["derm", "relay", "ngo"]).optional().default("derm"),
       });
       const data = schema.parse(req.body);
+      // Les relais s'inscrivent avec leur téléphone (écran R1, /rejoindre).
+      if (data.profile === "relay") return res.status(400).json({ code: "RELAY_SIGNUP", message: "Les relais s'inscrivent avec leur téléphone sur la page Rejoindre." });
       const emailLower = data.email.toLowerCase().trim();
       // pro_accounts.full_name est NOT NULL → si le nom n'est pas fourni (inscription
       // simplifiée), on met un libellé provisoire (partie locale de l'email), que le
@@ -681,10 +700,23 @@ export function registerProRoutes(app: Express) {
     try {
       const { email, password } = req.body;
       if (!email || !password) return res.status(400).json({ message: "Email et mot de passe requis" });
-      const emailLower = email.toLowerCase().trim();
+      // Relais : identifiant = téléphone (compte tel-…@phone.glowscan.cm, étape 10).
+      const raw = String(email).trim();
+      const asPhone = !raw.includes("@") ? intlPhone(raw) : null;
+      const emailLower = asPhone ? phoneAccountEmail(asPhone) : raw.toLowerCase();
       const [user] = await db.select().from(users).where(eq(users.email, emailLower));
       if (!user || !user.passwordHash || !(await bcrypt.compare(password, user.passwordHash))) {
-        return res.status(401).json({ message: "Email ou mot de passe incorrect" });
+        return res.status(401).json({ message: asPhone ? "Téléphone ou mot de passe incorrect" : "Email ou mot de passe incorrect" });
+      }
+
+      // ── Compte téléphone (relais) : 2e facteur par SMS, toujours.
+      const phoneDigits = phoneOfAccountEmail(user.email || "");
+      if (phoneDigits) {
+        (req.session as any).pending2faUserId = user.id;
+        const otp = await issueSmsOtp(user.id, phoneDigits);
+        return req.session.save(() => {
+          res.json({ requires2fa: true, method: "sms", emailSent: otp.ok, emailHint: `votre téléphone ${maskPhone(phoneDigits)}`, devFallback: otp.provider === "dev" });
+        });
       }
 
       // ── 2FA email : mot de passe OK mais on n'ouvre PAS encore la session.
@@ -785,6 +817,11 @@ export function registerProRoutes(app: Express) {
       if (!pendingId) return res.status(440).json({ message: "Session de connexion expirée." });
       const [user] = await db.select().from(users).where(eq(users.id, pendingId));
       if (!user) return res.status(401).json({ message: "Utilisateur introuvable" });
+      const phoneDigits = phoneOfAccountEmail(user.email || "");
+      if (phoneDigits) {
+        const otp = await issueSmsOtp(user.id, phoneDigits);
+        return res.json({ success: true, emailSent: otp.ok, emailHint: `votre téléphone ${maskPhone(phoneDigits)}`, devFallback: otp.provider === "dev" });
+      }
       const otp = await issueEmailOtp(user.id, user.email, (user as any).firstName);
       res.json({ success: true, emailSent: otp.ok, emailHint: maskEmail(user.email), devFallback: otp.provider === "dev" });
     } catch (err) {

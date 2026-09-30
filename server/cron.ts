@@ -9,6 +9,7 @@ import { productsAllowed, resultStateOf } from "@shared/resultB2C";
 import { normalizeCmPhone } from "@shared/phone";
 import { stopLinkSig, followupsStoppedAt } from "./consents";
 import { runPeerDeadlines } from "./peerRoutes";
+import { runInvitationReminders } from "./relayOnboarding";
 import { refundConsultation, refundRelayCase, chargeSubscriptionFromEarnings, proBalances, requestWithdrawal } from "./wallet";
 import { PRO_SUBSCRIPTION_FCFA } from "@shared/premium";
 const APP_BASE = (process.env.PUBLIC_BASE_URL || "https://glow-scan.com").replace(/\/$/, "");
@@ -976,6 +977,11 @@ export function startCronJobs() {
   cron.schedule("*/10 * * * *", async () => {
     try { const r = await runPeerDeadlines(); if (r.reoffered || r.expired) log(`🤝 Avis confrères : ${r.reoffered} reproposé(s), ${r.expired} hors délai`); }
     catch (e) { log(`❌ Erreur délais avis confrères : ${e}`); }
+  }, { timezone: "Africa/Douala" });
+  // Relais : invitations relancées à J+2 et J+7 (10 h), expirées après 14 jours.
+  cron.schedule("0 10 * * *", async () => {
+    try { const r = await runInvitationReminders(); if (r.reminded || r.expired) log(`Invitations relais : ${r.reminded} relance(s), ${r.expired} expirée(s)`); }
+    catch (e) { log(`❌ Erreur relances invitations relais : ${e}`); }
   }, { timezone: "Africa/Douala" });
   log("✅ Cron rappels RDV H-2 actif — toutes les 15 min (Douala)");
 

@@ -908,3 +908,74 @@ export const prescriptions = pgTable("prescriptions", {
   revokedAt: timestamp("revoked_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
+
+// ── Entrée des relais (étape 10, migration 0027) ─────────────────────────
+export const healthCenters = pgTable("health_centers", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  country: varchar("country", { length: 40 }),
+  district: text("district"),
+  dhis2OrgUnitUid: varchar("dhis2_org_unit_uid", { length: 20 }),
+  lat: decimal("lat"),
+  lng: decimal("lng"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const relays = pgTable("relays", {
+  id: serial("id").primaryKey(),
+  proAccountId: integer("pro_account_id").notNull().unique().references(() => proAccounts.id, { onDelete: "cascade" }),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  profession: varchar("profession", { length: 10 }).notNull(),            // nurse | gp | midwife
+  healthCenterId: integer("health_center_id").references(() => healthCenters.id),
+  country: varchar("country", { length: 40 }),
+  status: varchar("status", { length: 20 }).notNull().default("pending_card"), // invited | pending_card | pending_sponsor | pending_training | active | suspended
+  cardFrontUrl: text("card_front_url"),                                    // privé : lu par l'admin seulement
+  cardSelfieUrl: text("card_selfie_url"),
+  orderNumber: text("order_number"),
+  cardStatus: varchar("card_status", { length: 10 }).notNull().default("pending"), // pending | verified | rejected
+  cardRejectReason: text("card_reject_reason"),
+  sponsorType: varchar("sponsor_type", { length: 10 }),                   // derm | program | glowscan
+  sponsorId: integer("sponsor_id"),
+  verifiedBy: text("verified_by"),
+  verifiedAt: timestamp("verified_at"),
+  phoneVerifiedAt: timestamp("phone_verified_at"),
+  trainingPassedAt: timestamp("training_passed_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const invitations = pgTable("invitations", {
+  id: serial("id").primaryKey(),
+  inviterType: varchar("inviter_type", { length: 10 }).notNull(),         // derm | program
+  inviterId: integer("inviter_id").notNull(),
+  programId: integer("program_id").references(() => programs.id, { onDelete: "set null" }),
+  phone: varchar("phone", { length: 20 }).notNull(),
+  name: text("name"),
+  center: text("center"),
+  token: varchar("token", { length: 40 }).notNull().unique(),
+  sentVia: varchar("sent_via", { length: 10 }).notNull(),                 // sms | link | csv
+  status: varchar("status", { length: 10 }).notNull().default("sent"),    // sent | accepted | expired
+  expiresAt: timestamp("expires_at").notNull(),
+  remindedJ2At: timestamp("reminded_j2_at"),
+  remindedJ7At: timestamp("reminded_j7_at"),
+  acceptedBy: integer("accepted_by").references(() => proAccounts.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const trainingModules = pgTable("training_modules", {
+  id: serial("id").primaryKey(),
+  code: varchar("code", { length: 20 }).notNull().unique(),
+  title: text("title").notNull(),
+  total: smallint("total").notNull(),
+  passScore: smallint("pass_score").notNull(),
+});
+
+export const trainingAttempts = pgTable("training_attempts", {
+  id: serial("id").primaryKey(),
+  relayId: integer("relay_id").notNull().references(() => relays.id, { onDelete: "cascade" }),
+  moduleId: integer("module_id").notNull().references(() => trainingModules.id),
+  score: smallint("score").notNull(),
+  total: smallint("total").notNull(),
+  answers: jsonb("answers").notNull().default([]),
+  passed: boolean("passed").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});

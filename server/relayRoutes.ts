@@ -1,3 +1,4 @@
+import { relayIsActive } from "./relayOnboarding";
 import { teleFieldsSchema } from "@shared/teleexpertise";
 import type { Express } from "express";
 import { z } from "zod";
@@ -110,6 +111,8 @@ export function registerRelayRoutes(app: Express, deps: { checkAdmin: (req: any)
   // Nouveau cas : l'hypothèse du relais est OBLIGATOIRE et enregistrée avant l'IA.
   app.post("/api/relay/cases", ...relayOnly, async (req: any, res) => {
     try {
+      // Étape 10 : carte vérifiée, parrain et module photo avant le 1er cas.
+      if (!(await relayIsActive(req.proAccount.id))) return res.status(403).json({ code: "RELAY_NOT_ACTIVE", message: "Terminez votre inscription (carte, parrain, module photo) avant d'envoyer un cas." });
       const data = z.object({
         centerName: z.string().max(120).optional().nullable(),
         patientAge: z.number().int().min(0).max(120).optional().nullable(),

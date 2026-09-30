@@ -7,6 +7,7 @@ import { splitRelay } from "@shared/splits";
 import { formatF } from "@shared/delivery";
 import { relayCaseRef } from "@shared/teleexpertise";
 import { TeleFieldsForm, emptyTeleFields, type TeleFields } from "@/components/pro/TeleexpertiseReport";
+import { InviteRelays } from "@/components/relay/InviteRelays";
 
 // ════════════════════════════════════════════════════════════════════════
 // Réseau & formation — vue du dermatologue référent (maquette « Derm Reseau »,
@@ -68,6 +69,7 @@ export default function ProReseau() {
         </div>
 
         <div className="flex flex-col gap-organic-4">
+          <InviteRelays />
           <div className={card}>
             <h3 className="m-0 text-[22px]">Mes relais</h3>
             {relays.length === 0 && <span className="text-[14px] text-organic-neutral-700">Aucun relais ne vous a encore choisi comme référent.</span>}

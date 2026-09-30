@@ -84,6 +84,7 @@ const ProPilotage = lazyWithRetry(() => import("@/pages/pro/ProPilotage"));
 const ProPaiements = lazyWithRetry(() => import("@/pages/pro/ProPaiements"));
 const ProAccueil = lazyWithRetry(() => import("@/pages/pro/ProAccueil"));
 const RelayHome = lazyWithRetry(() => import("@/pages/relay/RelayHome"));
+const Rejoindre = lazyWithRetry(() => import("@/pages/relay/Rejoindre"));
 const ProReseau = lazyWithRetry(() => import("@/pages/pro/ProReseau"));
 const Privacy = lazyWithRetry(() => import("@/pages/Privacy"));
 const DermatoPortal = lazyWithRetry(() => import("@/pages/DermatoPortal"));
@@ -164,6 +165,7 @@ function Router() {
       <Route path="/derm/register" component={ProInscription} />
       <Route path="/challenge/:token" component={Challenge} />
       <Route path="/ref/:code" component={RefRedirect} />
+      <Route path="/rejoindre" component={Rejoindre} />
       <Route path="/verif" component={Verif} />
       <Route path="/verif/:ref" component={Verif} />
       <Route component={NotFound} />
