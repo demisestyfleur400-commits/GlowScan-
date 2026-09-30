@@ -1,3 +1,7 @@
+import { relayMoney, debitCreditForCase, CreditError } from "./relayCredit";
+import { providerFor } from "./payments/provider";
+import { toLocal } from "@shared/currency";
+import { intlPhone } from "@shared/relayOnboarding";
 import { relayIsActive } from "./relayOnboarding";
 import { teleFieldsSchema } from "@shared/teleexpertise";
 import type { Express } from "express";
@@ -6,7 +10,7 @@ import { sql } from "drizzle-orm";
 import { db } from "./db";
 import { requireActivePro, notifyProAccount } from "./proRoutes";
 import { uploadScanImageToStorage } from "./routes";
-import { recordRelayPayment, releaseRelayCase, WalletError } from "./wallet";
+import { recordRelayPayment, recordRelayCreditPayment, releaseRelayCase, WalletError } from "./wallet";
 import { RELAY_TIERS, RELAY_DISEASES, isAutonomous, relayLevelOf, AUTONOMY_CONTROL_RATE, diseaseLabel, LESSON_TIPS } from "@shared/relay";
 import { splitRelay } from "@shared/splits";
 
@@ -123,8 +127,9 @@ export function registerRelayRoutes(app: Express, deps: { checkAdmin: (req: any)
         relayDiagnosis: z.string().min(2).max(200),
         relayDiseaseCode: z.string().max(40).optional().nullable(),
         tier: z.enum(["simple", "urgent"]),
-        payer: z.enum(["patient", "program"]),
+        payer: z.enum(["patient", "credit", "program"]),
         programId: z.number().int().optional().nullable(),
+        patientPhone: z.string().max(30).optional().nullable(),   // facultatif : SMS de paiement (Mobile Money)
       }).parse(req.body);
       const me = req.proAccount;
       const link = Rows(await db.execute(sql`SELECT derm_id FROM relay_links WHERE relay_id = ${me.id}`))[0];
@@ -139,6 +144,12 @@ export function registerRelayRoutes(app: Express, deps: { checkAdmin: (req: any)
         programId = Number(m.program_id);
       }
 
+      // Étape 12 : devise du relais, taux figé maintenant ; Mobile Money seulement là où il existe.
+      const money = await relayMoney(me.id);
+      if (data.payer !== "program" && !money.rate) return res.status(409).json({ message: "Taux de change indisponible pour votre devise : passez par votre programme, ou réessayez plus tard." });
+      if (data.payer === "patient" && !providerFor(money.country)) return res.status(409).json({ message: "Le paiement Mobile Money n'est pas encore disponible dans votre pays : utilisez votre crédit ou votre programme." });
+      const patientPhone = data.payer === "patient" ? intlPhone(data.patientPhone) : null;
+
       // Autonome sur cette maladie : le relais traite seul, sauf 1 cas sur 5 contrôlé.
       const prog = Rows(await db.execute(sql`SELECT cases, agreements FROM relay_progress WHERE relay_id = ${me.id} AND disease_code = ${code}`))[0];
       const autonomousCase = code !== "autre" && prog && isAutonomous(Number(prog.cases), Number(prog.agreements)) && Math.random() >= AUTONOMY_CONTROL_RATE;
@@ -152,16 +163,44 @@ export function registerRelayRoutes(app: Express, deps: { checkAdmin: (req: any)
       const status = autonomousCase ? "autonomous" : "awaiting_payment";
       const [row] = Rows(await db.execute(sql`
         INSERT INTO relay_cases (relay_id, derm_id, center_name, patient_age, patient_sex, zone, symptoms, photos,
-          relay_diagnosis, relay_disease_code, tier, price_fcfa, payer, program_id, status, payment_status, due_at)
+          relay_diagnosis, relay_disease_code, tier, price_fcfa, payer, program_id, status, payment_status, due_at,
+          fx_currency, fx_rate, amount_local, patient_phone)
         VALUES (${me.id}, ${Number(link.derm_id)}, ${data.centerName || me.cabinetName || null}, ${data.patientAge ?? null}, ${data.patientSex ?? null},
           ${data.zone || null}, ${data.symptoms || null}, ${JSON.stringify(urls)}::jsonb,
           ${data.relayDiagnosis.trim()}, ${code}, ${data.tier}, ${autonomousCase ? 0 : tier.priceFcfa},
           ${autonomousCase ? "none" : data.payer}, ${programId}, ${status},
           ${autonomousCase ? "pending" : data.payer === "program" ? "program_pending" : "pending"},
-          NULL)
-        RETURNING id, status, price_fcfa`));
-      // Le délai de réponse démarre à la vérification du paiement ou à l'activation du cas programme.
-      res.json({ case: { id: row.id, status: row.status, priceFcfa: Number(row.price_fcfa) } });
+          NULL, ${money.currency}, ${money.rate ?? 1}, ${autonomousCase || !money.rate ? null : toLocal(tier.priceFcfa, money.rate, money.currency)}, ${patientPhone})
+        RETURNING id, status, price_fcfa, amount_local`));
+      const caseId = Number(row.id);
+      let result: any = { id: caseId, status: row.status, priceFcfa: Number(row.price_fcfa), amountLocal: row.amount_local == null ? null : Number(row.amount_local), currency: money.currency };
+
+      if (!autonomousCase && data.payer === "credit") {
+        // Espèces : débit du crédit prépayé, séquestre 60/20/20, le cas part tout de suite.
+        try { await debitCreditForCase(me.id, caseId, tier.priceFcfa, { currency: money.currency, rate: money.rate! }); }
+        catch (e: any) {
+          await db.execute(sql`DELETE FROM relay_cases WHERE id = ${caseId}`);
+          if (e instanceof CreditError) return res.status(402).json({ code: e.code, message: e.message });
+          throw e;
+        }
+        await recordRelayCreditPayment(caseId);
+        await db.execute(sql`
+          UPDATE relay_cases SET payment_status = 'credit', paid_at = NOW(), status = 'awaiting_review', due_at = NOW() + make_interval(hours => ${tier.hours})
+          WHERE id = ${caseId}`);
+        notifyProAccount(Number(link.derm_id), { title: data.tier === "urgent" ? "Avis urgent demandé (2 h)" : "Nouvel avis relais", body: data.relayDiagnosis.trim(), url: "/derm/reseau" }).catch(() => {});
+        result = { ...result, status: "awaiting_review" };
+      }
+      if (!autonomousCase && data.payer === "patient") {
+        // Mobile Money de la patiente : instructions (SMS si numéro), le cas part après vérification de l'ID.
+        const col = await providerFor(money.country)!.createCollection({
+          reference: `#B-${caseId}`, amountXaf: tier.priceFcfa, amountLocal: result.amountLocal ?? tier.priceFcfa, currency: money.currency,
+          country: money.country, phone: patientPhone, purpose: "relay_case",
+        });
+        if (col.smsSent) await db.execute(sql`UPDATE relay_cases SET patient_sms_sent_at = NOW() WHERE id = ${caseId}`);
+        result = { ...result, instructions: col.instructions, smsSent: col.smsSent };
+      }
+      // Le délai démarre à la vérification du paiement, au débit du crédit ou à l'activation du cas programme.
+      res.json({ case: result });
     } catch (e: any) {
       if (e?.name === "ZodError") return res.status(400).json({ message: "Cas incomplet : photo et hypothèse obligatoires." });
       console.error("[relay/cases] create", e);
@@ -301,13 +340,13 @@ export function registerRelayRoutes(app: Express, deps: { checkAdmin: (req: any)
           notifyProAccount(Number(c.relay_id), { title: `Autonome sur ${diseaseLabel(finalCode)}`, body: "Vous traitez désormais seul cette affection. Un cas sur cinq reste contrôlé.", url: "/derm/relais" }).catch(() => {});
         }
       }
-      if (c.payment_status === "verified") await releaseRelayCase(id);
+      if (c.payment_status === "verified" || c.payment_status === "credit") await releaseRelayCase(id);
       notifyProAccount(Number(c.relay_id), {
         title: data.verdict === "confirm" ? "Le dermatologue confirme votre diagnostic" : "Le dermatologue a corrigé votre diagnostic",
         body: (data.note || "").trim().slice(0, 120) || (data.verdict === "confirm" ? c.relay_diagnosis : data.dermDiagnosis!.trim()),
         url: "/derm/relais",
       }).catch(() => {});
-      const share = c.payment_status === "verified" ? splitRelay(Number(c.price_fcfa) || 0).derm : 0;
+      const share = c.payment_status === "verified" || c.payment_status === "credit" ? splitRelay(Number(c.price_fcfa) || 0).derm : 0;
       res.json({ success: true, dermShare: share });
     } catch (e: any) {
       if (e?.name === "ZodError") return res.status(400).json({ message: "Avis incomplet : indiquez au moins la conduite à tenir." });

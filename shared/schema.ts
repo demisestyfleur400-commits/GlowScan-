@@ -839,6 +839,12 @@ export const relayCases = pgTable("relay_cases", {
   relaySeenAt: timestamp("relay_seen_at"),
   dermSeenAt: timestamp("derm_seen_at"),
   pausedAt: timestamp("paused_at"),                                    // demande ouverte : délai en pause
+  // Paiement sans ONG (migration 0029) : taux figé au paiement, SMS de paiement à la patiente
+  fxCurrency: varchar("fx_currency", { length: 3 }),
+  fxRate: decimal("fx_rate"),
+  amountLocal: decimal("amount_local"),
+  patientPhone: varchar("patient_phone", { length: 20 }),
+  patientSmsSentAt: timestamp("patient_sms_sent_at"),
   answeredAt: timestamp("answered_at"),
   refundedAt: timestamp("refunded_at"),
   refundOperatorRef: text("refund_operator_ref"),
@@ -999,5 +1005,29 @@ export const caseMessages = pgTable("case_messages", {
   viaSms: boolean("via_sms").notNull().default(false),
   smsDeliveredAt: timestamp("sms_delivered_at"),
   resolvedAt: timestamp("resolved_at"),                                 // demande fermée
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// ── Crédit prépayé du relais et taux de change (étape 12, migration 0029) ──
+export const fxRates = pgTable("fx_rates", {
+  currency: varchar("currency", { length: 3 }).primaryKey(),          // XAF, XOF, CDF, BIF…
+  perXaf: decimal("per_xaf").notNull(),                                // unités locales pour 1 F CFA
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  updatedBy: text("updated_by"),
+});
+
+export const relayCreditLedger = pgTable("relay_credit_ledger", {
+  id: serial("id").primaryKey(),
+  relayId: integer("relay_id").notNull().references(() => proAccounts.id, { onDelete: "cascade" }),
+  kind: varchar("kind", { length: 10 }).notNull(),                    // recharge | debit | refund
+  amountFcfa: integer("amount_fcfa").notNull(),                        // + recharge / remboursement, − débit
+  amountLocal: decimal("amount_local"),
+  fxCurrency: varchar("fx_currency", { length: 3 }).notNull().default("XAF"),
+  fxRate: decimal("fx_rate").notNull().default("1"),
+  caseId: integer("case_id").references(() => relayCases.id, { onDelete: "set null" }),
+  operatorTxnId: text("operator_txn_id"),
+  status: varchar("status", { length: 10 }).notNull().default("pending"), // pending | confirmed | rejected
+  rejectReason: text("reject_reason"),
+  confirmedAt: timestamp("confirmed_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });

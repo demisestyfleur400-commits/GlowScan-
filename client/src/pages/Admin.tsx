@@ -238,6 +238,15 @@ export default function Admin() {
       const r = await fetch("/api/admin/relay-cases", { headers: { "x-admin-key": key } });
       if (r.ok) setRelayCases((await r.json()).cases || []);
     } catch {}
+    // Crédit des relais (étape 12) : recharges à vérifier, taux de change.
+    try {
+      const [a, b] = await Promise.all([
+        fetch("/api/admin/relay-credit", { headers: { "x-admin-key": key } }),
+        fetch("/api/admin/fx-rates", { headers: { "x-admin-key": key } }),
+      ]);
+      if (a.ok) setRelayCredit((await a.json()).items || []);
+      if (b.ok) setFxRates((await b.json()).items || []);
+    } catch {}
     // Avis confrères (étape 8) : Mobile Money à vérifier, remboursements à faire.
     try {
       const r = await fetch("/api/admin/peer-momo", { headers: { "x-admin-key": key } });
@@ -245,6 +254,8 @@ export default function Admin() {
     } catch {}
   };
   const [peerMomo, setPeerMomo] = useState<any[]>([]);
+  const [relayCredit, setRelayCredit] = useState<any[]>([]);
+  const [fxRates, setFxRates] = useState<any[]>([]);
   const [relayCases, setRelayCases] = useState<any[]>([]);
   const confirmRelay = async (id: number, declared?: string | null) => {
     const operatorRef = window.prompt("ID de transaction de l'opérateur (vérifié sur votre relevé Mobile Money)", declared || "")?.trim();
@@ -553,7 +564,7 @@ export default function Admin() {
             {[
               { key: "dataset", label: "Dataset", icon: Stethoscope, badge: datasetStats?.pending || 0, activeColor: "#10b981" },
               { key: "iavsdoc", label: "IA vs Médecin", icon: BarChart2, badge: 0, activeColor: "#7c3aed" },
-              { key: "rapprochement", label: "Rapprochement", icon: MessageCircle, badge: (recon?.toVerify?.length || 0) + (recon?.withdrawalsPending?.length || 0) + relayCases.filter((c: any) => c.operator_txn_id || c.status === "refund_due" || c.payment_status === "program_pending").length + peerMomo.length, activeColor: "#b45309" },
+              { key: "rapprochement", label: "Rapprochement", icon: MessageCircle, badge: (recon?.toVerify?.length || 0) + (recon?.withdrawalsPending?.length || 0) + relayCases.filter((c: any) => c.operator_txn_id || c.status === "refund_due" || c.payment_status === "program_pending").length + peerMomo.length + relayCredit.length, activeColor: "#b45309" },
               { key: "programmes", label: "Programmes", icon: Store, badge: 0, activeColor: "#10b981" },
               { key: "relais", label: "Relais", icon: Stethoscope, badge: 0, activeColor: "#2563eb" },
               { key: "consults", label: "Consultations", icon: MessageCircle, badge: consults.filter((c) => c.paymentStatus !== "paid").length, activeColor: "#10b981" },
@@ -1318,6 +1329,43 @@ export default function Admin() {
                       ) : null}
                     </div>
                   ))}
+                </div>
+
+                <div className="rounded-2xl p-4 space-y-2" style={{ background: DS.surface, border: `1px solid ${DS.border}` }}>
+                  <p className="text-sm font-extrabold" style={{ color: DS.text }}>Recharges de crédit relais ({relayCredit.length})</p>
+                  {relayCredit.length === 0 && <p className="text-xs" style={{ color: DS.muted }}>Rien à vérifier.</p>}
+                  {relayCredit.map((r: any) => (
+                    <div key={r.id} className="flex items-center justify-between gap-2 text-sm">
+                      <span style={{ color: DS.body }}>
+                        {r.full_name} (+{r.phone}) · {Number(r.amount_local ?? r.amount_fcfa).toLocaleString("fr-FR")} {r.fx_currency} = <b>{Number(r.amount_fcfa).toLocaleString("fr-FR")} FCFA</b> · ID déclaré : <b>{r.operator_txn_id}</b>
+                      </span>
+                      <span className="flex gap-1.5">
+                        <button onClick={() => { const ref = window.prompt("ID de transaction vu sur votre relevé Mobile Money (doit correspondre)", r.operator_txn_id || "")?.trim(); if (ref) reconPost(`/api/admin/relay-credit/${r.id}/confirm`, { operatorRef: ref }); }} className="px-3 py-1.5 rounded-xl text-xs font-extrabold text-white" style={{ background: "#10b981" }}>Vérifié</button>
+                        <button onClick={() => { const reason = window.prompt("Motif du refus (envoyé au relais)")?.trim(); if (reason) reconPost(`/api/admin/relay-credit/${r.id}/reject`, { reason }); }} className="px-3 py-1.5 rounded-xl text-xs font-extrabold" style={{ color: DS.muted, border: `1px solid ${DS.border}` }}>Refuser</button>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="rounded-2xl p-4 space-y-2" style={{ background: DS.surface, border: `1px solid ${DS.border}` }}>
+                  <p className="text-sm font-extrabold" style={{ color: DS.text }}>Taux de change (pour 1 F CFA)</p>
+                  <p className="text-xs" style={{ color: DS.muted }}>XAF et XOF sont à parité fixe. Le taux est figé sur chaque paiement au moment où il a lieu.</p>
+                  {["XAF", "XOF", "CDF", "BIF"].map((cur) => {
+                    const r = fxRates.find((x: any) => x.currency === cur);
+                    const fixed = cur === "XAF" || cur === "XOF";
+                    return (
+                      <div key={cur} className="flex items-center justify-between gap-2 text-sm">
+                        <span style={{ color: DS.body }}>
+                          <b>{cur}</b> : {r ? Number(r.per_xaf).toLocaleString("fr-FR", { maximumFractionDigits: 6 }) : "non défini (paiements bloqués hors programme)"}
+                          {r && !fixed ? ` · mis à jour le ${new Date(r.updated_at).toLocaleDateString("fr-FR")}` : ""}
+                        </span>
+                        {!fixed && (
+                          <button onClick={() => { const v = Number(String(window.prompt(`Combien de ${cur} pour 1 F CFA ?`, r ? String(r.per_xaf) : "") || "").replace(",", ".")); if (v > 0) reconPost("/api/admin/fx-rates", { currency: cur, perXaf: v }); }}
+                            className="px-3 py-1.5 rounded-xl text-xs font-extrabold text-white" style={{ background: "#2563eb" }}>Modifier</button>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
 
                 <div className="rounded-2xl p-4 space-y-2" style={{ background: DS.surface, border: `1px solid ${DS.border}` }}>

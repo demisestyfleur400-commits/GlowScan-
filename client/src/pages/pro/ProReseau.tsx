@@ -104,7 +104,7 @@ function QueueItem({ c, onDone, unread, onDiscuss }: { c: QCase; onDone: () => v
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const urgent = c.tier === "urgent";
-  const share = c.payment_status === "verified" ? splitRelay(c.price_fcfa).derm : 0;
+  const share = c.payment_status === "verified" || c.payment_status === "credit" ? splitRelay(c.price_fcfa).derm : 0;
   const chip = (on: boolean) => `cursor-pointer rounded-pill border px-3 py-1 font-body text-[12px] font-semibold ${on ? "border-organic-accent bg-organic-accent text-organic-bg" : "border-organic-divider bg-transparent text-organic-text"}`;
 
   const send = async () => {

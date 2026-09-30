@@ -11,6 +11,7 @@ import { stopLinkSig, followupsStoppedAt } from "./consents";
 import { runPeerDeadlines } from "./peerRoutes";
 import { runInvitationReminders } from "./relayOnboarding";
 import { runCaseSmsFallback } from "./caseThreads";
+import { refundCreditForCase } from "./relayCredit";
 import { refundConsultation, refundRelayCase, chargeSubscriptionFromEarnings, proBalances, requestWithdrawal } from "./wallet";
 import { PRO_SUBSCRIPTION_FCFA } from "@shared/premium";
 const APP_BASE = (process.env.PUBLIC_BASE_URL || "https://glow-scan.com").replace(/\/$/, "");
@@ -637,6 +638,19 @@ async function flagRelayDeadlines() {
         try { await sendEmail(ownerEmail, `Avis relais #${c.id} : remboursement à faire`,
           `<p>Le cas relais #${c.id} (${c.tier === "urgent" ? "urgent, 2 h" : "simple, 24 h"}, ${Number(c.price_fcfa)} FCFA) n'a pas reçu de réponse de Dr ${c.derm_name || "?"} dans le délai.</p><p>Remboursez la patiente puis saisissez l'ID de transaction dans /admin.</p>`,
           `Cas relais #${c.id} : remboursement à faire (/admin)`); } catch {}
+      } else if (c.payment_status === "credit") {
+        // Payé par le crédit du relais : remboursement automatique sur ce crédit.
+        const claimed: any = await db.execute(sql`UPDATE relay_cases SET status = 'refunded', refunded_at = NOW() WHERE id = ${c.id} AND status = 'awaiting_review' RETURNING id`);
+        if (!((claimed?.rows ?? claimed ?? []) as any[]).length) continue;
+        await refundRelayCase(Number(c.id));
+        await refundCreditForCase(Number(c.id));
+        refunds++;
+        if (c.relay_user_id) await sendPushToUsers(new Set([c.relay_user_id]), {
+          title: "Avis non rendu dans le délai", body: "Le montant a été rendu à votre crédit.", url: "/derm/relais",
+        });
+        if (c.derm_user_id) await sendPushToUsers(new Set([c.derm_user_id]), {
+          title: "Délai dépassé sur un avis relais", body: "Le cas a été annulé et le relais remboursé.", url: "/derm/reseau",
+        });
       } else if (c.payment_status === "program") {
         await db.execute(sql`UPDATE relay_cases SET due_at = NULL WHERE id = ${c.id}`).catch(() => {});
         try { await sendEmail(ownerEmail, `Avis relais #${c.id} (programme) en retard`,

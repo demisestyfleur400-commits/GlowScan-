@@ -95,6 +95,38 @@ export async function recordRelayPayment(caseId: number, operatorTxnId: string):
     VALUES (${Number(c.derm_id)}, 'relay_review', ${gross}, ${SPLITS.relay.derm}, ${split.derm}, ${source}, ${txn}, 'escrow'),
            (${Number(c.relay_id)}, 'relay_review', ${gross}, ${SPLITS.relay.relay}, ${split.relay}, ${source}, ${txn}, 'escrow')
     ON CONFLICT (pro_id, type, source_id) DO NOTHING`);
+  await stampRelayFx(caseId);
+}
+
+/**
+ * Avis payé en espèces par la patiente et débité du crédit prépayé du relais
+ * (étape 12) : l'argent est déjà sur le compte GlowScan (recharge vérifiée par
+ * son ID opérateur, relay_credit_ledger). Même séquestre et même 60/20/20.
+ */
+export async function recordRelayCreditPayment(caseId: number): Promise<void> {
+  const c: any = rows(await db.execute(sql`SELECT id, relay_id, derm_id, price_fcfa FROM relay_cases WHERE id = ${caseId}`))[0];
+  if (!c) throw new WalletError("NOT_FOUND", "Cas introuvable");
+  if (!c.derm_id) throw new WalletError("BAD_STATE", "Aucun dermatologue référent pour ce cas");
+  const gross = Number(c.price_fcfa) || 0;
+  const split = splitRelay(gross);
+  const source = `relay_case:${caseId}`;
+  await db.execute(sql`
+    INSERT INTO platform_ledger (type, gross_fcfa, share_pct, amount_fcfa, source_id, operator_txn_id, status)
+    VALUES ('relay_review', ${gross}, ${SPLITS.relay.platform}, ${split.platform}, ${source}, NULL, 'escrow')
+    ON CONFLICT (type, source_id) DO NOTHING`);
+  await db.execute(sql`
+    INSERT INTO wallet_ledger (pro_id, type, gross_fcfa, share_pct, amount_fcfa, source_id, operator_txn_id, status)
+    VALUES (${Number(c.derm_id)}, 'relay_review', ${gross}, ${SPLITS.relay.derm}, ${split.derm}, ${source}, NULL, 'escrow'),
+           (${Number(c.relay_id)}, 'relay_review', ${gross}, ${SPLITS.relay.relay}, ${split.relay}, ${source}, NULL, 'escrow')
+    ON CONFLICT (pro_id, type, source_id) DO NOTHING`);
+  await stampRelayFx(caseId);
+}
+
+/** Recopie le taux figé du cas sur ses lignes du grand livre. */
+async function stampRelayFx(caseId: number) {
+  const source = `relay_case:${caseId}`;
+  await db.execute(sql`UPDATE wallet_ledger w SET fx_currency = c.fx_currency, fx_rate = c.fx_rate FROM relay_cases c WHERE c.id = ${caseId} AND w.type = 'relay_review' AND w.source_id = ${source}`);
+  await db.execute(sql`UPDATE platform_ledger l SET fx_currency = c.fx_currency, fx_rate = c.fx_rate FROM relay_cases c WHERE c.id = ${caseId} AND l.type = 'relay_review' AND l.source_id = ${source}`);
 }
 
 /** Réponse du dermatologue : les parts deviennent disponibles. */

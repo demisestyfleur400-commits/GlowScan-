@@ -11,6 +11,7 @@ import { asProProfile, proHomeOf } from "@shared/proProfile";
 import { RELAY_TIERS, RELAY_LEVELS, RELAY_DISEASES, AUTONOMY_MIN_CASES, diseaseLabel, type RelayTier } from "@shared/relay";
 import { splitRelay } from "@shared/splits";
 import { formatF } from "@shared/delivery";
+import { formatMoney, toLocal, CURRENCY_LABEL, type Currency } from "@shared/currency";
 import { relayCaseRef, answeredIn, relayAnswer, type PhotoQuality } from "@shared/teleexpertise";
 import { TeleexpertiseReport } from "@/components/pro/TeleexpertiseReport";
 import { RelayOnboarding, type Onboarding } from "@/components/relay/RelayOnboarding";
@@ -37,6 +38,13 @@ type Case = {
   derm_disease_code: string | null; derm_onmc: string | null; derm_ddx: string | null; derm_plan: string | null; orientation: string | null;
   review_in: string | null; photo_quality: PhotoQuality | null; photos_sharp: number | null; relay_read_at: string | null; paid_at: string | null;
   patient_age: number | null; patient_sex: string | null; zone: string | null; symptoms: string | null; photos: string[];
+};
+
+type Payer = "patient" | "credit" | "program";
+type Credit = {
+  country: string; currency: Currency; rate: number | null; balance: number; balanceLocal: number | null; momo: boolean;
+  momoNumbers: { mtn: string; orange: string };
+  entries: { id: number; kind: string; amountFcfa: number; amountLocal: number | null; currency: Currency; status: string; reason: string | null; caseId: number | null; at: string }[];
 };
 
 const CONF: Record<string, string> = { high: "confiance élevée", medium: "confiance moyenne", low: "confiance faible" };
@@ -87,8 +95,9 @@ export default function RelayHome() {
   const { data: unreadData } = useQuery<{ unread: Record<string, number> }>({ queryKey: ["/api/case-threads/unread"], enabled: isRelay, refetchInterval: 30_000 });
   const unread = unreadData?.unread || {};
   const [threadId, setThreadId] = useState<number | null>(null);
+  const { data: credit } = useQuery<Credit>({ queryKey: ["/api/relay/credit"], enabled: isRelay });
   const { data: casesData } = useQuery<{ cases: Case[] }>({ queryKey: ["/api/relay/cases"], enabled: isRelay });
-  const refresh = () => { qc.invalidateQueries({ queryKey: ["/api/relay/me"] }); qc.invalidateQueries({ queryKey: ["/api/relay/cases"] }); qc.invalidateQueries({ queryKey: ["/api/relay/onboarding"] }); };
+  const refresh = () => { qc.invalidateQueries({ queryKey: ["/api/relay/me"] }); qc.invalidateQueries({ queryKey: ["/api/relay/cases"] }); qc.invalidateQueries({ queryKey: ["/api/relay/onboarding"] }); qc.invalidateQueries({ queryKey: ["/api/relay/credit"] }); };
 
   if (accLoading || !isRelay || !me || !onb) return <LoadingScreen />;
   // Étape 10 : tant que carte, parrain et module photo ne sont pas validés, écran R2.
@@ -129,8 +138,9 @@ export default function RelayHome() {
         ) : (
           <>
             <LevelCard me={me} />
+            {credit && <CreditCard credit={credit} onChange={refresh} />}
             <section className="grid items-start gap-organic-4 lg:grid-cols-2">
-              <NewCase me={me} onSent={refresh} />
+              <NewCase me={me} onSent={refresh} credit={credit} />
               <div className={card}>
                 <div className="flex items-baseline justify-between gap-3">
                   <h3 className="m-0 text-[22px]">Vos compétences</h3>
@@ -295,7 +305,7 @@ function ReferentPicker({ onDone }: { onDone: () => void }) {
   );
 }
 
-function NewCase({ me, onSent }: { me: Me; onSent: () => void }) {
+function NewCase({ me, onSent, credit }: { me: Me; onSent: () => void; credit: Credit | undefined }) {
   const [step, setStep] = useState<"cas" | "hypothese" | "envoi" | "revelation">("cas");
   const [photos, setPhotos] = useState<string[]>([]);
   const [age, setAge] = useState("");
@@ -305,14 +315,18 @@ function NewCase({ me, onSent }: { me: Me; onSent: () => void }) {
   const [code, setCode] = useState("");
   const [other, setOther] = useState("");
   const [tier, setTier] = useState<RelayTier>("simple");
-  const [payer, setPayer] = useState<"patient" | "program">("patient");
+  const defaultPayer = (): Payer => (credit?.momo ? "patient" : me.programs.length ? "program" : "credit");
+  const [payer, setPayer] = useState<Payer>(defaultPayer());
+  const [patientPhone, setPatientPhone] = useState("");
   const [err, setErr] = useState("");
-  const [result, setResult] = useState<{ status: string; priceFcfa: number; ai: string | null; conf: string | null; mine: string } | null>(null);
+  const [result, setResult] = useState<{ status: string; priceFcfa: number; amountLocal: number | null; instructions?: string; smsSent?: boolean; payer: Payer; ai: string | null; conf: string | null; mine: string } | null>(null);
+  const cur: Currency = credit?.currency || "XAF";
+  const price = (xaf: number) => (credit?.rate ? formatMoney(toLocal(xaf, credit.rate, cur), cur) : formatF(xaf));
   const fileRef = useRef<HTMLInputElement | null>(null);
 
   const hypothesis = code === "autre" ? other.trim() : diseaseLabel(code);
   const chip = (on: boolean) => `cursor-pointer rounded-pill border px-3.5 py-1.5 font-body text-[13px] font-semibold ${on ? "border-organic-accent bg-organic-accent text-organic-bg" : "border-organic-divider bg-transparent text-organic-text"}`;
-  const reset = () => { setStep("cas"); setPhotos([]); setAge(""); setSex(""); setZone(""); setSymptoms(""); setCode(""); setOther(""); setTier("simple"); setPayer("patient"); setErr(""); setResult(null); };
+  const reset = () => { setStep("cas"); setPhotos([]); setAge(""); setSex(""); setZone(""); setSymptoms(""); setCode(""); setOther(""); setTier("simple"); setPayer(defaultPayer()); setPatientPhone(""); setErr(""); setResult(null); };
 
   const addPhoto = async (f?: File | null) => {
     if (!f || !f.type.startsWith("image/") || photos.length >= 3) return;
@@ -325,6 +339,8 @@ function NewCase({ me, onSent }: { me: Me; onSent: () => void }) {
       const d = await post("/api/relay/cases", {
         photos, patientAge: age ? parseInt(age, 10) : null, patientSex: sex || null, zone: zone.trim() || null, symptoms: symptoms.trim() || null,
         relayDiagnosis: hypothesis, relayDiseaseCode: code || "autre", tier, payer,
+        patientPhone: payer === "patient" && patientPhone.trim() ? patientPhone.trim() : null,
+        programId: payer === "program" ? me.programs[0]?.id : null,
       });
       const caseId = d.case.id as number;
       // L'IA n'est lancée QU'APRÈS l'enregistrement de l'hypothèse.
@@ -343,7 +359,7 @@ function NewCase({ me, onSent }: { me: Me; onSent: () => void }) {
           }
         }
       } catch {}
-      setResult({ status: d.case.status, priceFcfa: d.case.priceFcfa, ai, conf, mine: hypothesis });
+      setResult({ status: d.case.status, priceFcfa: d.case.priceFcfa, amountLocal: d.case.amountLocal ?? null, instructions: d.case.instructions, smsSent: d.case.smsSent, payer, ai, conf, mine: hypothesis });
       setStep("revelation");
       onSent();
     } catch (e: any) {
@@ -408,20 +424,29 @@ function NewCase({ me, onSent }: { me: Me; onSent: () => void }) {
             <div className="flex flex-wrap gap-1.5">
               {(Object.keys(RELAY_TIERS) as RelayTier[]).map((k) => (
                 <button key={k} type="button" className={chip(tier === k)} onClick={() => setTier(k)}>
-                  {RELAY_TIERS[k].label} · {formatF(RELAY_TIERS[k].priceFcfa)} · réponse sous {RELAY_TIERS[k].hours} h
+                  {RELAY_TIERS[k].label} · {price(RELAY_TIERS[k].priceFcfa)} · réponse sous {RELAY_TIERS[k].hours} h
                 </button>
               ))}
             </div>
           </div>
-          {me.programs.length > 0 && (
-            <div className="flex flex-col gap-1.5">
-              <span className="text-[12px] text-organic-neutral-700">Qui paie ?</span>
-              <div className="flex flex-wrap gap-1.5">
-                <button type="button" className={chip(payer === "patient")} onClick={() => setPayer("patient")}>La patiente (Mobile Money)</button>
-                <button type="button" className={chip(payer === "program")} onClick={() => setPayer("program")}>{me.programs[0].name}</button>
-              </div>
+          <div className="flex flex-col gap-1.5" data-testid="relay-payer">
+            <span className="text-[12px] text-organic-neutral-700">Qui paie l'avis ?</span>
+            <div className="flex flex-wrap gap-1.5">
+              {credit?.momo && <button type="button" className={chip(payer === "patient")} onClick={() => setPayer("patient")}>Mobile Money de la patiente</button>}
+              <button type="button" className={chip(payer === "credit")} onClick={() => setPayer("credit")}>
+                Espèces · débité de mon crédit{credit?.balanceLocal != null ? ` (${formatMoney(credit.balanceLocal, cur)})` : ""}
+              </button>
+              {me.programs.length > 0 && <button type="button" className={chip(payer === "program")} onClick={() => setPayer("program")}>{me.programs[0].name}</button>}
             </div>
-          )}
+            {payer === "patient" && (
+              <ProInput label="Téléphone de la patiente (facultatif)" value={patientPhone} onChange={(e) => setPatientPhone(e.target.value)} inputMode="tel"
+                placeholder="Pour lui envoyer les instructions par SMS" testid="relay-patient-phone" />
+            )}
+            {payer === "credit" && credit && credit.balance < RELAY_TIERS[tier].priceFcfa && (
+              <span className="text-[12px] font-semibold text-organic-accent-800">Crédit insuffisant pour cet avis : rechargez-le dans « Mon crédit ».</span>
+            )}
+            {!credit?.momo && <span className="text-[12px] text-organic-neutral-700">Le paiement Mobile Money n'est pas encore disponible dans votre pays.</span>}
+          </div>
           <span className="text-[12px] text-organic-neutral-700">
             Sur {formatF(RELAY_TIERS[tier].priceFcfa)} : {formatF(splitRelay(RELAY_TIERS[tier].priceFcfa).derm)} pour le dermatologue, {formatF(splitRelay(RELAY_TIERS[tier].priceFcfa).relay)} pour vous, {formatF(splitRelay(RELAY_TIERS[tier].priceFcfa).platform)} pour GlowScan.
           </span>
@@ -456,12 +481,72 @@ function NewCase({ me, onSent }: { me: Me; onSent: () => void }) {
           <p className="m-0 text-[13px] text-organic-neutral-800">
             {result.status === "autonomous"
               ? "Vous maîtrisez cette affection : vous traitez ce cas seul."
-              : result.status === "awaiting_payment"
-                ? `Encaissez ${formatF(result.priceFcfa)} de la patiente par Mobile Money, puis saisissez l'ID de transaction dans « Vos cas en cours ».`
-                : "Cas pris en charge par le programme : il sera transmis au dermatologue dès que GlowScan l'aura activé."}
+              : result.payer === "credit"
+                ? `Débité de votre crédit (${price(result.priceFcfa)}). Le cas est transmis au dermatologue.`
+                : result.status === "awaiting_payment" && result.payer === "patient"
+                  ? `La patiente paie ${price(result.priceFcfa)} par Mobile Money${result.smsSent ? " (instructions envoyées par SMS)" : ""}. Saisissez ensuite l'ID de transaction dans « Vos cas en cours » : le cas part après vérification.`
+                  : "Cas pris en charge par le programme : il sera transmis au dermatologue dès que GlowScan l'aura activé."}
           </p>
+          {result.payer === "patient" && result.instructions && !result.smsSent && (
+            <div className="rounded-card bg-organic-bg p-organic-3 text-[13px]"><b>À montrer à la patiente :</b> {result.instructions}</div>
+          )}
           <Button onClick={reset} className="self-start" data-testid="relay-next-case">Cas suivant</Button>
         </>
+      )}
+    </div>
+  );
+}
+
+// R6 · Mon crédit : solde en monnaie locale, historique, recharge Mobile Money (ID vérifié par GlowScan).
+function CreditCard({ credit, onChange }: { credit: Credit; onChange: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [amount, setAmount] = useState("");
+  const [txn, setTxn] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+  const cur = credit.currency;
+  const recharge = async () => {
+    setBusy(true); setMsg("");
+    try {
+      await post("/api/relay/credit/recharge", { amountLocal: Number(amount.replace(/\D/g, "")), operatorTxnId: txn.trim() });
+      setMsg("Recharge enregistrée : elle sera ajoutée dès que GlowScan aura vérifié l'ID."); setAmount(""); setTxn(""); setOpen(false); onChange();
+    } catch (e: any) { setMsg(e.message); } finally { setBusy(false); }
+  };
+  const KIND: Record<string, string> = { recharge: "Recharge", debit: "Avis payé en espèces", refund: "Remboursement (délai dépassé)" };
+  return (
+    <div className="flex flex-col gap-organic-3 rounded-card bg-organic-surface p-organic-6" data-testid="relay-credit">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h3 className="m-0 text-[22px]">Mon crédit</h3>
+        <span className="font-heading text-[28px]">{credit.balanceLocal != null ? formatMoney(credit.balanceLocal, cur) : formatF(credit.balance)}</span>
+      </div>
+      <span className="text-[13px] text-organic-neutral-800">Vous encaissez la patiente en espèces ; l'avis est débité de ce crédit. Délai dépassé : le montant revient sur le crédit.</span>
+      {credit.momo ? (
+        open ? (
+          <div className="flex flex-col gap-organic-2 rounded-card bg-organic-bg p-organic-3">
+            <span className="text-[13px]">Envoyez le montant à GlowScan par MTN MoMo au <b>{credit.momoNumbers.mtn}</b> ou Orange Money au <b>{credit.momoNumbers.orange}</b>, puis saisissez l'ID de transaction.</span>
+            <div className="grid grid-cols-1 gap-organic-2 sm:grid-cols-2">
+              <ProInput label={`Montant payé (${CURRENCY_LABEL[cur].symbol})`} value={amount} onChange={(e) => setAmount(e.target.value.replace(/[^\d]/g, ""))} inputMode="numeric" testid="credit-amount" />
+              <ProInput label="ID de transaction" value={txn} onChange={(e) => setTxn(e.target.value)} testid="credit-txn" />
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={recharge} disabled={busy || !amount || txn.trim().length < 6} data-testid="credit-send">Enregistrer la recharge</Button>
+              <Button variant="ghost" onClick={() => setOpen(false)}>Annuler</Button>
+            </div>
+          </div>
+        ) : <Button variant="secondary" className="self-start" onClick={() => setOpen(true)} data-testid="credit-open">Recharger par Mobile Money</Button>
+      ) : (
+        <span className="text-[13px] text-organic-neutral-700">La recharge par Mobile Money arrive bientôt dans votre pays. En attendant, vos avis passent par votre programme.</span>
+      )}
+      {msg && <span className="text-[13px] font-semibold">{msg}</span>}
+      {credit.entries.length > 0 && (
+        <div className="flex flex-col gap-1">
+          {credit.entries.slice(0, 6).map((e) => (
+            <span key={e.id} className="flex justify-between gap-2 text-[12px]">
+              <span className="truncate">{KIND[e.kind] || e.kind}{e.caseId ? ` · #B-${e.caseId}` : ""}{e.status === "pending" ? " · en vérification" : e.status === "rejected" ? ` · refusée (${e.reason || ""})` : ""}</span>
+              <b className={`flex-none ${e.amountFcfa < 0 ? "" : "text-organic-accent-2-700"}`}>{e.amountLocal != null ? formatMoney(e.amountLocal, e.currency) : formatF(e.amountFcfa)}</b>
+            </span>
+          ))}
+        </div>
       )}
     </div>
   );
