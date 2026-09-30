@@ -101,7 +101,7 @@ async function sendSmsCode(phone: string, code: string): Promise<boolean> {
     return false;
   }
   try {
-    const message = `🔐 Réinitialisation GlowScan\n\nTon code : ${code}\n\nValide 15 minutes.`;
+    const message = `Réinitialisation GlowScan\n\nVotre code : ${code}\n\nValable 15 minutes.`;
     await twilioClient.messages.create({
       body: message,
       from: process.env.TWILIO_PHONE_NUMBER,

@@ -155,7 +155,10 @@ export default function ProAgenda() {
                 style={{ top, height: Math.max(28, dur * PX_PER_MIN - 4), background: t.bg, color: t.fg }} data-testid={`appt-${a.id}`}>
                 <span className="flex-none font-heading text-[14px]">{hhmmOf(d)}</span>
                 <span className="flex min-w-0 flex-1 flex-col">
-                  <span className="truncate text-[13px] font-bold">{a.patient_name || "Patient"}</span>
+                  <span className="truncate text-[13px] font-bold">
+                    {a.patient_name || "Patient"}
+                    {a.status === "confirmed" && <span className="ml-1.5 text-[11px] font-semibold opacity-80">· Confirmé</span>}
+                  </span>
                   {dur >= 30 && (
                     <span className="truncate text-[12px] opacity-80">{t.label} · {dur} min{a.notes ? ` · ${a.notes}` : ""}</span>
                   )}

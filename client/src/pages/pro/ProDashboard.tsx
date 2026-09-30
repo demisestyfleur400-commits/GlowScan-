@@ -134,6 +134,11 @@ export default function ProDashboard() {
   const newThisMonth = patients.filter((p) => p.createdAt && new Date(p.createdAt).toISOString().slice(0, 7) === thisMonth).length;
   const scansThisMonth = stats?.monthly?.find((m) => m.month === thisMonth)?.count ?? 0;
   const todo = pending.length + waiting.length;
+  // Photos de contrôle récentes (14 jours) : évolution réelle du Glow Score, première → dernière analyse.
+  const recentControls = (patients as any[])
+    .filter((p) => (p.scoreTrend?.length ?? 0) >= 2 && p.lastScanAt && Date.now() - +new Date(p.lastScanAt) < 14 * 86400000)
+    .sort((a, b) => +new Date(b.lastScanAt) - +new Date(a.lastScanAt))
+    .slice(0, 5);
   const firstName = String(acc.fullName || "").replace(/^dr\.?\s+/i, "").split(/\s+/)[0] || "";
 
   const profileFields = [acc.fullName, acc.cabinetName, acc.phone, acc.city, acc.photoUrl || acc.avatarUrl, acc.bio, acc.specialties?.length || acc.specialty, acc.licenseNumber];
@@ -215,7 +220,7 @@ export default function ProDashboard() {
             <div className="flex flex-col gap-organic-2">
               <span className={sectionLabel}>Dossiers préparés par la secrétaire</span>
               {waiting.map((w) => (
-                <Link key={w.id} href={`/derm/analyse?patient=${w.id}`}
+                <Link key={w.id} href={(w as any).intakeReady ? `/derm/patient/${w.id}` : `/derm/analyse?patient=${w.id}`}
                   className="flex items-center gap-3 rounded-pill bg-organic-bg py-2.5 pl-2.5 pr-3 text-organic-text no-underline hover:bg-organic-neutral-100">
                   <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-organic-accent-200 text-[12px] font-bold text-organic-accent-800">{initials(w.firstName, w.lastName)}</span>
                   <span className="flex min-w-0 flex-1 flex-col">
@@ -296,6 +301,22 @@ export default function ProDashboard() {
               {acc.subscriptionExpiresAt ? ` Prochain paiement le ${new Date(acc.subscriptionExpiresAt).toLocaleDateString("fr-FR", { timeZone: TZ, day: "numeric", month: "long" })}.` : ""}
             </p>
             <Button variant="secondary" onClick={() => setLocation("/derm/cabinet")} className="mt-1.5 self-start">Gérer mon cabinet</Button>
+          </div>
+        )}
+        {recentControls.length > 0 && (
+          <div className="flex flex-col gap-organic-2 rounded-card bg-organic-surface p-organic-6">
+            <span className="text-[10px] font-bold uppercase tracking-[.1em] text-organic-accent-700">Suivi</span>
+            <span className="font-heading text-[20px] leading-tight">Photos de contrôle reçues</span>
+            {recentControls.map((p) => {
+              const t = p.scoreTrend as number[];
+              const up = t[t.length - 1] >= t[0];
+              return (
+                <Link key={p.id} href={`/derm/patient/${p.id}`} className="flex items-center justify-between gap-3 text-[14px] text-organic-text no-underline">
+                  <span className="truncate font-semibold">{p.firstName} {p.lastName}</span>
+                  <span className={`flex-none font-bold ${up ? "text-organic-accent-2-700" : "text-organic-accent-700"}`}>{t[0]} → {t[t.length - 1]}</span>
+                </Link>
+              );
+            })}
           </div>
         )}
         <div className="flex flex-col gap-organic-2 rounded-card bg-organic-surface p-organic-6">

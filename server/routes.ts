@@ -16,7 +16,7 @@ import { sendPurchaseEvent } from "./metaCapi";
 import { classifyCondition, extractPhototype, calcAnnotationScore } from "./taxonomy";
 import webpush from "web-push";
 import { db } from "./db";
-import { referrals, loyaltyPoints, subscriptions, scans, leads, premiumRequests, wellnessLogs, trainingData, proAccounts, consultations, consultationMessages, type TrainingData } from "@shared/schema";
+import { referrals, loyaltyPoints, subscriptions, scans, leads, premiumRequests, wellnessLogs, trainingData, proAccounts, consultations, consultationMessages, secretaryAccounts, patients as proPatients, type TrainingData } from "@shared/schema";
 import { recommendSpecialty, SPECIALTY_LABEL } from "@shared/dermSpecialties";
 import { users } from "@shared/models/auth";
 import { eq, and, sql, gte, count, lte, desc, avg, inArray, isNull } from "drizzle-orm";
@@ -25,7 +25,7 @@ import { emitToUser, isUserOnline } from "./ws";
 import { normalizeCmPhone, formatCmPhone } from "@shared/phone";
 import { isMissingColumnError, ORDERS_MIGRATION_HINT } from "./dbErrors";
 import { recordConsent, stopReminders, verifyStopLinkSig, stopFollowups, followupsStoppedAt, resumeFollowups } from "./consents";
-import { buildResultWhatsApp, resultRequestText, RESULT_REF_RE, isStopMessage, isFollowupStopMessage } from "@shared/whatsappMessages";
+import { buildResultWhatsApp, resultRequestText, RESULT_REF_RE, isStopMessage, isFollowupStopMessage, isApptConfirmMessage, buildApptConfirmedReply } from "@shared/whatsappMessages";
 import { RESULT_DISCLAIMER } from "@shared/resultB2C";
 import { splitConsultation } from "@shared/splits";
 import { recordConsultationPayment, releaseConsultation, WalletError, platformBalances, markWithdrawalPaid, cancelWithdrawal, requestPlatformWithdrawal } from "./wallet";
@@ -2106,12 +2106,22 @@ export async function registerRoutes(
       const userId = req.session?.userId || req.user?.id || (req.user as any)?.claims?.sub;
       const isAnonymous = !isAuth(req);
 
-      // 🔑 SÉCURITÉ CRITIQUE : seuls les doctors (dermatologues) peuvent lancer l'analyse
-      // Les secrétaires voient l'erreur 403 si elles essaient d'appeler cet endpoint
+      // 🔑 SÉCURITÉ : la secrétaire ne lance l'IA QUE pour l'accueil d'un patient de
+      // son cabinet (mode DERM + patientId de son cabinet, README §4 point 3) : l'analyse
+      // tourne avant la consultation, la validation reste réservée au médecin.
+      let intakeByPatientId: number | null = null; // patient du cabinet (accueil secrétaire)
       if (userId && !isAnonymous) {
         try {
           const [user] = await db.select().from(users).where(eq(users.id, userId));
           if (user && user.role === "secretary") {
+            const pid = Number((req.body as any)?.intake?.patientId);
+            if ((req.body as any)?.mode === "derm" && Number.isFinite(pid) && pid > 0) {
+              const [sec] = await db.select().from(secretaryAccounts).where(eq(secretaryAccounts.userId, userId));
+              const [pt] = sec ? await db.select().from(proPatients).where(and(eq(proPatients.id, pid), eq(proPatients.dermatologistId, sec.proAccountId))) : [];
+              if (pt) intakeByPatientId = pid;
+            }
+          }
+          if (user && user.role === "secretary" && intakeByPatientId == null) {
             console.warn(`[security] ⚠️ Tentative non-autorisée par secretary ${user.email} sur POST /api/analyze`);
             return res.status(403).json({
               message: "Seules les dermatologues peuvent lancer une analyse",
@@ -2181,7 +2191,7 @@ export async function registerRoutes(
       if (reqMode === "derm" && userId && !isAnonymous) {
         try {
           const [pa] = await db.select().from(proAccounts).where(eq(proAccounts.userId, userId));
-          isProRequest = !!pa;
+          isProRequest = !!pa || intakeByPatientId != null;
         } catch (e) {
           console.warn("[analyze] vérif compte pro échouée (mode derm):", (e as any)?.message);
         }
@@ -2657,6 +2667,26 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
           });
           dermScanId = savedScan.id;
           console.log(`[analyze][derm] ✅ Scan #${dermScanId} sauvegardé (mode DERM)`);
+          // Accueil secrétaire : le scan est rattaché au dossier, avec les 3 photos et
+          // le motif ; le patient reste « en attente » (salle d'attente) jusqu'à ce que
+          // le médecin valide ou corrige le diagnostic.
+          if (intakeByPatientId != null) {
+            const extra: string[] = [];
+            for (const img of imageList.slice(1, 3)) {
+              try { const u = await uploadScanImageToStorage(img); if (u) extra.push(u); } catch {}
+            }
+            await db.update(scans).set({
+              patientId: intakeByPatientId,
+              clinicalContext: {
+                source: "intake",
+                intakePhotos: [uploadedDermImage, ...extra].filter(Boolean),
+                antecedents: { consultMotif: (intake as any)?.motif || null },
+                intakeBy: userId,
+                intakeAt: new Date().toISOString(),
+              } as any,
+            }).where(eq(scans.id, dermScanId));
+            await db.update(proPatients).set({ lastScanAt: new Date(), intakePending: true }).where(eq(proPatients.id, intakeByPatientId));
+          }
         } catch (e) {
           console.error("[analyze][derm] ❌ échec sauvegarde scan:", e instanceof Error ? e.message : String(e));
         }
@@ -4336,8 +4366,26 @@ Réponds en 2-4 phrases max, sois direct et utile.`;
         console.log(`[whatsapp-inbound] STOP reçu de ${from.slice(0, 6)}…`);
         return twiml("C'est noté : vous ne recevrez plus de messages de GlowScan. Vos analyses restent accessibles dans l'application.");
       }
-      const ref = body.match(RESULT_REF_RE);
       const phone = normalizeCmPhone(from);
+      // « 1 » : confirme le prochain rendez-vous du cabinet (rappel de la veille).
+      if (isApptConfirmMessage(body) && phone) {
+        const upcoming = Rows(await db.execute(sql`
+          SELECT a.id, a.patient_contact, a.appointment_date, p.full_name AS derm_name
+          FROM appointments a LEFT JOIN pro_accounts p ON p.id = a.dermatologue_id
+          WHERE a.status = 'scheduled' AND a.appointment_date > NOW() AND a.appointment_date < NOW() + INTERVAL '3 days'
+            AND a.patient_contact IS NOT NULL
+          ORDER BY a.appointment_date ASC LIMIT 500`)) as any[];
+        const appt = upcoming.find((a) => normalizeCmPhone(a.patient_contact) === phone);
+        if (appt) {
+          await db.execute(sql`UPDATE appointments SET status = 'confirmed', confirmed_at = NOW() WHERE id = ${appt.id}`);
+          const d = new Date(appt.appointment_date);
+          const day = d.toLocaleDateString("fr-FR", { timeZone: "Africa/Douala", weekday: "long", day: "numeric", month: "long" });
+          const time = d.toLocaleTimeString("fr-FR", { timeZone: "Africa/Douala", hour: "2-digit", minute: "2-digit" });
+          console.log(`[whatsapp-inbound] RDV #${appt.id} confirmé par le patient`);
+          return twiml(buildApptConfirmedReply({ derm: appt.derm_name, day, time }));
+        }
+      }
+      const ref = body.match(RESULT_REF_RE);
       if (ref && phone) {
         const scanId = parseInt(ref[1], 10);
         const row = Rows(await db.execute(sql`SELECT prospect_phone FROM scans WHERE id = ${scanId}`))[0] as any;

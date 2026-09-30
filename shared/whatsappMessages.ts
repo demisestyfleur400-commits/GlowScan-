@@ -58,3 +58,32 @@ export function followupsStoppedNote(at: string | Date): string {
   const jjmm = new Date(at).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", timeZone: "Africa/Douala" });
   return `Rappels de suivi désactivés par le patient le ${jjmm}`;
 }
+
+// ── Agenda du cabinet (étape 4c) — messages patients, sans emoji, vouvoiement ──
+
+const drName = (n?: string | null) => `Dr ${String(n || "").replace(/^dr\.?\s*/i, "").trim() || "votre dermatologue"}`;
+
+/** « 1 » (seul, ou « 1. », « 1 ! ») confirme le prochain rendez-vous. */
+export function isApptConfirmMessage(body: string | null | undefined): boolean {
+  return /^\s*1\s*[.!]?\s*$/.test(String(body || ""));
+}
+
+/** Veille du rendez-vous, par WhatsApp. */
+export function buildApptJ1Message(o: { name?: string | null; derm?: string | null; day: string; time: string; online?: boolean }): string {
+  return [
+    `Bonjour${o.name ? ` ${o.name}` : ""},`,
+    `Rappel : vous avez rendez-vous avec ${drName(o.derm)} demain, ${o.day} à ${o.time}${o.online ? " (consultation en ligne)" : " au cabinet"}.`,
+    "Répondez 1 pour confirmer.",
+    "GlowScan",
+  ].join("\n");
+}
+
+/** Deux heures avant, par SMS (court). */
+export function buildApptH2Sms(o: { derm?: string | null; time: string; online?: boolean }): string {
+  return `GlowScan : rappel, rendez-vous avec ${drName(o.derm)} aujourd'hui à ${o.time}${o.online ? " (en ligne)" : " au cabinet"}.`;
+}
+
+/** Réponse au « 1 ». */
+export function buildApptConfirmedReply(o: { derm?: string | null; day: string; time: string }): string {
+  return `Merci, votre rendez-vous avec ${drName(o.derm)} le ${o.day} à ${o.time} est confirmé.`;
+}

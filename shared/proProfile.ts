@@ -15,7 +15,7 @@ export function asProProfile(v: unknown): ProProfile {
 
 /** Page d'arrivée après connexion, selon le rôle (secrétaire) puis le profil. */
 export function proHomeOf(profile: unknown, role?: string | null): string {
-  if (role === "secretary") return "/derm/patients";
+  if (role === "secretary") return "/derm/accueil";
   const p = asProProfile(profile);
   if (p === "relay") return "/derm/relais";
   if (p === "ngo") return "/derm/pilotage";

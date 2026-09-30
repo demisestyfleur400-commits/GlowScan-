@@ -31,7 +31,7 @@ const PAGES: NavItem[] = [
 ];
 
 const SEC_PAGES: NavItem[] = [
-  { href: "/derm/analyse", icon: Plus, label: "Nouveau patient" },
+  { href: "/derm/accueil", icon: Plus, label: "Nouveau patient" },
   { href: "/derm/patients", icon: Users, label: "Mes patients", badge: "patients" },
   { href: "/derm/agenda", icon: Calendar, label: "Agenda" },
 ];

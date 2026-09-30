@@ -1152,8 +1152,20 @@ export function registerProRoutes(app: Express) {
           eq(patients.intakePending, true)
         ))
         .orderBy(desc(patients.createdAt));
+      // Salle d'attente : dossiers dont l'analyse d'accueil (secrétaire) est déjà faite
+      // → le médecin ouvre directement la fiche pour valider ou corriger.
+      const ready = new Set<number>();
+      if (list.length) {
+        try {
+          const r = Rows(await db.execute(sql`
+            SELECT DISTINCT patient_id FROM scans
+            WHERE patient_id = ANY(${sql.raw(`ARRAY[${list.map((p) => Number(p.id)).join(",")}]::int[]`)})
+              AND clinical_context->>'source' = 'intake' AND is_verified = false`));
+          for (const row of r as any[]) ready.add(Number(row.patient_id));
+        } catch {}
+      }
       res.json({
-        patients: list,
+        patients: list.map((p) => ({ ...p, intakeReady: ready.has(p.id) })),
         count: list.length
       });
     } catch (err) {
@@ -1744,6 +1756,14 @@ export function registerProRoutes(app: Express) {
         expertReviewer: req.proAccount.fullName,
         expertReviewedAt: new Date(),
       }).where(eq(scans.id, scanId)).returning();
+      // Diagnostic revu par le médecin : le patient quitte la salle d'attente.
+      await db.update(patients).set({ intakePending: false }).where(eq(patients.id, scan.patientId)).catch(() => {});
+      // J+28 : demande de photo de contrôle programmée d'office si aucun suivi n'est
+      // prévu (le cron « Rappels de contrôle » l'envoie et respecte ARRÊT SUIVI).
+      if (data.isVerified) {
+        await db.execute(sql`UPDATE "patients" SET "follow_up_at" = NOW() + INTERVAL '28 days', "follow_up_reminder_sent" = FALSE
+          WHERE "id" = ${scan.patientId} AND ("follow_up_at" IS NULL OR "follow_up_reminder_sent" = TRUE)`).catch(() => {});
+      }
 
       // ── Synchro dataset : le GOLD n'est attribué QUE sur validation RÉELLE du médecin ──
       // (auparavant tout scan DERM était "gold" par défaut, ce qui surévaluait la qualité).
@@ -2930,6 +2950,14 @@ Affine ton analyse selon tes règles.`;
       const email = typeof b.patientEmail === "string" && /.+@.+\..+/.test(b.patientEmail) ? b.patientEmail.trim().slice(0, 120) : null;
       const notes = typeof b.notes === "string" ? b.notes.trim().slice(0, 1000) : null;
       const patientId = typeof b.patientId === "string" ? b.patientId : null;
+      // Dossier du cabinet lié au RDV (rappel « compte rendu à envoyer » après la visite).
+      let recordId: number | null = null;
+      const rid = Number(b.patientRecordId);
+      if (Number.isFinite(rid) && rid > 0) {
+        const [pt] = await db.select().from(patients).where(and(eq(patients.id, rid), eq(patients.dermatologistId, req.proAccount.id)));
+        if (pt) recordId = rid;
+      }
+      const createdBy = req.isSecretary ? "secretary" : "doctor";
 
       // Détection de conflit : un RDV chevauchant sur ±30 min (sauf si forceConflict).
       const conflict = Rows(await db.execute(sql`
@@ -2942,8 +2970,8 @@ Affine ton analyse selon tes règles.`;
       }
 
       const [row] = Rows(await db.execute(sql`
-        INSERT INTO appointments (dermatologue_id, patient_id, patient_name, patient_contact, patient_email, appointment_date, duration_minutes, type, priority, notes)
-        VALUES (${req.proAccount.id}, ${patientId}, ${name}, ${contact}, ${email}, ${when.toISOString()}, ${duration}, ${cls.type}, ${cls.priority}, ${notes})
+        INSERT INTO appointments (dermatologue_id, patient_id, patient_name, patient_contact, patient_email, appointment_date, duration_minutes, type, priority, notes, patient_record_id, created_by)
+        VALUES (${req.proAccount.id}, ${patientId}, ${name}, ${contact}, ${email}, ${when.toISOString()}, ${duration}, ${cls.type}, ${cls.priority}, ${notes}, ${recordId}, ${createdBy})
         RETURNING *`));
       res.json({ ok: true, appointment: row });
     } catch (e) {

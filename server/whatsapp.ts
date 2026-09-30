@@ -105,6 +105,21 @@ export async function sendWhatsAppText(phone: string | null | undefined, body: s
   }
 }
 
+// Envoi SMS (Twilio, numéro TWILIO_PHONE_NUMBER) — rappel « 2 h avant » du cabinet.
+export async function sendSmsText(phone: string | null | undefined, body: string): Promise<{ ok: boolean; method: "twilio" | "none"; error?: string }> {
+  const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
+  const from = process.env.TWILIO_PHONE_NUMBER;
+  const to = normalizePhone(phone || "");
+  if (!(sid && tok && from && to)) return { ok: false, method: "none", error: "SMS (Twilio) non configuré ou numéro absent" };
+  try {
+    const twilio = (await import("twilio")).default(sid, tok);
+    await twilio.messages.create({ from, to, body });
+    return { ok: true, method: "twilio" };
+  } catch (e: any) {
+    return { ok: false, method: "twilio", error: e?.message || String(e) };
+  }
+}
+
 // Construit un lien "cliquer pour ouvrir WhatsApp" (fallback manuel si Twilio absent).
 export function whatsappDeepLink(phone: string, text: string): string {
   const d = (phone || "").replace(/[^0-9]/g, "");
@@ -117,9 +132,9 @@ export function buildFollowUpReminderMessage(patientName: string, dermatologistN
   if (customMsg && customMsg.trim()) return customMsg.trim();
   return (
     `Bonjour ${patientName || ""},\n\n` +
-    `Dr ${dermatologistName} vous invite a envoyer une nouvelle photo de la zone traitee ` +
-    `pour suivre l'evolution de votre traitement.\n\n` +
-    `Repondez simplement a ce message avec votre photo, ou prenez rendez-vous.\n\nGlowScan`
+    `Dr ${String(dermatologistName || "").replace(/^dr\.?\s*/i, "")} vous invite à envoyer une nouvelle photo de la zone traitée ` +
+    `pour suivre l'évolution de votre traitement.\n\n` +
+    `Répondez simplement à ce message avec votre photo, ou prenez rendez-vous.\n\nGlowScan`
   ).trim();
 }
 

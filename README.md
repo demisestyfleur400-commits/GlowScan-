@@ -6,9 +6,9 @@ Analyse de peau par IA pour les peaux africaines (appli patient) et portail Glow
 
 Les migrations SQL de `migrations/` s'appliquent **à la main, avant le déploiement** du code qui en dépend. Le serveur ne modifie pas ces tables au démarrage. Toutes sont idempotentes : on peut les relancer sans risque.
 
-Refonte Organic (étape 2), dans cet ordre : 0013 → 0014 → 0015 → 0016 → 0017 → 0018 → 0019 → 0020.
+Refonte Organic (étape 2), dans cet ordre : 0013 → 0014 → 0015 → 0016 → 0017 → 0018 → 0019 → 0020 → 0021.
 
-**État : 0013 à 0020 appliquées en production (projet Supabase `atjvlnzrwdeqhilvssyd`) le 29/09/2026**, après un essai complet dans une transaction annulée. Les relancer ne change rien (idempotentes).
+**État : 0013 à 0021 appliquées en production (projet Supabase `atjvlnzrwdeqhilvssyd`) le 29/09/2026**, après un essai complet dans une transaction annulée. Les relancer ne change rien (idempotentes).
 
 | Ordre | Fichier | Contenu |
 |---|---|---|
@@ -20,11 +20,12 @@ Refonte Organic (étape 2), dans cet ordre : 0013 → 0014 → 0015 → 0016 →
 | 6 | `0018_rls_runtime_tables.sql` | Sécurité par ligne sur `revenue_entries`, `appointments`, `follow_up_reminders`, `clinical_ai_exchanges`, `b2c_reminders` (alerte Supabase) |
 | 7 | `0019_pro_profile.sql` | Étape 4a — colonne `pro_accounts.profile` (`derm` \| `relay` \| `ngo`), choisie à l'inscription, décide de la page d'arrivée |
 | 8 | `0020_sign_pin.sql` | Étape 4b — code de signature à 4 chiffres du médecin (`pro_accounts.sign_pin_hash`, haché bcrypt, hors schéma Drizzle), `consultations.signed_at` |
+| 9 | `0021_intake_reminders.sql` | Étape 4c — agenda : `appointments` (créée si absente) + `patient_record_id`, `created_by`, `confirmed_at` (réponse « 1 »), `reminder_j1_sent_at`, `report_reminder_sent_at`, RLS |
 
 Commande (base Postgres / Supabase, variable `DATABASE_URL` ou `SUPABASE_URL`) :
 
 ```bash
-for f in 0013_consents 0014_product_scans 0015_orders_followups 0016_consultation_refunds 0017_wallets 0018_rls_runtime_tables 0019_pro_profile 0020_sign_pin; do
+for f in 0013_consents 0014_product_scans 0015_orders_followups 0016_consultation_refunds 0017_wallets 0018_rls_runtime_tables 0019_pro_profile 0020_sign_pin 0021_intake_reminders; do
   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "migrations/$f.sql" || break
 done
 ```

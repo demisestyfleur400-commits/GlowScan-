@@ -4,14 +4,14 @@ import webpush from "web-push";
 import { storage } from "./storage";
 import { db } from "./db";
 import { sql } from "drizzle-orm";
-import { buildRelanceMessage, withFollowupFooter } from "@shared/whatsappMessages";
+import { buildRelanceMessage, withFollowupFooter, buildApptJ1Message, buildApptH2Sms } from "@shared/whatsappMessages";
 import { productsAllowed, resultStateOf } from "@shared/resultB2C";
 import { normalizeCmPhone } from "@shared/phone";
 import { stopLinkSig, followupsStoppedAt } from "./consents";
 import { refundConsultation, chargeSubscriptionFromEarnings, proBalances, requestWithdrawal } from "./wallet";
 import { PRO_SUBSCRIPTION_FCFA } from "@shared/premium";
 const APP_BASE = (process.env.PUBLIC_BASE_URL || "https://glow-scan.com").replace(/\/$/, "");
-import { sendWhatsAppText, buildFollowUpReminderMessage } from "./whatsapp";
+import { sendWhatsAppText, sendSmsText, buildFollowUpReminderMessage } from "./whatsapp";
 import { sendEmail, buildTrialReminderEmail, buildDigestEmail, buildReengageEmail, buildB2CReengageEmail } from "./email";
 
 const fn = (s: string) => (s || "").split(" ")[0];
@@ -498,10 +498,14 @@ async function sendAppointmentH2Reminders() {
       if (a.patient_id) await sendPushToUsers(new Set([a.patient_id]), {
         title: `Rappel RDV Dr ${dName}`, body: `Votre RDV est dans 2 heures. ${heure} · ${lieu}`, url: "/",
       } as any);
-      // 3) WhatsApp patient (backup — part toujours si numéro)
+      // 3) SMS patient (README §4 point 5) ; WhatsApp en secours si le SMS ne part pas.
       if (a.patient_contact) {
-        const msg = `Bonjour ${pName}, rappel : votre RDV avec Dr ${dName} est dans 2 heures.\nÀ ${heure}. ${lieu}.`;
-        try { await sendWhatsAppText(a.patient_contact, msg); } catch {}
+        const online = a.type === "glowscan" || a.type === "online";
+        const sms = await sendSmsText(a.patient_contact, buildApptH2Sms({ derm: a.derm_name, time: heure, online })).catch(() => ({ ok: false }));
+        if (!sms.ok) {
+          const msg = `Bonjour ${pName}, rappel : votre rendez-vous avec Dr ${dName} est dans 2 heures, à ${heure}. ${lieu}.`;
+          try { await sendWhatsAppText(a.patient_contact, msg); } catch {}
+        }
       }
       // 4) Email patient (secours si le push ne passe pas — Android tue les process)
       if (a.patient_email) {
@@ -515,6 +519,75 @@ async function sendAppointmentH2Reminders() {
     log(`⏰ Rappels RDV H-2 : ${done}/${rows.length} envoyés`);
   } catch (err) {
     log(`❌ Erreur rappels RDV H-2 : ${err}`);
+  }
+}
+
+// ── AGENDA — rappel de la VEILLE (WhatsApp, « Répondez 1 pour confirmer ») ──
+// Tous les jours à 18 h (Douala) : rendez-vous de demain pas encore confirmés.
+async function sendAppointmentJ1Reminders() {
+  try {
+    const tomorrow = new Date(Date.now() + 86400000).toLocaleDateString("fr-CA", { timeZone: "Africa/Douala" });
+    const r: any = await db.execute(sql`
+      SELECT a.*, p.full_name AS derm_name
+      FROM appointments a LEFT JOIN pro_accounts p ON p.id = a.dermatologue_id
+      WHERE (a.appointment_date AT TIME ZONE 'Africa/Douala')::date = ${tomorrow}::date
+        AND a.status = 'scheduled' AND a.reminder_j1_sent_at IS NULL AND a.patient_contact IS NOT NULL
+      LIMIT 300`);
+    const rows = (r?.rows ?? r ?? []) as any[];
+    let sent = 0;
+    for (const a of rows) {
+      const d = new Date(a.appointment_date);
+      const msg = buildApptJ1Message({
+        name: fn(a.patient_name || ""),
+        derm: a.derm_name,
+        day: d.toLocaleDateString("fr-FR", { timeZone: "Africa/Douala", weekday: "long", day: "numeric", month: "long" }),
+        time: d.toLocaleTimeString("fr-FR", { timeZone: "Africa/Douala", hour: "2-digit", minute: "2-digit" }),
+        online: a.type === "glowscan" || a.type === "online",
+      });
+      const out = await sendWhatsAppText(a.patient_contact, msg).catch(() => ({ ok: false }));
+      // Marqué même en cas d'échec (pas de rafale de tentatives) ; le SMS de H-2 reste prévu.
+      await db.execute(sql`UPDATE appointments SET reminder_j1_sent_at = NOW() WHERE id = ${a.id}`).catch(() => {});
+      if (out.ok) sent++;
+    }
+    if (rows.length) log(`📅 Rappels RDV de la veille : ${sent}/${rows.length} envoyés (WhatsApp)`);
+  } catch (err) {
+    log(`❌ Erreur rappels RDV de la veille : ${err}`);
+  }
+}
+
+// ── AGENDA — après la visite : compte rendu à envoyer ────────────────────
+// Le compte rendu PDF du cabinet est produit par le médecin (signé, relu). Une
+// heure après la fin d'un rendez-vous lié à un dossier, si aucun compte rendu
+// n'a été envoyé depuis, on prévient le médecin (push + email). Rien au patient.
+async function sendVisitReportReminders() {
+  try {
+    const r: any = await db.execute(sql`
+      SELECT a.id, a.patient_record_id, a.appointment_date, a.duration_minutes,
+             pt.first_name, pt.last_name, pr.full_name AS derm_name, pr.user_id AS derm_user_id, u.email AS derm_email
+      FROM appointments a
+      JOIN patients pt ON pt.id = a.patient_record_id
+      LEFT JOIN pro_accounts pr ON pr.id = a.dermatologue_id
+      LEFT JOIN users u ON u.id = pr.user_id
+      WHERE a.status IN ('scheduled', 'confirmed', 'done') AND a.report_reminder_sent_at IS NULL
+        AND a.appointment_date + make_interval(mins => COALESCE(a.duration_minutes, 30) + 60) < NOW()
+        AND a.appointment_date > NOW() - INTERVAL '2 days'
+        AND (pt.report_sent_at IS NULL OR pt.report_sent_at < a.appointment_date)
+      LIMIT 200`);
+    const rows = (r?.rows ?? r ?? []) as any[];
+    for (const a of rows) {
+      const name = [a.first_name, a.last_name].filter(Boolean).join(" ") || "votre patient";
+      const url = `/derm/patient/${a.patient_record_id}`;
+      if (a.derm_user_id) await sendPushToUsers(new Set([a.derm_user_id]), { title: "Compte rendu à envoyer", body: `${name} : la visite est terminée, le compte rendu n'est pas encore parti.`, url } as any);
+      if (a.derm_email) {
+        try { await sendEmail(a.derm_email, `Compte rendu à envoyer : ${name}`,
+          `<p>Bonjour Dr ${String(a.derm_name || "").replace(/^dr\.?\s*/i, "")},</p><p>La visite de <strong>${name}</strong> est terminée et son compte rendu n'a pas encore été envoyé.</p><p><a href="${PUBLIC_BASE}${url}">Ouvrir le dossier</a></p>`,
+          `Compte rendu de ${name} à envoyer : ${PUBLIC_BASE}${url}`); } catch {}
+      }
+      await db.execute(sql`UPDATE appointments SET report_reminder_sent_at = NOW() WHERE id = ${a.id}`).catch(() => {});
+    }
+    if (rows.length) log(`📝 Comptes rendus à envoyer : ${rows.length} médecin(s) prévenu(s)`);
+  } catch (err) {
+    log(`❌ Erreur rappels compte rendu : ${err}`);
   }
 }
 
@@ -837,6 +910,9 @@ export function startCronJobs() {
 
   // ✅ Rappels RDV agenda H-2 — toutes les 15 minutes
   cron.schedule("*/15 * * * *", sendAppointmentH2Reminders, { timezone: "Africa/Douala" });
+  // Agenda : rappel WhatsApp de la veille (18 h) et compte rendu à envoyer après la visite.
+  cron.schedule("0 18 * * *", sendAppointmentJ1Reminders, { timezone: "Africa/Douala" });
+  cron.schedule("*/30 * * * *", sendVisitReportReminders, { timezone: "Africa/Douala" });
   log("✅ Cron rappels RDV H-2 actif — toutes les 15 min (Douala)");
 
   // ✅ Rappel B2C « plus tard » (score bas) — toutes les heures
