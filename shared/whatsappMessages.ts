@@ -87,3 +87,13 @@ export function buildApptH2Sms(o: { derm?: string | null; time: string; online?:
 export function buildApptConfirmedReply(o: { derm?: string | null; day: string; time: string }): string {
   return `Merci, votre rendez-vous avec ${drName(o.derm)} le ${o.day} à ${o.time} est confirmé.`;
 }
+
+/** Compte rendu signé (version patient 1a) : lien sécurisé. Aucun émoji. */
+export function buildReportReadyMessage(o: { name?: string | null; derm?: string | null; url: string; withPrescription: boolean }): string {
+  return [
+    `Bonjour${o.name ? ` ${o.name}` : ""},`,
+    `Voici votre compte rendu de ${drName(o.derm)}${o.withPrescription ? ", avec votre ordonnance" : ""}. Lisez surtout la partie « Ce que vous devez faire ».`,
+    o.url,
+    "GlowScan",
+  ].join("\n");
+}

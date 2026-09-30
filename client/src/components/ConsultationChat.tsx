@@ -2,6 +2,7 @@ import { followupsStoppedNote } from "@shared/whatsappMessages";
 import { useEffect, useRef, useState } from "react";
 import { useConsultationSocket } from "@/hooks/use-consultation-socket";
 import { ClinicalReasoningPanel } from "@/components/pro/ClinicalReasoningPanel";
+import { ReportEditor } from "@/components/pro/ReportEditor";
 import { GS, useGsFonts } from "@/lib/gs-ui";
 import { splitConsultation } from "@shared/splits";
 import { Zap, Camera, Phone, Mic, SendHorizontal, Bot, FileText, MessageCircle, Stethoscope } from "lucide-react";
@@ -101,6 +102,8 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
     }
   }, [dossier]);
   const recognitionRef = useRef<any>(null);
+  const reportSaveRef = useRef<(() => Promise<number | null>) | null>(null);
+  const [reportId, setReportId] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
   useGsFonts();
@@ -164,7 +167,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
     { t: "Les photos", b: "Ces photos ont été prises par le patient lors de son analyse. Appuyez pour agrandir." },
     { t: "Le diagnostic IA", b: "Ceci est une suggestion indicative. Votre diagnostic prime toujours." },
     { t: "Vos actions", b: "Validez si vous êtes d'accord. Corrigez si vous avez un autre avis." },
-    { t: "La prescription", b: "Dictez ou écrivez votre prescription. Elle apparaîtra dans le rapport final." },
+    { t: "Le compte rendu", b: "Remplissez une seule fois : GlowScan en tire la version patient, le dossier du cabinet et l'ordonnance." },
     { t: "Valider et rédiger le compte rendu", b: "Vous relisez votre avis, vous signez avec votre code à 4 chiffres, puis le compte rendu part au patient (e-mail / WhatsApp). Vous êtes payé sur Mobile Money." },
   ];
   const advanceCoach = () => {
@@ -486,9 +489,17 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
     try { recognitionRef.current?.stop(); } catch {}
     try { msgRecognitionRef.current?.stop(); } catch {}
     try {
+      // Le compte rendu structuré est enregistré, puis signé côté serveur avec le même code.
+      let reportId: number | null = null;
+      if (!reportSaveRef.current && !(ctx?.isDemo === true || ctx?.is_demo === true)) {
+        setDossierCollapsed(false); setShowFollowUp(false); setConfirmSend(false);
+        alert("Remplissez d'abord le compte rendu, dans le dossier du patient.");
+        return null;
+      }
+      try { reportId = (await reportSaveRef.current?.()) ?? null; } catch { alert("Le compte rendu n'a pas pu être enregistré. Réessayez."); return null; }
       const res = await fetch(`/api/pro/consultations/${consultationId}/close`, {
         method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prescription: prescription.trim() || undefined, followUp: followUp === "none" ? undefined : followUp, doctorMessage: doctorMessage.trim() || undefined, isPrescription, pin: pinOverride ?? signPin }),
+        body: JSON.stringify({ reportId: reportId ?? undefined, followUp: followUp === "none" ? undefined : followUp, pin: pinOverride ?? signPin }),
       });
       const d = await res.json().catch(() => ({}));
       if (!res.ok && typeof d?.code === "string" && d.code.startsWith("SIGN_PIN")) {
@@ -905,40 +916,10 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
                   )}
                 </div>
 
-                {/* Observations, conseils, traitement et suivi — champ unique transmis au rapport */}
+                {/* Compte rendu structuré (étape 9a) : une saisie → patient, dossier, ordonnance.
+                    Signé avec le code à 4 chiffres à la validation de la consultation. */}
                 {ctx?.status !== "closed" && (
-                  <div>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 6 }}>
-                      <span style={{ fontSize: 11, color: MUTED }}>Observations, conseils, traitement et suivi</span>
-                      <button onClick={toggleDictation}
-                        style={{ display: "flex", alignItems: "center", gap: 5, background: dictating ? "#ef4444" : (dark ? "rgba(10,110,114,0.2)" : "rgba(10,110,114,0.08)"), color: dictating ? "#fff" : "var(--color-accent-2-700)", border: `1px solid ${dictating ? "#ef4444" : "rgba(10,110,114,0.25)"}`, borderRadius: 9999, padding: "5px 11px", fontSize: 11, fontWeight: 800, cursor: "pointer" }}>
-                        {dictating ? "● Écoute…" : "Dicter"}
-                      </button>
-                    </div>
-                    <textarea value={prescription} onChange={(e) => { setPrescription(e.target.value); setPrescriptionTouched(true); }} rows={6}
-                      placeholder={"Ce que vous avez observé…\nConseils pour la suite…\nTraitement, si nécessaire…\nSuivi recommandé…"}
-                      style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: `1px solid ${BORDER}`, background: dark ? "rgba(255,255,255,0.05)" : "var(--color-bg)", color: INK, fontSize: 13, lineHeight: 1.6, outline: "none", resize: "vertical" }} />
-                    <label style={{ display: "flex", alignItems: "center", gap: 8, margin: "8px 2px 0", cursor: "pointer" }}>
-                      <input type="checkbox" checked={isPrescription} onChange={(e) => setIsPrescription(e.target.checked)} style={{ width: 15, height: 15, accentColor: "var(--color-accent-2-700)" }} />
-                      <span style={{ fontSize: 11.5, color: INK }}>C'est une ordonnance (sinon : « Conseils » dans le compte rendu)</span>
-                    </label>
-                    <p style={{ fontSize: 10, color: MUTED, margin: "4px 2px 0" }}>Inclus dans le compte rendu envoyé au patient à la clôture.</p>
-                  </div>
-                )}
-
-                {/* Message personnel au patient (Section 2 du compte rendu) */}
-                {ctx?.status !== "closed" && (
-                  <div>
-                    <span style={{ fontSize: 11, color: MUTED, display: "block", marginBottom: 6 }}>Message personnel au patient (optionnel)</span>
-                    <textarea value={doctorMessage} onChange={(e) => setDoctorMessage(e.target.value)} rows={3}
-                      placeholder="Ex : Bonjour, merci pour vos photos. Voici mes recommandations…"
-                      style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: `1px solid ${BORDER}`, background: dark ? "rgba(255,255,255,0.05)" : "var(--color-bg)", color: INK, fontSize: 13, lineHeight: 1.6, outline: "none", resize: "vertical" }} />
-                    <p style={{ fontSize: 10, color: MUTED, margin: "4px 2px 0" }}>Apparaît en tête du compte rendu, tel quel.</p>
-                    <button onClick={saveDraft} disabled={draftSaving}
-                      style={{ marginTop: 8, background: "transparent", color: "var(--color-accent-2-700)", border: `1px solid ${dark ? "rgba(255,255,255,0.15)" : "rgba(10,110,114,0.3)"}`, borderRadius: 9999, padding: "7px 14px", fontSize: 11.5, fontWeight: 800, cursor: "pointer", opacity: draftSaving ? 0.6 : 1 }}>
-                      {draftSaving ? "Enregistrement…" : "Enregistrer le brouillon"}
-                    </button>
-                  </div>
+                  <ReportEditor source="consultation" consultationId={consultationId} saveRef={reportSaveRef} onReportId={setReportId} narrow />
                 )}
               </div>
 
@@ -1249,42 +1230,18 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
                 <p style={{ fontSize: 16, fontWeight: 900, color: INK, margin: "0 0 4px" }}>Vérifiez votre compte rendu</p>
                 <p style={{ fontSize: 12, color: MUTED, margin: "0 0 14px", lineHeight: 1.5 }}>Ce que le patient recevra. Rien n'est envoyé tant que vous n'avez pas validé.</p>
 
-                {/* Prévisualisation enrichie : sections visibles + sections masquées (vides) */}
-                {(() => {
-                  const consented = dossier?.intake?.consent?.accepted === true;
-                  const hasPhotos = Array.isArray(dossier?.photos) && dossier.photos.length > 0 && consented;
-                  const hasSignaled = !!(dossier?.intake?.duration || dossier?.intake?.products || dossier?.intake?.allergies || (Array.isArray(dossier?.intake?.summaryNotes) && dossier.intake.summaryNotes.length));
-                  const avisTxt = dossier?.scan?.isVerified
-                    ? `Compatible avec « ${dossier?.scan?.expertCorrectedCondition || dossier?.scan?.condition || "avis validé"} »`
-                    : "Surveillance / prochaines étapes indiquées";
-                  const adviceTitle = isPrescription ? "Traitement prescrit" : "Conseils de votre dermatologue";
-                  const sections = [
-                    { on: !!doctorMessage.trim(), t: "Message personnel", v: doctorMessage.trim() },
-                    { on: true, t: "L'avis de votre dermatologue", v: avisTxt },
-                    { on: hasSignaled, t: "Ce que vous avez signalé", v: "" },
-                    { on: !!prescription.trim(), t: adviceTitle, v: prescription.trim().slice(0, 140) },
-                    { on: followUpOpt !== "none", t: "Votre suivi", v: "" },
-                    { on: hasPhotos, t: "Photos", v: hasPhotos ? `${dossier.photos.length} photo(s)` : "" },
-                  ];
-                  const masked = sections.filter((s) => !s.on).map((s) => s.t);
-                  return (
-                    <div style={{ border: `1px solid ${BORDER}`, borderRadius: 12, padding: 12, marginBottom: 14, display: "flex", flexDirection: "column", gap: 9 }}>
-                      <span style={{ fontSize: 10.5, color: MUTED, textTransform: "uppercase", letterSpacing: 0.4, fontWeight: 800 }}>Aperçu du compte rendu patient</span>
-                      {sections.filter((s) => s.on).map((s) => (
-                        <div key={s.t}>
-                          <span style={{ fontSize: 12, fontWeight: 800, color: INK }}>✓ {s.t}</span>
-                          {s.v && <span style={{ display: "block", fontSize: 12, color: MUTED, whiteSpace: "pre-wrap", lineHeight: 1.5 }}>{s.v}{s.v.length >= 140 ? "…" : ""}</span>}
-                        </div>
-                      ))}
-                      {!dossier?.scan?.isVerified && (
-                        <p style={{ fontSize: 11, color: dark ? "#fbbf24" : "#b45309", margin: 0 }}>Diagnostic non confirmé — le compte rendu indiquera « surveillance / examen complémentaire ».</p>
-                      )}
-                      {masked.length > 0 && (
-                        <p style={{ fontSize: 10.5, color: MUTED, margin: "2px 0 0", lineHeight: 1.5 }}>Sections masquées (vides) : {masked.join(" · ")}</p>
-                      )}
-                    </div>
-                  );
-                })()}
+                {/* Aperçu des documents générés depuis la saisie unique (étape 9a) */}
+                <div style={{ border: `1px solid ${BORDER}`, borderRadius: 12, padding: 12, marginBottom: 14, display: "flex", flexDirection: "column", gap: 8 }}>
+                  <span style={{ fontSize: 10.5, color: MUTED, textTransform: "uppercase", letterSpacing: 0.4, fontWeight: 800 }}>Aperçu des documents</span>
+                  {([["patient", "Version patient (et ordonnance)"], ["cabinet", "Dossier du cabinet"]] as const).map(([v, l]) => (
+                    <button key={v} disabled={!reportId}
+                      onClick={async () => { try { await reportSaveRef.current?.(); } catch {} window.open(`/api/reports/${reportId}/view?v=${v}`, "_blank", "noopener"); }}
+                      style={{ textAlign: "left", background: "transparent", border: `1px solid ${BORDER}`, borderRadius: 10, padding: "9px 12px", fontSize: 13, fontWeight: 700, color: INK, cursor: "pointer" }}>
+                      {l} →
+                    </button>
+                  ))}
+                  <p style={{ fontSize: 11, color: MUTED, margin: 0, lineHeight: 1.5 }}>Le compte rendu est signé avec votre code, puis il ne peut plus être modifié.</p>
+                </div>
 
                 <p style={{ fontSize: 12.5, fontWeight: 800, color: INK, margin: "0 0 8px" }}>Programmer un suivi ?</p>
                 {[

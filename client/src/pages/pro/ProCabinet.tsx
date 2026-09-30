@@ -1,4 +1,5 @@
 import { SPLITS, splitConsultation } from "@shared/splits";
+import { DEFAULT_SPECIALTY } from "@shared/report";
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
@@ -52,6 +53,9 @@ export default function ProCabinet() {
   const [city, setCity] = useState("");
   const [country, setCountry] = useState("");
   const [licenseNumber, setLicenseNumber] = useState("");
+  const [cabinetAddress, setCabinetAddress] = useState("");
+  const [cabinetPhone, setCabinetPhone] = useState("");
+  const [specialtyTitle, setSpecialtyTitle] = useState("");
   // Opt-in consultation B2C
   const [b2cAvailable, setB2cAvailable] = useState(false);
   const [consultPrice, setConsultPrice] = useState("4800");
@@ -121,6 +125,9 @@ export default function ProCabinet() {
       setCity(accData.account.city || "");
       setCountry((accData.account as any).country || "");
       setLicenseNumber((accData.account as any).licenseNumber || "");
+      setCabinetAddress((accData.account as any).cabinetAddress || "");
+      setCabinetPhone((accData.account as any).cabinetPhone || "");
+      setSpecialtyTitle((accData.account as any).specialtyTitle || "");
       setB2cAvailable((accData.account as any).b2cAvailable === true);
       setConsultPrice(String((accData.account as any).consultPriceFcfa ?? 4800));
     }
@@ -141,7 +148,10 @@ export default function ProCabinet() {
         city: city || null,
         country: country || null,
         licenseNumber: licenseNumber || null,
-      });
+        cabinetAddress: cabinetAddress.trim() || null,
+        cabinetPhone: cabinetPhone.trim() || null,
+        specialtyTitle: specialtyTitle.trim() || null,
+      } as any);
       setSaved(true);
       setTimeout(() => setSaved(false), 1800);
     } catch (err: any) {
@@ -211,8 +221,14 @@ export default function ProCabinet() {
             <div className="grid grid-cols-1 gap-organic-3 sm:grid-cols-2">
               <ProInput label="Ville" value={city} onChange={(e) => setCity(e.target.value)} testid="input-city" />
               <ProInput label="Téléphone" value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" testid="input-phone" />
-              <ProInput label="N° d'ordre" value={licenseNumber} onChange={(e) => setLicenseNumber(e.target.value)} testid="input-license" />
+              <ProInput label="N° ONMC" value={licenseNumber} onChange={(e) => setLicenseNumber(e.target.value)} testid="input-license" />
               <ProInput label="Pays" value={country} onChange={(e) => setCountry(e.target.value)} testid="input-country" />
+            </div>
+            <span className="text-[12px] text-organic-neutral-700">Pour l'ordonnance (mentions obligatoires de l'ONMC) :</span>
+            <ProInput label="Adresse complète du cabinet" value={cabinetAddress} onChange={(e) => setCabinetAddress(e.target.value)} placeholder="Rue, quartier, BP, ville" testid="input-cabinet-address" />
+            <div className="grid grid-cols-1 gap-organic-3 sm:grid-cols-2">
+              <ProInput label="Téléphone du cabinet" value={cabinetPhone} onChange={(e) => setCabinetPhone(e.target.value)} inputMode="tel" testid="input-cabinet-phone" />
+              <ProInput label="Spécialité (sur l'ordonnance)" value={specialtyTitle} onChange={(e) => setSpecialtyTitle(e.target.value)} placeholder={DEFAULT_SPECIALTY} testid="input-specialty-title" />
             </div>
             <Button onClick={handleSave} isLoading={updateAcc.isPending} disabled={updateAcc.isPending || !fullName.trim()} className="self-start" data-testid="button-save">
               {saved ? "Enregistré ✓" : "Enregistrer"}

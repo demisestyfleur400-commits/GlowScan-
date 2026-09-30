@@ -446,7 +446,7 @@ export function requireActivePro(req: any, res: any, next: any) {
 // Middleware — accès aux données patients d'un cabinet : autorisé au MÉDECIN
 // propriétaire OU à une SECRÉTAIRE liée. Résout req.proAccount vers le compte du
 // cabinet (celui du médecin) et exige qu'il soit actif. req.isSecretary = rôle.
-function requireProAccess(req: any, res: any, next: any) {
+export function requireProAccess(req: any, res: any, next: any) {
   const userId = req.session?.userId;
   if (!userId) return res.status(401).json({ message: "Connexion requise" });
   (async () => {
@@ -1063,6 +1063,10 @@ export function registerProRoutes(app: Express) {
         city: z.string().nullable().optional(),
         country: z.string().nullable().optional(),
         licenseNumber: z.string().nullable().optional(),
+        // Mentions obligatoires de l'ordonnance (migration 0025)
+        cabinetAddress: z.string().max(300).nullable().optional(),
+        cabinetPhone: z.string().max(40).nullable().optional(),
+        specialtyTitle: z.string().max(120).nullable().optional(),
         onboardingDone: z.boolean().optional(),
         // Opt-in consultation B2C (hors schéma Drizzle → SQL brut)
         b2cAvailable: z.boolean().optional(),
@@ -2269,9 +2273,20 @@ export function registerProRoutes(app: Express) {
       // Signature : code à 4 chiffres vérifié AVANT toute écriture (sauf consultation de démo).
       let demoFlag = false;
       try { demoFlag = (Rows(await db.execute(sql`SELECT is_demo FROM consultations WHERE id = ${id}`))[0] as any)?.is_demo === true; } catch {}
+      // Compte rendu structuré (étape 9a) : complet avant la signature (lecture seule).
+      const reportId = Number(req.body?.reportId) || null;
+      if (reportId && !demoFlag) {
+        const { reportBlockers } = await import("./reportRoutes");
+        const missing = await reportBlockers(reportId, req.proAccount.id);
+        if (missing.length) return res.status(400).json({ code: "REPORT_INCOMPLETE", message: `Il manque : ${missing.join(", ")}.`, missing });
+      }
       if (!demoFlag) {
         const chk = await verifySignPin(req.proAccount.id, String(req.body?.pin ?? ""));
         if (chk !== "ok") { const m = PIN_MESSAGES[chk]; return res.status(m.status).json({ code: m.code, message: m.message }); }
+      }
+      if (reportId && !demoFlag) {
+        const { signReport } = await import("./reportRoutes");
+        await signReport(reportId, req.proAccount.id);
       }
       // Prescription dictée/écrite par le dermatologue (facultative) → persistée et
       // injectée dans le rapport final envoyé au patient.

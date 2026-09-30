@@ -1,5 +1,7 @@
 import { followupsStoppedNote } from "@shared/whatsappMessages";
 import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { ReportEditor } from "@/components/pro/ReportEditor";
 import html2pdf from "html2pdf.js";
 import { Link, useRoute, useLocation } from "wouter";
 import { motion } from "framer-motion";
@@ -447,6 +449,7 @@ export default function ProPatient() {
 
       {lastScan && <EvolutionSection scan={lastScan as any} patientId={p.id} />}
       {scans.length > 0 && !isSecretary && <FollowUpReminderCard patient={p as any} patientId={p.id} />}
+      <ReportsSection patientId={p.id} isSecretary={isSecretary} />
       {lastScan && !isSecretary && <PeerReviewButton patientId={p.id} />}
 
       {scans.length > 0 && (
@@ -1031,6 +1034,46 @@ function FollowUpReminderCard({ patient, patientId }: { patient: any; patientId:
 }
 
 // ── Demander un second avis à un confrère (cas anonymisé) ──────────────────
+// ── Comptes rendus (étape 9a) : saisie unique → patient, dossier du cabinet, ordonnance ──
+function ReportsSection({ patientId, isSecretary }: { patientId: number; isSecretary: boolean }) {
+  const { data, refetch } = useQuery<{ items: any[] }>({ queryKey: [`/api/pro/reports?patientId=${patientId}`] });
+  const [editing, setEditing] = useState(false);
+  const items = (data?.items || []).filter((r) => r.signedAt);
+  const draft = (data?.items || []).find((r) => !r.signedAt);
+  return (
+    <section className="flex flex-col gap-organic-3" data-testid="reports-section">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="m-0 text-[22px]">Comptes rendus</h3>
+        {!isSecretary && !editing && (
+          <Button onClick={() => setEditing(true)} data-testid="button-write-report">{draft ? "Reprendre le brouillon" : "Rédiger le compte rendu"}</Button>
+        )}
+      </div>
+      {editing && (
+        <>
+          <ReportEditor source="visit" patientId={patientId} />
+          <Button variant="ghost" className="self-start" onClick={() => { setEditing(false); refetch(); }}>Fermer</Button>
+        </>
+      )}
+      {items.length === 0 && !editing && <span className="text-[14px] text-organic-neutral-700">Aucun compte rendu signé pour ce patient.</span>}
+      {items.map((r) => (
+        <div key={r.id} className="flex flex-wrap items-center justify-between gap-2 rounded-card bg-organic-surface p-organic-4">
+          <span className="flex min-w-0 flex-col">
+            <span className="truncate text-[14px] font-bold">{r.diagnosis || "Compte rendu"}</span>
+            <span className="text-[12px] text-organic-neutral-700">
+              {r.ref} · {new Date(r.signedAt).toLocaleDateString("fr-FR")}{r.prescription ? ` · ordonnance ${r.prescription.ref}${r.prescription.status === "revoked" ? " (annulée)" : ""}` : ""}{r.sentPatientAt ? " · envoyé au patient" : ""}
+            </span>
+          </span>
+          <span className="flex flex-wrap gap-1.5">
+            <a href={`/api/reports/${r.id}/view?v=cabinet`} target="_blank" rel="noopener noreferrer" className="rounded-pill bg-organic-bg px-3 py-1.5 text-[12px] font-bold text-organic-text no-underline">Dossier</a>
+            <a href={`/api/reports/${r.id}/view?v=patient`} target="_blank" rel="noopener noreferrer" className="rounded-pill bg-organic-bg px-3 py-1.5 text-[12px] font-bold text-organic-text no-underline">Patient</a>
+            {r.prescription && <a href={`/api/reports/${r.id}/view?v=ordonnance`} target="_blank" rel="noopener noreferrer" className="rounded-pill bg-organic-bg px-3 py-1.5 text-[12px] font-bold text-organic-text no-underline">Ordonnance</a>}
+          </span>
+        </div>
+      ))}
+    </section>
+  );
+}
+
 function PeerReviewButton({ patientId }: { patientId: number }) {
   const [, navigate] = useWouterLocation();
   return (

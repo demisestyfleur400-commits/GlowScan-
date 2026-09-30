@@ -372,6 +372,10 @@ export const proAccounts = pgTable("pro_accounts", {
   relayLevel: smallint("relay_level").notNull().default(0),
   peerAvailable: boolean("peer_available").notNull().default(true),     // disponible pour les avis confrères (migration 0024)
   country: varchar("country", { length: 40 }),            // 3 = Formateur (promu par le référent), migration 0022
+  // Mentions obligatoires de l'ordonnance (ONMC), migration 0025
+  cabinetAddress: text("cabinet_address"),
+  cabinetPhone: text("cabinet_phone"),
+  specialtyTitle: text("specialty_title"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -865,5 +869,34 @@ export const peerMessages = pgTable("peer_messages", {
   kind: varchar("kind", { length: 10 }).notNull().default("text"), // text | avis | system
   body: text("body"),
   structured: jsonb("structured"),                                   // { answer, dx, ddx, plan }
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// ── Compte rendu en 3 versions + ordonnance (étape 9a, migration 0025) ──
+// Une seule saisie du médecin (payload, cf. shared/report.ts) → version patient,
+// dossier du cabinet et ordonnance. Figé à la signature (code à 4 chiffres).
+export const consultReports = pgTable("consult_reports", {
+  id: serial("id").primaryKey(),
+  proAccountId: integer("pro_account_id").notNull().references(() => proAccounts.id, { onDelete: "cascade" }),
+  source: varchar("source", { length: 20 }).notNull(),               // consultation | visit
+  consultationId: integer("consultation_id").references(() => consultations.id, { onDelete: "cascade" }),
+  patientId: integer("patient_id").references(() => patients.id, { onDelete: "cascade" }),
+  payload: jsonb("payload").notNull().default({}),
+  signedAt: timestamp("signed_at"),
+  sentPatientAt: timestamp("sent_patient_at"),
+  viewedBy: text("viewed_by").array().notNull().default([]),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Ordonnance : référence GS-ORD-xxxxx vérifiable sur /verif/:ref.
+export const prescriptions = pgTable("prescriptions", {
+  id: serial("id").primaryKey(),
+  ref: varchar("ref", { length: 20 }).notNull().unique(),
+  reportId: integer("report_id").notNull().unique().references(() => consultReports.id, { onDelete: "cascade" }),
+  proAccountId: integer("pro_account_id").notNull().references(() => proAccounts.id, { onDelete: "cascade" }),
+  status: varchar("status", { length: 10 }).notNull().default("valid"), // valid | revoked
+  signedAt: timestamp("signed_at").notNull().defaultNow(),
+  revokedAt: timestamp("revoked_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });

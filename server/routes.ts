@@ -7,6 +7,7 @@ import { registerAuthRoutes } from "./replit_integrations/auth/routes";
 import { registerRelayRoutes } from "./relayRoutes";
 import { registerProgramRoutes } from "./programRoutes";
 import { registerPeerRoutes } from "./peerRoutes";
+import { registerReportRoutes } from "./reportRoutes";
 import { registerProRoutes } from "./proRoutes";
 import { analyzeLimiter, consultationLimiter, paymentLimiter, emailReportLimiter } from "./rateLimit";
 import { objectStorageClient } from "./replit_integrations/object_storage/objectStorage";
@@ -419,6 +420,7 @@ export async function registerRoutes(
   registerRelayRoutes(app, { checkAdmin: checkDatasetKey });
   registerProgramRoutes(app, { checkAdmin: checkDatasetKey });
   registerPeerRoutes(app, { checkAdmin: checkDatasetKey });
+  registerReportRoutes(app);
 
   // ══ Diagnostic santé IA — ouvrir /api/ai-health dans le navigateur ══
   // Teste un appel minimal au modèle courant et renvoie l'erreur BRUTE du fournisseur
@@ -1606,6 +1608,13 @@ export async function registerRoutes(
         if (userId) { const { side } = await consultAccess(c, userId); allowed = !!side; }
       }
       if (!allowed) return res.status(403).send("Accès refusé");
+      // Compte rendu structuré signé (étape 9a) : version patient + ordonnance.
+      try {
+        const { signedReportIdForConsultation, patientReportHtml } = await import("./reportRoutes");
+        const rid = await signedReportIdForConsultation(id);
+        const html = rid ? await patientReportHtml(rid) : null;
+        if (html) { res.setHeader("Content-Type", "text/html; charset=utf-8"); return res.send(html); }
+      } catch (e) { console.warn("[report download] nouveau modèle indisponible:", (e as any)?.message); }
       // ── Assemblage des données RÉELLES pour le compte rendu patient ──
       let doctorName = "GlowScan", patientName = "Patient", patientAge: string | null = null;
       let doctor: any = { name: "GlowScan", city: null, cabinet: null, photoUrl: null, certified: false };
