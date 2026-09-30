@@ -29,3 +29,6 @@ export function splitPeer(priceFcfa: number): { peer: number; platform: number }
   const platform = Math.round((priceFcfa * SPLITS.peer.platform) / 100);
   return { peer: priceFcfa - platform, platform };
 }
+
+/** Numéros Mobile Money de GlowScan (paiements manuels, vérifiés par le fondateur). */
+export const GLOWSCAN_MOMO = { mtn: "674 377 959", orange: "690 501 392" };

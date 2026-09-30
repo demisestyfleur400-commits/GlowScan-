@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { PhotoBlurEditor } from "@/components/pro/PhotoBlurEditor";
 import { useProPatients } from "@/hooks/use-pro";
 import { PEER_TIERS, PEER_SHARED, PEER_HIDDEN, PEER_QUESTION_SUGGESTIONS, PEER_QUICK_REPLIES, PEER_QUESTION_MIN, type PeerTier } from "@shared/peer";
-import { SPLITS } from "@shared/splits";
+import { SPLITS, GLOWSCAN_MOMO } from "@shared/splits";
 import { formatF } from "@shared/delivery";
 
 // ════════════════════════════════════════════════════════════════════════
@@ -445,7 +445,7 @@ function SendCase({ presetPatient, presetPeer, onSent, onCancel }: { presetPatie
           </div>
           {payWith === "momo" && (
             <>
-              <span className="text-[12px] text-organic-neutral-700">Envoyez {formatF(price)} à GlowScan par Mobile Money, puis saisissez l'ID de transaction. Le cas part dès que GlowScan l'a vérifié.</span>
+              <span className="text-[12px] text-organic-neutral-700">Envoyez {formatF(price)} à GlowScan (MTN {GLOWSCAN_MOMO.mtn} ou Orange {GLOWSCAN_MOMO.orange}), puis saisissez l'ID de transaction. Le cas part dès que GlowScan l'a vérifié.</span>
               <ProInput label="ID de transaction" value={txn} onChange={(e) => setTxn(e.target.value)} testid="peer-txn" />
             </>
           )}
