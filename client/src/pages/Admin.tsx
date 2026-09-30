@@ -13,6 +13,7 @@ import {
 import { formatPrice, catalog, type Product } from "@shared/catalog";
 import { TractionDashboard } from "@/components/admin/TractionDashboard";
 import { DatasetTab } from "@/components/admin/DatasetReview";
+import { ProgramsTab } from "@/components/admin/ProgramsTab";
 
 const DS = {
   base: "#0d0a0e",
@@ -66,7 +67,7 @@ export default function Admin() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [period, setPeriod] = useState<Period>("all");
-  const [adminTab, setAdminTab] = useState<"traction" | "stats" | "premium" | "leads" | "partenaires" | "vedettes" | "dataset" | "retention" | "dermatologues" | "iavsdoc" | "consults" | "revenus" | "prospects" | "rapprochement">("traction");
+  const [adminTab, setAdminTab] = useState<"traction" | "stats" | "premium" | "leads" | "partenaires" | "vedettes" | "dataset" | "retention" | "dermatologues" | "iavsdoc" | "consults" | "revenus" | "prospects" | "rapprochement" | "programmes">("traction");
   const [prospects, setProspects] = useState<any[]>([]);
   const [prospectsMeta, setProspectsMeta] = useState<{ total: number; toRelanceCount: number }>({ total: 0, toRelanceCount: 0 });
   const [prospectsLoading, setProspectsLoading] = useState(false);
@@ -546,6 +547,7 @@ export default function Admin() {
               { key: "dataset", label: "Dataset", icon: Stethoscope, badge: datasetStats?.pending || 0, activeColor: "#10b981" },
               { key: "iavsdoc", label: "IA vs Médecin", icon: BarChart2, badge: 0, activeColor: "#7c3aed" },
               { key: "rapprochement", label: "Rapprochement", icon: MessageCircle, badge: (recon?.toVerify?.length || 0) + (recon?.withdrawalsPending?.length || 0) + relayCases.filter((c: any) => c.operator_txn_id || c.status === "refund_due" || c.payment_status === "program_pending").length, activeColor: "#b45309" },
+              { key: "programmes", label: "Programmes", icon: Store, badge: 0, activeColor: "#10b981" },
               { key: "consults", label: "Consultations", icon: MessageCircle, badge: consults.filter((c) => c.paymentStatus !== "paid").length, activeColor: "#10b981" },
               { key: "revenus", label: "Revenus", icon: DollarSign, badge: 0, activeColor: "#22c55e" },
               { key: "prospects", label: "Prospects", icon: Phone, badge: prospectsMeta.toRelanceCount || 0, activeColor: "#25D366" },
@@ -1259,6 +1261,8 @@ export default function Admin() {
             )}
           </div>
         )}
+
+        {adminTab === "programmes" && <ProgramsTab adminKey={adminKey} DS={DS} />}
 
         {adminTab === "rapprochement" && (
           <div className="space-y-4">

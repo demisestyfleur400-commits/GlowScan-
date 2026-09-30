@@ -64,7 +64,7 @@ export function registerRelayRoutes(app: Express, deps: { checkAdmin: (req: any)
         SELECT l.derm_id, p.full_name, p.city, p.cabinet_name FROM relay_links l
         JOIN pro_accounts p ON p.id = l.derm_id WHERE l.relay_id = ${me.id}`))[0] || null;
       const programs = Rows(await db.execute(sql`
-        SELECT g.id, g.name FROM program_members m JOIN programs g ON g.id = m.program_id WHERE m.relay_id = ${me.id}`));
+        SELECT g.id, g.name, m.share_progress AS share FROM program_members m JOIN programs g ON g.id = m.program_id WHERE m.relay_id = ${me.id}`));
       res.json({
         ...(await relaySummary(me.id)),
         referent: link ? { id: link.derm_id, fullName: link.full_name, city: link.city, cabinetName: link.cabinet_name } : null,

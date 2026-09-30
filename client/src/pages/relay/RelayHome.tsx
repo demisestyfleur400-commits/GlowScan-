@@ -22,7 +22,7 @@ import { formatF } from "@shared/delivery";
 type Me = {
   level: number; validatedCases: number; center: string | null; city: string | null;
   referent: { id: number; fullName: string; city?: string | null; cabinetName?: string | null } | null;
-  programs: { id: number; name: string }[];
+  programs: { id: number; name: string; share: boolean }[];
   progress: { code: string; label: string; cases: number; agreements: number; accuracy: number | null; autonomous: boolean }[];
 };
 type Case = {
@@ -138,6 +138,8 @@ export default function RelayHome() {
               </div>
             </section>
 
+            {me.programs.map((p) => <ShareToggle key={p.id} p={p} onChange={refresh} />)}
+
             {pending.length > 0 && (
               <div className={card}>
                 <h3 className="m-0 text-[22px]">Vos cas en cours</h3>
@@ -166,6 +168,26 @@ export default function RelayHome() {
           </>
         )}
       </main>
+    </div>
+  );
+}
+
+function ShareToggle({ p, onChange }: { p: Me["programs"][number]; onChange: () => void }) {
+  const [busy, setBusy] = useState(false);
+  const toggle = async () => {
+    setBusy(true);
+    try { await post(`/api/relay/programs/${p.id}/share`, { share: !p.share }); onChange(); } catch {} finally { setBusy(false); }
+  };
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-card bg-organic-surface p-organic-4">
+      <span className="flex flex-col">
+        <span className="text-[14px] font-bold">Partager ma progression avec {p.name}</span>
+        <span className="text-[12px] text-organic-neutral-700">Le programme voit votre niveau et votre accord avec le dermatologue. Jamais les patients.</span>
+      </span>
+      <button type="button" role="switch" aria-checked={p.share} aria-label="Partager ma progression" onClick={toggle} disabled={busy}
+        className={`relative h-7 w-12 flex-none cursor-pointer rounded-pill border-0 transition-colors ${p.share ? "bg-organic-accent-2-600" : "bg-organic-neutral-400"}`}>
+        <span className={`absolute top-[3px] h-[22px] w-[22px] rounded-full bg-organic-neutral-100 transition-all ${p.share ? "left-[23px]" : "left-[3px]"}`} />
+      </button>
     </div>
   );
 }

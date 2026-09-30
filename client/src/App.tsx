@@ -79,7 +79,7 @@ const DermPublicProfile = lazyWithRetry(() => import("@/pages/DermPublicProfile"
 const DermPublicList = lazyWithRetry(() => import("@/pages/DermPublicList"));
 const ProConsultations = lazyWithRetry(() => import("@/pages/pro/ProConsultations"));
 const ProAgenda = lazyWithRetry(() => import("@/pages/pro/ProAgenda"));
-const ProEnPreparation = lazyWithRetry(() => import("@/pages/pro/ProEnPreparation"));
+const ProPilotage = lazyWithRetry(() => import("@/pages/pro/ProPilotage"));
 const ProPaiements = lazyWithRetry(() => import("@/pages/pro/ProPaiements"));
 const ProAccueil = lazyWithRetry(() => import("@/pages/pro/ProAccueil"));
 const RelayHome = lazyWithRetry(() => import("@/pages/relay/RelayHome"));
@@ -148,7 +148,7 @@ function Router() {
       <Route path="/derm/magic" component={ProMagicLink} />
       <Route path="/derm/relais" component={RelayHome} />
       <Route path="/derm/reseau" component={ProReseau} />
-      <Route path="/derm/pilotage">{() => <ProEnPreparation kind="ngo" />}</Route>
+      <Route path="/derm/pilotage" component={ProPilotage} />
 
       {/* Redirects from old /pro paths to new /derm paths */}
       <Route path="/pro" component={() => { window.location.href = "/derm"; return null; }} />

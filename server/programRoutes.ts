@@ -20,18 +20,25 @@ const Rows = (x: any): any[] => (x?.rows ?? x ?? []) as any[];
 export const MASK_MIN = 5;
 const mask = (n: number) => (n > 0 && n < MASK_MIN ? null : n); // null → affiché « < 5 »
 
-function sinceOf(range: string): Date | null {
-  if (range === "1m") return new Date(Date.now() - 30 * 86400000);
-  if (range === "3m") return new Date(Date.now() - 91 * 86400000);
-  return null; // depuis le début
+/** Période : « 1m », « 3m », « all », ou un mois calendaire « AAAA-MM » (rapport mensuel). */
+function periodOf(range: string): { since: Date | null; until: Date | null } {
+  if (range === "1m") return { since: new Date(Date.now() - 30 * 86400000), until: null };
+  if (range === "3m") return { since: new Date(Date.now() - 91 * 86400000), until: null };
+  const m = /^(\d{4})-(\d{2})$/.exec(range);
+  if (m) {
+    const y = Number(m[1]), mo = Number(m[2]) - 1;
+    // Mois calendaire à Douala (UTC+1).
+    return { since: new Date(Date.UTC(y, mo, 1) - 3600000), until: new Date(Date.UTC(y, mo + 1, 1) - 3600000) };
+  }
+  return { since: null, until: null }; // depuis le début
 }
 
 /** Tableau de bord d'un programme sur une période (valeurs réelles, anonymisées). */
 export async function programDashboard(programId: number, range: string) {
-  const since = sinceOf(range);
+  const { since, until } = periodOf(range);
   const p = Rows(await db.execute(sql`SELECT id, name, funder, district, budget_fcfa, status FROM programs WHERE id = ${programId}`))[0];
   if (!p) return null;
-  const inRange = since ? sql`AND c.created_at >= ${since.toISOString()}` : sql``;
+  const inRange = sql`${since ? sql`AND c.created_at >= ${since.toISOString()}` : sql``} ${until ? sql`AND c.created_at < ${until.toISOString()}` : sql``}`;
   const members = sql`SELECT relay_id FROM program_members WHERE program_id = ${programId}`;
 
   const k = Rows(await db.execute(sql`
@@ -95,6 +102,13 @@ export async function programDashboard(programId: number, range: string) {
     .filter((x: any) => Number(x.recent) >= MASK_MIN && Number(x.before) > 0 && Number(x.recent) >= 2 * Number(x.before))
     .map((x: any) => ({ disease: diseaseLabel(x.code), pct: Math.round(((Number(x.recent) - Number(x.before)) / Number(x.before)) * 100), district: x.city || null }));
 
+  // Cas d'école : les 3 dernières corrections expliquées (aucune donnée patient, pas de photo).
+  const lessons = Rows(await db.execute(sql`
+    SELECT c.relay_diagnosis, c.derm_diagnosis, c.derm_note, c.answered_at FROM relay_cases c
+    WHERE c.relay_id IN (${members}) AND c.status = 'answered' AND c.derm_verdict = 'correct'
+      AND COALESCE(c.derm_note, '') <> '' ${inRange}
+    ORDER BY c.answered_at DESC LIMIT 3`));
+
   return {
     program: { id: p.id, name: p.name, funder: p.funder, district: p.district, status: p.status },
     kpis: {
@@ -110,6 +124,7 @@ export async function programDashboard(programId: number, range: string) {
     agents,
     budget: { total: Number(p.budget_fcfa) || 0, used },
     alerts,
+    lessons: lessons.map((l: any) => ({ relayDx: l.relay_diagnosis, dermDx: l.derm_diagnosis, note: l.derm_note })),
   };
 }
 
