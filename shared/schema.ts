@@ -376,6 +376,9 @@ export const proAccounts = pgTable("pro_accounts", {
   cabinetAddress: text("cabinet_address"),
   cabinetPhone: text("cabinet_phone"),
   specialtyTitle: text("specialty_title"),
+  // Réseau entre pays (migration 0030)
+  languages: text("languages").array().notNull().default(["fr"]),
+  networkDailyCap: smallint("network_daily_cap").notNull().default(10),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -845,6 +848,14 @@ export const relayCases = pgTable("relay_cases", {
   amountLocal: decimal("amount_local"),
   patientPhone: varchar("patient_phone", { length: 20 }),
   patientSmsSentAt: timestamp("patient_sms_sent_at"),
+  // Routage (migration 0030)
+  language: varchar("language", { length: 2 }).notNull().default("fr"),
+  routedAt: timestamp("routed_at"),
+  acceptedAt: timestamp("accepted_at"),
+  routeStep: varchar("route_step", { length: 10 }),                   // referent | country | network
+  reassignCount: smallint("reassign_count").notNull().default(0),
+  routingLog: jsonb("routing_log").notNull().default([]),
+  crossBorderConsentAt: timestamp("cross_border_consent_at"),
   answeredAt: timestamp("answered_at"),
   refundedAt: timestamp("refunded_at"),
   refundOperatorRef: text("refund_operator_ref"),
@@ -1029,5 +1040,18 @@ export const relayCreditLedger = pgTable("relay_credit_ledger", {
   status: varchar("status", { length: 10 }).notNull().default("pending"), // pending | confirmed | rejected
   rejectReason: text("reject_reason"),
   confirmedAt: timestamp("confirmed_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// ── Autorisations d'exercer par pays (étape 13, migration 0030) ──────────
+export const dermLicenses = pgTable("derm_licenses", {
+  id: serial("id").primaryKey(),
+  dermId: integer("derm_id").notNull().references(() => proAccounts.id, { onDelete: "cascade" }),
+  country: varchar("country", { length: 40 }).notNull(),
+  kind: varchar("kind", { length: 15 }).notNull(),                     // home | authorization
+  documentUrl: text("document_url"),                                   // privé : admin seulement
+  status: varchar("status", { length: 10 }).notNull().default("pending"), // pending | verified | rejected
+  rejectReason: text("reject_reason"),
+  verifiedAt: timestamp("verified_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });

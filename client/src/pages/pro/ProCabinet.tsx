@@ -13,6 +13,7 @@ import { formatF } from "@shared/delivery";
 import { PRO_SUBSCRIPTION_FCFA } from "@shared/premium";
 import { NotifSettingsCard } from "@/components/NotifSettingsCard";
 import { DermSubscribeFlow } from "@/components/DermSubscribeFlow";
+import { NetworkCountriesCard } from "@/components/pro/NetworkCountriesCard";
 import { DERM } from "@/lib/design-tokens";
 
 const NAVY = "var(--color-accent-700)";
@@ -353,6 +354,7 @@ export default function ProCabinet() {
           <SignPinCard />
 
           {((accData?.account as any)?.profile || "derm") === "derm" && <PeerAvailabilityCard />}
+          {((accData?.account as any)?.profile || "derm") === "derm" && <NetworkCountriesCard />}
 
           {/* Données */}
           <div className={card}>

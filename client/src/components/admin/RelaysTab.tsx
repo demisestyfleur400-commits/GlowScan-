@@ -30,6 +30,56 @@ function CardImage({ id, side, adminKey }: { id: number; side: "front" | "selfie
     : <div className="flex h-28 w-40 items-center justify-center rounded-xl text-xs" style={{ background: "#0003" }}>…</div>;
 }
 
+function LicenseDoc({ id, adminKey }: { id: number; adminKey: string }) {
+  const open = async () => {
+    const r = await fetch(`/api/admin/licenses/${id}/document`, { headers: { "x-admin-key": adminKey } });
+    if (!r.ok) return window.alert("Justificatif introuvable");
+    window.open(URL.createObjectURL(await r.blob()), "_blank");
+  };
+  return <button onClick={open} style={{ background: "#475569", color: "#fff", border: "none", borderRadius: 12, padding: "6px 12px", fontSize: 12, fontWeight: 800, cursor: "pointer" }}>Voir le justificatif</button>;
+}
+
+function LicensesSection({ adminKey, DS }: { adminKey: string; DS: DS }) {
+  const [items, setItems] = useState<any[]>([]);
+  const load = async () => {
+    const r = await fetch("/api/admin/licenses", { headers: { "x-admin-key": adminKey } });
+    setItems(r.ok ? (await r.json()).items || [] : []);
+  };
+  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [adminKey]);
+  const decide = async (id: number, decision: "verified" | "rejected") => {
+    const reason = decision === "rejected" ? window.prompt("Motif du refus (envoyé au dermatologue)")?.trim() : "";
+    if (decision === "rejected" && !reason) return;
+    const r = await fetch(`/api/admin/licenses/${id}`, { method: "POST", headers: { "x-admin-key": adminKey, "Content-Type": "application/json" }, body: JSON.stringify({ decision, reason }) });
+    if (!r.ok) window.alert((await r.json().catch(() => ({})))?.message || "Action impossible");
+    load();
+  };
+  const btn = (bg: string) => ({ background: bg, color: "#fff", border: "none", borderRadius: 12, padding: "6px 12px", fontSize: 12, fontWeight: 800, cursor: "pointer" });
+  return (
+    <div className="space-y-3">
+      <h3 className="text-lg font-extrabold" style={{ color: DS.text }}>Autorisations d'exercer (consultation directe)</h3>
+      <p className="text-xs" style={{ color: DS.muted }}>Un dermatologue n'apparaît dans l'appli patient d'un pays qu'avec une autorisation vérifiée pour ce pays. La télé-expertise reste ouverte à tout le réseau.</p>
+      {items.length === 0 && <p className="text-sm" style={{ color: DS.muted }}>Rien à vérifier.</p>}
+      {items.map((l) => (
+        <div key={l.id} className="rounded-2xl p-3 flex flex-wrap items-center justify-between gap-2" style={{ background: DS.surface, border: `1px solid ${DS.border}` }}>
+          <span className="text-sm" style={{ color: DS.body }}>
+            <b style={{ color: DS.text }}>{l.full_name}</b> · {l.country} · {l.kind === "home" ? `ONMC ${l.license_number || "non renseigné"}` : "autorisation"} ·{" "}
+            <span style={{ color: l.status === "verified" ? "#10b981" : l.status === "rejected" ? "#b91c1c" : "#b45309", fontWeight: 800 }}>
+              {l.status === "verified" ? "vérifiée" : l.status === "rejected" ? `refusée (${l.reject_reason})` : "à vérifier"}
+            </span>
+          </span>
+          {l.status === "pending" && (
+            <span className="flex flex-wrap gap-1.5">
+              {l.has_doc && <LicenseDoc id={l.id} adminKey={adminKey} />}
+              <button onClick={() => decide(l.id, "verified")} style={btn("#10b981")}>Vérifiée</button>
+              <button onClick={() => decide(l.id, "rejected")} style={btn("#b91c1c")}>Refuser</button>
+            </span>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function RelaysTab({ adminKey, DS }: { adminKey: string; DS: DS }) {
   const [items, setItems] = useState<Relay[]>([]);
   const [open, setOpen] = useState<number | null>(null);
@@ -49,6 +99,7 @@ export function RelaysTab({ adminKey, DS }: { adminKey: string; DS: DS }) {
 
   return (
     <div className="space-y-4">
+      <LicensesSection adminKey={adminKey} DS={DS} />
       <h3 className="text-lg font-extrabold" style={{ color: DS.text }}>Relais : vérification</h3>
       <p className="text-xs" style={{ color: DS.muted }}>Deux validations avant le 1er cas : carte vérifiée et parrain (dermatologue, programme, ou GlowScan après appel du centre). Le relais passe ensuite le module photo.</p>
       {msg && <p className="text-xs font-bold" style={{ color: DS.body }}>{msg}</p>}

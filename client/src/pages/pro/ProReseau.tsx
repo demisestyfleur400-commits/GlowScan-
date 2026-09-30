@@ -22,6 +22,8 @@ type QCase = {
   payment_status: string; relay_diagnosis: string; relay_disease_code: string | null; ai_diagnosis: string | null; ai_confidence: string | null;
   patient_age: number | null; patient_sex: string | null; zone: string | null; symptoms: string | null; photos: string[]; due_at: string | null; created_at: string;
   paused_at: string | null;
+  // Routage (étape 13)
+  accepted_at: string | null; routed_at: string | null; paid_at: string | null; route_step: string | null; relay_country: string | null;
 };
 type Relay = { id: number; fullName: string; city: string | null; center: string | null; level: number; accuracy: number | null; cases: number; canPromote: boolean };
 
@@ -93,6 +95,12 @@ export default function ProReseau() {
   );
 }
 
+// Heure limite de prise en charge : 25 % du délai après l'attribution (ou le paiement).
+const takeBy = (c: QCase) => {
+  const start = Math.max(c.routed_at ? +new Date(c.routed_at) : 0, c.paid_at ? +new Date(c.paid_at) : 0) || Date.now();
+  return new Date(start + RELAY_TIERS[c.tier].hours * 15 * 60000).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", timeZone: "Africa/Douala" }).replace(":", " h ");
+};
+
 function QueueItem({ c, onDone, unread, onDiscuss }: { c: QCase; onDone: () => void; unread: number; onDiscuss: () => void }) {
   // Format 1b : le verdict ouvre l'avis complet (réponse, conduite à tenir, orientation, délai, photos, leçon).
   const [verdictSel, setVerdictSel] = useState<"confirm" | "correct" | null>(null);
@@ -137,6 +145,23 @@ function QueueItem({ c, onDone, unread, onDiscuss }: { c: QCase; onDone: () => v
         {urgent && <span className="flex-none rounded-pill bg-organic-accent-200 px-2.5 py-0.5 text-[12px] font-semibold text-organic-accent-900">Urgent</span>}
       </div>
       {c.paused_at && <span className="self-start rounded-pill bg-organic-accent-100 px-2.5 py-0.5 text-[12px] font-semibold text-organic-accent-900">Demande en cours · délai en pause</span>}
+      <div className="flex flex-wrap items-center gap-1.5">
+        {c.route_step && c.route_step !== "referent" && (
+          <span className="rounded-pill bg-organic-accent-2-100 px-2.5 py-0.5 text-[12px] font-semibold text-organic-accent-2-800" data-testid={`queue-network-${c.id}`}>
+            Réseau · {c.relay_country || "autre pays"}
+          </span>
+        )}
+        {c.accepted_at ? (
+          <span className="rounded-pill bg-organic-neutral-200 px-2.5 py-0.5 text-[12px] font-semibold">Pris en charge</span>
+        ) : (
+          <>
+            <span className="text-[12px] text-organic-neutral-700">À prendre avant {takeBy(c)}</span>
+            <Button size="sm" disabled={busy} onClick={async () => { setBusy(true); try { await post(`/api/relay/cases/${c.id}/accept`); onDone(); } catch (e: any) { setErr(e.message); } finally { setBusy(false); } }} data-testid={`queue-accept-${c.id}`}>
+              Je prends ce cas
+            </Button>
+          </>
+        )}
+      </div>
       {c.photos?.length > 1 && (
         <div className="flex gap-2 overflow-x-auto">{c.photos.slice(1).map((u, i) => <img key={i} src={u} alt={`Photo ${i + 2}`} className="h-16 w-14 flex-none rounded-xl object-cover" />)}</div>
       )}

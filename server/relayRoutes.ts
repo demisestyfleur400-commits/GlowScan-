@@ -1,3 +1,4 @@
+import { routeNewCase } from "./routing";
 import { relayMoney, debitCreditForCase, CreditError } from "./relayCredit";
 import { providerFor } from "./payments/provider";
 import { toLocal } from "@shared/currency";
@@ -130,10 +131,12 @@ export function registerRelayRoutes(app: Express, deps: { checkAdmin: (req: any)
         payer: z.enum(["patient", "credit", "program"]),
         programId: z.number().int().optional().nullable(),
         patientPhone: z.string().max(30).optional().nullable(),   // facultatif : SMS de paiement (Mobile Money)
+        crossBorderConsent: z.boolean().optional().default(false), // accord du patient, demandé à voix haute (étape 13)
       }).parse(req.body);
       const me = req.proAccount;
-      const link = Rows(await db.execute(sql`SELECT derm_id FROM relay_links WHERE relay_id = ${me.id}`))[0];
-      if (!link) return res.status(409).json({ code: "NO_REFERENT", message: "Choisissez d'abord votre dermatologue référent." });
+      // Étape 13 : le référent passe en premier, puis le routage (même pays, puis réseau si accord du patient).
+      const link = Rows(await db.execute(sql`SELECT derm_id FROM relay_links WHERE relay_id = ${me.id}`))[0] || null;
+      const relayLang = (Rows(await db.execute(sql`SELECT languages FROM pro_accounts WHERE id = ${me.id}`))[0]?.languages || ["fr"])[0] || "fr";
       const code = data.relayDiseaseCode && DISEASE_CODES.has(data.relayDiseaseCode) ? data.relayDiseaseCode : "autre";
 
       let programId: number | null = null;
@@ -164,15 +167,25 @@ export function registerRelayRoutes(app: Express, deps: { checkAdmin: (req: any)
       const [row] = Rows(await db.execute(sql`
         INSERT INTO relay_cases (relay_id, derm_id, center_name, patient_age, patient_sex, zone, symptoms, photos,
           relay_diagnosis, relay_disease_code, tier, price_fcfa, payer, program_id, status, payment_status, due_at,
-          fx_currency, fx_rate, amount_local, patient_phone)
-        VALUES (${me.id}, ${Number(link.derm_id)}, ${data.centerName || me.cabinetName || null}, ${data.patientAge ?? null}, ${data.patientSex ?? null},
+          fx_currency, fx_rate, amount_local, patient_phone, language, cross_border_consent_at)
+        VALUES (${me.id}, ${link ? Number(link.derm_id) : null}, ${data.centerName || me.cabinetName || null}, ${data.patientAge ?? null}, ${data.patientSex ?? null},
           ${data.zone || null}, ${data.symptoms || null}, ${JSON.stringify(urls)}::jsonb,
           ${data.relayDiagnosis.trim()}, ${code}, ${data.tier}, ${autonomousCase ? 0 : tier.priceFcfa},
           ${autonomousCase ? "none" : data.payer}, ${programId}, ${status},
           ${autonomousCase ? "pending" : data.payer === "program" ? "program_pending" : "pending"},
-          NULL, ${money.currency}, ${money.rate ?? 1}, ${autonomousCase || !money.rate ? null : toLocal(tier.priceFcfa, money.rate, money.currency)}, ${patientPhone})
+          NULL, ${money.currency}, ${money.rate ?? 1}, ${autonomousCase || !money.rate ? null : toLocal(tier.priceFcfa, money.rate, money.currency)}, ${patientPhone},
+          ${relayLang}, ${data.crossBorderConsent ? sql`NOW()` : null})
         RETURNING id, status, price_fcfa, amount_local`));
       const caseId = Number(row.id);
+      if (!autonomousCase) {
+        const routed = await routeNewCase(caseId);
+        if (!routed) {
+          await db.execute(sql`DELETE FROM relay_cases WHERE id = ${caseId}`);
+          return res.status(409).json({ code: "NO_DERM", message: data.crossBorderConsent
+            ? "Aucun dermatologue disponible pour le moment. Réessayez plus tard."
+            : "Aucun dermatologue disponible dans votre pays pour le moment. Avec l'accord du patient, le cas peut partir vers un dermatologue d'un autre pays du réseau." });
+        }
+      }
       let result: any = { id: caseId, status: row.status, priceFcfa: Number(row.price_fcfa), amountLocal: row.amount_local == null ? null : Number(row.amount_local), currency: money.currency };
 
       if (!autonomousCase && data.payer === "credit") {
@@ -187,7 +200,8 @@ export function registerRelayRoutes(app: Express, deps: { checkAdmin: (req: any)
         await db.execute(sql`
           UPDATE relay_cases SET payment_status = 'credit', paid_at = NOW(), status = 'awaiting_review', due_at = NOW() + make_interval(hours => ${tier.hours})
           WHERE id = ${caseId}`);
-        notifyProAccount(Number(link.derm_id), { title: data.tier === "urgent" ? "Avis urgent demandé (2 h)" : "Nouvel avis relais", body: data.relayDiagnosis.trim(), url: "/derm/reseau" }).catch(() => {});
+        const dermNow = Rows(await db.execute(sql`SELECT derm_id FROM relay_cases WHERE id = ${caseId}`))[0]?.derm_id;
+        if (dermNow) notifyProAccount(Number(dermNow), { title: data.tier === "urgent" ? "Avis urgent demandé (2 h)" : "Nouvel avis relais", body: data.relayDiagnosis.trim(), url: "/derm/reseau" }).catch(() => {});
         result = { ...result, status: "awaiting_review" };
       }
       if (!autonomousCase && data.payer === "patient") {
@@ -265,8 +279,8 @@ export function registerRelayRoutes(app: Express, deps: { checkAdmin: (req: any)
   app.get("/api/relay/review-queue", ...dermOnly, async (req: any, res) => {
     try {
       const rows = Rows(await db.execute(sql`
-        SELECT c.*, p.full_name AS relay_name, p.city AS relay_city FROM relay_cases c
-        JOIN pro_accounts p ON p.id = c.relay_id
+        SELECT c.*, p.full_name AS relay_name, p.city AS relay_city, COALESCE(rl.country, p.country, 'Cameroun') AS relay_country FROM relay_cases c
+        JOIN pro_accounts p ON p.id = c.relay_id LEFT JOIN relays rl ON rl.pro_account_id = c.relay_id
         WHERE c.derm_id = ${req.proAccount.id} AND c.status = 'awaiting_review'
         ORDER BY (c.tier = 'urgent') DESC, c.due_at ASC NULLS LAST LIMIT 100`));
       res.json({ cases: rows });
@@ -320,7 +334,7 @@ export function registerRelayRoutes(app: Express, deps: { checkAdmin: (req: any)
       const tip = data.tip && (LESSON_TIPS as readonly string[]).includes(data.tip) ? data.tip : null;
 
       await db.execute(sql`
-        UPDATE relay_cases SET status = 'answered', derm_verdict = ${data.verdict},
+        UPDATE relay_cases SET status = 'answered', accepted_at = COALESCE(accepted_at, NOW()), derm_verdict = ${data.verdict},
           derm_diagnosis = ${data.verdict === "confirm" ? c.relay_diagnosis : data.dermDiagnosis!.trim()},
           derm_disease_code = ${finalCode}, derm_note = ${(data.note || "").trim() || null}, lesson_tip = ${tip},
           derm_ddx = ${data.ddx || null}, derm_plan = ${data.plan}, orientation = ${data.orientation || null}, review_in = ${data.reviewIn || null},

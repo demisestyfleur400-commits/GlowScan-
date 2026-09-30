@@ -12,6 +12,7 @@ import { runPeerDeadlines } from "./peerRoutes";
 import { runInvitationReminders } from "./relayOnboarding";
 import { runCaseSmsFallback } from "./caseThreads";
 import { refundCreditForCase } from "./relayCredit";
+import { runRoutingTimeouts } from "./routing";
 import { refundConsultation, refundRelayCase, chargeSubscriptionFromEarnings, proBalances, requestWithdrawal } from "./wallet";
 import { PRO_SUBSCRIPTION_FCFA } from "@shared/premium";
 const APP_BASE = (process.env.PUBLIC_BASE_URL || "https://glow-scan.com").replace(/\/$/, "");
@@ -992,6 +993,11 @@ export function startCronJobs() {
   cron.schedule("*/10 * * * *", async () => {
     try { const r = await runPeerDeadlines(); if (r.reoffered || r.expired) log(`🤝 Avis confrères : ${r.reoffered} reproposé(s), ${r.expired} hors délai`); }
     catch (e) { log(`❌ Erreur délais avis confrères : ${e}`); }
+  }, { timezone: "Africa/Douala" });
+  // Routage : sans prise en charge après 25 % du délai, le cas passe au dermatologue suivant.
+  cron.schedule("*/5 * * * *", async () => {
+    try { const n = await runRoutingTimeouts(); if (n) log(`Routage relais : ${n} cas réattribué(s)`); }
+    catch (e) { log(`❌ Erreur routage relais : ${e}`); }
   }, { timezone: "Africa/Douala" });
   // Discussion par cas : SMS de secours si le relais n'a pas lu en 15 min.
   cron.schedule("*/5 * * * *", async () => {

@@ -627,6 +627,10 @@ export function registerProRoutes(app: Express) {
       if (data.country) {
         db.execute(sql`UPDATE "pro_accounts" SET "country" = ${data.country} WHERE "id" = ${acc.id}`).catch(() => {});
       }
+      // Étape 13 : autorisation d'exercer dans son pays, à vérifier par GlowScan (n° ONMC).
+      if (data.profile === "derm") {
+        db.execute(sql`INSERT INTO derm_licenses (derm_id, country, kind, status) VALUES (${acc.id}, ${data.country || "Cameroun"}, 'home', 'pending') ON CONFLICT (derm_id, country) DO NOTHING`).catch(() => {});
+      }
       // Version des Conditions & Confidentialité acceptée (preuve opposable, SQL brut)
       db.execute(sql`UPDATE "pro_accounts" SET "consent_version" = ${data.consentVersion || TERMS_VERSION} WHERE "id" = ${acc.id}`).catch(() => {});
 

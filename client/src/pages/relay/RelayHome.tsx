@@ -318,6 +318,7 @@ function NewCase({ me, onSent, credit }: { me: Me; onSent: () => void; credit: C
   const defaultPayer = (): Payer => (credit?.momo ? "patient" : me.programs.length ? "program" : "credit");
   const [payer, setPayer] = useState<Payer>(defaultPayer());
   const [patientPhone, setPatientPhone] = useState("");
+  const [crossBorder, setCrossBorder] = useState(false);
   const [err, setErr] = useState("");
   const [result, setResult] = useState<{ status: string; priceFcfa: number; amountLocal: number | null; instructions?: string; smsSent?: boolean; payer: Payer; ai: string | null; conf: string | null; mine: string } | null>(null);
   const cur: Currency = credit?.currency || "XAF";
@@ -326,7 +327,7 @@ function NewCase({ me, onSent, credit }: { me: Me; onSent: () => void; credit: C
 
   const hypothesis = code === "autre" ? other.trim() : diseaseLabel(code);
   const chip = (on: boolean) => `cursor-pointer rounded-pill border px-3.5 py-1.5 font-body text-[13px] font-semibold ${on ? "border-organic-accent bg-organic-accent text-organic-bg" : "border-organic-divider bg-transparent text-organic-text"}`;
-  const reset = () => { setStep("cas"); setPhotos([]); setAge(""); setSex(""); setZone(""); setSymptoms(""); setCode(""); setOther(""); setTier("simple"); setPayer(defaultPayer()); setPatientPhone(""); setErr(""); setResult(null); };
+  const reset = () => { setStep("cas"); setPhotos([]); setAge(""); setSex(""); setZone(""); setSymptoms(""); setCode(""); setOther(""); setTier("simple"); setPayer(defaultPayer()); setPatientPhone(""); setCrossBorder(false); setErr(""); setResult(null); };
 
   const addPhoto = async (f?: File | null) => {
     if (!f || !f.type.startsWith("image/") || photos.length >= 3) return;
@@ -341,6 +342,7 @@ function NewCase({ me, onSent, credit }: { me: Me; onSent: () => void; credit: C
         relayDiagnosis: hypothesis, relayDiseaseCode: code || "autre", tier, payer,
         patientPhone: payer === "patient" && patientPhone.trim() ? patientPhone.trim() : null,
         programId: payer === "program" ? me.programs[0]?.id : null,
+        crossBorderConsent: crossBorder,
       });
       const caseId = d.case.id as number;
       // L'IA n'est lancée QU'APRÈS l'enregistrement de l'hypothèse.
@@ -447,6 +449,10 @@ function NewCase({ me, onSent, credit }: { me: Me; onSent: () => void; credit: C
             )}
             {!credit?.momo && <span className="text-[12px] text-organic-neutral-700">Le paiement Mobile Money n'est pas encore disponible dans votre pays.</span>}
           </div>
+          <label className="flex cursor-pointer items-start gap-2.5 text-[13px] leading-snug" data-testid="relay-cross-border">
+            <input type="checkbox" checked={crossBorder} onChange={(e) => setCrossBorder(e.target.checked)} className="mt-0.5 h-4 w-4 flex-none accent-[var(--color-accent)]" />
+            <span>Le patient accepte l'envoi à un dermatologue d'un autre pays du réseau (demandé à voix haute). Sinon, le cas reste dans votre pays.</span>
+          </label>
           <span className="text-[12px] text-organic-neutral-700">
             Sur {formatF(RELAY_TIERS[tier].priceFcfa)} : {formatF(splitRelay(RELAY_TIERS[tier].priceFcfa).derm)} pour le dermatologue, {formatF(splitRelay(RELAY_TIERS[tier].priceFcfa).relay)} pour vous, {formatF(splitRelay(RELAY_TIERS[tier].priceFcfa).platform)} pour GlowScan.
           </span>

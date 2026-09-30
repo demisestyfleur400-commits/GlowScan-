@@ -59,3 +59,10 @@ export function intlPhone(input: string | null | undefined): string | null {
 }
 export const phoneAccountEmail = (digits: string) => `tel-${digits}@phone.glowscan.cm`;
 export const maskPhone = (digits: string) => `•••${digits.slice(-3)}`;
+
+/** Pays du réseau d'après l'indicatif (chiffres, ex. « 2376… »). */
+const DIAL: [string, string][] = [["237", "Cameroun"], ["229", "Bénin"], ["243", "RDC"], ["257", "Burundi"], ["225", "Côte d'Ivoire"], ["221", "Sénégal"], ["235", "Tchad"], ["241", "Gabon"], ["242", "Congo"], ["228", "Togo"]];
+export function countryOfPhone(digits: string | null | undefined): string | null {
+  const d = String(digits || "").replace(/\D/g, "");
+  return DIAL.find(([code]) => d.startsWith(code))?.[1] || null;
+}

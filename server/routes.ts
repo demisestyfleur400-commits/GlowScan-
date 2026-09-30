@@ -1,3 +1,5 @@
+import { NETWORK_COUNTRIES } from "@shared/peer";
+import { countryOfPhone } from "@shared/relayOnboarding";
 import type { Express } from "express";
 import { ensureRls } from "./ensureRls";
 import { createServer, type Server } from "http";
@@ -11,6 +13,7 @@ import { registerReportRoutes } from "./reportRoutes";
 import { registerRelayOnboardingRoutes } from "./relayOnboarding";
 import { registerCaseThreadRoutes } from "./caseThreads";
 import { registerRelayCreditRoutes } from "./relayCredit";
+import { registerRoutingRoutes } from "./routing";
 import { registerProRoutes } from "./proRoutes";
 import { analyzeLimiter, consultationLimiter, paymentLimiter, emailReportLimiter } from "./rateLimit";
 import { objectStorageClient } from "./replit_integrations/object_storage/objectStorage";
@@ -427,6 +430,7 @@ export async function registerRoutes(
   registerRelayOnboardingRoutes(app, { checkAdmin: checkDatasetKey });
   registerCaseThreadRoutes(app);
   registerRelayCreditRoutes(app, { checkAdmin: checkDatasetKey });
+  registerRoutingRoutes(app, { checkAdmin: checkDatasetKey });
 
   // ══ Diagnostic santé IA — ouvrir /api/ai-health dans le navigateur ══
   // Teste un appel minimal au modèle courant et renvoie l'erreur BRUTE du fournisseur
@@ -577,6 +581,16 @@ export async function registerRoutes(
   app.get("/api/b2c/dermatologists", async (req: any, res) => {
     // Sous-spécialité recommandée d'après la condition détectée (pour classer).
     const recoSpec = recommendSpecialty(req.query?.condition ? String(req.query.condition) : null);
+    // Pays du patient : paramètre ?country=, sinon indicatif du téléphone de son compte, sinon Cameroun.
+    let patientCountry = NETWORK_COUNTRIES.includes(String(req.query?.country || "")) ? String(req.query.country) : "Cameroun";
+    if (!req.query?.country) {
+      try {
+        const uid = getUID(req);
+        const em = uid ? String(Rows(await db.execute(sql`SELECT email FROM users WHERE id = ${uid}`))[0]?.email || "") : "";
+        const c = countryOfPhone((/^tel-(\d+)@phone\.glowscan\.cm$/.exec(em) || [])[1] || null);
+        if (c) patientCountry = c;
+      } catch {}
+    }
     try {
       // SELECT de base (colonnes toujours présentes) — ne casse jamais.
       const rows = Rows(await db.execute(sql`
@@ -588,6 +602,8 @@ export async function registerRoutes(
             (subscription_status = 'active' AND subscription_expires_at > NOW())
             OR (subscription_status = 'trial' AND trial_ends_at > NOW())
           )
+          -- Étape 13 : consultation directe seulement avec un dermatologue autorisé dans le pays du patient.
+          AND EXISTS (SELECT 1 FROM derm_licenses dl WHERE dl.derm_id = pro_accounts.id AND dl.country = ${patientCountry} AND dl.status = 'verified')
         ORDER BY full_name`));
       // Enrichissement profil (colonnes ajoutées via ALTER) — best-effort.
       const extra = new Map<number, any>();
@@ -850,6 +866,13 @@ export async function registerRoutes(
       if (!proAccountId) return res.status(400).json({ message: "Dermatologue requis" });
       const pr = Rows(await db.execute(sql`SELECT COALESCE(consult_price_fcfa,4800) AS p, b2c_available FROM pro_accounts WHERE id = ${Number(proAccountId)}`));
       if (!pr[0] || pr[0].b2c_available !== true) return res.status(400).json({ message: "Ce dermatologue n'est pas disponible en consultation." });
+      // Étape 13 : consultation directe seulement si le dermatologue est autorisé dans le pays du patient.
+      {
+        const em = String(Rows(await db.execute(sql`SELECT email FROM users WHERE id = ${userId}`))[0]?.email || "");
+        const patientCountry = countryOfPhone((/^tel-(\d+)@phone\.glowscan\.cm$/.exec(em) || [])[1] || null) || "Cameroun";
+        const lic = Rows(await db.execute(sql`SELECT 1 FROM derm_licenses WHERE derm_id = ${Number(proAccountId)} AND country = ${patientCountry} AND status = 'verified'`))[0];
+        if (!lic) return res.status(400).json({ message: "Ce dermatologue n'est pas autorisé à consulter dans votre pays." });
+      }
       const price = Number(pr[0].p) || 4800;
       const [c] = await db.insert(consultations).values({
         userId,
