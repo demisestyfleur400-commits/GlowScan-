@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb, decimal, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, jsonb, decimal, varchar, smallint, primaryKey } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -369,6 +369,7 @@ export const proAccounts = pgTable("pro_accounts", {
   onboardingDone: boolean("onboarding_done").default(false),
   consentSignedAt: timestamp("consent_signed_at").notNull(),
   profile: varchar("profile", { length: 10 }).notNull().default("derm"), // derm | relay | ngo (migration 0019)
+  relayLevel: smallint("relay_level").notNull().default(0),            // 3 = Formateur (promu par le référent), migration 0022
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -744,3 +745,75 @@ export const productScans = pgTable("product_scans", {
   flagged: jsonb("flagged").notNull().default([]),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
+
+// ════════════════════════════════════════════════════════════════════════
+// Réseau des relais, téléexpertise et formation (migration 0022)
+// ════════════════════════════════════════════════════════════════════════
+export const programs = pgTable("programs", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  funder: text("funder"),
+  district: text("district"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const programMembers = pgTable("program_members", {
+  programId: integer("program_id").notNull().references(() => programs.id, { onDelete: "cascade" }),
+  relayId: integer("relay_id").notNull().references(() => proAccounts.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (t) => ({ pk: primaryKey({ columns: [t.programId, t.relayId] }) }));
+
+// Le relais choisit son dermatologue référent.
+export const relayLinks = pgTable("relay_links", {
+  relayId: integer("relay_id").primaryKey().references(() => proAccounts.id, { onDelete: "cascade" }),
+  dermId: integer("derm_id").notNull().references(() => proAccounts.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const relayCases = pgTable("relay_cases", {
+  id: serial("id").primaryKey(),
+  relayId: integer("relay_id").notNull().references(() => proAccounts.id),
+  dermId: integer("derm_id").references(() => proAccounts.id),
+  centerName: text("center_name"),
+  patientAge: integer("patient_age"),
+  patientSex: varchar("patient_sex", { length: 1 }),
+  zone: text("zone"),
+  symptoms: text("symptoms"),
+  photos: jsonb("photos").notNull().default([]),
+  relayDiagnosis: text("relay_diagnosis").notNull(),                  // proposé AVANT de voir l'IA
+  relayDiseaseCode: varchar("relay_disease_code", { length: 40 }),
+  aiScanId: integer("ai_scan_id").references(() => scans.id),
+  aiDiagnosis: text("ai_diagnosis"),
+  aiConfidence: varchar("ai_confidence", { length: 10 }),
+  tier: varchar("tier", { length: 10 }).notNull(),                     // simple | urgent
+  priceFcfa: integer("price_fcfa").notNull().default(0),
+  payer: varchar("payer", { length: 10 }).notNull(),                   // patient | program | none (cas autonome)
+  programId: integer("program_id").references(() => programs.id),
+  operatorTxnId: text("operator_txn_id"),
+  status: varchar("status", { length: 20 }).notNull().default("awaiting_payment"), // awaiting_payment | awaiting_review | answered | autonomous | refund_due | refunded
+  paymentStatus: varchar("payment_status", { length: 20 }).notNull().default("pending"), // pending | verified | program | refunded
+  paidAt: timestamp("paid_at"),
+  dueAt: timestamp("due_at"),
+  alertSentAt: timestamp("alert_sent_at"),
+  dermVerdict: varchar("derm_verdict", { length: 10 }),                // confirm | correct
+  dermDiagnosis: text("derm_diagnosis"),
+  dermDiseaseCode: varchar("derm_disease_code", { length: 40 }),
+  dermNote: text("derm_note"),                                         // la leçon du relais
+  lessonTip: varchar("lesson_tip", { length: 40 }),
+  answeredAt: timestamp("answered_at"),
+  refundedAt: timestamp("refunded_at"),
+  refundOperatorRef: text("refund_operator_ref"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const relayProgress = pgTable("relay_progress", {
+  relayId: integer("relay_id").notNull().references(() => proAccounts.id, { onDelete: "cascade" }),
+  diseaseCode: varchar("disease_code", { length: 40 }).notNull(),
+  cases: integer("cases").notNull().default(0),
+  agreements: integer("agreements").notNull().default(0),
+  autonomousAt: timestamp("autonomous_at"),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (t) => ({ pk: primaryKey({ columns: [t.relayId, t.diseaseCode] }) }));
+
+export type RelayCase = typeof relayCases.$inferSelect;
+export type RelayProgress = typeof relayProgress.$inferSelect;

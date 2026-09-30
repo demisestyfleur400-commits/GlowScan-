@@ -8,7 +8,7 @@ import { buildRelanceMessage, withFollowupFooter, buildApptJ1Message, buildApptH
 import { productsAllowed, resultStateOf } from "@shared/resultB2C";
 import { normalizeCmPhone } from "@shared/phone";
 import { stopLinkSig, followupsStoppedAt } from "./consents";
-import { refundConsultation, chargeSubscriptionFromEarnings, proBalances, requestWithdrawal } from "./wallet";
+import { refundConsultation, refundRelayCase, chargeSubscriptionFromEarnings, proBalances, requestWithdrawal } from "./wallet";
 import { PRO_SUBSCRIPTION_FCFA } from "@shared/premium";
 const APP_BASE = (process.env.PUBLIC_BASE_URL || "https://glow-scan.com").replace(/\/$/, "");
 import { sendWhatsAppText, sendSmsText, buildFollowUpReminderMessage } from "./whatsapp";
@@ -591,6 +591,62 @@ async function sendVisitReportReminders() {
   }
 }
 
+// ── RÉSEAU — délais des avis relais (simple : 24 h, urgent : 2 h) ─────────
+// Rappel au référent aux 3/4 du délai ; délai dépassé : cas payé → remboursement
+// décidé (virement manuel avec ID), cas « programme » → alerte seulement.
+async function flagRelayDeadlines() {
+  const ownerEmail = process.env.OWNER_EMAIL || "demiseessawe12@gmail.com";
+  try {
+    const soon: any = await db.execute(sql`
+      SELECT c.id, c.tier, c.relay_diagnosis, p.user_id AS derm_user_id
+      FROM relay_cases c JOIN pro_accounts p ON p.id = c.derm_id
+      WHERE c.status = 'awaiting_review' AND c.alert_sent_at IS NULL AND c.due_at IS NOT NULL
+        AND NOW() > c.due_at - (CASE WHEN c.tier = 'urgent' THEN INTERVAL '30 minutes' ELSE INTERVAL '6 hours' END)
+        AND NOW() < c.due_at
+      LIMIT 200`);
+    for (const c of (soon?.rows ?? soon ?? []) as any[]) {
+      if (c.derm_user_id) await sendPushToUsers(new Set([c.derm_user_id]), {
+        title: c.tier === "urgent" ? "Avis urgent : réponse attendue très bientôt" : "Avis relais à rendre aujourd'hui",
+        body: String(c.relay_diagnosis || "Cas à valider"), url: "/derm/reseau",
+      });
+      await db.execute(sql`UPDATE relay_cases SET alert_sent_at = NOW() WHERE id = ${c.id}`).catch(() => {});
+    }
+
+    const late: any = await db.execute(sql`
+      SELECT c.id, c.tier, c.price_fcfa, c.payment_status, c.relay_diagnosis,
+             r.user_id AS relay_user_id, d.user_id AS derm_user_id, d.full_name AS derm_name
+      FROM relay_cases c JOIN pro_accounts r ON r.id = c.relay_id LEFT JOIN pro_accounts d ON d.id = c.derm_id
+      WHERE c.status = 'awaiting_review' AND c.due_at IS NOT NULL AND c.due_at < NOW()
+      LIMIT 200`);
+    let refunds = 0;
+    for (const c of (late?.rows ?? late ?? []) as any[]) {
+      if (c.payment_status === "verified") {
+        const claimed: any = await db.execute(sql`UPDATE relay_cases SET status = 'refund_due' WHERE id = ${c.id} AND status = 'awaiting_review' RETURNING id`);
+        if (!((claimed?.rows ?? claimed ?? []) as any[]).length) continue;
+        await refundRelayCase(Number(c.id));
+        refunds++;
+        if (c.relay_user_id) await sendPushToUsers(new Set([c.relay_user_id]), {
+          title: "Avis non rendu dans le délai", body: "La patiente sera remboursée par GlowScan.", url: "/derm/relais",
+        });
+        if (c.derm_user_id) await sendPushToUsers(new Set([c.derm_user_id]), {
+          title: "Délai dépassé sur un avis relais", body: "Le cas a été annulé et la patiente sera remboursée.", url: "/derm/reseau",
+        });
+        try { await sendEmail(ownerEmail, `Avis relais #${c.id} : remboursement à faire`,
+          `<p>Le cas relais #${c.id} (${c.tier === "urgent" ? "urgent, 2 h" : "simple, 24 h"}, ${Number(c.price_fcfa)} FCFA) n'a pas reçu de réponse de Dr ${c.derm_name || "?"} dans le délai.</p><p>Remboursez la patiente puis saisissez l'ID de transaction dans /admin.</p>`,
+          `Cas relais #${c.id} : remboursement à faire (/admin)`); } catch {}
+      } else if (c.payment_status === "program") {
+        await db.execute(sql`UPDATE relay_cases SET due_at = NULL WHERE id = ${c.id}`).catch(() => {});
+        try { await sendEmail(ownerEmail, `Avis relais #${c.id} (programme) en retard`,
+          `<p>Le cas relais #${c.id} payé par un programme attend toujours la réponse de Dr ${c.derm_name || "?"}.</p>`,
+          `Cas relais #${c.id} (programme) en retard`); } catch {}
+      }
+    }
+    if (refunds) log(`⏱️ Avis relais hors délai : ${refunds} remboursement(s) décidé(s)`);
+  } catch (err) {
+    log(`❌ Erreur délais avis relais : ${err}`);
+  }
+}
+
 // ── B2C « Je préfère attendre » : rappel 24 h après (score bas non converti). ──
 async function sendB2CRemindLater() {
   try {
@@ -913,6 +969,8 @@ export function startCronJobs() {
   // Agenda : rappel WhatsApp de la veille (18 h) et compte rendu à envoyer après la visite.
   cron.schedule("0 18 * * *", sendAppointmentJ1Reminders, { timezone: "Africa/Douala" });
   cron.schedule("*/30 * * * *", sendVisitReportReminders, { timezone: "Africa/Douala" });
+  // Réseau : délais des avis relais (simple 24 h, urgent 2 h).
+  cron.schedule("*/10 * * * *", flagRelayDeadlines, { timezone: "Africa/Douala" });
   log("✅ Cron rappels RDV H-2 actif — toutes les 15 min (Douala)");
 
   // ✅ Rappel B2C « plus tard » (score bas) — toutes les heures

@@ -4,6 +4,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth } from "./replit_integrations/auth";
 import { registerAuthRoutes } from "./replit_integrations/auth/routes";
+import { registerRelayRoutes } from "./relayRoutes";
 import { registerProRoutes } from "./proRoutes";
 import { analyzeLimiter, consultationLimiter, paymentLimiter, emailReportLimiter } from "./rateLimit";
 import { objectStorageClient } from "./replit_integrations/object_storage/objectStorage";
@@ -413,6 +414,7 @@ export async function registerRoutes(
   await setupAuth(app);
   registerAuthRoutes(app);
   registerProRoutes(app);
+  registerRelayRoutes(app, { checkAdmin: checkDatasetKey });
 
   // ══ Diagnostic santé IA — ouvrir /api/ai-health dans le navigateur ══
   // Teste un appel minimal au modèle courant et renvoie l'erreur BRUTE du fournisseur

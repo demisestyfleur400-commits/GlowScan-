@@ -15,3 +15,10 @@ export function splitConsultation(priceFcfa: number): { pro: number; platform: n
   const platform = Math.round((priceFcfa * SPLITS.consultation.platform) / 100);
   return { pro: priceFcfa - platform, platform };
 }
+
+/** Avis de télé-expertise : 60 % dermatologue, 20 % relais, 20 % GlowScan (arrondis ; la somme vaut le prix). */
+export function splitRelay(priceFcfa: number): { derm: number; relay: number; platform: number } {
+  const relay = Math.round((priceFcfa * SPLITS.relay.relay) / 100);
+  const platform = Math.round((priceFcfa * SPLITS.relay.platform) / 100);
+  return { derm: priceFcfa - relay - platform, relay, platform };
+}

@@ -13,7 +13,7 @@
 // ════════════════════════════════════════════════════════════════════════
 import { sql } from "drizzle-orm";
 import { db } from "./db";
-import { SPLITS, splitConsultation } from "@shared/splits";
+import { SPLITS, splitConsultation, splitRelay } from "@shared/splits";
 import { normalizeCmPhone, opOf } from "@shared/phone";
 
 const rows = (x: any): any[] => (x?.rows ?? x ?? []) as any[];
@@ -64,6 +64,51 @@ export async function refundConsultation(consultationId: number): Promise<void> 
   const source = `consultation:${consultationId}`;
   await db.execute(sql`UPDATE wallet_ledger SET status = 'refunded', updated_at = NOW() WHERE type = 'consultation' AND source_id = ${source} AND status = 'escrow'`);
   await db.execute(sql`UPDATE platform_ledger SET status = 'refunded', updated_at = NOW() WHERE type = 'consultation' AND source_id = ${source} AND status = 'escrow'`);
+}
+
+// ── Avis de télé-expertise (relais) : 60 % dermatologue, 20 % relais, 20 % GlowScan ──
+
+/**
+ * Paiement VÉRIFIÉ d'un cas relais (patiente → CSI par Mobile Money) : les trois
+ * parts sont bloquées jusqu'à la réponse du dermatologue. Les cas payés par un
+ * programme ne passent pas ici : ils seront réglés sur facture (étape 6).
+ */
+export async function recordRelayPayment(caseId: number, operatorTxnId: string): Promise<void> {
+  const txn = String(operatorTxnId || "").trim();
+  if (!isOperatorTxnId(txn)) throw new WalletError("TXN_REQUIRED", "ID de transaction de l'opérateur requis");
+  const c: any = rows(await db.execute(sql`SELECT id, relay_id, derm_id, price_fcfa FROM relay_cases WHERE id = ${caseId}`))[0];
+  if (!c) throw new WalletError("NOT_FOUND", "Cas introuvable");
+  if (!c.derm_id) throw new WalletError("BAD_STATE", "Aucun dermatologue référent pour ce cas");
+  const gross = Number(c.price_fcfa) || 0;
+  const split = splitRelay(gross);
+  const source = `relay_case:${caseId}`;
+  const used: any = rows(await db.execute(sql`
+    SELECT source_id FROM platform_ledger WHERE operator_txn_id = ${txn} AND type <> 'withdrawal' LIMIT 1`))[0];
+  if (used && used.source_id !== source) throw new WalletError("TXN_ALREADY_USED", `Cet ID de transaction a déjà servi (${used.source_id})`);
+
+  await db.execute(sql`
+    INSERT INTO platform_ledger (type, gross_fcfa, share_pct, amount_fcfa, source_id, operator_txn_id, status)
+    VALUES ('relay_review', ${gross}, ${SPLITS.relay.platform}, ${split.platform}, ${source}, ${txn}, 'escrow')
+    ON CONFLICT (type, source_id) DO NOTHING`);
+  await db.execute(sql`
+    INSERT INTO wallet_ledger (pro_id, type, gross_fcfa, share_pct, amount_fcfa, source_id, operator_txn_id, status)
+    VALUES (${Number(c.derm_id)}, 'relay_review', ${gross}, ${SPLITS.relay.derm}, ${split.derm}, ${source}, ${txn}, 'escrow'),
+           (${Number(c.relay_id)}, 'relay_review', ${gross}, ${SPLITS.relay.relay}, ${split.relay}, ${source}, ${txn}, 'escrow')
+    ON CONFLICT (pro_id, type, source_id) DO NOTHING`);
+}
+
+/** Réponse du dermatologue : les parts deviennent disponibles. */
+export async function releaseRelayCase(caseId: number): Promise<void> {
+  const source = `relay_case:${caseId}`;
+  await db.execute(sql`UPDATE wallet_ledger SET status = 'available', updated_at = NOW() WHERE type = 'relay_review' AND source_id = ${source} AND status = 'escrow'`);
+  await db.execute(sql`UPDATE platform_ledger SET status = 'available', updated_at = NOW() WHERE type = 'relay_review' AND source_id = ${source} AND status = 'escrow'`);
+}
+
+/** Délai dépassé sans réponse : remboursement décidé, aucune part acquise. */
+export async function refundRelayCase(caseId: number): Promise<void> {
+  const source = `relay_case:${caseId}`;
+  await db.execute(sql`UPDATE wallet_ledger SET status = 'refunded', updated_at = NOW() WHERE type = 'relay_review' AND source_id = ${source} AND status = 'escrow'`);
+  await db.execute(sql`UPDATE platform_ledger SET status = 'refunded', updated_at = NOW() WHERE type = 'relay_review' AND source_id = ${source} AND status = 'escrow'`);
 }
 
 // ── Soldes et mouvements ──────────────────────────────────────────────────

@@ -160,7 +160,7 @@ export async function securityAlert(userId: string, kind: "login" | "password_ch
 // Notifie un dermatologue (par proAccount.id) : WebSocket temps réel + push web,
 // ET email en secours quand le compte n'a AUCUN abonnement push (ou emailAlways).
 // Résilient : ne throw jamais. VAPID déjà configuré par le module whatsapp.
-async function notifyProAccount(
+export async function notifyProAccount(
   accountId: number,
   n: { title: string; body: string; url: string },
   opts?: { emailAlways?: boolean },
@@ -392,7 +392,9 @@ async function getProAccountForUser(userId: string) {
   return acc || null;
 }
 
-function isProActive(acc: { trialEndsAt: Date; subscriptionStatus: string; subscriptionExpiresAt: Date | null }) {
+function isProActive(acc: { trialEndsAt: Date; subscriptionStatus: string; subscriptionExpiresAt: Date | null; profile?: string | null }) {
+  // Relais et ONG : pas d'abonnement (seuls les dermatologues paient 10 000 FCFA / mois).
+  if (acc.profile && acc.profile !== "derm") return true;
   const now = new Date();
   if (acc.subscriptionStatus === "active" && acc.subscriptionExpiresAt && acc.subscriptionExpiresAt > now) return true;
   if (acc.subscriptionStatus === "trial" && acc.trialEndsAt > now) return true;
@@ -429,12 +431,12 @@ function requirePro(req: any, res: any, next: any) {
 
 // Middleware strict — exige un abonnement actif (essai non expiré OU abo payé valide)
 // Bloque l'accès aux features métier (patients, scans, stats, pdf) après expiration
-function requireActivePro(req: any, res: any, next: any) {
+export function requireActivePro(req: any, res: any, next: any) {
   requirePro(req, res, () => {
     if (!(req as any).proActive) {
       return res.status(402).json({
         code: "PRO_SUBSCRIPTION_REQUIRED",
-        message: "Ton essai gratuit est terminé. Abonne-toi pour continuer (10 000 FCFA / mois).",
+        message: "Votre essai gratuit est terminé. Abonnez-vous pour continuer (10 000 FCFA / mois).",
       });
     }
     next();
