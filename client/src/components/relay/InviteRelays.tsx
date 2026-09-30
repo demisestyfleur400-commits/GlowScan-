@@ -87,6 +87,21 @@ export function parseAgentsCsv(text: string): { name: string; phone: string; cen
   return out;
 }
 
+/** Excel → CSV (première feuille), avec SheetJS chargé depuis cdnjs seulement quand il sert. */
+async function excelToCsv(file: File): Promise<string> {
+  const w = window as any;
+  if (!w.XLSX) {
+    await new Promise<void>((ok, ko) => {
+      const sc = document.createElement("script");
+      sc.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+      sc.onload = () => ok(); sc.onerror = () => ko(new Error("SheetJS"));
+      document.head.appendChild(sc);
+    });
+  }
+  const wb = w.XLSX.read(await file.arrayBuffer(), { type: "array" });
+  return w.XLSX.utils.sheet_to_csv(wb.Sheets[wb.SheetNames[0]], { FS: ";" });
+}
+
 export function CsvInvite({ programId }: { programId: number }) {
   const qc = useQueryClient();
   const ref = useRef<HTMLInputElement | null>(null);
@@ -95,8 +110,12 @@ export function CsvInvite({ programId }: { programId: number }) {
   const [msg, setMsg] = useState("");
   const load = async (file: File) => {
     setMsg("");
-    if (!/\.csv$/i.test(file.name)) { setMsg("Choisissez un fichier .csv (depuis Excel : Fichier > Enregistrer sous > CSV)."); return; }
-    const r = parseAgentsCsv(await file.text());
+    let text = "";
+    if (/\.csv$/i.test(file.name)) text = await file.text();
+    else if (/\.xlsx?$/i.test(file.name)) {
+      try { text = await excelToCsv(file); } catch { setMsg("Fichier Excel illisible. Enregistrez-le en CSV et réessayez."); return; }
+    } else { setMsg("Choisissez un fichier CSV ou Excel (.xlsx)."); return; }
+    const r = parseAgentsCsv(text);
     if (!r.length) { setMsg("Aucune ligne avec un numéro de téléphone."); return; }
     if (r.length > 300) { setMsg("300 agents au maximum par import."); return; }
     setRows(r);
@@ -113,10 +132,10 @@ export function CsvInvite({ programId }: { programId: number }) {
   };
   return (
     <div className="flex flex-col gap-organic-2 rounded-card bg-organic-surface p-organic-6" data-testid="csv-invite">
-      <span className="font-heading text-[20px]">Importer une liste d'agents</span>
-      <span className="text-[13px] text-organic-neutral-800">Fichier CSV avec une ligne par agent : nom, téléphone, centre de santé. Chaque agent reçoit une invitation par SMS.</span>
-      <Button variant="secondary" className="self-start" onClick={() => ref.current?.click()}>Choisir le fichier CSV</Button>
-      <input ref={ref} type="file" accept=".csv,text/csv" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) load(f); e.target.value = ""; }} />
+      <span className="font-heading text-[20px]">Importer un fichier (CSV, Excel)</span>
+      <span className="text-[13px] text-organic-neutral-800">Une ligne par agent : nom, téléphone, centre de santé. Chaque agent reçoit une invitation par SMS.</span>
+      <Button variant="secondary" className="self-start" onClick={() => ref.current?.click()}>Choisir le fichier</Button>
+      <input ref={ref} type="file" accept=".csv,text/csv,.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) load(f); e.target.value = ""; }} />
       {rows && (
         <>
           <div className="flex max-h-48 flex-col gap-1 overflow-y-auto rounded-card bg-organic-bg p-organic-3 text-[12px]">

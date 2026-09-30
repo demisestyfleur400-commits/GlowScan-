@@ -765,7 +765,15 @@ export const programs = pgTable("programs", {
   district: text("district"),
   budgetFcfa: integer("budget_fcfa").notNull().default(0),            // migration 0023
   funderEmail: text("funder_email"),                                   // destinataire du rapport mensuel
-  status: varchar("status", { length: 10 }).notNull().default("active"), // active | paused
+  status: varchar("status", { length: 10 }).notNull().default("active"), // draft | active | paused | closed
+  // Programmes ONG (migration 0031)
+  country: varchar("country", { length: 40 }),
+  dermMode: varchar("derm_mode", { length: 10 }).notNull().default("auto"),  // auto | chosen
+  alertPct: smallint("alert_pct").notNull().default(20),
+  alertSentAt: timestamp("alert_sent_at"),
+  createdBy: integer("created_by"),
+  launchedAt: timestamp("launched_at"),
+  closedAt: timestamp("closed_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -1053,5 +1061,37 @@ export const dermLicenses = pgTable("derm_licenses", {
   status: varchar("status", { length: 10 }).notNull().default("pending"), // pending | verified | rejected
   rejectReason: text("reject_reason"),
   verifiedAt: timestamp("verified_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// ── Programmes ONG : O1 et O3 (étape 14a, migration 0031) ─────────────────
+export const programDistricts = pgTable("program_districts", {
+  id: serial("id").primaryKey(),
+  programId: integer("program_id").notNull().references(() => programs.id, { onDelete: "cascade" }),
+  country: varchar("country", { length: 40 }).notNull(),
+  district: text("district").notNull(),
+});
+export const programDerms = pgTable("program_derms", {
+  programId: integer("program_id").notNull().references(() => programs.id, { onDelete: "cascade" }),
+  dermId: integer("derm_id").notNull().references(() => proAccounts.id, { onDelete: "cascade" }),
+}, (t) => ({ pk: primaryKey({ columns: [t.programId, t.dermId] }) }));
+export const programDiseases = pgTable("program_diseases", {
+  programId: integer("program_id").notNull().references(() => programs.id, { onDelete: "cascade" }),
+  diseaseCode: varchar("disease_code", { length: 40 }).notNull(),
+}, (t) => ({ pk: primaryKey({ columns: [t.programId, t.diseaseCode] }) }));
+export const programBudgetLedger = pgTable("program_budget_ledger", {
+  id: serial("id").primaryKey(),
+  programId: integer("program_id").notNull().references(() => programs.id, { onDelete: "cascade" }),
+  kind: varchar("kind", { length: 15 }).notNull(),                     // recharge | debit | refund | quality | close_refund
+  amountFcfa: integer("amount_fcfa").notNull(),
+  reviews: integer("reviews"),
+  caseId: integer("case_id").references(() => relayCases.id, { onDelete: "set null" }),
+  method: varchar("method", { length: 10 }),                            // virement | momo
+  operatorRef: text("operator_ref"),
+  status: varchar("status", { length: 10 }).notNull().default("pending"),
+  rejectReason: text("reject_reason"),
+  receiptNo: varchar("receipt_no", { length: 20 }),
+  requestedBy: integer("requested_by"),
+  confirmedAt: timestamp("confirmed_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });

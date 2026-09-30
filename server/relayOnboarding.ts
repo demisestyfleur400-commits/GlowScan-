@@ -364,6 +364,19 @@ export function registerRelayOnboardingRoutes(app: Express, deps: { checkAdmin: 
     }
   });
 
+  // « Relancer » une invitation (O2) : nouveau SMS, même lien.
+  app.post("/api/relay-invitations/:id/resend", requireActivePro, async (req: any, res) => {
+    const i = Rows(await db.execute(sql`
+      SELECT i.*, g.name AS program_name FROM invitations i LEFT JOIN programs g ON g.id = i.program_id
+      WHERE i.id = ${Number(req.params.id)} AND i.status = 'sent' AND i.expires_at > NOW()`))[0];
+    if (!i) return res.status(404).json({ message: "Invitation introuvable ou expirée." });
+    const allowed = i.program_id ? await managesProgram(req.proAccount.id, Number(i.program_id)) : Number(i.inviter_id) === req.proAccount.id;
+    if (!allowed) return res.status(403).json({ message: "Invitation non autorisée" });
+    const who = i.program_id ? `Le programme ${i.program_name || ""}`.trim() : dr(req.proAccount.fullName);
+    const r = await sendSmsText(`+${i.phone}`, `Rappel : ${inviteSms(who, i.token)}`);
+    res.json({ sent: r.ok });
+  });
+
   // ── Admin : vérification des relais ───────────────────────────────────
   app.get("/api/admin/relays", admin, async (_req: any, res) => {
     try {

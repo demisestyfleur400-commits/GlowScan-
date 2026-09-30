@@ -5,6 +5,7 @@ import { db } from "./db";
 import { requireActivePro } from "./proRoutes";
 import { sendEmail } from "./email";
 import { relayLevelOf, diseaseLabel } from "@shared/relay";
+import { programBalance } from "./programBudget";
 
 // ════════════════════════════════════════════════════════════════════════
 // Pilotage des programmes (étape 6, README §4 point 10) + vue fondateur (§4.11).
@@ -85,9 +86,7 @@ export async function programDashboard(programId: number, range: string) {
   });
   const autonomousAgents = agentRows.filter((a: any) => Number(a.autonomous) > 0).length;
 
-  const used = Number(Rows(await db.execute(sql`
-    SELECT COALESCE(SUM(price_fcfa), 0)::int AS used FROM relay_cases
-    WHERE program_id = ${programId} AND payment_status = 'program'`))[0]?.used) || 0;
+  const bal = await programBalance(programId);
 
   // Hausse inhabituelle : ≥ 5 cas sur 3 semaines et au moins le double des 3 semaines d'avant.
   const spikes = Rows(await db.execute(sql`
@@ -122,7 +121,7 @@ export async function programDashboard(programId: number, range: string) {
     diseases: diseases.map((d: any) => ({ name: diseaseLabel(d.code), n: mask(Number(d.n)) })),
     agreement: agreement.map((a: any) => ({ month: a.month, n: Number(a.n), pct: Number(a.n) ? Math.round((Number(a.ok) / Number(a.n)) * 100) : null })),
     agents,
-    budget: { total: Number(p.budget_fcfa) || 0, used },
+    budget: { total: bal.recharged, used: bal.spent },
     alerts,
     lessons: lessons.map((l: any) => ({ relayDx: l.relay_diagnosis, dermDx: l.derm_diagnosis, note: l.derm_note })),
   };
@@ -130,7 +129,7 @@ export async function programDashboard(programId: number, range: string) {
 
 async function managedPrograms(proId: number) {
   return Rows(await db.execute(sql`
-    SELECT g.id, g.name FROM program_managers m JOIN programs g ON g.id = m.program_id WHERE m.pro_id = ${proId} ORDER BY g.name`));
+    SELECT g.id, g.name, g.status FROM program_managers m JOIN programs g ON g.id = m.program_id WHERE m.pro_id = ${proId} ORDER BY g.created_at DESC`));
 }
 
 export function registerProgramRoutes(app: Express, deps: { checkAdmin: (req: any) => boolean }) {
@@ -175,7 +174,9 @@ export function registerProgramRoutes(app: Express, deps: { checkAdmin: (req: an
     try {
       const rows = Rows(await db.execute(sql`
         SELECT g.*,
-          (SELECT COALESCE(SUM(price_fcfa), 0)::int FROM relay_cases c WHERE c.program_id = g.id AND c.payment_status = 'program') AS used,
+          (SELECT COALESCE(-SUM(amount_fcfa) FILTER (WHERE kind IN ('debit', 'refund', 'quality')), 0)::int FROM program_budget_ledger l WHERE l.program_id = g.id AND l.status = 'confirmed') AS used,
+          (SELECT COALESCE(SUM(amount_fcfa) FILTER (WHERE kind = 'recharge'), 0)::int FROM program_budget_ledger l WHERE l.program_id = g.id AND l.status = 'confirmed') AS recharged,
+          (SELECT COALESCE(SUM(amount_fcfa), 0)::int FROM program_budget_ledger l WHERE l.program_id = g.id AND l.status = 'confirmed') AS balance,
           (SELECT json_agg(json_build_object('id', r.id, 'name', r.full_name, 'city', r.city, 'share', m.share_progress) ORDER BY r.full_name)
              FROM program_members m JOIN pro_accounts r ON r.id = m.relay_id WHERE m.program_id = g.id) AS relays,
           (SELECT json_agg(json_build_object('id', a.id, 'name', a.full_name))
@@ -196,7 +197,7 @@ export function registerProgramRoutes(app: Express, deps: { checkAdmin: (req: an
     district: z.string().max(120).optional().nullable(),
     budgetFcfa: z.number().int().min(0).max(1_000_000_000).optional().default(0),
     funderEmail: z.string().email().optional().nullable().or(z.literal("")),
-    status: z.enum(["active", "paused"]).optional().default("active"),
+    status: z.enum(["draft", "active", "paused", "closed"]).optional().default("draft"),
   });
 
   app.post("/api/admin/programs", admin, async (req: any, res) => {
@@ -221,6 +222,26 @@ export function registerProgramRoutes(app: Express, deps: { checkAdmin: (req: an
       res.json({ success: true });
     } catch (e: any) {
       res.status(400).json({ message: e?.name === "ZodError" ? "Programme incomplet." : "Erreur serveur" });
+    }
+  });
+
+  // Recharge reçue et vérifiée par GlowScan (virement ou Mobile Money) : créditée directement.
+  app.post("/api/admin/programs/:id/recharge", admin, async (req: any, res) => {
+    const pid = Number(req.params.id);
+    const amount = Math.round(Number(req.body?.amountFcfa) || 0);
+    const ref = String(req.body?.operatorRef || "").trim();
+    const method = req.body?.method === "momo" ? "momo" : "virement";
+    if (amount < 3000 || ref.length < 4) return res.status(400).json({ message: "Montant et référence vérifiée du paiement requis." });
+    try {
+      await db.execute(sql`
+        INSERT INTO program_budget_ledger (program_id, kind, amount_fcfa, reviews, method, operator_ref, status, confirmed_at)
+        VALUES (${pid}, 'recharge', ${amount}, ${Math.floor(amount / 3000)}, ${method}, ${ref}, 'confirmed', NOW())`);
+      await db.execute(sql`UPDATE program_budget_ledger SET receipt_no = 'GS-REC-' || lpad(id::text, 5, '0') WHERE program_id = ${pid} AND kind = 'recharge' AND operator_ref = ${ref}`);
+      await db.execute(sql`UPDATE programs SET status = CASE WHEN status = 'draft' THEN 'active' ELSE status END, launched_at = COALESCE(launched_at, NOW()), alert_sent_at = NULL WHERE id = ${pid}`);
+      res.json({ success: true });
+    } catch (e: any) {
+      if (String(e?.message || "").includes("program_budget_ref_uidx")) return res.status(409).json({ message: "Cette référence a déjà servi." });
+      res.status(500).json({ message: "Erreur serveur" });
     }
   });
 
@@ -306,8 +327,9 @@ export function registerProgramRoutes(app: Express, deps: { checkAdmin: (req: an
         SELECT source_id, type, operator_txn_id, gross_fcfa, amount_fcfa, status, created_at
         FROM platform_ledger WHERE type <> 'withdrawal' ORDER BY created_at DESC LIMIT 30`));
       const programs = Rows(await db.execute(sql`
-        SELECT g.id, g.name, g.budget_fcfa,
-          (SELECT COALESCE(SUM(price_fcfa), 0)::int FROM relay_cases c WHERE c.program_id = g.id AND c.payment_status = 'program') AS used
+        SELECT g.id, g.name,
+          (SELECT COALESCE(SUM(amount_fcfa) FILTER (WHERE kind = 'recharge'), 0)::int FROM program_budget_ledger l WHERE l.program_id = g.id AND l.status = 'confirmed') AS budget_fcfa,
+          (SELECT COALESCE(-SUM(amount_fcfa) FILTER (WHERE kind IN ('debit', 'refund', 'quality')), 0)::int FROM program_budget_ledger l WHERE l.program_id = g.id AND l.status = 'confirmed') AS used
         FROM programs g ORDER BY g.name`));
       res.json({
         collected: Number(m.collected) || 0,

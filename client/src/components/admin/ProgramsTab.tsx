@@ -12,6 +12,7 @@ import { buildProgramReportHtml, buildProgramReportPdf } from "@/lib/programRepo
 type DS = { surface: string; text: string; body: string; muted: string; border: string; violet: string };
 type Program = {
   id: number; name: string; funder: string | null; district: string | null; budget_fcfa: number; funder_email: string | null; status: string; used: number;
+  recharged: number; balance: number; country: string | null;
   relays: { id: number; name: string; city: string | null; share: boolean }[] | null;
   managers: { id: number; name: string }[] | null;
   reports: { month: string; sentAt: string; sentTo: string }[] | null;
@@ -31,7 +32,8 @@ const TX_KIND: Record<string, string> = { consultation: "Consultation B2C", rela
 export function ProgramsTab({ adminKey, DS }: { adminKey: string; DS: DS }) {
   const [founder, setFounder] = useState<Founder | null>(null);
   const [programs, setPrograms] = useState<Program[]>([]);
-  const [form, setForm] = useState({ name: "", funder: "", district: "", budgetFcfa: "", funderEmail: "" });
+  const [form, setForm] = useState({ name: "", funder: "", district: "", funderEmail: "" });
+  const [pending, setPending] = useState<any[]>([]);
   const [open, setOpen] = useState<number | null>(null);
   const [msg, setMsg] = useState("");
 
@@ -42,6 +44,7 @@ export function ProgramsTab({ adminKey, DS }: { adminKey: string; DS: DS }) {
     return d;
   };
   const load = async () => {
+    call("/api/admin/program-recharges").then((d) => setPending(d.items || [])).catch(() => setPending([]));
     try { setFounder(await call("/api/admin/founder")); } catch {}
     try { setPrograms((await call("/api/admin/programs")).programs || []); } catch {}
   };
@@ -50,8 +53,8 @@ export function ProgramsTab({ adminKey, DS }: { adminKey: string; DS: DS }) {
   const create = async () => {
     setMsg("");
     try {
-      await call("/api/admin/programs", "POST", { ...form, budgetFcfa: parseInt(form.budgetFcfa || "0", 10) || 0 });
-      setForm({ name: "", funder: "", district: "", budgetFcfa: "", funderEmail: "" }); load();
+      await call("/api/admin/programs", "POST", { ...form, status: "draft" });
+      setForm({ name: "", funder: "", district: "", funderEmail: "" }); load();
     } catch (e: any) { setMsg(e.message); }
   };
 
@@ -87,11 +90,30 @@ export function ProgramsTab({ adminKey, DS }: { adminKey: string; DS: DS }) {
 
       <h3 className="text-lg font-extrabold pt-2" style={{ color: DS.text }}>Programmes ONG</h3>
       <div className="rounded-2xl p-4 space-y-2" style={box}>
+        <p className="text-sm font-extrabold" style={{ color: DS.text }}>Recharges et remboursements à traiter ({pending.length})</p>
+        {pending.length === 0 && <p className="text-xs" style={{ color: DS.muted }}>Rien à traiter.</p>}
+        {pending.map((r) => (
+          <div key={r.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
+            <span style={{ color: DS.body }}>
+              <b style={{ color: DS.text }}>{r.name}</b> · {r.kind === "close_refund" ? "solde à rembourser au bailleur" : `recharge ${r.program_status === "draft" ? "(lancement)" : ""}`} · <b>{fcfa(Math.abs(r.amount_fcfa))}</b>
+              {r.kind === "recharge" ? ` · ${r.method === "momo" ? `Mobile Money, ID ${r.operator_ref}` : `virement${r.operator_ref ? `, réf. ${r.operator_ref}` : ""}`}` : ""}
+            </span>
+            <span className="flex gap-1.5">
+              {r.kind === "recharge" && <a href={`/api/program/recharges/${r.id}/receipt`} target="_blank" rel="noreferrer" className="px-3 py-1.5 rounded-xl text-xs font-extrabold" style={{ color: DS.muted, border: `1px solid ${DS.border}` }}>Facture</a>}
+              <button onClick={async () => { const ref = window.prompt(r.kind === "close_refund" ? "Référence du virement de remboursement" : "Référence vérifiée (relevé bancaire ou Mobile Money)", r.operator_ref || "")?.trim(); if (!ref) return; try { await call(`/api/admin/program-recharges/${r.id}/confirm`, "POST", { operatorRef: ref }); } catch (e: any) { window.alert(e.message); } load(); }}
+                className="px-3 py-1.5 rounded-xl text-xs font-extrabold text-white" style={{ background: "#10b981" }}>{r.kind === "close_refund" ? "Remboursé" : "Vérifié"}</button>
+              {r.kind === "recharge" && <button onClick={async () => { const reason = window.prompt("Motif du refus")?.trim(); if (!reason) return; try { await call(`/api/admin/program-recharges/${r.id}/reject`, "POST", { reason }); } catch (e: any) { window.alert(e.message); } load(); }}
+                className="px-3 py-1.5 rounded-xl text-xs font-extrabold" style={{ color: DS.muted, border: `1px solid ${DS.border}` }}>Refuser</button>}
+            </span>
+          </div>
+        ))}
+      </div>
+      <div className="rounded-2xl p-4 space-y-2" style={box}>
         <p className="text-sm font-extrabold" style={{ color: DS.text }}>Nouveau programme</p>
         <div className="grid sm:grid-cols-2 gap-2">
-          {([["name", "Nom du programme"], ["funder", "Bailleur (ex. Fondation Sahel Santé)"], ["district", "District / région"], ["budgetFcfa", "Budget (FCFA)"], ["funderEmail", "Email du bailleur (rapport mensuel)"]] as const).map(([k, ph]) => (
+          {([["name", "Nom du programme"], ["funder", "Bailleur (ex. Fondation Sahel Santé)"], ["district", "District / région"], ["funderEmail", "Email du bailleur (rapport mensuel)"]] as const).map(([k, ph]) => (
             <input key={k} className={input} style={inputStyle} placeholder={ph} value={(form as any)[k]}
-              onChange={(e) => setForm({ ...form, [k]: k === "budgetFcfa" ? e.target.value.replace(/\D/g, "") : e.target.value })} />
+              onChange={(e) => setForm({ ...form, [k]: e.target.value })} />
           ))}
         </div>
         {msg && <p className="text-xs" style={{ color: "#f43f5e" }}>{msg}</p>}
@@ -108,7 +130,8 @@ export function ProgramsTab({ adminKey, DS }: { adminKey: string; DS: DS }) {
 function ProgramCard({ p, DS, call, reload, expanded, onToggle }: {
   p: Program; DS: DS; call: (u: string, m?: string, b?: unknown) => Promise<any>; reload: () => void; expanded: boolean; onToggle: () => void;
 }) {
-  const [edit, setEdit] = useState({ name: p.name, funder: p.funder || "", district: p.district || "", budgetFcfa: String(p.budget_fcfa || ""), funderEmail: p.funder_email || "", status: p.status });
+  const [edit, setEdit] = useState({ name: p.name, funder: p.funder || "", district: p.district || "", funderEmail: p.funder_email || "", status: p.status });
+  const [rech, setRech] = useState({ amount: "", ref: "", method: "virement" });
   const [relayEmail, setRelayEmail] = useState("");
   const [ngoEmail, setNgoEmail] = useState("");
   const [range, setRange] = useState("1m");
@@ -128,33 +151,49 @@ function ProgramCard({ p, DS, call, reload, expanded, onToggle }: {
   const input = "w-full px-3 py-2 rounded-xl text-sm outline-none";
   const inputStyle = { background: "rgba(255,255,255,0.05)", border: `1px solid ${DS.border}`, color: DS.text };
   const btn = "px-3 py-1.5 rounded-xl text-xs font-extrabold text-white disabled:opacity-40";
-  const pct = p.budget_fcfa ? Math.min(100, Math.round((p.used / p.budget_fcfa) * 100)) : 0;
+  const pct = p.recharged ? Math.min(100, Math.round((p.used / p.recharged) * 100)) : 0;
 
   return (
     <div className="rounded-2xl p-4 space-y-3" style={box}>
       <button onClick={onToggle} className="w-full flex flex-wrap items-center justify-between gap-2 text-left">
         <span>
           <span className="text-sm font-extrabold" style={{ color: DS.text }}>{p.name}</span>
-          <span className="text-xs ml-2" style={{ color: DS.muted }}>{[p.funder, p.district].filter(Boolean).join(" · ")}{p.status === "paused" ? " · suspendu" : ""}</span>
+          <span className="text-xs ml-2" style={{ color: DS.muted }}>{[p.funder, p.district].filter(Boolean).join(" · ")}{p.status === "paused" ? " · suspendu" : p.status === "draft" ? " · brouillon" : p.status === "closed" ? " · clôturé" : ""}</span>
         </span>
         <span className="text-xs" style={{ color: DS.body }}>
-          {p.budget_fcfa ? `${fcfa(p.used)} / ${fcfa(p.budget_fcfa)} (${pct} %)` : "budget non renseigné"} · {(p.relays || []).length} relais · {(p.managers || []).length} compte(s) ONG
+          {p.recharged ? `${fcfa(p.used)} / ${fcfa(p.recharged)} (${pct} %)` : "aucune recharge"} · {(p.relays || []).length} relais · {(p.managers || []).length} compte(s) ONG
         </span>
       </button>
 
       {expanded && (
         <div className="space-y-4">
           <div className="grid sm:grid-cols-3 gap-2">
-            {([["name", "Nom"], ["funder", "Bailleur"], ["district", "District"], ["budgetFcfa", "Budget (FCFA)"], ["funderEmail", "Email du bailleur"]] as const).map(([k, ph]) => (
+            {([["name", "Nom"], ["funder", "Bailleur"], ["district", "District"], ["funderEmail", "Email du bailleur"]] as const).map(([k, ph]) => (
               <input key={k} className={input} style={inputStyle} placeholder={ph} value={(edit as any)[k]}
-                onChange={(e) => setEdit({ ...edit, [k]: k === "budgetFcfa" ? e.target.value.replace(/\D/g, "") : e.target.value })} />
+                onChange={(e) => setEdit({ ...edit, [k]: e.target.value })} />
             ))}
             <select className={input} style={inputStyle} value={edit.status} onChange={(e) => setEdit({ ...edit, status: e.target.value })}>
-              <option value="active">Actif</option><option value="paused">Suspendu</option>
+              <option value="draft">Brouillon</option><option value="active">Actif</option><option value="paused">Suspendu</option>
             </select>
           </div>
           <button disabled={busy} className={btn} style={{ background: DS.violet }}
-            onClick={() => act(() => call(`/api/admin/programs/${p.id}`, "PATCH", { ...edit, budgetFcfa: parseInt(edit.budgetFcfa || "0", 10) || 0 }), "Programme enregistré.")}>Enregistrer</button>
+            onClick={() => act(() => call(`/api/admin/programs/${p.id}`, "PATCH", edit), "Programme enregistré.")}>Enregistrer</button>
+
+          {/* Budget prépayé (étape 14a) : recharge reçue et vérifiée, clôture. */}
+          <div className="space-y-1.5">
+            <p className="text-xs font-extrabold" style={{ color: DS.text }}>Budget : solde {fcfa(p.balance)} · rechargé {fcfa(p.recharged)} · consommé {fcfa(p.used)}</p>
+            <div className="grid sm:grid-cols-4 gap-2">
+              <input className={input} style={inputStyle} placeholder="Montant reçu (FCFA)" value={rech.amount} onChange={(e) => setRech({ ...rech, amount: e.target.value.replace(/\D/g, "") })} />
+              <select className={input} style={inputStyle} value={rech.method} onChange={(e) => setRech({ ...rech, method: e.target.value })}><option value="virement">Virement</option><option value="momo">Mobile Money</option></select>
+              <input className={input} style={inputStyle} placeholder="Référence vérifiée" value={rech.ref} onChange={(e) => setRech({ ...rech, ref: e.target.value })} />
+              <button disabled={busy || !rech.amount || rech.ref.trim().length < 4} className={btn} style={{ background: "#10b981" }}
+                onClick={() => act(() => call(`/api/admin/programs/${p.id}/recharge`, "POST", { amountFcfa: Number(rech.amount), method: rech.method, operatorRef: rech.ref.trim() }).then(() => setRech({ amount: "", ref: "", method: "virement" })), "Recharge enregistrée.")}>Enregistrer la recharge</button>
+            </div>
+            {p.status !== "closed" && (
+              <button disabled={busy} className={btn} style={{ background: "#b45309" }}
+                onClick={() => { if (window.confirm("Clôturer ce programme ? Plus aucun cas ne sera accepté ; le solde non consommé sera à rembourser au bailleur.")) act(() => call(`/api/admin/programs/${p.id}/close`, "POST"), "Programme clôturé."); }}>Clôturer le programme</button>
+            )}
+          </div>
 
           <div className="grid sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">

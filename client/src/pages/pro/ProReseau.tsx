@@ -112,7 +112,7 @@ function QueueItem({ c, onDone, unread, onDiscuss }: { c: QCase; onDone: () => v
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const urgent = c.tier === "urgent";
-  const share = c.payment_status === "verified" || c.payment_status === "credit" ? splitRelay(c.price_fcfa).derm : 0;
+  const share = ["verified", "credit", "program"].includes(c.payment_status) ? splitRelay(c.price_fcfa).derm : 0;
   const chip = (on: boolean) => `cursor-pointer rounded-pill border px-3 py-1 font-body text-[12px] font-semibold ${on ? "border-organic-accent bg-organic-accent text-organic-bg" : "border-organic-divider bg-transparent text-organic-text"}`;
 
   const send = async () => {
@@ -146,7 +146,8 @@ function QueueItem({ c, onDone, unread, onDiscuss }: { c: QCase; onDone: () => v
       </div>
       {c.paused_at && <span className="self-start rounded-pill bg-organic-accent-100 px-2.5 py-0.5 text-[12px] font-semibold text-organic-accent-900">Demande en cours · délai en pause</span>}
       <div className="flex flex-wrap items-center gap-1.5">
-        {c.route_step && c.route_step !== "referent" && (
+        {c.route_step === "program" && <span className="rounded-pill bg-organic-accent-2-100 px-2.5 py-0.5 text-[12px] font-semibold text-organic-accent-2-800">Programme</span>}
+        {c.route_step && c.route_step !== "referent" && c.route_step !== "program" && (
           <span className="rounded-pill bg-organic-accent-2-100 px-2.5 py-0.5 text-[12px] font-semibold text-organic-accent-2-800" data-testid={`queue-network-${c.id}`}>
             Réseau · {c.relay_country || "autre pays"}
           </span>

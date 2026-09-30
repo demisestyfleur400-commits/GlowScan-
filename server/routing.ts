@@ -17,7 +17,7 @@ import { NETWORK_COUNTRIES } from "@shared/peer";
 // ════════════════════════════════════════════════════════════════════════
 
 const Rows = (x: any): any[] => (x?.rows ?? x ?? []) as any[];
-export type RouteStep = "referent" | "country" | "network";
+export type RouteStep = "program" | "referent" | "country" | "network";
 export const LANGUAGES = [{ key: "fr", label: "Français" }, { key: "en", label: "Anglais" }] as const;
 export const DAILY_CAPS = [5, 10, 20] as const;
 
@@ -27,7 +27,7 @@ const ACTIVE = sql`COALESCE(p.profile, 'derm') = 'derm'
 
 async function caseContext(caseId: number) {
   return Rows(await db.execute(sql`
-    SELECT c.id, c.relay_id, c.derm_id, c.tier, c.language, c.cross_border_consent_at, c.routing_log, c.status,
+    SELECT c.id, c.relay_id, c.derm_id, c.tier, c.language, c.cross_border_consent_at, c.routing_log, c.status, c.program_id,
            COALESCE(r.country, rp.country, 'Cameroun') AS relay_country, l.derm_id AS referent_id
     FROM relay_cases c JOIN pro_accounts rp ON rp.id = c.relay_id
     LEFT JOIN relays r ON r.pro_account_id = c.relay_id
@@ -42,6 +42,16 @@ export async function pickDerm(caseId: number, exclude: number[] = []): Promise<
   const ex = sql.raw(`ARRAY[${[0, ...exclude].map(Number).join(",")}]::int[]`);
   const lang = c.language || "fr";
   const hours = RELAY_TIERS[(c.tier as "simple" | "urgent") || "simple"].hours;
+
+  // Programme avec des dermatologues choisis : eux d'abord (étape 14a).
+  if (c.program_id) {
+    const chosen = Rows(await db.execute(sql`
+      SELECT p.id, p.country FROM program_derms pd JOIN programs g ON g.id = pd.program_id AND g.derm_mode = 'chosen'
+      JOIN pro_accounts p ON p.id = pd.derm_id
+      WHERE pd.program_id = ${c.program_id} AND ${ACTIVE} AND NOT (p.id = ANY(${ex})) AND ${lang} = ANY(p.languages)
+      ORDER BY (SELECT COUNT(*) FROM relay_cases y WHERE y.derm_id = p.id AND y.status = 'awaiting_review') ASC, p.id ASC LIMIT 1`))[0];
+    if (chosen) return { dermId: Number(chosen.id), step: "program", country: chosen.country || null };
+  }
 
   // 0 · Référent du relais (pas de quota : ce sont ses propres relais).
   if (c.referent_id && !exclude.includes(Number(c.referent_id))) {

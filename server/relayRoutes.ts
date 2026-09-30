@@ -1,3 +1,4 @@
+import { debitProgramForCase, BudgetError, alertCoordinators } from "./programBudget";
 import { routeNewCase } from "./routing";
 import { relayMoney, debitCreditForCase, CreditError } from "./relayCredit";
 import { providerFor } from "./payments/provider";
@@ -142,7 +143,8 @@ export function registerRelayRoutes(app: Express, deps: { checkAdmin: (req: any)
       let programId: number | null = null;
       if (data.payer === "program") {
         const m = Rows(await db.execute(sql`
-          SELECT program_id FROM program_members WHERE relay_id = ${me.id} ${data.programId ? sql`AND program_id = ${data.programId}` : sql``} LIMIT 1`))[0];
+          SELECT m.program_id FROM program_members m JOIN programs g ON g.id = m.program_id
+          WHERE m.relay_id = ${me.id} AND g.status = 'active' ${data.programId ? sql`AND m.program_id = ${data.programId}` : sql``} LIMIT 1`))[0];
         if (!m) return res.status(403).json({ message: "Vous n'êtes rattaché à aucun programme." });
         programId = Number(m.program_id);
       }
@@ -172,7 +174,7 @@ export function registerRelayRoutes(app: Express, deps: { checkAdmin: (req: any)
           ${data.zone || null}, ${data.symptoms || null}, ${JSON.stringify(urls)}::jsonb,
           ${data.relayDiagnosis.trim()}, ${code}, ${data.tier}, ${autonomousCase ? 0 : tier.priceFcfa},
           ${autonomousCase ? "none" : data.payer}, ${programId}, ${status},
-          ${autonomousCase ? "pending" : data.payer === "program" ? "program_pending" : "pending"},
+          ${"pending"},
           NULL, ${money.currency}, ${money.rate ?? 1}, ${autonomousCase || !money.rate ? null : toLocal(tier.priceFcfa, money.rate, money.currency)}, ${patientPhone},
           ${relayLang}, ${data.crossBorderConsent ? sql`NOW()` : null})
         RETURNING id, status, price_fcfa, amount_local`));
@@ -188,6 +190,25 @@ export function registerRelayRoutes(app: Express, deps: { checkAdmin: (req: any)
       }
       let result: any = { id: caseId, status: row.status, priceFcfa: Number(row.price_fcfa), amountLocal: row.amount_local == null ? null : Number(row.amount_local), currency: money.currency };
 
+      if (!autonomousCase && data.payer === "program" && programId) {
+        // Programme ONG : débit automatique du budget prépayé (validé par GlowScan), même séquestre 60/20/20.
+        try { await debitProgramForCase(programId, caseId, tier.priceFcfa, code === "autre" ? null : code); }
+        catch (e: any) {
+          await db.execute(sql`DELETE FROM relay_cases WHERE id = ${caseId}`);
+          if (e instanceof BudgetError) {
+            if (e.code === "PROGRAM_BUDGET") alertCoordinators(programId, "Budget du programme épuisé", "Un agent n'a pas pu envoyer de cas : le budget d'avis est épuisé. Rechargez depuis votre espace GlowScan.").catch(() => {});
+            return res.status(402).json({ code: e.code, message: e.message });
+          }
+          throw e;
+        }
+        await recordRelayCreditPayment(caseId);
+        await db.execute(sql`
+          UPDATE relay_cases SET payment_status = 'program', paid_at = NOW(), status = 'awaiting_review', due_at = NOW() + make_interval(hours => ${tier.hours})
+          WHERE id = ${caseId}`);
+        const dermP = Rows(await db.execute(sql`SELECT derm_id FROM relay_cases WHERE id = ${caseId}`))[0]?.derm_id;
+        if (dermP) notifyProAccount(Number(dermP), { title: data.tier === "urgent" ? "Avis urgent demandé (2 h)" : "Nouvel avis relais", body: data.relayDiagnosis.trim(), url: "/derm/reseau" }).catch(() => {});
+        result = { ...result, status: "awaiting_review" };
+      }
       if (!autonomousCase && data.payer === "credit") {
         // Espèces : débit du crédit prépayé, séquestre 60/20/20, le cas part tout de suite.
         try { await debitCreditForCase(me.id, caseId, tier.priceFcfa, { currency: money.currency, rate: money.rate! }); }
@@ -354,13 +375,13 @@ export function registerRelayRoutes(app: Express, deps: { checkAdmin: (req: any)
           notifyProAccount(Number(c.relay_id), { title: `Autonome sur ${diseaseLabel(finalCode)}`, body: "Vous traitez désormais seul cette affection. Un cas sur cinq reste contrôlé.", url: "/derm/relais" }).catch(() => {});
         }
       }
-      if (c.payment_status === "verified" || c.payment_status === "credit") await releaseRelayCase(id);
+      if (["verified", "credit", "program"].includes(c.payment_status)) await releaseRelayCase(id);
       notifyProAccount(Number(c.relay_id), {
         title: data.verdict === "confirm" ? "Le dermatologue confirme votre diagnostic" : "Le dermatologue a corrigé votre diagnostic",
         body: (data.note || "").trim().slice(0, 120) || (data.verdict === "confirm" ? c.relay_diagnosis : data.dermDiagnosis!.trim()),
         url: "/derm/relais",
       }).catch(() => {});
-      const share = c.payment_status === "verified" || c.payment_status === "credit" ? splitRelay(Number(c.price_fcfa) || 0).derm : 0;
+      const share = ["verified", "credit", "program"].includes(c.payment_status) ? splitRelay(Number(c.price_fcfa) || 0).derm : 0;
       res.json({ success: true, dermShare: share });
     } catch (e: any) {
       if (e?.name === "ZodError") return res.status(400).json({ message: "Avis incomplet : indiquez au moins la conduite à tenir." });

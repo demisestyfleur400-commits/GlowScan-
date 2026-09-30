@@ -13,6 +13,7 @@ import { runInvitationReminders } from "./relayOnboarding";
 import { runCaseSmsFallback } from "./caseThreads";
 import { refundCreditForCase } from "./relayCredit";
 import { runRoutingTimeouts } from "./routing";
+import { refundProgramForCase } from "./programBudget";
 import { refundConsultation, refundRelayCase, chargeSubscriptionFromEarnings, proBalances, requestWithdrawal } from "./wallet";
 import { PRO_SUBSCRIPTION_FCFA } from "@shared/premium";
 const APP_BASE = (process.env.PUBLIC_BASE_URL || "https://glow-scan.com").replace(/\/$/, "");
@@ -653,10 +654,15 @@ async function flagRelayDeadlines() {
           title: "Délai dépassé sur un avis relais", body: "Le cas a été annulé et le relais remboursé.", url: "/derm/reseau",
         });
       } else if (c.payment_status === "program") {
-        await db.execute(sql`UPDATE relay_cases SET due_at = NULL WHERE id = ${c.id}`).catch(() => {});
-        try { await sendEmail(ownerEmail, `Avis relais #${c.id} (programme) en retard`,
-          `<p>Le cas relais #${c.id} payé par un programme attend toujours la réponse de Dr ${c.derm_name || "?"}.</p>`,
-          `Cas relais #${c.id} (programme) en retard`); } catch {}
+        // Payé par le budget du programme : l'avis revient au budget (étape 14a).
+        const claimed: any = await db.execute(sql`UPDATE relay_cases SET status = 'refunded', refunded_at = NOW() WHERE id = ${c.id} AND status = 'awaiting_review' RETURNING id`);
+        if (!((claimed?.rows ?? claimed ?? []) as any[]).length) continue;
+        await refundRelayCase(Number(c.id));
+        await refundProgramForCase(Number(c.id));
+        refunds++;
+        if (c.relay_user_id) await sendPushToUsers(new Set([c.relay_user_id]), {
+          title: "Avis non rendu dans le délai", body: "L'avis a été rendu au budget du programme.", url: "/derm/relais",
+        });
       }
     }
     if (refunds) log(`⏱️ Avis relais hors délai : ${refunds} remboursement(s) décidé(s)`);
