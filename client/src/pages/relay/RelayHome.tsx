@@ -14,6 +14,7 @@ import { formatF } from "@shared/delivery";
 import { relayCaseRef, answeredIn, relayAnswer, type PhotoQuality } from "@shared/teleexpertise";
 import { TeleexpertiseReport } from "@/components/pro/TeleexpertiseReport";
 import { RelayOnboarding, type Onboarding } from "@/components/relay/RelayOnboarding";
+import { CaseThreadSheet } from "@/components/relay/CaseThread";
 
 // ════════════════════════════════════════════════════════════════════════
 // Espace relais (infirmier / médecin d'un CSI) — maquette « Derm Reseau »,
@@ -83,6 +84,9 @@ export default function RelayHome() {
 
   const { data: me } = useQuery<Me>({ queryKey: ["/api/relay/me"], enabled: isRelay });
   const { data: onb } = useQuery<Onboarding | { status: "missing" }>({ queryKey: ["/api/relay/onboarding"], enabled: isRelay });
+  const { data: unreadData } = useQuery<{ unread: Record<string, number> }>({ queryKey: ["/api/case-threads/unread"], enabled: isRelay, refetchInterval: 30_000 });
+  const unread = unreadData?.unread || {};
+  const [threadId, setThreadId] = useState<number | null>(null);
   const { data: casesData } = useQuery<{ cases: Case[] }>({ queryKey: ["/api/relay/cases"], enabled: isRelay });
   const refresh = () => { qc.invalidateQueries({ queryKey: ["/api/relay/me"] }); qc.invalidateQueries({ queryKey: ["/api/relay/cases"] }); qc.invalidateQueries({ queryKey: ["/api/relay/onboarding"] }); };
 
@@ -162,7 +166,7 @@ export default function RelayHome() {
             {pending.length > 0 && (
               <div className={card}>
                 <h3 className="m-0 text-[22px]">Vos cas en cours</h3>
-                {pending.map((c) => <PendingCase key={c.id} c={c} onChange={refresh} />)}
+                {pending.map((c) => <PendingCase key={c.id} c={c} onChange={refresh} unread={unread[c.id] || 0} onDiscuss={() => setThreadId(c.id)} />)}
               </div>
             )}
 
@@ -188,9 +192,12 @@ export default function RelayHome() {
                       lesson: [f.lesson_tip, f.derm_note].filter(Boolean).join(" : ") || null,
                       photoQuality: f.photo_quality, photosSharp: f.photos_sharp, photosTotal: f.photos?.length || 0,
                       stat: prog && prog.cases > 0 ? `${prog.label} : ${prog.agreements}/${prog.cases} cas justes · ${Math.round((prog.agreements / prog.cases) * 100)} %` : null,
-                    }} actions={f.relay_read_at
-                      ? <span className="text-[12px] text-organic-neutral-700">Lu</span>
-                      : <Button variant="secondary" size="sm" onClick={async () => { await fetch(`/api/relay/cases/${f.id}/read`, { method: "POST", credentials: "include" }).catch(() => {}); refresh(); }}>Marquer comme lu</Button>} />
+                    }} actions={<>
+                      {f.relay_read_at
+                        ? <span className="self-center text-[12px] text-organic-neutral-700">Lu</span>
+                        : <Button variant="secondary" size="sm" onClick={async () => { await fetch(`/api/relay/cases/${f.id}/read`, { method: "POST", credentials: "include" }).catch(() => {}); refresh(); }}>Marquer comme lu</Button>}
+                      <Button size="sm" onClick={() => setThreadId(f.id)} data-testid={`relay-reply-${f.id}`}>Répondre{unread[f.id] ? ` (${unread[f.id]})` : ""}</Button>
+                    </>} />
                   );
                 })}
               </div>
@@ -198,6 +205,7 @@ export default function RelayHome() {
           </>
         )}
       </main>
+      {threadId != null && <CaseThreadSheet caseId={threadId} onClose={() => { setThreadId(null); refresh(); }} />}
     </div>
   );
 }
@@ -459,7 +467,7 @@ function NewCase({ me, onSent }: { me: Me; onSent: () => void }) {
   );
 }
 
-function PendingCase({ c, onChange }: { c: Case; onChange: () => void }) {
+function PendingCase({ c, onChange, unread, onDiscuss }: { c: Case; onChange: () => void; unread: number; onDiscuss: () => void }) {
   const [txn, setTxn] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -487,6 +495,11 @@ function PendingCase({ c, onChange }: { c: Case; onChange: () => void }) {
         </div>
       )}
       {err && <div role="alert" className="rounded-pill bg-organic-accent-100 px-4 py-2.5 text-[13px] font-semibold text-organic-accent-900">{err}</div>}
+      {c.status === "awaiting_review" && (
+        <Button variant={unread ? "default" : "secondary"} size="sm" onClick={onDiscuss} className="self-start" data-testid={`relay-discuss-${c.id}`}>
+          Discussion{unread ? ` · ${unread} nouveau${unread > 1 ? "x" : ""}` : ""}
+        </Button>
+      )}
     </div>
   );
 }

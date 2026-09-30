@@ -10,6 +10,7 @@ import { normalizeCmPhone } from "@shared/phone";
 import { stopLinkSig, followupsStoppedAt } from "./consents";
 import { runPeerDeadlines } from "./peerRoutes";
 import { runInvitationReminders } from "./relayOnboarding";
+import { runCaseSmsFallback } from "./caseThreads";
 import { refundConsultation, refundRelayCase, chargeSubscriptionFromEarnings, proBalances, requestWithdrawal } from "./wallet";
 import { PRO_SUBSCRIPTION_FCFA } from "@shared/premium";
 const APP_BASE = (process.env.PUBLIC_BASE_URL || "https://glow-scan.com").replace(/\/$/, "");
@@ -602,7 +603,7 @@ async function flagRelayDeadlines() {
     const soon: any = await db.execute(sql`
       SELECT c.id, c.tier, c.relay_diagnosis, p.user_id AS derm_user_id
       FROM relay_cases c JOIN pro_accounts p ON p.id = c.derm_id
-      WHERE c.status = 'awaiting_review' AND c.alert_sent_at IS NULL AND c.due_at IS NOT NULL
+      WHERE c.status = 'awaiting_review' AND c.alert_sent_at IS NULL AND c.due_at IS NOT NULL AND c.paused_at IS NULL
         AND NOW() > c.due_at - (CASE WHEN c.tier = 'urgent' THEN INTERVAL '30 minutes' ELSE INTERVAL '6 hours' END)
         AND NOW() < c.due_at
       LIMIT 200`);
@@ -618,7 +619,7 @@ async function flagRelayDeadlines() {
       SELECT c.id, c.tier, c.price_fcfa, c.payment_status, c.relay_diagnosis,
              r.user_id AS relay_user_id, d.user_id AS derm_user_id, d.full_name AS derm_name
       FROM relay_cases c JOIN pro_accounts r ON r.id = c.relay_id LEFT JOIN pro_accounts d ON d.id = c.derm_id
-      WHERE c.status = 'awaiting_review' AND c.due_at IS NOT NULL AND c.due_at < NOW()
+      WHERE c.status = 'awaiting_review' AND c.due_at IS NOT NULL AND c.due_at < NOW() AND c.paused_at IS NULL
       LIMIT 200`);
     let refunds = 0;
     for (const c of (late?.rows ?? late ?? []) as any[]) {
@@ -977,6 +978,11 @@ export function startCronJobs() {
   cron.schedule("*/10 * * * *", async () => {
     try { const r = await runPeerDeadlines(); if (r.reoffered || r.expired) log(`🤝 Avis confrères : ${r.reoffered} reproposé(s), ${r.expired} hors délai`); }
     catch (e) { log(`❌ Erreur délais avis confrères : ${e}`); }
+  }, { timezone: "Africa/Douala" });
+  // Discussion par cas : SMS de secours si le relais n'a pas lu en 15 min.
+  cron.schedule("*/5 * * * *", async () => {
+    try { const n = await runCaseSmsFallback(); if (n) log(`Discussion relais : ${n} SMS de secours`); }
+    catch (e) { log(`❌ Erreur SMS de secours : ${e}`); }
   }, { timezone: "Africa/Douala" });
   // Relais : invitations relancées à J+2 et J+7 (10 h), expirées après 14 jours.
   cron.schedule("0 10 * * *", async () => {

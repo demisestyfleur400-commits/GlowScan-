@@ -8,6 +8,7 @@ import { formatF } from "@shared/delivery";
 import { relayCaseRef } from "@shared/teleexpertise";
 import { TeleFieldsForm, emptyTeleFields, type TeleFields } from "@/components/pro/TeleexpertiseReport";
 import { InviteRelays } from "@/components/relay/InviteRelays";
+import { CaseThreadSheet } from "@/components/relay/CaseThread";
 
 // ════════════════════════════════════════════════════════════════════════
 // Réseau & formation — vue du dermatologue référent (maquette « Derm Reseau »,
@@ -20,6 +21,7 @@ type QCase = {
   id: number; relay_name: string; relay_city: string | null; center_name: string | null; tier: RelayTier; price_fcfa: number;
   payment_status: string; relay_diagnosis: string; relay_disease_code: string | null; ai_diagnosis: string | null; ai_confidence: string | null;
   patient_age: number | null; patient_sex: string | null; zone: string | null; symptoms: string | null; photos: string[]; due_at: string | null; created_at: string;
+  paused_at: string | null;
 };
 type Relay = { id: number; fullName: string; city: string | null; center: string | null; level: number; accuracy: number | null; cases: number; canPromote: boolean };
 
@@ -43,6 +45,8 @@ export default function ProReseau() {
   const queue = qData?.cases || [];
   const relays = rData?.relays || [];
   const refresh = () => { qc.invalidateQueries({ queryKey: ["/api/relay/review-queue"] }); qc.invalidateQueries({ queryKey: ["/api/relay/my-relays"] }); };
+  const { data: unreadData } = useQuery<{ unread: Record<string, number> }>({ queryKey: ["/api/case-threads/unread"], refetchInterval: 30_000 });
+  const [threadId, setThreadId] = useState<number | null>(null);
   const card = "flex flex-col gap-organic-3 rounded-card bg-organic-surface p-organic-6";
 
   return (
@@ -65,7 +69,7 @@ export default function ProReseau() {
           {!isLoading && queue.length === 0 && (
             <div className="rounded-pill bg-organic-accent-2-100 px-[18px] py-3.5 text-[13px] font-semibold text-organic-accent-2-800">File vide. Vos relais ont reçu leur leçon.</div>
           )}
-          {queue.map((c) => <QueueItem key={c.id} c={c} onDone={refresh} />)}
+          {queue.map((c) => <QueueItem key={c.id} c={c} onDone={refresh} unread={unreadData?.unread?.[c.id] || 0} onDiscuss={() => setThreadId(c.id)} />)}
         </div>
 
         <div className="flex flex-col gap-organic-4">
@@ -84,11 +88,12 @@ export default function ProReseau() {
           </div>
         </div>
       </section>
+      {threadId != null && <CaseThreadSheet caseId={threadId} onClose={() => { setThreadId(null); refresh(); qc.invalidateQueries({ queryKey: ["/api/case-threads/unread"] }); }} />}
     </ProLayout>
   );
 }
 
-function QueueItem({ c, onDone }: { c: QCase; onDone: () => void }) {
+function QueueItem({ c, onDone, unread, onDiscuss }: { c: QCase; onDone: () => void; unread: number; onDiscuss: () => void }) {
   // Format 1b : le verdict ouvre l'avis complet (réponse, conduite à tenir, orientation, délai, photos, leçon).
   const [verdictSel, setVerdictSel] = useState<"confirm" | "correct" | null>(null);
   const [tip, setTip] = useState<string | null>(null);
@@ -131,6 +136,7 @@ function QueueItem({ c, onDone }: { c: QCase; onDone: () => void }) {
         </span>
         {urgent && <span className="flex-none rounded-pill bg-organic-accent-200 px-2.5 py-0.5 text-[12px] font-semibold text-organic-accent-900">Urgent</span>}
       </div>
+      {c.paused_at && <span className="self-start rounded-pill bg-organic-accent-100 px-2.5 py-0.5 text-[12px] font-semibold text-organic-accent-900">Demande en cours · délai en pause</span>}
       {c.photos?.length > 1 && (
         <div className="flex gap-2 overflow-x-auto">{c.photos.slice(1).map((u, i) => <img key={i} src={u} alt={`Photo ${i + 2}`} className="h-16 w-14 flex-none rounded-xl object-cover" />)}</div>
       )}
@@ -174,6 +180,7 @@ function QueueItem({ c, onDone }: { c: QCase; onDone: () => void }) {
             <Button variant="ghost" onClick={() => { setVerdictSel(null); setErr(""); }} disabled={busy}>Retour</Button>
           </>
         )}
+        <Button variant={unread ? "default" : "ghost"} onClick={onDiscuss} data-testid={`queue-discuss-${c.id}`}>Discussion{unread ? ` · ${unread}` : ""}</Button>
         {share > 0 && <span className="text-[12px] text-organic-neutral-700">{formatF(share)} pour vous</span>}
       </div>
     </div>

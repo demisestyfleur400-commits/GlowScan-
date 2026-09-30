@@ -835,6 +835,10 @@ export const relayCases = pgTable("relay_cases", {
   photoQuality: varchar("photo_quality", { length: 12 }),
   photosSharp: smallint("photos_sharp"),
   relayReadAt: timestamp("relay_read_at"),
+  // Discussion par cas (migration 0028)
+  relaySeenAt: timestamp("relay_seen_at"),
+  dermSeenAt: timestamp("derm_seen_at"),
+  pausedAt: timestamp("paused_at"),                                    // demande ouverte : délai en pause
   answeredAt: timestamp("answered_at"),
   refundedAt: timestamp("refunded_at"),
   refundOperatorRef: text("refund_operator_ref"),
@@ -977,5 +981,23 @@ export const trainingAttempts = pgTable("training_attempts", {
   total: smallint("total").notNull(),
   answers: jsonb("answers").notNull().default([]),
   passed: boolean("passed").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// ── Discussion par cas relais (étape 11, migration 0028) ─────────────────
+export const caseMessages = pgTable("case_messages", {
+  id: serial("id").primaryKey(),
+  caseId: integer("case_id").notNull().references(() => relayCases.id, { onDelete: "cascade" }),
+  authorId: integer("author_id").notNull().references(() => proAccounts.id, { onDelete: "cascade" }),
+  authorRole: varchar("author_role", { length: 10 }).notNull(),         // derm | relay | system
+  kind: varchar("kind", { length: 10 }).notNull(),                      // text | photo | voice | system | request
+  body: text("body"),
+  mediaUrl: text("media_url"),                                          // privé : /api/case-media/:id
+  mediaType: varchar("media_type", { length: 40 }),
+  durationS: smallint("duration_s"),
+  transcript: text("transcript"),                                       // « transcription automatique »
+  viaSms: boolean("via_sms").notNull().default(false),
+  smsDeliveredAt: timestamp("sms_delivered_at"),
+  resolvedAt: timestamp("resolved_at"),                                 // demande fermée
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
