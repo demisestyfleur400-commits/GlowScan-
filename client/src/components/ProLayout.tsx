@@ -2,7 +2,7 @@ import { Link, useLocation } from "wouter";
 import { ReactNode, useState, useEffect } from "react";
 import {
   Home, Users, ScanLine, BarChart3, Settings, ArrowLeft, LogOut, MessageCircle, Calendar, Wallet,
-  ArrowLeftRight, Coins, Plus, ChevronRight,
+  ArrowLeftRight, Coins, Plus, ChevronRight, Network,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useProAccount } from "@/hooks/use-pro";
@@ -36,10 +36,10 @@ const SEC_PAGES: NavItem[] = [
   { href: "/derm/agenda", icon: Calendar, label: "Agenda" },
 ];
 
-// Section « Réseau » (médecin). Réseau & formation (étape 5) et Pilotage
-// (étape 6) s'ajouteront ici quand leurs écrans existeront.
+// Section « Réseau » (médecin). Pilotage (étape 6) s'ajoutera ici.
 const NETWORK: NavItem[] = [
   { href: "/derm/confreres", icon: ArrowLeftRight, label: "Téléexpertise" },
+  { href: "/derm/reseau", icon: Network, label: "Réseau & formation" },
   { href: "/derm/portefeuille", icon: Coins, label: "Portefeuille" },
 ];
 

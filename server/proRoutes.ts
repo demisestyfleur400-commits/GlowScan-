@@ -1430,13 +1430,34 @@ export function registerProRoutes(app: Express) {
   // Tout en SQL brut (résilient : si tables absentes → réponses vides, pas de crash).
   // ═══════════════════════════════════════════════════════════════════════
 
+  const dermPeerOnly = (req: any, res: any, next: any) => {
+    if ((req.proAccount?.profile || "derm") !== "derm") return res.status(403).json({ message: "Réservé aux dermatologues." });
+    next();
+  };
+  // Un confrère voit un cas s'il l'a demandé, s'il en est le destinataire, ou si le cas est ouvert à tous.
+  const canSeePeerCase = (row: any, me: number) =>
+    row.requester_account_id === me || row.target_account_id === me || (row.target_account_id == null && row.requester_account_id !== me);
+
+  // GET /api/pro/peers — confrères du réseau (« À qui ? »)
+  app.get("/api/pro/peers", requireActivePro, dermPeerOnly, async (req: any, res) => {
+    try {
+      const r = Rows(await db.execute(sql`
+        SELECT id, full_name, city, specialties FROM pro_accounts
+        WHERE id <> ${req.proAccount.id} AND COALESCE(profile, 'derm') = 'derm'
+          AND (subscription_status = 'active' OR (subscription_status = 'trial' AND trial_ends_at > NOW()))
+        ORDER BY full_name LIMIT 200`));
+      res.json({ peers: r.map((x: any) => ({ id: x.id, fullName: x.full_name, city: x.city, specialties: Array.isArray(x.specialties) ? x.specialties : [] })) });
+    } catch { res.json({ peers: [] }); }
+  });
+
   // POST /api/pro/peer-reviews — publier un cas pour second avis
-  app.post("/api/pro/peer-reviews", requireActivePro, async (req: any, res) => {
+  app.post("/api/pro/peer-reviews", requireActivePro, dermPeerOnly, async (req: any, res) => {
     try {
       const schema = z.object({
         scanId: z.number().int().optional().nullable(),
         question: z.string().min(3).max(1000),
         targetAccountId: z.number().int().optional().nullable(),
+        urgency: z.enum(["normal", "urgent"]).optional().default("normal"),
       });
       const data = schema.parse(req.body);
 
@@ -1460,15 +1481,15 @@ export function registerProRoutes(app: Express) {
       }
 
       const r: any = await db.execute(sql`
-        INSERT INTO "peer_reviews" ("requester_account_id","target_account_id","scan_id","image_url","condition","age_sex","question")
-        VALUES (${req.proAccount.id}, ${data.targetAccountId ?? null}, ${data.scanId ?? null}, ${imageUrl}, ${condition}, ${ageSex}, ${data.question})
+        INSERT INTO "peer_reviews" ("requester_account_id","target_account_id","scan_id","image_url","condition","age_sex","question","urgency")
+        VALUES (${req.proAccount.id}, ${data.targetAccountId ?? null}, ${data.scanId ?? null}, ${imageUrl}, ${condition}, ${ageSex}, ${data.question}, ${data.urgency})
         RETURNING "id"
       `);
       const id = (r?.rows ?? r ?? [])[0]?.id;
       // Cas adressé nommément à un confrère → on le notifie.
       if (data.targetAccountId) {
         notifyProAccount(data.targetAccountId, {
-          title: "Un confrère demande votre avis 🩺",
+          title: data.urgency === "urgent" ? "Avis urgent demandé par un confrère" : "Un confrère demande votre avis",
           body: `${req.proAccount.fullName} : ${condition || "cas clinique"} — ${data.question.slice(0, 80)}`,
           url: "/derm/confreres",
         });
@@ -1482,13 +1503,14 @@ export function registerProRoutes(app: Express) {
   });
 
   // GET /api/pro/peer-reviews — mes demandes + cas qui me sont adressés + réseau ouvert
-  app.get("/api/pro/peer-reviews", requireActivePro, async (req: any, res) => {
+  app.get("/api/pro/peer-reviews", requireActivePro, dermPeerOnly, async (req: any, res) => {
     try {
       const me = req.proAccount.id;
       const r: any = await db.execute(sql`
-        SELECT pr.*, a."full_name" AS requester_name, a."city" AS requester_city
+        SELECT pr.*, a."full_name" AS requester_name, a."city" AS requester_city, t."full_name" AS target_name
         FROM "peer_reviews" pr
         LEFT JOIN "pro_accounts" a ON a."id" = pr."requester_account_id"
+        LEFT JOIN "pro_accounts" t ON t."id" = pr."target_account_id"
         WHERE pr."requester_account_id" = ${me}
            OR pr."target_account_id" = ${me}
            OR (pr."target_account_id" IS NULL AND pr."status" = 'open' AND pr."requester_account_id" <> ${me})
@@ -1503,7 +1525,8 @@ export function registerProRoutes(app: Express) {
         requesterCity: row.requester_city || null,
         condition: row.condition, ageSex: row.age_sex, question: row.question,
         imageUrl: row.image_url, status: row.status, replyCount: row.reply_count,
-        createdAt: row.created_at,
+        createdAt: row.created_at, urgency: row.urgency || "normal", targetName: row.target_name || null,
+        acceptedAt: row.accepted_at || null,
       }));
       res.json({ items });
     } catch (err) {
@@ -1513,7 +1536,7 @@ export function registerProRoutes(app: Express) {
   });
 
   // GET /api/pro/peer-reviews/:id — détail + fil de réponses
-  app.get("/api/pro/peer-reviews/:id", requireActivePro, async (req: any, res) => {
+  app.get("/api/pro/peer-reviews/:id", requireActivePro, dermPeerOnly, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       const me = req.proAccount.id;
@@ -1523,13 +1546,13 @@ export function registerProRoutes(app: Express) {
         WHERE pr."id" = ${id}
       `);
       const row = (r?.rows ?? r ?? [])[0];
-      if (!row) return res.status(404).json({ message: "Cas introuvable" });
+      if (!row || !canSeePeerCase(row, me)) return res.status(404).json({ message: "Cas introuvable" });
       const rr: any = await db.execute(sql`
         SELECT * FROM "peer_review_replies" WHERE "review_id" = ${id} ORDER BY "created_at" ASC
       `);
       const replies = ((rr?.rows ?? rr ?? []) as any[]).map((x) => ({
         id: x.id, mine: x.account_id === me, authorName: x.account_id === me ? "Vous" : (x.author_name || "Confrère"),
-        message: x.message, createdAt: x.created_at,
+        message: x.message, createdAt: x.created_at, structured: x.structured || null,
       }));
       res.json({
         review: {
@@ -1538,6 +1561,7 @@ export function registerProRoutes(app: Express) {
           requesterCity: row.requester_city || null,
           condition: row.condition, ageSex: row.age_sex, question: row.question,
           imageUrl: row.image_url, status: row.status, replyCount: row.reply_count, createdAt: row.created_at,
+          urgency: row.urgency || "normal", acceptedAt: row.accepted_at || null,
         },
         replies,
       });
@@ -1547,19 +1571,26 @@ export function registerProRoutes(app: Express) {
   });
 
   // POST /api/pro/peer-reviews/:id/reply — répondre à un cas
-  app.post("/api/pro/peer-reviews/:id/reply", requireActivePro, async (req: any, res) => {
+  app.post("/api/pro/peer-reviews/:id/reply", requireActivePro, dermPeerOnly, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
-      const schema = z.object({ message: z.string().min(1).max(2000) });
-      const { message } = schema.parse(req.body);
-      const r: any = await db.execute(sql`SELECT "requester_account_id","status" FROM "peer_reviews" WHERE "id" = ${id}`);
+      const schema = z.object({
+        message: z.string().max(2000).optional().default(""),
+        structured: z.object({ dx: z.string().min(1).max(300), plan: z.string().min(1).max(1000), follow: z.string().max(200).optional().default("") }).optional().nullable(),
+      });
+      const parsed = schema.parse(req.body);
+      const structured = parsed.structured || null;
+      const message = parsed.message.trim()
+        || (structured ? `Diagnostic retenu : ${structured.dx}\nConduite à tenir : ${structured.plan}${structured.follow ? `\nRevoir : ${structured.follow}` : ""}` : "");
+      if (!message) return res.status(400).json({ message: "Message requis" });
+      const r: any = await db.execute(sql`SELECT "requester_account_id","target_account_id","status" FROM "peer_reviews" WHERE "id" = ${id}`);
       const row = (r?.rows ?? r ?? [])[0];
-      if (!row) return res.status(404).json({ message: "Cas introuvable" });
+      if (!row || !canSeePeerCase(row, req.proAccount.id)) return res.status(404).json({ message: "Cas introuvable" });
       if (row.status === "closed") return res.status(400).json({ message: "Ce cas est clôturé" });
 
       await db.execute(sql`
-        INSERT INTO "peer_review_replies" ("review_id","account_id","author_name","message")
-        VALUES (${id}, ${req.proAccount.id}, ${req.proAccount.fullName}, ${message})
+        INSERT INTO "peer_review_replies" ("review_id","account_id","author_name","message","structured")
+        VALUES (${id}, ${req.proAccount.id}, ${req.proAccount.fullName}, ${message}, ${structured ? JSON.stringify(structured) : null}::jsonb)
       `);
       // incrémente le compteur ; si un confrère répond, le cas passe "answered"
       const isConfrere = row.requester_account_id !== req.proAccount.id;
@@ -1568,7 +1599,7 @@ export function registerProRoutes(app: Express) {
       // Notifie l'auteur qu'un confrère a donné son avis.
       if (isConfrere) {
         notifyProAccount(row.requester_account_id, {
-          title: "Un confrère a répondu à votre cas 💬",
+          title: structured ? "Un confrère vous a donné son avis" : "Un confrère a répondu à votre cas",
           body: `${req.proAccount.fullName} : ${message.slice(0, 90)}`,
           url: "/derm/confreres",
         });
@@ -1582,7 +1613,18 @@ export function registerProRoutes(app: Express) {
   });
 
   // POST /api/pro/peer-reviews/:id/close — le demandeur clôture
-  app.post("/api/pro/peer-reviews/:id/close", requireActivePro, async (req: any, res) => {
+  // POST /api/pro/peer-reviews/:id/accept — le demandeur retient l'avis reçu
+  app.post("/api/pro/peer-reviews/:id/accept", requireActivePro, dermPeerOnly, async (req: any, res) => {
+    try {
+      const r = Rows(await db.execute(sql`
+        UPDATE "peer_reviews" SET "accepted_at" = NOW()
+        WHERE "id" = ${parseInt(req.params.id)} AND "requester_account_id" = ${req.proAccount.id} RETURNING "id"`));
+      if (!r.length) return res.status(404).json({ message: "Cas introuvable" });
+      res.json({ success: true });
+    } catch { res.status(500).json({ message: "Erreur serveur" }); }
+  });
+
+  app.post("/api/pro/peer-reviews/:id/close", requireActivePro, dermPeerOnly, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       const r: any = await db.execute(sql`SELECT "requester_account_id" FROM "peer_reviews" WHERE "id" = ${id}`);
