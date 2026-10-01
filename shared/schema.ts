@@ -1142,3 +1142,42 @@ export const qualityReviews = pgTable("quality_reviews", {
   answeredAt: timestamp("answered_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
+
+// ── Export DHIS2 (étape 15, migration 0033) ──────────────────────────────
+export const dhis2Connections = pgTable("dhis2_connections", {
+  programId: integer("program_id").primaryKey().references(() => programs.id, { onDelete: "cascade" }),
+  baseUrl: text("base_url").notNull(),
+  tokenEnc: text("token_enc"),                                          // PAT chiffré, jamais réaffiché
+  tokenHint: varchar("token_hint", { length: 12 }),
+  dataSetUid: varchar("data_set_uid", { length: 11 }),
+  orgUnitUid: varchar("org_unit_uid", { length: 11 }),
+  orgUnitMode: varchar("org_unit_mode", { length: 10 }).notNull().default("district"), // district | center
+  autoSend: boolean("auto_send").notNull().default(true),
+  status: varchar("status", { length: 12 }).notNull().default("new"),
+  lastTestAt: timestamp("last_test_at"),
+  lastError: text("last_error"),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+export const dhis2Mappings = pgTable("dhis2_mappings", {
+  id: serial("id").primaryKey(),
+  programId: integer("program_id").notNull().references(() => programs.id, { onDelete: "cascade" }),
+  glowscanKey: varchar("glowscan_key", { length: 60 }).notNull(),
+  dataElementUid: varchar("data_element_uid", { length: 11 }),
+  cocUid: varchar("coc_uid", { length: 11 }),
+});
+export const dhis2Exports = pgTable("dhis2_exports", {
+  id: serial("id").primaryKey(),
+  programId: integer("program_id").notNull().references(() => programs.id, { onDelete: "cascade" }),
+  period: varchar("period", { length: 6 }).notNull(),
+  mode: varchar("mode", { length: 8 }).notNull(),                      // dry_run | import | file
+  status: varchar("status", { length: 10 }).notNull(),                 // ok | conflicts | error
+  valuesCount: integer("values_count").notNull().default(0),
+  maskedCount: integer("masked_count").notNull().default(0),
+  unmappedCount: integer("unmapped_count").notNull().default(0),
+  importCount: jsonb("import_count"),
+  conflicts: jsonb("conflicts"),
+  payload: jsonb("payload"),
+  error: text("error"),
+  createdBy: text("created_by"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});

@@ -15,6 +15,7 @@ import { refundCreditForCase } from "./relayCredit";
 import { runRoutingTimeouts } from "./routing";
 import { refundProgramForCase } from "./programBudget";
 import { runReferralFollowups } from "./referrals";
+import { runDhis2Monthly } from "./dhis2";
 import { refundConsultation, refundRelayCase, chargeSubscriptionFromEarnings, proBalances, requestWithdrawal } from "./wallet";
 import { PRO_SUBSCRIPTION_FCFA } from "@shared/premium";
 const APP_BASE = (process.env.PUBLIC_BASE_URL || "https://glow-scan.com").replace(/\/$/, "");
@@ -1000,6 +1001,11 @@ export function startCronJobs() {
   cron.schedule("*/10 * * * *", async () => {
     try { const r = await runPeerDeadlines(); if (r.reoffered || r.expired) log(`🤝 Avis confrères : ${r.reoffered} reproposé(s), ${r.expired} hors délai`); }
     catch (e) { log(`❌ Erreur délais avis confrères : ${e}`); }
+  }, { timezone: "Africa/Douala" });
+  // DHIS2 : le 5 de chaque mois à 7 h, envoi des agrégats du mois précédent (essai puis envoi).
+  cron.schedule("0 7 5 * *", async () => {
+    try { const r = await runDhis2Monthly(); if (r.sent || r.failed) log(`DHIS2 : ${r.sent} envoi(s), ${r.failed} échec(s)`); }
+    catch (e) { log(`❌ Erreur envoi DHIS2 : ${e}`); }
   }, { timezone: "Africa/Douala" });
   // Orientations vers l'hôpital : J+7 (SMS patient, relais), J+10 (ONG) ; relectures qualité expirées.
   cron.schedule("0 9 * * *", async () => {

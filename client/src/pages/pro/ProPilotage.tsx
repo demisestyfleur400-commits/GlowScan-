@@ -8,6 +8,7 @@ import { DermBrand } from "@/components/pro/DermAuthShell";
 import { PilotageView, type ProgramDashboard } from "@/components/pro/PilotageView";
 import { InviteRelays, CsvInvite } from "@/components/relay/InviteRelays";
 import { ProgramSetup, ProgramBudget, ProgramAgents, ProgramReferrals } from "@/components/pro/ProgramSpace";
+import { Dhis2Card } from "@/components/pro/Dhis2Card";
 import { useAuth } from "@/hooks/use-auth";
 import { useProAccount } from "@/hooks/use-pro";
 import { asProProfile, proHomeOf } from "@shared/proProfile";
@@ -90,7 +91,10 @@ export default function ProPilotage() {
                   <ProgramAgents programId={pid} />
                   <ProgramReferrals programId={pid} />
                 </section>
-                <CsvInvite programId={pid} />
+                <section className="grid items-start gap-organic-4 lg:grid-cols-2">
+                  <CsvInvite programId={pid} />
+                  <Dhis2Card programId={pid} />
+                </section>
               </>
             )}
             <div className="flex flex-col gap-1 rounded-card bg-organic-surface p-organic-6">

@@ -204,7 +204,7 @@ export function ProgramBudget({ programId }: { programId: number }) {
   const { data: b } = useQuery<Budget>({ queryKey: [key] });
   const [open, setOpen] = useState(false);
   const [pack, setPack] = useState(200);
-  if (!b) return null;
+  if (!b || !b.month || !Array.isArray(b.recharges)) return null;
   const refresh = () => qc.invalidateQueries({ queryKey: [key] });
   return (
     <div className={card} data-testid="program-budget">
@@ -249,7 +249,7 @@ type Agents = {
 export function ProgramAgents({ programId }: { programId: number }) {
   const { data } = useQuery<Agents>({ queryKey: [`/api/program/${programId}/agents`] });
   const [sent, setSent] = useState<Record<number, string>>({});
-  if (!data) return null;
+  if (!data || !Array.isArray(data.agents)) return null;
   const resend = async (id: number) => {
     try { const d = await call(`/api/relay-invitations/${id}/resend`, {}); setSent({ ...sent, [id]: d.sent ? "Relancée" : "SMS non parti" }); }
     catch (e: any) { setSent({ ...sent, [id]: e.message }); }
@@ -294,7 +294,7 @@ type Referrals = { referred: number; arrived: number; toRelaunch: number; items:
 const REF_STATUS: Record<string, string> = { referred: "Orientée", arrived: "Arrivée", report_received: "CR reçu", no_show: "Pas venue" };
 export function ProgramReferrals({ programId }: { programId: number }) {
   const { data } = useQuery<Referrals>({ queryKey: [`/api/program/${programId}/referrals`] });
-  if (!data) return null;
+  if (!data || !Array.isArray(data.items)) return null;
   return (
     <div className={card} data-testid="program-referrals">
       <span className="font-heading text-[22px]">Orientations · {data.referred}</span>
