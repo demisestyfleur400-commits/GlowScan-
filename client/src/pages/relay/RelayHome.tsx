@@ -16,6 +16,7 @@ import { relayCaseRef, answeredIn, relayAnswer, type PhotoQuality } from "@share
 import { TeleexpertiseReport } from "@/components/pro/TeleexpertiseReport";
 import { RelayOnboarding, type Onboarding } from "@/components/relay/RelayOnboarding";
 import { CaseThreadSheet } from "@/components/relay/CaseThread";
+import { ReferralCards } from "@/components/relay/ReferralCards";
 
 // ════════════════════════════════════════════════════════════════════════
 // Espace relais (infirmier / médecin d'un CSI) — maquette « Derm Reseau »,
@@ -139,6 +140,7 @@ export default function RelayHome() {
           <>
             <LevelCard me={me} />
             {credit && <CreditCard credit={credit} onChange={refresh} />}
+            <ReferralCards />
             <section className="grid items-start gap-organic-4 lg:grid-cols-2">
               <NewCase me={me} onSent={refresh} credit={credit} />
               <div className={card}>

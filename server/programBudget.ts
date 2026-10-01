@@ -28,7 +28,7 @@ export async function programBalance(programId: number): Promise<{ balance: numb
   const r = Rows(await db.execute(sql`
     SELECT COALESCE(SUM(amount_fcfa), 0)::int AS balance,
            COALESCE(SUM(amount_fcfa) FILTER (WHERE kind = 'recharge'), 0)::int AS recharged,
-           COALESCE(-SUM(amount_fcfa) FILTER (WHERE kind IN ('debit', 'quality', 'refund')), 0)::int AS spent
+           COALESCE(-SUM(amount_fcfa) FILTER (WHERE kind IN ('debit', 'quality', 'refund', 'quality_refund')), 0)::int AS spent
     FROM program_budget_ledger WHERE program_id = ${programId} AND status = 'confirmed'`))[0] || {};
   return { balance: Number(r.balance) || 0, recharged: Number(r.recharged) || 0, spent: Number(r.spent) || 0 };
 }
@@ -100,7 +100,7 @@ export async function budgetView(programId: number) {
       AND NOT EXISTS (SELECT 1 FROM program_budget_ledger r WHERE r.case_id = l.case_id AND r.kind = 'refund')`))[0] || {};
   const last28 = Number(Rows(await db.execute(sql`
     SELECT COALESCE(-SUM(amount_fcfa), 0)::int AS s FROM program_budget_ledger
-    WHERE program_id = ${programId} AND status = 'confirmed' AND kind IN ('debit', 'refund', 'quality') AND created_at > NOW() - INTERVAL '28 days'`))[0]?.s) || 0;
+    WHERE program_id = ${programId} AND status = 'confirmed' AND kind IN ('debit', 'refund', 'quality', 'quality_refund') AND created_at > NOW() - INTERVAL '28 days'`))[0]?.s) || 0;
   const weeksLeft = last28 > 0 ? Math.floor(b.balance / (last28 / 4)) : null;
   const recharges = Rows(await db.execute(sql`
     SELECT id, amount_fcfa, reviews, method, operator_ref, status, reject_reason, receipt_no, created_at, confirmed_at

@@ -1095,3 +1095,50 @@ export const programBudgetLedger = pgTable("program_budget_ledger", {
   confirmedAt: timestamp("confirmed_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
+
+// ── Orientations vers l'hôpital et relecture qualité (étape 14b, migration 0032) ──
+export const hospitals = pgTable("hospitals", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  service: text("service"),
+  country: varchar("country", { length: 40 }).notNull(),
+  district: text("district"),
+  city: text("city"),
+  lat: decimal("lat"),
+  lng: decimal("lng"),
+  phone: varchar("phone", { length: 30 }),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+// « referrals » sert déjà au parrainage B2C : table dédiée.
+export const hospitalReferrals = pgTable("hospital_referrals", {
+  id: serial("id").primaryKey(),
+  code: varchar("code", { length: 12 }).notNull().unique(),
+  caseId: integer("case_id").notNull().unique().references(() => relayCases.id, { onDelete: "cascade" }),
+  hospitalId: integer("hospital_id").references(() => hospitals.id, { onDelete: "set null" }),
+  programId: integer("program_id").references(() => programs.id, { onDelete: "set null" }),
+  urgency: varchar("urgency", { length: 12 }).notNull().default("consultation"),
+  arrivalCode: varchar("arrival_code", { length: 6 }).notNull(),
+  appointmentAt: timestamp("appointment_at"),
+  status: varchar("status", { length: 16 }).notNull().default("referred"), // referred | arrived | report_received | no_show
+  reportPdf: text("report_pdf"),
+  arrivedAt: timestamp("arrived_at"),
+  reportAt: timestamp("report_at"),
+  patientSmsAt: timestamp("patient_sms_at"),
+  remindedJ7At: timestamp("reminded_j7_at"),
+  alertedJ10At: timestamp("alerted_j10_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+export const qualityReviews = pgTable("quality_reviews", {
+  id: serial("id").primaryKey(),
+  caseId: integer("case_id").notNull().unique().references(() => relayCases.id, { onDelete: "cascade" }),
+  programId: integer("program_id").references(() => programs.id, { onDelete: "set null" }),
+  reviewerId: integer("reviewer_id").notNull().references(() => proAccounts.id, { onDelete: "cascade" }),
+  status: varchar("status", { length: 10 }).notNull().default("pending"), // pending | done | expired
+  agree: boolean("agree"),
+  comment: text("comment"),
+  priceFcfa: integer("price_fcfa").notNull().default(0),
+  dueAt: timestamp("due_at").notNull(),
+  answeredAt: timestamp("answered_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});

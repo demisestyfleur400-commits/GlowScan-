@@ -7,7 +7,7 @@ import { LoadingScreen } from "@/components/ProLayout";
 import { DermBrand } from "@/components/pro/DermAuthShell";
 import { PilotageView, type ProgramDashboard } from "@/components/pro/PilotageView";
 import { InviteRelays, CsvInvite } from "@/components/relay/InviteRelays";
-import { ProgramSetup, ProgramBudget, ProgramAgents } from "@/components/pro/ProgramSpace";
+import { ProgramSetup, ProgramBudget, ProgramAgents, ProgramReferrals } from "@/components/pro/ProgramSpace";
 import { useAuth } from "@/hooks/use-auth";
 import { useProAccount } from "@/hooks/use-pro";
 import { asProProfile, proHomeOf } from "@shared/proProfile";
@@ -86,7 +86,10 @@ export default function ProPilotage() {
                   <ProgramBudget programId={pid} />
                   <InviteRelays programId={pid} />
                 </section>
-                <ProgramAgents programId={pid} />
+                <section className="grid items-start gap-organic-4 lg:grid-cols-2">
+                  <ProgramAgents programId={pid} />
+                  <ProgramReferrals programId={pid} />
+                </section>
                 <CsvInvite programId={pid} />
               </>
             )}

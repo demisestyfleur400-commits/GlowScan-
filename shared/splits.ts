@@ -9,6 +9,8 @@ export const SPLITS = {
   consultation: { pro: 80, platform: 20 },
   relay: { derm: 60, relay: 20, platform: 20 },
   peer: { peer: 80, platform: 20 },
+  // Relecture qualité d'un avis de programme (étape 14b) : payée comme un avis simple.
+  quality: { reviewer: 80, platform: 20 },
 } as const;
 
 /** Part plateforme arrondie à l'entier ; le reste va au médecin (la somme vaut toujours le prix). */
@@ -32,3 +34,9 @@ export function splitPeer(priceFcfa: number): { peer: number; platform: number }
 
 /** Numéros Mobile Money de GlowScan (paiements manuels, vérifiés par le fondateur). */
 export const GLOWSCAN_MOMO = { mtn: "674 377 959", orange: "690 501 392" };
+
+/** Relecture qualité : 80 % au dermatologue relecteur, 20 % à GlowScan. */
+export function splitQuality(priceFcfa: number) {
+  const platform = Math.round(priceFcfa * SPLITS.quality.platform / 100);
+  return { reviewer: priceFcfa - platform, platform };
+}

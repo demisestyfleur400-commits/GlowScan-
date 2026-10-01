@@ -1,3 +1,4 @@
+import { createReferral, maybeCreateQualityReview } from "./referrals";
 import { debitProgramForCase, BudgetError, alertCoordinators } from "./programBudget";
 import { routeNewCase } from "./routing";
 import { relayMoney, debitCreditForCase, CreditError } from "./relayCredit";
@@ -344,6 +345,7 @@ export function registerRelayRoutes(app: Express, deps: { checkAdmin: (req: any)
         dermDiseaseCode: z.string().max(40).optional().nullable(),
         note: z.string().max(1500).optional().nullable(),
         tip: z.string().max(40).optional().nullable(),
+        hospitalId: z.number().int().optional().nullable(),        // orientation vers l'hôpital (étape 14b)
       }).merge(teleFieldsSchema).parse(req.body);
       const c = Rows(await db.execute(sql`
         SELECT * FROM relay_cases WHERE id = ${id} AND derm_id = ${req.proAccount.id} AND status = 'awaiting_review'`))[0];
@@ -376,6 +378,9 @@ export function registerRelayRoutes(app: Express, deps: { checkAdmin: (req: any)
         }
       }
       if (["verified", "credit", "program"].includes(c.payment_status)) await releaseRelayCase(id);
+      // Étape 14b : « Adresser… » crée la fiche de référence ; un avis de programme sur 10 part en relecture.
+      if (/^adresser/i.test(data.orientation || "")) await createReferral(id, /urgence/i.test(data.orientation || ""), data.hospitalId ?? null).catch((e) => console.error("[referral]", e));
+      if (c.payment_status === "program") maybeCreateQualityReview(id).catch(() => {});
       notifyProAccount(Number(c.relay_id), {
         title: data.verdict === "confirm" ? "Le dermatologue confirme votre diagnostic" : "Le dermatologue a corrigé votre diagnostic",
         body: (data.note || "").trim().slice(0, 120) || (data.verdict === "confirm" ? c.relay_diagnosis : data.dermDiagnosis!.trim()),

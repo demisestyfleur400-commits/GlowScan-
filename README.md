@@ -6,9 +6,9 @@ Analyse de peau par IA pour les peaux africaines (appli patient) et portail Glow
 
 Les migrations SQL de `migrations/` s'appliquent **à la main, avant le déploiement** du code qui en dépend. Le serveur ne modifie pas ces tables au démarrage. Toutes sont idempotentes : on peut les relancer sans risque.
 
-Refonte Organic (étape 2), dans cet ordre : 0013 → 0014 → 0015 → 0016 → 0017 → 0018 → 0019 → 0020 → 0021 → 0022 → 0023 → 0024 → 0025 → 0026 → 0027 → 0028 → 0029 → 0030 → 0031.
+Refonte Organic (étape 2), dans cet ordre : 0013 → 0014 → 0015 → 0016 → 0017 → 0018 → 0019 → 0020 → 0021 → 0022 → 0023 → 0024 → 0025 → 0026 → 0027 → 0028 → 0029 → 0030 → 0031 → 0032.
 
-**État : 0013 à 0031 appliquées en production (projet Supabase `atjvlnzrwdeqhilvssyd`) le 30/09/2026**, après un essai complet dans une transaction annulée. Les relancer ne change rien (idempotentes).
+**État : 0013 à 0032 appliquées en production (projet Supabase `atjvlnzrwdeqhilvssyd`) le 30/09/2026**, après un essai complet dans une transaction annulée. Les relancer ne change rien (idempotentes).
 
 | Ordre | Fichier | Contenu |
 |---|---|---|
@@ -31,11 +31,12 @@ Refonte Organic (étape 2), dans cet ordre : 0013 → 0014 → 0015 → 0016 →
 | 17 | `0029_relay_credit_fx.sql` | Étape 12 — paiement relais sans ONG : `relay_credit_ledger` (crédit prépayé, recharge vérifiée par ID), `fx_rates`, taux figé (`fx_currency`, `fx_rate`) sur les cas et les grands livres, téléphone de la patiente (SMS de paiement), RLS |
 | 18 | `0030_routing_licenses.sql` | Étape 13 — routage et réseau entre pays : `derm_licenses` (reprise : autorisation « home » vérifiée pour les dermatologues existants), langues et quota d'avis réseau, routage des cas (étape, prise en charge, historique, accord hors pays), RLS |
 | 19 | `0031_programs_o1_o3.sql` | Étape 14a — programmes ONG : création par l'ONG (brouillon), districts, dermatologues choisis, maladies suivies, `program_budget_ledger` (budget prépayé, recharge validée par GlowScan, débit automatique des cas, clôture), alerte de solde bas, RLS |
+| 20 | `0032_referrals_quality.sql` | Étape 14b — `hospitals`, `hospital_referrals` (fiche REF-XXXX, code à 6 chiffres, arrivée et compte rendu de l'hôpital, relances J+7 / J+10 ; « referrals » sert déjà au parrainage B2C), `quality_reviews` (1 avis de programme sur 10), RLS |
 
 Commande (base Postgres / Supabase, variable `DATABASE_URL` ou `SUPABASE_URL`) :
 
 ```bash
-for f in 0013_consents 0014_product_scans 0015_orders_followups 0016_consultation_refunds 0017_wallets 0018_rls_runtime_tables 0019_pro_profile 0020_sign_pin 0021_intake_reminders 0022_relay_network 0023_programs_pilotage 0024_peer_network 0025_reports 0026_teleexpertise_report 0027_relay_onboarding 0028_case_messages 0029_relay_credit_fx 0030_routing_licenses 0031_programs_o1_o3; do
+for f in 0013_consents 0014_product_scans 0015_orders_followups 0016_consultation_refunds 0017_wallets 0018_rls_runtime_tables 0019_pro_profile 0020_sign_pin 0021_intake_reminders 0022_relay_network 0023_programs_pilotage 0024_peer_network 0025_reports 0026_teleexpertise_report 0027_relay_onboarding 0028_case_messages 0029_relay_credit_fx 0030_routing_licenses 0031_programs_o1_o3 0032_referrals_quality; do
   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "migrations/$f.sql" || break
 done
 ```

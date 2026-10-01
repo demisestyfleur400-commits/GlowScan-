@@ -174,7 +174,7 @@ export function registerProgramRoutes(app: Express, deps: { checkAdmin: (req: an
     try {
       const rows = Rows(await db.execute(sql`
         SELECT g.*,
-          (SELECT COALESCE(-SUM(amount_fcfa) FILTER (WHERE kind IN ('debit', 'refund', 'quality')), 0)::int FROM program_budget_ledger l WHERE l.program_id = g.id AND l.status = 'confirmed') AS used,
+          (SELECT COALESCE(-SUM(amount_fcfa) FILTER (WHERE kind IN ('debit', 'refund', 'quality', 'quality_refund')), 0)::int FROM program_budget_ledger l WHERE l.program_id = g.id AND l.status = 'confirmed') AS used,
           (SELECT COALESCE(SUM(amount_fcfa) FILTER (WHERE kind = 'recharge'), 0)::int FROM program_budget_ledger l WHERE l.program_id = g.id AND l.status = 'confirmed') AS recharged,
           (SELECT COALESCE(SUM(amount_fcfa), 0)::int FROM program_budget_ledger l WHERE l.program_id = g.id AND l.status = 'confirmed') AS balance,
           (SELECT json_agg(json_build_object('id', r.id, 'name', r.full_name, 'city', r.city, 'share', m.share_progress) ORDER BY r.full_name)
@@ -329,7 +329,7 @@ export function registerProgramRoutes(app: Express, deps: { checkAdmin: (req: an
       const programs = Rows(await db.execute(sql`
         SELECT g.id, g.name,
           (SELECT COALESCE(SUM(amount_fcfa) FILTER (WHERE kind = 'recharge'), 0)::int FROM program_budget_ledger l WHERE l.program_id = g.id AND l.status = 'confirmed') AS budget_fcfa,
-          (SELECT COALESCE(-SUM(amount_fcfa) FILTER (WHERE kind IN ('debit', 'refund', 'quality')), 0)::int FROM program_budget_ledger l WHERE l.program_id = g.id AND l.status = 'confirmed') AS used
+          (SELECT COALESCE(-SUM(amount_fcfa) FILTER (WHERE kind IN ('debit', 'refund', 'quality', 'quality_refund')), 0)::int FROM program_budget_ledger l WHERE l.program_id = g.id AND l.status = 'confirmed') AS used
         FROM programs g ORDER BY g.name`));
       res.json({
         collected: Number(m.collected) || 0,

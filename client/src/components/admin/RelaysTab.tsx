@@ -80,6 +80,42 @@ function LicensesSection({ adminKey, DS }: { adminKey: string; DS: DS }) {
   );
 }
 
+function HospitalsSection({ adminKey, DS }: { adminKey: string; DS: DS }) {
+  const [items, setItems] = useState<any[]>([]);
+  const [f, setF] = useState({ name: "", service: "Dermatologie", country: "Cameroun", district: "", city: "", phone: "", lat: "", lng: "" });
+  const [msg, setMsg] = useState("");
+  const load = async () => { const r = await fetch("/api/admin/hospitals", { headers: { "x-admin-key": adminKey } }); setItems(r.ok ? (await r.json()).items || [] : []); };
+  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [adminKey]);
+  const add = async () => {
+    const body = { ...f, lat: f.lat ? Number(f.lat.replace(",", ".")) : null, lng: f.lng ? Number(f.lng.replace(",", ".")) : null };
+    const r = await fetch("/api/admin/hospitals", { method: "POST", headers: { "x-admin-key": adminKey, "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const d = await r.json().catch(() => ({}));
+    setMsg(r.ok ? "Hôpital ajouté." : d?.message || "Erreur");
+    if (r.ok) { setF({ ...f, name: "", district: "", city: "", phone: "", lat: "", lng: "" }); load(); }
+  };
+  const input = { background: "rgba(255,255,255,0.05)", border: `1px solid ${DS.border}`, color: DS.text, borderRadius: 12, padding: "8px 10px", fontSize: 13 };
+  return (
+    <div className="space-y-3">
+      <h3 className="text-lg font-extrabold" style={{ color: DS.text }}>Hôpitaux de référence</h3>
+      <p className="text-xs" style={{ color: DS.muted }}>Proposés au dermatologue quand il oriente un patient : même district d'abord, puis le plus proche (coordonnées GPS facultatives).</p>
+      <div className="grid sm:grid-cols-4 gap-2">
+        {([["name", "Nom (ex. Hôpital régional de Maroua)"], ["service", "Service"], ["country", "Pays"], ["district", "District"], ["city", "Ville"], ["phone", "Téléphone"], ["lat", "Latitude"], ["lng", "Longitude"]] as const).map(([k, ph]) => (
+          <input key={k} style={input} placeholder={ph} value={(f as any)[k]} onChange={(e) => setF({ ...f, [k]: e.target.value })} />
+        ))}
+      </div>
+      <button onClick={add} disabled={f.name.trim().length < 3} style={{ background: "#10b981", color: "#fff", border: "none", borderRadius: 12, padding: "6px 12px", fontSize: 12, fontWeight: 800, cursor: "pointer" }}>Ajouter l'hôpital</button>
+      {msg && <p className="text-xs" style={{ color: DS.body }}>{msg}</p>}
+      {items.map((h) => (
+        <div key={h.id} className="flex flex-wrap items-center justify-between gap-2 text-sm" style={{ color: DS.body }}>
+          <span><b style={{ color: DS.text }}>{h.name}</b> · {[h.service, h.district, h.city, h.country].filter(Boolean).join(" · ")}{h.lat != null ? " · GPS" : ""}{h.active ? "" : " · désactivé"}</span>
+          <button onClick={async () => { await fetch(`/api/admin/hospitals/${h.id}/active`, { method: "POST", headers: { "x-admin-key": adminKey, "Content-Type": "application/json" }, body: JSON.stringify({ active: !h.active }) }); load(); }}
+            className="underline text-xs">{h.active ? "Désactiver" : "Réactiver"}</button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function RelaysTab({ adminKey, DS }: { adminKey: string; DS: DS }) {
   const [items, setItems] = useState<Relay[]>([]);
   const [open, setOpen] = useState<number | null>(null);
@@ -100,6 +136,7 @@ export function RelaysTab({ adminKey, DS }: { adminKey: string; DS: DS }) {
   return (
     <div className="space-y-4">
       <LicensesSection adminKey={adminKey} DS={DS} />
+      <HospitalsSection adminKey={adminKey} DS={DS} />
       <h3 className="text-lg font-extrabold" style={{ color: DS.text }}>Relais : vérification</h3>
       <p className="text-xs" style={{ color: DS.muted }}>Deux validations avant le 1er cas : carte vérifiée et parrain (dermatologue, programme, ou GlowScan après appel du centre). Le relais passe ensuite le module photo.</p>
       {msg && <p className="text-xs font-bold" style={{ color: DS.body }}>{msg}</p>}

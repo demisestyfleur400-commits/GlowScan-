@@ -70,6 +70,7 @@ const ProCabinet = lazyWithRetry(() => import("@/pages/pro/ProCabinet"));
 const ProPublicProfile = lazyWithRetry(() => import("@/pages/pro/ProPublicProfile"));
 const ProConfreres = lazyWithRetry(() => import("@/pages/pro/ProConfreres"));
 const Verif = lazyWithRetry(() => import("@/pages/Verif"));
+const HospitalRef = lazyWithRetry(() => import("@/pages/HospitalRef"));
 const ProProfil = lazyWithRetry(() => import("@/pages/pro/ProProfil"));
 const ProMagicLink = lazyWithRetry(() => import("@/pages/pro/ProMagicLink"));
 const DermOnboarding = lazyWithRetry(() => import("@/pages/pro/DermOnboarding"));
@@ -96,6 +97,8 @@ function RefRedirect() {
   const params = new URLSearchParams(window.location.search);
   const path = window.location.pathname;
   const code = path.split("/ref/")[1];
+  // Étape 14b : fiche de référence vers l'hôpital (REF-XXXX), page publique.
+  if (code && /^REF-[A-Z0-9]+$/i.test(decodeURIComponent(code))) return <HospitalRef code={decodeURIComponent(code).toUpperCase()} />;
   if (code) {
     try { localStorage.setItem("glowscan_referral", code); } catch {}
   }

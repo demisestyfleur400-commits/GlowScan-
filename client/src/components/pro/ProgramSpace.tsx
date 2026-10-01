@@ -288,3 +288,31 @@ export function ProgramAgents({ programId }: { programId: number }) {
     </div>
   );
 }
+
+// ── O4 · Orientations vers l'hôpital (et qualité des avis) ─────────────────
+type Referrals = { referred: number; arrived: number; toRelaunch: number; items: { code: string; city: string | null; status: string; day: number; toRelaunch: boolean }[]; quality: { done: number; agree: number } };
+const REF_STATUS: Record<string, string> = { referred: "Orientée", arrived: "Arrivée", report_received: "CR reçu", no_show: "Pas venue" };
+export function ProgramReferrals({ programId }: { programId: number }) {
+  const { data } = useQuery<Referrals>({ queryKey: [`/api/program/${programId}/referrals`] });
+  if (!data) return null;
+  return (
+    <div className={card} data-testid="program-referrals">
+      <span className="font-heading text-[22px]">Orientations · {data.referred}</span>
+      <div className="grid grid-cols-3 gap-organic-2 text-center">
+        {([["orientées", data.referred], ["arrivées", data.arrived], ["à relancer", data.toRelaunch]] as const).map(([l, n]) => (
+          <div key={l} className="flex flex-col rounded-card bg-organic-bg p-organic-3"><b className="font-heading text-[28px]">{n}</b><span className="text-[12px]">{l}</span></div>
+        ))}
+      </div>
+      {data.items.slice(0, 8).map((r) => (
+        <span key={r.code} className="flex flex-wrap justify-between gap-2 text-[13px]">
+          <span><b>{r.code}</b>{r.city ? ` · ${r.city}` : ""}</span>
+          <span className={r.toRelaunch ? "font-semibold text-organic-accent-800" : ""}>{REF_STATUS[r.status] || r.status}{r.status === "referred" || r.status === "no_show" ? ` · J+${r.day}` : ""}</span>
+        </span>
+      ))}
+      <span className="text-[12px] text-organic-neutral-700">L'hôpital confirme l'arrivée en scannant le code de la fiche (sans compte GlowScan). Sans nouvelle à J+7 : SMS au patient et au relais.</span>
+      {data.quality.done > 0 && (
+        <span className="text-[13px]"><b>Relecture qualité</b> : {data.quality.agree}/{data.quality.done} avis confirmés par un 2e dermatologue ({Math.round((data.quality.agree / data.quality.done) * 100)} %).</span>
+      )}
+    </div>
+  );
+}

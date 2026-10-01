@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ProLayout, ProInput } from "@/components/ProLayout";
 import { Button } from "@/components/ui/button";
@@ -75,6 +75,7 @@ export default function ProReseau() {
         </div>
 
         <div className="flex flex-col gap-organic-4">
+          <QualityReviews />
           <InviteRelays />
           <div className={card}>
             <h3 className="m-0 text-[22px]">Mes relais</h3>
@@ -115,6 +116,7 @@ function QueueItem({ c, onDone, unread, onDiscuss }: { c: QCase; onDone: () => v
   const share = ["verified", "credit", "program"].includes(c.payment_status) ? splitRelay(c.price_fcfa).derm : 0;
   const chip = (on: boolean) => `cursor-pointer rounded-pill border px-3 py-1 font-body text-[12px] font-semibold ${on ? "border-organic-accent bg-organic-accent text-organic-bg" : "border-organic-divider bg-transparent text-organic-text"}`;
 
+  const [hospitalId, setHospitalId] = useState<number | null>(null);
   const send = async () => {
     const v = verdictSel!;
     const finalDx = code === "autre" ? dx.trim() : diseaseLabel(code);
@@ -125,6 +127,7 @@ function QueueItem({ c, onDone, unread, onDiscuss }: { c: QCase; onDone: () => v
       await post(`/api/relay/cases/${c.id}/verdict`, {
         verdict: v, dermDiagnosis: v === "correct" ? finalDx : null, dermDiseaseCode: v === "correct" ? code : null, note: note.trim() || null, tip,
         ddx: tele.ddx.trim(), plan: tele.plan.trim(), orientation: tele.orientation, reviewIn: tele.reviewIn, photoQuality: tele.photoQuality, photosSharp: tele.photosSharp,
+        hospitalId: /^adresser/i.test(tele.orientation) ? hospitalId : null,
       });
       onDone();
     } catch (e: any) { setErr(e.message); } finally { setBusy(false); }
@@ -185,6 +188,7 @@ function QueueItem({ c, onDone, unread, onDiscuss }: { c: QCase; onDone: () => v
             </>
           )}
           <TeleFieldsForm v={tele} onChange={setTele} photosTotal={c.photos?.length || 0} idPrefix={`queue-${c.id}`} />
+          {/^adresser/i.test(tele.orientation) && <HospitalPicker caseId={c.id} value={hospitalId} onChange={setHospitalId} />}
           <span className="text-[12px] font-semibold text-organic-neutral-800">La leçon de ce cas</span>
           <div className="flex flex-wrap gap-1.5">
             {LESSON_TIPS.map((t) => <button key={t} type="button" className={chip(tip === t)} onClick={() => setTip(tip === t ? null : t)}>{t}</button>)}
@@ -230,6 +234,61 @@ function RelayRow({ r, onDone }: { r: Relay; onDone: () => void }) {
       ) : (
         <span className="flex-none rounded-pill bg-organic-neutral-200 px-2.5 py-1 text-[12px] font-semibold">Niv. {r.level + 1} · {RELAY_LEVELS[r.level].name}</span>
       )}
+    </div>
+  );
+}
+
+// Orientation vers l'hôpital (étape 14b) : hôpital proposé selon le district puis la distance.
+function HospitalPicker({ caseId, value, onChange }: { caseId: number; value: number | null; onChange: (id: number | null) => void }) {
+  const { data } = useQuery<{ hospitals: { id: number; name: string; service: string | null; city: string | null; km: number | null }[] }>({ queryKey: [`/api/relay/cases/${caseId}/hospitals`] });
+  const list = data?.hospitals || [];
+  useEffect(() => { if (value == null && list[0]) onChange(list[0].id); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [list.length]);
+  if (!data) return null;
+  if (!list.length) return <span className="text-[12px] text-organic-neutral-700">Aucun hôpital enregistré dans ce pays : la fiche sera créée et GlowScan indiquera l'hôpital.</span>;
+  return (
+    <label className="flex flex-col gap-1.5" data-testid={`queue-hospital-${caseId}`}>
+      <span className="text-[12px] font-semibold text-organic-neutral-800">Hôpital (fiche de référence pour le patient)</span>
+      <select value={value ?? ""} onChange={(e) => onChange(Number(e.target.value) || null)} className="h-11 rounded-pill border border-organic-divider bg-organic-surface px-3 font-body text-[14px]">
+        {list.map((h, i) => <option key={h.id} value={h.id}>{h.name}{h.city ? ` · ${h.city}` : ""}{h.km != null ? ` · ${h.km} km` : ""}{i === 0 ? " (proposé)" : ""}</option>)}
+      </select>
+    </label>
+  );
+}
+
+// Relecture qualité (étape 14b) : 1 avis de programme sur 10, relu par un 2e dermatologue.
+function QualityReviews() {
+  const qc = useQueryClient();
+  const { data } = useQuery<{ reviews: any[] }>({ queryKey: ["/api/quality-reviews"] });
+  const [comment, setComment] = useState<Record<number, string>>({});
+  const [err, setErr] = useState<Record<number, string>>({});
+  const list = data?.reviews || [];
+  if (!list.length) return null;
+  const answer = async (id: number, agree: boolean) => {
+    try { await post(`/api/quality-reviews/${id}`, { agree, comment: comment[id] || "" }); qc.invalidateQueries({ queryKey: ["/api/quality-reviews"] }); }
+    catch (e: any) { setErr({ ...err, [id]: e.message }); }
+  };
+  return (
+    <div className="flex flex-col gap-organic-3 rounded-card bg-organic-surface p-organic-6" data-testid="quality-reviews">
+      <h3 className="m-0 text-[22px]">Relectures qualité · {list.length}</h3>
+      {list.map((r) => (
+        <div key={r.id} className="flex flex-col gap-2 rounded-card bg-organic-bg p-organic-4 text-[13px]">
+          <div className="flex gap-2 overflow-x-auto">{(r.photos || []).slice(0, 3).map((u: string, i: number) => <img key={i} src={u} alt={`Photo ${i + 1}`} className="h-16 w-14 flex-none rounded-xl object-cover" />)}</div>
+          <span>{[r.zone, [r.patient_sex, r.patient_age != null ? `${r.patient_age} ans` : null].filter(Boolean).join(", ")].filter(Boolean).join(" · ")}</span>
+          {r.symptoms && <span>{r.symptoms}</span>}
+          <span><b>Relais :</b> {r.relay_diagnosis} · <b>IA (indicative) :</b> {r.ai_diagnosis || "—"}</span>
+          <span><b>Avis rendu :</b> {r.derm_verdict === "confirm" ? "confirme" : "corrige"} · {r.derm_diagnosis}{r.derm_ddx ? ` · à écarter : ${r.derm_ddx}` : ""}</span>
+          {r.derm_plan && <span className="whitespace-pre-wrap"><b>Conduite à tenir :</b> {r.derm_plan}</span>}
+          {r.orientation && <span><b>Orientation :</b> {r.orientation}</span>}
+          <textarea value={comment[r.id] || ""} onChange={(e) => setComment({ ...comment, [r.id]: e.target.value })} rows={2} placeholder="Commentaire (obligatoire en cas de désaccord)"
+            className="resize-y rounded-2xl border border-organic-divider bg-organic-surface px-3.5 py-2 font-body text-[13px] outline-none focus:border-organic-accent" />
+          {err[r.id] && <span role="alert" className="font-semibold text-organic-accent-900">{err[r.id]}</span>}
+          <div className="flex flex-wrap items-center gap-2">
+            <Button size="sm" onClick={() => answer(r.id, true)} className="bg-organic-accent-2-600 text-organic-bg hover:bg-organic-accent-2-700">D'accord</Button>
+            <Button size="sm" variant="secondary" onClick={() => answer(r.id, false)}>Pas d'accord</Button>
+            <span className="text-[12px] text-organic-neutral-700">{formatF(r.share)} pour vous · avant le {new Date(r.due_at).toLocaleString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Africa/Douala" })}</span>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
