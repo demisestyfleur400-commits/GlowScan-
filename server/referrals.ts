@@ -117,7 +117,7 @@ export async function maybeCreateQualityReview(caseId: number, force = false) {
 }
 
 // Photos du cas pour l'hôpital : lues côté serveur (le stockage exige une session).
-async function photoAsDataUrl(src: string): Promise<string | null> {
+export async function photoAsDataUrl(src: string): Promise<string | null> {
   if (/^data:image\//i.test(src)) return src;
   if (!src.startsWith("/objects/")) return null;
   try {
@@ -231,6 +231,8 @@ ${r.appointment_at ? `<p style="font-size:14px">RDV ${esc(new Date(r.appointment
       await db.execute(sql`UPDATE hospital_referrals SET status = 'arrived', arrived_at = NOW() WHERE id = ${f.id}`);
       const rc = Rows(await db.execute(sql`SELECT relay_id FROM relay_cases WHERE id = ${f.case_id}`))[0];
       if (rc) notifyProAccount(Number(rc.relay_id), { title: `Arrivée à l'hôpital · ${f.code}`, body: "L'hôpital a confirmé l'arrivée du patient.", url: "/derm/relais" }).catch(() => {});
+      const pc = Rows(await db.execute(sql`SELECT partner_id, external_ref FROM relay_cases WHERE id = ${f.case_id}`))[0];
+      if (pc?.partner_id) import("./partnerApi").then((m) => m.enqueueWebhook(Number(pc.partner_id), "referral.arrived", { caseId: f.case_id, externalRef: pc.external_ref, referralCode: f.code, arrivedAt: new Date().toISOString() })).catch(() => {});
     }
     const photos: string[] = [];
     for (const p of (Array.isArray(f.photos) ? f.photos : []).slice(0, 3)) { const d = await photoAsDataUrl(String(p)); if (d) photos.push(d); }

@@ -209,6 +209,7 @@ export default function RelayHome() {
                         ? <span className="self-center text-[12px] text-organic-neutral-700">Lu</span>
                         : <Button variant="secondary" size="sm" onClick={async () => { await fetch(`/api/relay/cases/${f.id}/read`, { method: "POST", credentials: "include" }).catch(() => {}); refresh(); }}>Marquer comme lu</Button>}
                       <Button size="sm" onClick={() => setThreadId(f.id)} data-testid={`relay-reply-${f.id}`}>Répondre{unread[f.id] ? ` (${unread[f.id]})` : ""}</Button>
+                      <a href={`/api/relay/cases/${f.id}/package`} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center px-2 text-[13px] font-bold text-organic-accent-700">Exporter vers Bogou</a>
                     </>} />
                   );
                 })}
@@ -321,6 +322,7 @@ function NewCase({ me, onSent, credit }: { me: Me; onSent: () => void; credit: C
   const [payer, setPayer] = useState<Payer>(defaultPayer());
   const [patientPhone, setPatientPhone] = useState("");
   const [crossBorder, setCrossBorder] = useState(false);
+  const [bogouRef, setBogouRef] = useState<string | null>(null);
   const [err, setErr] = useState("");
   const [result, setResult] = useState<{ status: string; priceFcfa: number; amountLocal: number | null; instructions?: string; smsSent?: boolean; payer: Payer; ai: string | null; conf: string | null; mine: string } | null>(null);
   const cur: Currency = credit?.currency || "XAF";
@@ -329,7 +331,7 @@ function NewCase({ me, onSent, credit }: { me: Me; onSent: () => void; credit: C
 
   const hypothesis = code === "autre" ? other.trim() : diseaseLabel(code);
   const chip = (on: boolean) => `cursor-pointer rounded-pill border px-3.5 py-1.5 font-body text-[13px] font-semibold ${on ? "border-organic-accent bg-organic-accent text-organic-bg" : "border-organic-divider bg-transparent text-organic-text"}`;
-  const reset = () => { setStep("cas"); setPhotos([]); setAge(""); setSex(""); setZone(""); setSymptoms(""); setCode(""); setOther(""); setTier("simple"); setPayer(defaultPayer()); setPatientPhone(""); setCrossBorder(false); setErr(""); setResult(null); };
+  const reset = () => { setStep("cas"); setPhotos([]); setAge(""); setSex(""); setZone(""); setSymptoms(""); setCode(""); setOther(""); setTier("simple"); setPayer(defaultPayer()); setPatientPhone(""); setCrossBorder(false); setBogouRef(null); setErr(""); setResult(null); };
 
   const addPhoto = async (f?: File | null) => {
     if (!f || !f.type.startsWith("image/") || photos.length >= 3) return;
@@ -345,6 +347,7 @@ function NewCase({ me, onSent, credit }: { me: Me; onSent: () => void; credit: C
         patientPhone: payer === "patient" && patientPhone.trim() ? patientPhone.trim() : null,
         programId: payer === "program" ? me.programs[0]?.id : null,
         crossBorderConsent: crossBorder,
+        bogouRef: bogouRef?.trim() || null,
       });
       const caseId = d.case.id as number;
       // L'IA n'est lancée QU'APRÈS l'enregistrement de l'hypothèse.
@@ -395,6 +398,11 @@ function NewCase({ me, onSent, credit }: { me: Me; onSent: () => void; credit: C
             <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => { addPhoto(e.target.files?.[0]); e.target.value = ""; }} />
           </div>
           <span className="text-[12px] text-organic-neutral-700">Lumière naturelle, sans flash. Une photo de près, une de plus loin.</span>
+          <label className="flex cursor-pointer items-center gap-2.5 text-[13px]" data-testid="relay-bogou">
+            <input type="checkbox" checked={bogouRef !== null} onChange={(e) => setBogouRef(e.target.checked ? "" : null)} className="h-4 w-4 accent-[var(--color-accent)]" />
+            Cas reçu de Bogou
+          </label>
+          {bogouRef !== null && <ProInput label="Référence du cas Bogou" value={bogouRef} onChange={(e) => setBogouRef(e.target.value)} testid="relay-bogou-ref" />}
           <div className="grid grid-cols-2 gap-organic-3">
             <ProInput label="Âge" value={age} onChange={(e) => setAge(e.target.value.replace(/\D/g, "").slice(0, 3))} inputMode="numeric" testid="relay-age" />
             <ProInput label="Zone" value={zone} onChange={(e) => setZone(e.target.value)} placeholder="Cuir chevelu, bras…" testid="relay-zone" />
@@ -588,6 +596,7 @@ function PendingCase({ c, onChange, unread, onDiscuss }: { c: Case; onChange: ()
         </div>
       )}
       {err && <div role="alert" className="rounded-pill bg-organic-accent-100 px-4 py-2.5 text-[13px] font-semibold text-organic-accent-900">{err}</div>}
+      <a href={`/api/relay/cases/${c.id}/package`} target="_blank" rel="noopener noreferrer" className="self-start text-[12px] font-bold text-organic-accent-700">Exporter vers Bogou</a>
       {c.status === "awaiting_review" && (
         <Button variant={unread ? "default" : "secondary"} size="sm" onClick={onDiscuss} className="self-start" data-testid={`relay-discuss-${c.id}`}>
           Discussion{unread ? ` · ${unread} nouveau${unread > 1 ? "x" : ""}` : ""}

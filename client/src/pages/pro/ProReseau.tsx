@@ -211,6 +211,7 @@ function QueueItem({ c, onDone, unread, onDiscuss }: { c: QCase; onDone: () => v
           </>
         )}
         <Button variant={unread ? "default" : "ghost"} onClick={onDiscuss} data-testid={`queue-discuss-${c.id}`}>Discussion{unread ? ` · ${unread}` : ""}</Button>
+        <a href={`/api/relay/cases/${c.id}/package`} target="_blank" rel="noopener noreferrer" className="text-[12px] font-bold text-organic-accent-700">Exporter vers Bogou</a>
         {share > 0 && <span className="text-[12px] text-organic-neutral-700">{formatF(share)} pour vous</span>}
       </div>
     </div>

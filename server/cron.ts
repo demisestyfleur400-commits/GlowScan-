@@ -16,6 +16,7 @@ import { runRoutingTimeouts } from "./routing";
 import { refundProgramForCase } from "./programBudget";
 import { runReferralFollowups } from "./referrals";
 import { runDhis2Monthly } from "./dhis2";
+import { runWebhookDeliveries } from "./partnerApi";
 import { refundConsultation, refundRelayCase, chargeSubscriptionFromEarnings, proBalances, requestWithdrawal } from "./wallet";
 import { PRO_SUBSCRIPTION_FCFA } from "@shared/premium";
 const APP_BASE = (process.env.PUBLIC_BASE_URL || "https://glow-scan.com").replace(/\/$/, "");
@@ -1001,6 +1002,11 @@ export function startCronJobs() {
   cron.schedule("*/10 * * * *", async () => {
     try { const r = await runPeerDeadlines(); if (r.reoffered || r.expired) log(`🤝 Avis confrères : ${r.reoffered} reproposé(s), ${r.expired} hors délai`); }
     catch (e) { log(`❌ Erreur délais avis confrères : ${e}`); }
+  }, { timezone: "Africa/Douala" });
+  // API partenaires : webhooks signés (case.answered, referral.arrived), nouvelles tentatives espacées.
+  cron.schedule("*/2 * * * *", async () => {
+    try { const r = await runWebhookDeliveries(); if (r.delivered || r.failed) log(`Webhooks partenaires : ${r.delivered} livré(s), ${r.failed} abandonné(s)`); }
+    catch (e) { log(`❌ Erreur webhooks partenaires : ${e}`); }
   }, { timezone: "Africa/Douala" });
   // DHIS2 : le 5 de chaque mois à 7 h, envoi des agrégats du mois précédent (essai puis envoi).
   cron.schedule("0 7 5 * *", async () => {

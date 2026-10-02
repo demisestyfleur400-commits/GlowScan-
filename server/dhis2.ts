@@ -1,11 +1,11 @@
 import type { Express } from "express";
-import crypto from "crypto";
 import { z } from "zod";
 import { sql } from "drizzle-orm";
 import { db } from "./db";
 import { requireActivePro } from "./proRoutes";
 import { alertCoordinators } from "./programBudget";
 import { checkBaseUrl, Dhis2Error } from "./dhis2Net";
+import { encryptSecret, decryptSecret } from "./secretBox";
 import { DHIS2_MASK_MIN, UID_RE, ageBandOf, dhis2Keys, dhis2KeyLabel, previousPeriod } from "@shared/dhis2";
 
 // ════════════════════════════════════════════════════════════════════════
@@ -23,23 +23,12 @@ import { DHIS2_MASK_MIN, UID_RE, ageBandOf, dhis2Keys, dhis2KeyLabel, previousPe
 const Rows = (x: any): any[] => (x?.rows ?? x ?? []) as any[];
 export { Dhis2Error };
 
-// ── Chiffrement du jeton ──────────────────────────────────────────────────
-function tokenKey(): Buffer {
-  const k = process.env.DHIS2_TOKEN_KEY || "";
-  if (k.length < 32) throw new Dhis2Error("NO_KEY", "Le serveur n'a pas de clé de chiffrement DHIS2 (DHIS2_TOKEN_KEY) : contactez GlowScan.");
-  return crypto.createHash("sha256").update(k).digest();
-}
+// ── Chiffrement du jeton (clé commune, server/secretBox.ts) ───────────────
 function encryptToken(plain: string): string {
-  const iv = crypto.randomBytes(12);
-  const c = crypto.createCipheriv("aes-256-gcm", tokenKey(), iv);
-  const data = Buffer.concat([c.update(plain, "utf8"), c.final()]);
-  return [iv, c.getAuthTag(), data].map((b) => b.toString("base64")).join(".");
+  try { return encryptSecret(plain); } catch { throw new Dhis2Error("NO_KEY", "Le serveur n'a pas de clé de chiffrement DHIS2 (DHIS2_TOKEN_KEY) : contactez GlowScan."); }
 }
 function decryptToken(enc: string): string {
-  const [iv, tag, data] = enc.split(".").map((p) => Buffer.from(p, "base64"));
-  const d = crypto.createDecipheriv("aes-256-gcm", tokenKey(), iv);
-  d.setAuthTag(tag);
-  return Buffer.concat([d.update(data), d.final()]).toString("utf8");
+  try { return decryptSecret(enc); } catch { throw new Dhis2Error("NO_KEY", "Jeton DHIS2 illisible : saisissez-le de nouveau."); }
 }
 
 // ── Agrégats du mois ──────────────────────────────────────────────────────

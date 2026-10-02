@@ -9,6 +9,7 @@ import { PilotageView, type ProgramDashboard } from "@/components/pro/PilotageVi
 import { InviteRelays, CsvInvite } from "@/components/relay/InviteRelays";
 import { ProgramSetup, ProgramBudget, ProgramAgents, ProgramReferrals } from "@/components/pro/ProgramSpace";
 import { Dhis2Card } from "@/components/pro/Dhis2Card";
+import { ConnectorCards } from "@/components/pro/ConnectorCards";
 import { useAuth } from "@/hooks/use-auth";
 import { useProAccount } from "@/hooks/use-pro";
 import { asProProfile, proHomeOf } from "@shared/proProfile";
@@ -94,6 +95,9 @@ export default function ProPilotage() {
                 <section className="grid items-start gap-organic-4 lg:grid-cols-2">
                   <CsvInvite programId={pid} />
                   <Dhis2Card programId={pid} />
+                </section>
+                <section className="grid items-start gap-organic-4 lg:grid-cols-2">
+                  <ConnectorCards programId={pid} />
                 </section>
               </>
             )}

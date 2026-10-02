@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { PilotageView, type ProgramDashboard } from "@/components/pro/PilotageView";
 import { buildProgramReportHtml, buildProgramReportPdf } from "@/lib/programReport";
+import { ApiPartnersSection } from "@/components/admin/ApiPartnersSection";
 
 // ════════════════════════════════════════════════════════════════════════
 // /admin › Programmes (étape 6) : vue fondateur (argent et plateforme),
@@ -119,6 +120,8 @@ export function ProgramsTab({ adminKey, DS }: { adminKey: string; DS: DS }) {
         {msg && <p className="text-xs" style={{ color: "#f43f5e" }}>{msg}</p>}
         <button onClick={create} disabled={!form.name.trim()} className="px-4 py-2 rounded-xl text-xs font-extrabold text-white disabled:opacity-40" style={{ background: DS.violet }}>Créer le programme</button>
       </div>
+
+      <ApiPartnersSection adminKey={adminKey} DS={DS} programs={programs.map((p) => ({ id: p.id, name: p.name }))} />
 
       {programs.map((p) => (
         <ProgramCard key={p.id} p={p} DS={DS} call={call} reload={load} expanded={open === p.id} onToggle={() => setOpen(open === p.id ? null : p.id)} />

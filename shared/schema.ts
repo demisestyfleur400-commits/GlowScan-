@@ -774,6 +774,7 @@ export const programs = pgTable("programs", {
   createdBy: integer("created_by"),
   launchedAt: timestamp("launched_at"),
   closedAt: timestamp("closed_at"),
+  bogouEmail: text("bogou_email"),                                      // adresse du cercle Bogou (migration 0034)
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -864,6 +865,11 @@ export const relayCases = pgTable("relay_cases", {
   reassignCount: smallint("reassign_count").notNull().default(0),
   routingLog: jsonb("routing_log").notNull().default([]),
   crossBorderConsentAt: timestamp("cross_border_consent_at"),
+  // Bogou et API ouverte (migration 0034)
+  source: varchar("source", { length: 10 }).notNull().default("glowscan"), // glowscan | bogou | partner
+  externalRef: varchar("external_ref", { length: 80 }),
+  partnerId: integer("partner_id"),
+  bogouSharedAt: timestamp("bogou_shared_at"),
   answeredAt: timestamp("answered_at"),
   refundedAt: timestamp("refunded_at"),
   refundOperatorRef: text("refund_operator_ref"),
@@ -1179,5 +1185,44 @@ export const dhis2Exports = pgTable("dhis2_exports", {
   payload: jsonb("payload"),
   error: text("error"),
   createdBy: text("created_by"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// ── API ouverte pour les partenaires (étape 16, migration 0034) ──────────
+// « partners » = partenaires de la boutique B2C : table dédiée api_partners.
+export const apiPartners = pgTable("api_partners", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  kind: varchar("kind", { length: 12 }).notNull().default("telemed"),  // bogou | telemed | hospital | ministry | other
+  programId: integer("program_id").notNull().references(() => programs.id),
+  ownerProId: integer("owner_pro_id").notNull().references(() => proAccounts.id),
+  keyPrefix: varchar("key_prefix", { length: 12 }).notNull().unique(),
+  keyHash: text("key_hash").notNull(),
+  webhookUrl: text("webhook_url"),
+  webhookSecretEnc: text("webhook_secret_enc"),
+  rateLimitPerMin: smallint("rate_limit_per_min").notNull().default(60),
+  active: boolean("active").notNull().default(true),
+  lastUsedAt: timestamp("last_used_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+export const partnerAccessLog = pgTable("partner_access_log", {
+  id: serial("id").primaryKey(),
+  partnerId: integer("partner_id").references(() => apiPartners.id, { onDelete: "cascade" }),
+  method: varchar("method", { length: 8 }).notNull(),
+  path: text("path").notNull(),
+  status: smallint("status").notNull(),
+  ip: varchar("ip", { length: 64 }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+export const webhookDeliveries = pgTable("webhook_deliveries", {
+  id: serial("id").primaryKey(),
+  partnerId: integer("partner_id").notNull().references(() => apiPartners.id, { onDelete: "cascade" }),
+  event: varchar("event", { length: 30 }).notNull(),
+  payload: jsonb("payload").notNull(),
+  status: varchar("status", { length: 10 }).notNull().default("pending"),
+  attempts: smallint("attempts").notNull().default(0),
+  nextAttemptAt: timestamp("next_attempt_at").notNull().defaultNow(),
+  lastError: text("last_error"),
+  deliveredAt: timestamp("delivered_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });

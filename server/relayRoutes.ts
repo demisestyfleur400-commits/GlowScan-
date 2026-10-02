@@ -134,6 +134,7 @@ export function registerRelayRoutes(app: Express, deps: { checkAdmin: (req: any)
         programId: z.number().int().optional().nullable(),
         patientPhone: z.string().max(30).optional().nullable(),   // facultatif : SMS de paiement (Mobile Money)
         crossBorderConsent: z.boolean().optional().default(false), // accord du patient, demandé à voix haute (étape 13)
+        bogouRef: z.string().trim().max(80).optional().nullable(),    // cas reçu de Bogou (étape 16)
       }).parse(req.body);
       const me = req.proAccount;
       // Étape 13 : le référent passe en premier, puis le routage (même pays, puis réseau si accord du patient).
@@ -170,14 +171,14 @@ export function registerRelayRoutes(app: Express, deps: { checkAdmin: (req: any)
       const [row] = Rows(await db.execute(sql`
         INSERT INTO relay_cases (relay_id, derm_id, center_name, patient_age, patient_sex, zone, symptoms, photos,
           relay_diagnosis, relay_disease_code, tier, price_fcfa, payer, program_id, status, payment_status, due_at,
-          fx_currency, fx_rate, amount_local, patient_phone, language, cross_border_consent_at)
+          fx_currency, fx_rate, amount_local, patient_phone, language, cross_border_consent_at, source, external_ref)
         VALUES (${me.id}, ${link ? Number(link.derm_id) : null}, ${data.centerName || me.cabinetName || null}, ${data.patientAge ?? null}, ${data.patientSex ?? null},
           ${data.zone || null}, ${data.symptoms || null}, ${JSON.stringify(urls)}::jsonb,
           ${data.relayDiagnosis.trim()}, ${code}, ${data.tier}, ${autonomousCase ? 0 : tier.priceFcfa},
           ${autonomousCase ? "none" : data.payer}, ${programId}, ${status},
           ${"pending"},
           NULL, ${money.currency}, ${money.rate ?? 1}, ${autonomousCase || !money.rate ? null : toLocal(tier.priceFcfa, money.rate, money.currency)}, ${patientPhone},
-          ${relayLang}, ${data.crossBorderConsent ? sql`NOW()` : null})
+          ${relayLang}, ${data.crossBorderConsent ? sql`NOW()` : null}, ${data.bogouRef ? "bogou" : "glowscan"}, ${data.bogouRef || null})
         RETURNING id, status, price_fcfa, amount_local`));
       const caseId = Number(row.id);
       if (!autonomousCase) {
@@ -381,6 +382,8 @@ export function registerRelayRoutes(app: Express, deps: { checkAdmin: (req: any)
       // Étape 14b : « Adresser… » crée la fiche de référence ; un avis de programme sur 10 part en relecture.
       if (/^adresser/i.test(data.orientation || "")) await createReferral(id, /urgence/i.test(data.orientation || ""), data.hospitalId ?? null).catch((e) => console.error("[referral]", e));
       if (c.payment_status === "program") maybeCreateQualityReview(id).catch(() => {});
+      // Étape 16 : cas reçu par l'API → webhook « case.answered » au partenaire.
+      import("./partnerApi").then((m) => m.notifyCaseAnswered(id)).catch(() => {});
       notifyProAccount(Number(c.relay_id), {
         title: data.verdict === "confirm" ? "Le dermatologue confirme votre diagnostic" : "Le dermatologue a corrigé votre diagnostic",
         body: (data.note || "").trim().slice(0, 120) || (data.verdict === "confirm" ? c.relay_diagnosis : data.dermDiagnosis!.trim()),

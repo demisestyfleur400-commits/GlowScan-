@@ -71,6 +71,7 @@ const ProPublicProfile = lazyWithRetry(() => import("@/pages/pro/ProPublicProfil
 const ProConfreres = lazyWithRetry(() => import("@/pages/pro/ProConfreres"));
 const Verif = lazyWithRetry(() => import("@/pages/Verif"));
 const HospitalRef = lazyWithRetry(() => import("@/pages/HospitalRef"));
+const Developpeurs = lazyWithRetry(() => import("@/pages/Developpeurs"));
 const ProProfil = lazyWithRetry(() => import("@/pages/pro/ProProfil"));
 const ProMagicLink = lazyWithRetry(() => import("@/pages/pro/ProMagicLink"));
 const DermOnboarding = lazyWithRetry(() => import("@/pages/pro/DermOnboarding"));
@@ -169,6 +170,7 @@ function Router() {
       <Route path="/challenge/:token" component={Challenge} />
       <Route path="/ref/:code" component={RefRedirect} />
       <Route path="/rejoindre" component={Rejoindre} />
+      <Route path="/developpeurs" component={Developpeurs} />
       <Route path="/verif" component={Verif} />
       <Route path="/verif/:ref" component={Verif} />
       <Route component={NotFound} />
