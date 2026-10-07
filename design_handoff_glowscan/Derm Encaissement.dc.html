@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/organic-a6b730fa-b5d6-4692-8156-eacdd1b52399/styles.css">
+<script src="_ds/organic-a6b730fa-b5d6-4692-8156-eacdd1b52399/_ds_bundle.js"></script>
+<style>body{margin:0;background:var(--color-bg)} [data-m=mbar]{display:none} @media (max-width:760px){ [data-m=shell]{flex-direction:column} [data-m=aside]{position:sticky!important;top:0;z-index:40;width:100%!important;height:auto!important;padding:10px 16px!important;gap:10px!important;background:var(--color-bg);border-bottom:1px solid var(--color-divider)} [data-m=aside] nav,[data-m=roles]{flex-direction:row!important;overflow-x:auto;gap:4px!important;scrollbar-width:none} [data-m=aside] nav>*,[data-m=roles]>*{flex:none!important;white-space:nowrap} [data-m=roles]>span:first-child{display:none} [data-m=hide-m]{display:none!important} [data-m=portal-aside]{display:none!important} [data-m=main]{padding:16px 16px 40px!important;gap:20px!important} [data-m=main] h1{font-size:30px!important} [data-p]{padding-bottom:110px!important} [data-m=paper]{padding:24px 18px!important} [data-m=mbar]{display:flex} } a{color:var(--color-accent-700)} a:hover{color:var(--color-accent-600)}</style>
+</helmet>
+<div data-m="shell" style="display:flex;min-height:100vh;background:var(--color-bg);color:var(--color-text);font-family:var(--font-body)">
+  <aside data-m="aside" style="flex:none;width:232px;padding:var(--space-6) var(--space-4);display:flex;flex-direction:column;gap:var(--space-6);position:sticky;top:0;height:100vh;box-sizing:border-box">
+    <div style="display:flex;align-items:center;gap:10px">
+      <img src="client/public/glowscan-mark.png" alt="GlowScan" style="width:36px;height:36px;border-radius:999px;object-fit:cover">
+      <div style="display:flex;flex-direction:column"><span style="font-family:var(--font-heading);font-size:18px;line-height:1.1">GlowScan</span><span style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-accent-2-700);font-weight:700">Paiements</span></div>
+    </div>
+    <nav style="display:flex;flex-direction:column;gap:2px">
+      <a href="Derm Portal.dc.html" style="padding:10px 14px;border-radius:999px;text-decoration:none;font-size:14px;font-weight:600;color:var(--color-text)" style-hover="background:var(--color-neutral-200)">← Portail DERM</a>
+      <a href="Derm Reseau.dc.html" style="padding:10px 14px;border-radius:999px;text-decoration:none;font-size:14px;font-weight:600;color:var(--color-text)" style-hover="background:var(--color-neutral-200)">Réseau & formation</a>
+      <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="2">
+        <a href="#" onClick="{{ t.go }}" style="padding:10px 14px;border-radius:999px;text-decoration:none;font-size:14px;font-weight:600;color:{{ t.fg }};background:{{ t.bg }}" style-hover="background:var(--color-neutral-200)">{{ t.label }}</a>
+      </sc-for>
+    </nav>
+    <div data-m="roles" style="display:flex;flex-direction:column;gap:6px">
+      <span style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--color-neutral-700);padding-left:14px">Voir en tant que</span>
+      <sc-for list="{{ roles }}" as="r" hint-placeholder-count="2">
+        <button onClick="{{ r.go }}" style="display:flex;align-items:center;gap:10px;text-align:left;border:0;cursor:pointer;padding:8px 12px 8px 8px;border-radius:999px;font:inherit;background:{{ r.bg }};color:var(--color-text)">
+          <span style="flex:none;width:32px;height:32px;border-radius:999px;background:{{ r.av }};color:var(--color-bg);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px">{{ r.ini }}</span>
+          <span style="display:flex;flex-direction:column;min-width:0"><span style="font-size:13px;font-weight:700">{{ r.name }}</span><span style="font-size:11px;color:var(--color-neutral-700)">{{ r.sub }}</span></span>
+        </button>
+      </sc-for>
+    </div>
+  </aside>
+
+  <main data-m="main" style="flex:1;min-width:0;padding:var(--space-6) var(--space-8) var(--space-8) var(--space-4);display:flex;flex-direction:column;gap:var(--space-6);max-width:1120px">
+
+    <!-- ═══ ENCAISSER ═══ -->
+    <sc-if value="{{ isPay }}" hint-placeholder-val="{{ true }}">
+      <header style="display:flex;flex-direction:column;gap:4px">
+        <span style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:var(--color-accent-700)">CSI de Mokolo · patient présent</span>
+        <h1 style="margin:0;font-size:42px">Encaisser un avis dermatologue</h1>
+      </header>
+      <section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,400px),1fr));gap:var(--space-4);align-items:start">
+        <div class="card" style="padding:var(--space-6);gap:var(--space-4)">
+          <div style="display:flex;align-items:center;gap:12px;padding:10px 14px 10px 10px;border-radius:999px;background:var(--color-bg)">
+            <span style="flex:none;width:40px;height:40px;border-radius:999px;background:var(--color-accent-200);color:var(--color-accent-800);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px">AB</span>
+            <span style="flex:1;display:flex;flex-direction:column"><span style="font-size:14px;font-weight:700">Abdou Bouba, 7 ans</span><span style="font-size:12px;color:var(--color-neutral-700)">Dossier prêt · 3 photos · IA : teigne 82 %</span></span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px"><span style="font-size:12px;color:var(--color-neutral-700)">Type d'avis</span>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px">
+              <sc-for list="{{ kinds }}" as="k" hint-placeholder-count="2">
+                <button onClick="{{ k.go }}" style="display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;border:2px solid {{ k.border }};cursor:pointer;padding:14px 18px;border-radius:var(--radius-lg);font:inherit;background:{{ k.bg }};color:var(--color-text)">
+                  <span style="font-size:14px;font-weight:700">{{ k.label }}</span><span style="font-family:var(--font-heading);font-size:24px">{{ k.price }}</span><span style="font-size:12px;color:var(--color-neutral-700)">{{ k.sla }}</span>
+                </button>
+              </sc-for>
+            </div>
+          </div>
+          <sc-if value="{{ sponsored }}" hint-placeholder-val="{{ false }}"><div style="padding:10px 16px;border-radius:999px;background:var(--color-accent-2-100);color:var(--color-accent-2-900);font-size:13px;font-weight:600">Cas pris en charge par le programme « Peau saine Extrême-Nord ». Le patient ne paie rien.</div></sc-if>
+          <div style="display:flex;flex-direction:column;gap:8px"><span style="font-size:12px;color:var(--color-neutral-700)">Moyen de paiement</span>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;padding:4px;border-radius:999px;background:var(--color-bg);align-self:flex-start">
+              <sc-for list="{{ methods }}" as="m" hint-placeholder-count="3"><button onClick="{{ m.go }}" style="border:0;cursor:pointer;padding:9px 16px;border-radius:999px;font:inherit;font-size:13px;font-weight:700;background:{{ m.bg }};color:{{ m.fg }}">{{ m.label }}</button></sc-for>
+            </div>
+          </div>
+          <sc-if value="{{ isMomo }}" hint-placeholder-val="{{ true }}">
+            <div class="field"><label>Numéro Mobile Money du patient</label>
+              <div style="display:flex;align-items:center;gap:8px;padding:0 6px 0 16px;border-radius:999px;background:var(--color-bg);height:48px">
+                <span style="font-weight:700">+237</span>
+                <input value="{{ phone }}" onChange="{{ onPhone }}" inputmode="tel" placeholder="6XX XXX XXX" style="flex:1;min-width:0;border:0;background:transparent;font:inherit;font-size:16px;letter-spacing:.06em;outline:none;color:var(--color-text)">
+                <sc-if value="{{ op.known }}" hint-placeholder-val="{{ false }}"><span style="padding:6px 12px;border-radius:999px;font-size:12px;font-weight:700;background:{{ op.bg }};color:{{ op.fg }}">{{ op.name }}</span></sc-if>
+              </div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ isCredit }}" hint-placeholder-val="{{ false }}"><div style="padding:12px 16px;border-radius:var(--radius-lg);background:var(--color-bg);font-size:13px">Il vous reste <b>{{ credits }} crédits</b>. Encaissez le patient en espèces, un crédit sera utilisé.</div></sc-if>
+          <button class="btn btn-primary" onClick="{{ charge }}" disabled="{{ chargeOff }}" style="padding:14px 24px;font-size:16px">{{ chargeLabel }}</button>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:var(--space-4)">
+          <div class="card" style="padding:var(--space-6);gap:var(--space-3)">
+            <span class="card-title" style="font-size:20px">Statut</span>
+            <sc-for list="{{ steps }}" as="s" hint-placeholder-count="4">
+              <div style="display:flex;align-items:center;gap:12px">
+                <span style="flex:none;width:28px;height:28px;border-radius:999px;background:{{ s.bg }};color:{{ s.fg }};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">{{ s.mark }}</span>
+                <span style="flex:1;display:flex;flex-direction:column"><span style="font-size:14px;font-weight:700;color:{{ s.ink }}">{{ s.label }}</span><span style="font-size:12px;color:var(--color-neutral-700)">{{ s.sub }}</span></span>
+              </div>
+            </sc-for>
+            <sc-if value="{{ done }}" hint-placeholder-val="{{ false }}"><button class="btn btn-ghost" onClick="{{ reset }}" style="align-self:flex-start">Nouvel encaissement</button></sc-if>
+          </div>
+          <div class="card" style="padding:var(--space-6);gap:var(--space-3)">
+            <span class="card-title" style="font-size:20px">Qui reçoit quoi</span>
+            <div style="display:flex;height:14px;border-radius:999px;overflow:hidden;gap:3px">
+              <span style="flex:60;background:var(--color-accent)"></span><span style="flex:20;background:var(--color-accent-2-600)"></span><span style="flex:20;background:var(--color-neutral-400)"></span>
+            </div>
+            <sc-for list="{{ split }}" as="p" hint-placeholder-count="3">
+              <div style="display:flex;align-items:center;gap:10px;font-size:14px"><span style="width:10px;height:10px;border-radius:999px;background:{{ p.c }}"></span><span style="flex:1">{{ p.label }}</span><b>{{ p.amt }}</b></div>
+            </sc-for>
+            <span style="font-size:12px;color:var(--color-neutral-700)">L'argent reste bloqué jusqu'à l'avis signé. Sans réponse sous le délai, le patient est remboursé automatiquement.</span>
+          </div>
+        </div>
+      </section>
+    </sc-if>
+
+    <!-- ═══ PORTEFEUILLE ═══ -->
+    <sc-if value="{{ isWallet }}" hint-placeholder-val="{{ false }}">
+      <header style="display:flex;flex-direction:column;gap:4px">
+        <span style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:var(--color-accent-700)">{{ w.who }}</span>
+        <h1 style="margin:0;font-size:42px">Portefeuille</h1>
+      </header>
+      <section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:var(--space-3)">
+        <div style="display:flex;flex-direction:column;gap:6px;padding:var(--space-6);border-radius:var(--radius-lg);background:var(--color-accent-2-100)"><span style="font-size:12px;font-weight:700;color:var(--color-accent-2-800)">Disponible</span><span style="font-family:var(--font-heading);font-size:40px;line-height:1">{{ w.avail }}</span><span style="font-size:12px;color:var(--color-accent-2-800)">FCFA</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px;padding:var(--space-6);border-radius:var(--radius-lg);background:var(--color-surface)"><span style="font-size:12px;font-weight:700;color:var(--color-neutral-700)">Bloqué (avis en cours)</span><span style="font-family:var(--font-heading);font-size:40px;line-height:1">{{ w.held }}</span><span style="font-size:12px;color:var(--color-neutral-700)">FCFA</span></div>
+        <sc-if value="{{ w.isDerm }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;flex-direction:column;gap:6px;padding:var(--space-6);border-radius:var(--radius-lg);background:var(--color-surface)"><span style="font-size:12px;font-weight:700;color:var(--color-neutral-700)">Abonnement d'octobre</span><span style="font-family:var(--font-heading);font-size:28px;line-height:1.1">Payé par vos gains</span><span style="font-size:12px;color:var(--color-neutral-700)">10 000 FCFA prélevés le 1er</span></div>
+        </sc-if>
+      </section>
+      <section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:var(--space-4);align-items:start">
+        <div class="card" style="padding:var(--space-6);gap:var(--space-4)">
+          <span class="card-title" style="font-size:20px">Retirer</span>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <sc-for list="{{ w.accounts }}" as="a" hint-placeholder-count="2">
+              <button onClick="{{ a.go }}" style="display:flex;align-items:center;gap:12px;text-align:left;border:2px solid {{ a.border }};cursor:pointer;padding:10px 16px 10px 10px;border-radius:999px;font:inherit;background:var(--color-bg);color:var(--color-text)">
+                <span style="flex:none;padding:6px 12px;border-radius:999px;font-size:12px;font-weight:700;background:{{ a.bg }};color:{{ a.fg }}">{{ a.op }}</span>
+                <span style="flex:1;font-size:14px;font-weight:600">{{ a.num }}</span>
+              </button>
+            </sc-for>
+          </div>
+          <div class="field"><label>Montant</label><input class="input" value="{{ w.amt }}" onChange="{{ w.onAmt }}" inputmode="numeric" style="font-size:18px;font-weight:700"></div>
+          <span style="font-size:12px;color:var(--color-neutral-700)">Minimum 5 000 FCFA · frais opérateur pris en charge par GlowScan · arrivée en moins de 5 min</span>
+          <button class="btn btn-primary" onClick="{{ w.withdraw }}" style="padding:12px 22px">{{ w.wLabel }}</button>
+          <div style="display:flex;align-items:center;gap:12px;padding-top:var(--space-3);border-top:1px solid var(--color-divider)">
+            <span style="flex:1;display:flex;flex-direction:column"><span style="font-size:14px;font-weight:700">Virement automatique chaque vendredi</span><span style="font-size:12px;color:var(--color-neutral-700)">Tout le disponible part sur votre compte principal</span></span>
+            <button onClick="{{ w.toggleAuto }}" style="flex:none;width:52px;height:30px;border:0;border-radius:999px;cursor:pointer;padding:3px;display:flex;justify-content:{{ w.autoJ }};background:{{ w.autoBg }}"><span style="width:24px;height:24px;border-radius:999px;background:var(--color-neutral-100)"></span></button>
+          </div>
+        </div>
+        <div class="card" style="padding:var(--space-6);gap:var(--space-2)">
+          <span class="card-title" style="font-size:20px">Mouvements</span>
+          <sc-for list="{{ w.moves }}" as="m" hint-placeholder-count="6">
+            <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--color-divider)">
+              <span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:14px;font-weight:700">{{ m.label }}</span><span style="font-size:12px;color:var(--color-neutral-700)">{{ m.sub }}</span></span>
+              <span style="font-size:14px;font-weight:700;color:{{ m.c }}">{{ m.amt }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+    </sc-if>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const fmt = n => n.toLocaleString('fr-FR');
+const OPS = { mtn: { name: 'MTN MoMo', bg: '#ffcb05', fg: '#1a1a1a' }, orange: { name: 'Orange Money', bg: '#ff7900', fg: '#1a1a1a' } };
+const opOf = d => { if (d.length < 3) return null; const p2 = +d.slice(0, 2), p3 = +d.slice(0, 3); if (p2 === 67 || p2 === 68 || (p3 >= 650 && p3 <= 654)) return 'mtn'; if (p2 === 69 || (p3 >= 655 && p3 <= 659)) return 'orange'; return null; };
+const MOVES = {
+  relais: [['Avis · Abdou B.', 'Part relais · bloqué jusqu\'à l\'avis', 600, 'held'], ['Avis · Fadimatou A.', 'Part relais · validé par Dr Aïcha', 600], ['Avis urgent · Moussa K.', 'Part relais · validé par Pr Essomba', 1000], ['Retrait MTN MoMo', 'vendredi 18 sept.', -4800], ['Avis · Hadja I.', 'Programme « Peau saine » · validé', 600]],
+  derm: [['Consultation B2C · Arnaud M.', 'GlowScan patient · 80 %', 9600], ['Avis relais · Fadimatou A.', 'CSI de Mokolo · 60 %', 1800], ['Avis urgent · Moussa K.', 'CSI de Kousséri · 60 %', 3000], ['Consultation B2C · Nadège E.', 'Bloqué jusqu\'au compte rendu', 9600, 'held'], ['Abonnement septembre', 'déduit des gains', -10000], ['Retrait Orange Money', 'vendredi 18 sept.', -25000]]
+};
+class Component extends DCLogic {
+  state = { role: 'relais', tab: 'pay', kind: 'simple', method: 'momo', phone: '677 12 45 90', phase: 0, credits: 7, acct: 0, amt: '', auto: true, withdrawn: false };
+  go(t) { this.setState({ tab: t }); }
+  renderVals() {
+    const s = this.state; const derm = s.role === 'derm';
+    const tab = derm ? 'wallet' : s.tab;
+    const price = s.kind === 'urgent' ? 5000 : s.kind === 'sponsor' ? 3000 : 3000;
+    const digits = s.phone.replace(/\D/g, ''); const op = opOf(digits);
+    const momo = s.method === 'momo';
+    const charge = () => { if (s.phase) return; this.setState({ phase: 1 }); clearTimeout(this._t); this._t = setTimeout(() => this.setState({ phase: 2, credits: s.method === 'credit' ? s.credits - 1 : s.credits }), 1800); setTimeout(() => this.setState(st => st.phase === 2 ? { phase: 3 } : null), 4200); };
+    const pay = s.kind === 'sponsor';
+    const stepsDef = [
+      [momo && !pay ? 'Demande envoyée au téléphone' : 'Paiement enregistré', momo && !pay ? `Le patient valide avec son code ${op ? OPS[op].name : ''}` : pay ? 'Facturé au programme' : 'Espèces reçues, 1 crédit utilisé'],
+      ['Paiement reçu', `${fmt(price)} FCFA bloqués par GlowScan`],
+      ['Cas envoyé à Dr Aïcha', s.kind === 'urgent' ? 'Réponse sous 2 h' : 'Réponse sous 24 h'],
+      ['Avis signé · parts versées', 'Chacun est crédité dans son portefeuille']
+    ];
+    const moves = MOVES[derm ? 'derm' : 'relais'];
+    const held = moves.filter(m => m[3] === 'held').reduce((a, m) => a + m[2], 0);
+    const avail = derm ? 38400 : 5200;
+    const accounts = derm ? [['orange', '+237 6 99 41 20 18'], ['mtn', '+237 6 77 80 12 33']] : [['mtn', '+237 6 70 55 21 08']];
+    return {
+      roles: [['relais', 'JM', 'Joseph Mballa', 'Infirmier relais', 'var(--color-accent-2-600)'], ['derm', 'AN', 'Dr Aïcha', 'Dermatologue', 'var(--color-accent)']].map(([k, ini, name, sub, av]) => ({ ini, name, sub, av, go: () => this.setState({ role: k, withdrawn: false }), bg: s.role === k ? 'var(--color-surface)' : 'transparent' })),
+      tabs: (derm ? [['wallet', 'Portefeuille']] : [['pay', 'Encaisser'], ['wallet', 'Portefeuille']]).map(([k, l]) => ({ label: l, go: e => { e.preventDefault(); this.go(k); }, bg: tab === k ? 'var(--color-surface)' : 'transparent', fg: tab === k ? 'var(--color-accent-700)' : 'var(--color-text)' })),
+      isPay: tab === 'pay', isWallet: tab === 'wallet',
+      kinds: [['simple', 'Avis simple', '3 000 FCFA', 'Réponse sous 24 h'], ['urgent', 'Avis urgent', '5 000 FCFA', 'Réponse sous 2 h'], ['sponsor', 'Programme sponsorisé', '0 FCFA', 'Payé par l\'ONG / le district']].map(([k, label, p, sla]) => ({ label, price: p, sla, go: () => this.setState({ kind: k, phase: 0 }), bg: s.kind === k ? 'var(--color-accent-100)' : 'var(--color-bg)', border: s.kind === k ? 'var(--color-accent)' : 'transparent' })),
+      sponsored: pay,
+      methods: [['momo', 'Mobile Money'], ['credit', 'Espèces + crédit']].map(([k, l]) => ({ label: l, go: () => this.setState({ method: k, phase: 0 }), bg: s.method === k ? 'var(--color-accent)' : 'transparent', fg: s.method === k ? 'var(--color-bg)' : 'var(--color-text)' })),
+      isMomo: momo && !pay, isCredit: s.method === 'credit' && !pay, credits: s.credits,
+      phone: s.phone, onPhone: e => this.setState({ phone: e.target.value, phase: 0 }),
+      op: op ? { known: true, ...OPS[op] } : { known: false },
+      chargeOff: s.phase > 0 || (momo && !pay && (!op || digits.length !== 9)),
+      chargeLabel: s.phase === 1 ? 'En attente du patient…' : s.phase > 1 ? 'Encaissé ✓' : pay ? 'Envoyer au dermatologue' : momo ? `Envoyer la demande de ${fmt(price)} FCFA` : `Encaisser ${fmt(price)} FCFA`,
+      charge, done: s.phase >= 2, reset: () => this.setState({ phase: 0 }),
+      steps: stepsDef.map(([label, sub], i) => { const dn = s.phase > i || (s.phase === 3), cur = s.phase === i && s.phase > 0; return { label, sub, mark: dn ? '✓' : i + 1, bg: dn ? 'var(--color-accent-2-600)' : cur ? 'var(--color-accent)' : 'var(--color-neutral-200)', fg: dn || cur ? 'var(--color-bg)' : 'var(--color-neutral-800)', ink: dn || cur ? 'var(--color-text)' : 'var(--color-neutral-700)' }; }),
+      split: [['Dermatologue (60 %)', 0.6, 'var(--color-accent)'], ['Vous, relais (20 %)', 0.2, 'var(--color-accent-2-600)'], ['GlowScan (20 %)', 0.2, 'var(--color-neutral-400)']].map(([label, r, c]) => ({ label, c, amt: fmt(price * r) + ' FCFA' })),
+      w: {
+        who: derm ? 'Dr Aïcha Nkemdirim · consultations B2C (80 %) + avis relais (60 %)' : 'Joseph Mballa · relais', isDerm: derm,
+        avail: fmt(s.withdrawn ? avail - (+String(s.amt || avail).replace(/\D/g, '') || avail) : avail), held: fmt(held),
+        accounts: accounts.map(([o, num], i) => ({ op: OPS[o].name, bg: OPS[o].bg, fg: OPS[o].fg, num, go: () => this.setState({ acct: i }), border: s.acct === i ? 'var(--color-accent)' : 'transparent' })),
+        amt: s.amt || fmt(avail), onAmt: e => this.setState({ amt: e.target.value }),
+        wLabel: s.withdrawn ? 'Envoyé ✓ — arrive dans quelques minutes' : 'Retirer maintenant', withdraw: () => this.setState({ withdrawn: true }),
+        toggleAuto: () => this.setState({ auto: !s.auto }), autoJ: s.auto ? 'flex-end' : 'flex-start', autoBg: s.auto ? 'var(--color-accent-2-600)' : 'var(--color-neutral-400)',
+        moves: moves.map(([label, sub, amt, h]) => ({ label, sub, amt: (amt > 0 ? '+ ' : '− ') + fmt(Math.abs(amt)), c: h ? 'var(--color-neutral-700)' : amt > 0 ? 'var(--color-accent-2-700)' : 'var(--color-text)' }))
+      }
+    };
+  }
+  componentWillUnmount() { clearTimeout(this._t); }
+}
+</script>
+</body>
+</html>

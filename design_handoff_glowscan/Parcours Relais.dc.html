@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caprasimo&family=Figtree:wght@400;600;700&display=swap&subset=latin">
+<script>window.OM_SCENES = '[{"name":"Intro","dur":5,"desc":"Claudine infirmière au Burundi, Jeanne patiente, Dr Aïcha dermatologue au Cameroun"},{"name":"Invitation","dur":6,"desc":"Claudine est invitée par Dr Aïcha, GlowScan vérifie sa carte professionnelle"},{"name":"Cas","dur":7,"desc":"Photo floue refusée, 3 photos, diagnostic du relais, paiement en espèces débité du crédit"},{"name":"Routage","dur":8,"desc":"Aucun dermatologue libre au Burundi, le cas part au Cameroun, Dr Aïcha pose une question dans le chat"},{"name":"Vocal","dur":7,"desc":"Claudine répond par photo et message vocal"},{"name":"Avis","dur":7,"desc":"Dr Aïcha écoute le vocal, corrige, écrit la leçon et envoie"},{"name":"Retour","dur":6,"desc":"Claudine reçoit la correction, sa part en FBu et sa progression"},{"name":"Reseau","dur":7,"desc":"Consultation assistée ou directe, annuaire, routage, paiement local, consentement"},{"name":"Fin","dur":4,"desc":"Logo GlowScan Africa"}]';</script>
+<script>window.OM_PLAYBACK = '{"mode":"loop"}';</script>
+<style>html,body{margin:0;height:100%;background:#2e2b25} a{color:#8c491a} a:hover{color:#b2622d}</style>
+</helmet>
+<div style="width:100vw;height:100vh">
+  <x-import component-from-global-scope="ParcoursRelais" from="./animations-v3.jsx ./parcours-relais-a.jsx ./parcours-relais-b.jsx" hint-size="100%,100%"></x-import>
+</div>
+</x-dc>
+</body>
+</html>

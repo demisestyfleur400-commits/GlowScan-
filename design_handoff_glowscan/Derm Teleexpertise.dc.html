@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/organic-a6b730fa-b5d6-4692-8156-eacdd1b52399/styles.css">
+<script src="_ds/organic-a6b730fa-b5d6-4692-8156-eacdd1b52399/_ds_bundle.js"></script>
+<style>body{margin:0;background:var(--color-bg)} [data-m=mbar]{display:none} @media (max-width:760px){ [data-m=shell]{flex-direction:column} [data-m=aside]{position:sticky!important;top:0;z-index:40;width:100%!important;height:auto!important;padding:10px 16px!important;gap:10px!important;background:var(--color-bg);border-bottom:1px solid var(--color-divider)} [data-m=aside] nav,[data-m=roles]{flex-direction:row!important;overflow-x:auto;gap:4px!important;scrollbar-width:none} [data-m=aside] nav>*,[data-m=roles]>*{flex:none!important;white-space:nowrap} [data-m=roles]>span:first-child{display:none} [data-m=hide-m]{display:none!important} [data-m=portal-aside]{display:none!important} [data-m=main]{padding:16px 16px 40px!important;gap:20px!important} [data-m=main] h1{font-size:30px!important} [data-p]{padding-bottom:110px!important} [data-m=paper]{padding:24px 18px!important} [data-m=mbar]{display:flex} } a{color:var(--color-accent-700)} a:hover{color:var(--color-accent-600)}</style>
+</helmet>
+<div data-m="shell" style="display:flex;min-height:100vh;background:var(--color-bg);color:var(--color-text);font-family:var(--font-body)">
+  <aside data-m="aside" style="flex:none;width:232px;padding:var(--space-6) var(--space-4);display:flex;flex-direction:column;gap:var(--space-6);position:sticky;top:0;height:100vh;box-sizing:border-box">
+    <div style="display:flex;align-items:center;gap:10px">
+      <img src="client/public/glowscan-mark.png" alt="GlowScan" style="width:36px;height:36px;border-radius:999px;object-fit:cover">
+      <div style="display:flex;flex-direction:column">
+        <span style="font-family:var(--font-heading);font-size:18px;line-height:1.1">GlowScan</span>
+        <span style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-accent-2-700);font-weight:700">Derm</span>
+      </div>
+    </div>
+    <nav style="display:flex;flex-direction:column;gap:2px">
+      <a href="Derm Portal.dc.html" style="padding:10px 14px;border-radius:999px;text-decoration:none;font-size:14px;font-weight:600;color:var(--color-text)" style-hover="background:var(--color-neutral-200)">← Portail DERM</a>
+      <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="3">
+        <a href="#" onClick="{{ t.go }}" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:999px;text-decoration:none;font-size:14px;font-weight:600;color:{{ t.fg }};background:{{ t.bg }}" style-hover="background:var(--color-neutral-200)">
+          <span style="flex:1">{{ t.label }}</span>
+          <sc-if value="{{ t.hasBadge }}" hint-placeholder-val="{{ false }}"><span style="min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--color-accent);color:var(--color-bg);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ t.badge }}</span></sc-if>
+        </a>
+      </sc-for>
+      <a href="Derm Reseau.dc.html" style="padding:10px 14px;border-radius:999px;text-decoration:none;font-size:14px;font-weight:600;color:var(--color-text)" style-hover="background:var(--color-neutral-200)">Réseau & formation</a>
+    </nav>
+    <div data-m="hide-m" style="margin-top:auto;display:flex;align-items:center;gap:10px;padding:10px;border-radius:999px;background:var(--color-surface)">
+      <span style="flex:none;width:34px;height:34px;border-radius:999px;background:var(--color-accent-2-500);color:var(--color-bg);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px">AN</span>
+      <div style="display:flex;flex-direction:column;min-width:0"><span style="font-size:13px;font-weight:700">Dr Aïcha Nkemdirim</span><span style="font-size:11px;color:var(--color-neutral-700)">Cabinet Bonapriso · Douala</span></div>
+    </div>
+  </aside>
+
+  <main data-m="main" style="flex:1;min-width:0;padding:var(--space-6) var(--space-8) var(--space-8) var(--space-4);display:flex;flex-direction:column;gap:var(--space-6);max-width:1240px">
+
+    <!-- ═══ PARCOURS CONSULTATION ═══ -->
+    <sc-if value="{{ is.consult }}" hint-placeholder-val="{{ false }}">
+      <header style="display:flex;flex-direction:column;gap:4px">
+        <span style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:var(--color-accent-700)">Patient ↔ dermatologue</span>
+        <h1 style="margin:0;font-size:42px">Parcours d'une consultation en ligne</h1>
+        <p style="margin:0;color:var(--color-neutral-700);max-width:680px">Chaque consultation suit les mêmes 6 étapes. Le patient voit où il en est, le médecin sait toujours quoi faire ensuite.</p>
+      </header>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:var(--space-2)">
+        <sc-for list="{{ cons.stages }}" as="s" hint-placeholder-count="6">
+          <button onClick="{{ s.go }}" style="display:flex;flex-direction:column;align-items:flex-start;gap:6px;text-align:left;border:0;cursor:pointer;padding:var(--space-4);border-radius:var(--radius-lg);font:inherit;background:{{ s.bg }};color:{{ s.fg }}">
+            <span style="width:30px;height:30px;border-radius:999px;background:{{ s.dotBg }};color:{{ s.dotFg }};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px">{{ s.n }}</span>
+            <span style="font-size:14px;font-weight:700">{{ s.label }}</span>
+            <span style="font-size:12px;opacity:.8">{{ s.who }}</span>
+          </button>
+        </sc-for>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:var(--space-4);align-items:start">
+        <div class="card" style="padding:var(--space-6);gap:var(--space-3)">
+          <span class="card-kicker" style="font-weight:700;color:var(--color-accent-700)">Étape {{ cons.cur.n }} · {{ cons.cur.who }}</span>
+          <span class="card-title" style="font-size:24px">{{ cons.cur.label }}</span>
+          <p style="margin:0;font-size:14px;line-height:1.55">{{ cons.cur.what }}</p>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
+            <sc-for list="{{ cons.cur.rules }}" as="r" hint-placeholder-count="3">
+              <div style="display:flex;gap:10px;align-items:flex-start;font-size:13px"><span style="flex:none;margin-top:5px;width:8px;height:8px;border-radius:999px;background:var(--color-accent-2-600)"></span><span>{{ r.t }}</span></div>
+            </sc-for>
+          </div>
+        </div>
+        <div class="card" style="padding:var(--space-6);gap:var(--space-3);background:var(--color-accent-2-100)">
+          <span class="card-kicker" style="font-weight:700;color:var(--color-accent-2-800)">Ce que voit le patient</span>
+          <div style="display:flex;flex-direction:column;gap:10px;padding:var(--space-4);border-radius:var(--radius-lg);background:var(--color-surface)">
+            <span style="font-size:12px;color:var(--color-neutral-700)">GlowScan · WhatsApp</span>
+            <span style="font-size:15px;font-weight:700">{{ cons.cur.patientMsg }}</span>
+            <div style="height:8px;border-radius:999px;background:var(--color-neutral-200);overflow:hidden"><div style="height:100%;width:{{ cons.cur.pct }};border-radius:999px;background:var(--color-accent-2-600)"></div></div>
+          </div>
+          <span style="font-size:12px;color:var(--color-accent-2-900)">Délai de réponse garanti : 24 h. Passé 20 h sans réponse, le dossier est proposé à un confrère disponible.</span>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ═══ AVIS CONFRÈRE ═══ -->
+    <sc-if value="{{ is.avis }}" hint-placeholder-val="{{ true }}">
+      <header style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:var(--space-4)">
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <span style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:var(--color-accent-700)">Téléexpertise</span>
+          <h1 style="margin:0;font-size:42px">Avis entre confrères</h1>
+        </div>
+        <button class="btn btn-primary" onClick="{{ av.openNew }}" style="padding:12px 22px;font-size:15px;white-space:nowrap">+ Demander un avis</button>
+      </header>
+      <div style="display:flex;flex-wrap:wrap;gap:var(--space-4);align-items:stretch">
+        <div style="flex:1 1 260px;max-width:100%;display:flex;flex-direction:column;gap:var(--space-2)">
+          <div style="display:flex;gap:6px;padding:4px;border-radius:999px;background:var(--color-surface);align-self:flex-start">
+            <sc-for list="{{ av.boxes }}" as="b" hint-placeholder-count="2"><button onClick="{{ b.go }}" style="border:0;cursor:pointer;padding:8px 14px;border-radius:999px;font:inherit;font-size:13px;font-weight:700;background:{{ b.bg }};color:{{ b.fg }}">{{ b.label }}</button></sc-for>
+          </div>
+          <sc-for list="{{ av.list }}" as="c" hint-placeholder-count="3">
+            <button onClick="{{ c.go }}" style="display:flex;flex-direction:column;gap:6px;text-align:left;border:0;cursor:pointer;padding:14px 18px;border-radius:var(--radius-lg);font:inherit;color:var(--color-text);background:{{ c.bg }}">
+              <span style="display:flex;justify-content:space-between;gap:8px;align-items:center"><span style="font-size:14px;font-weight:700">{{ c.title }}</span><span class="tag {{ c.tag }}">{{ c.status }}</span></span>
+              <span style="font-size:12px;color:var(--color-neutral-700)">{{ c.peer }} · {{ c.when }}</span>
+            </button>
+          </sc-for>
+        </div>
+        <div class="card" style="flex:999 1 420px;min-width:0;padding:var(--space-4);gap:var(--space-3);min-height:560px">
+          <div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:4px 6px 12px;border-bottom:1px solid var(--color-divider)">
+            <span style="flex:1;min-width:200px;display:flex;flex-direction:column"><span class="card-title" style="font-size:20px">{{ av.cur.title }}</span><span style="font-size:12px;color:var(--color-neutral-700)">{{ av.cur.peer }} · {{ av.cur.ref }} · données anonymisées</span></span>
+            <span class="tag {{ av.cur.tag }}">{{ av.cur.status }}</span>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:var(--space-3);padding:var(--space-3);border-radius:var(--radius-lg);background:var(--color-bg)">
+            <sc-for list="{{ av.cur.photos }}" as="p" hint-placeholder-count="3">
+              <div style="position:relative;width:96px;height:96px;border-radius:20px;background:{{ p.bg }};display:flex;align-items:flex-end;padding:6px;box-sizing:border-box">
+                <span style="font-size:10px;font-weight:700;color:var(--color-neutral-100)">{{ p.label }}</span>
+                <sc-if value="{{ p.hasPin }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:{{ p.y }};left:{{ p.x }};width:22px;height:22px;border-radius:999px;border:2px solid var(--color-neutral-100);background:var(--color-accent);color:var(--color-bg);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center">1</span></sc-if>
+              </div>
+            </sc-for>
+            <div style="flex:1;min-width:180px;display:flex;flex-direction:column;gap:4px;font-size:12px">
+              <span><b>Femme, 29 ans</b> · phototype V</span>
+              <span>IA : HPI 87 % · mélasma 9 %</span>
+              <span>Échec hydroquinone 4 % (8 sem.)</span>
+              <span style="color:var(--color-accent-700);font-weight:700">Question : {{ av.cur.question }}</span>
+            </div>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;gap:10px;overflow:auto;padding:4px">
+            <sc-for list="{{ av.msgs }}" as="m" hint-placeholder-count="3">
+              <div style="display:flex;justify-content:{{ m.justify }}">
+                <sc-if value="{{ m.isText }}" hint-placeholder-val="{{ true }}">
+                  <div style="max-width:78%;padding:10px 16px;border-radius:22px;background:{{ m.bg }};color:{{ m.fg }};font-size:14px;line-height:1.45">{{ m.t }}<div style="font-size:10px;opacity:.7;margin-top:4px">{{ m.who }} · {{ m.at }}</div></div>
+                </sc-if>
+                <sc-if value="{{ m.isAnswer }}" hint-placeholder-val="{{ false }}">
+                  <div style="max-width:88%;display:flex;flex-direction:column;gap:8px;padding:var(--space-4);border-radius:var(--radius-lg);background:var(--color-accent-2-100);border:2px solid var(--color-accent-2-300)">
+                    <span style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--color-accent-2-800)">Avis structuré · {{ m.who }}</span>
+                    <span style="font-size:13px"><b>Diagnostic retenu :</b> {{ m.dx }}</span>
+                    <span style="font-size:13px"><b>Conduite à tenir :</b> {{ m.plan }}</span>
+                    <span style="font-size:13px"><b>Revoir :</b> {{ m.follow }}</span>
+                    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px">
+                      <button class="btn" onClick="{{ av.accept }}" style="background:var(--color-accent-2-600);color:var(--color-bg)">{{ av.acceptLabel }}</button>
+                      <button class="btn btn-ghost" onClick="{{ av.toReport }}">Voir dans le rapport →</button>
+                    </div>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-for>
+          </div>
+          <div style="display:flex;gap:var(--space-2)">
+            <input class="input" value="{{ av.draft }}" onChange="{{ av.onDraft }}" onKeyDown="{{ av.onKey }}" placeholder="Répondre au confrère…" style="flex:1;min-height:44px;background:var(--color-bg)">
+            <button class="btn btn-primary" onClick="{{ av.send }}" style="height:44px">Envoyer</button>
+          </div>
+        </div>
+      </div>
+
+      <sc-if value="{{ av.dlg }}" hint-placeholder-val="{{ false }}">
+        <div class="dialog-backdrop" onClick="{{ av.close }}" style="z-index:50">
+          <div class="dialog" onClick="{{ stop }}" style="max-width:560px;width:100%">
+            <span class="dialog-title">Demander un avis</span>
+            <div class="field"><label>Dossier</label><input class="input" defaultValue="Hervé Kamga — pseudofolliculite de la barbe"></div>
+            <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:999px;background:var(--color-accent-2-100)">
+              <span style="flex:1;display:flex;flex-direction:column"><span style="font-size:14px;font-weight:700;color:var(--color-accent-2-900)">Anonymiser le patient</span><span style="font-size:12px;color:var(--color-accent-2-800)">Nom, téléphone et visage flouté retirés</span></span>
+              <button onClick="{{ av.toggleAnon }}" style="flex:none;width:52px;height:30px;border:0;border-radius:999px;cursor:pointer;padding:3px;display:flex;justify-content:{{ av.anonJ }};background:{{ av.anonBg }}"><span style="width:24px;height:24px;border-radius:999px;background:var(--color-neutral-100)"></span></button>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:var(--color-neutral-700)">Joindre</span>
+              <div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ av.attach }}" as="c" hint-placeholder-count="4"><button onClick="{{ c.go }}" style="border:1px solid {{ c.border }};cursor:pointer;padding:7px 14px;border-radius:999px;font:inherit;font-size:13px;font-weight:600;background:{{ c.bg }};color:{{ c.fg }}">{{ c.label }}</button></sc-for></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:var(--color-neutral-700)">À qui ?</span>
+              <sc-for list="{{ av.peers }}" as="p" hint-placeholder-count="3">
+                <button onClick="{{ p.go }}" style="display:flex;align-items:center;gap:12px;text-align:left;border:2px solid {{ p.border }};cursor:pointer;padding:8px 14px 8px 8px;border-radius:999px;font:inherit;background:var(--color-surface);color:var(--color-text)">
+                  <span style="flex:none;width:36px;height:36px;border-radius:999px;background:var(--color-accent-200);color:var(--color-accent-800);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">{{ p.ini }}</span>
+                  <span style="flex:1;display:flex;flex-direction:column"><span style="font-size:14px;font-weight:700">{{ p.name }}</span><span style="font-size:12px;color:var(--color-neutral-700)">{{ p.spec }}</span></span>
+                  <span style="font-size:12px;font-weight:700;color:{{ p.dotC }}">● {{ p.avail }}</span>
+                </button>
+              </sc-for>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:var(--color-neutral-700)">Urgence</span>
+              <div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ av.urg }}" as="c" hint-placeholder-count="3"><button onClick="{{ c.go }}" style="border:1px solid {{ c.border }};cursor:pointer;padding:7px 14px;border-radius:999px;font:inherit;font-size:13px;font-weight:600;background:{{ c.bg }};color:{{ c.fg }}">{{ c.label }}</button></sc-for></div>
+            </div>
+            <div class="field"><label>Votre question (une seule, précise)</label><textarea class="input" style="border-radius:var(--radius-md)" placeholder="Ex. Laser Nd:YAG envisageable sur phototype VI ?"></textarea></div>
+            <div class="dialog-actions"><button class="btn btn-ghost" onClick="{{ av.close }}">Annuler</button><button class="btn btn-primary" onClick="{{ av.create }}">Envoyer la demande</button></div>
+          </div>
+        </div>
+      </sc-if>
+    </sc-if>
+
+    <!-- ═══ RAPPORT ═══ -->
+    <sc-if value="{{ is.rapport }}" hint-placeholder-val="{{ false }}">
+      <header style="display:flex;flex-direction:column;gap:var(--space-3)">
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <span style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:var(--color-accent-700)">Grâce Mbarga · consultation GS-C-1182</span>
+          <h1 style="margin:0;font-size:42px">Compte rendu</h1>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:var(--space-2)">
+          <sc-for list="{{ rp.steps }}" as="s" hint-placeholder-count="4">
+            <span style="display:flex;align-items:center;gap:10px;padding:6px 16px 6px 6px;border-radius:999px;font-size:13px;font-weight:700;background:{{ s.bg }};color:{{ s.fg }}"><span style="width:28px;height:28px;border-radius:999px;background:{{ s.dotBg }};color:{{ s.dotFg }};display:flex;align-items:center;justify-content:center;font-size:12px">{{ s.mark }}</span>{{ s.label }}</span>
+          </sc-for>
+        </div>
+      </header>
+      <div style="display:flex;flex-wrap:wrap;gap:var(--space-6);align-items:flex-start">
+        <div data-m="paper" style="flex:1 1 520px;min-width:0;max-width:720px;background:var(--color-neutral-100);border-radius:6px;box-shadow:var(--shadow-lg);padding:48px 52px;box-sizing:border-box;display:flex;flex-direction:column;gap:18px;color:var(--color-neutral-900);font-size:13px;line-height:1.55">
+          <div style="display:flex;justify-content:space-between;gap:16px;padding-bottom:14px;border-bottom:2px solid var(--color-accent)">
+            <div style="display:flex;flex-direction:column"><span style="font-family:var(--font-heading);font-size:20px">Dr Aïcha Nkemdirim</span><span>Dermatologue · ONMC-DLA-2187</span><span>Cabinet Bonapriso, Douala · +237 6 99 41 20 18</span></div>
+            <div style="display:flex;flex-direction:column;align-items:flex-end;text-align:right"><span style="font-weight:700">Compte rendu de consultation</span><span>Réf. GS-C-1182</span><span>24 septembre 2026</span></div>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px 28px"><span><b>Patiente :</b> Grâce Mbarga</span><span><b>Âge :</b> 29 ans</span><span><b>Phototype :</b> V</span><span><b>Glow Score :</b> 48/100</span></div>
+          <sc-for list="{{ rp.sections }}" as="x" hint-placeholder-count="4">
+            <div style="display:flex;flex-direction:column;gap:4px;padding:10px 12px;margin:0 -12px;border-radius:12px;background:{{ x.hl }}">
+              <span style="display:flex;justify-content:space-between;gap:8px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--color-accent-700)"><span>{{ x.title }}</span><sc-if value="{{ x.editable }}" hint-placeholder-val="{{ false }}"><button onClick="{{ x.edit }}" style="border:0;background:transparent;font:inherit;font-size:11px;font-weight:700;color:var(--color-accent-700);cursor:pointer;text-transform:none;letter-spacing:0">{{ x.editLabel }}</button></sc-if></span>
+              <sc-if value="{{ x.editing }}" hint-placeholder-val="{{ false }}"><textarea class="input" value="{{ x.body }}" onChange="{{ x.onChange }}" style="border-radius:10px;min-height:80px;font-size:13px"></textarea></sc-if>
+              <sc-if value="{{ x.reading }}" hint-placeholder-val="{{ true }}"><span style="white-space:pre-line">{{ x.body }}</span></sc-if>
+            </div>
+          </sc-for>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <div style="width:90px;height:90px;border-radius:12px;background:#8b5e3c"></div><div style="width:90px;height:90px;border-radius:12px;background:#7a5234"></div><div style="width:90px;height:90px;border-radius:12px;background:#946642"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin-top:10px;padding-top:14px;border-top:1px solid var(--color-neutral-300)">
+            <div style="display:flex;flex-direction:column;gap:2px;font-size:11px;color:var(--color-neutral-700);max-width:300px"><span>Aide au diagnostic par IA GlowScan — diagnostic final établi par le médecin signataire.</span><sc-if value="{{ rp.signed }}" hint-placeholder-val="{{ false }}"><span style="font-family:monospace;color:var(--color-neutral-800)">Empreinte : {{ rp.hash }}</span></sc-if></div>
+            <div style="display:flex;align-items:flex-end;gap:12px">
+              <sc-if value="{{ rp.signed }}" hint-placeholder-val="{{ false }}">
+                <div style="width:62px;height:62px;border-radius:8px;background:repeating-conic-gradient(var(--color-neutral-900) 0 25%, var(--color-neutral-100) 0 50%) 0 0/12px 12px;border:4px solid var(--color-neutral-100);outline:1px solid var(--color-neutral-300)" title="QR de vérification"></div>
+              </sc-if>
+              <div style="display:flex;flex-direction:column;align-items:center;min-width:170px">
+                <sc-if value="{{ rp.signed }}" hint-placeholder-val="{{ false }}"><img src="{{ rp.sigImg }}" alt="Signature" style="height:56px;max-width:190px;object-fit:contain"></sc-if>
+                <sc-if value="{{ rp.unsigned }}" hint-placeholder-val="{{ true }}"><span style="height:56px;display:flex;align-items:center;color:var(--color-neutral-500);font-style:italic">En attente de signature</span></sc-if>
+                <span style="border-top:1px solid var(--color-neutral-600);width:100%;text-align:center;padding-top:4px;font-size:11px">{{ rp.signLine }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="flex:1 1 300px;min-width:0;display:flex;flex-direction:column;gap:var(--space-4);position:sticky;top:24px">
+          <sc-if value="{{ rp.inReview }}" hint-placeholder-val="{{ true }}">
+            <div class="card" style="padding:var(--space-6);gap:var(--space-3)">
+              <span class="card-title" style="font-size:20px">Relire avant de signer</span>
+              <span style="font-size:13px;color:var(--color-neutral-700)">Cochez chaque point. Cliquez sur une section du document pour la modifier.</span>
+              <sc-for list="{{ rp.checks }}" as="c" hint-placeholder-count="4">
+                <button onClick="{{ c.go }}" style="display:flex;align-items:center;gap:12px;text-align:left;border:0;cursor:pointer;padding:10px 14px 10px 10px;border-radius:999px;font:inherit;font-size:13px;font-weight:600;background:{{ c.bg }};color:var(--color-text)">
+                  <span style="flex:none;width:24px;height:24px;border-radius:999px;border:2px solid {{ c.ring }};background:{{ c.fill }};color:var(--color-bg);display:flex;align-items:center;justify-content:center;font-size:13px">{{ c.mark }}</span>{{ c.label }}
+                </button>
+              </sc-for>
+              <span style="font-size:12px;font-weight:700;color:var(--color-accent-700)">{{ rp.checkCount }}</span>
+            </div>
+          </sc-if>
+          <sc-if value="{{ rp.canSign }}" hint-placeholder-val="{{ false }}">
+            <div class="card" style="padding:var(--space-6);gap:var(--space-3)">
+              <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="card-title" style="font-size:20px">Signer</span><button class="btn btn-ghost" onClick="{{ rp.clear }}" style="padding-inline:10px">Effacer</button></div>
+              <canvas ref="{{ sigRef }}" width="560" height="200" style="width:100%;height:150px;border-radius:var(--radius-lg);background:var(--color-bg);border:2px dashed var(--color-neutral-400);touch-action:none;cursor:crosshair"></canvas>
+              <span style="font-size:12px;color:var(--color-neutral-700)">Signez au doigt ou à la souris. Puis confirmez avec votre code à 4 chiffres.</span>
+              <div style="display:flex;gap:var(--space-2)">
+                <input class="input" type="password" inputmode="numeric" maxlength="4" value="{{ rp.pin }}" onChange="{{ rp.onPin }}" placeholder="Code" style="width:110px;letter-spacing:.3em;text-align:center">
+                <button class="btn btn-primary" onClick="{{ rp.sign }}" disabled="{{ rp.signDisabled }}" style="flex:1">Signer le compte rendu</button>
+              </div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ rp.canSend }}" hint-placeholder-val="{{ false }}">
+            <div class="card" style="padding:var(--space-6);gap:var(--space-3);background:var(--color-accent-2-100)">
+              <span class="card-kicker" style="font-weight:700;color:var(--color-accent-2-800)">Signé · verrouillé</span>
+              <span class="card-title" style="font-size:20px;color:var(--color-accent-2-900)">Envoyer à la patiente</span>
+              <div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ rp.channels }}" as="c" hint-placeholder-count="3"><button onClick="{{ c.go }}" style="border:1px solid {{ c.border }};cursor:pointer;padding:7px 14px;border-radius:999px;font:inherit;font-size:13px;font-weight:600;background:{{ c.bg }};color:{{ c.fg }}">{{ c.label }}</button></sc-for></div>
+              <button class="btn" onClick="{{ rp.send }}" style="background:var(--color-accent-2-600);color:var(--color-bg);padding:12px 20px">Envoyer le PDF signé</button>
+              <span style="font-size:12px;color:var(--color-accent-2-900)">Toute modification crée une nouvelle version à signer. La version signée reste archivée 20 ans.</span>
+            </div>
+          </sc-if>
+          <sc-if value="{{ rp.sent }}" hint-placeholder-val="{{ false }}">
+            <div class="card" style="padding:var(--space-6);gap:var(--space-3)">
+              <span class="card-title" style="font-size:20px">Suivi de l'envoi</span>
+              <sc-for list="{{ rp.track }}" as="t" hint-placeholder-count="3">
+                <div style="display:flex;align-items:center;gap:12px;font-size:13px"><span style="flex:none;width:12px;height:12px;border-radius:999px;background:{{ t.c }}"></span><span style="flex:1;font-weight:600">{{ t.label }}</span><span style="color:var(--color-neutral-700)">{{ t.at }}</span></div>
+              </sc-for>
+              <div style="display:flex;flex-wrap:wrap;gap:var(--space-2)"><button class="btn btn-secondary">Télécharger le PDF</button><button class="btn btn-ghost" onClick="{{ rp.reset }}">Recommencer la démo</button></div>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </sc-if>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const chip = (on, go, label) => ({ label, go, bg: on ? 'var(--color-accent)' : 'transparent', fg: on ? 'var(--color-bg)' : 'var(--color-text)', border: on ? 'var(--color-accent)' : 'var(--color-divider)' });
+const STAGES = [
+  { label: 'Demande', who: 'Patient', what: 'Le patient choisit un dermatologue (ou « le premier disponible »), décrit son problème en 3 questions guidées et prend 3 photos avec le cadrage GlowScan.', rules: ['Photos refusées automatiquement si floues ou trop sombres', 'Analyse IA lancée en arrière-plan, visible uniquement par le médecin'], patientMsg: 'Votre demande est prête. Il reste le paiement.', pct: '16%' },
+  { label: 'Paiement', who: 'Patient', what: 'Paiement Mobile Money (MTN / Orange) de 12 000 FCFA. L\'argent est bloqué par GlowScan tant que le médecin n\'a pas répondu.', rules: ['Remboursement automatique si pas de réponse sous 24 h', 'Le médecin ne voit le dossier qu\'après paiement confirmé'], patientMsg: 'Paiement reçu. Dr Aïcha a été prévenue.', pct: '33%' },
+  { label: 'Examen', who: 'Dermatologue', what: 'Le médecin ouvre le dossier : photos, réponses, pré-analyse IA. Il peut demander une photo en plus ou un avis confrère sans sortir du dossier.', rules: ['Bouton « Demander un avis » envoie le cas anonymisé', 'Chronomètre SLA visible en haut du dossier'], patientMsg: 'Dr Aïcha examine vos photos.', pct: '50%' },
+  { label: 'Échange', who: 'Les deux', what: 'Chat avec réponses rapides. Le médecin peut proposer un rendez-vous au cabinet si l\'examen à distance ne suffit pas.', rules: ['Messages vocaux WhatsApp transcrits', 'Aucun numéro personnel échangé'], patientMsg: 'Dr Aïcha vous a posé une question.', pct: '66%' },
+  { label: 'Compte rendu', who: 'Dermatologue', what: 'Le rapport est pré-rempli à partir de l\'examen et de l\'avis confrère. Le médecin relit, corrige, signe avec son code.', rules: ['Impossible d\'envoyer sans signature', 'Le PDF signé est horodaté et vérifiable par QR'], patientMsg: 'Votre compte rendu est en préparation.', pct: '83%' },
+  { label: 'Clôture & suivi', who: 'Automatique', what: 'Le PDF part sur WhatsApp. La consultation est clôturée, le versement au médecin est programmé, un rappel photo est planifié.', rules: ['Rappel WhatsApp à 4 semaines pour une photo de contrôle', 'Le patient note la consultation'], patientMsg: 'Votre compte rendu est arrivé. Rappel photo le 22 octobre.', pct: '100%' }
+];
+const CASES = [
+  { id: 1, box: 'sent', title: 'HPI résistante — joues', peer: 'Pr Mathieu Essomba', ref: 'AV-0412', when: 'il y a 2 h', status: 'Répondu', tag: 'tag-accent-2', question: 'Peeling ou laser sur phototype V ?', pin: true,
+    msgs: [['me', 'Bonjour Mathieu, pas d\'amélioration après 8 semaines d\'hydroquinone. Je n\'ose pas le laser sur phototype V. Ton avis ?', '09:12'], ['peer', 'Bonjour Aïcha. Bien vu d\'éviter le laser. Tu as regardé le point 1 ? Ça ressemble à une ochronose débutante.', '10:40'], ['answer']] },
+  { id: 2, box: 'sent', title: 'Alopécie — tempes', peer: 'Dr Sandrine Owona', ref: 'AV-0409', when: 'hier', status: 'En attente', tag: 'tag-accent', question: 'Biopsie nécessaire ?', pin: false, msgs: [['me', 'Traction ou lichen plan pilaire ? Les photos sont jointes.', 'hier 16:02']] },
+  { id: 3, box: 'recv', title: 'Chéloïde post-opératoire', peer: 'Dr Eric Tchatchoua', ref: 'AV-0415', when: 'il y a 20 min', status: 'À répondre', tag: 'tag-accent', question: 'Infiltration ou cryothérapie ?', pin: true, msgs: [['peer', 'Aïcha, chéloïde de 3 cm au lobe, récidive après exérèse. Tu ferais quoi ?', '15:02']] }
+];
+const PEERS = [['ME', 'Pr Mathieu Essomba', 'Dermatologie esthétique · CHU Yaoundé', 'Dispo', 'var(--color-accent-2-600)'], ['SO', 'Dr Sandrine Owona', 'Trichologie · Douala', 'Répond en ~3 h', 'var(--color-accent-400)'], ['ET', 'Dr Eric Tchatchoua', 'Dermato-chirurgie · Bafoussam', 'Absent', 'var(--color-neutral-500)']];
+const SECTIONS = [
+  ['motif', 'Motif', 'Taches brunes des joues apparues après des poussées d\'acné, aggravées par le soleil.'],
+  ['exam', 'Examen', 'Macules hyperpigmentées bilatérales des joues, sans inflammation active. Phototype V.'],
+  ['dx', 'Diagnostic', 'Hyperpigmentation post-inflammatoire, avec suspicion d\'ochronose exogène débutante (avis du Pr Essomba, 24/09).'],
+  ['tt', 'Traitement', '1. Arrêt de tout produit éclaircissant\n2. Écran solaire teinté SPF 50 chaque matin\n3. Acide azélaïque 15 % le soir, 8 semaines'],
+  ['fu', 'Suivi', 'Photo de contrôle dans 4 semaines via GlowScan. Consulter plus tôt si irritation.']
+];
+const CHECKS = ['Identité et âge corrects', 'Diagnostic relu', 'Posologies vérifiées', 'Avis confrère cité'];
+const PAD = n => String(n).padStart(2, '0');
+
+class Component extends DCLogic {
+  state = { tab: 'avis', stage: 2, box: 'sent', sel: 1, extra: {}, draft: '', accepted: false, dlg: false, anon: true, attach: ['Photos', 'Analyse IA', 'Antécédents'], peer: 0, urg: 'Sous 24 h',
+    body: Object.fromEntries(SECTIONS.map(s => [s[0], s[2]])), editing: null, checks: [], hasInk: false, pin: '', sigImg: null, signedAt: null, channel: 'WhatsApp', sent: false };
+  sigRef = (el) => {
+    if (!el || el === this._cv) return; this._cv = el; const ctx = el.getContext('2d');
+    ctx.lineWidth = 3.2; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#2a1a10';
+    let down = false; const pos = e => { const r = el.getBoundingClientRect(); return [(e.clientX - r.left) * el.width / r.width, (e.clientY - r.top) * el.height / r.height]; };
+    el.addEventListener('pointerdown', e => { down = true; el.setPointerCapture(e.pointerId); const [x, y] = pos(e); ctx.beginPath(); ctx.moveTo(x, y); });
+    el.addEventListener('pointermove', e => { if (!down) return; const [x, y] = pos(e); ctx.lineTo(x, y); ctx.stroke(); if (!this.state.hasInk) this.setState({ hasInk: true }); });
+    el.addEventListener('pointerup', () => { down = false; });
+  };
+  renderVals() {
+    const s = this.state;
+    const cur = CASES.find(c => c.id === s.sel);
+    const toReport = () => this.setState({ tab: 'rapport' });
+    const msgs = [...cur.msgs, ...(s.extra[cur.id] || [])];
+    const sendMsg = () => { const t = s.draft.trim(); if (!t) return; this.setState(st => ({ draft: '', extra: { ...st.extra, [cur.id]: [...(st.extra[cur.id] || []), ['me', t, 'maintenant']] } })); };
+    const allChecked = s.checks.length === CHECKS.length;
+    const signed = !!s.sigImg;
+    const phase = s.sent ? 4 : signed ? 3 : allChecked ? 2 : 1;
+    const sign = () => {
+      if (!this._cv || !s.hasInk || s.pin.length !== 4) return;
+      const d = new Date(); this.setState({ sigImg: this._cv.toDataURL('image/png'), signedAt: `${PAD(d.getDate())}/${PAD(d.getMonth() + 1)}/${d.getFullYear()} à ${PAD(d.getHours())}:${PAD(d.getMinutes())}`, editing: null });
+    };
+    return {
+      stop: e => e.stopPropagation(), sigRef: this.sigRef,
+      is: { consult: s.tab === 'consult', avis: s.tab === 'avis', rapport: s.tab === 'rapport' },
+      tabs: [['consult', 'Parcours consultation', 0], ['avis', 'Avis confrères', 1], ['rapport', 'Compte rendu PDF', signed ? 0 : 1]].map(([k, l, b]) => ({ label: l, badge: b, hasBadge: b > 0, go: e => { e.preventDefault(); this.setState({ tab: k }); }, bg: s.tab === k ? 'var(--color-surface)' : 'transparent', fg: s.tab === k ? 'var(--color-accent-700)' : 'var(--color-text)' })),
+      cons: {
+        stages: STAGES.map((st, i) => { const on = i === s.stage, dn = i < s.stage; return { n: i + 1, label: st.label, who: st.who, go: () => this.setState({ stage: i }), bg: on ? 'var(--color-accent)' : 'var(--color-surface)', fg: on ? 'var(--color-bg)' : 'var(--color-text)', dotBg: on ? 'var(--color-bg)' : dn ? 'var(--color-accent-2-600)' : 'var(--color-neutral-200)', dotFg: on ? 'var(--color-accent-700)' : dn ? 'var(--color-bg)' : 'var(--color-text)' }; }),
+        cur: { ...STAGES[s.stage], n: s.stage + 1, rules: STAGES[s.stage].rules.map(t => ({ t })) }
+      },
+      av: {
+        boxes: [['sent', 'Envoyés'], ['recv', 'Reçus']].map(([k, l]) => ({ label: l, go: () => this.setState({ box: k, sel: CASES.find(c => c.box === k).id }), bg: s.box === k ? 'var(--color-bg)' : 'transparent', fg: s.box === k ? 'var(--color-accent-700)' : 'var(--color-text)' })),
+        list: CASES.filter(c => c.box === s.box).map(c => ({ ...c, go: () => this.setState({ sel: c.id }), bg: c.id === s.sel ? 'var(--color-surface)' : 'transparent' })),
+        cur: { ...cur, photos: [['Joue D', '#8b5e3c', true], ['Joue G', '#7a5234', false], ['Face', '#946642', false]].map(([label, bg, pin]) => ({ label, bg, hasPin: pin && cur.pin, x: '52px', y: '24px' })) },
+        msgs: msgs.map(m => m[0] === 'answer'
+          ? { isAnswer: true, isText: false, justify: 'flex-start', who: 'Pr Essomba', dx: 'HPI + ochronose exogène débutante', plan: 'Stop hydroquinone. Azélaïque 15 %, photoprotection teintée. Pas de laser ni peeling profond.', follow: 'Photo à 4 semaines, dermoscopie si extension' }
+          : { isText: true, isAnswer: false, t: m[1], at: m[2], who: m[0] === 'me' ? 'Vous' : cur.peer, justify: m[0] === 'me' ? 'flex-end' : 'flex-start', bg: m[0] === 'me' ? 'var(--color-accent)' : 'var(--color-bg)', fg: m[0] === 'me' ? 'var(--color-bg)' : 'var(--color-text)' }),
+        accept: () => this.setState({ accepted: true }), acceptLabel: s.accepted ? 'Intégré au dossier ✓' : 'Intégrer au dossier', toReport,
+        draft: s.draft, onDraft: e => this.setState({ draft: e.target.value }), onKey: e => { if (e.key === 'Enter') sendMsg(); }, send: sendMsg,
+        dlg: s.dlg, openNew: () => this.setState({ dlg: true }), close: () => this.setState({ dlg: false }), create: () => this.setState({ dlg: false, box: 'sent', sel: 2 }),
+        toggleAnon: () => this.setState({ anon: !s.anon }), anonJ: s.anon ? 'flex-end' : 'flex-start', anonBg: s.anon ? 'var(--color-accent-2-600)' : 'var(--color-neutral-400)',
+        attach: ['Photos', 'Analyse IA', 'Antécédents', 'Traitements essayés'].map(a => chip(s.attach.includes(a), () => this.setState({ attach: s.attach.includes(a) ? s.attach.filter(x => x !== a) : [...s.attach, a] }), a)),
+        peers: PEERS.map(([ini, name, spec, avail, dotC], i) => ({ ini, name, spec, avail, dotC, go: () => this.setState({ peer: i }), border: s.peer === i ? 'var(--color-accent)' : 'transparent' })),
+        urg: ['Sous 2 h', 'Sous 24 h', 'Cette semaine'].map(u => chip(s.urg === u, () => this.setState({ urg: u }), u))
+      },
+      rp: {
+        steps: ['Généré', 'Relu', 'Signé', 'Envoyé'].map((l, i) => { const dn = i < phase, on = i === phase; return { label: l, mark: dn ? '✓' : i + 1, bg: on ? 'var(--color-surface)' : 'transparent', fg: dn || on ? 'var(--color-text)' : 'var(--color-neutral-700)', dotBg: on ? 'var(--color-accent)' : dn ? 'var(--color-accent-2-600)' : 'var(--color-neutral-200)', dotFg: dn || on ? 'var(--color-bg)' : 'var(--color-neutral-800)' }; }),
+        sections: SECTIONS.map(([k, title]) => { const ed = s.editing === k; return { title, body: s.body[k], editable: !signed, editing: ed, reading: !ed, editLabel: ed ? 'Terminer' : 'Modifier', edit: () => this.setState({ editing: ed ? null : k }), onChange: e => { const v = e.target.value; this.setState(st => ({ body: { ...st.body, [k]: v } })); }, hl: ed ? 'var(--color-accent-100)' : (k === 'dx' && s.accepted && !signed ? 'var(--color-accent-2-100)' : 'transparent') }; }),
+        checks: CHECKS.map((l, i) => { const on = s.checks.includes(i); return { label: l, mark: on ? '✓' : '', go: () => this.setState({ checks: on ? s.checks.filter(x => x !== i) : [...s.checks, i] }), bg: on ? 'var(--color-accent-2-100)' : 'var(--color-bg)', ring: on ? 'var(--color-accent-2-600)' : 'var(--color-neutral-400)', fill: on ? 'var(--color-accent-2-600)' : 'transparent' }; }),
+        checkCount: allChecked ? 'Relecture terminée — vous pouvez signer.' : `${s.checks.length} / ${CHECKS.length} vérifiés`,
+        inReview: !signed, canSign: allChecked && !signed, canSend: signed && !s.sent, sent: s.sent, signed, unsigned: !signed, sigImg: s.sigImg || '',
+        signLine: signed ? `Signé électroniquement le ${s.signedAt}` : 'Dr Aïcha Nkemdirim', hash: 'SHA-256 3f9a·c21e·77b0·d4e8',
+        pin: s.pin, onPin: e => this.setState({ pin: e.target.value.replace(/\D/g, '').slice(0, 4) }), signDisabled: !(s.hasInk && s.pin.length === 4), sign,
+        clear: () => { if (this._cv) this._cv.getContext('2d').clearRect(0, 0, this._cv.width, this._cv.height); this.setState({ hasInk: false }); },
+        channels: ['WhatsApp', 'Email', 'App GlowScan'].map(c => chip(s.channel === c, () => this.setState({ channel: c }), c)),
+        send: () => this.setState({ sent: true }),
+        track: [['Envoyé par ' + s.channel, 'maintenant', 'var(--color-accent-2-600)'], ['Remis', 'maintenant', 'var(--color-accent-2-600)'], ['Ouvert par la patiente', 'en attente', 'var(--color-neutral-400)'], ['Consultation clôturée · versement programmé', 'automatique', 'var(--color-neutral-400)']].map(([label, at, c]) => ({ label, at, c })),
+        reset: () => { this._cv = null; this.setState({ checks: [], hasInk: false, pin: '', sigImg: null, sent: false }); }
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>

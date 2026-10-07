@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/organic-a6b730fa-b5d6-4692-8156-eacdd1b52399/styles.css">
+<script src="_ds/organic-a6b730fa-b5d6-4692-8156-eacdd1b52399/_ds_bundle.js"></script>
+<style>body{margin:0;background:var(--color-neutral-200)} a{color:var(--color-accent-700)} a:hover{color:var(--color-accent-600)} [data-scroller] > *{flex-shrink:0} @keyframes gsPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(.9);opacity:.55}}</style>
+</helmet>
+<div style="min-height:100vh;display:flex;flex-wrap:wrap;justify-content:center;align-items:flex-start;gap:40px;padding:40px 24px;box-sizing:border-box;font-family:var(--font-body);color:var(--color-text)">
+
+  <aside style="flex:0 1 340px;min-width:0;display:flex;flex-direction:column;gap:16px;position:sticky;top:40px">
+    <div style="display:flex;align-items:center;gap:10px"><img src="client/public/glowscan-mark.png" alt="" style="width:34px;height:34px;border-radius:999px"><span style="font-family:var(--font-heading);font-size:22px">GlowScan · appli patient</span></div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px">
+      <sc-for list="{{ jump }}" as="j" hint-placeholder-count="8"><button onClick="{{ j.go }}" style="border:0;cursor:pointer;padding:7px 12px;border-radius:999px;font:inherit;font-size:12px;font-weight:700;background:{{ j.bg }};color:{{ j.fg }}">{{ j.label }}</button></sc-for>
+    </div>
+    <sc-if value="{{ s.result }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;flex-direction:column;gap:8px;padding:16px 20px;border-radius:var(--radius-lg);background:var(--color-surface)">
+        <span style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:var(--color-accent-700)">Les 5 états du résultat</span>
+        <div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ rsStates }}" as="r" hint-placeholder-count="5"><button onClick="{{ r.go }}" style="border:1px solid {{ r.border }};cursor:pointer;padding:7px 12px;border-radius:999px;font:inherit;font-size:12px;font-weight:700;white-space:nowrap;background:{{ r.bg }};color:{{ r.fg }}">{{ r.label }}</button></sc-for></div>
+      </div>
+    </sc-if>
+    <div style="display:flex;flex-direction:column;gap:12px;padding:20px;border-radius:var(--radius-lg);background:var(--color-surface)">
+      <span style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:var(--color-accent-700)">Écran · {{ note.title }}</span>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <span style="font-size:12px;font-weight:700;color:var(--color-accent-2-800)">Ajouté</span>
+        <sc-for list="{{ note.add }}" as="n" hint-placeholder-count="3"><span style="display:flex;gap:8px;font-size:13px;line-height:1.45"><span style="color:var(--color-accent-2-700);font-weight:700">+</span>{{ n.t }}</span></sc-for>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <span style="font-size:12px;font-weight:700;color:var(--color-accent-800)">Retiré</span>
+        <sc-for list="{{ note.rm }}" as="n" hint-placeholder-count="2"><span style="display:flex;gap:8px;font-size:13px;line-height:1.45;color:var(--color-neutral-800)"><span style="color:var(--color-accent-700);font-weight:700">−</span>{{ n.t }}</span></sc-for>
+      </div>
+    </div>
+  </aside>
+
+  <div style="flex:none;width:390px;height:820px;border-radius:48px;background:var(--color-neutral-900);padding:10px;box-sizing:border-box;box-shadow:var(--shadow-lg)">
+    <div style="position:relative;width:100%;height:100%;border-radius:38px;overflow:hidden;background:var(--color-bg);display:flex;flex-direction:column">
+      <div style="flex:none;height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 26px;font-size:13px;font-weight:700"><span>9:41</span><span style="width:90px;height:24px;border-radius:999px;background:var(--color-neutral-900)"></span><span style="white-space:nowrap">4G · 82 %</span></div>
+
+      <div style="flex:1;min-height:0;overflow:auto;padding:4px 20px 24px;display:flex;flex-direction:column;gap:16px" data-scroller="1">
+
+        <!-- ACCUEIL -->
+        <sc-if value="{{ s.home }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <img src="client/public/glowscan-mark.png" alt="GlowScan" style="width:32px;height:32px;border-radius:999px">
+            <button onClick="{{ openProfile }}" style="width:38px;height:38px;border-radius:999px;border:0;cursor:pointer;background:var(--color-accent-200);color:var(--color-accent-800);font:inherit;font-weight:700">N</button>
+          </div>
+          <h1 style="margin:0;font-size:30px">Bonjour Nadège</h1>
+          <button onClick="{{ openResult }}" style="display:flex;align-items:center;gap:16px;text-align:left;border:0;cursor:pointer;padding:18px;border-radius:var(--radius-lg);font:inherit;background:var(--color-surface);color:var(--color-text)">
+            <span style="flex:none;width:76px;height:76px;border-radius:999px;background:conic-gradient(var(--color-accent-400) 209deg, var(--color-neutral-200) 0);display:flex;align-items:center;justify-content:center"><span style="width:60px;height:60px;border-radius:999px;background:var(--color-surface);display:flex;align-items:center;justify-content:center;font-family:var(--font-heading);font-size:24px">58</span></span>
+            <span style="flex:1;display:flex;flex-direction:column;gap:4px"><span class="tag tag-accent" style="align-self:flex-start">Avis médical conseillé</span><span style="font-size:15px;font-weight:700">Votre Glow Score</span><span style="font-size:12px;color:var(--color-neutral-700)">Visage · il y a 12 jours</span></span>
+          </button>
+          <sc-if value="{{ hasReply }}" hint-placeholder-val="{{ true }}">
+            <button onClick="{{ openChat }}" style="display:flex;align-items:center;gap:12px;text-align:left;border:0;cursor:pointer;padding:14px 16px;border-radius:var(--radius-lg);font:inherit;background:var(--color-accent-2-100);color:var(--color-accent-2-900)">
+              <span style="flex:none;width:40px;height:40px;border-radius:999px;background:var(--color-accent-2-500);color:var(--color-bg);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px">AN</span>
+              <span style="flex:1;display:flex;flex-direction:column"><span style="font-size:14px;font-weight:700">Dr Aïcha vous a répondu</span><span style="font-size:12px">Votre compte rendu signé est prêt</span></span>
+              <span style="font-weight:700">→</span>
+            </button>
+          </sc-if>
+          <button class="btn btn-primary" onClick="{{ goScan }}" style="padding:16px;font-size:16px">Nouvelle analyse · 2 min</button>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <button onClick="{{ goCare }}" style="display:flex;flex-direction:column;gap:6px;text-align:left;border:0;cursor:pointer;padding:16px;border-radius:var(--radius-lg);font:inherit;background:var(--color-surface);color:var(--color-text)">
+              <span style="font-size:12px;color:var(--color-neutral-700)">Routine du soir</span><span style="font-family:var(--font-heading);font-size:24px">{{ routineCount }}</span>
+              <div style="height:6px;border-radius:999px;background:var(--color-neutral-200)"><div style="height:100%;width:{{ routinePct }};border-radius:999px;background:var(--color-accent-2-600)"></div></div>
+            </button>
+            <button onClick="{{ goSkin }}" style="display:flex;flex-direction:column;gap:6px;text-align:left;border:0;cursor:pointer;padding:16px;border-radius:var(--radius-lg);font:inherit;background:var(--color-surface);color:var(--color-text)">
+              <span style="font-size:12px;color:var(--color-neutral-700)">Photo de contrôle</span><span style="font-family:var(--font-heading);font-size:24px">dans 16 j</span><span style="font-size:11px;color:var(--color-neutral-700)">demandée par Dr Aïcha</span>
+            </button>
+          </div>
+          <button onClick="{{ openPremium }}" style="display:flex;align-items:center;gap:12px;text-align:left;border:2px solid var(--color-accent-300);cursor:pointer;padding:14px 16px;border-radius:var(--radius-lg);font:inherit;background:transparent;color:var(--color-text)">
+            <span style="flex:1;display:flex;flex-direction:column"><span style="font-size:14px;font-weight:700">Premium · 2 000 F / mois</span><span style="font-size:12px;color:var(--color-neutral-700)">Analyses et scans produit illimités, assistant</span></span><span class="tag tag-accent">Voir</span>
+          </button>
+        </sc-if>
+
+        <!-- SCANNER -->
+        <sc-if value="{{ s.scan }}" hint-placeholder-val="{{ false }}">
+          <h1 style="margin:0;font-size:28px">Scanner</h1>
+          <div style="display:flex;gap:6px;padding:4px;border-radius:999px;background:var(--color-surface)">
+            <sc-for list="{{ scanModes }}" as="m" hint-placeholder-count="2"><button onClick="{{ m.go }}" style="flex:1;border:0;cursor:pointer;padding:10px;border-radius:999px;font:inherit;font-size:14px;font-weight:700;background:{{ m.bg }};color:{{ m.fg }}">{{ m.label }}</button></sc-for>
+          </div>
+          <sc-if value="{{ isSkinMode }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex;flex-direction:column;gap:8px"><span style="font-size:13px;font-weight:700">Quelle zone ?</span>
+              <div style="display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{ zones }}" as="z" hint-placeholder-count="3"><button onClick="{{ z.go }}" style="border:1px solid {{ z.border }};cursor:pointer;padding:9px 16px;border-radius:999px;font:inherit;font-size:14px;font-weight:600;white-space:nowrap;background:{{ z.bg }};color:{{ z.fg }}">{{ z.label }}</button></sc-for></div>
+            </div>
+            <div style="flex:none;position:relative;height:300px;border-radius:32px;background:#4a3322;display:flex;align-items:center;justify-content:center;overflow:hidden">
+              <span style="width:190px;height:240px;border-radius:50%;border:3px dashed color-mix(in srgb, var(--color-neutral-100) 80%, transparent)"></span>
+              <span style="position:absolute;top:14px;left:14px;right:14px;display:flex;justify-content:space-between;gap:8px"><span style="padding:6px 12px;border-radius:999px;background:var(--color-accent-2-600);color:var(--color-bg);font-size:12px;font-weight:700">Lumière OK</span><span style="padding:6px 12px;border-radius:999px;background:var(--color-neutral-900);color:var(--color-neutral-100);font-size:12px;font-weight:700">{{ shotLabel }}</span></span>
+              <span style="position:absolute;bottom:14px;left:0;right:0;text-align:center;font-size:13px;font-weight:600;color:var(--color-neutral-100)">{{ shotHint }}</span>
+            </div>
+            <div style="display:flex;justify-content:center;gap:10px"><sc-for list="{{ shots }}" as="x" hint-placeholder-count="3"><span style="width:12px;height:12px;border-radius:999px;background:{{ x.c }}"></span></sc-for></div>
+            <sc-if value="{{ analysing }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;justify-content:center;gap:12px;padding:14px;border-radius:999px;background:var(--color-accent-2-100);font-size:14px;font-weight:700;color:var(--color-accent-2-900)">{{ pulse }}Analyse de vos 3 photos…</div></sc-if>
+            <button class="btn btn-primary" onClick="{{ shoot }}" disabled="{{ analysing }}" style="padding:16px;font-size:16px">{{ shootLabel }}</button>
+            <span style="font-size:12px;color:var(--color-neutral-700);text-align:center">Vos photos restent privées. Résultat indicatif, pas un diagnostic.</span>
+          </sc-if>
+          <sc-if value="{{ isProductMode }}" hint-placeholder-val="{{ false }}">
+            <div style="flex:none;height:300px;border-radius:32px;background:var(--color-neutral-800);display:flex;align-items:center;justify-content:center"><span style="width:240px;height:140px;border-radius:20px;border:3px solid var(--color-accent-300)"></span></div>
+            <span style="font-size:14px;text-align:center">Visez la <b>liste des ingrédients</b> au dos du produit.</span>
+            <button class="btn btn-primary" onClick="{{ openProduct }}" style="padding:16px;font-size:16px">Scanner le produit</button>
+            <span style="font-size:12px;color:var(--color-neutral-700);text-align:center">{{ productQuota }}</span>
+          </sc-if>
+        </sc-if>
+
+        <!-- RÉSULTAT -->
+        <sc-if value="{{ s.result }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;align-items:center;gap:10px">
+            <button onClick="{{ back }}" style="border:0;background:transparent;cursor:pointer;font:inherit;font-size:20px;font-weight:700;color:var(--color-accent-700);padding:0 4px 0 0">←</button>
+            <span style="flex:1;display:flex;flex-direction:column"><span style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:var(--color-neutral-700)">Rapport d'analyse</span><span style="font-size:13px;font-weight:700">Visage · 24 septembre · 3 photos</span></span>
+            <button class="btn btn-ghost" style="padding-inline:12px;white-space:nowrap">PDF</button>
+          </div>
+
+          <div style="flex:none;position:relative;height:230px;border-radius:28px;background:{{ rs.photoBg }};overflow:hidden">
+            <sc-if value="{{ rs.usable }}" hint-placeholder-val="{{ true }}">
+              <sc-for list="{{ rs.pins }}" as="p" hint-placeholder-count="5">
+                <button onClick="{{ p.go }}" title="{{ p.label }}" style="position:absolute;left:{{ p.x }};top:{{ p.y }};transform:translate(-50%,-50%);width:{{ p.size }};height:{{ p.size }};border-radius:999px;border:2px solid var(--color-neutral-100);background:{{ p.c }};color:var(--color-neutral-100);font:inherit;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">{{ p.n }}</button>
+              </sc-for>
+              <span style="position:absolute;left:12px;bottom:12px;right:12px;display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:color-mix(in srgb, var(--color-neutral-900) 78%, transparent);color:var(--color-neutral-100);font-size:12px"><span style="width:10px;height:10px;border-radius:999px;flex:none;background:{{ rs.zone.c }}"></span><b style="white-space:nowrap">{{ rs.zone.label }}</b><span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ rs.zone.note }}</span></span>
+            </sc-if>
+            <sc-if value="{{ rs.unusable }}" hint-placeholder-val="{{ false }}">
+              <span style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--color-neutral-100);text-align:center;padding:20px"><b style="font-size:16px">Photo 2 sur 3 trop sombre</b><span style="font-size:12px">Le visage n'est pas lisible : l'analyse serait fausse.</span></span>
+            </sc-if>
+          </div>
+
+          <sc-if value="{{ rs.usable }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex;align-items:center;gap:16px">
+              <span style="flex:none;width:88px;height:88px;border-radius:999px;background:conic-gradient({{ rs.ring }} {{ rs.deg }}, var(--color-neutral-200) 0);display:flex;align-items:center;justify-content:center"><span style="width:70px;height:70px;border-radius:999px;background:var(--color-bg);display:flex;flex-direction:column;align-items:center;justify-content:center"><span style="font-family:var(--font-heading);font-size:28px;line-height:1">{{ rs.score }}</span><span style="font-size:10px;color:var(--color-neutral-700)">Glow Score</span></span></span>
+              <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px"><span class="tag {{ rs.tag }}" style="align-self:flex-start;white-space:nowrap">{{ rs.level }}</span><span style="font-family:var(--font-heading);font-size:22px;line-height:1.15">{{ rs.title }}</span><span style="font-size:12px;font-weight:700;color:var(--color-neutral-800)">{{ rs.delta }}</span></span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <div style="position:relative;height:10px;border-radius:999px;background:linear-gradient(90deg, var(--color-accent-700) 0 40%, var(--color-accent-300) 40% 60%, var(--color-accent-2-300) 60% 75%, var(--color-accent-2-600) 75% 100%)"><span style="position:absolute;top:-5px;left:{{ rs.pos }};width:4px;height:20px;border-radius:999px;background:var(--color-neutral-900);transform:translateX(-50%)"></span></div>
+              <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--color-neutral-700)"><span>Urgent</span><span>Médecin</span><span>À surveiller</span><span>Bonne santé</span></div>
+            </div>
+          </sc-if>
+
+          <div style="display:flex;flex-direction:column;gap:10px;padding:16px;border-radius:var(--radius-lg);background:{{ rs.vBg }};color:{{ rs.vFg }}">
+            <span style="font-size:16px;font-weight:700">{{ rs.vTitle }}</span>
+            <span style="font-size:13px;line-height:1.5">{{ rs.vText }}</span>
+            <sc-if value="{{ rs.hasFlags }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;flex-direction:column;gap:6px"><sc-for list="{{ rs.flags }}" as="f" hint-placeholder-count="3"><span style="display:flex;gap:8px;font-size:13px;font-weight:600"><span style="flex:none;margin-top:6px;width:8px;height:8px;border-radius:999px;background:currentColor"></span>{{ f.t }}</span></sc-for></div>
+            </sc-if>
+            <sc-if value="{{ rs.hasCta }}" hint-placeholder-val="{{ true }}"><button class="btn" onClick="{{ rs.cta }}" style="background:{{ rs.ctaBg }};color:{{ rs.ctaFg }};padding:13px 18px">{{ rs.ctaLabel }}</button></sc-if>
+            <sc-if value="{{ rs.hasCta2 }}" hint-placeholder-val="{{ false }}"><button class="btn btn-ghost" onClick="{{ rs.cta2 }}" style="color:inherit">{{ rs.cta2Label }}</button></sc-if>
+          </div>
+
+          <sc-if value="{{ rs.hasObs }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <span style="font-size:13px;font-weight:700">Ce que l'analyse a observé</span>
+              <sc-for list="{{ rs.obs }}" as="o" hint-placeholder-count="3"><div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:999px;background:var(--color-surface);font-size:13px"><span style="flex:none;width:22px;height:22px;border-radius:999px;background:{{ o.c }};color:var(--color-neutral-100);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ o.n }}</span>{{ o.t }}</div></sc-for>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ rs.hasMetrics }}" hint-placeholder-val="{{ true }}">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+              <sc-for list="{{ rs.metrics }}" as="m" hint-placeholder-count="3"><div style="display:flex;flex-direction:column;gap:2px;padding:12px;border-radius:20px;background:var(--color-surface)"><span style="font-size:11px;color:var(--color-neutral-700)">{{ m.k }}</span><span style="font-size:15px;font-weight:700">{{ m.v }}</span></div></sc-for>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px;padding:16px;border-radius:var(--radius-lg);background:var(--color-surface)">
+              <sc-for list="{{ rs.bars }}" as="i" hint-placeholder-count="5">
+                <div style="display:flex;flex-direction:column;gap:4px"><div style="display:flex;justify-content:space-between;font-size:13px"><span style="font-weight:600">{{ i.name }}</span><span style="font-weight:700">{{ i.word }}</span></div><div style="height:8px;border-radius:999px;background:var(--color-neutral-200)"><div style="height:100%;width:{{ i.w }};border-radius:999px;background:{{ i.c }}"></div></div></div>
+              </sc-for>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ rs.hasPlan }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <span style="font-size:13px;font-weight:700">Votre routine conseillée</span>
+              <sc-for list="{{ rs.plan }}" as="p" hint-placeholder-count="3"><div style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:var(--radius-lg);background:var(--color-surface)"><span style="flex:none;width:44px;height:44px;border-radius:14px;background:{{ p.tint }}"></span><span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:13px;font-weight:700">{{ p.name }}</span><span style="font-size:11px;color:var(--color-accent-2-800)">{{ p.why }}</span></span><span style="font-size:12px;font-weight:700;white-space:nowrap">{{ p.price }}</span></div></sc-for>
+              <button class="btn btn-secondary" onClick="{{ goCareShop }}">Ajouter à ma routine</button>
+            </div>
+          </sc-if>
+          <sc-if value="{{ rs.hasWait }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <span style="font-size:13px;font-weight:700">En attendant le médecin</span>
+              <sc-for list="{{ waitTips }}" as="t" hint-placeholder-count="2"><span style="display:flex;gap:10px;font-size:13px;line-height:1.45"><span style="flex:none;margin-top:6px;width:8px;height:8px;border-radius:999px;background:var(--color-accent-2-600)"></span>{{ t.t }}</span></sc-for>
+            </div>
+          </sc-if>
+          <span style="font-size:11px;line-height:1.5;color:var(--color-neutral-700)">Analyse indicative, calibrée sur les phototypes IV à VI. Elle ne pose pas de diagnostic et ne remplace pas un examen médical.</span>
+        </sc-if>
+
+        <!-- PRODUIT -->
+        <sc-if value="{{ s.product }}" hint-placeholder-val="{{ false }}">
+          <button onClick="{{ back }}" style="align-self:flex-start;border:0;background:transparent;cursor:pointer;font:inherit;font-weight:700;color:var(--color-accent-700);padding:0">← Retour</button>
+          <div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:12px;color:var(--color-neutral-700)">Crème éclaircissante · marché Mboppi</span><h1 style="margin:0;font-size:26px">Crème « Teint Parfait »</h1></div>
+          <div style="display:flex;flex-direction:column;gap:6px;padding:16px;border-radius:var(--radius-lg);background:var(--color-accent-700);color:var(--color-bg)">
+            <span style="font-size:18px;font-weight:700">À éviter pour votre peau</span>
+            <span style="font-size:13px;line-height:1.5">Contient de l'hydroquinone et un corticoïde. Ils peuvent aggraver vos taches et abîmer la peau.</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <sc-for list="{{ ingredients }}" as="g" hint-placeholder-count="4">
+              <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:999px;background:var(--color-surface)"><span style="width:10px;height:10px;border-radius:999px;background:{{ g.c }}"></span><span style="flex:1;font-size:13px;font-weight:600">{{ g.name }}</span><span style="font-size:12px;color:var(--color-neutral-700)">{{ g.why }}</span></div>
+            </sc-for>
+          </div>
+          <button class="btn btn-secondary" onClick="{{ goCareShop }}">Voir une alternative sans danger</button>
+        </sc-if>
+
+        <!-- MA PEAU -->
+        <sc-if value="{{ s.skin }}" hint-placeholder-val="{{ false }}">
+          <h1 style="margin:0;font-size:28px">Ma peau</h1>
+          <div style="display:flex;flex-direction:column;gap:10px;padding:16px;border-radius:var(--radius-lg);background:var(--color-surface)">
+            <span style="font-size:13px;font-weight:700">Glow Score · 6 derniers mois</span>
+            <div style="display:flex;align-items:flex-end;gap:10px;height:120px">
+              <sc-for list="{{ curve }}" as="c" hint-placeholder-count="6"><div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end"><span style="font-size:11px;font-weight:700">{{ c.v }}</span><div style="width:100%;height:{{ c.h }};border-radius:999px 999px 10px 10px;background:{{ c.c }}"></div><span style="font-size:10px;color:var(--color-neutral-700)">{{ c.m }}</span></div></sc-for>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px;padding:16px;border-radius:var(--radius-lg);background:var(--color-surface)">
+            <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:13px;font-weight:700">Avant / après</span><span style="font-size:11px;color:var(--color-neutral-700)">mêmes conditions de lumière</span></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <div style="display:flex;flex-direction:column;gap:4px"><div style="height:120px;border-radius:20px;background:#8b5e3c"></div><span style="font-size:11px;text-align:center">12 juin · 64</span></div>
+              <div style="display:flex;flex-direction:column;gap:4px"><div style="height:120px;border-radius:20px;background:#7a5234"></div><span style="font-size:11px;text-align:center">12 sept. · 58</span></div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <span style="font-size:13px;font-weight:700">Comptes rendus de vos médecins</span>
+            <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:var(--radius-lg);background:var(--color-surface)"><span style="flex:1;display:flex;flex-direction:column"><span style="font-size:14px;font-weight:700">Dr Aïcha Nkemdirim</span><span style="font-size:12px;color:var(--color-neutral-700)">24 sept. · signé · mélasma</span></span><span class="tag tag-accent-2">PDF</span></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <span style="font-size:13px;font-weight:700">Mes analyses</span>
+            <sc-for list="{{ history }}" as="h" hint-placeholder-count="3"><button onClick="{{ openResult }}" style="display:flex;align-items:center;gap:12px;text-align:left;border:0;cursor:pointer;padding:10px 14px 10px 10px;border-radius:999px;font:inherit;background:var(--color-surface);color:var(--color-text)"><span style="flex:none;width:40px;height:40px;border-radius:999px;background:{{ h.bg }};display:flex;align-items:center;justify-content:center;font-family:var(--font-heading);font-size:15px">{{ h.v }}</span><span style="flex:1;display:flex;flex-direction:column"><span style="font-size:14px;font-weight:700">{{ h.zone }}</span><span style="font-size:12px;color:var(--color-neutral-700)">{{ h.date }}</span></span></button></sc-for>
+          </div>
+        </sc-if>
+
+        <!-- SOINS -->
+        <sc-if value="{{ s.care }}" hint-placeholder-val="{{ false }}">
+          <h1 style="margin:0;font-size:28px">Soins</h1>
+          <div style="display:flex;gap:6px;padding:4px;border-radius:999px;background:var(--color-surface)">
+            <sc-for list="{{ careTabs }}" as="m" hint-placeholder-count="2"><button onClick="{{ m.go }}" style="flex:1;border:0;cursor:pointer;padding:10px;border-radius:999px;font:inherit;font-size:14px;font-weight:700;background:{{ m.bg }};color:{{ m.fg }}">{{ m.label }}</button></sc-for>
+          </div>
+          <sc-if value="{{ isRoutine }}" hint-placeholder-val="{{ true }}">
+            <div style="padding:10px 14px;border-radius:999px;background:var(--color-accent-2-100);font-size:12px;font-weight:600;color:var(--color-accent-2-900)">Adaptée par Dr Aïcha le 24 septembre</div>
+            <sc-for list="{{ routine }}" as="g" hint-placeholder-count="2">
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <span style="font-size:13px;font-weight:700">{{ g.title }}</span>
+                <sc-for list="{{ g.steps }}" as="r" hint-placeholder-count="3">
+                  <button onClick="{{ r.go }}" style="display:flex;align-items:center;gap:12px;text-align:left;border:0;cursor:pointer;padding:12px 14px 12px 12px;border-radius:999px;font:inherit;background:{{ r.bg }};color:var(--color-text)">
+                    <span style="flex:none;width:26px;height:26px;border-radius:999px;border:2px solid {{ r.ring }};background:{{ r.fill }};color:var(--color-bg);display:flex;align-items:center;justify-content:center;font-size:13px">{{ r.mark }}</span>
+                    <span style="flex:1;display:flex;flex-direction:column"><span style="font-size:14px;font-weight:700">{{ r.name }}</span><span style="font-size:12px;color:var(--color-neutral-700)">{{ r.how }}</span></span>
+                  </button>
+                </sc-for>
+              </div>
+            </sc-for>
+          </sc-if>
+          <sc-if value="{{ isShop }}" hint-placeholder-val="{{ false }}">
+            <span style="font-size:13px;color:var(--color-neutral-800)">Choisis pour votre peau et validés par nos dermatologues. Livraison dans 6 villes.</span>
+            <sc-if value="{{ od.hasCart }}" hint-placeholder-val="{{ false }}">
+              <button class="btn btn-primary" onClick="{{ od.open }}" style="padding:14px 18px;font-size:15px;justify-content:space-between"><span>Commander · {{ od.count }}</span><span>{{ od.subtotal }}</span></button>
+            </sc-if>
+            <sc-for list="{{ products }}" as="p" hint-placeholder-count="3">
+              <div style="display:flex;gap:12px;padding:12px;border-radius:var(--radius-lg);background:var(--color-surface)">
+                <div style="flex:none;width:72px;height:72px;border-radius:18px;background:{{ p.tint }}"></div>
+                <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px">
+                  <span style="font-size:14px;font-weight:700">{{ p.name }}</span>
+                  <span style="font-size:12px;color:var(--color-accent-2-800)">{{ p.why }}</span>
+                  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:2px"><span style="font-weight:700">{{ p.price }}</span><button onClick="{{ p.go }}" style="border:0;cursor:pointer;padding:7px 14px;border-radius:999px;font:inherit;font-size:12px;font-weight:700;background:{{ p.bg }};color:{{ p.fg }}">{{ p.label }}</button></div>
+                </div>
+              </div>
+            </sc-for>
+          </sc-if>
+        </sc-if>
+
+        <!-- MESSAGES -->
+        <sc-if value="{{ s.msg }}" hint-placeholder-val="{{ false }}">
+          <h1 style="margin:0;font-size:28px">Messages</h1>
+          <button onClick="{{ openChat }}" style="display:flex;align-items:center;gap:12px;text-align:left;border:0;cursor:pointer;padding:12px 14px 12px 12px;border-radius:var(--radius-lg);font:inherit;background:var(--color-surface);color:var(--color-text)">
+            <span style="flex:none;width:44px;height:44px;border-radius:999px;background:var(--color-accent-2-500);color:var(--color-bg);display:flex;align-items:center;justify-content:center;font-weight:700">AN</span>
+            <span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:14px;font-weight:700">Dr Aïcha Nkemdirim</span><span style="font-size:12px;color:var(--color-neutral-700);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ lastMsg }}</span></span>
+            <sc-if value="{{ hasReply }}" hint-placeholder-val="{{ true }}"><span style="min-width:22px;height:22px;border-radius:999px;background:var(--color-accent);color:var(--color-bg);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center">1</span></sc-if>
+          </button>
+          <button onClick="{{ openPremium }}" style="display:flex;align-items:center;gap:12px;text-align:left;border:0;cursor:pointer;padding:12px 14px 12px 12px;border-radius:var(--radius-lg);font:inherit;background:var(--color-surface);color:var(--color-text)">
+            <span style="flex:none;width:44px;height:44px;border-radius:999px;background:var(--color-accent-200);color:var(--color-accent-800);display:flex;align-items:center;justify-content:center;font-weight:700">GS</span>
+            <span style="flex:1;display:flex;flex-direction:column"><span style="font-size:14px;font-weight:700">Assistant GlowScan</span><span style="font-size:12px;color:var(--color-neutral-700)">Questions sur vos soins · Premium</span></span>
+          </button>
+          <button class="btn btn-secondary" onClick="{{ openDerms }}">Consulter un autre dermatologue</button>
+        </sc-if>
+
+        <!-- CONVERSATION -->
+        <sc-if value="{{ s.chat }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;align-items:center;gap:10px"><button onClick="{{ back }}" style="border:0;background:transparent;cursor:pointer;font:inherit;font-size:20px;font-weight:700;color:var(--color-accent-700);padding:0 4px 0 0">←</button><span style="flex:1;display:flex;flex-direction:column"><span style="font-size:15px;font-weight:700">Dr Aïcha Nkemdirim</span><span style="font-size:11px;color:var(--color-accent-2-700);font-weight:700">Consultation payée · réponse sous 24 h</span></span></div>
+          <sc-for list="{{ chat }}" as="m" hint-placeholder-count="4">
+            <div style="display:flex;justify-content:{{ m.j }}"><div style="max-width:82%;padding:10px 14px;border-radius:20px;background:{{ m.bg }};color:{{ m.fg }};font-size:14px;line-height:1.45">{{ m.t }}</div></div>
+          </sc-for>
+          <div style="display:flex;flex-direction:column;gap:8px;padding:14px;border-radius:var(--radius-lg);background:var(--color-accent-2-100)">
+            <span style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--color-accent-2-800)">Compte rendu signé</span>
+            <span style="font-size:14px;font-weight:700">Mélasma épidermique · traitement 8 semaines</span>
+            <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary" style="padding-inline:16px">Télécharger le PDF</button><button class="btn btn-ghost" onClick="{{ goCare }}">Voir ma routine</button></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;align-items:center;padding:12px;border-radius:var(--radius-lg);background:var(--color-surface)">
+            <span style="font-size:13px;font-weight:700">{{ rateLabel }}</span>
+            <div style="display:flex;gap:4px"><sc-for list="{{ stars }}" as="x" hint-placeholder-count="5"><button onClick="{{ x.go }}" style="border:0;background:transparent;cursor:pointer;font-size:26px;line-height:1;color:{{ x.c }};padding:2px">★</button></sc-for></div>
+          </div>
+          <div style="display:flex;gap:8px"><input class="input" value="{{ draft }}" onChange="{{ onDraft }}" onKeyDown="{{ onKey }}" placeholder="Écrire au médecin…" style="flex:1;min-height:44px"><button class="btn btn-primary" onClick="{{ send }}" style="height:44px">Envoyer</button></div>
+        </sc-if>
+
+        <!-- DERMATOLOGUES -->
+        <sc-if value="{{ s.derms }}" hint-placeholder-val="{{ false }}">
+          <button onClick="{{ back }}" style="align-self:flex-start;border:0;background:transparent;cursor:pointer;font:inherit;font-weight:700;color:var(--color-accent-700);padding:0">← Retour</button>
+          <h1 style="margin:0;font-size:26px">Choisir un dermatologue</h1>
+          <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px"><sc-for list="{{ specs }}" as="c" hint-placeholder-count="4"><button onClick="{{ c.go }}" style="flex:none;border:1px solid {{ c.border }};cursor:pointer;padding:7px 14px;border-radius:999px;font:inherit;font-size:13px;font-weight:600;white-space:nowrap;background:{{ c.bg }};color:{{ c.fg }}">{{ c.label }}</button></sc-for></div>
+          <sc-for list="{{ derms }}" as="d" hint-placeholder-count="3">
+            <button onClick="{{ d.go }}" style="display:flex;gap:12px;text-align:left;border:0;cursor:pointer;padding:14px;border-radius:var(--radius-lg);font:inherit;background:var(--color-surface);color:var(--color-text)">
+              <span style="flex:none;width:52px;height:52px;border-radius:999px;background:{{ d.av }};color:var(--color-bg);display:flex;align-items:center;justify-content:center;font-weight:700">{{ d.ini }}</span>
+              <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px">
+                <span style="font-size:15px;font-weight:700">{{ d.name }}</span>
+                <span style="font-size:12px;color:var(--color-neutral-700)">{{ d.city }} · ★ {{ d.rating }} · répond en {{ d.resp }}</span>
+                <span style="display:flex;gap:4px;flex-wrap:wrap;margin-top:2px"><sc-for list="{{ d.tags }}" as="t" hint-placeholder-count="2"><span class="tag tag-neutral" style="font-size:11px">{{ t.t }}</span></sc-for></span>
+              </span>
+              <span style="flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:4px"><span style="font-weight:700">{{ d.price }}</span><span style="font-size:11px;font-weight:700;color:{{ d.dotC }}">● {{ d.avail }}</span></span>
+            </button>
+          </sc-for>
+        </sc-if>
+
+        <!-- DOSSIER + PAIEMENT -->
+        <sc-if value="{{ s.book }}" hint-placeholder-val="{{ false }}">
+          <button onClick="{{ back }}" style="align-self:flex-start;border:0;background:transparent;cursor:pointer;font:inherit;font-weight:700;color:var(--color-accent-700);padding:0">← Retour</button>
+          <div style="display:flex;align-items:center;gap:12px"><span style="flex:none;width:52px;height:52px;border-radius:999px;background:{{ bk.av }};color:var(--color-bg);display:flex;align-items:center;justify-content:center;font-weight:700">{{ bk.ini }}</span><span style="display:flex;flex-direction:column"><span style="font-family:var(--font-heading);font-size:22px">{{ bk.name }}</span><span style="font-size:12px;color:var(--color-neutral-700)">{{ bk.city }} · répond en {{ bk.resp }}</span></span></div>
+          <div style="display:flex;flex-direction:column;gap:8px;padding:14px;border-radius:var(--radius-lg);background:var(--color-surface)">
+            <span style="font-size:13px;font-weight:700">Envoyé au médecin</span>
+            <div style="display:flex;gap:6px"><span style="flex:none;width:44px;height:44px;border-radius:14px;background:#8b5e3c"></span><span style="flex:none;width:44px;height:44px;border-radius:14px;background:#7a5234"></span><span style="flex:none;width:44px;height:44px;border-radius:14px;background:#946642"></span><span style="flex:1;display:flex;flex-direction:column;justify-content:center;font-size:12px;color:var(--color-neutral-800)">3 photos · Glow Score 58 · historique depuis juin</span></div>
+          </div>
+          <sc-for list="{{ intake }}" as="q" hint-placeholder-count="3">
+            <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;font-weight:700">{{ q.q }}</span><div style="display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{ q.opts }}" as="o" hint-placeholder-count="3"><button onClick="{{ o.go }}" style="border:1px solid {{ o.border }};cursor:pointer;padding:8px 14px;border-radius:999px;font:inherit;font-size:13px;font-weight:600;white-space:nowrap;background:{{ o.bg }};color:{{ o.fg }}">{{ o.label }}</button></sc-for></div></div>
+          </sc-for>
+          <div style="display:flex;flex-direction:column;gap:10px;padding:16px;border-radius:var(--radius-lg);background:var(--color-surface)">
+            <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:14px;font-weight:700">Consultation en ligne</span><span style="font-family:var(--font-heading);font-size:22px">{{ bk.price }}</span></div>
+            <div style="display:flex;align-items:center;gap:8px;padding:0 6px 0 14px;border-radius:999px;background:var(--color-bg);height:48px"><span style="font-weight:700">+237</span><input value="{{ phone }}" onChange="{{ onPhone }}" inputmode="tel" style="flex:1;min-width:0;border:0;background:transparent;font:inherit;font-size:16px;outline:none;color:var(--color-text)"><sc-if value="{{ op.known }}" hint-placeholder-val="{{ true }}"><span style="padding:6px 10px;border-radius:999px;font-size:11px;font-weight:700;background:{{ op.bg }};color:#1a1a1a">{{ op.name }}</span></sc-if></div>
+            <span style="font-size:12px;color:var(--color-neutral-700)">L'argent reste bloqué jusqu'à la réponse du médecin. Remboursé automatiquement s'il ne répond pas sous 24 h.</span>
+            <button class="btn btn-primary" onClick="{{ pay }}" disabled="{{ payOff }}" style="padding:15px;font-size:16px">{{ payLabel }}</button>
+          </div>
+        </sc-if>
+
+        <!-- COMMANDE -->
+        <sc-if value="{{ s.order }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;align-items:center;gap:10px"><button onClick="{{ od.back }}" style="border:0;background:transparent;cursor:pointer;font:inherit;font-size:20px;font-weight:700;color:var(--color-accent-700);padding:0 4px 0 0">←</button><span style="flex:1;font-family:var(--font-heading);font-size:22px">{{ od.title }}</span><span style="font-size:12px;font-weight:700;color:var(--color-neutral-700)">{{ od.stepLabel }}</span></div>
+          <div style="display:flex;gap:4px"><sc-for list="{{ od.bar }}" as="b" hint-placeholder-count="4"><span style="flex:1;height:5px;border-radius:999px;background:{{ b.c }}"></span></sc-for></div>
+
+          <sc-if value="{{ od.s1 }}" hint-placeholder-val="{{ true }}">
+            <sc-for list="{{ od.items }}" as="p" hint-placeholder-count="2">
+              <div style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:var(--radius-lg);background:var(--color-surface)">
+                <span style="flex:none;width:48px;height:48px;border-radius:14px;background:{{ p.tint }}"></span>
+                <span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:13px;font-weight:700">{{ p.name }}</span><span style="font-size:12px;color:var(--color-neutral-700)">{{ p.unit }}</span></span>
+                <span style="display:flex;align-items:center;gap:6px"><button onClick="{{ p.dec }}" style="width:30px;height:30px;border-radius:999px;border:1px solid var(--color-divider);background:transparent;cursor:pointer;font:inherit;font-weight:700">−</button><b style="min-width:16px;text-align:center">{{ p.q }}</b><button onClick="{{ p.inc }}" style="width:30px;height:30px;border-radius:999px;border:1px solid var(--color-divider);background:transparent;cursor:pointer;font:inherit;font-weight:700">+</button></span>
+              </div>
+            </sc-for>
+            <div style="display:flex;justify-content:space-between;padding:4px 6px;font-size:14px"><span>Sous-total</span><b>{{ od.subtotal }}</b></div>
+          </sc-if>
+
+          <sc-if value="{{ od.s2 }}" hint-placeholder-val="{{ false }}">
+            <div class="field"><label>Nom complet</label><input class="input" value="{{ od.f.name }}" onChange="{{ od.onName }}" placeholder="Nadège Eyenga"></div>
+            <div class="field"><label>Téléphone (WhatsApp ou MoMo)</label><input class="input" value="{{ od.f.tel }}" onChange="{{ od.onTel }}" inputmode="tel" placeholder="6XX XXX XXX"></div>
+            <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:var(--color-neutral-700)">Ville</span>
+              <div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ od.cities }}" as="c" hint-placeholder-count="6"><button onClick="{{ c.go }}" style="border:1px solid {{ c.border }};cursor:pointer;padding:7px 12px;border-radius:999px;font:inherit;font-size:13px;font-weight:600;white-space:nowrap;background:{{ c.bg }};color:{{ c.fg }}">{{ c.label }}</button></sc-for></div>
+            </div>
+            <div class="field"><label>Quartier ou point de repère</label><input class="input" value="{{ od.f.quartier }}" onChange="{{ od.onQ }}" placeholder="Bonamoussadi, carrefour Kotto"></div>
+            <div class="field"><label>Précisions pour le livreur (facultatif)</label><input class="input" value="{{ od.f.notes }}" onChange="{{ od.onNotes }}" placeholder="Barrière blanche, à côté de la pharmacie"></div>
+          </sc-if>
+
+          <sc-if value="{{ od.s3 }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:6px;padding:14px 16px;border-radius:var(--radius-lg);background:var(--color-surface);font-size:14px">
+              <div style="display:flex;justify-content:space-between"><span>Produits</span><span>{{ od.subtotal }}</span></div>
+              <div style="display:flex;justify-content:space-between"><span>{{ od.feeLabel }}</span><span>{{ od.fee }}</span></div>
+              <div style="display:flex;justify-content:space-between;padding-top:8px;border-top:1px solid var(--color-divider);font-weight:700"><span>Total</span><span>{{ od.total }}</span></div>
+            </div>
+            <sc-for list="{{ od.methods }}" as="m" hint-placeholder-count="3">
+              <button onClick="{{ m.go }}" style="display:flex;align-items:center;gap:12px;text-align:left;border:2px solid {{ m.border }};cursor:pointer;padding:12px 14px;border-radius:var(--radius-lg);font:inherit;background:var(--color-surface);color:var(--color-text)">
+                <span style="flex:none;padding:6px 10px;border-radius:999px;font-size:11px;font-weight:700;background:{{ m.tagBg }};color:{{ m.tagFg }}">{{ m.tag }}</span>
+                <span style="flex:1;display:flex;flex-direction:column"><span style="font-size:14px;font-weight:700">{{ m.label }}</span><span style="font-size:12px;color:var(--color-neutral-700)">{{ m.sub }}</span></span>
+              </button>
+            </sc-for>
+            <sc-if value="{{ od.isMomo }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;flex-direction:column;gap:8px;padding:14px 16px;border-radius:var(--radius-lg);background:var(--color-accent-2-100);color:var(--color-accent-2-900)">
+                <span style="font-size:13px;font-weight:700">Envoyez {{ od.total }} au</span>
+                <div style="display:flex;align-items:center;gap:10px"><span style="flex:1;font-family:var(--font-heading);font-size:24px">{{ od.m.num }}</span><button class="btn btn-secondary" onClick="{{ od.copy }}" style="padding-inline:12px">{{ od.copyLabel }}</button></div>
+                <span style="font-size:12px">Nom affiché : GlowScan · code {{ od.m.ussd }} · référence {{ od.num }}</span>
+              </div>
+            </sc-if>
+          </sc-if>
+
+          <sc-if value="{{ od.s4 }}" hint-placeholder-val="{{ false }}">
+            <span style="font-size:14px;line-height:1.5">Ajoutez la capture de votre paiement de <b>{{ od.total }}</b>. Elle sera jointe à votre commande sur WhatsApp.</span>
+            <button onClick="{{ od.addShot }}" style="height:170px;border-radius:var(--radius-lg);border:2px dashed {{ od.shotBorder }};background:{{ od.shotBg }};cursor:pointer;font:inherit;color:var(--color-text);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px">
+              <b style="font-size:15px">{{ od.shotTitle }}</b><span style="font-size:12px;color:var(--color-neutral-700)">{{ od.shotSub }}</span>
+            </button>
+            <div style="display:flex;flex-direction:column;gap:4px;padding:12px 14px;border-radius:var(--radius-lg);background:var(--color-surface);font-size:12px;color:var(--color-neutral-800)">
+              <b style="font-size:13px;color:var(--color-text)">Message prêt pour WhatsApp</b>
+              <span>Commande {{ od.num }} · {{ od.count }} · {{ od.total }}</span>
+              <span>{{ od.f.name }} · {{ od.f.city }}, {{ od.f.quartier }}</span>
+              <span>Analyse GlowScan : Glow Score 58 · peau mixte</span>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ od.s5 }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:20px;border-radius:var(--radius-lg);background:var(--color-accent-2-100);color:var(--color-accent-2-900);text-align:center">
+              <span style="font-family:var(--font-heading);font-size:24px">Commande envoyée</span>
+              <span style="font-size:13px;white-space:nowrap">N° {{ od.num }} · {{ od.lastTotal }}</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px;padding:16px;border-radius:var(--radius-lg);background:var(--color-surface)">
+              <sc-for list="{{ od.track }}" as="t" hint-placeholder-count="4">
+                <div style="display:flex;align-items:center;gap:12px"><span style="flex:none;width:24px;height:24px;border-radius:999px;background:{{ t.bg }};color:var(--color-bg);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">{{ t.mark }}</span><span style="flex:1;display:flex;flex-direction:column"><span style="font-size:14px;font-weight:700;color:{{ t.ink }}">{{ t.label }}</span><span style="font-size:12px;color:var(--color-neutral-700)">{{ t.sub }}</span></span></div>
+              </sc-for>
+            </div>
+            <span style="font-size:12px;color:var(--color-neutral-700);text-align:center">Vous serez prévenue sur WhatsApp à chaque étape. Retrouvez vos commandes dans votre profil.</span>
+          </sc-if>
+
+          <button class="btn btn-primary" onClick="{{ od.next }}" disabled="{{ od.nextOff }}" style="padding:15px;font-size:16px">{{ od.nextLabel }}</button>
+        </sc-if>
+
+        <!-- PROFIL -->
+        <sc-if value="{{ s.profile }}" hint-placeholder-val="{{ false }}">
+          <button onClick="{{ back }}" style="align-self:flex-start;border:0;background:transparent;cursor:pointer;font:inherit;font-weight:700;color:var(--color-accent-700);padding:0">← Retour</button>
+          <div style="display:flex;align-items:center;gap:14px"><span style="width:60px;height:60px;border-radius:999px;background:var(--color-accent-200);color:var(--color-accent-800);display:flex;align-items:center;justify-content:center;font-family:var(--font-heading);font-size:24px">N</span><span style="display:flex;flex-direction:column"><span style="font-family:var(--font-heading);font-size:22px">Nadège Eyenga</span><span style="font-size:12px;color:var(--color-neutral-700)">31 ans · phototype V · Douala</span></span></div>
+          <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:var(--radius-lg);background:var(--color-surface)"><span style="flex:1;display:flex;flex-direction:column"><span style="font-size:14px;font-weight:700">{{ planName }}</span><span style="font-size:12px;color:var(--color-neutral-700)">{{ planSub }}</span></span><button class="btn btn-secondary" onClick="{{ openPremium }}">Gérer</button></div>
+          <sc-if value="{{ od.hasOrder }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:var(--radius-lg);background:var(--color-surface)"><span style="flex:1;display:flex;flex-direction:column"><span style="font-size:14px;font-weight:700">Commande {{ od.num }}</span><span style="font-size:12px;color:var(--color-neutral-700)">{{ od.lastTotal }} · paiement en vérification</span></span><span class="tag tag-accent" style="white-space:nowrap">En cours</span></div>
+          </sc-if>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <span style="font-size:13px;font-weight:700">Mes données</span>
+            <sc-for list="{{ consents }}" as="c" hint-placeholder-count="3">
+              <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:var(--radius-lg);background:var(--color-surface)">
+                <span style="flex:1;display:flex;flex-direction:column"><span style="font-size:14px;font-weight:700">{{ c.t }}</span><span style="font-size:12px;color:var(--color-neutral-700)">{{ c.s }}</span></span>
+                <button onClick="{{ c.go }}" disabled="{{ c.locked }}" style="flex:none;width:48px;height:28px;border:0;border-radius:999px;cursor:pointer;padding:3px;display:flex;justify-content:{{ c.j }};background:{{ c.bg }}"><span style="width:22px;height:22px;border-radius:999px;background:var(--color-neutral-100)"></span></button>
+              </div>
+            </sc-for>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <button class="btn btn-ghost" style="justify-content:flex-start">Qui a consulté mon dossier</button>
+            <button class="btn btn-ghost" style="justify-content:flex-start">Télécharger toutes mes données</button>
+            <button class="btn btn-ghost" style="justify-content:flex-start;color:var(--color-accent-700)">Supprimer mon compte</button>
+          </div>
+        </sc-if>
+
+        <!-- PREMIUM -->
+        <sc-if value="{{ s.premium }}" hint-placeholder-val="{{ false }}">
+          <button onClick="{{ back }}" style="align-self:flex-start;border:0;background:transparent;cursor:pointer;font:inherit;font-weight:700;color:var(--color-accent-700);padding:0">← Retour</button>
+          <h1 style="margin:0;font-size:28px">GlowScan Premium</h1>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <sc-for list="{{ plans }}" as="p" hint-placeholder-count="2"><button onClick="{{ p.go }}" style="display:flex;flex-direction:column;gap:2px;text-align:left;border:2px solid {{ p.border }};cursor:pointer;padding:14px;border-radius:var(--radius-lg);font:inherit;background:var(--color-surface);color:var(--color-text)"><span style="font-size:12px;color:var(--color-neutral-700)">{{ p.label }}</span><span style="font-family:var(--font-heading);font-size:24px">{{ p.price }}</span><span style="font-size:11px;color:var(--color-accent-2-700);font-weight:700">{{ p.note }}</span></button></sc-for>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px"><sc-for list="{{ perks }}" as="k" hint-placeholder-count="5"><span style="display:flex;gap:10px;font-size:14px"><span style="color:var(--color-accent-2-700);font-weight:700">✓</span>{{ k.t }}</span></sc-for></div>
+          <span style="font-size:12px;color:var(--color-neutral-700)">Les consultations avec un dermatologue restent payées à part : c'est le médecin qui fixe son prix.</span>
+          <button class="btn btn-primary" onClick="{{ subscribe }}" style="padding:15px;font-size:16px">{{ subLabel }}</button>
+        </sc-if>
+      </div>
+
+      <sc-if value="{{ showTabs }}" hint-placeholder-val="{{ true }}">
+        <nav style="flex:none;display:flex;justify-content:space-around;align-items:center;padding:8px 8px 22px;background:var(--color-surface);border-top:1px solid var(--color-divider)">
+          <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="5">
+            <button onClick="{{ t.go }}" style="display:flex;flex-direction:column;align-items:center;gap:3px;min-width:60px;border:0;background:transparent;cursor:pointer;font:inherit;padding:6px 0;color:{{ t.fg }}">
+              <span style="width:{{ t.w }};height:{{ t.h }};border-radius:999px;background:{{ t.bg }};color:{{ t.icoFg }};display:flex;align-items:center;justify-content:center">{{ t.icon }}</span>
+              <span style="font-size:11px;font-weight:{{ t.fw }}">{{ t.label }}</span>
+            </button>
+          </sc-for>
+        </nav>
+      </sc-if>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const svg = (d, s = 22) => React.createElement('svg', { width: s, height: s, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.75, strokeLinecap: 'round', strokeLinejoin: 'round', dangerouslySetInnerHTML: { __html: d } });
+const IC = { home: '<path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>', skin: '<path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="m19 9-5 5-4-4-3 3"/>', scan: '<path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="3.5"/>', care: '<path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/>', msg: '<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>' };
+const OPS = { mtn: ['MTN MoMo', '#ffcb05'], orange: ['Orange Money', '#ff7900'] };
+const opOf = d => { const p2 = +d.slice(0, 2), p3 = +d.slice(0, 3); if (p2 === 67 || p2 === 68 || (p3 >= 650 && p3 <= 654)) return 'mtn'; if (p2 === 69 || (p3 >= 655 && p3 <= 659)) return 'orange'; return null; };
+const DERMS = [
+  { id: 1, ini: 'AN', name: 'Dr Aïcha Nkemdirim', city: 'Douala', rating: '4,9', resp: '3 h', price: '5 000 F', tags: ['Taches', 'Peaux mélanisées'], spec: ['taches'], avail: 'Disponible', dotC: 'var(--color-accent-2-700)', av: 'var(--color-accent-2-500)' },
+  { id: 2, ini: 'ME', name: 'Pr Mathieu Essomba', city: 'Yaoundé', rating: '4,8', resp: '8 h', price: '8 000 F', tags: ['Taches', 'Esthétique'], spec: ['taches'], avail: 'Disponible', dotC: 'var(--color-accent-2-700)', av: 'var(--color-accent)' },
+  { id: 3, ini: 'SO', name: 'Dr Sandrine Owona', city: 'Douala', rating: '4,7', resp: '5 h', price: '4 800 F', tags: ['Cheveux', 'Acné'], spec: ['cheveux', 'acne'], avail: 'Demain', dotC: 'var(--color-neutral-700)', av: 'var(--color-accent-700)' }
+];
+const NOTES = {
+  home: ['Accueil', ['Le Glow Score et son niveau d\'alerte en premier', 'La réponse du médecin remonte ici', 'Rappel de la photo de contrôle demandée par le médecin', 'Progression de la routine du jour'], ['« Console globale », « télémétrie », « indicateurs cellulaires » : jargon remplacé par des mots simples', 'Le menu « Explorer » à 8 entrées : remplacé par 5 onglets']],
+  scan: ['Scanner', ['Peau et produit réunis dans un seul onglet', 'Contrôle de la lumière avant chaque photo', 'Guide de cadrage et 3 prises pour un résultat comparable'], ['« Scan produit » en onglet séparé', 'Le compteur « analyses ce mois » en haut de l\'écran']],
+  result: ['Résultat (ResultCard)', ['5 états clairs : bonne santé, à surveiller, avis médical (< 60), urgent, photo inexploitable', 'Zones numérotées sur la photo, touchez-les pour le détail', 'Échelle avec le seuil 60 visible', 'Sous 60 : aucun produit, orientation médecin', 'Urgent : signes d\'alerte et avis sous 2 h', 'Observations en mots simples, pas un diagnostic'], ['Métriques inventées de LowScoreExperience : surface en cm², taille en mm, GEA, « critères ABCDE », hypothèses écartées avec des % fictifs', '« Âge cutané » et « rides » : peu fiables, anxiogènes', 'Émojis sur les indicateurs', 'Bundles vendus quel que soit le score']],
+  product: ['Scan produit', ['Verdict simple : compatible ou à éviter', 'Détection des éclaircissants et corticoïdes, un vrai risque sur le marché', 'Une alternative sans danger en un clic'], ['Liste brute des ingrédients sans explication']],
+  skin: ['Ma peau', ['Courbe du Glow Score sur 6 mois', 'Photos avant / après dans les mêmes conditions', 'Tous les comptes rendus signés des médecins'], ['Onglet « Courbe d\'évolution » caché dans le profil']],
+  care: ['Soins', ['Routine et boutique réunies', 'Routine adaptée par le médecin après consultation', 'Chaque produit dit pourquoi il est pour vous'], ['Routine derrière un paiement : la routine prescrite par le médecin reste gratuite']],
+  msg: ['Messages', ['Médecins et assistant au même endroit', 'Accès direct pour consulter un autre dermatologue'], ['Nom « SkinBot Engine », remplacé par « Assistant GlowScan »']],
+  chat: ['Consultation', ['Compte rendu signé dans la conversation', 'Lien vers la routine prescrite', 'Note du médecin en fin de consultation'], ['Émojis dans les statuts et boutons']],
+  derms: ['Dermatologues', ['Filtre par problème de peau', 'Délai de réponse et disponibilité visibles', 'Prix fixé par chaque médecin'], ['En-tête dégradé violet, hors charte']],
+  book: ['Réserver', ['Dossier envoyé automatiquement : photos, score, historique', '3 questions seulement, en boutons', 'Paiement Mobile Money avec opérateur reconnu', 'Argent bloqué jusqu\'à la réponse, remboursement auto'], ['Numéros marchands à recopier à la main']],
+  profile: ['Profil', ['Consentements séparés : soins, atlas, rappels', 'Journal « qui a consulté mon dossier »', 'Export et suppression des données'], ['Métriques et « droits » techniques']],
+  order: ['Commande', ['Bon de commande en 4 étapes : panier, livraison, paiement, preuve', 'Quantités modifiables, frais de livraison par ville', 'Numéros Orange Money et MTN à copier, avec le code et la référence de commande', 'Capture de paiement jointe, message WhatsApp pré-rempli avec n° de commande et contexte d\'analyse', 'Suivi : reçue, paiement vérifié, en livraison, livrée', 'Paiement à la livraison toujours possible'], ['Fenêtre sombre violette hors charte', 'Émojis dans le message WhatsApp envoyé au client']],
+  premium: ['Premium', ['Offre à la semaine pour les petits budgets', 'Ce qui reste gratuit est dit clairement'], ['Les consultations incluses dans Premium : c\'est le médecin qui fixe son prix']]
+};
+const ZC = { ok: 'var(--color-accent-2-600)', watch: 'var(--color-accent-300)', med: 'var(--color-accent)', urgent: 'var(--color-accent-800)' };
+const RZONES = [{ k: 'front', label: 'Front', x: '50%', y: '20%' }, { k: 'jd', label: 'Joue droite', x: '27%', y: '50%' }, { k: 'nez', label: 'Nez', x: '50%', y: '46%' }, { k: 'jg', label: 'Joue gauche', x: '73%', y: '50%' }, { k: 'menton', label: 'Menton', x: '50%', y: '74%' }];
+const MET = [['Phototype', 'V'], ['Type de peau', 'Mixte'], ['Hydratation', '55 %']];
+const BARS = (a) => [['Taches', a[0], a[1], a[2]], ['Imperfections', a[3], a[4], a[5]], ['Sébum', 48, 'Moyen', 'watch'], ['Hydratation', 55, 'Correcte', 'ok'], ['Sensibilité', 30, 'Faible', 'ok']];
+const RSTATES = {
+  good: { name: 'Bonne santé · 75+', score: 82, ring: 'var(--color-accent-2-600)', tag: 'tag-accent-2', level: 'Bonne santé', title: 'Peau équilibrée', delta: '+4 depuis août',
+    zones: { menton: 'watch' }, notes: { menton: 'Quelques pores dilatés' },
+    vBg: 'var(--color-accent-2-100)', vFg: 'var(--color-accent-2-900)', vTitle: 'Rien d\'alarmant', vText: 'Continuez votre routine. Prochaine analyse dans 4 semaines pour suivre l\'évolution.', cta: 'Voir ma routine', ctaGo: 'care', ctaBg: 'var(--color-accent-2-600)', ctaFg: 'var(--color-bg)',
+    metrics: MET, bars: BARS([18, 'Faible', 'ok', 20, 'Faible', 'ok']), plan: true },
+  watch: { name: 'À surveiller · 60-74', score: 67, ring: 'var(--color-accent-300)', tag: 'tag-accent', level: 'À surveiller', title: 'Imperfections sur la zone T', delta: '−2 depuis août',
+    zones: { front: 'watch', nez: 'watch', menton: 'watch' }, notes: { front: 'Sébum élevé', nez: 'Pores dilatés, points noirs', menton: 'Quelques boutons' },
+    vBg: 'var(--color-accent-100)', vFg: 'var(--color-accent-900)', vTitle: 'Quelques points à améliorer', vText: 'Une routine adaptée devrait suffire. Si rien ne change en 6 semaines, consultez un dermatologue.', cta: 'Voir la routine conseillée', ctaGo: 'care', ctaBg: 'var(--color-accent)', ctaFg: 'var(--color-bg)', cta2: 'Demander l\'avis d\'un dermatologue',
+    metrics: MET, bars: BARS([30, 'Faible', 'ok', 58, 'Moyen', 'watch']), plan: true },
+  medical: { name: 'Avis médical · < 60', score: 58, ring: 'var(--color-accent)', tag: 'tag-accent', level: 'Avis médical conseillé', title: 'Taches brunes étendues', delta: '−6 depuis juin',
+    zones: { jd: 'med', jg: 'med', front: 'watch' }, notes: { jd: 'Taches brunes, plus étendues qu\'en juin', jg: 'Taches brunes symétriques', front: 'Légère pigmentation' },
+    vBg: 'var(--color-accent-100)', vFg: 'var(--color-accent-900)', vTitle: 'Un dermatologue doit voir ces taches', vText: 'Sous 60, GlowScan ne conseille aucun produit seul. Votre dossier est prêt : photos et historique partent au médecin.', cta: 'Consulter un dermatologue', ctaGo: 'derms', ctaBg: 'var(--color-accent)', ctaFg: 'var(--color-bg)',
+    obs: [[2, 'Taches brunes sur les deux joues', 'med'], [4, 'Répartition symétrique', 'med'], [1, 'Plus étendues que le 12 juin', 'watch']],
+    metrics: [['Phototype', 'V'], ['Type de peau', 'Mixte'], ['Zones', '3 sur 5']], bars: BARS([72, 'Élevé', 'med', 22, 'Faible', 'ok']) },
+  urgent: { name: 'Urgent', score: 41, ring: 'var(--color-accent-800)', tag: 'tag-accent', level: 'Examen rapide', title: 'Lésion à faire examiner', delta: 'Nouvelle depuis août',
+    zones: { jg: 'urgent' }, notes: { jg: 'Lésion foncée, bords irréguliers' },
+    vBg: 'var(--color-accent-800)', vFg: 'var(--color-neutral-100)', vTitle: 'Faites-vous examiner rapidement', vText: 'Ces signes ne veulent pas dire que c\'est grave, mais un médecin doit les voir cette semaine.', flags: ['Bords irréguliers', 'Taille qui a changé en quelques semaines', 'Plusieurs couleurs dans la même tache'],
+    cta: 'Avis urgent · réponse sous 2 h', ctaGo: 'derms', ctaBg: 'var(--color-neutral-100)', ctaFg: 'var(--color-accent-900)',
+    obs: [[4, 'Lésion foncée de la joue gauche', 'urgent']], metrics: [['Phototype', 'V'], ['Zone', 'Joue G'], ['Apparue', 'août']] },
+  unusable: { name: 'Photo inexploitable', score: 0, ring: 'var(--color-neutral-400)', tag: 'tag-neutral', level: '', title: '', delta: '', zones: {},
+    vBg: 'var(--color-surface)', vFg: 'var(--color-text)', vTitle: 'Reprenons cette photo', vText: 'Pour un résultat fiable, les 3 photos doivent être nettes et bien éclairées.', flags: ['Face à une fenêtre, sans flash', 'Sans maquillage ni crème', 'Téléphone à hauteur du visage'],
+    cta: 'Reprendre la photo 2', ctaGo: 'scan', ctaBg: 'var(--color-accent)', ctaFg: 'var(--color-bg)', cta2: 'Envoyer quand même à un médecin', metrics: [] }
+};
+const PRODS = [['p1', 'Écran solaire teinté SPF 50', 'Prescrit par Dr Aïcha · ne blanchit pas', 6500, '#d9a77c'], ['p2', 'Acide azélaïque 15 %', 'Contre les taches, sans éclaircissant', 8000, '#f3e3cf'], ['p3', 'Nettoyant doux sans savon', 'Peau sensible et sèche', 3500, '#cfe3d8']];
+const CITIES = { 'Douala': 1000, 'Yaoundé': 2500, 'Kribi': 2500, 'Bafoussam': 2500, 'Buea': 2500, 'Garoua': 3000 };
+const PAY = { orange: { tag: 'OM', label: 'Orange Money', num: '690 501 392', ussd: '#150#', tagBg: '#ff7900', tagFg: '#1a1a1a' }, mtn: { tag: 'MoMo', label: 'MTN Mobile Money', num: '674 377 959', ussd: '*126#', tagBg: '#ffcb05', tagFg: '#1a1a1a' }, cash: { tag: 'Espèces', label: 'À la livraison', num: '', ussd: '', tagBg: 'var(--color-neutral-200)', tagFg: 'var(--color-text)' } };
+const F = n => n.toLocaleString('fr-FR') + ' F';
+class Component extends DCLogic {
+  state = { ostep: 1, qty: {}, of: { name: 'Nadège Eyenga', tel: '677 12 45 90', city: 'Douala', quartier: '', notes: '' }, pay: 'orange', shot: false, copied: false, onum: 'GS-K7M2QX', ordered: false, rs: 'medical', rzone: 'jd', tab: 'home', sub: null, scanMode: 'skin', zone: 'Visage', shot: 0, analysing: false, careTab: 'routine', done: ['m1', 'm2'], cart: [], derm: 1, spec: 'all', ans: {}, phone: '677 12 45 90', paid: false, paying: false, draft: '', extra: [], rating: 0, replied: true, consent: { soins: true, atlas: true, rappels: true }, plan: 'month', premium: false, pScans: 2 };
+  go(tab) { this.setState({ tab, sub: null }); }
+  open(sub) { this.setState({ sub }); }
+  renderVals() {
+    const s = this.state;
+    const cur = s.sub || s.tab;
+    const seg = (on) => ({ bg: on ? 'var(--color-accent)' : 'transparent', fg: on ? 'var(--color-bg)' : 'var(--color-text)' });
+    const chip = (on, go, label) => ({ label, go, bg: on ? 'var(--color-accent)' : 'transparent', fg: on ? 'var(--color-bg)' : 'var(--color-text)', border: on ? 'var(--color-accent)' : 'var(--color-divider)' });
+    const ROUT = [['Matin', [['m1', 'Nettoyant doux', 'Visage humide, 30 secondes'], ['m2', 'Écran solaire teinté SPF 50', 'Chaque matin, même nuageux']]], ['Soir', [['s1', 'Nettoyant doux', 'Retirer l\'écran solaire'], ['s2', 'Acide azélaïque 15 %', 'Une noisette sur les taches'], ['s3', 'Crème hydratante', 'Visage et cou']]]];
+    const total = 5, doneN = s.done.length;
+    const d = DERMS.find(x => x.id === s.derm);
+    const digits = s.phone.replace(/\D/g, ''); const op = opOf(digits);
+    const note = NOTES[cur] || NOTES.home;
+    const chat = [['p', 'Bonjour Docteur, les taches sont revenues après mes vacances à Kribi.'], ['d', 'Bonjour Nadège. J\'ai vu vos photos et votre historique. Vous mettez l\'écran solaire tous les jours ?'], ['p', 'Pas tous les jours, je l\'avoue.'], ['d', 'C\'est un mélasma. Je vous ai préparé un traitement de 8 semaines et une routine. Photo de contrôle dans 4 semaines.'], ...s.extra];
+    const sendMsg = () => { const t = s.draft.trim(); if (!t) return; this.setState(st => ({ draft: '', extra: [...st.extra, ['p', t]] })); };
+    const JUMP = [['home', 'Accueil', null], ['scan', 'Scanner', null], ['result', 'Résultat', 'home'], ['product', 'Scan produit', 'scan'], ['skin', 'Ma peau', null], ['care', 'Soins', null], ['msg', 'Messages', null], ['chat', 'Consultation', 'msg'], ['derms', 'Dermatologues', 'msg'], ['book', 'Réserver', 'msg'], ['order', 'Commande', 'care'], ['profile', 'Profil', 'home'], ['premium', 'Premium', 'home']];
+    const RS = RSTATES[s.rs]; const zSel = RZONES.find(z => z.k === s.rzone) || RZONES[0]; const zSt = RS.zones[zSel.k] || 'ok';
+    const toDerms = () => this.setState({ sub: 'derms' });
+    const q = id => s.qty[id] || 1;
+    const items = PRODS.filter(p => s.cart.includes(p[0]));
+    const sub = items.reduce((a, p) => a + p[3] * q(p[0]), 0); const fee = CITIES[s.of.city]; const nItems = items.reduce((a, p) => a + q(p[0]), 0);
+    const setOf = k => e => { const v = e.target.value; this.setState(st => ({ of: { ...st.of, [k]: v } })); };
+    const cash = s.pay === 'cash';
+    const TITLES = ['Mon panier', 'Livraison', 'Paiement', cash ? 'Confirmer' : 'Preuve de paiement', 'Suivi'];
+    const canNext = s.ostep === 1 ? nItems > 0 : s.ostep === 2 ? (s.of.name.trim() && s.of.tel.trim() && s.of.quartier.trim()) : s.ostep === 4 ? (cash || s.shot) : true;
+    const od = {
+      hasCart: s.cart.length > 0, count: nItems + (nItems > 1 ? ' produits' : ' produit'), subtotal: F(sub), fee: F(fee), feeLabel: s.of.city === 'Douala' ? 'Livraison · Douala' : 'Expédition · ' + s.of.city, total: F(sub + fee), num: s.onum, hasOrder: s.ordered, lastTotal: s.lastOrder ? s.lastOrder.total : '',
+      open: () => this.setState({ sub: 'order', ostep: s.ordered ? 5 : 1 }), back: () => s.ostep > 1 && s.ostep < 5 ? this.setState({ ostep: s.ostep - 1 }) : this.setState({ sub: null }),
+      title: TITLES[s.ostep - 1], stepLabel: s.ostep < 5 ? s.ostep + ' / 4' : '', s1: s.ostep === 1, s2: s.ostep === 2, s3: s.ostep === 3, s4: s.ostep === 4, s5: s.ostep === 5,
+      bar: [1, 2, 3, 4].map(i => ({ c: i <= s.ostep ? 'var(--color-accent)' : 'var(--color-neutral-200)' })),
+      items: items.map(([id, name, , pr, tint]) => ({ name, tint, q: q(id), unit: F(pr) + ' l\'unité', inc: () => this.setState(st => ({ qty: { ...st.qty, [id]: q(id) + 1 } })), dec: () => q(id) > 1 ? this.setState(st => ({ qty: { ...st.qty, [id]: q(id) - 1 } })) : this.setState(st => ({ cart: st.cart.filter(x => x !== id) })) })),
+      f: s.of, onName: setOf('name'), onTel: setOf('tel'), onQ: setOf('quartier'), onNotes: setOf('notes'),
+      cities: Object.keys(CITIES).map(c => chip(s.of.city === c, () => this.setState(st => ({ of: { ...st.of, city: c } })), c)),
+      methods: Object.entries(PAY).map(([k, m]) => ({ ...m, sub: k === 'cash' ? 'Espèces ou MoMo au livreur' : 'Payer maintenant · ' + m.ussd, go: () => this.setState({ pay: k }), border: s.pay === k ? 'var(--color-accent)' : 'transparent' })),
+      isMomo: !cash, m: PAY[s.pay], copyLabel: s.copied ? 'Copié ✓' : 'Copier', copy: () => { this.setState({ copied: true }); setTimeout(() => this.setState({ copied: false }), 1500); },
+      addShot: () => this.setState({ shot: !s.shot }), shotBorder: s.shot ? 'var(--color-accent-2-600)' : 'var(--color-neutral-400)', shotBg: s.shot ? 'var(--color-accent-2-100)' : 'var(--color-surface)',
+      shotTitle: s.shot ? 'Capture_paiement.jpg ✓' : 'Ajouter la capture', shotSub: s.shot ? 'Touchez pour changer' : 'Depuis votre galerie',
+      nextOff: !canNext,
+      nextLabel: s.ostep === 1 ? 'Continuer' : s.ostep === 2 ? 'Continuer vers le paiement' : s.ostep === 3 ? (cash ? 'Continuer' : 'J\'ai payé') : s.ostep === 4 ? 'Envoyer ma commande sur WhatsApp' : 'Retour à la boutique',
+      next: () => s.ostep < 4 ? this.setState({ ostep: s.ostep + 1 }) : s.ostep === 4 ? this.setState({ ostep: 5, ordered: true, lastOrder: { total: F(sub + fee) }, cart: [], qty: {} }) : this.setState({ sub: null }),
+      track: [['Commande reçue', 'maintenant'], [cash ? 'Confirmée par GlowScan' : 'Paiement vérifié', cash ? 'appel sous 2 h' : 'sous 2 h'], [s.of.city === 'Douala' ? 'En livraison' : 'Expédiée', s.of.city === 'Douala' ? 'demain' : 'sous 48 à 72 h'], ['Livrée', cash ? 'paiement à la réception' : '']].map(([label, sub2], i) => ({ label, sub: sub2, mark: i === 0 ? '✓' : i + 1, bg: i === 0 ? 'var(--color-accent-2-600)' : 'var(--color-neutral-300)', ink: i === 0 ? 'var(--color-text)' : 'var(--color-neutral-700)' }))
+    };
+    return {
+      od,
+      rsStates: Object.entries(RSTATES).map(([k, v]) => ({ label: v.name, go: () => this.setState({ rs: k }), bg: s.rs === k ? 'var(--color-accent)' : 'transparent', fg: s.rs === k ? 'var(--color-bg)' : 'var(--color-text)', border: s.rs === k ? 'var(--color-accent)' : 'var(--color-divider)' })),
+      rs: {
+        usable: s.rs !== 'unusable', unusable: s.rs === 'unusable', photoBg: s.rs === 'unusable' ? '#2a1c12' : '#7a5234',
+        pins: RZONES.map((z, i) => { const st = RS.zones[z.k] || 'ok'; return { n: i + 1, label: z.label, x: z.x, y: z.y, c: ZC[st], size: z.k === s.rzone ? '30px' : '24px', go: () => this.setState({ rzone: z.k }) }; }),
+        zone: { label: zSel.label, c: ZC[zSt], note: (RS.notes && RS.notes[zSel.k]) || 'Rien de particulier' },
+        score: RS.score, deg: (RS.score * 3.6) + 'deg', pos: RS.score + '%', ring: RS.ring, tag: RS.tag, level: RS.level, title: RS.title, delta: RS.delta,
+        vBg: RS.vBg, vFg: RS.vFg, vTitle: RS.vTitle, vText: RS.vText, hasFlags: !!RS.flags, flags: (RS.flags || []).map(t => ({ t })),
+        hasCta: true, ctaLabel: RS.cta, ctaBg: RS.ctaBg, ctaFg: RS.ctaFg, cta: RS.ctaGo === 'derms' ? toDerms : RS.ctaGo === 'scan' ? () => this.setState({ tab: 'scan', sub: null, shot: 1 }) : () => this.setState({ tab: 'care', sub: null, careTab: 'routine' }),
+        hasCta2: !!RS.cta2, cta2Label: RS.cta2 || '', cta2: toDerms,
+        hasObs: !!RS.obs, obs: (RS.obs || []).map(([n, t, st]) => ({ n, t, c: ZC[st] })),
+        hasMetrics: !!RS.bars, metrics: RS.metrics.map(([k2, v]) => ({ k: k2, v })),
+        bars: (RS.bars || []).map(([name, w, word, st]) => ({ name, word, w: w + '%', c: ZC[st] })),
+        hasPlan: !!RS.plan, plan: [['Nettoyant doux sans savon', 'Peau mixte, ne dessèche pas', '3 500 F', '#cfe3d8'], ['Sérum niacinamide 10 %', 'Réduit le sébum et les pores', '7 000 F', '#f3e3cf'], ['Écran solaire teinté SPF 50', 'Prévient les taches', '6 500 F', '#d9a77c']].map(([name, why, price, tint]) => ({ name, why, price, tint })),
+        hasWait: s.rs === 'medical'
+      },
+      jump: JUMP.map(([k, label, parent]) => ({ label, go: () => parent ? this.setState({ tab: parent, sub: k }) : this.go(k), ...(cur === k ? { bg: 'var(--color-accent)', fg: 'var(--color-bg)' } : { bg: 'var(--color-surface)', fg: 'var(--color-text)' }) })),
+      note: { title: note[0], add: note[1].map(t => ({ t })), rm: note[2].map(t => ({ t })) },
+      s: { home: cur === 'home', scan: cur === 'scan', result: cur === 'result', product: cur === 'product', skin: cur === 'skin', care: cur === 'care', msg: cur === 'msg', chat: cur === 'chat', derms: cur === 'derms', book: cur === 'book', profile: cur === 'profile', premium: cur === 'premium', order: cur === 'order' },
+      showTabs: !s.sub || ['result', 'product'].includes(s.sub),
+      tabs: [['home', 'Accueil'], ['skin', 'Ma peau'], ['scan', 'Scanner'], ['care', 'Soins'], ['msg', 'Messages']].map(([k, label]) => { const on = s.tab === k, mid = k === 'scan'; return { label, icon: svg(IC[k], mid ? 24 : 21), go: () => this.go(k), fg: on ? 'var(--color-text)' : 'var(--color-neutral-700)', fw: on ? 700 : 600, w: mid ? '50px' : '52px', h: mid ? '50px' : '30px', bg: mid ? 'var(--color-neutral-900)' : on ? 'var(--color-accent-100)' : 'transparent', icoFg: mid ? 'var(--color-neutral-100)' : on ? 'var(--color-accent-800)' : 'currentColor' }; }),
+      back: () => this.setState({ sub: s.sub === 'book' ? 'derms' : null }),
+      openProfile: () => this.open('profile'), openResult: () => this.open('result'), openChat: () => this.setState({ tab: 'msg', sub: 'chat', replied: false }), openPremium: () => this.open('premium'),
+      openDerms: () => this.setState({ sub: 'derms' }), openProduct: () => this.setState({ sub: 'product', pScans: Math.max(0, s.pScans - 1) }),
+      goScan: () => this.go('scan'), goCare: () => this.setState({ tab: 'care', sub: null, careTab: 'routine' }), goSkin: () => this.go('skin'), goCareShop: () => this.setState({ tab: 'care', sub: null, careTab: 'shop' }),
+      hasReply: s.replied, lastMsg: s.extra.length ? s.extra[s.extra.length - 1][1] : 'C\'est un mélasma. Je vous ai préparé un traitement…',
+      routineCount: `${doneN} / ${total}`, routinePct: (doneN / total * 100) + '%',
+      scanModes: [['skin', 'Ma peau'], ['product', 'Un produit']].map(([k, l]) => ({ label: l, go: () => this.setState({ scanMode: k }), ...seg(s.scanMode === k) })),
+      isSkinMode: s.scanMode === 'skin', isProductMode: s.scanMode === 'product',
+      zones: ['Visage', 'Corps', 'Cuir chevelu'].map(z => chip(s.zone === z, () => this.setState({ zone: z, shot: 0 }), z)),
+      shotLabel: `Photo ${Math.min(s.shot + 1, 3)} / 3`, shotHint: ['Regardez l\'écran, visage dans l\'ovale', 'Tournez la tête vers la gauche', 'Tournez la tête vers la droite', 'Photos prises'][s.shot],
+      shots: [0, 1, 2].map(i => ({ c: i < s.shot ? 'var(--color-accent-2-600)' : i === s.shot ? 'var(--color-accent)' : 'var(--color-neutral-300)' })),
+      analysing: s.analysing, pulse: React.createElement('span', { style: { width: 16, height: 16, borderRadius: 999, background: 'var(--color-accent-2-600)', animation: 'gsPulse 1s ease-in-out infinite' } }),
+      shootLabel: s.shot < 3 ? 'Prendre la photo' : 'Voir mon résultat',
+      shoot: () => { if (s.shot < 2) return this.setState({ shot: s.shot + 1 }); if (s.shot === 2) { this.setState({ shot: 3, analysing: true }); clearTimeout(this._t); this._t = setTimeout(() => this.setState({ analysing: false, sub: 'result', shot: 0 }), 1600); } else this.open('result'); },
+      productQuota: s.premium ? 'Scans illimités avec Premium' : `${s.pScans} scans gratuits restants cette semaine`,
+      indicators: [['Taches', 72, 'Élevé', 'var(--color-accent)'], ['Inflammation', 22, 'Faible', 'var(--color-accent-2-600)'], ['Sébum', 48, 'Moyen', 'var(--color-accent-300)'], ['Hydratation', 55, 'Correcte', 'var(--color-accent-2-600)'], ['Sensibilité', 30, 'Faible', 'var(--color-accent-2-600)']].map(([name, w, word, c]) => ({ name, word, c, w: w + '%', ink: c === 'var(--color-accent)' ? 'var(--color-accent-700)' : 'var(--color-text)' })),
+      waitTips: ['Écran solaire chaque matin, c\'est le geste le plus utile contre les taches', 'N\'utilisez aucun produit éclaircissant'].map(t => ({ t })),
+      ingredients: [['Hydroquinone 4 %', 'éclaircissant, sur ordonnance', 'var(--color-accent)'], ['Clobétasol', 'corticoïde puissant', 'var(--color-accent)'], ['Parfum', 'peut irriter', 'var(--color-accent-300)'], ['Glycérine', 'hydratant, sans risque', 'var(--color-accent-2-600)']].map(([name, why, c]) => ({ name, why, c })),
+      curve: [['Avr', 61], ['Mai', 63], ['Juin', 64], ['Juil', 62], ['Août', 60], ['Sept', 58]].map(([m, v], i, a) => ({ m, v, h: Math.round((v - 40) / 30 * 90) + 'px', c: i === a.length - 1 ? 'var(--color-accent)' : 'var(--color-accent-300)' })),
+      history: [['58', 'Visage', '12 septembre', 'var(--color-accent-200)'], ['60', 'Visage', '14 août', 'var(--color-neutral-200)'], ['72', 'Cuir chevelu', '2 août', 'var(--color-accent-2-200)']].map(([v, zone, date, bg]) => ({ v, zone, date, bg })),
+      careTabs: [['routine', 'Ma routine'], ['shop', 'Boutique']].map(([k, l]) => ({ label: l, go: () => this.setState({ careTab: k }), ...seg(s.careTab === k) })),
+      isRoutine: s.careTab === 'routine', isShop: s.careTab === 'shop',
+      routine: ROUT.map(([title, steps]) => ({ title, steps: steps.map(([id, name, how]) => { const on = s.done.includes(id); return { name, how, mark: on ? '✓' : '', go: () => this.setState(st => ({ done: on ? st.done.filter(x => x !== id) : [...st.done, id] })), bg: on ? 'var(--color-accent-2-100)' : 'var(--color-surface)', ring: on ? 'var(--color-accent-2-600)' : 'var(--color-neutral-400)', fill: on ? 'var(--color-accent-2-600)' : 'transparent' }; }) })),
+      products: PRODS.map(([id, name, why, pr, tint]) => { const on = s.cart.includes(id); const price = F(pr); return { name, why, price, tint, label: on ? 'Ajouté ✓' : 'Ajouter', go: () => this.setState(st => ({ cart: on ? st.cart.filter(x => x !== id) : [...st.cart, id] })), bg: on ? 'var(--color-accent-2-600)' : 'var(--color-accent)', fg: 'var(--color-bg)' }; }),
+      chat: chat.map(([w, t]) => ({ t, j: w === 'p' ? 'flex-end' : 'flex-start', bg: w === 'p' ? 'var(--color-accent)' : 'var(--color-surface)', fg: w === 'p' ? 'var(--color-bg)' : 'var(--color-text)' })),
+      rateLabel: s.rating ? 'Merci pour votre note' : 'Notez votre consultation',
+      stars: [1, 2, 3, 4, 5].map(n => ({ go: () => this.setState({ rating: n }), c: n <= s.rating ? 'var(--color-accent-400)' : 'var(--color-neutral-300)' })),
+      draft: s.draft, onDraft: e => this.setState({ draft: e.target.value }), onKey: e => { if (e.key === 'Enter') sendMsg(); }, send: sendMsg,
+      specs: [['all', 'Tous'], ['taches', 'Taches'], ['acne', 'Acné'], ['cheveux', 'Cheveux']].map(([k, l]) => chip(s.spec === k, () => this.setState({ spec: k }), l)),
+      derms: DERMS.filter(x => s.spec === 'all' || x.spec.includes(s.spec)).map(x => ({ ...x, tags: x.tags.map(t => ({ t })), go: () => this.setState({ derm: x.id, sub: 'book', paid: false }) })),
+      bk: d,
+      intake: [['Depuis quand ?', ['< 1 mois', '1 à 3 mois', '+ de 3 mois']], ['Ça démange ?', ['Oui', 'Non']], ['Vous avez utilisé un éclaircissant ?', ['Oui', 'Non', 'Je ne sais pas']]].map(([q, opts], i) => ({ q, opts: opts.map(o => chip(s.ans[i] === o, () => this.setState(st => ({ ans: { ...st.ans, [i]: o } })), o)) })),
+      phone: s.phone, onPhone: e => this.setState({ phone: e.target.value }),
+      op: op ? { known: true, name: OPS[op][0], bg: OPS[op][1] } : { known: false },
+      payOff: s.paying || !op || digits.length !== 9 || Object.keys(s.ans).length < 3,
+      payLabel: s.paid ? 'Payé ✓ — ouvrir la conversation' : s.paying ? 'Validez sur votre téléphone…' : Object.keys(s.ans).length < 3 ? 'Répondez aux 3 questions' : `Payer ${d.price}`,
+      pay: () => { if (s.paid) return this.setState({ tab: 'msg', sub: 'chat' }); this.setState({ paying: true }); setTimeout(() => this.setState({ paying: false, paid: true }), 1800); },
+      planName: s.premium ? 'Premium' : 'Gratuit', planSub: s.premium ? 'Renouvelé le 24 octobre' : '1 analyse et 3 scans produit par semaine',
+      consents: [['soins', 'Partager avec mes médecins', 'Nécessaire pour consulter', true], ['atlas', 'Aider la recherche', 'Photos anonymisées pour l\'atlas des peaux africaines', false], ['rappels', 'Rappels WhatsApp', 'Photo de contrôle, routine', false]].map(([k, t, sub, locked]) => { const on = s.consent[k]; return { t, s: sub, locked, go: () => this.setState(st => ({ consent: { ...st.consent, [k]: !on } })), j: on ? 'flex-end' : 'flex-start', bg: on ? 'var(--color-accent-2-600)' : 'var(--color-neutral-400)' }; }),
+      plans: [['week', 'Semaine', '500 F', 'sans engagement'], ['month', 'Mois', '2 000 F', 'le plus choisi']].map(([k, label, price, n]) => ({ label, price, note: n, go: () => this.setState({ plan: k }), border: s.plan === k ? 'var(--color-accent)' : 'transparent' })),
+      perks: ['Analyses illimitées', 'Scans produit illimités', 'Assistant GlowScan pour vos questions', 'Comparaison avant / après détaillée', 'La routine prescrite par votre médecin reste gratuite'].map(t => ({ t })),
+      subLabel: s.premium ? 'Premium actif ✓' : `S'abonner · ${s.plan === 'week' ? '500 F' : '2 000 F'} par Mobile Money`, subscribe: () => this.setState({ premium: true })
+    };
+  }
+  componentWillUnmount() { clearTimeout(this._t); }
+}
+</script>
+</body>
+</html>

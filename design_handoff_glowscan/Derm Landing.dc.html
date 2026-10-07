@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/organic-a6b730fa-b5d6-4692-8156-eacdd1b52399/styles.css">
+<script src="_ds/organic-a6b730fa-b5d6-4692-8156-eacdd1b52399/_ds_bundle.js"></script>
+<style>body{margin:0;background:var(--color-bg)} a{color:var(--color-accent-700)} a:hover{color:var(--color-accent-600)} html{scroll-behavior:smooth}</style>
+</helmet>
+<div style="background:var(--color-bg);color:var(--color-text);font-family:var(--font-body);overflow-x:hidden">
+
+  <header style="position:sticky;top:0;z-index:50;background:color-mix(in srgb, var(--color-bg) 90%, transparent);backdrop-filter:blur(10px)">
+    <div style="max-width:1160px;margin:0 auto;padding:14px clamp(16px,4vw,40px);display:flex;align-items:center;justify-content:space-between;gap:16px">
+      <a href="#" style="display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--color-text)">
+        <img src="client/public/glowscan-mark.png" alt="GlowScan" style="width:34px;height:34px;border-radius:999px;object-fit:cover">
+        <span style="font-family:var(--font-heading);font-size:19px;white-space:nowrap">GlowScan <span style="color:var(--color-accent-2-700)">Derm</span></span>
+      </a>
+      <nav style="display:flex;align-items:center;gap:clamp(8px,2vw,24px)">
+        <a href="#reseau" style="font-size:14px;font-weight:600;color:var(--color-text);text-decoration:none;white-space:nowrap">Le réseau</a>
+        <a href="#tarif" style="font-size:14px;font-weight:600;color:var(--color-text);text-decoration:none;white-space:nowrap">Tarif</a>
+        <a href="Derm Connexion.dc.html" style="font-size:14px;font-weight:700;color:var(--color-text);text-decoration:none;white-space:nowrap">Connexion</a>
+        <a href="Derm Connexion.dc.html" class="btn btn-primary" style="white-space:nowrap">14 jours gratuits</a>
+      </nav>
+    </div>
+  </header>
+
+  <section style="max-width:1160px;margin:0 auto;padding:clamp(32px,6vw,80px) clamp(16px,4vw,40px) clamp(40px,6vw,72px);display:flex;flex-wrap:wrap;align-items:center;gap:clamp(28px,5vw,56px)">
+    <div style="flex:1 1 440px;min-width:0;display:flex;flex-direction:column;gap:20px">
+      <span style="font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--color-accent-700)">Dermatologie numérique · Afrique</span>
+      <h1 style="margin:0;font-size:clamp(38px,5.2vw,64px);line-height:1.05;text-wrap:balance">Vos patients viennent à vous. <span style="color:var(--color-accent)">Votre expertise va partout en Afrique.</span></h1>
+      <p style="margin:0;font-size:17px;line-height:1.6;color:var(--color-neutral-800);max-width:540px;text-wrap:pretty">GlowScan Derm numérise votre cabinet, rédige votre compte rendu en 3 minutes et l'envoie signé sur le WhatsApp du patient. Vous consultez, GlowScan documente.</p>
+      <div style="display:flex;flex-wrap:wrap;gap:12px">
+        <a href="Derm Connexion.dc.html" class="btn btn-primary" style="padding:14px 26px;font-size:16px">Créer mon profil gratuitement</a>
+        <a href="#comment" class="btn btn-secondary" style="padding:14px 22px;font-size:16px">Comment ça marche</a>
+      </div>
+      <span style="font-size:13px;color:var(--color-neutral-700)">Sans carte bancaire · paiement Orange Money ou MTN MoMo</span>
+    </div>
+    <div style="flex:1 1 380px;min-width:0;display:flex;justify-content:center">
+      <img src="client/public/glowscan-derm-hero-full.webp" alt="GlowScan Africa" style="display:block;width:100%;max-width:560px;height:auto;border-radius:var(--radius-lg)">
+    </div>
+  </section>
+
+  <section style="max-width:1160px;margin:0 auto;padding:0 clamp(16px,4vw,40px) clamp(40px,6vw,64px)">
+    <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:10px">
+      <span class="tag tag-neutral" style="font-size:13px;padding:8px 16px">Dermatologues actifs au Cameroun, au Bénin et en RDC</span>
+      <span class="tag tag-accent-2" style="font-size:13px;padding:8px 16px">Présenté au Congrès SODAF — Ouagadougou 2026</span>
+    </div>
+  </section>
+
+  <section style="background:var(--color-surface);padding:clamp(56px,8vw,104px) 0">
+    <div style="max-width:1160px;margin:0 auto;padding:0 clamp(16px,4vw,40px);display:flex;flex-direction:column;gap:clamp(28px,4vw,44px)">
+      <div style="display:flex;flex-direction:column;gap:10px;max-width:640px">
+        <h2 style="margin:0;font-size:clamp(28px,3.4vw,42px);line-height:1.15;text-wrap:balance">Il est 19 h. Il vous reste 3 dossiers à écrire à la main.</h2>
+        <p style="margin:0;font-size:16px;color:var(--color-neutral-800)">Chaque jour, l'administratif vous prend le temps que vous devriez passer avec vos patients.</p>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:var(--space-3)">
+        <sc-for list="{{ pains }}" as="p" hint-placeholder-count="3">
+          <div style="display:flex;flex-direction:column;gap:6px;padding:var(--space-6);border-radius:var(--radius-lg);background:var(--color-accent-100)">
+            <span style="font-family:var(--font-heading);font-size:34px;line-height:1;color:var(--color-accent-800)">{{ p.big }}</span>
+            <span style="font-size:15px;font-weight:700">{{ p.t }}</span>
+            <span style="font-size:13px;color:var(--color-neutral-800)">{{ p.s }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </section>
+
+  <section style="max-width:1160px;margin:0 auto;padding:clamp(56px,8vw,104px) clamp(16px,4vw,40px);display:flex;flex-direction:column;gap:clamp(28px,4vw,44px)">
+    <div style="display:flex;flex-direction:column;gap:10px;align-items:center;text-align:center">
+      <span style="font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--color-accent-700)">Ce que GlowScan Derm fait pour vous</span>
+      <h2 style="margin:0;font-size:clamp(28px,3.4vw,42px)">Tout votre cabinet. Dans votre téléphone.</h2>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:var(--space-3)">
+      <sc-for list="{{ features }}" as="f" hint-placeholder-count="6">
+        <div class="card" style="padding:var(--space-6);gap:10px">
+          <span style="width:44px;height:44px;border-radius:999px;background:{{ f.bg }};color:{{ f.fg }};display:flex;align-items:center;justify-content:center;font-family:var(--font-heading);font-size:18px">{{ f.n }}</span>
+          <span class="card-title" style="font-size:19px">{{ f.t }}</span>
+          <span style="font-size:14px;line-height:1.5;color:var(--color-neutral-800)">{{ f.s }}</span>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <section id="comment" style="background:var(--color-accent-2-100);padding:clamp(56px,8vw,104px) 0">
+    <div style="max-width:1160px;margin:0 auto;padding:0 clamp(16px,4vw,40px);display:flex;flex-direction:column;gap:clamp(24px,4vw,40px)">
+      <div style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px">
+        <h2 style="margin:0;font-size:clamp(28px,3.4vw,42px);color:var(--color-accent-2-900)">Comment ça marche</h2>
+        <div style="display:flex;gap:6px;padding:4px;border-radius:999px;background:var(--color-surface)">
+          <sc-for list="{{ flows }}" as="f" hint-placeholder-count="2"><button onClick="{{ f.go }}" style="border:0;cursor:pointer;padding:9px 16px;border-radius:999px;font:inherit;font-size:13px;font-weight:700;background:{{ f.bg }};color:{{ f.fg }}">{{ f.label }}</button></sc-for>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:var(--space-3)">
+        <sc-for list="{{ steps }}" as="s" hint-placeholder-count="4">
+          <div style="display:flex;flex-direction:column;gap:10px;padding:var(--space-6);border-radius:var(--radius-lg);background:var(--color-surface)">
+            <span style="width:40px;height:40px;border-radius:999px;background:var(--color-accent-2-600);color:var(--color-bg);display:flex;align-items:center;justify-content:center;font-family:var(--font-heading);font-size:18px">{{ s.n }}</span>
+            <span style="font-size:16px;font-weight:700">{{ s.t }}</span>
+            <span style="font-size:13px;line-height:1.5;color:var(--color-neutral-800)">{{ s.d }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <p style="margin:0;font-size:16px;font-weight:700;color:var(--color-accent-2-900)">{{ flowNote }}</p>
+    </div>
+  </section>
+
+  <section id="reseau" style="max-width:1160px;margin:0 auto;padding:clamp(56px,8vw,104px) clamp(16px,4vw,40px);display:flex;flex-wrap:wrap;gap:clamp(28px,5vw,56px);align-items:center">
+    <div style="flex:1 1 400px;min-width:0;display:flex;flex-direction:column;gap:16px">
+      <span style="font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--color-accent-700)">Le réseau GlowScan Derm</span>
+      <h2 style="margin:0;font-size:clamp(28px,3.4vw,42px);line-height:1.15;text-wrap:balance">Là où il n'y a pas de dermatologue, vous devenez le référent.</h2>
+      <p style="margin:0;font-size:16px;line-height:1.6;color:var(--color-neutral-800)">Des infirmiers et des médecins de terrain vous envoient leurs cas. Vous validez ou corrigez, et votre correction devient leur leçon. Vous êtes payé pour chaque avis.</p>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <sc-for list="{{ network }}" as="n" hint-placeholder-count="4">
+          <div style="display:flex;gap:12px;align-items:flex-start"><span style="flex:none;margin-top:6px;width:10px;height:10px;border-radius:999px;background:var(--color-accent-2-600)"></span><span style="font-size:15px;line-height:1.5">{{ n.t }}</span></div>
+        </sc-for>
+      </div>
+    </div>
+    <div style="flex:1 1 360px;min-width:0;display:flex;flex-direction:column;gap:var(--space-3)">
+      <div class="card" style="padding:var(--space-6);gap:10px">
+        <span class="card-kicker" style="font-weight:700;color:var(--color-accent-700)">Avis relais · CSI de Mokolo</span>
+        <span style="font-size:15px;font-weight:700">Plaques du cuir chevelu, garçon de 7 ans</span>
+        <div style="display:flex;flex-wrap:wrap;gap:6px"><span class="tag tag-neutral">Relais : pelade</span><span class="tag tag-neutral">IA : teigne 82 %</span></div>
+        <div style="padding:12px 16px;border-radius:var(--radius-lg);background:var(--color-accent-2-100);font-size:14px;line-height:1.5;color:var(--color-accent-2-900)"><b>Votre correction :</b> plaques rondes + squames + fratrie touchée = teigne jusqu'à preuve du contraire.</div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--space-2)">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:var(--space-4) 8px;border-radius:var(--radius-lg);background:var(--color-accent-100)"><span style="font-family:var(--font-heading);font-size:24px">60 %</span><span style="font-size:12px;text-align:center">pour vous</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:var(--space-4) 8px;border-radius:var(--radius-lg);background:var(--color-accent-2-100)"><span style="font-family:var(--font-heading);font-size:24px">20 %</span><span style="font-size:12px;text-align:center">pour le relais</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:var(--space-4) 8px;border-radius:var(--radius-lg);background:var(--color-surface)"><span style="font-family:var(--font-heading);font-size:24px">20 %</span><span style="font-size:12px;text-align:center">pour GlowScan</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding:0 clamp(16px,4vw,40px) clamp(56px,8vw,104px)">
+    <div style="max-width:760px;margin:0 auto;padding:clamp(32px,5vw,56px);border-radius:var(--radius-lg);background:var(--color-accent-2-600);color:var(--color-bg);text-align:center;display:flex;flex-direction:column;gap:10px">
+      <span style="font-family:var(--font-heading);font-size:clamp(28px,3.6vw,44px);line-height:1.15">GlowScan ne diagnostique pas. GlowScan documente.</span>
+      <span style="font-size:17px;font-weight:700">Vous restez le médecin. Toujours.</span>
+    </div>
+  </section>
+
+  <section id="tarif" style="background:var(--color-surface);padding:clamp(56px,8vw,104px) 0">
+    <div style="max-width:1160px;margin:0 auto;padding:0 clamp(16px,4vw,40px);display:flex;flex-wrap:wrap;gap:clamp(28px,5vw,56px);align-items:center">
+      <div style="flex:1 1 360px;min-width:0;display:flex;flex-direction:column;gap:14px">
+        <span style="font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--color-accent-700)">Un seul tarif</span>
+        <h2 style="margin:0;font-size:clamp(28px,3.4vw,42px);line-height:1.15">Votre abonnement se paie avec vos avis.</h2>
+        <p style="margin:0;font-size:16px;line-height:1.6;color:var(--color-neutral-800)">Vos gains en consultations et en avis sont déduits automatiquement. Avec 6 avis par mois, vous ne payez plus rien.</p>
+      </div>
+      <div style="flex:1 1 380px;min-width:0;display:flex;flex-direction:column;gap:14px;padding:clamp(24px,4vw,40px);border-radius:var(--radius-lg);background:var(--color-bg)">
+        <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap"><span style="font-family:var(--font-heading);font-size:48px;line-height:1">10 000</span><span style="font-size:16px;font-weight:700">FCFA / mois</span></div>
+        <span class="tag tag-accent-2" style="align-self:flex-start">14 jours gratuits · sans engagement</span>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <sc-for list="{{ included }}" as="i" hint-placeholder-count="6"><span style="display:flex;gap:10px;font-size:14px;font-weight:600"><span style="color:var(--color-accent-2-700);font-weight:700">✓</span>{{ i.t }}</span></sc-for>
+        </div>
+        <a href="Derm Connexion.dc.html" class="btn btn-primary" style="padding:14px 24px;font-size:16px">Commencer 14 jours gratuits</a>
+        <span style="font-size:12px;color:var(--color-neutral-700)">Aucune carte bancaire. Paiement Orange Money ou MTN MoMo après l'essai.</span>
+      </div>
+    </div>
+  </section>
+
+  <section style="max-width:760px;margin:0 auto;padding:clamp(56px,8vw,96px) clamp(16px,4vw,40px);display:flex;flex-direction:column;gap:var(--space-4)">
+    <h2 style="margin:0;font-size:clamp(26px,3vw,36px);text-align:center">Questions fréquentes</h2>
+    <div style="display:flex;flex-direction:column;gap:var(--space-2)">
+      <sc-for list="{{ faqs }}" as="f" hint-placeholder-count="6">
+        <div style="border-radius:var(--radius-lg);background:{{ f.bg }}">
+          <button onClick="{{ f.go }}" style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;border:0;background:transparent;cursor:pointer;padding:16px 20px;font:inherit;font-size:15px;font-weight:700;text-align:left;color:var(--color-text)">{{ f.q }}<span style="flex:none;font-size:20px;color:var(--color-accent-700)">{{ f.mark }}</span></button>
+          <sc-if value="{{ f.open }}" hint-placeholder-val="{{ false }}"><p style="margin:0;padding:0 20px 18px;font-size:14px;line-height:1.6;color:var(--color-neutral-800)">{{ f.a }}</p></sc-if>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <section style="background:var(--color-accent);padding:clamp(56px,8vw,104px) clamp(16px,4vw,40px);text-align:center">
+    <div style="max-width:760px;margin:0 auto;display:flex;flex-direction:column;align-items:center;gap:20px">
+      <h2 style="margin:0;font-size:clamp(28px,3.8vw,46px);line-height:1.15;color:var(--color-bg);text-wrap:balance">Rejoignez les dermatologues qui consultent déjà toute l'Afrique depuis leur cabinet.</h2>
+      <a href="Derm Connexion.dc.html" class="btn" style="background:var(--color-bg);color:var(--color-accent-800);padding:15px 30px;font-size:16px">Créer mon profil — 14 jours gratuits</a>
+      <span style="font-size:14px;color:var(--color-bg)">Votre profil est en ligne en moins de 5 minutes.</span>
+    </div>
+  </section>
+
+  <footer style="max-width:1160px;margin:0 auto;padding:clamp(32px,5vw,56px) clamp(16px,4vw,40px);display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center">
+    <div style="display:flex;align-items:center;gap:10px"><img src="client/public/glowscan-mark.png" alt="" style="width:28px;height:28px;border-radius:999px"><span style="font-family:var(--font-heading);font-size:17px">GlowScan Derm</span></div>
+    <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:18px;font-size:13px">
+      <a href="Derm Connexion.dc.html">Connexion</a><a href="https://wa.me/237674377959">Support WhatsApp</a><a href="https://glow-scan.com">glow-scan.com</a>
+    </div>
+    <p style="margin:0;max-width:560px;font-size:12px;line-height:1.6;color:var(--color-neutral-700)">GlowScan Derm est un outil d'aide à la pratique médicale. Il ne remplace ni le diagnostic ni la responsabilité du praticien.</p>
+    <p style="margin:0;font-size:12px;color:var(--color-neutral-700)">© 2026 GlowScan Africa</p>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const FLOWS = {
+  b2c: { label: 'Patients GlowScan', note: 'Tout se fait depuis votre téléphone. Sans déplacement, sans paperasse.', steps: [
+    ['Le patient fait son analyse', 'Photo de peau et Glow Score gratuits sur son téléphone.'],
+    ['GlowScan repère un cas sérieux', 'Un score faible déclenche la recommandation de consulter.'],
+    ['Il choisit votre profil et paie', 'Orange Money ou MTN MoMo. L\'argent est bloqué jusqu\'à votre réponse.'],
+    ['Vous répondez, le PDF part signé', 'Le diagnostic IA est déjà proposé : vous validez, signez, 80 % pour vous.']] },
+  relais: { label: 'Relais de terrain', note: 'Vous formez les soignants des zones sans dermatologue, à chaque cas.', steps: [
+    ['Le patient est chez le relais', 'Infirmier ou médecin d\'un centre de santé éloigné.'],
+    ['Le relais propose son diagnostic', 'Avant de voir l\'IA, pour apprendre vraiment.'],
+    ['Vous validez ou corrigez', 'Une phrase suffit : le signe qui aurait dû l\'orienter.'],
+    ['Le relais progresse', 'À 85 % d\'accord sur 20 cas, il traite seul cette maladie.']] }
+};
+const FAQS = [
+  ['L\'IA va-t-elle remplacer mon diagnostic ?', 'Non. La suggestion de l\'IA est marquée « indicative ». Seule votre validation apparaît dans le compte rendu signé de votre nom.'],
+  ['Comment mes patients me trouvent-ils ?', 'Par votre profil public visible sur Google, et par les patients GlowScan dont le score est faible : ils sont orientés vers un dermatologue disponible dans leur région.'],
+  ['Qu\'est-ce qu\'un relais ?', 'Un infirmier ou un médecin d\'une zone sans dermatologue. Il vous envoie ses cas, vous validez, il apprend. Vous êtes payé à chaque avis.'],
+  ['Le second avis entre confrères, c\'est quoi ?', 'Un cas difficile ? Envoyez-le à un confrère du réseau. Seules la photo, l\'âge et le sexe sont partagés, jamais le nom ni le téléphone. Vous restez le médecin traitant.'],
+  ['Comment suis-je payé ?', 'Vos gains arrivent dans votre portefeuille GlowScan. Retrait vers Orange Money ou MTN MoMo à la demande ou chaque vendredi.'],
+  ['Que se passe-t-il après les 14 jours ?', 'Vous choisissez de continuer. Aucun prélèvement automatique, aucune carte bancaire.']
+];
+class Component extends DCLogic {
+  state = { flow: 'b2c', faq: 0 };
+  renderVals() {
+    const s = this.state; const F = FLOWS[s.flow];
+    return {
+      pains: [['30 min', 'par compte rendu écrit à la main', 'Temps pris sur vos consultations.'], ['20 h', 'et encore des questions WhatsApp', 'Gratuitement, sans structure.'], ['5 ans', 'de carnets à feuilleter', 'Pour retrouver un ancien dossier.']].map(([big, t, s2]) => ({ big, t, s: s2 })),
+      features: [
+        ['Dossier patient numérisé', 'Créé et retrouvé en 10 secondes, photos incluses.'],
+        ['Diagnostic IA déjà proposé', 'Calibré sur les phototypes IV à VI. Vous validez ou corrigez.'],
+        ['Compte rendu signé en 1 clic', 'Pré-rempli, relu, signé avec votre code, envoyé sur WhatsApp ou par email.'],
+        ['Consultations en ligne', 'Des patients de Douala à Kinshasa, payés sur Mobile Money.'],
+        ['Second avis entre confrères', 'Un cas difficile, anonymisé, discuté dans l\'appli.'],
+        ['Profil public sur Google', 'Vos patients vous trouvent. Vos confrères vous rejoignent.']
+      ].map(([t, s2], i) => ({ t, s: s2, n: i + 1, bg: i % 2 ? 'var(--color-accent-2-200)' : 'var(--color-accent-200)', fg: i % 2 ? 'var(--color-accent-2-800)' : 'var(--color-accent-800)' })),
+      flows: Object.entries(FLOWS).map(([k, f]) => ({ label: f.label, go: () => this.setState({ flow: k }), bg: s.flow === k ? 'var(--color-accent-2-600)' : 'transparent', fg: s.flow === k ? 'var(--color-bg)' : 'var(--color-text)' })),
+      steps: F.steps.map(([t, d], i) => ({ n: i + 1, t, d })), flowNote: F.note,
+      network: ['Des cas réels envoyés par des relais de votre région', 'Un avis simple ou urgent, payé sur Mobile Money', 'Chaque validation enrichit l\'atlas des peaux africaines', 'Des programmes financés par des ONG et des districts'].map(t => ({ t })),
+      included: ['Dossiers patients illimités', 'Diagnostic IA indicatif', 'Comptes rendus signés sur WhatsApp', 'Consultations en ligne', 'Avis confrères et relais', 'Profil public sur Google'].map(t => ({ t })),
+      faqs: FAQS.map(([q, a], i) => { const open = s.faq === i; return { q, a, open, mark: open ? '−' : '+', bg: open ? 'var(--color-surface)' : 'transparent', go: () => this.setState({ faq: open ? -1 : i }) }; })
+    };
+  }
+}
+</script>
+</body>
+</html>

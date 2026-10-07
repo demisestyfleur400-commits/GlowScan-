@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/organic-a6b730fa-b5d6-4692-8156-eacdd1b52399/styles.css">
+<script src="_ds/organic-a6b730fa-b5d6-4692-8156-eacdd1b52399/_ds_bundle.js"></script>
+<style>body{margin:0;background:var(--color-bg)} [data-m=mbar]{display:none} @media (max-width:760px){ [data-m=shell]{flex-direction:column} [data-m=aside]{position:sticky!important;top:0;z-index:40;width:100%!important;height:auto!important;padding:10px 16px!important;gap:10px!important;background:var(--color-bg);border-bottom:1px solid var(--color-divider)} [data-m=aside] nav,[data-m=roles]{flex-direction:row!important;overflow-x:auto;gap:4px!important;scrollbar-width:none} [data-m=aside] nav>*,[data-m=roles]>*{flex:none!important;white-space:nowrap} [data-m=roles]>span:first-child{display:none} [data-m=hide-m]{display:none!important} [data-m=portal-aside]{display:none!important} [data-m=main]{padding:16px 16px 40px!important;gap:20px!important} [data-m=main] h1{font-size:30px!important} [data-p]{padding-bottom:110px!important} [data-m=paper]{padding:24px 18px!important} [data-m=mbar]{display:flex} } a{color:var(--color-accent-700)} a:hover{color:var(--color-accent-600)} @keyframes gsPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(.92);opacity:.6}}</style>
+</helmet>
+<div data-m="shell" style="display:flex;min-height:100vh;background:var(--color-bg);color:var(--color-text);font-family:var(--font-body)">
+  <aside data-m="portal-aside" style="flex:none;width:232px;padding:var(--space-6) var(--space-4);display:flex;flex-direction:column;gap:var(--space-6);position:sticky;top:0;height:100vh;box-sizing:border-box">
+    <div style="display:flex;align-items:center;gap:10px">
+      <img src="client/public/glowscan-mark.png" alt="GlowScan" style="width:36px;height:36px;border-radius:999px;object-fit:cover">
+      <div style="display:flex;flex-direction:column">
+        <span style="font-family:var(--font-heading);font-size:18px;line-height:1.1">GlowScan</span>
+        <span style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-accent-2-700);font-weight:700">Derm</span>
+      </div>
+    </div>
+    <nav style="display:flex;flex-direction:column;gap:2px">
+      <sc-for list="{{ nav }}" as="n" hint-placeholder-count="8">
+        <a href="#" onClick="{{ n.go }}" style="display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:999px;text-decoration:none;font-size:14px;font-weight:600;color:{{ n.color }};background:{{ n.bg }}" style-hover="background:var(--color-neutral-200)">
+          <span style="display:flex;width:18px;height:18px">{{ n.icon }}</span>
+          <span style="flex:1">{{ n.label }}</span>
+          <sc-if value="{{ n.hasBadge }}" hint-placeholder-val="{{ false }}"><span style="min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--color-accent);color:var(--color-bg);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ n.badge }}</span></sc-if>
+        </a>
+      </sc-for>
+      <sc-if value="{{ isDoctor }}" hint-placeholder-val="{{ true }}">
+        <span style="margin:12px 14px 4px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--color-neutral-700)">Réseau</span>
+        <a href="Derm Teleexpertise.dc.html" style="display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:999px;text-decoration:none;font-size:14px;font-weight:600;color:var(--color-text)" style-hover="background:var(--color-neutral-200)"><span style="width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-weight:700">⇄</span><span style="flex:1">Téléexpertise</span><span style="min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--color-accent);color:var(--color-bg);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center">2</span></a>
+        <a href="Derm Confreres.dc.html" style="display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:999px;text-decoration:none;font-size:14px;font-weight:600;color:var(--color-text)" style-hover="background:var(--color-neutral-200)"><span style="width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-weight:700">✉</span><span style="flex:1">Confrères</span><span style="min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--color-accent);color:var(--color-bg);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center">1</span></a>
+        <a href="Derm Reseau.dc.html" style="display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:999px;text-decoration:none;font-size:14px;font-weight:600;color:var(--color-text)" style-hover="background:var(--color-neutral-200)"><span style="width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-weight:700">◎</span><span style="flex:1">Réseau & formation</span></a>
+        <a href="Derm Encaissement.dc.html" style="display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:999px;text-decoration:none;font-size:14px;font-weight:600;color:var(--color-text)" style-hover="background:var(--color-neutral-200)"><span style="width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-weight:700">₣</span><span style="flex:1">Portefeuille</span></a>
+        <a href="Derm Pilotage.dc.html" style="display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:999px;text-decoration:none;font-size:14px;font-weight:600;color:var(--color-text)" style-hover="background:var(--color-neutral-200)"><span style="width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-weight:700">▦</span><span style="flex:1">Pilotage (ONG · admin)</span><span style="min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--color-accent-2-600);color:var(--color-bg);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center">4</span></a>
+      </sc-if>
+    </nav>
+    <div data-m="hide-m" style="margin-top:auto;display:flex;align-items:center;gap:10px;padding:10px;border-radius:999px;background:var(--color-surface)">
+      <span style="flex:none;width:34px;height:34px;border-radius:999px;background:var(--color-accent-2-500);color:var(--color-bg);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px">{{ me.initials }}</span>
+      <div style="display:flex;flex-direction:column;min-width:0">
+        <span style="font-size:13px;font-weight:700">{{ me.name }}</span>
+        <span style="font-size:11px;color:var(--color-neutral-700)">{{ me.sub }}</span>
+      </div>
+    </div>
+  </aside>
+  <div data-m="mbar" style="position:fixed;left:0;right:0;bottom:0;z-index:45;justify-content:space-around;align-items:flex-end;padding:6px 4px 12px;background:var(--color-surface);border-top:1px solid var(--color-divider)">
+    <sc-for list="{{ mnav }}" as="t" hint-placeholder-count="5">
+      <button onClick="{{ t.go }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;border:0;background:transparent;cursor:pointer;font:inherit;padding:4px 0;color:{{ t.fg }}">
+        <span style="position:relative;width:{{ t.w }};height:{{ t.h }};border-radius:999px;background:{{ t.bg }};color:{{ t.ico }};display:flex;align-items:center;justify-content:center">{{ t.icon }}<sc-if value="{{ t.hasBadge }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:-3px;right:4px;min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:var(--color-accent);color:var(--color-bg);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ t.badge }}</span></sc-if></span>
+        <span style="font-size:11px;font-weight:700">{{ t.label }}</span>
+      </button>
+    </sc-for>
+  </div>
+  <sc-if value="{{ moreOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeMore }}" style="position:fixed;inset:0;z-index:60;background:color-mix(in srgb, var(--color-neutral-900) 45%, transparent);display:flex;align-items:flex-end">
+      <div onClick="{{ stop }}" style="width:100%;max-height:80vh;overflow:auto;background:var(--color-bg);border-radius:32px 32px 0 0;padding:12px 16px 28px;display:flex;flex-direction:column;gap:2px;box-sizing:border-box">
+        <span style="align-self:center;width:40px;height:4px;border-radius:999px;background:var(--color-neutral-300);margin-bottom:8px"></span>
+        <sc-for list="{{ moreItems }}" as="m" hint-placeholder-count="8">
+          <a href="{{ m.href }}" onClick="{{ m.go }}" style="display:flex;align-items:center;gap:14px;padding:14px 12px;border-radius:999px;text-decoration:none;font-size:15px;font-weight:600;color:var(--color-text)" style-hover="background:var(--color-surface)"><span style="width:20px;height:20px;display:flex;align-items:center;justify-content:center;color:var(--color-accent-700)">{{ m.icon }}</span><span style="flex:1">{{ m.label }}</span><span style="color:var(--color-neutral-500)">›</span></a>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <main data-m="main" data-p="1" style="flex:1;min-width:0;padding:var(--space-6) var(--space-8) var(--space-8) var(--space-4);display:flex;flex-direction:column;gap:var(--space-6);max-width:1180px">
+
+    <!-- ═══ TABLEAU DE BORD ═══ -->
+    <sc-if value="{{ pg.dashboard }}" hint-placeholder-val="{{ true }}">
+      <header style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:var(--space-4)">
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <span style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:var(--color-accent-700)">Jeudi 24 septembre</span>
+          <h1 style="margin:0;font-size:42px">Bonjour, Dr Aïcha</h1>
+          <p style="margin:0;color:var(--color-neutral-700);font-size:15px">{{ dash.summary }}</p>
+        </div>
+        <div style="display:flex;gap:var(--space-2);flex-wrap:wrap">
+          <button class="btn btn-secondary" onClick="{{ goPatients }}" style="padding:12px 20px;white-space:nowrap">Mes patients</button>
+          <button class="btn btn-primary" onClick="{{ newPatient }}" style="padding:12px 22px;font-size:15px;white-space:nowrap">{{ ic.plus }}Nouveau patient</button>
+        </div>
+      </header>
+      <sc-if value="{{ dash.showProfile }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-4);padding:var(--space-3) var(--space-4);border-radius:999px;background:var(--color-accent-2-100)">
+          <span style="font-family:var(--font-heading);font-size:22px;color:var(--color-accent-2-800)">{{ dash.profilePct }}%</span>
+          <div style="flex:1;min-width:200px;display:flex;flex-direction:column;gap:6px">
+            <span style="font-size:13px;font-weight:700;color:var(--color-accent-2-900)">Profil public presque prêt — ajoutez votre bio et votre photo pour recevoir des patients GlowScan.</span>
+            <div style="height:8px;border-radius:999px;background:var(--color-accent-2-200);overflow:hidden"><div style="height:100%;width:{{ dash.profileW }};border-radius:999px;background:var(--color-accent-2-600)"></div></div>
+          </div>
+          <button class="btn btn-secondary" onClick="{{ goCabinet }}" style="border-color:var(--color-accent-2-600);color:var(--color-accent-2-900)">Compléter</button>
+        </div>
+      </sc-if>
+      <section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:var(--space-3)">
+        <sc-for list="{{ dash.kpis }}" as="k" hint-placeholder-count="4">
+          <a href="#" onClick="{{ k.go }}" style="display:flex;flex-direction:column;gap:6px;padding:var(--space-4);border-radius:var(--radius-lg);background:{{ k.bg }};text-decoration:none;color:var(--color-text)" style-hover="box-shadow:var(--shadow-md)">
+            <span style="font-size:12px;font-weight:700;color:{{ k.ink }}">{{ k.label }}</span>
+            <span style="font-family:var(--font-heading);font-size:40px;line-height:1">{{ k.value }}</span>
+            <span style="font-size:12px;color:var(--color-neutral-700)">{{ k.note }}</span>
+          </a>
+        </sc-for>
+      </section>
+      <section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:var(--space-4);align-items:start">
+        <div class="card" style="padding:var(--space-6);gap:var(--space-4)">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px">
+            <h3 style="margin:0;font-size:22px">À faire aujourd'hui</h3>
+            <span class="tag tag-accent">{{ dash.todo }} en attente</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:var(--space-2)">
+            <span style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--color-neutral-700)">Dossiers préparés par la secrétaire</span>
+            <sc-for list="{{ waiting }}" as="w" hint-placeholder-count="2">
+              <a href="#" onClick="{{ w.go }}" style="display:flex;align-items:center;gap:12px;padding:10px 12px 10px 10px;border-radius:999px;background:var(--color-bg);text-decoration:none;color:var(--color-text)" style-hover="background:var(--color-neutral-100)">
+                <span style="flex:none;width:36px;height:36px;border-radius:999px;background:var(--color-accent-200);color:var(--color-accent-800);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">{{ w.initials }}</span>
+                <span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:14px;font-weight:700">{{ w.name }}</span><span style="font-size:12px;color:var(--color-neutral-700)">{{ w.meta }}</span></span>
+                <span style="font-size:13px;font-weight:700;color:var(--color-accent-700)">Continuer →</span>
+              </a>
+            </sc-for>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:var(--space-2)">
+            <span style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--color-neutral-700)">Diagnostics IA à valider</span>
+            <sc-for list="{{ dash.pending }}" as="s" hint-placeholder-count="3">
+              <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:10px 10px 10px 16px;border-radius:999px;background:var(--color-bg)">
+                <span style="flex:1;min-width:160px;display:flex;flex-direction:column"><span style="font-size:14px;font-weight:700">{{ s.condition }}</span><span style="font-size:12px;color:var(--color-neutral-700)">{{ s.patient }} · {{ s.date }} · confiance {{ s.conf }}</span></span>
+                <button class="btn btn-ghost" onClick="{{ s.fix }}" style="padding-inline:12px">Corriger</button>
+                <button class="btn" onClick="{{ s.validate }}" style="background:var(--color-accent-2-600);color:var(--color-bg);padding-inline:16px" style-hover="background:var(--color-accent-2-700)">Valider</button>
+              </div>
+            </sc-for>
+            <sc-if value="{{ dash.noPending }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:14px 18px;border-radius:999px;background:var(--color-accent-2-100);color:var(--color-accent-2-800);font-size:13px;font-weight:600">Tout est validé. Chaque validation rend l'IA plus précise.</div>
+            </sc-if>
+          </div>
+        </div>
+        <div class="card" style="padding:var(--space-6);gap:var(--space-3)">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px">
+            <h3 style="margin:0;font-size:22px">Aujourd'hui à l'agenda</h3>
+            <a href="#" onClick="{{ goAgenda }}" style="font-size:13px;font-weight:700">Voir l'agenda</a>
+          </div>
+          <sc-for list="{{ todayAppts }}" as="a" hint-placeholder-count="4">
+            <div style="display:flex;align-items:center;gap:14px;padding:8px 0">
+              <span style="flex:none;width:52px;font-family:var(--font-heading);font-size:17px">{{ a.time }}</span>
+              <span style="flex:none;width:10px;height:10px;border-radius:999px;background:{{ a.dot }}"></span>
+              <span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:14px;font-weight:700">{{ a.name }}</span><span style="font-size:12px;color:var(--color-neutral-700)">{{ a.typeLabel }} · {{ a.dur }} min</span></span>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+      <section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:var(--space-4)">
+        <sc-if value="{{ isTrial }}" hint-placeholder-val="{{ true }}">
+          <div class="card" style="padding:var(--space-6);background:var(--color-accent-100);gap:var(--space-2)">
+            <span class="card-kicker" style="color:var(--color-accent-700);font-weight:700">Essai gratuit</span>
+            <span style="font-family:var(--font-heading);font-size:40px;line-height:1">9 <span style="font-size:18px">jours restants</span></span>
+            <p style="margin:0;font-size:13px;color:var(--color-accent-900)">Ensuite 10 000 FCFA / mois via Mobile Money. Résiliable à tout moment.</p>
+            <button class="btn btn-primary" onClick="{{ goCabinet }}" style="align-self:flex-start;margin-top:6px">Activer mon abonnement</button>
+          </div>
+        </sc-if>
+        <sc-if value="{{ isActive }}" hint-placeholder-val="{{ false }}">
+          <div class="card" style="padding:var(--space-6);background:var(--color-accent-2-100);gap:var(--space-2)">
+            <span class="card-kicker" style="color:var(--color-accent-2-700);font-weight:700">Abonnement actif</span>
+            <span style="font-family:var(--font-heading);font-size:28px;line-height:1.1">Plan Pro</span>
+            <p style="margin:0;font-size:13px;color:var(--color-accent-2-900)">Toutes les fonctionnalités cliniques activées. Prochain paiement le 12 octobre.</p>
+            <button class="btn btn-secondary" onClick="{{ goCabinet }}" style="align-self:flex-start;margin-top:6px">Gérer mon cabinet</button>
+          </div>
+        </sc-if>
+        <div class="card" style="padding:var(--space-6);gap:var(--space-2)">
+          <span class="card-kicker" style="font-weight:700;color:var(--color-accent-700)">Réseau</span>
+          <span class="card-title" style="font-size:20px">Second avis entre confrères</span>
+          <p style="margin:0;font-size:13px;color:var(--color-neutral-800)">Un cas difficile ? Partagez-le anonymisé avec un dermatologue du réseau.</p>
+          <button class="btn btn-secondary" style="align-self:flex-start;margin-top:6px">Demander un avis</button>
+        </div>
+        <div class="card" style="padding:var(--space-6);gap:var(--space-2)">
+          <span class="card-kicker" style="font-weight:700;color:var(--color-accent-700)">Parrainage</span>
+          <span class="card-title" style="font-size:20px">Invitez un confrère</span>
+          <p style="margin:0;font-size:13px;color:var(--color-neutral-800)">Déjà 2 confrères invités.</p>
+          <div style="display:flex;flex-wrap:wrap;gap:var(--space-2);margin-top:6px">
+            <button class="btn btn-secondary" onClick="{{ copyLink }}">{{ copyLabel }}</button>
+            <a href="#" class="btn" style="background:var(--color-accent-2-600);color:var(--color-bg)">Inviter sur WhatsApp</a>
+          </div>
+        </div>
+      </section>
+    </sc-if>
+
+    <!-- ═══ PATIENTÈLE ═══ -->
+    <sc-if value="{{ pg.patients }}" hint-placeholder-val="{{ false }}">
+      <header style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:var(--space-4)">
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <span style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:var(--color-accent-700)">{{ pt.kicker }}</span>
+          <h1 style="margin:0;font-size:42px">{{ pt.title }}</h1>
+        </div>
+        <button class="btn btn-primary" onClick="{{ newPatient }}" style="padding:12px 22px;font-size:15px;white-space:nowrap">{{ ic.plus }}Nouveau patient</button>
+      </header>
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-3)">
+        <div style="display:flex;gap:6px;padding:4px;border-radius:999px;background:var(--color-surface)">
+          <sc-for list="{{ pt.tabs }}" as="t" hint-placeholder-count="2">
+            <button onClick="{{ t.go }}" style="display:flex;align-items:center;gap:8px;border:0;cursor:pointer;padding:9px 16px;border-radius:999px;font:inherit;font-size:13px;font-weight:700;background:{{ t.bg }};color:{{ t.fg }}">{{ t.label }}<sc-if value="{{ t.hasCount }}" hint-placeholder-val="{{ false }}"><span style="min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--color-accent);color:var(--color-bg);font-size:11px;display:flex;align-items:center;justify-content:center">{{ t.count }}</span></sc-if></button>
+          </sc-for>
+        </div>
+        <label style="flex:1;min-width:220px;display:flex;align-items:center;gap:10px;padding:0 16px;height:44px;border-radius:999px;background:var(--color-surface);color:var(--color-neutral-700)">
+          {{ ic.search }}
+          <input value="{{ pt.q }}" onChange="{{ pt.onQ }}" placeholder="Rechercher un patient par nom…" style="flex:1;border:0;background:transparent;font:inherit;font-size:14px;color:var(--color-text);outline:none">
+        </label>
+      </div>
+      <sc-if value="{{ pt.showFilters }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          <sc-for list="{{ pt.filters }}" as="f" hint-placeholder-count="5">
+            <button onClick="{{ f.go }}" style="border:1px solid {{ f.border }};cursor:pointer;padding:7px 14px;border-radius:999px;font:inherit;font-size:13px;font-weight:600;background:{{ f.bg }};color:{{ f.fg }}">{{ f.label }} <span style="opacity:.7">{{ f.count }}</span></button>
+          </sc-for>
+        </div>
+      </sc-if>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:var(--space-3)">
+        <sc-for list="{{ pt.rows }}" as="p" hint-placeholder-count="6">
+          <a href="#" onClick="{{ p.open }}" class="card" style="padding:var(--space-4);gap:var(--space-3);text-decoration:none;color:var(--color-text)" style-hover="box-shadow:var(--shadow-md)">
+            <div style="display:flex;align-items:center;gap:12px">
+              <span style="flex:none;width:44px;height:44px;border-radius:999px;background:{{ p.avBg }};color:{{ p.avFg }};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px">{{ p.initials }}</span>
+              <span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:15px;font-weight:700">{{ p.name }}</span><span style="font-size:12px;color:var(--color-neutral-700)">{{ p.meta }}</span></span>
+              <span class="tag {{ p.tag }}">{{ p.statusLabel }}</span>
+            </div>
+            <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px">
+              <span style="display:flex;flex-direction:column;min-width:0"><span style="font-size:12px;color:var(--color-neutral-700)">{{ p.condition }}</span><span style="font-family:var(--font-heading);font-size:26px;line-height:1.1">{{ p.score }}<span style="font-size:13px;font-family:var(--font-body);color:var(--color-neutral-700)"> Glow Score</span></span></span>
+              <span style="display:flex;align-items:flex-end;gap:4px;height:36px" title="Évolution du Glow Score">
+                <sc-for list="{{ p.bars }}" as="b" hint-placeholder-count="4"><span style="width:8px;border-radius:999px;height:{{ b.h }};background:{{ b.c }}"></span></sc-for>
+              </span>
+            </div>
+          </a>
+        </sc-for>
+      </div>
+      <sc-if value="{{ pt.empty }}" hint-placeholder-val="{{ false }}">
+        <div class="card" style="padding:var(--space-8);align-items:flex-start"><span class="card-title">Aucun patient trouvé</span><p class="card-body">Essayez un autre nom ou retirez le filtre.</p></div>
+      </sc-if>
+    </sc-if>
+
+    <!-- ═══ FICHE PATIENT ═══ -->
+    <sc-if value="{{ pg.patient }}" hint-placeholder-val="{{ false }}">
+      <a href="#" onClick="{{ goPatients }}" style="font-size:13px;font-weight:700;text-decoration:none">← Patientèle</a>
+      <header style="display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-4)">
+        <span style="flex:none;width:72px;height:72px;border-radius:999px;background:var(--color-accent-200);color:var(--color-accent-800);display:flex;align-items:center;justify-content:center;font-family:var(--font-heading);font-size:26px">{{ fp.initials }}</span>
+        <div style="flex:1;min-width:220px;display:flex;flex-direction:column;gap:4px">
+          <h1 style="margin:0;font-size:38px">{{ fp.name }}</h1>
+          <span style="font-size:14px;color:var(--color-neutral-700)">{{ fp.meta }}</span>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:var(--space-2)">
+          <button class="btn btn-secondary" onClick="{{ fp.remind }}" style="white-space:nowrap">{{ ic.phone }}{{ fp.remindLabel }}</button>
+          <button class="btn btn-primary" onClick="{{ newPatient }}" style="white-space:nowrap">{{ ic.camera }}Photo de contrôle</button>
+        </div>
+      </header>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;padding:4px;border-radius:999px;background:var(--color-surface);align-self:flex-start">
+        <sc-for list="{{ fp.statuses }}" as="s" hint-placeholder-count="4">
+          <button onClick="{{ s.go }}" style="border:0;cursor:pointer;padding:9px 16px;border-radius:999px;font:inherit;font-size:13px;font-weight:700;background:{{ s.bg }};color:{{ s.fg }}">{{ s.label }}</button>
+        </sc-for>
+      </div>
+      <section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:var(--space-4);align-items:start">
+        <div class="card" style="padding:var(--space-6);gap:var(--space-4);align-items:flex-start">
+          <span class="card-kicker" style="font-weight:700;color:var(--color-accent-700)">Glow Score actuel</span>
+          <div style="width:180px;height:180px;border-radius:999px;background:conic-gradient(var(--color-accent) {{ fp.deg }}, var(--color-accent-200) 0);display:flex;align-items:center;justify-content:center">
+            <div style="width:140px;height:140px;border-radius:999px;background:var(--color-surface);display:flex;flex-direction:column;align-items:center;justify-content:center">
+              <span style="font-family:var(--font-heading);font-size:48px;line-height:1">{{ fp.score }}</span>
+              <span style="font-size:12px;color:var(--color-neutral-700)">sur 100</span>
+            </div>
+          </div>
+          <span style="font-size:14px;font-weight:700;color:{{ fp.deltaInk }}">{{ fp.delta }}</span>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <span style="font-size:12px;color:var(--color-neutral-700)">Diagnostic principal</span>
+            <span class="card-title" style="font-size:20px">{{ fp.condition }}</span>
+          </div>
+        </div>
+        <div class="card" style="padding:var(--space-6);gap:var(--space-3)">
+          <h3 style="margin:0;font-size:22px">Historique des analyses</h3>
+          <sc-for list="{{ fp.history }}" as="h" hint-placeholder-count="4">
+            <div style="display:flex;align-items:center;gap:14px;padding:8px 10px;border-radius:999px;background:var(--color-bg)">
+              <span style="flex:none;width:46px;height:46px;border-radius:999px;background:{{ h.bg }};color:{{ h.fg }};display:flex;align-items:center;justify-content:center;font-family:var(--font-heading);font-size:17px">{{ h.score }}</span>
+              <span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:14px;font-weight:700">{{ h.date }}</span><span style="font-size:12px;color:var(--color-neutral-700)">{{ h.note }}</span></span>
+            </div>
+          </sc-for>
+        </div>
+        <div class="card" style="padding:var(--space-6);gap:var(--space-3)">
+          <h3 style="margin:0;font-size:22px">Traitement en cours</h3>
+          <sc-for list="{{ fp.treatment }}" as="t" hint-placeholder-count="3">
+            <div style="display:flex;gap:12px;align-items:flex-start">
+              <span style="flex:none;margin-top:4px;width:22px;height:22px;border-radius:999px;background:var(--color-accent-2-200);color:var(--color-accent-2-800);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">{{ t.n }}</span>
+              <span style="display:flex;flex-direction:column"><span style="font-size:14px;font-weight:700">{{ t.name }}</span><span style="font-size:12px;color:var(--color-neutral-700)">{{ t.how }}</span></span>
+            </div>
+          </sc-for>
+          <div class="field" style="margin-top:6px"><label>Note clinique</label><textarea class="input" style="border-radius:var(--radius-md)" placeholder="Observation, évolution, prochaine étape…"></textarea></div>
+        </div>
+      </section>
+    </sc-if>
+
+    <!-- ═══ ANALYSE ═══ -->
+    <sc-if value="{{ pg.analyse }}" hint-placeholder-val="{{ false }}">
+      <header style="display:flex;flex-direction:column;gap:4px">
+        <span style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:var(--color-accent-700)">Nouvelle analyse · étape {{ an.step }} sur 5</span>
+        <h1 style="margin:0;font-size:42px">{{ an.title }}</h1>
+      </header>
+      <div style="display:flex;flex-wrap:wrap;gap:var(--space-2)">
+        <sc-for list="{{ an.steps }}" as="s" hint-placeholder-count="5">
+          <button onClick="{{ s.go }}" style="display:flex;align-items:center;gap:10px;border:0;cursor:pointer;padding:6px 16px 6px 6px;border-radius:999px;font:inherit;font-size:13px;font-weight:700;background:{{ s.bg }};color:{{ s.fg }}">
+            <span style="width:28px;height:28px;border-radius:999px;background:{{ s.dotBg }};color:{{ s.dotFg }};display:flex;align-items:center;justify-content:center;font-size:12px">{{ s.mark }}</span>{{ s.label }}
+          </button>
+        </sc-for>
+      </div>
+
+      <sc-if value="{{ an.s1 }}" hint-placeholder-val="{{ false }}">
+        <div class="card" style="padding:var(--space-6);gap:var(--space-4)">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:var(--space-3)">
+            <div class="field"><label>Prénom</label><input class="input" placeholder="Samuel"></div>
+            <div class="field"><label>Nom</label><input class="input" placeholder="Etoga"></div>
+            <div class="field"><label>Âge</label><input class="input" placeholder="34" inputmode="numeric"></div>
+            <div class="field"><label>WhatsApp</label><input class="input" placeholder="6XX XXX XXX" inputmode="tel"></div>
+          </div>
+          <div class="field"><label>Motif de consultation</label><textarea class="input" style="border-radius:var(--radius-md)" placeholder="Depuis quand, où, ce qui aggrave…"></textarea></div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <span style="font-size:12px;color:var(--color-neutral-700)">Antécédents</span>
+            <div style="display:flex;flex-wrap:wrap;gap:8px">
+              <sc-for list="{{ an.history }}" as="c" hint-placeholder-count="6"><button onClick="{{ c.go }}" style="border:1px solid {{ c.border }};cursor:pointer;padding:7px 14px;border-radius:999px;font:inherit;font-size:13px;font-weight:600;background:{{ c.bg }};color:{{ c.fg }}">{{ c.label }}</button></sc-for>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ an.s2 }}" hint-placeholder-val="{{ false }}">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:var(--space-4);align-items:start">
+          <div class="card" style="padding:var(--space-6);gap:var(--space-4)">
+            <span class="card-title" style="font-size:20px">Photos</span>
+            <div style="display:flex;flex-wrap:wrap;gap:var(--space-4)">
+              <sc-for list="{{ an.shots }}" as="s" hint-placeholder-count="3">
+                <button onClick="{{ s.go }}" style="display:flex;flex-direction:column;align-items:center;gap:8px;border:0;background:transparent;cursor:pointer;font:inherit;color:var(--color-text)">
+                  <span style="width:104px;height:104px;border-radius:999px;border:2px dashed {{ s.border }};background:{{ s.bg }};color:{{ s.fg }};display:flex;align-items:center;justify-content:center">{{ s.icon }}</span>
+                  <span style="font-size:13px;font-weight:700">{{ s.label }}</span>
+                </button>
+              </sc-for>
+            </div>
+            <span style="font-size:12px;color:var(--color-neutral-700)">Lumière naturelle, sans flash, visage dégagé.</span>
+          </div>
+          <div class="card" style="padding:var(--space-6);gap:var(--space-4)">
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <span class="card-title" style="font-size:20px">Phototype</span>
+              <div style="display:flex;gap:var(--space-3)">
+                <sc-for list="{{ an.phototypes }}" as="t" hint-placeholder-count="3">
+                  <button onClick="{{ t.go }}" title="{{ t.title }}" style="display:flex;flex-direction:column;align-items:center;gap:6px;border:0;background:transparent;cursor:pointer;font:inherit;color:var(--color-text)">
+                    <span style="width:52px;height:52px;border-radius:999px;background:{{ t.color }};box-shadow:0 0 0 3px var(--color-surface), 0 0 0 6px {{ t.ring }}"></span>
+                    <span style="font-size:13px;font-weight:700">{{ t.label }}</span>
+                  </button>
+                </sc-for>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <span style="font-size:12px;color:var(--color-neutral-700)">Lésions observées</span>
+              <div style="display:flex;flex-wrap:wrap;gap:8px"><sc-for list="{{ an.lesions }}" as="c" hint-placeholder-count="9"><button onClick="{{ c.go }}" style="border:1px solid {{ c.border }};cursor:pointer;padding:7px 14px;border-radius:999px;font:inherit;font-size:13px;font-weight:600;background:{{ c.bg }};color:{{ c.fg }}">{{ c.label }}</button></sc-for></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <span style="font-size:12px;color:var(--color-neutral-700)">Zones</span>
+              <div style="display:flex;flex-wrap:wrap;gap:8px"><sc-for list="{{ an.zones }}" as="c" hint-placeholder-count="8"><button onClick="{{ c.go }}" style="border:1px solid {{ c.border }};cursor:pointer;padding:7px 14px;border-radius:999px;font:inherit;font-size:13px;font-weight:600;background:{{ c.bg }};color:{{ c.fg }}">{{ c.label }}</button></sc-for></div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ an.s3 }}" hint-placeholder-val="{{ false }}">
+        <div class="card" style="padding:var(--space-6);gap:var(--space-2)">
+          <sc-for list="{{ an.questions }}" as="q" hint-placeholder-count="5">
+            <div style="display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-3);padding:10px 10px 10px 18px;border-radius:999px;background:var(--color-bg)">
+              <span style="flex:1;min-width:200px;font-size:14px;font-weight:600">{{ q.text }}</span>
+              <div style="display:flex;gap:6px">
+                <sc-for list="{{ q.opts }}" as="o" hint-placeholder-count="3"><button onClick="{{ o.go }}" style="border:0;cursor:pointer;padding:8px 14px;border-radius:999px;font:inherit;font-size:13px;font-weight:700;background:{{ o.bg }};color:{{ o.fg }}">{{ o.label }}</button></sc-for>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ an.s4 }}" hint-placeholder-val="{{ false }}">
+        <sc-if value="{{ an.aiIdle }}" hint-placeholder-val="{{ true }}">
+          <div class="card" style="padding:var(--space-8);gap:var(--space-4);align-items:flex-start;background:var(--color-accent-2-100)">
+            <span class="card-title" style="font-size:24px;color:var(--color-accent-2-900)">Tout est prêt pour l'analyse</span>
+            <p style="margin:0;font-size:14px;color:var(--color-accent-2-900)">{{ an.recap }}</p>
+            <button class="btn btn-primary" onClick="{{ an.run }}" style="padding:12px 24px;font-size:15px">{{ ic.sparkle }}Lancer l'analyse IA</button>
+          </div>
+        </sc-if>
+        <sc-if value="{{ an.aiRun }}" hint-placeholder-val="{{ false }}">
+          <div class="card" style="padding:var(--space-8);gap:var(--space-4);align-items:center">
+            {{ pulse }}
+            <span class="card-title" style="font-size:20px">Analyse en cours…</span>
+            <span style="font-size:13px;color:var(--color-neutral-700)">Comparaison avec 14 000 cas validés sur peaux phototype IV à VI</span>
+          </div>
+        </sc-if>
+        <sc-if value="{{ an.aiDone }}" hint-placeholder-val="{{ false }}">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:var(--space-4);align-items:start">
+            <div class="card" style="padding:var(--space-6);gap:var(--space-4)">
+              <span class="card-kicker" style="font-weight:700;color:var(--color-accent-700)">Diagnostic différentiel</span>
+              <sc-for list="{{ an.diff }}" as="d" hint-placeholder-count="3">
+                <div style="display:flex;flex-direction:column;gap:6px">
+                  <div style="display:flex;justify-content:space-between;gap:12px"><span style="font-size:15px;font-weight:700">{{ d.name }}</span><span style="font-family:var(--font-heading);font-size:18px">{{ d.pct }}</span></div>
+                  <div style="height:10px;border-radius:999px;background:var(--color-neutral-200);overflow:hidden"><div style="height:100%;width:{{ d.pct }};border-radius:999px;background:{{ d.c }}"></div></div>
+                </div>
+              </sc-for>
+              <span style="font-size:12px;color:var(--color-neutral-700)">Aide à la décision. Le diagnostic final reste celui du médecin.</span>
+            </div>
+            <div class="card" style="padding:var(--space-6);gap:var(--space-3)">
+              <span class="card-kicker" style="font-weight:700;color:var(--color-accent-2-700)">Protocole suggéré</span>
+              <sc-for list="{{ an.protocol }}" as="t" hint-placeholder-count="3">
+                <div style="display:flex;gap:12px;align-items:flex-start">
+                  <span style="flex:none;margin-top:3px;width:22px;height:22px;border-radius:999px;background:var(--color-accent-2-200);color:var(--color-accent-2-800);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">{{ t.n }}</span>
+                  <span style="display:flex;flex-direction:column"><span style="font-size:14px;font-weight:700">{{ t.name }}</span><span style="font-size:12px;color:var(--color-neutral-700)">{{ t.how }}</span></span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+      </sc-if>
+
+      <sc-if value="{{ an.s5 }}" hint-placeholder-val="{{ false }}">
+        <div class="card" style="padding:var(--space-6);gap:var(--space-4)">
+          <div style="display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-4)">
+            <span style="flex:none;width:64px;height:64px;border-radius:999px;background:var(--color-accent-200);color:var(--color-accent-800);display:flex;align-items:center;justify-content:center;font-family:var(--font-heading);font-size:22px">SE</span>
+            <div style="flex:1;min-width:200px;display:flex;flex-direction:column"><span class="card-title" style="font-size:24px">Samuel Etoga · 34 ans</span><span style="font-size:13px;color:var(--color-neutral-700)">Hyperpigmentation post-inflammatoire · phototype {{ an.pt }} · 3 photos</span></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <span style="font-size:12px;color:var(--color-neutral-700)">Statut du dossier</span>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;padding:4px;border-radius:999px;background:var(--color-bg);align-self:flex-start">
+              <sc-for list="{{ an.statuses }}" as="s" hint-placeholder-count="4"><button onClick="{{ s.go }}" style="border:0;cursor:pointer;padding:9px 16px;border-radius:999px;font:inherit;font-size:13px;font-weight:700;background:{{ s.bg }};color:{{ s.fg }}">{{ s.label }}</button></sc-for>
+            </div>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:var(--space-2)">
+            <button class="btn" onClick="{{ an.send }}" style="background:var(--color-accent-2-600);color:var(--color-bg);padding:12px 20px">{{ ic.send }}{{ an.sendLabel }}</button>
+            <button class="btn btn-secondary" style="padding:12px 20px">{{ ic.download }}Télécharger le PDF</button>
+          </div>
+        </div>
+      </sc-if>
+
+      <div style="display:flex;justify-content:space-between;gap:var(--space-3)">
+        <button class="btn btn-secondary" onClick="{{ an.prev }}" disabled="{{ an.isFirst }}" style="padding:12px 20px">← Précédent</button>
+        <button class="btn btn-primary" onClick="{{ an.next }}" style="padding:12px 24px">{{ an.nextLabel }}</button>
+      </div>
+    </sc-if>
+
+    <!-- ═══ CONSULTATIONS ═══ -->
+    <sc-if value="{{ pg.consultations }}" hint-placeholder-val="{{ false }}">
+      <header style="display:flex;flex-direction:column;gap:4px">
+        <span style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:var(--color-accent-700)">En ligne depuis GlowScan</span>
+        <h1 style="margin:0;font-size:42px">Consultations</h1>
+      </header>
+      <div style="display:flex;flex-wrap:wrap;gap:var(--space-4);align-items:stretch">
+        <div style="flex:1 1 260px;max-width:100%;display:flex;flex-direction:column;gap:var(--space-2)">
+          <sc-for list="{{ cs.list }}" as="c" hint-placeholder-count="4">
+            <button onClick="{{ c.go }}" style="display:flex;align-items:center;gap:12px;text-align:left;border:0;cursor:pointer;padding:10px 14px 10px 10px;border-radius:999px;font:inherit;color:var(--color-text);background:{{ c.bg }}">
+              <span style="flex:none;width:42px;height:42px;border-radius:999px;background:var(--color-accent-2-200);color:var(--color-accent-2-800);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px">{{ c.initials }}</span>
+              <span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:14px;font-weight:700">{{ c.name }}</span><span style="font-size:12px;color:var(--color-neutral-700);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.condition }}</span></span>
+              <sc-if value="{{ c.hasUnread }}" hint-placeholder-val="{{ false }}"><span style="min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:var(--color-accent);color:var(--color-bg);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ c.unread }}</span></sc-if>
+              <span style="font-size:11px;color:var(--color-neutral-700)">{{ c.time }}</span>
+            </button>
+          </sc-for>
+        </div>
+        <div class="card" style="flex:999 1 360px;min-width:0;padding:var(--space-4);gap:var(--space-3);min-height:520px">
+          <div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:4px 6px 12px;border-bottom:1px solid var(--color-divider)">
+            <span style="flex:1;min-width:0;display:flex;flex-direction:column"><span class="card-title" style="font-size:20px">{{ cs.cur.name }}</span><span style="font-size:12px;color:var(--color-neutral-700)">{{ cs.cur.condition }} · {{ cs.cur.price }}</span></span>
+            <span class="tag {{ cs.cur.tag }}">{{ cs.cur.stage }}</span>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-3);padding:var(--space-3);border-radius:var(--radius-lg);background:var(--color-bg)">
+            <div style="display:flex;gap:6px"><span style="width:52px;height:52px;border-radius:16px;background:#8b5e3c"></span><span style="width:52px;height:52px;border-radius:16px;background:#7a5234"></span><span style="width:52px;height:52px;border-radius:16px;background:#946642"></span></div>
+            <div style="flex:1;min-width:200px;display:flex;flex-direction:column;gap:2px">
+              <span style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--color-accent-700)">Pré-diagnostic IA</span>
+              <span style="font-size:15px;font-weight:700">{{ cs.cur.ai }} · {{ cs.cur.conf }}</span>
+              <span style="font-size:12px;color:var(--color-neutral-700)">{{ cs.cur.answers }}</span>
+            </div>
+            <sc-if value="{{ cs.cur.canReport }}" hint-placeholder-val="{{ true }}"><button class="btn btn-primary" onClick="{{ cs.openReport }}" style="white-space:nowrap">Valider et rédiger le compte rendu</button></sc-if>
+            <sc-if value="{{ cs.cur.isSent }}" hint-placeholder-val="{{ false }}"><span style="display:flex;flex-direction:column;align-items:flex-end;gap:2px"><span class="tag tag-accent-2">Compte rendu envoyé ✓</span><span style="font-size:12px;font-weight:700;color:var(--color-accent-2-700)">+ {{ cs.split.derm }} dans votre portefeuille</span></span></sc-if>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;gap:10px;overflow:auto;padding:4px">
+            <sc-for list="{{ cs.msgs }}" as="m" hint-placeholder-count="4">
+              <div style="display:flex;justify-content:{{ m.justify }}">
+                <div style="max-width:78%;padding:10px 16px;border-radius:22px;background:{{ m.bg }};color:{{ m.fg }};font-size:14px;line-height:1.45">{{ m.t }}<div style="font-size:10px;opacity:.7;margin-top:4px">{{ m.at }}</div></div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">
+            <sc-for list="{{ cs.quick }}" as="q" hint-placeholder-count="3"><button onClick="{{ q.go }}" class="tag tag-neutral" style="border:0;cursor:pointer;font:inherit;font-size:12px;padding:6px 12px">{{ q.label }}</button></sc-for>
+          </div>
+          <div style="display:flex;gap:var(--space-2)">
+            <input class="input" value="{{ cs.draft }}" onChange="{{ cs.onDraft }}" onKeyDown="{{ cs.onKey }}" placeholder="Écrire au patient…" style="flex:1;min-height:44px;background:var(--color-bg)">
+            <button class="btn btn-primary btn-icon" onClick="{{ cs.send }}" style="width:44px;height:44px" title="Envoyer">{{ ic.send }}</button>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ cs.dlg }}" hint-placeholder-val="{{ false }}">
+      <div class="dialog-backdrop" onClick="{{ cs.closeReport }}" style="z-index:50">
+        <div class="dialog" onClick="{{ stop }}" style="max-width:560px;width:100%">
+          <span class="dialog-title">Compte rendu · {{ cs.cur.name }}</span>
+          <span style="font-size:13px;color:var(--color-neutral-700)">Pré-rempli par l'IA. Corrigez si besoin, puis signez.</span>
+          <div class="field"><label>Diagnostic</label><textarea class="input" style="border-radius:var(--radius-md);min-height:56px" value="{{ cs.rDx }}" onChange="{{ cs.onDx }}"></textarea></div>
+          <div class="field"><label>Traitement et conseils</label><textarea class="input" style="border-radius:var(--radius-md);min-height:90px" value="{{ cs.rTt }}" onChange="{{ cs.onTt }}"></textarea></div>
+          <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:var(--color-neutral-700)">Envoyer par</span>
+            <div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ cs.channels }}" as="c" hint-placeholder-count="2"><button onClick="{{ c.go }}" style="border:1px solid {{ c.border }};cursor:pointer;padding:7px 14px;border-radius:999px;font:inherit;font-size:13px;font-weight:600;background:{{ c.bg }};color:{{ c.fg }}">{{ c.label }}</button></sc-for></div>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;padding:12px 16px;border-radius:var(--radius-lg);background:var(--color-accent-2-100);font-size:13px;color:var(--color-accent-2-900)">
+            <span style="flex:1;min-width:140px">Honoraires <b>{{ cs.split.total }}</b></span><span>Vous <b>{{ cs.split.derm }}</b></span><span>GlowScan <b>{{ cs.split.gs }}</b></span>
+          </div>
+          <div style="display:flex;gap:var(--space-2);align-items:center">
+            <input class="input" type="password" inputmode="numeric" maxlength="4" value="{{ cs.pin }}" onChange="{{ cs.onPin }}" placeholder="Code" style="width:110px;letter-spacing:.3em;text-align:center">
+            <span style="font-size:12px;color:var(--color-neutral-700)">Votre code à 4 chiffres vaut signature.</span>
+          </div>
+          <div class="dialog-actions"><button class="btn btn-ghost" onClick="{{ cs.closeReport }}">Annuler</button><button class="btn btn-primary" onClick="{{ cs.signSend }}" disabled="{{ cs.signOff }}">Signer et envoyer</button></div>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ═══ AGENDA ═══ -->
+    <sc-if value="{{ pg.agenda }}" hint-placeholder-val="{{ false }}">
+      <header style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:var(--space-4)">
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <span style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:var(--color-accent-700)">Septembre 2026</span>
+          <h1 style="margin:0;font-size:42px">{{ ag.dayTitle }}</h1>
+          <p style="margin:0;color:var(--color-neutral-700)">{{ ag.summary }}</p>
+        </div>
+        <button class="btn btn-primary" onClick="{{ ag.open }}" style="padding:12px 22px;font-size:15px;white-space:nowrap">{{ ic.plus }}Nouveau rendez-vous</button>
+      </header>
+      <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:var(--space-2)">
+        <sc-for list="{{ ag.week }}" as="d" hint-placeholder-count="7">
+          <button onClick="{{ d.go }}" style="display:flex;flex-direction:column;align-items:center;gap:2px;border:0;cursor:pointer;padding:10px 4px;border-radius:999px;font:inherit;background:{{ d.bg }};color:{{ d.fg }}">
+            <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em">{{ d.dow }}</span>
+            <span style="font-family:var(--font-heading);font-size:22px;line-height:1.1">{{ d.num }}</span>
+            <span style="display:flex;gap:3px;height:6px"><sc-for list="{{ d.dots }}" as="x" hint-placeholder-count="2"><span style="width:6px;height:6px;border-radius:999px;background:{{ x.c }}"></span></sc-for></span>
+          </button>
+        </sc-for>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:var(--space-3)">
+        <sc-for list="{{ ag.legend }}" as="l" hint-placeholder-count="4"><span style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--color-neutral-800)"><span style="width:10px;height:10px;border-radius:999px;background:{{ l.c }}"></span>{{ l.label }}</span></sc-for>
+      </div>
+      <div class="card" style="padding:var(--space-4) var(--space-4) var(--space-4) 0;display:flex;flex-direction:row;gap:0">
+        <div style="flex:none;width:64px;display:flex;flex-direction:column">
+          <sc-for list="{{ ag.hours }}" as="h" hint-placeholder-count="11"><span style="height:60px;font-size:12px;color:var(--color-neutral-700);text-align:right;padding-right:12px;transform:translateY(-8px)">{{ h.label }}</span></sc-for>
+        </div>
+        <div style="flex:1;position:relative;height:660px;background:repeating-linear-gradient(to bottom, color-mix(in srgb, var(--color-text) 10%, transparent) 0 1px, transparent 1px 60px)">
+          <div style="position:absolute;left:0;right:0;top:{{ ag.nowTop }};height:2px;background:var(--color-accent);display:{{ ag.nowDisplay }}"><span style="position:absolute;left:-5px;top:-4px;width:10px;height:10px;border-radius:999px;background:var(--color-accent)"></span></div>
+          <sc-for list="{{ ag.appts }}" as="a" hint-placeholder-count="4">
+            <div style="position:absolute;left:8px;right:8px;top:{{ a.top }};height:{{ a.h }};border-radius:20px;background:{{ a.bg }};color:{{ a.fg }};padding:8px 14px;display:flex;align-items:flex-start;gap:12px;overflow:hidden;box-sizing:border-box">
+              <span style="font-family:var(--font-heading);font-size:15px;flex:none">{{ a.time }}</span>
+              <span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:14px;font-weight:700">{{ a.name }}</span><span style="font-size:12px;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ a.typeLabel }} · {{ a.dur }} min · {{ a.notes }}</span></span>
+              <button onClick="{{ a.del }}" title="Annuler" style="flex:none;border:0;background:transparent;color:inherit;cursor:pointer;opacity:.7;padding:2px">{{ ic.trash }}</button>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <sc-if value="{{ ag.dlg }}" hint-placeholder-val="{{ false }}">
+        <div class="dialog-backdrop" onClick="{{ ag.close }}" style="z-index:50">
+          <div class="dialog" onClick="{{ stop }}">
+            <span class="dialog-title">Nouveau rendez-vous</span>
+            <div class="field"><label>Patient</label><input class="input" value="{{ ag.f.name }}" onChange="{{ ag.onName }}" placeholder="Nom du patient"></div>
+            <div style="display:flex;gap:var(--space-2)">
+              <div class="field" style="flex:1"><label>Heure</label><input class="input" type="time" value="{{ ag.f.time }}" onChange="{{ ag.onTime }}"></div>
+              <div class="field" style="flex:1"><label>Contact WhatsApp</label><input class="input" placeholder="6XX XXX XXX"></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:var(--color-neutral-700)">Type</span>
+              <div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ ag.types }}" as="t" hint-placeholder-count="3"><button onClick="{{ t.go }}" style="border:1px solid {{ t.border }};cursor:pointer;padding:7px 14px;border-radius:999px;font:inherit;font-size:13px;font-weight:600;background:{{ t.bg }};color:{{ t.fg }}">{{ t.label }}</button></sc-for></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:var(--color-neutral-700)">Durée</span>
+              <div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ ag.durs }}" as="t" hint-placeholder-count="4"><button onClick="{{ t.go }}" style="border:1px solid {{ t.border }};cursor:pointer;padding:7px 14px;border-radius:999px;font:inherit;font-size:13px;font-weight:600;background:{{ t.bg }};color:{{ t.fg }}">{{ t.label }}</button></sc-for></div>
+            </div>
+            <div class="field"><label>Notes — « urgent » ou « douleur » passent le RDV en urgence</label><input class="input" value="{{ ag.f.notes }}" onChange="{{ ag.onNotes }}" placeholder="Motif, précisions…"></div>
+            <div class="dialog-actions">
+              <button class="btn btn-ghost" onClick="{{ ag.close }}">Annuler</button>
+              <button class="btn btn-primary" onClick="{{ ag.create }}">Créer le rendez-vous</button>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+    </sc-if>
+
+    <!-- ═══ PERFORMANCES ═══ -->
+    <sc-if value="{{ pg.stats }}" hint-placeholder-val="{{ false }}">
+      <header style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:var(--space-4)">
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <span style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:var(--color-accent-700)">Votre cabinet en chiffres</span>
+          <h1 style="margin:0;font-size:42px">Performances</h1>
+        </div>
+        <div class="seg">
+          <sc-for list="{{ st.ranges }}" as="r" hint-placeholder-count="3"><button onClick="{{ r.go }}" class="seg-opt" style="border:0;font:inherit;font-size:13px;cursor:pointer;background:{{ r.bg }};color:{{ r.fg }}">{{ r.label }}</button></sc-for>
+        </div>
+      </header>
+      <section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:var(--space-3)">
+        <sc-for list="{{ st.kpis }}" as="k" hint-placeholder-count="4">
+          <div style="display:flex;flex-direction:column;gap:6px;padding:var(--space-4);border-radius:var(--radius-lg);background:{{ k.bg }}">
+            <span style="font-size:12px;font-weight:700;color:{{ k.ink }}">{{ k.label }}</span>
+            <span style="font-family:var(--font-heading);font-size:38px;line-height:1">{{ k.value }}</span>
+          </div>
+        </sc-for>
+      </section>
+      <div class="card" style="padding:var(--space-6);gap:var(--space-4)">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px"><h3 style="margin:0;font-size:22px">Analyses par mois</h3><span style="font-size:13px;color:var(--color-neutral-700)">{{ st.monthTotal }}</span></div>
+        <div style="display:flex;align-items:flex-end;gap:var(--space-3);height:200px">
+          <sc-for list="{{ st.months }}" as="m" hint-placeholder-count="6">
+            <div style="flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:6px">
+              <span style="font-size:12px;font-weight:700">{{ m.count }}</span>
+              <div style="width:100%;max-width:56px;height:{{ m.h }};border-radius:999px 999px 18px 18px;background:{{ m.c }}"></div>
+              <span style="font-size:12px;color:var(--color-neutral-700)">{{ m.label }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:var(--space-4);align-items:start">
+        <div class="card" style="padding:var(--space-6);gap:var(--space-3)">
+          <h3 style="margin:0;font-size:22px">Top 5 problèmes de peau</h3>
+          <sc-for list="{{ st.conditions }}" as="c" hint-placeholder-count="5">
+            <div style="display:flex;flex-direction:column;gap:5px"><div style="display:flex;justify-content:space-between;font-size:13px"><span style="font-weight:600">{{ c.name }}</span><span style="font-weight:700">{{ c.count }}</span></div><div style="height:10px;border-radius:999px;background:var(--color-neutral-200)"><div style="height:100%;width:{{ c.w }};border-radius:999px;background:var(--color-accent)"></div></div></div>
+          </sc-for>
+        </div>
+        <div class="card" style="padding:var(--space-6);gap:var(--space-3)">
+          <h3 style="margin:0;font-size:22px">Top 5 produits recommandés</h3>
+          <sc-for list="{{ st.products }}" as="c" hint-placeholder-count="5">
+            <div style="display:flex;flex-direction:column;gap:5px"><div style="display:flex;justify-content:space-between;font-size:13px"><span style="font-weight:600">{{ c.name }}</span><span style="font-weight:700">{{ c.count }}×</span></div><div style="height:10px;border-radius:999px;background:var(--color-neutral-200)"><div style="height:100%;width:{{ c.w }};border-radius:999px;background:var(--color-accent-2-600)"></div></div></div>
+          </sc-for>
+        </div>
+        <div class="card" style="padding:var(--space-6);gap:var(--space-4)">
+          <h3 style="margin:0;font-size:22px">Répartition par phototype</h3>
+          <div style="display:flex;align-items:flex-end;gap:var(--space-4)">
+            <sc-for list="{{ st.phototypes }}" as="p" hint-placeholder-count="3">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:8px">
+                <span style="width:{{ p.size }};height:{{ p.size }};border-radius:999px;background:{{ p.color }};color:var(--color-neutral-100);display:flex;align-items:center;justify-content:center;font-family:var(--font-heading);font-size:18px">{{ p.pct }}</span>
+                <span style="font-size:12px;font-weight:700">Fitzpatrick {{ p.name }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <div class="card" style="padding:var(--space-6);gap:var(--space-3);background:var(--color-accent-2-100)">
+          <h3 style="margin:0;font-size:22px;color:var(--color-accent-2-900)">Consultations en ligne</h3>
+          <div style="display:flex;gap:var(--space-6);flex-wrap:wrap">
+            <span style="display:flex;flex-direction:column"><span style="font-family:var(--font-heading);font-size:38px;line-height:1">23</span><span style="font-size:12px;color:var(--color-accent-2-800)">consultations</span></span>
+            <span style="display:flex;flex-direction:column"><span style="font-family:var(--font-heading);font-size:38px;line-height:1">276 000</span><span style="font-size:12px;color:var(--color-accent-2-800)">FCFA reçus</span></span>
+          </div>
+          <p style="margin:0;font-size:13px;color:var(--color-accent-2-900)">+38 % par rapport au trimestre précédent.</p>
+        </div>
+      </section>
+    </sc-if>
+
+    <!-- ═══ PAIEMENTS ═══ -->
+    <sc-if value="{{ pg.payments }}" hint-placeholder-val="{{ false }}">
+      <header style="display:flex;flex-direction:column;gap:4px">
+        <span style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:var(--color-accent-700)">Séparé du dossier clinique</span>
+        <h1 style="margin:0;font-size:42px">Paiements</h1>
+      </header>
+      <section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:var(--space-3)">
+        <div style="display:flex;flex-direction:column;gap:6px;padding:var(--space-6);border-radius:var(--radius-lg);background:var(--color-surface)"><span style="font-size:12px;font-weight:700;color:var(--color-neutral-700)">Payé par les patients</span><span style="font-family:var(--font-heading);font-size:38px;line-height:1">{{ pay.paid }}</span><span style="font-size:12px;color:var(--color-neutral-700)">FCFA</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px;padding:var(--space-6);border-radius:var(--radius-lg);background:var(--color-accent-2-100)"><span style="font-size:12px;font-weight:700;color:var(--color-accent-2-800)">À verser (enregistré)</span><span style="font-family:var(--font-heading);font-size:38px;line-height:1">{{ pay.toPay }}</span><span style="font-size:12px;color:var(--color-accent-2-800)">FCFA</span></div>
+      </section>
+      <p style="margin:0;font-size:13px;color:var(--color-neutral-700);max-width:640px">Montants issus des enregistrements de la plateforme. Les versements sont réglés par GlowScan selon le barème en vigueur.</p>
+      <div style="display:flex;flex-direction:column;gap:var(--space-2)">
+        <sc-for list="{{ pay.rows }}" as="p" hint-placeholder-count="5">
+          <div class="card" style="padding:var(--space-4) var(--space-6);display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:var(--space-3);align-items:center">
+            <span style="display:flex;flex-direction:column"><span style="font-size:15px;font-weight:700">{{ p.name }}</span><span style="font-size:12px;color:var(--color-neutral-700)">{{ p.ref }} · {{ p.date }}</span></span>
+            <span style="display:flex;flex-direction:column"><span style="font-size:11px;color:var(--color-neutral-700)">Payé patient</span><span style="font-size:14px;font-weight:700">{{ p.price }}</span></span>
+            <span style="display:flex;flex-direction:column"><span style="font-size:11px;color:var(--color-neutral-700)">Votre part (80 %)</span><span style="font-size:14px;font-weight:700;color:var(--color-accent-2-700)">{{ p.derm }}</span></span>
+            <span style="display:flex;flex-direction:column"><span style="font-size:11px;color:var(--color-neutral-700)">Versement</span><span style="font-size:13px;font-weight:600">{{ p.payout }}</span></span>
+            <span><span class="tag {{ p.tag }}">{{ p.badge }}</span></span>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <!-- ═══ CABINET ═══ -->
+    <sc-if value="{{ pg.cabinet }}" hint-placeholder-val="{{ false }}">
+      <header style="display:flex;flex-direction:column;gap:4px">
+        <span style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:var(--color-accent-700)">Réglages</span>
+        <h1 style="margin:0;font-size:42px">Cabinet</h1>
+      </header>
+      <section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:var(--space-4);align-items:start">
+        <div class="card" style="padding:var(--space-6);gap:var(--space-3)">
+          <h3 style="margin:0;font-size:22px">Profil du cabinet</h3>
+          <div class="field"><label>Nom complet</label><input class="input" defaultValue="Dr Aïcha Nkemdirim"></div>
+          <div class="field"><label>Nom du cabinet</label><input class="input" defaultValue="Cabinet Dermatologique Bonapriso"></div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:var(--space-3)">
+            <div class="field"><label>Ville</label><input class="input" defaultValue="Douala"></div>
+            <div class="field"><label>Téléphone</label><input class="input" defaultValue="+237 6 99 41 20 18"></div>
+            <div class="field"><label>N° d'ordre</label><input class="input" defaultValue="ONMC-DLA-2187"></div>
+            <div class="field"><label>Pays</label><input class="input" defaultValue="Cameroun"></div>
+          </div>
+          <button class="btn btn-primary" onClick="{{ cab.save }}" style="align-self:flex-start;margin-top:6px">{{ cab.saveLabel }}</button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:var(--space-4)">
+          <div class="card" style="padding:var(--space-6);gap:var(--space-3)">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px"><h3 style="margin:0;font-size:22px">Secrétaires</h3><button class="btn btn-ghost" onClick="{{ cab.add }}">{{ ic.plus }}Ajouter</button></div>
+            <sc-for list="{{ cab.secs }}" as="s" hint-placeholder-count="2">
+              <div style="display:flex;align-items:center;gap:12px;padding:8px 8px 8px 10px;border-radius:999px;background:var(--color-bg)">
+                <span style="flex:none;width:36px;height:36px;border-radius:999px;background:var(--color-accent-2-200);color:var(--color-accent-2-800);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">{{ s.initials }}</span>
+                <span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:14px;font-weight:700">{{ s.name }}</span><span style="font-size:12px;color:var(--color-neutral-700)">{{ s.email }} · {{ s.last }}</span></span>
+                <button class="btn btn-ghost" onClick="{{ s.del }}" style="padding-inline:12px">Retirer</button>
+              </div>
+            </sc-for>
+            <span style="font-size:12px;color:var(--color-neutral-700)">Elles créent les dossiers et prennent les photos. Pas d'accès aux chiffres ni aux paiements.</span>
+          </div>
+          <div class="card" style="padding:var(--space-6);gap:var(--space-3)">
+            <h3 style="margin:0;font-size:22px">Sécurité et données</h3>
+            <div style="display:flex;align-items:center;gap:12px">
+              <span style="flex:1;display:flex;flex-direction:column"><span style="font-size:14px;font-weight:700">Vérification en 2 étapes</span><span style="font-size:12px;color:var(--color-neutral-700)">Un code par email à chaque connexion</span></span>
+              <button onClick="{{ cab.toggle2fa }}" title="Activer / désactiver" style="flex:none;width:52px;height:30px;border:0;border-radius:999px;cursor:pointer;padding:3px;display:flex;justify-content:{{ cab.twofaJustify }};background:{{ cab.twofaBg }}"><span style="width:24px;height:24px;border-radius:999px;background:var(--color-neutral-100);box-shadow:var(--shadow-sm)"></span></button>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px">
+              <span style="flex:1;display:flex;flex-direction:column"><span style="font-size:14px;font-weight:700">Exporter mes patients</span><span style="font-size:12px;color:var(--color-neutral-700)">Fichier CSV · 128 dossiers</span></span>
+              <button class="btn btn-secondary" onClick="{{ cab.export }}">{{ ic.download }}{{ cab.exportLabel }}</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </sc-if>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;role&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;doctor&quot;,&quot;secretary&quot;],&quot;default&quot;:&quot;doctor&quot;,&quot;tsType&quot;:&quot;'doctor'|'secretary'&quot;},&quot;subscription&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;trial&quot;,&quot;active&quot;],&quot;default&quot;:&quot;trial&quot;,&quot;tsType&quot;:&quot;'trial'|'active'&quot;},&quot;showProfile&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;profilePct&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;min&quot;:0,&quot;max&quot;:100,&quot;step&quot;:5,&quot;default&quot;:75,&quot;tsType&quot;:&quot;number&quot;}}">
+const svg = (d, s = 18) => React.createElement('svg', { width: s, height: s, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2.75, strokeLinecap: 'round', strokeLinejoin: 'round', style: { display: 'block', flex: 'none' }, dangerouslySetInnerHTML: { __html: d } });
+const P = {
+  home: '<path d="M3 10l9-7 9 7v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+  users: '<circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3-6 7-6s7 2 7 6M17 11a3 3 0 1 0 0-6M22 21c0-3-2-5-5-5.5"/>',
+  scan: '<path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 12h10"/>',
+  chat: '<path d="M21 12a8 8 0 0 1-11.6 7.1L3 21l1.9-6.4A8 8 0 1 1 21 12z"/>',
+  cal: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+  chart: '<path d="M3 3v18h18M8 17V11M13 17V7M18 17v-4"/>',
+  wallet: '<path d="M20 7H5a2 2 0 0 1 0-4h13v4M3 5v14a2 2 0 0 0 2 2h15V7M16 14h.01"/>',
+  gear: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  search: '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>',
+  send: '<path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/>',
+  phone: '<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/>',
+  camera: '<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3"/>',
+  check: '<path d="M20 6L9 17l-5-5"/>',
+  trash: '<path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/>',
+  download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>',
+  sparkle: '<path d="M12 3l1.9 5.8L20 11l-6.1 2.2L12 19l-1.9-5.8L4 11l6.1-2.2z"/>'
+};
+const PAGES = [['dashboard', 'Tableau de bord', 'home'], ['patients', 'Patientèle', 'users'], ['analyse', 'Analyse', 'scan'], ['consultations', 'Consultations', 'chat'], ['agenda', 'Agenda', 'cal'], ['stats', 'Performances', 'chart'], ['payments', 'Paiements', 'wallet'], ['cabinet', 'Cabinet', 'gear']];
+const SEC_PAGES = [['analyse', 'Nouveau patient', 'plus'], ['patients', 'Mes patients', 'users'], ['agenda', 'Agenda', 'cal']];
+const STATUS = { priority: ['Priorité haute', 'tag-accent'], monitoring: ['En suivi', 'tag-neutral'], stable: ['Stable', 'tag-accent-2'], resolved: ['Résolu', 'tag-outline'] };
+const PATIENTS = [
+  { id: 1, first: 'Grâce', last: 'Mbarga', age: 29, sex: 'F', status: 'priority', lastScan: '23 sept.', trend: [62, 58, 51, 48], condition: 'Hyperpigmentation post-inflammatoire', pt: 'V' },
+  { id: 2, first: 'Junior', last: 'Fotso', age: 19, sex: 'M', status: 'monitoring', lastScan: '22 sept.', trend: [44, 52, 57, 63], condition: 'Acné vulgaire modérée', pt: 'V' },
+  { id: 3, first: 'Estelle', last: 'Ngo Bassa', age: 41, sex: 'F', status: 'monitoring', lastScan: '21 sept.', trend: [58, 60, 59, 61], condition: 'Dermatite séborrhéique', pt: 'VI' },
+  { id: 4, first: 'Paul', last: 'Ndjock', age: 52, sex: 'M', status: 'stable', lastScan: '18 sept.', trend: [66, 70, 73, 76], condition: 'Eczéma de contact', pt: 'VI' },
+  { id: 5, first: 'Brenda', last: 'Ayuk', age: 24, sex: 'F', status: 'resolved', lastScan: '15 sept.', trend: [55, 68, 79, 84], condition: 'Acné hormonale', pt: 'IV' },
+  { id: 6, first: 'Hervé', last: 'Kamga', age: 37, sex: 'M', status: 'priority', lastScan: '12 sept.', trend: [60, 54, 49, 41], condition: 'Pseudofolliculite de la barbe', pt: 'V' },
+  { id: 7, first: 'Nadège', last: 'Eyenga', age: 31, sex: 'F', status: 'stable', lastScan: '9 sept.', trend: [63, 66, 70, 71], condition: 'Mélasma', pt: 'V' },
+  { id: 8, first: 'Carine', last: 'Tsafack', age: 45, sex: 'F', status: 'monitoring', lastScan: '4 sept.', trend: [52, 50, 55, 57], condition: 'Alopécie de traction', pt: 'V' }
+];
+const WAITING = [{ initials: 'SE', name: 'Samuel Etoga', meta: '34 ans · photos prises à 9 h 40' }, { initials: 'MT', name: 'Marie-Claire Tchoua', meta: '27 ans · photos prises à 10 h 15' }];
+const PENDING = [
+  { id: 1, pid: 1, condition: 'Hyperpigmentation post-inflammatoire', patient: 'Grâce Mbarga', date: '23 sept.', conf: '87 %' },
+  { id: 2, pid: 2, condition: 'Acné vulgaire modérée', patient: 'Junior Fotso', date: '22 sept.', conf: '91 %' },
+  { id: 3, pid: 3, condition: 'Dermatite séborrhéique', patient: 'Estelle Ngo Bassa', date: '21 sept.', conf: '74 %' }
+];
+const CONSULTS = [
+  { id: 1, name: 'Nadège E.', condition: 'Taches brunes sur les joues', unread: 2, time: '10:12', price: '12 000 FCFA payé', msgs: [['p', 'Bonjour Docteur, les taches sont revenues après mes vacances à Kribi.', '09:58'], ['d', 'Bonjour Nadège. Vous avez gardé l\'écran solaire tous les jours ?', '10:03'], ['p', 'Pas tous les jours, je l\'avoue…', '10:10'], ['p', 'Je vous envoie une photo ce soir.', '10:12']] },
+  { id: 2, name: 'Arnaud M.', condition: 'Boutons dans le dos', unread: 0, time: 'Hier', price: '12 000 FCFA payé', msgs: [['p', 'Bonsoir, les boutons grattent surtout après le sport.', '19:20'], ['d', 'Merci. Je vous propose un nettoyant au peroxyde de benzoyle 5 %.', '19:41']] },
+  { id: 3, name: 'Linda K.', condition: 'Chute de cheveux sur les tempes', unread: 1, time: 'Hier', price: 'Paiement en attente', msgs: [['p', 'Bonjour, depuis mes tresses j\'ai perdu des cheveux sur les côtés.', '14:02']] },
+  { id: 4, name: 'Blaise O.', condition: 'Irritation après rasage', unread: 0, time: 'Lun.', price: '12 000 FCFA payé', msgs: [['p', 'Merci Docteur, ça va beaucoup mieux.', '08:15'], ['d', 'Parfait. On refait le point dans un mois.', '08:30']] }
+];
+const CAI = {
+  1: { ai: 'Mélasma épidermique', conf: '84 %', answers: 'Écran solaire irrégulier · pas de grossesse · aggravé au soleil', tt: '1. Écran solaire teinté SPF 50 chaque matin\n2. Acide azélaïque 15 % le soir, 8 semaines\n3. Photo de contrôle dans 4 semaines', paid: true },
+  2: { ai: 'Acné rétentionnelle du dos', conf: '91 %', answers: 'Sport 4×/sem. · pas de traitement antérieur', tt: '1. Nettoyant peroxyde de benzoyle 5 % sous la douche\n2. T-shirt coton, se changer après le sport', paid: true },
+  3: { ai: 'Alopécie de traction', conf: '78 %', answers: 'Tresses serrées depuis 2 ans · pas de démangeaisons', tt: '1. Arrêt des coiffures serrées 3 mois\n2. Minoxidil 2 % matin et soir', paid: false },
+  4: { ai: 'Pseudofolliculite de la barbe', conf: '88 %', answers: 'Rasage lame quotidien', tt: '1. Tondeuse plutôt que lame\n2. Gel à l\'acide glycolique le soir', paid: true }
+};
+const QUICK = ['Pouvez-vous m\'envoyer une photo en lumière du jour ?', 'Continuez le traitement 4 semaines.', 'Je vous propose un rendez-vous au cabinet.'];
+const TYPES = {
+  online: { label: 'Consultation en ligne', bg: 'var(--color-accent-2-200)', fg: 'var(--color-accent-2-900)', dot: 'var(--color-accent-2-600)' },
+  consultation: { label: 'Consultation', bg: 'var(--color-neutral-200)', fg: 'var(--color-neutral-900)', dot: 'var(--color-neutral-600)' },
+  suivi: { label: 'Suivi', bg: 'var(--color-accent-200)', fg: 'var(--color-accent-900)', dot: 'var(--color-accent-400)' },
+  urgence: { label: 'Urgence', bg: 'var(--color-accent-700)', fg: 'var(--color-neutral-100)', dot: 'var(--color-accent-700)' }
+};
+const WEEK = [['Lun', 21], ['Mar', 22], ['Mer', 23], ['Jeu', 24], ['Ven', 25], ['Sam', 26], ['Dim', 27]];
+const APPTS = [
+  { id: 1, day: 3, h: 8, m: 30, dur: 30, type: 'consultation', name: 'Paul Ndjock', notes: 'Contrôle eczéma' },
+  { id: 2, day: 3, h: 9, m: 40, dur: 45, type: 'consultation', name: 'Samuel Etoga', notes: 'Première consultation' },
+  { id: 3, day: 3, h: 11, m: 0, dur: 30, type: 'suivi', name: 'Grâce Mbarga', notes: 'Évolution des taches' },
+  { id: 4, day: 3, h: 13, m: 30, dur: 30, type: 'online', name: 'Nadège E.', notes: 'Visio GlowScan' },
+  { id: 5, day: 3, h: 15, m: 0, dur: 60, type: 'urgence', name: 'Hervé Kamga', notes: 'Douleur, surinfection' },
+  { id: 6, day: 1, h: 10, m: 0, dur: 30, type: 'suivi', name: 'Junior Fotso', notes: 'Acné — 1 mois' },
+  { id: 7, day: 2, h: 9, m: 0, dur: 30, type: 'consultation', name: 'Carine Tsafack', notes: 'Alopécie' },
+  { id: 8, day: 4, h: 14, m: 0, dur: 30, type: 'online', name: 'Linda K.', notes: 'Visio GlowScan' },
+  { id: 9, day: 4, h: 16, m: 30, dur: 30, type: 'suivi', name: 'Estelle Ngo Bassa', notes: 'Contrôle' }
+];
+const STEPS = ['Patient & Anamnèse', 'Examen + Photo', 'Questionnaire', 'Analyse IA', 'Dossier'];
+const HIST = ['Diabète', 'Grossesse', 'Allergies', 'Éclaircissants', 'Asthme', 'Chéloïdes'];
+const LESIONS = [['macule', 'Macule'], ['papule', 'Papule'], ['pustule', 'Pustule'], ['nodule', 'Nodule'], ['comedon', 'Comédon'], ['plaque', 'Plaque'], ['squame', 'Squame'], ['cicatrice', 'Cicatrice/PIH'], ['keloide', 'Chéloïde']];
+const ZONES = [['front', 'Front'], ['joue_d', 'Joue D'], ['joue_g', 'Joue G'], ['nez', 'Nez/Zone T'], ['menton', 'Menton'], ['cou', 'Cou'], ['dos', 'Dos'], ['poitrine', 'Décolleté']];
+const PHOTOTYPES = [['IV', '#c8956c', 'Peau brun clair / métissée'], ['V', '#8b5e3c', 'Peau noire / brun foncé'], ['VI', '#3b1f0e', 'Peau très foncée / ébène']];
+const QUESTIONS = ['Les lésions démangent-elles ?', 'Les lésions sont-elles douloureuses ?', 'Exposition au soleil sans protection ?', 'Utilise des produits éclaircissants ?', 'Antécédents familiaux similaires ?'];
+const MONTHS = { '6m': [['Avr', 38], ['Mai', 44], ['Juin', 51], ['Juil', 47], ['Août', 59], ['Sept', 66]], '3m': [['Juil', 47], ['Août', 59], ['Sept', 66]], '12m': [['Oct', 18], ['Nov', 22], ['Déc', 19], ['Jan', 27], ['Fév', 30], ['Mar', 33], ['Avr', 38], ['Mai', 44], ['Juin', 51], ['Juil', 47], ['Août', 59], ['Sept', 66]] };
+const PAYMENTS = [
+  ['Nadège E.', 'GS-C-1182', '24 sept.', 12000, 9600, 'paid', 'open'], ['Arnaud M.', 'GS-C-1177', '23 sept.', 12000, 9600, 'paid', 'closed'],
+  ['Linda K.', 'GS-C-1175', '23 sept.', 12000, null, 'unpaid', 'open'], ['Blaise O.', 'GS-C-1169', '22 sept.', 12000, 9600, 'paid', 'closed'], ['Yvette N.', 'GS-C-1160', '19 sept.', 12000, null, 'refunded', 'cancelled']
+];
+const fcfa = n => n == null ? 'À la clôture' : n.toLocaleString('fr-FR') + ' FCFA';
+const ini = s => s.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
+const chip = (on, go, label) => ({ label, go, bg: on ? 'var(--color-accent)' : 'transparent', fg: on ? 'var(--color-bg)' : 'var(--color-text)', border: on ? 'var(--color-accent)' : 'var(--color-divider)' });
+const segBtn = (on, go, label) => ({ label, go, bg: on ? 'var(--color-accent)' : 'transparent', fg: on ? 'var(--color-bg)' : 'var(--color-text)' });
+
+class Component extends DCLogic {
+  state = { more: false,
+    page: (() => { try { return localStorage.getItem('gs_derm_page') || 'dashboard'; } catch (e) { return 'dashboard'; } })(),
+    sel: 1, done: [], copied: false, pTab: 'all', q: '', filter: 'all', statusOv: {}, reminded: {},
+    step: 1, shots: { face: true }, pt: 'V', hist: ['Éclaircissants'], lesions: ['macule', 'cicatrice'], zones: ['joue_d', 'joue_g'], answers: {}, ai: 'idle', anStatus: 'monitoring', sent: false,
+    csSent: [4], rDlg: false, rDx: '', rTt: '', rCh: 'WhatsApp', pin: '', cSel: 1, cm: Object.fromEntries(CONSULTS.map(c => [c.id, c.msgs])), read: [], draft: '',
+    day: 3, appts: APPTS, dlg: false, f: { name: '', time: '09:00', type: 'consultation', dur: 30, notes: '' },
+    range: '6m', secs: [{ id: 1, name: 'Mireille Abena', email: 'mireille@cabinet-bonapriso.cm', last: 'connectée ce matin' }, { id: 2, name: 'Rose Ekotto', email: 'rose@cabinet-bonapriso.cm', last: 'il y a 3 jours' }],
+    twofa: true, exported: false, saved: false
+  };
+  go(p) { this.setState({ page: p }); try { localStorage.setItem('gs_derm_page', p); } catch (e) {} const m = document.querySelector('main'); if (m) window.scrollTo(0, 0); }
+  flash(k) { this.setState({ [k]: true }); setTimeout(() => this.setState({ [k]: false }), 1800); }
+  toggle(key, v) { this.setState(s => ({ [key]: s[key].includes(v) ? s[key].filter(x => x !== v) : [...s[key], v] })); }
+  stOf(p) { return this.state.statusOv[p.id] || p.status; }
+
+  renderVals() {
+    const s = this.state;
+    const sec = (this.props.role ?? 'doctor') === 'secretary';
+    const pages = sec ? SEC_PAGES : PAGES;
+    let page = s.page;
+    const allowed = pages.map(p => p[0]).concat(['patient']);
+    if (!allowed.includes(page)) page = sec ? 'patients' : 'dashboard';
+    const trial = (this.props.subscription ?? 'trial') === 'trial';
+    const pct = this.props.profilePct ?? 75;
+    const openP = id => e => { e && e.preventDefault && e.preventDefault(); this.setState({ sel: id }); this.go('patient'); };
+    const newPatient = () => { this.setState({ step: 1, ai: 'idle', sent: false }); this.go('analyse'); };
+    const unreadTotal = CONSULTS.filter(c => !s.read.includes(c.id)).reduce((a, c) => a + c.unread, 0);
+    const pending = PENDING.filter(p => !s.done.includes(p.id));
+    const badges = { consultations: unreadTotal, patients: WAITING.length };
+    const tA = s.appts.filter(a => a.day === 3).sort((a, b) => a.h * 60 + a.m - b.h * 60 - b.m);
+    const hhmm = a => `${String(a.h).padStart(2, '0')}:${String(a.m).padStart(2, '0')}`;
+
+    // patients
+    const counts = k => PATIENTS.filter(p => this.stOf(p) === k).length;
+    const rows = PATIENTS.filter(p => (s.filter === 'all' || this.stOf(p) === s.filter) && (`${p.first} ${p.last}`).toLowerCase().includes(s.q.toLowerCase()));
+    const waitingRows = WAITING.map((w, i) => ({ id: 100 + i, first: w.name.split(' ')[0], last: w.name.split(' ').slice(1).join(' '), age: [34, 27][i], sex: ['M', 'F'][i], status: 'monitoring', lastScan: 'aujourd\'hui', trend: [0, 0, 0, 0], condition: 'Dossier prêt · analyse à faire', waiting: true }));
+    const listSrc = s.pTab === 'pending' ? waitingRows : rows;
+    const prow = p => {
+      const st = this.stOf(p); const last = p.trend[3];
+      return { name: `${p.first} ${p.last}`, initials: ini(`${p.first} ${p.last}`), meta: `${p.age} ans · ${p.sex === 'F' ? 'Femme' : 'Homme'} · ${p.waiting ? 'photos prises ' : 'dernier scan '}${p.lastScan}`,
+        statusLabel: p.waiting ? 'À analyser' : STATUS[st][0], tag: p.waiting ? 'tag-accent' : STATUS[st][1], condition: p.condition, score: p.waiting ? '—' : last,
+        avBg: st === 'priority' ? 'var(--color-accent-200)' : 'var(--color-accent-2-200)', avFg: st === 'priority' ? 'var(--color-accent-800)' : 'var(--color-accent-2-800)',
+        bars: p.trend.map((v, i) => ({ h: Math.max(4, (v / 100) * 36) + 'px', c: i === 3 ? (p.trend[3] >= p.trend[0] ? 'var(--color-accent-2-600)' : 'var(--color-accent)') : 'var(--color-neutral-300)' })),
+        open: p.waiting ? (e) => { e.preventDefault(); newPatient(); } : openP(p.id) };
+    };
+
+    // fiche
+    const P0 = PATIENTS.find(p => p.id === s.sel) || PATIENTS[0];
+    const fst = this.stOf(P0); const d = P0.trend[3] - P0.trend[0];
+    const hDates = ['12 juin', '18 juil.', '26 août', P0.lastScan];
+    const hNotes = ['Première analyse', 'Début du traitement', 'Contrôle à 6 semaines', 'Dernier contrôle'];
+
+    // analyse
+    const aDone = s.ai === 'done';
+    const nextStep = () => { if (s.step === 4 && s.ai !== 'done') return this.runAI(); if (s.step < 5) this.setState({ step: s.step + 1 }); else { this.setState({ step: 1, ai: 'idle', sent: false }); this.go('patients'); } };
+
+    // consult
+    const cur = CONSULTS.find(c => c.id === s.cSel);
+    const sendMsg = (t) => { const txt = (t ?? s.draft).trim(); if (!txt) return; this.setState(st => ({ cm: { ...st.cm, [st.cSel]: [...st.cm[st.cSel], ['d', txt, 'maintenant']] }, draft: '' })); };
+
+    // agenda
+    const dayA = s.appts.filter(a => a.day === s.day).sort((a, b) => a.h * 60 + a.m - b.h * 60 - b.m);
+    const createAppt = () => {
+      const f = s.f; if (!f.name.trim()) return;
+      const [h, m] = f.time.split(':').map(Number);
+      const type = /urgent|douleur/i.test(f.notes) ? 'urgence' : f.type;
+      this.setState(st => ({ appts: [...st.appts, { id: Date.now(), day: st.day, h, m, dur: f.dur, type, name: f.name.trim(), notes: f.notes || '—' }], dlg: false, f: { name: '', time: '09:00', type: 'consultation', dur: 30, notes: '' } }));
+    };
+    const setF = (k) => (e) => { const v = e.target.value; this.setState(st => ({ f: { ...st.f, [k]: v } })); };
+
+    // stats
+    const months = MONTHS[s.range]; const mMax = Math.max(...months.map(m => m[1]));
+    const conds = [['Acné vulgaire', 48], ['Hyperpigmentation', 41], ['Dermatite séborrhéique', 22], ['Eczéma', 17], ['Alopécie de traction', 12]];
+    const prods = [['Écran solaire teinté SPF 50', 64], ['Sérum niacinamide 10 %', 51], ['Nettoyant peroxyde de benzoyle', 37], ['Crème azélaïque 15 %', 29], ['Huile de ricin pure', 18]];
+    const photos = [['IV', 29, '#c8956c'], ['V', 61, '#8b5e3c'], ['VI', 38, '#3b1f0e']]; const phTot = 128;
+
+    const paidTot = PAYMENTS.filter(p => p[5] === 'paid').reduce((a, p) => a + p[3], 0);
+    const toPay = PAYMENTS.filter(p => p[5] === 'paid' && p[6] === 'closed').reduce((a, p) => a + p[4], 0);
+
+    return {
+      ic: Object.fromEntries(Object.keys(P).map(k => [k, svg(P[k], 16)])),
+      pulse: React.createElement('div', { style: { width: 88, height: 88, borderRadius: 999, background: 'var(--color-accent-2-300)', animation: 'gsPulse 1.2s ease-in-out infinite' } }),
+      stop: e => e.stopPropagation(), isDoctor: !sec,
+      me: sec ? { initials: 'MA', name: 'Mireille Abena', sub: 'Secrétaire · Bonapriso' } : { initials: 'AN', name: 'Dr Aïcha Nkemdirim', sub: 'Cabinet Bonapriso · Douala' },
+      moreOpen: !!s.more, closeMore: () => this.setState({ more: false }),
+      mnav: (sec ? pages.map(p => [p[0], p[1], p[2]]) : [['dashboard', 'Accueil', 'home'], ['patients', 'Patients', 'users'], ['analyse', 'Analyse', 'scan'], ['consultations', 'Messages', 'chat'], ['more', 'Plus', 'gear']]).map(([key, label, ic]) => {
+        const on = key === 'more' ? !!s.more : (key === page || (key === 'patients' && page === 'patient'));
+        const mid = key === 'analyse'; const b = badges[key] || 0;
+        return { label, icon: svg(P[ic], mid ? 22 : 20), hasBadge: b > 0, badge: b, go: () => key === 'more' ? this.setState({ more: true }) : (this.setState({ more: false }), key === 'analyse' ? newPatient() : this.go(key)),
+          fg: on ? 'var(--color-accent-700)' : 'var(--color-neutral-700)', w: mid ? '48px' : '52px', h: mid ? '48px' : '30px', bg: mid ? 'var(--color-accent)' : on ? 'var(--color-accent-100)' : 'transparent', ico: mid ? 'var(--color-bg)' : 'currentColor' };
+      }),
+      moreItems: [['agenda', 'Agenda', 'cal'], ['stats', 'Performances', 'chart'], ['payments', 'Paiements', 'wallet'], ['cabinet', 'Cabinet', 'gear']].map(([key, label, ic]) => ({ label, icon: svg(P[ic], 18), href: '#', go: e => { e.preventDefault(); this.setState({ more: false }); this.go(key); } }))
+        .concat([['Derm Teleexpertise.dc.html', 'Téléexpertise', 'chat'], ['Derm Reseau.dc.html', 'Réseau & formation', 'users'], ['Derm Encaissement.dc.html', 'Portefeuille', 'wallet'], ['Derm Pilotage.dc.html', 'Pilotage (ONG · admin)', 'chart']].map(([href, label, ic]) => ({ label, href, icon: svg(P[ic], 18) }))),
+      nav: pages.map(([key, label, ic]) => {
+        const on = key === page || (key === 'patients' && page === 'patient');
+        const b = badges[key] || 0;
+        return { label, icon: svg(P[ic]), go: e => { e.preventDefault(); key === 'analyse' ? newPatient() : this.go(key); }, bg: on ? 'var(--color-surface)' : 'transparent', color: on ? 'var(--color-accent-700)' : 'var(--color-text)', hasBadge: b > 0, badge: b };
+      }),
+      pg: { dashboard: page === 'dashboard', patients: page === 'patients', patient: page === 'patient', analyse: page === 'analyse', consultations: page === 'consultations', agenda: page === 'agenda', stats: page === 'stats', payments: page === 'payments', cabinet: page === 'cabinet' },
+      goPatients: e => { e && e.preventDefault && e.preventDefault(); this.go('patients'); },
+      goCabinet: () => this.go('cabinet'), goAgenda: e => { e.preventDefault(); this.setState({ day: 3 }); this.go('agenda'); },
+      newPatient, isTrial: trial, isActive: !trial,
+      copyLabel: s.copied ? 'Lien copié ✓' : 'Copier mon lien',
+      copyLink: () => { try { navigator.clipboard.writeText('https://glow-scan.com/derm/inscription?ref=1042'); } catch (e) {} this.flash('copied'); },
+      waiting: WAITING.map(w => ({ ...w, go: e => { e.preventDefault(); newPatient(); } })),
+      todayAppts: tA.map(a => ({ time: hhmm(a), name: a.name, dur: a.dur, typeLabel: TYPES[a.type].label, dot: TYPES[a.type].dot })),
+      dash: {
+        summary: `${pending.length + WAITING.length} dossiers vous attendent et ${tA.length} rendez-vous aujourd'hui.`,
+        showProfile: (this.props.showProfile ?? true) && pct < 100, profilePct: pct, profileW: pct + '%', todo: pending.length + WAITING.length,
+        kpis: [
+          { label: 'Patients', value: 128, note: '+6 ce mois-ci', bg: 'var(--color-surface)', ink: 'var(--color-neutral-700)', go: e => { e.preventDefault(); this.setState({ filter: 'all', pTab: 'all' }); this.go('patients'); } },
+          { label: 'Analyses', value: 342, note: '66 ce mois-ci', bg: 'var(--color-surface)', ink: 'var(--color-neutral-700)', go: e => { e.preventDefault(); this.go('stats'); } },
+          { label: 'Priorité haute', value: counts('priority'), note: 'à revoir cette semaine', bg: 'var(--color-accent-100)', ink: 'var(--color-accent-800)', go: e => { e.preventDefault(); this.setState({ filter: 'priority', pTab: 'all' }); this.go('patients'); } },
+          { label: 'En suivi', value: counts('monitoring'), note: 'rappels programmés', bg: 'var(--color-accent-2-100)', ink: 'var(--color-accent-2-800)', go: e => { e.preventDefault(); this.setState({ filter: 'monitoring', pTab: 'all' }); this.go('patients'); } }
+        ],
+        pending: pending.map(p => ({ ...p, validate: () => this.setState(st => ({ done: [...st.done, p.id] })), fix: openP(p.pid) })), noPending: pending.length === 0
+      },
+      pt: {
+        kicker: sec ? 'Aujourd\'hui' : `${PATIENTS.length} dossiers actifs`, title: sec ? 'Mes patients' : 'Patientèle', q: s.q, onQ: e => this.setState({ q: e.target.value }),
+        tabs: [['all', 'Tous les patients', 0], ['pending', 'En attente', WAITING.length]].map(([k, l, c]) => ({ label: l, count: c, hasCount: c > 0, go: () => this.setState({ pTab: k }), bg: s.pTab === k ? 'var(--color-bg)' : 'transparent', fg: s.pTab === k ? 'var(--color-accent-700)' : 'var(--color-text)' })),
+        showFilters: s.pTab === 'all',
+        filters: [['all', 'Tous', PATIENTS.length], ['priority', 'Priorité', counts('priority')], ['monitoring', 'En suivi', counts('monitoring')], ['stable', 'Stable', counts('stable')], ['resolved', 'Résolu', counts('resolved')]].map(([k, l, c]) => ({ ...chip(s.filter === k, () => this.setState({ filter: k }), l), count: c })),
+        rows: listSrc.map(prow), empty: listSrc.length === 0
+      },
+      fp: {
+        name: `${P0.first} ${P0.last}`, initials: ini(`${P0.first} ${P0.last}`), meta: `${P0.age} ans · ${P0.sex === 'F' ? 'Femme' : 'Homme'} · Phototype ${P0.pt} · +237 6 77 12 45 90`,
+        score: P0.trend[3], deg: (P0.trend[3] * 3.6) + 'deg', condition: P0.condition,
+        delta: d >= 0 ? `+${d} points depuis juin` : `${d} points depuis juin — à surveiller`, deltaInk: d >= 0 ? 'var(--color-accent-2-700)' : 'var(--color-accent-700)',
+        remindLabel: s.reminded[P0.id] ? 'Rappel envoyé ✓' : 'Rappel WhatsApp', remind: () => this.setState(st => ({ reminded: { ...st.reminded, [P0.id]: true } })),
+        statuses: Object.entries(STATUS).map(([k, v]) => segBtn(fst === k, () => this.setState(st => ({ statusOv: { ...st.statusOv, [P0.id]: k } })), v[0])),
+        history: P0.trend.map((v, i) => ({ score: v, date: hDates[i], note: hNotes[i], bg: i === 3 ? 'var(--color-accent)' : 'var(--color-neutral-200)', fg: i === 3 ? 'var(--color-bg)' : 'var(--color-text)' })).reverse(),
+        treatment: [{ n: 1, name: 'Écran solaire teinté SPF 50', how: 'Chaque matin, renouveler à midi' }, { n: 2, name: 'Sérum niacinamide 10 %', how: 'Le soir, sur peau sèche' }, { n: 3, name: 'Crème azélaïque 15 %', how: 'Un soir sur deux, 8 semaines' }]
+      },
+      an: {
+        step: s.step, title: STEPS[s.step - 1], s1: s.step === 1, s2: s.step === 2, s3: s.step === 3, s4: s.step === 4, s5: s.step === 5, pt: s.pt,
+        steps: STEPS.map((l, i) => { const n = i + 1, cur = n === s.step, dn = n < s.step; return { label: l, mark: dn ? '✓' : n, go: () => this.setState({ step: n }), bg: cur ? 'var(--color-surface)' : 'transparent', fg: cur || dn ? 'var(--color-text)' : 'var(--color-neutral-700)', dotBg: cur ? 'var(--color-accent)' : dn ? 'var(--color-accent-2-600)' : 'var(--color-neutral-200)', dotFg: cur || dn ? 'var(--color-bg)' : 'var(--color-neutral-800)' }; }),
+        history: HIST.map(h => chip(s.hist.includes(h), () => this.toggle('hist', h), h)),
+        shots: [['face', 'Portrait'], ['right', 'Profil D'], ['left', 'Profil G']].map(([k, l]) => { const on = !!s.shots[k]; return { label: l, icon: svg(on ? P.check : P.camera, 26), go: () => this.setState(st => ({ shots: { ...st.shots, [k]: !st.shots[k] } })), bg: on ? 'var(--color-accent-2-200)' : 'transparent', fg: on ? 'var(--color-accent-2-800)' : 'var(--color-neutral-700)', border: on ? 'var(--color-accent-2-600)' : 'var(--color-neutral-400)' }; }),
+        phototypes: PHOTOTYPES.map(([id, c, t]) => ({ label: id, color: c, title: `Phototype ${id} — ${t}`, ring: s.pt === id ? 'var(--color-accent)' : 'transparent', go: () => this.setState({ pt: id }) })),
+        lesions: LESIONS.map(([k, l]) => chip(s.lesions.includes(k), () => this.toggle('lesions', k), l)),
+        zones: ZONES.map(([k, l]) => chip(s.zones.includes(k), () => this.toggle('zones', k), l)),
+        questions: QUESTIONS.map((q, i) => ({ text: q, opts: [['oui', 'Oui'], ['non', 'Non'], ['nsp', 'Ne sait pas']].map(([v, l]) => { const on = s.answers[i] === v; return { label: l, go: () => this.setState(st => ({ answers: { ...st.answers, [i]: v } })), bg: on ? (v === 'oui' ? 'var(--color-accent-2-600)' : v === 'non' ? 'var(--color-accent)' : 'var(--color-neutral-600)') : 'var(--color-neutral-200)', fg: on ? 'var(--color-bg)' : 'var(--color-text)' }; }) })),
+        recap: `${Object.values(s.shots).filter(Boolean).length} photo(s) · phototype ${s.pt} · ${s.lesions.length} type(s) de lésion · ${s.zones.length} zone(s) · ${Object.keys(s.answers).length}/5 réponses`,
+        aiIdle: s.ai === 'idle', aiRun: s.ai === 'run', aiDone: aDone, run: () => this.runAI(),
+        diff: [['Hyperpigmentation post-inflammatoire', '87%', 'var(--color-accent)'], ['Mélasma', '9%', 'var(--color-accent-300)'], ['Dermatite de contact', '4%', 'var(--color-neutral-400)']].map(([name, pct, c]) => ({ name, pct, c })),
+        protocol: [{ n: 1, name: 'Arrêt des produits éclaircissants', how: 'Immédiat — cause probable des rechutes' }, { n: 2, name: 'Écran solaire teinté SPF 50', how: 'Tous les matins, même par temps couvert' }, { n: 3, name: 'Acide azélaïque 15 %', how: 'Le soir, contrôle photo à 6 semaines' }],
+        statuses: Object.entries(STATUS).map(([k, v]) => segBtn(s.anStatus === k, () => this.setState({ anStatus: k }), v[0])),
+        sendLabel: s.sent ? 'Dossier envoyé ✓' : 'Envoyer au patient sur WhatsApp', send: () => this.setState({ sent: true }),
+        isFirst: s.step === 1, prev: () => this.setState({ step: Math.max(1, s.step - 1) }), next: nextStep,
+        nextLabel: s.step === 4 && !aDone ? 'Lancer l\'analyse IA' : s.step === 5 ? 'Enregistrer le dossier' : 'Suivant →'
+      },
+      cs: {
+        list: CONSULTS.map(c => { const u = s.read.includes(c.id) ? 0 : c.unread; return { name: c.name, initials: ini(c.name), condition: c.condition, time: c.time, unread: u, hasUnread: u > 0, bg: c.id === s.cSel ? 'var(--color-surface)' : 'transparent', go: () => this.setState(st => ({ cSel: c.id, read: st.read.includes(c.id) ? st.read : [...st.read, c.id] })) }; }),
+        cur: { name: cur.name, condition: cur.condition, price: cur.price, ...CAI[cur.id], isSent: s.csSent.includes(cur.id), canReport: !s.csSent.includes(cur.id) && CAI[cur.id].paid,
+          stage: s.csSent.includes(cur.id) ? 'Clôturée' : CAI[cur.id].paid ? 'Payée · à traiter' : 'En attente de paiement', tag: s.csSent.includes(cur.id) ? 'tag-accent-2' : CAI[cur.id].paid ? 'tag-accent' : 'tag-neutral' },
+        split: { total: '12 000 FCFA', derm: '9 600 FCFA', gs: '2 400 FCFA' },
+        dlg: s.rDlg, openReport: () => this.setState({ rDlg: true, pin: '', rDx: CAI[cur.id].ai, rTt: CAI[cur.id].tt }), closeReport: () => this.setState({ rDlg: false }),
+        rDx: s.rDx, rTt: s.rTt, onDx: e => this.setState({ rDx: e.target.value }), onTt: e => this.setState({ rTt: e.target.value }),
+        pin: s.pin || '', onPin: e => this.setState({ pin: e.target.value.replace(/\D/g, '').slice(0, 4) }), signOff: (s.pin || '').length !== 4,
+        channels: ['WhatsApp', 'Email'].map(c => ({ label: c, go: () => this.setState({ rCh: c }), bg: s.rCh === c ? 'var(--color-accent)' : 'transparent', fg: s.rCh === c ? 'var(--color-bg)' : 'var(--color-text)', border: s.rCh === c ? 'var(--color-accent)' : 'var(--color-divider)' })),
+        signSend: () => this.setState(st => ({ rDlg: false, csSent: [...st.csSent, st.cSel], cm: { ...st.cm, [st.cSel]: [...st.cm[st.cSel], ['d', `Votre compte rendu signé vous a été envoyé par ${st.rCh}. Bon rétablissement.`, 'maintenant']] } })),
+        msgs: s.cm[s.cSel].map(([w, t, at]) => ({ t, at, justify: w === 'd' ? 'flex-end' : 'flex-start', bg: w === 'd' ? 'var(--color-accent)' : 'var(--color-bg)', fg: w === 'd' ? 'var(--color-bg)' : 'var(--color-text)' })),
+        quick: QUICK.map(q => ({ label: q, go: () => sendMsg(q) })),
+        draft: s.draft, onDraft: e => this.setState({ draft: e.target.value }), onKey: e => { if (e.key === 'Enter') sendMsg(); }, send: () => sendMsg()
+      },
+      ag: {
+        dayTitle: ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'][s.day] + ' ' + WEEK[s.day][1],
+        summary: dayA.length ? `${dayA.length} rendez-vous · ${dayA.reduce((a, x) => a + x.dur, 0)} min de consultation` : 'Aucun rendez-vous ce jour.',
+        week: WEEK.map(([dow, num], i) => { const on = i === s.day; return { dow, num, go: () => this.setState({ day: i }), bg: on ? 'var(--color-accent)' : 'var(--color-surface)', fg: on ? 'var(--color-bg)' : 'var(--color-text)', dots: s.appts.filter(a => a.day === i).slice(0, 4).map(a => ({ c: on ? 'var(--color-bg)' : TYPES[a.type].dot })) }; }),
+        legend: Object.values(TYPES).map(t => ({ label: t.label, c: t.dot })),
+        hours: Array.from({ length: 11 }, (_, i) => ({ label: `${8 + i} h` })),
+        nowTop: ((10.4 - 8) * 60) + 'px', nowDisplay: s.day === 3 ? 'block' : 'none',
+        appts: dayA.map(a => ({ time: hhmm(a), name: a.name, dur: a.dur, notes: a.notes, typeLabel: TYPES[a.type].label, bg: TYPES[a.type].bg, fg: TYPES[a.type].fg, top: ((a.h - 8) * 60 + a.m) + 'px', h: Math.max(28, a.dur - 4) + 'px', del: () => this.setState(st => ({ appts: st.appts.filter(x => x.id !== a.id) })) })),
+        dlg: s.dlg, open: () => this.setState({ dlg: true }), close: () => this.setState({ dlg: false }), create: createAppt, f: s.f,
+        onName: setF('name'), onTime: setF('time'), onNotes: setF('notes'),
+        types: ['consultation', 'suivi', 'urgence'].map(k => chip(s.f.type === k, () => this.setState(st => ({ f: { ...st.f, type: k } })), TYPES[k].label)),
+        durs: [15, 30, 45, 60].map(m => chip(s.f.dur === m, () => this.setState(st => ({ f: { ...st.f, dur: m } })), `${m} min`))
+      },
+      st: {
+        ranges: [['3m', '3 mois'], ['6m', '6 mois'], ['12m', '12 mois']].map(([k, l]) => segBtn(s.range === k, () => this.setState({ range: k }), l)),
+        kpis: [['Patients', 128, 'var(--color-surface)', 'var(--color-neutral-700)'], ['Analyses', 342, 'var(--color-surface)', 'var(--color-neutral-700)'], ['Glow Score moyen', '61/100', 'var(--color-accent-2-100)', 'var(--color-accent-2-800)'], ['Priorité haute', counts('priority'), 'var(--color-accent-100)', 'var(--color-accent-800)']].map(([label, value, bg, ink]) => ({ label, value, bg, ink })),
+        monthTotal: `${months.reduce((a, m) => a + m[1], 0)} analyses sur la période`,
+        months: months.map(([label, count], i) => ({ label, count, h: Math.round((count / mMax) * 150) + 'px', c: i === months.length - 1 ? 'var(--color-accent)' : 'var(--color-accent-300)' })),
+        conditions: conds.map(([name, count]) => ({ name, count, w: (count / conds[0][1] * 100) + '%' })),
+        products: prods.map(([name, count]) => ({ name, count, w: (count / prods[0][1] * 100) + '%' })),
+        phototypes: photos.map(([name, n, color]) => ({ name, color, pct: Math.round(n / phTot * 100) + '%', size: Math.round(64 + (n / 61) * 48) + 'px' }))
+      },
+      pay: {
+        paid: paidTot.toLocaleString('fr-FR'), toPay: toPay.toLocaleString('fr-FR'),
+        rows: PAYMENTS.map(([name, ref, date, price, derm, pst, cst]) => ({ name, ref, date, price: fcfa(price), derm: pst === 'refunded' ? '—' : fcfa(derm),
+          badge: pst === 'paid' ? 'Paiement confirmé' : pst === 'refunded' ? 'Remboursé' : 'Paiement en attente', tag: pst === 'paid' ? 'tag-accent-2' : pst === 'refunded' ? 'tag-neutral' : 'tag-accent',
+          payout: pst === 'refunded' ? '—' : pst !== 'paid' ? 'En attente du paiement patient' : cst === 'closed' ? 'À verser' : 'Consultation en cours' }))
+      },
+      cab: {
+        saveLabel: s.saved ? 'Enregistré ✓' : 'Enregistrer', save: () => this.flash('saved'),
+        secs: s.secs.map(x => ({ ...x, initials: ini(x.name), del: () => this.setState(st => ({ secs: st.secs.filter(y => y.id !== x.id) })) })),
+        add: () => this.setState(st => ({ secs: [...st.secs, { id: Date.now(), name: 'Nouvelle secrétaire', email: 'identifiants à communiquer', last: 'jamais connectée' }] })),
+        toggle2fa: () => this.setState(st => ({ twofa: !st.twofa })), twofaBg: s.twofa ? 'var(--color-accent-2-600)' : 'var(--color-neutral-400)', twofaJustify: s.twofa ? 'flex-end' : 'flex-start',
+        exportLabel: s.exported ? 'Téléchargé ✓' : 'Exporter', export: () => this.flash('exported')
+      }
+    };
+  }
+  runAI() { this.setState({ ai: 'run' }); clearTimeout(this._t); this._t = setTimeout(() => this.setState({ ai: 'done' }), 1800); }
+  componentWillUnmount() { clearTimeout(this._t); }
+}
+</script>
+</body>
+</html>

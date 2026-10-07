@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/organic-a6b730fa-b5d6-4692-8156-eacdd1b52399/styles.css">
+<script src="_ds/organic-a6b730fa-b5d6-4692-8156-eacdd1b52399/_ds_bundle.js"></script>
+<style>body{margin:0;background:var(--color-bg)} [data-m=mbar]{display:none} @media (max-width:760px){ [data-m=shell]{flex-direction:column} [data-m=aside]{position:sticky!important;top:0;z-index:40;width:100%!important;height:auto!important;padding:10px 16px!important;gap:10px!important;background:var(--color-bg);border-bottom:1px solid var(--color-divider)} [data-m=aside] nav,[data-m=roles]{flex-direction:row!important;overflow-x:auto;gap:4px!important;scrollbar-width:none} [data-m=aside] nav>*,[data-m=roles]>*{flex:none!important;white-space:nowrap} [data-m=roles]>span:first-child{display:none} [data-m=hide-m]{display:none!important} [data-m=portal-aside]{display:none!important} [data-m=main]{padding:16px 16px 40px!important;gap:20px!important} [data-m=main] h1{font-size:30px!important} [data-p]{padding-bottom:110px!important} [data-m=paper]{padding:24px 18px!important} [data-m=mbar]{display:flex} } a{color:var(--color-accent-700)} a:hover{color:var(--color-accent-600)}</style>
+</helmet>
+<div data-m="shell" style="display:flex;min-height:100vh;background:var(--color-bg);color:var(--color-text);font-family:var(--font-body)">
+  <aside data-m="aside" style="flex:none;width:232px;padding:var(--space-6) var(--space-4);display:flex;flex-direction:column;gap:var(--space-6);position:sticky;top:0;height:100vh;box-sizing:border-box">
+    <div style="display:flex;align-items:center;gap:10px">
+      <img src="client/public/glowscan-mark.png" alt="GlowScan" style="width:36px;height:36px;border-radius:999px;object-fit:cover">
+      <div style="display:flex;flex-direction:column"><span style="font-family:var(--font-heading);font-size:18px;line-height:1.1">GlowScan</span><span style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-accent-2-700);font-weight:700">Réseau</span></div>
+    </div>
+    <nav style="display:flex;flex-direction:column;gap:2px">
+      <a href="Derm Portal.dc.html" style="padding:10px 14px;border-radius:999px;text-decoration:none;font-size:14px;font-weight:600;color:var(--color-text)" style-hover="background:var(--color-neutral-200)">← Portail DERM</a>
+      <a href="Derm Teleexpertise.dc.html" style="padding:10px 14px;border-radius:999px;text-decoration:none;font-size:14px;font-weight:600;color:var(--color-text)" style-hover="background:var(--color-neutral-200)">Téléexpertise</a>
+      <span style="padding:10px 14px;border-radius:999px;font-size:14px;font-weight:600;background:var(--color-surface);color:var(--color-accent-700)">Réseau & formation</span>
+    </nav>
+    <div data-m="roles" style="display:flex;flex-direction:column;gap:6px">
+      <span style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--color-neutral-700);padding-left:14px">Voir en tant que</span>
+      <sc-for list="{{ roles }}" as="r" hint-placeholder-count="2">
+        <button onClick="{{ r.go }}" style="display:flex;align-items:center;gap:10px;text-align:left;border:0;cursor:pointer;padding:8px 12px 8px 8px;border-radius:999px;font:inherit;background:{{ r.bg }};color:var(--color-text)">
+          <span style="flex:none;width:32px;height:32px;border-radius:999px;background:{{ r.av }};color:var(--color-bg);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px">{{ r.ini }}</span>
+          <span style="display:flex;flex-direction:column;min-width:0"><span style="font-size:13px;font-weight:700">{{ r.name }}</span><span style="font-size:11px;color:var(--color-neutral-700)">{{ r.sub }}</span></span>
+        </button>
+      </sc-for>
+    </div>
+  </aside>
+
+  <main data-m="main" style="flex:1;min-width:0;padding:var(--space-6) var(--space-8) var(--space-8) var(--space-4);display:flex;flex-direction:column;gap:var(--space-6);max-width:1180px">
+
+    <!-- ═══ VUE RELAIS ═══ -->
+    <sc-if value="{{ isRelais }}" hint-placeholder-val="{{ true }}">
+      <header style="display:flex;flex-direction:column;gap:4px">
+        <span style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:var(--color-accent-700)">CSI de Mokolo · Extrême-Nord · dermatologue le plus proche à 380 km</span>
+        <h1 style="margin:0;font-size:42px">Bonjour Joseph</h1>
+        <p style="margin:0;color:var(--color-neutral-700);max-width:640px">Chaque cas que vous envoyez est validé par un dermatologue. Chaque validation vous apprend quelque chose.</p>
+      </header>
+
+      <div class="card" style="padding:var(--space-6);gap:var(--space-4)">
+        <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--space-3)">
+          <div style="display:flex;flex-direction:column"><span class="card-kicker" style="font-weight:700;color:var(--color-accent-2-700)">Votre niveau</span><span style="font-family:var(--font-heading);font-size:28px;line-height:1.15">{{ lv.cur.name }}</span></div>
+          <span style="font-size:13px;color:var(--color-neutral-700)">{{ lv.toNext }}</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:var(--space-2)">
+          <sc-for list="{{ lv.levels }}" as="l" hint-placeholder-count="4">
+            <div style="display:flex;flex-direction:column;gap:6px;padding:var(--space-4);border-radius:var(--radius-lg);background:{{ l.bg }};color:{{ l.fg }};border:2px solid {{ l.border }}">
+              <span style="display:flex;align-items:center;gap:8px"><span style="width:26px;height:26px;border-radius:999px;background:{{ l.dotBg }};color:{{ l.dotFg }};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">{{ l.mark }}</span><span style="font-size:14px;font-weight:700">{{ l.name }}</span></span>
+              <span style="font-size:12px;line-height:1.45">{{ l.rule }}</span>
+              <sc-if value="{{ l.isCur }}" hint-placeholder-val="{{ false }}"><div style="height:6px;border-radius:999px;background:var(--color-accent-2-200);overflow:hidden;margin-top:4px"><div style="height:100%;width:{{ lv.pct }};border-radius:999px;background:var(--color-accent-2-600)"></div></div></sc-if>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:var(--space-4);align-items:start">
+        <div class="card" style="padding:var(--space-6);gap:var(--space-4)">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px"><h3 style="margin:0;font-size:22px">Nouveau cas</h3><span class="tag tag-accent">{{ cs.phaseLabel }}</span></div>
+          <div style="display:flex;gap:var(--space-3);flex-wrap:wrap">
+            <div style="width:120px;height:120px;border-radius:24px;background:#6e4a2e;display:flex;align-items:flex-end;padding:8px;box-sizing:border-box"><span style="font-size:10px;font-weight:700;color:var(--color-neutral-100)">Cuir chevelu</span></div>
+            <div style="flex:1;min-width:180px;display:flex;flex-direction:column;gap:4px;font-size:13px"><b>Garçon, 7 ans</b><span>Plaques rondes sans cheveux, squames, démangeaisons depuis 3 semaines. Deux frères touchés.</span></div>
+          </div>
+          <sc-if value="{{ cs.ask }}" hint-placeholder-val="{{ true }}">
+            <span style="font-size:14px;font-weight:700">Votre hypothèse, avant de voir l'IA :</span>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px">
+              <sc-for list="{{ cs.options }}" as="o" hint-placeholder-count="4"><button onClick="{{ o.go }}" style="border:2px solid var(--color-divider);cursor:pointer;padding:12px 16px;border-radius:999px;font:inherit;font-size:14px;font-weight:600;background:var(--color-surface);color:var(--color-text)" style-hover="border-color:var(--color-accent)">{{ o.label }}</button></sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{ cs.reveal }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div style="display:flex;justify-content:space-between;gap:10px;padding:12px 16px;border-radius:999px;background:var(--color-bg);font-size:14px"><span>Vous</span><b>{{ cs.mine }}</b></div>
+              <div style="display:flex;justify-content:space-between;gap:10px;padding:12px 16px;border-radius:999px;background:var(--color-bg);font-size:14px"><span>IA GlowScan</span><b>Teigne du cuir chevelu · 82 %</b></div>
+              <div style="display:flex;justify-content:space-between;gap:10px;padding:12px 16px;border-radius:999px;background:var(--color-accent-100);font-size:14px"><span>Dr Aïcha (référente)</span><b>{{ cs.dermLabel }}</b></div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ cs.lesson }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:8px;padding:var(--space-4);border-radius:var(--radius-lg);background:{{ cs.lessonBg }}">
+              <span style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--color-accent-2-800)">{{ cs.verdict }}</span>
+              <span style="font-size:14px;line-height:1.5"><b>Le signe qui compte :</b> plaques rondes + squames + cas dans la fratrie = teigne jusqu'à preuve du contraire. La pelade, elle, laisse une peau lisse.</span>
+              <span style="font-size:13px"><b>Conduite :</b> griséofulvine 20 mg/kg/j pendant 6 semaines, traiter les frères, ne pas partager peignes et bonnets.</span>
+              <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px"><button class="btn btn-primary" onClick="{{ cs.reset }}">Cas suivant</button><button class="btn btn-ghost">Revoir en 3 min : teignes chez l'enfant</button></div>
+            </div>
+          </sc-if>
+        </div>
+
+        <div class="card" style="padding:var(--space-6);gap:var(--space-3)">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px"><h3 style="margin:0;font-size:22px">Vos compétences</h3><span style="font-size:12px;color:var(--color-neutral-700)">accord avec le dermatologue</span></div>
+          <sc-for list="{{ skills }}" as="k" hint-placeholder-count="7">
+            <div style="display:flex;flex-direction:column;gap:5px">
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px"><span style="font-weight:700">{{ k.name }}</span><span style="display:flex;align-items:center;gap:8px"><span style="color:var(--color-neutral-700)">{{ k.n }} cas</span><span class="tag {{ k.tag }}">{{ k.badge }}</span></span></div>
+              <div style="position:relative;height:10px;border-radius:999px;background:var(--color-neutral-200)"><div style="height:100%;width:{{ k.w }};border-radius:999px;background:{{ k.c }}"></div><span style="position:absolute;top:-3px;left:85%;width:2px;height:16px;background:var(--color-neutral-600)"></span></div>
+            </div>
+          </sc-for>
+          <span style="font-size:12px;color:var(--color-neutral-700)">Au-delà du trait (85 % sur 20 cas), vous traitez seul. Un cas sur cinq reste contrôlé.</span>
+        </div>
+      </section>
+
+      <div class="card" style="padding:var(--space-6);gap:var(--space-3)">
+        <h3 style="margin:0;font-size:22px">Retours des dermatologues</h3>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:var(--space-3)">
+          <sc-for list="{{ feedback }}" as="f" hint-placeholder-count="3">
+            <div style="display:flex;flex-direction:column;gap:8px;padding:var(--space-4);border-radius:var(--radius-lg);background:var(--color-bg)">
+              <span style="display:flex;justify-content:space-between;gap:8px"><span style="font-size:13px;font-weight:700">{{ f.case }}</span><span class="tag {{ f.tag }}">{{ f.res }}</span></span>
+              <span style="font-size:13px;line-height:1.5">« {{ f.tip }} »</span>
+              <span style="font-size:12px;color:var(--color-neutral-700)">{{ f.by }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ═══ VUE RÉFÉRENT ═══ -->
+    <sc-if value="{{ isRef }}" hint-placeholder-val="{{ false }}">
+      <header style="display:flex;flex-direction:column;gap:4px">
+        <span style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:var(--color-accent-700)">Dermatologue référente · 6 relais dans 3 régions</span>
+        <h1 style="margin:0;font-size:42px">Valider et former</h1>
+        <p style="margin:0;color:var(--color-neutral-700);max-width:660px">Votre correction devient la leçon du relais. Une phrase suffit : le signe qui aurait dû l'orienter.</p>
+      </header>
+      <section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr));gap:var(--space-4);align-items:start">
+        <div class="card" style="padding:var(--space-6);gap:var(--space-3)">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px"><h3 style="margin:0;font-size:22px">À valider</h3><span class="tag tag-accent">{{ q.count }} cas</span></div>
+          <sc-for list="{{ q.items }}" as="c" hint-placeholder-count="3">
+            <div style="display:flex;flex-direction:column;gap:10px;padding:var(--space-4);border-radius:var(--radius-lg);background:var(--color-bg)">
+              <div style="display:flex;gap:12px;align-items:center">
+                <span style="flex:none;width:56px;height:56px;border-radius:16px;background:{{ c.ph }}"></span>
+                <span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:14px;font-weight:700">{{ c.title }}</span><span style="font-size:12px;color:var(--color-neutral-700)">{{ c.relais }} · {{ c.place }} · {{ c.when }}</span></span>
+                <sc-if value="{{ c.urgent }}" hint-placeholder-val="{{ false }}"><span class="tag tag-accent">Urgent</span></sc-if>
+              </div>
+              <div style="display:flex;flex-wrap:wrap;gap:6px;font-size:12px"><span class="tag tag-neutral">Relais : {{ c.guess }}</span><span class="tag tag-neutral">IA : {{ c.ai }}</span></div>
+              <sc-if value="{{ c.open }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;flex-direction:column;gap:8px">
+                  <div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ c.tips }}" as="t" hint-placeholder-count="3"><button onClick="{{ t.go }}" style="border:1px solid {{ t.border }};cursor:pointer;padding:6px 12px;border-radius:999px;font:inherit;font-size:12px;font-weight:600;background:{{ t.bg }};color:{{ t.fg }}">{{ t.label }}</button></sc-for></div>
+                  <textarea class="input" style="border-radius:var(--radius-md);min-height:64px" placeholder="Le signe qui aurait dû l'orienter…" value="{{ c.note }}" onChange="{{ c.onNote }}"></textarea>
+                </div>
+              </sc-if>
+              <div style="display:flex;flex-wrap:wrap;gap:8px">
+                <button class="btn" onClick="{{ c.ok }}" style="background:var(--color-accent-2-600);color:var(--color-bg)">Relais a raison</button>
+                <button class="btn btn-secondary" onClick="{{ c.fix }}">{{ c.fixLabel }}</button>
+              </div>
+            </div>
+          </sc-for>
+          <sc-if value="{{ q.empty }}" hint-placeholder-val="{{ false }}"><div style="padding:14px 18px;border-radius:999px;background:var(--color-accent-2-100);color:var(--color-accent-2-800);font-size:13px;font-weight:600">File vide. Vos 3 relais ont reçu leur leçon.</div></sc-if>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:var(--space-4)">
+          <div class="card" style="padding:var(--space-6);gap:var(--space-3)">
+            <h3 style="margin:0;font-size:22px">Mes relais</h3>
+            <sc-for list="{{ relais }}" as="r" hint-placeholder-count="4">
+              <div style="display:flex;align-items:center;gap:12px;padding:8px 10px;border-radius:999px;background:var(--color-bg)">
+                <span style="flex:none;width:36px;height:36px;border-radius:999px;background:var(--color-accent-2-200);color:var(--color-accent-2-800);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">{{ r.ini }}</span>
+                <span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:14px;font-weight:700">{{ r.name }}</span><span style="font-size:12px;color:var(--color-neutral-700)">{{ r.role }} · {{ r.place }} · accord {{ r.acc }}</span></span>
+                <sc-if value="{{ r.canPromote }}" hint-placeholder-val="{{ false }}"><button class="btn btn-secondary" onClick="{{ r.promote }}" style="padding-inline:12px">Promouvoir</button></sc-if>
+                <sc-if value="{{ r.noPromote }}" hint-placeholder-val="{{ true }}"><span class="tag tag-neutral">{{ r.level }}</span></sc-if>
+              </div>
+            </sc-for>
+          </div>
+          <div class="card" style="padding:var(--space-6);gap:var(--space-2);background:var(--color-accent-2-100)">
+            <span class="card-kicker" style="font-weight:700;color:var(--color-accent-2-800)">Atlas des peaux africaines</span>
+            <span style="font-family:var(--font-heading);font-size:38px;line-height:1">{{ atlas }}</span>
+            <p style="margin:0;font-size:13px;color:var(--color-accent-2-900)">cas validés par le réseau, dont 312 par vous. Chaque validation rend l'IA plus juste sur phototypes IV à VI et sert de cas d'école aux relais.</p>
+          </div>
+        </div>
+      </section>
+    </sc-if>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const chip = (on, go, label) => ({ label, go, bg: on ? 'var(--color-accent)' : 'transparent', fg: on ? 'var(--color-bg)' : 'var(--color-text)', border: on ? 'var(--color-accent)' : 'var(--color-divider)' });
+const LEVELS = [
+  ['Observateur', 'Envoie des cas. Tout est validé par un dermatologue.'],
+  ['Relais', 'Propose son diagnostic avant l\'IA. Tout est validé.'],
+  ['Relais autonome', 'Traite seul les affections maîtrisées. 1 cas sur 5 contrôlé.'],
+  ['Formateur', 'Forme les nouveaux relais de sa région.']
+];
+const SKILLS = [['Gale', 31, 94], ['Teigne', 24, 88], ['Acné', 18, 83], ['Eczéma', 15, 71], ['Pityriasis versicolor', 12, 90], ['Ulcère de Buruli', 4, 50], ['Lèpre', 3, 67]];
+const FEEDBACK = [
+  ['Eczéma ou gale ?', 'Corrigé', 'tag-accent', 'Regardez entre les doigts et les poignets : les sillons signent la gale. Ici il n\'y en a pas.', 'Dr Aïcha · il y a 2 jours'],
+  ['Tache claire du dos', 'Juste', 'tag-accent-2', 'Bon réflexe d\'avoir testé la sensibilité. Tache insensible = penser lèpre, envoyer en urgence.', 'Pr Essomba · il y a 4 jours'],
+  ['Plaie de jambe', 'Corrigé', 'tag-accent', 'Bords décollés, indolore, bord de rivière : Buruli. Pas d\'antibiotique seul, orienter vers le centre de référence.', 'Dr Aïcha · la semaine dernière']
+];
+const QUEUE = [
+  { id: 1, title: 'Plaques du cuir chevelu, 7 ans', relais: 'Joseph M.', place: 'Mokolo', when: 'il y a 12 min', guess: 'Pelade', ai: 'Teigne 82 %', ph: '#6e4a2e', urgent: false },
+  { id: 2, title: 'Tache hypochromique insensible', relais: 'Awa D.', place: 'Kousséri', when: 'il y a 1 h', guess: 'Pityriasis', ai: 'Lèpre 61 %', ph: '#5a3a22', urgent: true },
+  { id: 3, title: 'Prurit nocturne familial', relais: 'Blaise T.', place: 'Batouri', when: 'il y a 3 h', guess: 'Gale', ai: 'Gale 90 %', ph: '#7a5234', urgent: false }
+];
+const TIPS = ['Signe clé manqué', 'Examen à compléter', 'Orienter en urgence'];
+const RELAIS = [
+  { id: 1, ini: 'JM', name: 'Joseph Mballa', role: 'Infirmier', place: 'Mokolo', acc: '84 %', lvl: 1 },
+  { id: 2, ini: 'AD', name: 'Awa Djibrilla', role: 'Infirmière', place: 'Kousséri', acc: '79 %', lvl: 1 },
+  { id: 3, ini: 'BT', name: 'Dr Blaise Tamo', role: 'Généraliste', place: 'Batouri', acc: '91 %', lvl: 1, ready: true },
+  { id: 4, ini: 'HN', name: 'Hawa Ndam', role: 'Infirmière', place: 'Garoua', acc: '93 %', lvl: 2 }
+];
+class Component extends DCLogic {
+  state = { role: 'relais', pick: null, phase: 'ask', done: [], open: null, tip: {}, note: {}, promoted: [], atlas: 14212 };
+  renderVals() {
+    const s = this.state;
+    const right = s.pick === 'Teigne';
+    const q = QUEUE.filter(c => !s.done.includes(c.id));
+    const finish = id => this.setState(st => ({ done: [...st.done, id], open: null, atlas: st.atlas + 1 }));
+    const cur = 1, pct = 72;
+    return {
+      roles: [['relais', 'JM', 'Joseph Mballa', 'Infirmier relais', 'var(--color-accent-2-600)'], ['ref', 'AN', 'Dr Aïcha', 'Dermatologue référente', 'var(--color-accent)']].map(([k, ini, name, sub, av]) => ({ ini, name, sub, av, go: () => this.setState({ role: k }), bg: s.role === k ? 'var(--color-surface)' : 'transparent' })),
+      isRelais: s.role === 'relais', isRef: s.role === 'ref',
+      lv: {
+        cur: { name: `Niveau ${cur + 1} · ${LEVELS[cur][0]}` }, pct: pct + '%', toNext: 'Encore 3 affections à maîtriser pour devenir autonome',
+        levels: LEVELS.map(([name, rule], i) => { const on = i === cur, dn = i < cur; return { name, rule, isCur: on, mark: dn ? '✓' : i + 1, bg: on ? 'var(--color-accent-2-100)' : dn ? 'var(--color-surface)' : 'var(--color-bg)', fg: i > cur ? 'var(--color-neutral-700)' : 'var(--color-text)', border: on ? 'var(--color-accent-2-600)' : 'transparent', dotBg: dn || on ? 'var(--color-accent-2-600)' : 'var(--color-neutral-200)', dotFg: dn || on ? 'var(--color-bg)' : 'var(--color-neutral-800)' }; })
+      },
+      cs: {
+        ask: s.phase === 'ask', reveal: s.phase !== 'ask', lesson: s.phase === 'done', mine: s.pick,
+        phaseLabel: s.phase === 'ask' ? 'À vous' : s.phase === 'wait' ? 'Chez le dermatologue' : 'Validé',
+        dermLabel: s.phase === 'wait' ? 'en cours de validation…' : 'Teigne du cuir chevelu',
+        verdict: right ? 'Bien vu — diagnostic confirmé' : 'Leçon du jour', lessonBg: right ? 'var(--color-accent-2-100)' : 'var(--color-accent-100)',
+        options: ['Teigne', 'Pelade', 'Eczéma', 'Psoriasis'].map(o => ({ label: o, go: () => { this.setState({ pick: o, phase: 'wait' }); clearTimeout(this._t); this._t = setTimeout(() => this.setState({ phase: 'done' }), 1600); } })),
+        reset: () => this.setState({ pick: null, phase: 'ask' })
+      },
+      skills: SKILLS.map(([name, n, acc]) => { const auto = acc >= 85 && n >= 20; return { name, n, w: acc + '%', c: auto ? 'var(--color-accent-2-600)' : acc < 60 ? 'var(--color-accent)' : 'var(--color-accent-300)', badge: auto ? 'Autonome' : n < 5 ? 'Toujours valider' : acc + ' %', tag: auto ? 'tag-accent-2' : n < 5 ? 'tag-accent' : 'tag-neutral' }; }),
+      feedback: FEEDBACK.map(([c, res, tag, tip, by]) => ({ case: c, res, tag, tip, by })),
+      q: {
+        count: q.length, empty: q.length === 0,
+        items: q.map(c => { const op = s.open === c.id; return { ...c, open: op, note: s.note[c.id] || '', onNote: e => { const v = e.target.value; this.setState(st => ({ note: { ...st.note, [c.id]: v } })); },
+          tips: TIPS.map(t => chip(s.tip[c.id] === t, () => this.setState(st => ({ tip: { ...st.tip, [c.id]: t } })), t)),
+          ok: () => finish(c.id), fixLabel: op ? 'Envoyer la correction' : 'Corriger', fix: () => op ? finish(c.id) : this.setState({ open: c.id }) }; })
+      },
+      relais: RELAIS.map(r => { const lvl = s.promoted.includes(r.id) ? r.lvl + 1 : r.lvl; const can = r.ready && !s.promoted.includes(r.id); return { ...r, level: `Niv. ${lvl + 1} · ${LEVELS[lvl][0]}`, canPromote: can, noPromote: !can, promote: () => this.setState(st => ({ promoted: [...st.promoted, r.id] })) }; }),
+      atlas: s.atlas.toLocaleString('fr-FR')
+    };
+  }
+  componentWillUnmount() { clearTimeout(this._t); }
+}
+</script>
+</body>
+</html>

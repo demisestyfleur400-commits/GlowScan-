@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caprasimo&family=Figtree:wght@400;600;700&display=swap&subset=latin">
+<script>window.OM_SCENES = '[{"name":"Intro","dur":5,"desc":"Les 4 acteurs : ONG, infirmier relais, dermatologue, bailleur"},{"name":"Programme","dur":7,"desc":"L ONG crée son programme : districts, agents, dermatologues, avis prépayés, connecteurs Bogou et DHIS2"},{"name":"Formation","dur":7,"desc":"L infirmier suit le module photo et valide le quiz"},{"name":"Cas","dur":8,"desc":"Il photographie le cas, propose son diagnostic avant l IA, envoi hors ligne"},{"name":"Avis","dur":8,"desc":"Dr Aïcha corrige, écrit la leçon, choisit traiter au CSI, envoie"},{"name":"Retour","dur":6,"desc":"L infirmier reçoit la correction par SMS et voit sa progression"},{"name":"Orientation","dur":7,"desc":"Autre cas grave : fiche de référence vers l hôpital et suivi"},{"name":"Pilotage","dur":7,"desc":"L ONG suit l accord, les maladies par district, recharge son budget"},{"name":"Rapport","dur":6,"desc":"Rapport mensuel, envoi au bailleur, export DHIS2, partage Bogou"},{"name":"Fin","dur":4,"desc":"Logo GlowScan Africa"}]';</script>
+<script>window.OM_PLAYBACK = '{"mode":"loop"}';</script>
+<style>html,body{margin:0;height:100%;background:#2e2b25} a{color:#8c491a} a:hover{color:#b2622d}</style>
+</helmet>
+<div style="width:100vw;height:100vh">
+  <x-import component-from-global-scope="ParcoursONG" from="./animations-v3.jsx ./parcours-ong.jsx" hint-size="100%,100%"></x-import>
+</div>
+</x-dc>
+</body>
+</html>

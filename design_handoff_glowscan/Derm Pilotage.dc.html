@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/organic-a6b730fa-b5d6-4692-8156-eacdd1b52399/styles.css">
+<script src="_ds/organic-a6b730fa-b5d6-4692-8156-eacdd1b52399/_ds_bundle.js"></script>
+<style>body{margin:0;background:var(--color-bg)} [data-m=mbar]{display:none} @media (max-width:760px){ [data-m=shell]{flex-direction:column} [data-m=aside]{position:sticky!important;top:0;z-index:40;width:100%!important;height:auto!important;padding:10px 16px!important;gap:10px!important;background:var(--color-bg);border-bottom:1px solid var(--color-divider)} [data-m=aside] nav,[data-m=roles]{flex-direction:row!important;overflow-x:auto;gap:4px!important;scrollbar-width:none} [data-m=aside] nav>*,[data-m=roles]>*{flex:none!important;white-space:nowrap} [data-m=roles]>span:first-child{display:none} [data-m=hide-m]{display:none!important} [data-m=portal-aside]{display:none!important} [data-m=main]{padding:16px 16px 40px!important;gap:20px!important} [data-m=main] h1{font-size:30px!important} [data-p]{padding-bottom:110px!important} [data-m=paper]{padding:24px 18px!important} [data-m=mbar]{display:flex} } a{color:var(--color-accent-700)} a:hover{color:var(--color-accent-600)}</style>
+</helmet>
+<div data-m="shell" style="display:flex;min-height:100vh;background:var(--color-bg);color:var(--color-text);font-family:var(--font-body)">
+  <aside data-m="aside" style="flex:none;width:232px;padding:var(--space-6) var(--space-4);display:flex;flex-direction:column;gap:var(--space-6);position:sticky;top:0;height:100vh;box-sizing:border-box">
+    <div style="display:flex;align-items:center;gap:10px">
+      <img src="client/public/glowscan-mark.png" alt="GlowScan" style="width:36px;height:36px;border-radius:999px;object-fit:cover">
+      <div style="display:flex;flex-direction:column"><span style="font-family:var(--font-heading);font-size:18px;line-height:1.1">GlowScan</span><span style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-accent-2-700);font-weight:700">Pilotage</span></div>
+    </div>
+    <div data-m="roles" style="display:flex;flex-direction:column;gap:6px">
+      <span style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--color-neutral-700);padding-left:14px">Voir en tant que</span>
+      <sc-for list="{{ roles }}" as="r" hint-placeholder-count="2">
+        <button onClick="{{ r.go }}" style="display:flex;align-items:center;gap:10px;text-align:left;border:0;cursor:pointer;padding:8px 12px 8px 8px;border-radius:999px;font:inherit;background:{{ r.bg }};color:var(--color-text)">
+          <span style="flex:none;width:32px;height:32px;border-radius:999px;background:{{ r.av }};color:var(--color-bg);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px">{{ r.ini }}</span>
+          <span style="display:flex;flex-direction:column;min-width:0"><span style="font-size:13px;font-weight:700">{{ r.name }}</span><span style="font-size:11px;color:var(--color-neutral-700)">{{ r.sub }}</span></span>
+        </button>
+      </sc-for>
+    </div>
+    <div data-m="hide-m" style="margin-top:auto;display:flex;flex-direction:column;gap:6px;padding:var(--space-4);border-radius:var(--radius-lg);background:var(--color-surface)">
+      <span style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--color-accent-2-700)">Vos droits</span>
+      <sc-for list="{{ rights }}" as="x" hint-placeholder-count="4"><span style="display:flex;gap:8px;font-size:12px;line-height:1.4"><span style="flex:none;font-weight:700;color:{{ x.c }}">{{ x.m }}</span>{{ x.t }}</span></sc-for>
+    </div>
+  </aside>
+
+  <main data-m="main" style="flex:1;min-width:0;padding:var(--space-6) var(--space-8) var(--space-8) var(--space-4);display:flex;flex-direction:column;gap:var(--space-6);max-width:1180px">
+
+    <!-- ═══ ONG ═══ -->
+    <sc-if value="{{ isOng }}" hint-placeholder-val="{{ true }}">
+      <header style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:var(--space-4)">
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <span style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:var(--color-accent-700)">Fondation Sahel Santé · programme financé</span>
+          <h1 style="margin:0;font-size:42px">Peau saine Extrême-Nord</h1>
+        </div>
+        <div class="seg"><sc-for list="{{ ranges }}" as="r" hint-placeholder-count="3"><button onClick="{{ r.go }}" class="seg-opt" style="border:0;font:inherit;font-size:13px;cursor:pointer;background:{{ r.bg }};color:{{ r.fg }}">{{ r.label }}</button></sc-for></div>
+      </header>
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:10px 18px;border-radius:999px;background:var(--color-accent-2-100);color:var(--color-accent-2-900);font-size:13px;font-weight:600">
+        <span style="flex:1;min-width:240px">Données anonymisées : aucun nom, téléphone ni photo de patient. Effectifs inférieurs à 5 masqués.</span>
+      </div>
+      <section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:var(--space-3)">
+        <sc-for list="{{ ong.kpis }}" as="k" hint-placeholder-count="4">
+          <div style="display:flex;flex-direction:column;gap:6px;padding:var(--space-4);border-radius:var(--radius-lg);background:{{ k.bg }}">
+            <span style="font-size:12px;font-weight:700;color:{{ k.ink }}">{{ k.label }}</span>
+            <span style="font-family:var(--font-heading);font-size:38px;line-height:1">{{ k.value }}</span>
+            <span style="font-size:12px;color:var(--color-neutral-700)">{{ k.note }}</span>
+          </div>
+        </sc-for>
+      </section>
+
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-3);padding:var(--space-4) var(--space-6);border-radius:var(--radius-lg);background:var(--color-accent-100)">
+        <span style="flex:1;min-width:240px;display:flex;flex-direction:column;gap:2px"><span style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--color-accent-800)">Alerte épidémiologique</span><span style="font-size:15px;font-weight:700;color:var(--color-accent-900)">Gale : +140 % en 3 semaines dans le district de Mokolo</span><span style="font-size:12px;color:var(--color-accent-900)">Signalée automatiquement au district de santé le 21 sept.</span></span>
+        <button class="btn btn-secondary" style="border-color:var(--color-accent-700);color:var(--color-accent-900)">Voir l'évolution</button>
+      </div>
+
+      <section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:var(--space-4);align-items:start">
+        <div class="card" style="padding:var(--space-6);gap:var(--space-3)">
+          <h3 style="margin:0;font-size:22px">Par district</h3>
+          <div style="display:grid;grid-template-columns:minmax(0,1.3fr) 70px 70px minmax(0,1.2fr);gap:10px;padding:0 4px 8px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-neutral-700);border-bottom:1px solid var(--color-divider)"><span>District</span><span>Cas</span><span>Délai</span><span>1re cause</span></div>
+          <sc-for list="{{ ong.districts }}" as="d" hint-placeholder-count="5">
+            <div style="display:grid;grid-template-columns:minmax(0,1.3fr) 70px 70px minmax(0,1.2fr);gap:10px;align-items:center;padding:6px 4px;font-size:14px">
+              <span style="font-weight:700">{{ d.name }}</span><span style="font-weight:700;color:{{ d.ink }}">{{ d.cases }}</span><span>{{ d.delay }}</span><span style="font-size:13px;color:var(--color-neutral-800)">{{ d.top }}</span>
+            </div>
+          </sc-for>
+        </div>
+        <div class="card" style="padding:var(--space-6);gap:var(--space-3)">
+          <h3 style="margin:0;font-size:22px">Maladies du programme</h3>
+          <sc-for list="{{ ong.diseases }}" as="c" hint-placeholder-count="5">
+            <div style="display:flex;flex-direction:column;gap:5px">
+              <div style="display:flex;justify-content:space-between;font-size:13px"><span style="font-weight:600">{{ c.name }}</span><span style="font-weight:700">{{ c.label }}</span></div>
+              <div style="height:10px;border-radius:999px;background:var(--color-neutral-200)"><div style="height:100%;width:{{ c.w }};border-radius:999px;background:{{ c.c }}"></div></div>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+
+      <section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:var(--space-4);align-items:start">
+        <div class="card" style="padding:var(--space-6);gap:var(--space-3)">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px"><h3 style="margin:0;font-size:22px">Agents du programme</h3><span style="font-size:12px;color:var(--color-neutral-700)">avec leur accord</span></div>
+          <sc-for list="{{ ong.agents }}" as="a" hint-placeholder-count="5">
+            <div style="display:flex;align-items:center;gap:12px;padding:8px 12px 8px 8px;border-radius:999px;background:var(--color-bg)">
+              <span style="flex:none;width:36px;height:36px;border-radius:999px;background:var(--color-accent-2-200);color:var(--color-accent-2-800);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">{{ a.ini }}</span>
+              <span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:14px;font-weight:700">{{ a.name }}</span><span style="font-size:12px;color:var(--color-neutral-700)">{{ a.sub }}</span></span>
+              <span class="tag {{ a.tag }}" style="flex:none;white-space:nowrap">{{ a.level }}</span>
+            </div>
+          </sc-for>
+          <span style="font-size:12px;color:var(--color-neutral-700)">Ces indicateurs servent à la formation, pas à l'évaluation disciplinaire (article 7 de la convention).</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:var(--space-4)">
+          <div class="card" style="padding:var(--space-6);gap:var(--space-3)">
+            <h3 style="margin:0;font-size:22px">Budget</h3>
+            <div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 12px;font-size:14px"><span style="white-space:nowrap">{{ ong.budget.used }} consommés</span><b style="white-space:nowrap">sur {{ ong.budget.total }}</b></div>
+            <div style="height:14px;border-radius:999px;background:var(--color-neutral-200);overflow:hidden"><div style="height:100%;width:{{ ong.budget.pct }};border-radius:999px;background:var(--color-accent-2-600)"></div></div>
+            <span style="font-size:13px;color:var(--color-neutral-800)">{{ ong.budget.left }}</span>
+          </div>
+          <div class="card" style="padding:var(--space-6);gap:var(--space-3);background:var(--color-surface)">
+            <h3 style="margin:0;font-size:22px">Rapport au bailleur</h3>
+            <span style="font-size:13px;color:var(--color-neutral-800)">Chiffres clés, carte des districts, progression des agents et 3 cas d'école floutés validés par un dermatologue.</span>
+            <button class="btn btn-primary" onClick="{{ ong.gen }}" style="align-self:flex-start;max-width:100%;white-space:normal;height:auto;min-height:44px;text-align:left">{{ ong.genLabel }}</button>
+          </div>
+        </div>
+      </section>
+    </sc-if>
+
+    <!-- ═══ FONDATEUR ═══ -->
+    <sc-if value="{{ isFounder }}" hint-placeholder-val="{{ false }}">
+      <header style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:var(--space-4)">
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <span style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:var(--color-accent-700)">GlowScan SARL · septembre 2026</span>
+          <h1 style="margin:0;font-size:42px">Argent et plateforme</h1>
+        </div>
+      </header>
+      <section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:var(--space-3)">
+        <sc-for list="{{ fd.kpis }}" as="k" hint-placeholder-count="5">
+          <div style="display:flex;flex-direction:column;gap:6px;padding:var(--space-4);border-radius:var(--radius-lg);background:{{ k.bg }}">
+            <span style="font-size:12px;font-weight:700;color:{{ k.ink }}">{{ k.label }}</span>
+            <span style="font-family:var(--font-heading);font-size:30px;line-height:1">{{ k.value }}</span>
+            <span style="font-size:12px;color:var(--color-neutral-700)">FCFA</span>
+          </div>
+        </sc-for>
+      </section>
+      <section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,400px),1fr));gap:var(--space-4);align-items:start">
+        <div class="card" style="padding:var(--space-6);gap:var(--space-3)">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px"><h3 style="margin:0;font-size:22px">Rapprochement du jour</h3><span class="tag {{ fd.recTag }}" style="white-space:nowrap">{{ fd.recLabel }}</span></div>
+          <div style="display:flex;justify-content:space-between;padding:10px 16px;border-radius:999px;background:var(--color-bg);font-size:14px"><span>Encaissé selon GlowScan</span><b>1 284 000</b></div>
+          <div style="display:flex;justify-content:space-between;padding:10px 16px;border-radius:999px;background:var(--color-bg);font-size:14px"><span>Confirmé par l'agrégateur</span><b>{{ fd.aggr }}</b></div>
+          <sc-if value="{{ fd.hasGap }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:10px 16px;border-radius:var(--radius-lg);background:var(--color-accent-100);font-size:13px;color:var(--color-accent-900)">
+              <span style="flex:1;min-width:200px">Écart de 3 000 : transaction MP-88213 (Orange) sans confirmation opérateur. Le cas reste « non payé ».</span>
+              <button class="btn btn-secondary" onClick="{{ fd.resolve }}" style="border-color:var(--color-accent-700);color:var(--color-accent-900)">Revérifier</button>
+            </div>
+          </sc-if>
+          <span style="font-size:12px;color:var(--color-neutral-700)">Un paiement n'est « payé » que sur confirmation signée de l'opérateur, reçue par le serveur.</span>
+        </div>
+        <div class="card" style="padding:var(--space-6);gap:var(--space-3);background:var(--color-accent-2-100)">
+          <span class="card-kicker" style="font-weight:700;color:var(--color-accent-2-800)">Part GlowScan disponible</span>
+          <span style="font-family:var(--font-heading);font-size:40px;line-height:1">{{ fd.avail }} <span style="font-size:16px">FCFA</span></span>
+          <div style="display:flex;align-items:center;gap:12px;padding:10px 16px;border-radius:999px;background:var(--color-surface)"><span style="flex:1;font-size:14px;font-weight:700">Compte bancaire GlowScan SARL</span><span style="font-size:13px;color:var(--color-neutral-700)">•••• 4417</span></div>
+          <button class="btn btn-primary" onClick="{{ fd.withdraw }}" style="align-self:flex-start;white-space:nowrap">{{ fd.wLabel }}</button>
+          <span style="font-size:12px;color:var(--color-accent-2-900)">Parts dermatologues et relais déjà versées automatiquement. Frais opérateur inclus dans les 20 %.</span>
+        </div>
+      </section>
+      <div class="card" style="padding:var(--space-6);gap:var(--space-2)">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px"><h3 style="margin:0;font-size:22px">Transactions</h3><span style="font-size:12px;color:var(--color-neutral-700)">références uniquement, aucune donnée médicale</span></div>
+        <sc-for list="{{ fd.tx }}" as="t" hint-placeholder-count="6">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--color-divider);font-size:13px">
+            <span style="display:flex;flex-direction:column"><b>{{ t.ref }}</b><span style="font-size:12px;color:var(--color-neutral-700)">{{ t.when }}</span></span>
+            <span>{{ t.kind }}</span>
+            <span><span style="padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700;background:{{ t.opBg }};color:#1a1a1a">{{ t.op }}</span></span>
+            <b>{{ t.amt }}</b>
+            <span style="color:var(--color-neutral-700)">{{ t.gs }}</span>
+            <span><span class="tag {{ t.tag }}" style="white-space:nowrap">{{ t.status }}</span></span>
+          </div>
+        </sc-for>
+      </div>
+      <section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,400px),1fr));gap:var(--space-4);align-items:start">
+        <div class="card" style="padding:var(--space-6);gap:var(--space-3)">
+          <h3 style="margin:0;font-size:22px">Programmes ONG</h3>
+          <sc-for list="{{ fd.ongs }}" as="o" hint-placeholder-count="3">
+            <div style="display:flex;flex-direction:column;gap:5px">
+              <div style="display:flex;justify-content:space-between;gap:8px;font-size:13px"><span style="font-weight:700">{{ o.name }}</span><span>{{ o.used }}</span></div>
+              <div style="height:10px;border-radius:999px;background:var(--color-neutral-200)"><div style="height:100%;width:{{ o.pct }};border-radius:999px;background:var(--color-accent-2-600)"></div></div>
+            </div>
+          </sc-for>
+        </div>
+        <div class="card" style="padding:var(--space-6);gap:var(--space-3)">
+          <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:12px"><h3 style="margin:0;font-size:22px">Accès d'urgence</h3><button class="btn btn-ghost" onClick="{{ fd.openBg }}" style="white-space:nowrap">Demander un accès</button></div>
+          <span style="font-size:12px;color:var(--color-neutral-700)">Vous ne voyez pas les dossiers médicaux. Tout accès exceptionnel est motivé, limité à 1 h et visible par le médecin concerné.</span>
+          <sc-for list="{{ fd.log }}" as="l" hint-placeholder-count="2">
+            <div style="display:flex;flex-direction:column;gap:2px;padding:10px 16px;border-radius:var(--radius-lg);background:var(--color-bg);font-size:13px"><span style="display:flex;justify-content:space-between;gap:8px"><b>{{ l.ref }}</b><span style="color:var(--color-neutral-700)">{{ l.when }}</span></span><span>{{ l.why }}</span><span style="font-size:12px;color:var(--color-neutral-700)">{{ l.who }}</span></div>
+          </sc-for>
+        </div>
+      </section>
+      <sc-if value="{{ fd.bg }}" hint-placeholder-val="{{ false }}">
+        <div class="dialog-backdrop" onClick="{{ fd.closeBg }}" style="z-index:50">
+          <div class="dialog" onClick="{{ stop }}" style="max-width:500px;width:100%">
+            <span class="dialog-title">Accès d'urgence à un dossier</span>
+            <div class="field"><label>Référence du dossier</label><input class="input" value="{{ fd.bgRef }}" onChange="{{ fd.onRef }}" placeholder="GS-C-1175"></div>
+            <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:var(--color-neutral-700)">Motif</span>
+              <div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ fd.whys }}" as="c" hint-placeholder-count="3"><button onClick="{{ c.go }}" style="border:1px solid {{ c.border }};cursor:pointer;padding:7px 14px;border-radius:999px;font:inherit;font-size:13px;font-weight:600;background:{{ c.bg }};color:{{ c.fg }}">{{ c.label }}</button></sc-for></div>
+            </div>
+            <span style="font-size:12px;color:var(--color-accent-800)">Le médecin du dossier et le patient seront informés de cet accès.</span>
+            <div class="dialog-actions"><button class="btn btn-ghost" onClick="{{ fd.closeBg }}">Annuler</button><button class="btn btn-primary" onClick="{{ fd.confirmBg }}" disabled="{{ fd.bgOff }}">Confirmer et journaliser</button></div>
+          </div>
+        </div>
+      </sc-if>
+    </sc-if>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const fmt = n => n.toLocaleString('fr-FR');
+const mask = n => n < 5 ? '< 5' : String(n);
+const chip = (on, go, label) => ({ label, go, bg: on ? 'var(--color-accent)' : 'transparent', fg: on ? 'var(--color-bg)' : 'var(--color-text)', border: on ? 'var(--color-accent)' : 'var(--color-divider)' });
+const MULT = { '1m': 0.3, '3m': 1, '12m': 2.6 };
+const DISTRICTS = [['Mokolo', 142, '9 h', 'Gale'], ['Kousséri', 88, '14 h', 'Teigne'], ['Maroua', 64, '6 h', 'Gale'], ['Mora', 21, '11 h', 'Pityriasis versicolor'], ['Tokombéré', 3, '—', '—']];
+const DISEASES = [['Gale', 168, 'var(--color-accent)'], ['Teigne', 74, 'var(--color-accent-300)'], ['Pityriasis versicolor', 41, 'var(--color-accent-300)'], ['Ulcère de Buruli', 6, 'var(--color-accent-700)'], ['Lèpre', 3, 'var(--color-accent-700)']];
+const AGENTS = [['JM', 'Joseph Mballa', 'Infirmier · Mokolo', 'Niv. 2 · accord 84 %', 'tag-neutral', true], ['HN', 'Hawa Ndam', 'Infirmière · Maroua', 'Niv. 3 · autonome', 'tag-accent-2', true], ['AD', 'Awa Djibrilla', 'Infirmière · Kousséri', 'Niv. 2 · accord 79 %', 'tag-neutral', true], ['—', 'Agent de Mora', 'a refusé le partage', 'Progression privée', 'tag-outline', false]];
+const TX = [['GS-C-1182', '10:12', 'Consultation B2C', 'MTN', 12000, 2400, 'Bloqué', 'tag-neutral'], ['AV-R-0931', '09:48', 'Avis relais', 'Orange', 3000, 600, 'Versé', 'tag-accent-2'], ['MP-88213', '09:30', 'Avis relais', 'Orange', 3000, 600, 'Non confirmé', 'tag-accent'], ['ONG-SS-044', '08:00', 'Programme ONG', 'Virement', 150000, 30000, 'Reçu', 'tag-accent-2'], ['GS-C-1177', 'hier', 'Consultation B2C', 'MTN', 12000, 2400, 'Versé', 'tag-accent-2'], ['GS-C-1160', 'lun.', 'Consultation B2C', 'Orange', 12000, 0, 'Remboursé', 'tag-neutral']];
+const OPBG = { MTN: '#ffcb05', Orange: '#ff7900', Virement: 'var(--color-neutral-200)' };
+class Component extends DCLogic {
+  state = { role: 'ong', range: '3m', gen: false, gap: true, wd: false, bg: false, bgRef: '', bgWhy: '', log: [{ ref: 'GS-C-1103', when: '12 sept. · 14:02', why: 'Litige paiement signalé par le patient', who: 'Vous · 38 min · Dr Aïcha informée' }] };
+  renderVals() {
+    const s = this.state; const m = MULT[s.range];
+    const dMax = DISEASES[0][1];
+    return {
+      stop: e => e.stopPropagation(),
+      roles: [['ong', 'FS', 'Fondation Sahel Santé', 'Gestionnaire de programme', 'var(--color-accent-2-600)'], ['founder', 'GS', 'Fondateur', 'GlowScan SARL', 'var(--color-accent)']].map(([k, ini, name, sub, av]) => ({ ini, name, sub, av, go: () => this.setState({ role: k }), bg: s.role === k ? 'var(--color-surface)' : 'transparent' })),
+      isOng: s.role === 'ong', isFounder: s.role === 'founder',
+      rights: (s.role === 'ong'
+        ? [['✓', 'Chiffres anonymisés de votre programme'], ['✓', 'Progression des agents qui l\'acceptent'], ['✕', 'Noms et photos des patients'], ['✕', 'Autres programmes']]
+        : [['✓', 'Argent, comptes, programmes'], ['✓', 'Statistiques globales'], ['✕', 'Dossiers médicaux nominatifs'], ['!', 'Accès d\'urgence motivé et journalisé']]).map(([mk, t]) => ({ m: mk, t, c: mk === '✓' ? 'var(--color-accent-2-700)' : mk === '✕' ? 'var(--color-accent-700)' : 'var(--color-neutral-800)' })),
+      ranges: [['1m', '1 mois'], ['3m', '3 mois'], ['12m', 'Depuis le début']].map(([k, l]) => ({ label: l, go: () => this.setState({ range: k }), bg: s.range === k ? 'var(--color-accent)' : 'transparent', fg: s.range === k ? 'var(--color-bg)' : 'var(--color-text)' })),
+      ong: {
+        kpis: [['Cas validés', fmt(Math.round(318 * m)), 'par un dermatologue', 'var(--color-surface)', 'var(--color-neutral-700)'], ['Délai moyen', '9 h', 'objectif : moins de 24 h', 'var(--color-surface)', 'var(--color-neutral-700)'], ['Agents autonomes', '1 / 4', '2 à moins de 3 affections', 'var(--color-accent-2-100)', 'var(--color-accent-2-800)'], ['Orientés en urgence', mask(Math.round(9 * m)), 'lèpre, Buruli, surinfections', 'var(--color-accent-100)', 'var(--color-accent-800)']].map(([label, value, note, bg, ink]) => ({ label, value, note, bg, ink })),
+        districts: DISTRICTS.map(([name, c, delay, top]) => { const n = Math.round(c * m); const hid = n < 5; return { name, cases: mask(n), delay: hid ? '—' : delay, top: hid ? 'masqué (effectif faible)' : top, ink: hid ? 'var(--color-neutral-600)' : 'var(--color-text)' }; }),
+        diseases: DISEASES.map(([name, c, col]) => { const n = Math.round(c * m); return { name, label: mask(n), w: (n < 5 ? 3 : c / dMax * 100) + '%', c: col }; }),
+        agents: AGENTS.map(([ini, name, sub, level, tag]) => ({ ini, name, sub, level, tag })),
+        budget: { total: '3 000 000 FCFA', used: '954 000', pct: '32%', left: 'Reste de quoi financer environ 680 avis jusqu\'en mars 2027.' },
+        gen: () => this.setState({ gen: true }), genLabel: s.gen ? 'Rapport de septembre généré ✓ — Télécharger le PDF' : 'Générer le rapport du mois'
+      },
+      fd: {
+        kpis: [['Encaissé', '1 284 000', 'var(--color-surface)', 'var(--color-neutral-700)'], ['Versé aux dermatologues', '812 400', 'var(--color-surface)', 'var(--color-neutral-700)'], ['Versé aux relais', '96 000', 'var(--color-surface)', 'var(--color-neutral-700)'], ['Part GlowScan', '256 800', 'var(--color-accent-2-100)', 'var(--color-accent-2-800)'], ['Remboursé', '36 000', 'var(--color-accent-100)', 'var(--color-accent-800)']].map(([label, value, bg, ink]) => ({ label, value, bg, ink })),
+        aggr: s.gap ? '1 281 000' : '1 284 000', hasGap: s.gap, recTag: s.gap ? 'tag-accent' : 'tag-accent-2', recLabel: s.gap ? '1 écart' : 'Tout concorde ✓',
+        resolve: () => this.setState({ gap: false }),
+        avail: s.wd ? '0' : '218 400', wLabel: s.wd ? 'Virement envoyé ✓ — sous 48 h' : 'Virer vers la banque', withdraw: () => this.setState({ wd: true }),
+        tx: TX.map(([ref, when, kind, op, amt, gs, status, tag]) => ({ ref, when, kind, op, opBg: OPBG[op], amt: fmt(amt) + ' FCFA', gs: 'GlowScan : ' + fmt(gs), status: ref === 'MP-88213' && !s.gap ? 'Confirmé' : status, tag: ref === 'MP-88213' && !s.gap ? 'tag-accent-2' : tag })),
+        ongs: [['Fondation Sahel Santé · Extrême-Nord', 954000, 3000000], ['Programme Buruli Centre (district)', 210000, 800000], ['Lèpre Zéro Est', 45000, 1200000]].map(([name, u, t]) => ({ name, used: `${fmt(u)} / ${fmt(t)}`, pct: (u / t * 100) + '%' })),
+        log: s.log,
+        bg: s.bg, openBg: () => this.setState({ bg: true, bgRef: '', bgWhy: '' }), closeBg: () => this.setState({ bg: false }),
+        bgRef: s.bgRef, onRef: e => this.setState({ bgRef: e.target.value }),
+        whys: ['Litige paiement', 'Demande judiciaire', 'Incident technique'].map(w => chip(s.bgWhy === w, () => this.setState({ bgWhy: w }), w)),
+        bgOff: !s.bgRef.trim() || !s.bgWhy,
+        confirmBg: () => this.setState(st => ({ bg: false, log: [{ ref: st.bgRef.trim().toUpperCase(), when: 'maintenant', why: st.bgWhy, who: 'Vous · accès valable 1 h · médecin et patient informés' }, ...st.log] }))
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>

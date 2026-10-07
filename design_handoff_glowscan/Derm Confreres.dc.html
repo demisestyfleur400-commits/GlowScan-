@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/organic-a6b730fa-b5d6-4692-8156-eacdd1b52399/styles.css">
+<script src="_ds/organic-a6b730fa-b5d6-4692-8156-eacdd1b52399/_ds_bundle.js"></script>
+<style>body{margin:0;background:var(--color-bg)} a{color:var(--color-accent-700)} a:hover{color:var(--color-accent-600)}</style>
+</helmet>
+<div style="min-height:100vh;background:var(--color-bg);color:var(--color-text);font-family:var(--font-body);padding:clamp(16px,3vw,40px);box-sizing:border-box">
+<div style="max-width:1200px;margin:0 auto;display:flex;flex-direction:column;gap:var(--space-6)">
+  <header style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:var(--space-4)">
+    <div style="display:flex;flex-direction:column;gap:4px">
+      <a href="Derm Portal.dc.html" style="font-size:13px;font-weight:700;text-decoration:none">← Tableau de bord</a>
+      <span style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:var(--color-accent-700)">Réseau GlowScan Derm</span>
+      <h1 style="margin:0;font-size:clamp(30px,4vw,42px)">Confrères</h1>
+    </div>
+    <button class="btn btn-primary" onClick="{{ openSend }}" style="padding:12px 22px;font-size:15px;white-space:nowrap">+ Envoyer un cas complexe</button>
+  </header>
+  <div style="display:flex;gap:6px;padding:4px;border-radius:999px;background:var(--color-surface);align-self:flex-start;flex-wrap:wrap">
+    <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="3"><button onClick="{{ t.go }}" style="display:flex;align-items:center;gap:8px;border:0;cursor:pointer;padding:10px 18px;border-radius:999px;font:inherit;font-size:14px;font-weight:700;background:{{ t.bg }};color:{{ t.fg }}">{{ t.label }}<sc-if value="{{ t.hasBadge }}" hint-placeholder-val="{{ false }}"><span style="min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--color-accent-800);color:var(--color-bg);font-size:11px;display:flex;align-items:center;justify-content:center">{{ t.badge }}</span></sc-if></button></sc-for>
+  </div>
+
+  <sc-if value="{{ is.msg }}" hint-placeholder-val="{{ true }}">
+    <div style="display:flex;flex-wrap:wrap;gap:var(--space-4);align-items:stretch">
+      <div style="flex:1 1 280px;max-width:100%;display:flex;flex-direction:column;gap:var(--space-2)">
+        <input class="input" placeholder="Rechercher un confrère ou un cas" style="background:var(--color-surface)">
+        <sc-for list="{{ threads }}" as="c" hint-placeholder-count="4">
+          <button onClick="{{ c.go }}" style="display:flex;gap:12px;align-items:center;text-align:left;border:0;cursor:pointer;padding:12px 14px;border-radius:var(--radius-lg);font:inherit;color:var(--color-text);background:{{ c.bg }}">
+            <span style="flex:none;width:44px;height:44px;border-radius:999px;background:{{ c.av }};color:var(--color-bg);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px">{{ c.ini }}</span>
+            <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px">
+              <span style="display:flex;justify-content:space-between;gap:8px"><b style="font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.name }}</b><span style="font-size:11px;color:var(--color-neutral-700);white-space:nowrap">{{ c.when }}</span></span>
+              <span style="display:flex;gap:6px;align-items:center;min-width:0"><span class="tag {{ c.tag }}" style="flex:none">{{ c.kind }}</span><span style="font-size:12px;color:var(--color-neutral-700);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.last }}</span></span>
+            </span>
+            <sc-if value="{{ c.unread }}" hint-placeholder-val="{{ false }}"><span style="flex:none;width:10px;height:10px;border-radius:999px;background:var(--color-accent)"></span></sc-if>
+          </button>
+        </sc-for>
+      </div>
+      <div class="card" style="flex:999 1 440px;min-width:0;padding:var(--space-4);gap:var(--space-3);min-height:600px">
+        <div style="display:flex;align-items:center;gap:12px;padding:0 4px 12px;border-bottom:1px solid var(--color-divider)">
+          <span style="flex:none;width:44px;height:44px;border-radius:999px;background:{{ cur.av }};color:var(--color-bg);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px">{{ cur.ini }}</span>
+          <span style="flex:1;min-width:0;display:flex;flex-direction:column"><b style="font-size:16px">{{ cur.name }}</b><span style="font-size:12px;color:var(--color-neutral-700)">{{ cur.sub }}</span></span>
+          <span class="tag {{ cur.tag }}" style="white-space:nowrap">{{ cur.status }}</span>
+        </div>
+        <sc-if value="{{ cur.hasCase }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;flex-wrap:wrap;gap:var(--space-3);padding:var(--space-3);border-radius:var(--radius-lg);background:var(--color-bg)">
+            <div style="display:flex;gap:6px"><span style="width:72px;height:72px;border-radius:16px;background:#5c3b26"></span><span style="width:72px;height:72px;border-radius:16px;background:#6e4a30"></span><span style="width:72px;height:72px;border-radius:16px;background:#7a5234"></span></div>
+            <div style="flex:1;min-width:200px;display:flex;flex-direction:column;gap:3px;font-size:12px">
+              <b style="font-size:13px">{{ cur.caseRef }} · {{ cur.caseWho }}</b>
+              <span>{{ cur.caseHist }}</span>
+              <span style="color:var(--color-accent-800);font-weight:700">Question : {{ cur.question }}</span>
+              <span style="color:var(--color-neutral-700)">Nom et téléphone du patient masqués</span>
+            </div>
+          </div>
+        </sc-if>
+        <div style="flex:1;display:flex;flex-direction:column;gap:10px;overflow:auto;padding:4px">
+          <sc-for list="{{ msgs }}" as="m" hint-placeholder-count="3">
+            <div style="display:flex;justify-content:{{ m.j }}">
+              <sc-if value="{{ m.isText }}" hint-placeholder-val="{{ true }}"><div style="max-width:78%;padding:10px 16px;border-radius:22px;background:{{ m.bg }};color:{{ m.fg }};font-size:14px;line-height:1.45">{{ m.t }}<div style="font-size:10px;opacity:.75;margin-top:4px">{{ m.who }} · {{ m.at }}</div></div></sc-if>
+              <sc-if value="{{ m.isAvis }}" hint-placeholder-val="{{ false }}">
+                <div style="max-width:88%;display:flex;flex-direction:column;gap:8px;padding:var(--space-4);border-radius:var(--radius-lg);background:var(--color-accent-2-100);border:2px solid var(--color-accent-2-300)">
+                  <span style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--color-accent-2-800)">Avis structuré · {{ m.who }}</span>
+                  <span style="font-size:13px"><b>Réponse :</b> {{ m.answer }}</span>
+                  <span style="font-size:13px"><b>Diagnostic retenu :</b> {{ m.dx }}</span>
+                  <span style="font-size:13px"><b>À écarter :</b> {{ m.ddx }}</span>
+                  <span style="font-size:13px"><b>Conduite à tenir :</b> {{ m.plan }}</span>
+                  <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px"><button class="btn" onClick="{{ accept }}" style="background:var(--color-accent-2-600);color:var(--color-bg)">{{ acceptLabel }}</button><a href="Derm Compte Rendu.dc.html" class="btn btn-ghost">Voir le compte rendu</a></div>
+                </div>
+              </sc-if>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ quick }}" as="q" hint-placeholder-count="3"><button onClick="{{ q.go }}" style="border:1px solid var(--color-divider);background:transparent;cursor:pointer;padding:7px 12px;border-radius:999px;font:inherit;font-size:12px;font-weight:600;color:var(--color-text)">{{ q.t }}</button></sc-for></div>
+        <div style="display:flex;gap:var(--space-2)">
+          <button class="btn btn-secondary" onClick="{{ openSend }}" style="height:44px;white-space:nowrap">+ Cas</button>
+          <input class="input" value="{{ draft }}" onChange="{{ onDraft }}" onKeyDown="{{ onKey }}" placeholder="Écrire au confrère…" style="flex:1;min-width:0;min-height:44px;background:var(--color-bg)">
+          <button class="btn btn-primary" onClick="{{ send }}" style="height:44px">Envoyer</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ is.send }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;flex-wrap:wrap;gap:var(--space-4);align-items:flex-start">
+      <div style="flex:999 1 520px;min-width:0;display:flex;flex-direction:column;gap:var(--space-4)">
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><sc-for list="{{ steps }}" as="st" hint-placeholder-count="4"><span style="display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;font-size:13px;font-weight:700;background:{{ st.bg }};color:{{ st.fg }}"><span style="width:22px;height:22px;border-radius:999px;background:{{ st.dot }};color:var(--color-bg);display:flex;align-items:center;justify-content:center;font-size:11px">{{ st.n }}</span>{{ st.label }}</span></sc-for></div>
+
+        <sc-if value="{{ sd.s0 }}" hint-placeholder-val="{{ true }}">
+          <div class="card" style="padding:var(--space-6);gap:var(--space-3)">
+            <span class="card-title" style="font-size:20px">Quel dossier voulez-vous partager ?</span>
+            <sc-for list="{{ patients }}" as="p" hint-placeholder-count="3">
+              <button onClick="{{ p.go }}" style="display:flex;gap:12px;align-items:center;text-align:left;border:2px solid {{ p.border }};cursor:pointer;padding:12px 14px;border-radius:var(--radius-lg);font:inherit;color:var(--color-text);background:var(--color-bg)">
+                <span style="flex:none;width:52px;height:52px;border-radius:14px;background:{{ p.tint }}"></span>
+                <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><b style="font-size:14px">{{ p.name }}</b><span style="font-size:12px;color:var(--color-neutral-700)">{{ p.sub }}</span></span>
+                <span class="tag {{ p.tag }}">{{ p.status }}</span>
+              </button>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ sd.s1 }}" hint-placeholder-val="{{ false }}">
+          <div class="card" style="padding:var(--space-6);gap:var(--space-3)">
+            <span class="card-title" style="font-size:20px">Ce que votre confrère verra</span>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:var(--space-2)">
+              <div style="display:flex;flex-direction:column;gap:6px;padding:14px 16px;border-radius:20px;background:var(--color-accent-2-100)"><b style="font-size:13px;color:var(--color-accent-2-900)">Partagé</b><sc-for list="{{ shared }}" as="x" hint-placeholder-count="5"><span style="font-size:13px">✓ {{ x.t }}</span></sc-for></div>
+              <div style="display:flex;flex-direction:column;gap:6px;padding:14px 16px;border-radius:20px;background:var(--color-neutral-200)"><b style="font-size:13px">Masqué automatiquement</b><sc-for list="{{ hidden }}" as="x" hint-placeholder-count="3"><span style="font-size:13px;color:var(--color-neutral-800)">— {{ x.t }}</span></sc-for></div>
+            </div>
+            <span style="font-size:12px;color:var(--color-neutral-700)">Le visage entier est flouté si la lésion n'est pas sur le visage. Vous restez le médecin traitant du patient.</span>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ sd.s2 }}" hint-placeholder-val="{{ false }}">
+          <div class="card" style="padding:var(--space-6);gap:var(--space-4)">
+            <span class="card-title" style="font-size:20px">Votre question</span>
+            <div class="field"><label>Une question précise, à laquelle on peut répondre</label><textarea class="input" value="{{ question }}" onChange="{{ onQuestion }}" rows="3" placeholder="Ex. : Faut-il biopsier avant de traiter ?" style="border-radius:24px;padding:12px 16px;min-height:88px;resize:vertical;font:inherit"></textarea></div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ qSugg }}" as="q" hint-placeholder-count="3"><button onClick="{{ q.go }}" style="border:1px solid var(--color-divider);background:transparent;cursor:pointer;padding:7px 12px;border-radius:999px;font:inherit;font-size:12px;font-weight:600;color:var(--color-text)">{{ q.t }}</button></sc-for></div>
+            <div style="display:flex;flex-direction:column;gap:8px"><span style="font-size:13px;font-weight:700">Délai souhaité</span>
+              <div style="display:flex;gap:8px;flex-wrap:wrap"><sc-for list="{{ urg }}" as="u" hint-placeholder-count="2"><button onClick="{{ u.go }}" style="display:flex;flex-direction:column;align-items:flex-start;gap:2px;border:2px solid {{ u.border }};cursor:pointer;padding:12px 16px;border-radius:20px;font:inherit;background:var(--color-bg);color:var(--color-text);text-align:left"><b style="font-size:14px">{{ u.label }}</b><span style="font-size:12px;color:var(--color-neutral-700)">{{ u.sub }}</span></button></sc-for></div>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ sd.s3 }}" hint-placeholder-val="{{ false }}">
+          <div class="card" style="padding:var(--space-6);gap:var(--space-3)">
+            <span class="card-title" style="font-size:20px">À quel confrère ?</span>
+            <span style="font-size:13px;color:var(--color-neutral-800)">Classés selon leur expertise pour ce type de cas.</span>
+            <button onClick="{{ pickFirst }}" style="display:flex;gap:12px;align-items:center;text-align:left;border:2px solid {{ firstBorder }};cursor:pointer;padding:12px 14px;border-radius:var(--radius-lg);font:inherit;color:var(--color-text);background:var(--color-bg)"><span style="flex:none;width:44px;height:44px;border-radius:999px;background:var(--color-accent-2-200);display:flex;align-items:center;justify-content:center;font-weight:700">⇄</span><span style="flex:1;display:flex;flex-direction:column"><b style="font-size:14px">Le premier confrère disponible</b><span style="font-size:12px;color:var(--color-neutral-700)">Le plus rapide. Proposé aux 3 experts les mieux placés.</span></span></button>
+            <sc-for list="{{ peerPick }}" as="p" hint-placeholder-count="4">
+              <button onClick="{{ p.go }}" style="display:flex;gap:12px;align-items:center;text-align:left;border:2px solid {{ p.border }};cursor:pointer;padding:12px 14px;border-radius:var(--radius-lg);font:inherit;color:var(--color-text);background:var(--color-bg)">
+                <span style="flex:none;width:44px;height:44px;border-radius:999px;background:{{ p.av }};color:var(--color-bg);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px">{{ p.ini }}</span>
+                <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><b style="font-size:14px">{{ p.name }}</b><span style="font-size:12px;color:var(--color-neutral-700)">{{ p.city }} · {{ p.expTxt }}</span></span>
+                <span style="flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:2px"><span style="font-size:12px;font-weight:700;color:{{ p.dotC }}">● {{ p.availTxt }}</span><span style="font-size:11px;color:var(--color-neutral-700)">répond en {{ p.resp }}</span></span>
+              </button>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ sd.sent }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:10px;padding:var(--space-6);border-radius:var(--radius-lg);background:var(--color-accent-2-100);color:var(--color-accent-2-900)">
+            <span style="font-family:var(--font-heading);font-size:26px">Cas envoyé ✓</span>
+            <span style="font-size:14px;line-height:1.5">{{ sentText }}</span>
+            <button class="btn btn-primary" onClick="{{ toMsg }}" style="align-self:flex-start">Ouvrir la conversation</button>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ sd.nav }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;justify-content:space-between;gap:12px">
+            <button class="btn btn-ghost" onClick="{{ prev }}">← Retour</button>
+            <button class="btn btn-primary" onClick="{{ next }}" disabled="{{ nextOff }}" style="padding:12px 24px">{{ nextLabel }}</button>
+          </div>
+        </sc-if>
+      </div>
+
+      <div style="flex:1 1 280px;min-width:0;display:flex;flex-direction:column;gap:10px;padding:var(--space-6);border-radius:var(--radius-lg);background:var(--color-surface)">
+        <span style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:var(--color-accent-700)">Récapitulatif</span>
+        <span style="font-size:13px"><b>Dossier :</b> {{ sum.patient }}</span>
+        <span style="font-size:13px"><b>Question :</b> {{ sum.question }}</span>
+        <span style="font-size:13px"><b>Délai :</b> {{ sum.delay }}</span>
+        <span style="font-size:13px"><b>Confrère :</b> {{ sum.peer }}</span>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding-top:10px;border-top:1px solid var(--color-divider)"><span style="font-size:13px">Honoraires de l'avis</span><b style="font-family:var(--font-heading);font-size:22px">{{ sum.price }}</b></div>
+        <span style="font-size:12px;line-height:1.5;color:var(--color-neutral-700)">Débité de votre portefeuille à la réponse. 80 % pour le confrère, 20 % pour GlowScan. Remboursé si aucune réponse dans le délai.</span>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ is.dir }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;flex-direction:column;gap:var(--space-4)">
+      <div style="display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{ filters }}" as="f" hint-placeholder-count="4"><button onClick="{{ f.go }}" style="border:1px solid {{ f.border }};cursor:pointer;padding:8px 16px;border-radius:999px;font:inherit;font-size:13px;font-weight:600;background:{{ f.bg }};color:{{ f.fg }}">{{ f.label }}</button></sc-for></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,280px),1fr));gap:var(--space-3)">
+        <sc-for list="{{ dir }}" as="p" hint-placeholder-count="4">
+          <div class="card" style="padding:var(--space-6);gap:10px">
+            <div style="display:flex;gap:12px;align-items:center"><span style="flex:none;width:52px;height:52px;border-radius:999px;background:{{ p.av }};color:var(--color-bg);display:flex;align-items:center;justify-content:center;font-weight:700">{{ p.ini }}</span><span style="display:flex;flex-direction:column"><b style="font-size:15px">{{ p.name }}</b><span style="font-size:12px;color:var(--color-neutral-700)">{{ p.city }}, {{ p.country }}</span></span></div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ p.tags }}" as="t" hint-placeholder-count="2"><span class="tag tag-neutral">{{ t.t }}</span></sc-for></div>
+            <span style="font-size:12px;color:var(--color-neutral-700)">{{ p.cases }} avis rendus · répond en {{ p.resp }} · <b style="color:{{ p.dotC }}">{{ p.availTxt }}</b></span>
+            <div style="display:flex;gap:8px"><button class="btn btn-primary" onClick="{{ p.sendCase }}" style="flex:1">Envoyer un cas</button><button class="btn btn-secondary" onClick="{{ p.write }}">Écrire</button></div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const PEERS = [
+  { id: 'me', ini: 'ME', name: 'Pr Mathieu Essomba', city: 'Yaoundé', country: 'Cameroun', exp: ['Pédiatrie', 'Lésions pigmentées'], resp: '6 h', cases: 41, av: 'var(--color-accent)', avail: true },
+  { id: 'kd', ini: 'KD', name: 'Dr Koffi Dossou', city: 'Cotonou', country: 'Bénin', exp: ['Infectiologie cutanée', 'Lèpre'], resp: '10 h', cases: 27, av: 'var(--color-accent-2-600)', avail: true },
+  { id: 'ml', ini: 'ML', name: 'Dr Marie Lukusa', city: 'Kinshasa', country: 'RDC', exp: ['Maladies bulleuses', 'Dermatoses auto-immunes'], resp: '1 j', cases: 18, av: 'var(--color-accent-700)', avail: false },
+  { id: 'so', ini: 'SO', name: 'Dr Sandrine Owona', city: 'Douala', country: 'Cameroun', exp: ['Cheveux et cuir chevelu', 'Acné'], resp: '4 h', cases: 33, av: 'var(--color-neutral-800)', avail: true }
+];
+const THREADS = [
+  { id: 't1', peer: 'me', kind: 'Cas complexe', tag: 'tag-accent', status: 'Avis rendu', stag: 'tag-accent-2', when: '10:42', unread: true, caseRef: 'GS-SA-0214', caseWho: 'Femme, 29 ans, phototype V', caseHist: 'Macules hyperpigmentées du visage. Échec hydroquinone 4 % pendant 8 semaines.', question: 'Mélasma résistant ou ochronose exogène ? Faut-il une biopsie ?',
+    msgs: [['me', 'Bonjour Mathieu, je vous envoie ce cas. La patiente a utilisé des crèmes éclaircissantes pendant 3 ans.', '09:10'], ['p', 'Bonjour Aïcha. Les photos sont nettes. Avez-vous une vue de près des pommettes ?', '09:48'], ['me', 'Oui, la photo 3. Petites papules bleu-gris à la palpation.', '10:05'], ['avis', '', '10:42']] },
+  { id: 't2', peer: 'kd', kind: 'Cas complexe', tag: 'tag-accent', status: 'En attente', stag: 'tag-neutral', when: 'Hier', unread: false, caseRef: 'GS-SA-0209', caseWho: 'Homme, 44 ans, phototype VI', caseHist: 'Plaques hypochromiques anesthésiques du tronc depuis 6 mois.', question: 'Lèpre paucibacillaire ? Quelle conduite pour le dépistage de l\'entourage ?',
+    msgs: [['me', 'Koffi, vous avez l\'habitude de ces cas au Bénin. Qu\'en pensez-vous ?', 'Hier 16:20']] },
+  { id: 't3', peer: 'so', kind: 'Discussion', tag: 'tag-neutral', status: 'Discussion', stag: 'tag-neutral', when: 'Lun.', unread: false,
+    msgs: [['p', 'Aïcha, vous avez un fournisseur fiable pour le minoxidil 5 % à Douala ?', 'Lun. 11:02'], ['me', 'Oui, la pharmacie du Centre à Akwa. Je vous envoie le contact.', 'Lun. 11:30']] }
+];
+const AVIS = { answer: 'Oui, biopsie conseillée avant tout traitement.', dx: 'Ochronose exogène probable (papules bleu-gris, usage prolongé d\'hydroquinone).', ddx: 'Mélasma dermique, hyperpigmentation post-inflammatoire.', plan: 'Arrêt définitif de l\'hydroquinone. Photoprotection stricte. Biopsie d\'une papule. Revoir avec le résultat.' };
+const QUICK = ['Pouvez-vous envoyer une photo de plus près ?', 'Merci, je suis votre avis.', 'Je préfère voir le patient au cabinet.'];
+class Component extends DCLogic {
+  state = { tab: 'msg', thread: 't1', draft: '', extra: {}, accepted: false, step: 0, patient: null, question: '', urgent: false, peer: null, sent: false, filter: 'Tous' };
+  renderVals() {
+    const s = this.state;
+    const P = id => PEERS.find(p => p.id === id);
+    const T = THREADS.find(t => t.id === s.thread), tp = P(T.peer);
+    const all = [...T.msgs, ...(s.extra[T.id] || [])];
+    const sendTxt = t => { const v = (t ?? s.draft).trim(); if (!v) return; this.setState(st => ({ draft: '', extra: { ...st.extra, [T.id]: [...(st.extra[T.id] || []), ['me', v, 'À l\'instant']] } })); };
+    const seg = on => ({ bg: on ? 'var(--color-accent)' : 'transparent', fg: on ? 'var(--color-bg)' : 'var(--color-text)' });
+    return {
+      is: { msg: s.tab === 'msg', send: s.tab === 'send', dir: s.tab === 'dir' },
+      tabs: [['msg', 'Messages', 1], ['send', 'Envoyer un cas', 0], ['dir', 'Annuaire du réseau', 0]].map(([k, label, b]) => ({ label, badge: b, hasBadge: b > 0, go: () => this.setState({ tab: k }), ...seg(s.tab === k) })),
+      openSend: () => this.setState({ tab: 'send', step: 0, sent: false }),
+      threads: THREADS.map(t => { const p = P(t.peer); const ex = s.extra[t.id] || []; const lm = ex.length ? ex[ex.length - 1][1] : t.id === 't1' ? 'Avis structuré reçu' : t.msgs[t.msgs.length - 1][1]; return { go: () => this.setState({ thread: t.id }), ini: p.ini, av: p.av, name: p.name, when: t.when, kind: t.kind, tag: t.tag, last: lm, unread: t.unread && s.thread !== t.id, bg: s.thread === t.id ? 'var(--color-surface)' : 'transparent' }; }),
+      cur: { ini: tp.ini, av: tp.av, name: tp.name, sub: tp.city + ', ' + tp.country + ' · ' + tp.exp.join(', '), tag: T.stag, status: T.status, hasCase: !!T.caseRef, caseRef: T.caseRef || '', caseWho: T.caseWho || '', caseHist: T.caseHist || '', question: T.question || '' },
+      msgs: all.map(([w, t, at]) => w === 'avis' ? { isAvis: true, isText: false, who: tp.name, j: 'flex-start', ...AVIS } : { isText: true, isAvis: false, t, at, who: w === 'me' ? 'Vous' : tp.name, j: w === 'me' ? 'flex-end' : 'flex-start', bg: w === 'me' ? 'var(--color-accent)' : 'var(--color-bg)', fg: w === 'me' ? 'var(--color-bg)' : 'var(--color-text)' }),
+      accept: () => this.setState({ accepted: true }), acceptLabel: s.accepted ? 'Ajouté au compte rendu ✓' : 'Intégrer à mon compte rendu',
+      quick: QUICK.map(t => ({ t, go: () => sendTxt(t) })),
+      draft: s.draft, onDraft: e => this.setState({ draft: e.target.value }), onKey: e => { if (e.key === 'Enter') sendTxt(); }, send: () => sendTxt(),
+      ...this.sendVals(s, P, seg)
+    };
+  }
+  sendVals(s, P, seg) {
+    const PAT = [['p1', 'Nadège Eyenga · 31 ans', 'Mélasma, échec du traitement à 8 semaines', 'En suivi', 'tag-neutral', '#7a5234'], ['p2', 'Jean-Paul Mbida · 58 ans', 'Lésion pigmentée du pied, apparue en 6 mois', 'Priorité haute', 'tag-accent', '#4a3322'], ['p3', 'Inès Fotso · 9 ans', 'Plaques du cuir chevelu, sans amélioration', 'En suivi', 'tag-neutral', '#8b5e3c']];
+    const pat = PAT.find(p => p[0] === s.patient);
+    const peer = s.peer === 'first' ? { name: 'Premier disponible' } : P(s.peer);
+    const price = s.urgent ? 5000 : 3000;
+    const fmt = n => n.toLocaleString('fr-FR').replace(/[\u202f\u00a0]/g, ' ') + ' F';
+    const ok = [!!s.patient, true, s.question.trim().length >= 10, !!s.peer][s.step];
+    const pick = (id, go) => ({ border: s.peer === id ? 'var(--color-accent)' : 'transparent', go });
+    const seen = p => ({ availTxt: p.avail ? 'Disponible' : 'Absent', dotC: p.avail ? 'var(--color-accent-2-700)' : 'var(--color-neutral-700)' });
+    return {
+      steps: ['Dossier', 'Anonymisation', 'Question', 'Confrère'].map((label, i) => ({ n: i + 1, label, bg: i === s.step && !s.sent ? 'var(--color-accent-100)' : 'transparent', fg: i <= s.step ? 'var(--color-text)' : 'var(--color-neutral-700)', dot: i < s.step || s.sent ? 'var(--color-accent-2-600)' : i === s.step ? 'var(--color-accent)' : 'var(--color-neutral-400)' })),
+      sd: { s0: !s.sent && s.step === 0, s1: !s.sent && s.step === 1, s2: !s.sent && s.step === 2, s3: !s.sent && s.step === 3, sent: s.sent, nav: !s.sent },
+      patients: PAT.map(([id, name, sub, status, tag, tint]) => ({ name, sub, status, tag, tint, border: s.patient === id ? 'var(--color-accent)' : 'transparent', go: () => this.setState({ patient: id }) })),
+      shared: ['Photos de la lésion (3)', 'Âge et sexe', 'Phototype', 'Historique des traitements', 'Suggestion de l\'IA et vos notes d\'examen'].map(t => ({ t })),
+      hidden: ['Nom et prénom', 'Téléphone et email', 'Adresse et quartier'].map(t => ({ t })),
+      question: s.question, onQuestion: e => this.setState({ question: e.target.value }),
+      qSugg: ['Faut-il biopsier avant de traiter ?', 'Quel traitement de 2e intention ?', 'Faut-il adresser en chirurgie ?'].map(t => ({ t, go: () => this.setState({ question: t }) })),
+      urg: [[false, 'Avis simple', 'Réponse sous 48 h · 3 000 F'], [true, 'Avis urgent', 'Réponse sous 24 h · 5 000 F']].map(([v, label, sub]) => ({ label, sub, border: s.urgent === v ? 'var(--color-accent)' : 'var(--color-divider)', go: () => this.setState({ urgent: v }) })),
+      firstBorder: s.peer === 'first' ? 'var(--color-accent)' : 'transparent', pickFirst: () => this.setState({ peer: 'first' }),
+      peerPick: PEERS.map(p => ({ ...p, ...seen(p), expTxt: p.exp.join(', '), ...pick(p.id, () => this.setState({ peer: p.id })) })),
+      prev: () => s.step > 0 ? this.setState({ step: s.step - 1 }) : this.setState({ tab: 'msg' }),
+      next: () => s.step < 3 ? this.setState({ step: s.step + 1 }) : this.setState({ sent: true }),
+      nextOff: !ok, nextLabel: s.step < 3 ? 'Continuer' : 'Envoyer le cas',
+      sentText: (peer ? peer.name : '') + ' a reçu le dossier anonymisé. Vous serez notifié dès sa réponse, sous ' + (s.urgent ? '24 h' : '48 h') + '.',
+      toMsg: () => this.setState({ tab: 'msg', thread: 't2' }),
+      sum: { patient: pat ? pat[1] : '—', question: s.question.trim() || '—', delay: s.urgent ? 'Urgent, sous 24 h' : 'Simple, sous 48 h', peer: peer ? peer.name : '—', price: fmt(price) },
+      filters: ['Tous', 'Cameroun', 'Bénin', 'RDC'].map(f => ({ label: f, go: () => this.setState({ filter: f }), bg: s.filter === f ? 'var(--color-accent)' : 'transparent', fg: s.filter === f ? 'var(--color-bg)' : 'var(--color-text)', border: s.filter === f ? 'var(--color-accent)' : 'var(--color-divider)' })),
+      dir: PEERS.filter(p => s.filter === 'Tous' || p.country === s.filter).map(p => ({ ...p, ...seen(p), tags: p.exp.map(t => ({ t })), sendCase: () => this.setState({ tab: 'send', step: 0, sent: false, peer: p.id }), write: () => { const t = THREADS.find(x => x.peer === p.id); this.setState({ tab: 'msg', thread: t ? t.id : 't1' }); } }))
+    };
+  }
+}
+</script>
+</body>
+</html>

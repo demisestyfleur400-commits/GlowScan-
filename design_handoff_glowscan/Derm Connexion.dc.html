@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/organic-a6b730fa-b5d6-4692-8156-eacdd1b52399/styles.css">
+<script src="_ds/organic-a6b730fa-b5d6-4692-8156-eacdd1b52399/_ds_bundle.js"></script>
+<style>body{margin:0;background:var(--color-bg)} a{color:var(--color-accent-700)} a:hover{color:var(--color-accent-600)}</style>
+</helmet>
+<div style="min-height:100vh;display:flex;flex-direction:column;background:var(--color-bg);color:var(--color-text);font-family:var(--font-body)">
+  <header style="max-width:1160px;width:100%;box-sizing:border-box;margin:0 auto;padding:14px clamp(16px,4vw,40px);display:flex;align-items:center;gap:12px">
+    <a href="Derm Landing.dc.html" style="display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--color-text)">
+      <span style="font-size:18px;font-weight:700;padding:6px 10px;border-radius:999px">←</span>
+      <img src="client/public/glowscan-mark.png" alt="GlowScan" style="width:32px;height:32px;border-radius:999px;object-fit:cover">
+      <span style="font-family:var(--font-heading);font-size:18px">GlowScan <span style="color:var(--color-accent-2-700)">Derm</span></span>
+    </a>
+  </header>
+
+  <main style="flex:1;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:clamp(32px,6vw,80px);padding:clamp(24px,5vw,64px) clamp(16px,4vw,40px)">
+    <div style="flex:0 1 420px;min-width:0;display:flex;flex-direction:column;gap:14px">
+      <h1 style="margin:0;font-size:clamp(34px,4.4vw,52px);line-height:1.08;text-wrap:balance">{{ side.title }}</h1>
+      <p style="margin:0;font-size:16px;line-height:1.6;color:var(--color-neutral-800)">{{ side.text }}</p>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:6px">
+        <sc-for list="{{ side.points }}" as="p" hint-placeholder-count="3"><span style="display:flex;gap:10px;font-size:14px;font-weight:600"><span style="color:var(--color-accent-2-700);font-weight:700">✓</span>{{ p.t }}</span></sc-for>
+      </div>
+    </div>
+
+    <div style="flex:0 1 440px;min-width:0;width:100%">
+      <sc-if value="{{ isLogin }}" hint-placeholder-val="{{ true }}">
+        <div class="card" style="padding:clamp(24px,4vw,40px);gap:var(--space-4)">
+          <div style="display:flex;gap:6px;padding:4px;border-radius:999px;background:var(--color-bg)">
+            <sc-for list="{{ modes }}" as="m" hint-placeholder-count="2"><button onClick="{{ m.go }}" style="flex:1;border:0;cursor:pointer;padding:10px 14px;border-radius:999px;font:inherit;font-size:14px;font-weight:700;background:{{ m.bg }};color:{{ m.fg }}">{{ m.label }}</button></sc-for>
+          </div>
+          <sc-if value="{{ isSignup }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:var(--color-neutral-700)">Je suis</span>
+              <div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ profiles }}" as="p" hint-placeholder-count="3"><button onClick="{{ p.go }}" style="border:1px solid {{ p.border }};cursor:pointer;padding:8px 14px;border-radius:999px;font:inherit;font-size:13px;font-weight:600;background:{{ p.bg }};color:{{ p.fg }}">{{ p.label }}</button></sc-for></div>
+            </div>
+            <div class="field"><label>Nom complet</label><input class="input" placeholder="Dr Aïcha Nkemdirim"></div>
+          </sc-if>
+          <div class="field"><label>Email professionnel</label><input class="input" type="email" value="{{ email }}" onChange="{{ onEmail }}" placeholder="vous@cabinet.cm"></div>
+          <div class="field"><label>Mot de passe</label>
+            <div style="position:relative">
+              <input class="input" type="{{ pwType }}" value="{{ pw }}" onChange="{{ onPw }}" placeholder="8 caractères minimum" style="width:100%;box-sizing:border-box;padding-right:84px">
+              <button onClick="{{ togglePw }}" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);border:0;background:transparent;cursor:pointer;font:inherit;font-size:12px;font-weight:700;color:var(--color-accent-700);padding:6px 8px">{{ pwToggle }}</button>
+            </div>
+          </div>
+          <sc-if value="{{ isSignin }}" hint-placeholder-val="{{ true }}"><a href="#" onClick="{{ forgot }}" style="align-self:flex-end;font-size:13px;font-weight:700;margin-top:-8px">Mot de passe oublié ?</a></sc-if>
+          <sc-if value="{{ hasError }}" hint-placeholder-val="{{ false }}"><div style="padding:10px 16px;border-radius:999px;background:var(--color-accent-100);color:var(--color-accent-900);font-size:13px;font-weight:600">{{ error }}</div></sc-if>
+          <button class="btn btn-primary" onClick="{{ submit }}" style="padding:14px 24px;font-size:16px">{{ submitLabel }}</button>
+          <sc-if value="{{ isSignin }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex;align-items:center;gap:12px;font-size:12px;color:var(--color-neutral-700)"><span style="flex:1;height:1px;background:var(--color-divider)"></span>ou<span style="flex:1;height:1px;background:var(--color-divider)"></span></div>
+            <button class="btn btn-secondary" onClick="{{ magic }}">{{ magicLabel }}</button>
+          </sc-if>
+          <sc-if value="{{ isSignup }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:var(--color-neutral-700);text-align:center">14 jours gratuits · sans carte bancaire · paiement Mobile Money ensuite</span></sc-if>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ is2fa }}" hint-placeholder-val="{{ false }}">
+        <div class="card" style="padding:clamp(24px,4vw,40px);gap:var(--space-4)">
+          <span class="card-title" style="font-size:22px">Vérification en 2 étapes</span>
+          <span style="font-size:14px;color:var(--color-neutral-800)">Nous avons envoyé un code à 6 chiffres à <b>{{ emailHint }}</b>.</span>
+          <div style="display:flex;justify-content:center;gap:8px">
+            <sc-for list="{{ codeBoxes }}" as="c" hint-placeholder-count="6"><span style="width:46px;height:56px;border-radius:16px;background:var(--color-bg);border:2px solid {{ c.border }};display:flex;align-items:center;justify-content:center;font-family:var(--font-heading);font-size:24px">{{ c.d }}</span></sc-for>
+          </div>
+          <input class="input" value="{{ code }}" onChange="{{ onCode }}" inputmode="numeric" maxlength="6" placeholder="Tapez le code" style="text-align:center;letter-spacing:.4em;font-size:18px">
+          <span style="font-size:12px;color:var(--color-neutral-700);text-align:center">Pas accès à votre email ? Entrez un de vos codes de secours.</span>
+          <button class="btn btn-primary" onClick="{{ verify }}" disabled="{{ verifyOff }}" style="padding:14px 24px;font-size:16px">Vérifier</button>
+          <div style="display:flex;justify-content:space-between;gap:12px">
+            <button class="btn btn-ghost" onClick="{{ back }}">← Retour</button>
+            <button class="btn btn-ghost" onClick="{{ resend }}">{{ resendLabel }}</button>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isForgot }}" hint-placeholder-val="{{ false }}">
+        <div class="card" style="padding:clamp(24px,4vw,40px);gap:var(--space-4)">
+          <span class="card-title" style="font-size:22px">Mot de passe oublié</span>
+          <span style="font-size:14px;color:var(--color-neutral-800)">Entrez votre email : vous recevrez un lien pour choisir un nouveau mot de passe.</span>
+          <div class="field"><label>Email professionnel</label><input class="input" type="email" value="{{ email }}" onChange="{{ onEmail }}"></div>
+          <button class="btn btn-primary" onClick="{{ sendReset }}">{{ resetLabel }}</button>
+          <button class="btn btn-ghost" onClick="{{ back }}">← Retour à la connexion</button>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isDone }}" hint-placeholder-val="{{ false }}">
+        <div class="card" style="padding:clamp(24px,4vw,40px);gap:var(--space-3);align-items:flex-start;background:var(--color-accent-2-100)">
+          <span class="card-title" style="font-size:22px;color:var(--color-accent-2-900)">Connecté ✓</span>
+          <span style="font-size:14px;color:var(--color-accent-2-900)">{{ doneText }}</span>
+          <a href="{{ doneHref }}" class="btn btn-primary">{{ doneCta }}</a>
+        </div>
+      </sc-if>
+      <span style="display:block;margin-top:14px;font-size:12px;color:var(--color-neutral-700);text-align:center">Démo : n'importe quel email et mot de passe, puis le code 123456.</span>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const PROFILES = ['Dermatologue', 'Relais (infirmier / médecin)', 'ONG / programme'];
+const DEST = {
+  'Dermatologue': ['Derm Portal.dc.html', 'Ouvrir mon tableau de bord', 'Votre cabinet vous attend : 4 dossiers et 5 rendez-vous aujourd\'hui.'],
+  'Relais (infirmier / médecin)': ['Derm Reseau.dc.html', 'Voir mon parcours', 'Un nouveau retour de Dr Aïcha vous attend.'],
+  'ONG / programme': ['Derm Pilotage.dc.html', 'Ouvrir le suivi du programme', 'Le rapport de septembre est prêt à générer.']
+};
+class Component extends DCLogic {
+  state = { step: 'login', mode: 'signin', profile: 'Dermatologue', email: '', pw: '', showPw: false, code: '', error: '', magicSent: false, resent: false, resetSent: false };
+  renderVals() {
+    const s = this.state; const signup = s.mode === 'signup';
+    const hint = s.email.includes('@') ? s.email.replace(/^(.).*(@.*)$/, '$1•••$2') : 'votre email';
+    const [href, cta, txt] = DEST[s.profile];
+    return {
+      side: signup
+        ? { title: 'Rejoignez le réseau de la dermatologie africaine.', text: 'Dermatologue, relais de terrain ou programme de santé : un seul compte, les outils adaptés à votre rôle.', points: [{ t: 'Profil en ligne en 5 minutes' }, { t: '14 jours gratuits, sans carte bancaire' }, { t: 'Vos données de santé protégées' }] }
+        : { title: 'Bon retour sur GlowScan Derm.', text: 'Accédez à votre cabinet, à vos avis et à votre portefeuille.', points: [{ t: 'Vérification en 2 étapes par email' }, { t: 'Secrétaires : même page, accès limité' }, { t: 'Connexion possible sans mot de passe' }] },
+      isLogin: s.step === 'login', is2fa: s.step === '2fa', isForgot: s.step === 'forgot', isDone: s.step === 'done',
+      isSignin: !signup, isSignup: signup,
+      modes: [['signin', 'Se connecter'], ['signup', 'Créer un compte']].map(([k, l]) => ({ label: l, go: () => this.setState({ mode: k, error: '' }), bg: s.mode === k ? 'var(--color-surface)' : 'transparent', fg: s.mode === k ? 'var(--color-accent-700)' : 'var(--color-text)' })),
+      profiles: PROFILES.map(p => { const on = s.profile === p; return { label: p, go: () => this.setState({ profile: p }), bg: on ? 'var(--color-accent)' : 'transparent', fg: on ? 'var(--color-bg)' : 'var(--color-text)', border: on ? 'var(--color-accent)' : 'var(--color-divider)' }; }),
+      email: s.email, onEmail: e => this.setState({ email: e.target.value, error: '' }),
+      pw: s.pw, onPw: e => this.setState({ pw: e.target.value, error: '' }),
+      pwType: s.showPw ? 'text' : 'password', pwToggle: s.showPw ? 'Masquer' : 'Afficher', togglePw: () => this.setState({ showPw: !s.showPw }),
+      hasError: !!s.error, error: s.error,
+      submitLabel: signup ? 'Créer mon compte gratuitement' : 'Se connecter →',
+      submit: () => {
+        if (!s.email.includes('@')) return this.setState({ error: 'Entrez un email valide.' });
+        if (s.pw.length < (signup ? 8 : 1)) return this.setState({ error: signup ? 'Mot de passe trop court : 8 caractères minimum.' : 'Entrez votre mot de passe.' });
+        this.setState({ step: '2fa', code: '', error: '' });
+      },
+      magicLabel: s.magicSent ? `Lien envoyé à ${hint} (valable 15 min)` : 'Recevoir un lien de connexion par email',
+      magic: () => s.email.includes('@') ? this.setState({ magicSent: true, error: '' }) : this.setState({ error: 'Entrez votre email d\'abord.' }),
+      forgot: e => { e.preventDefault(); this.setState({ step: 'forgot', resetSent: false }); },
+      emailHint: hint, code: s.code, onCode: e => this.setState({ code: e.target.value.replace(/\D/g, '').slice(0, 6) }),
+      codeBoxes: Array.from({ length: 6 }, (_, i) => ({ d: s.code[i] || '', border: i === s.code.length ? 'var(--color-accent)' : 'var(--color-divider)' })),
+      verifyOff: s.code.length < 6, verify: () => this.setState({ step: 'done' }),
+      resendLabel: s.resent ? 'Code renvoyé ✓' : 'Renvoyer le code', resend: () => this.setState({ resent: true }),
+      back: () => this.setState({ step: 'login' }),
+      resetLabel: s.resetSent ? 'Lien envoyé ✓ — vérifiez vos emails' : 'Envoyer le lien', sendReset: () => this.setState({ resetSent: true }),
+      doneHref: href, doneCta: cta, doneText: txt
+    };
+  }
+}
+</script>
+</body>
+</html>

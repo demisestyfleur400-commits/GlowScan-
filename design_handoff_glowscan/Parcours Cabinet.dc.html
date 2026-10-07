@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caprasimo&family=Figtree:wght@400;600;700&display=swap&subset=latin">
+<script>window.OM_SCENES = '[{"name":"Intro","dur":5,"desc":"Les 3 personnes du parcours : secrétaire, dermatologue, patient"},{"name":"Accueil","dur":5,"desc":"Clarisse, secrétaire, enregistre l arrivée de Paul et le motif"},{"name":"Photos","dur":7,"desc":"Elle prend 3 photos avec le téléphone du cabinet et les envoie au dossier"},{"name":"Attente","dur":5,"desc":"L IA analyse avant la consultation, Paul passe en salle d attente, Dr Aïcha est prévenue"},{"name":"Dossier","dur":6,"desc":"Dr Aïcha ouvre le dossier et compare avec la 1re visite"},{"name":"Examen","dur":10,"desc":"Elle examine Paul en personne, coche ses observations, l IA croise photos et examen et propose 3 diagnostics, elle valide"},{"name":"CompteRendu","dur":9,"desc":"Compte rendu pré-rempli, elle ajoute un produit, signe avec son code et envoie"},{"name":"Agenda","dur":7,"desc":"Clarisse encaisse 15 000 F en espèces et réserve le contrôle du 27 octobre"},{"name":"Patient","dur":7,"desc":"Paul reçoit compte rendu, reçu et rendez-vous sur WhatsApp et confirme avec 1"},{"name":"Fin","dur":4,"desc":"Logo GlowScan Derm"}]';</script>
+<script>window.OM_PLAYBACK = '{"mode":"loop"}';</script>
+<style>html,body{margin:0;height:100%;background:#2e2b25} a{color:#8c491a} a:hover{color:#b2622d}</style>
+</helmet>
+<div style="width:100vw;height:100vh">
+  <x-import component-from-global-scope="ParcoursCabinet" from="./animations-v3.jsx ./parcours-cabinet.jsx" hint-size="100%,100%"></x-import>
+</div>
+</x-dc>
+</body>
+</html>

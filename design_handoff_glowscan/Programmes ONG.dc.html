@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/organic-a6b730fa-b5d6-4692-8156-eacdd1b52399/styles.css">
+<script src="_ds/organic-a6b730fa-b5d6-4692-8156-eacdd1b52399/_ds_bundle.js"></script>
+<meta name="design_doc_mode" content="canvas">
+<style>body{margin:0;background:var(--color-neutral-200)} a{color:var(--color-accent-700)} a:hover{color:var(--color-accent-600)}</style>
+</helmet>
+<div style="padding:48px;font-family:var(--font-body);color:var(--color-text);display:flex;flex-direction:column;gap:32px">
+  <div style="display:flex;flex-direction:column;gap:6px;max-width:960px">
+    <span style="font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--color-accent-700)">GlowScan Programmes · espace ONG, district, ministère</span>
+    <h1 style="margin:0;font-size:40px">Programmes : création, agents, budget, orientations, connecteurs</h1>
+    <p style="margin:0;font-size:15px;color:var(--color-neutral-800)">Écrans O1 à O5 (ordinateur). Complète le Pilotage existant (Derm Pilotage).</p>
+  </div>
+  <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
+
+    <div id="O1" style="display:flex;flex-direction:column;gap:12px">
+      <span class="tag tag-accent" style="align-self:flex-start">O1 · Nouveau programme</span>
+      <div style="width:1120px;border-radius:32px;background:var(--color-bg);padding:36px;box-sizing:border-box;display:grid;grid-template-columns:1.4fr 1fr;gap:28px;box-shadow:var(--shadow-md)">
+        <div style="display:flex;flex-direction:column;gap:18px">
+          <h2 style="margin:0;font-size:30px">Nouveau programme</h2>
+          <div class="field"><label>Nom</label><input class="input" value="Peau saine Extrême-Nord"></div>
+          <div class="field"><label>Pays et districts de santé</label><div style="display:flex;flex-wrap:wrap;gap:8px"><span class="tag tag-accent" style="padding:8px 14px;font-size:13px">Cameroun · Mokolo</span><span class="tag tag-accent" style="padding:8px 14px;font-size:13px">Cameroun · Mora</span><span class="tag tag-outline" style="padding:8px 14px;font-size:13px">+ Ajouter</span></div></div>
+          <div class="field"><label>Dermatologues du réseau</label><div style="display:flex;flex-wrap:wrap;gap:8px"><span class="tag tag-neutral" style="padding:8px 14px;font-size:13px">Dr Aïcha Nkemdirim</span><span class="tag tag-neutral" style="padding:8px 14px;font-size:13px">Dr Sandrine Owona</span><span class="tag tag-outline" style="padding:8px 14px;font-size:13px">Choix automatique selon la langue et le délai</span></div></div>
+          <div class="field"><label>Maladies suivies</label><div style="display:flex;flex-wrap:wrap;gap:8px"><span class="tag tag-accent-2" style="padding:8px 14px;font-size:13px">Teigne</span><span class="tag tag-accent-2" style="padding:8px 14px;font-size:13px">Gale</span><span class="tag tag-accent-2" style="padding:8px 14px;font-size:13px">Ulcère de Buruli</span><span class="tag tag-accent-2" style="padding:8px 14px;font-size:13px">Lèpre</span><span class="tag tag-outline" style="padding:8px 14px;font-size:13px">Toutes</span></div></div>
+          <div class="field"><label>Avis prépayés</label><div class="seg"><span class="seg-opt">100</span><span class="seg-opt" style="background:var(--color-accent);color:var(--color-bg)">200 · 600 000 F</span><span class="seg-opt">500</span><span class="seg-opt">Montant libre</span></div></div>
+          <div style="display:flex;gap:10px"><button class="btn btn-secondary">Enregistrer le brouillon</button><button class="btn btn-primary">Lancer le programme</button></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div class="card" style="gap:10px"><b>Chaque avis</b>
+            <div style="display:flex;height:40px;border-radius:999px;overflow:hidden;font-size:12px;font-weight:700;color:var(--color-bg)"><span style="flex:60;background:var(--color-accent-2-600);display:flex;align-items:center;justify-content:center">Dermato 60 %</span><span style="flex:20;background:var(--color-accent-2-800);display:flex;align-items:center;justify-content:center">Relais</span><span style="flex:20;background:var(--color-accent);display:flex;align-items:center;justify-content:center">GS</span></div>
+            <span style="font-size:13px;color:var(--color-neutral-800)">Simple 3 000 F · urgent 5 000 F · non consommé = remboursable</span></div>
+          <div class="card" style="gap:8px"><b>Règles du programme</b>
+            <span style="font-size:13px">Module photo obligatoire avant le 1er cas</span>
+            <span style="font-size:13px">Autonomie : 85 % d'accord sur 20 cas</span>
+            <span style="font-size:13px">Relecture qualité : 1 avis sur 10 par un 2e dermatologue</span>
+            <span style="font-size:13px">Données : seuls les agrégats sortent vers DHIS2</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="O2" style="display:flex;flex-direction:column;gap:12px">
+      <span class="tag tag-accent" style="align-self:flex-start">O2 · Agents et invitations</span>
+      <div style="width:1120px;border-radius:32px;background:var(--color-bg);padding:36px;box-sizing:border-box;display:flex;flex-direction:column;gap:18px;box-shadow:var(--shadow-md)">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap"><h2 style="margin:0;font-size:30px">Agents · 12</h2><div style="display:flex;gap:10px"><button class="btn btn-secondary">Importer un fichier (CSV, Excel)</button><button class="btn btn-secondary">Lien et QR d'invitation</button><button class="btn btn-primary">Inviter par SMS</button></div></div>
+        <table class="table" style="width:100%">
+          <thead><tr><th>Agent</th><th>Centre</th><th>Statut</th><th>Module photo</th><th>Cas</th><th>Accord</th></tr></thead>
+          <tbody>
+            <tr><td><b>Moussa K.</b><br><span style="font-size:12px;color:var(--color-neutral-700)">Infirmier</span></td><td>CSI de Mokolo</td><td><span class="tag tag-accent-2">Vérifié</span></td><td>Validé</td><td>54</td><td><b>86 %</b> · autonome gale</td></tr>
+            <tr><td><b>Aminatou D.</b><br><span style="font-size:12px;color:var(--color-neutral-700)">Sage-femme</span></td><td>CSI de Koza</td><td><span class="tag tag-accent-2">Vérifié</span></td><td>Validé</td><td>31</td><td>78 %</td></tr>
+            <tr><td><b>Paul T.</b><br><span style="font-size:12px;color:var(--color-neutral-700)">Infirmier</span></td><td>CSI de Mora</td><td><span class="tag tag-accent">Carte à vérifier</span></td><td>En cours</td><td>0</td><td>—</td></tr>
+            <tr><td><b>+237 6•• •• 18 20</b></td><td>CSI de Tokombéré</td><td><span class="tag tag-neutral">Invitation envoyée · J+2</span></td><td>—</td><td>0</td><td><a href="#O2">Relancer</a></td></tr>
+          </tbody>
+        </table>
+        <span style="font-size:13px;color:var(--color-neutral-800)">Un agent invité par une ONG est parrainé par elle ; GlowScan vérifie quand même sa carte professionnelle.</span>
+      </div>
+    </div>
+    <div id="O3" style="display:flex;flex-direction:column;gap:12px">
+      <span class="tag tag-accent" style="align-self:flex-start">O3 · Budget d'avis</span>
+      <div style="width:540px;border-radius:32px;background:var(--color-bg);padding:32px;box-sizing:border-box;display:flex;flex-direction:column;gap:16px;box-shadow:var(--shadow-md)">
+        <h2 style="margin:0;font-size:28px">Budget</h2>
+        <div style="display:flex;align-items:baseline;gap:10px"><span style="font-family:var(--font-heading);font-size:48px">62</span><span style="font-weight:600;color:var(--color-neutral-700)">avis restants sur 200</span></div>
+        <div style="height:12px;border-radius:999px;background:var(--color-neutral-300)"><div style="width:31%;height:100%;border-radius:999px;background:var(--color-accent)"></div></div>
+        <span class="tag tag-accent" style="align-self:flex-start;padding:6px 14px;font-size:13px">Solde bas · environ 3 semaines au rythme actuel</span>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="card" style="gap:4px"><span style="font-size:12px">Ce mois</span><b style="font-size:20px">78 avis</b><span style="font-size:12px;color:var(--color-neutral-700)">71 simples · 7 urgents</span></div>
+          <div class="card" style="gap:4px"><span style="font-size:12px">Dépensé</span><b style="font-size:20px">414 000 F</b><span style="font-size:12px;color:var(--color-neutral-700)">sur 600 000 F</span></div>
+        </div>
+        <div class="field"><label>Alerte automatique</label><div class="seg"><span class="seg-opt">20 %</span><span class="seg-opt" style="background:var(--color-accent);color:var(--color-bg)">30 %</span><span class="seg-opt">50 %</span></div></div>
+        <button class="btn btn-primary">Recharger · virement ou Mobile Money</button>
+        <span style="font-size:12px;color:var(--color-neutral-700)">Facture et reçu pour le bailleur à chaque recharge.</span>
+      </div>
+    </div>
+
+    <div id="O4" style="display:flex;flex-direction:column;gap:12px">
+      <span class="tag tag-accent" style="align-self:flex-start">O4 · Orientations vers l'hôpital</span>
+      <div style="width:540px;border-radius:32px;background:var(--color-bg);padding:32px;box-sizing:border-box;display:flex;flex-direction:column;gap:14px;box-shadow:var(--shadow-md)">
+        <h2 style="margin:0;font-size:28px">Orientations · 9</h2>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+          <div style="padding:14px;border-radius:20px;background:var(--color-surface)"><b style="font-size:22px">9</b><div style="font-size:12px">orientées</div></div>
+          <div style="padding:14px;border-radius:20px;background:var(--color-accent-2-100)"><b style="font-size:22px">8</b><div style="font-size:12px">arrivées</div></div>
+          <div style="padding:14px;border-radius:20px;background:var(--color-accent-100)"><b style="font-size:22px">1</b><div style="font-size:12px">à relancer</div></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-radius:999px;background:var(--color-surface);font-size:13px"><span><b>REF-M236</b> · Maroua</span><span class="tag tag-accent-2">CR reçu</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-radius:999px;background:var(--color-surface);font-size:13px"><span><b>REF-K219</b> · Mokolo</span><span class="tag tag-accent-2">Arrivée</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-radius:999px;background:var(--color-accent-100);font-size:13px"><span><b>REF-M241</b> · Maroua</span><span class="tag tag-accent">Pas venue · J+9</span></div>
+        </div>
+        <span style="font-size:13px;line-height:1.5;color:var(--color-neutral-800)">L'hôpital confirme l'arrivée en scannant le code de la fiche (sans compte GlowScan). Sans nouvelle à J+7 : SMS au patient et au relais.</span>
+      </div>
+    </div>
+
+    <div id="O5" style="display:flex;flex-direction:column;gap:12px">
+      <span class="tag tag-accent" style="align-self:flex-start">O5 · Connecteurs</span>
+      <div style="width:1120px;border-radius:32px;background:var(--color-bg);padding:36px;box-sizing:border-box;display:grid;grid-template-columns:repeat(3,1fr);gap:18px;box-shadow:var(--shadow-md)">
+        <div class="card" style="gap:10px"><div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:18px">DHIS2</b><span class="tag tag-accent-2">Connecté</span></div><span style="font-size:13px;line-height:1.5">Instance nationale · district de Mokolo. Envoi le 5 de chaque mois : cas par maladie, par sexe et tranche d'âge, orientations.</span><span style="font-size:12px;color:var(--color-neutral-700)">Dernier envoi : 5 nov. · 48 valeurs · OK</span><button class="btn btn-secondary">Voir la correspondance</button></div>
+        <div class="card" style="gap:10px"><div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:18px">Bogou (RAFT)</b><span class="tag tag-accent-2">Actif</span></div><span style="font-size:13px;line-height:1.5">Un cas peut être envoyé aussi vers un cercle Bogou, ou reçu depuis Bogou. Le dossier part en PDF + photos.</span><span style="font-size:12px;color:var(--color-neutral-700)">36 cas partagés ce trimestre</span><button class="btn btn-secondary">Paramétrer</button></div>
+        <div class="card" style="gap:10px"><div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:18px">SMS</b><span class="tag tag-accent-2">Actif</span></div><span style="font-size:13px;line-height:1.5">Réponses, questions et fiches de référence par SMS quand le relais n'a pas internet. Réponse par SMS acceptée.</span><span style="font-size:12px;color:var(--color-neutral-700)">Cameroun, Burundi, RDC</span><button class="btn btn-secondary">Numéros par pays</button></div>
+        <div class="card" style="gap:10px;grid-column:span 3"><b style="font-size:18px">Autres plateformes</b><span style="font-size:13px;line-height:1.5">Connexion ouverte (API) pour tout réseau de télémédecine, hôpital ou ministère : envoi et réception de cas, résultats, statistiques. Même format pour tous.</span></div>
+      </div>
+    </div>
+
+    <div id="D1" style="display:flex;flex-direction:column;gap:12px">
+      <span class="tag tag-accent-2" style="align-self:flex-start">D1 · Dermatologue · pays où j'exerce</span>
+      <div style="width:540px;border-radius:32px;background:var(--color-bg);padding:32px;box-sizing:border-box;display:flex;flex-direction:column;gap:14px;box-shadow:var(--shadow-md)">
+        <h2 style="margin:0;font-size:28px">Réseau entre pays</h2>
+        <b style="font-size:13px">Télé-expertise (avis à un soignant)</b>
+        <span style="font-size:13px;color:var(--color-neutral-800)">Tous les pays du réseau · le soignant local reste responsable du patient</span>
+        <b style="font-size:13px">Consultation directe au patient</b>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-radius:999px;background:var(--color-surface);font-size:13px"><span>Cameroun · ONMC</span><span class="tag tag-accent-2">Vérifié</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-radius:999px;background:var(--color-surface);font-size:13px"><span>Burundi · autorisation</span><span class="tag tag-accent">Document envoyé</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-radius:999px;background:var(--color-surface);font-size:13px"><span>+ Ajouter un pays</span><span style="font-size:12px;color:var(--color-neutral-700)">justificatif requis</span></div>
+        </div>
+        <div class="field"><label>Langues</label><div style="display:flex;gap:8px"><span class="tag tag-accent" style="padding:8px 14px;font-size:13px">Français</span><span class="tag tag-accent" style="padding:8px 14px;font-size:13px">Anglais</span></div></div>
+        <div class="field"><label>Avis de réseau par jour</label><div class="seg"><span class="seg-opt">5</span><span class="seg-opt" style="background:var(--color-accent);color:var(--color-bg)">10</span><span class="seg-opt">20</span></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
