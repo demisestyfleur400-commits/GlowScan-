@@ -15,6 +15,7 @@ import { registerGlowAssistantRoutes } from "./glowAssistant";
 import { registerDermFollowupRoutes, recordPatientMessage } from "./dermFollowups";
 import { registerDermActivityRoutes } from "./dermActivity";
 import { registerDermSettingsRoutes, trackSessionDevice } from "./dermSettings";
+import { registerSkinJournalRoutes } from "./skinJournal";
 import { registerRelayOnboardingRoutes } from "./relayOnboarding";
 import { registerCaseThreadRoutes } from "./caseThreads";
 import { registerRelayCreditRoutes } from "./relayCredit";
@@ -442,6 +443,7 @@ export async function registerRoutes(
   registerDermFollowupRoutes(app);
   registerDermActivityRoutes(app);
   registerDermSettingsRoutes(app);
+  registerSkinJournalRoutes(app);
   registerRelayOnboardingRoutes(app, { checkAdmin: checkDatasetKey });
   registerCaseThreadRoutes(app);
   registerRelayCreditRoutes(app, { checkAdmin: checkDatasetKey });
