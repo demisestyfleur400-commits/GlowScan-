@@ -27,10 +27,10 @@ async function postJson(url: string, body?: unknown) {
   return data;
 }
 
-const field: React.CSSProperties = { width: "100%", boxSizing: "border-box", height: 40, padding: "0 12px", border: `1px solid #e3e7e4`, borderRadius: 6, background: "#fff", fontSize: 12.5, color: D.textAlt, outline: "none", fontFamily: FONT_UI };
-const lbl: React.CSSProperties = { display: "flex", flexDirection: "column", gap: 6, fontSize: 9.5, fontWeight: 600, color: D.textAlt };
-const cta: React.CSSProperties = { width: "100%", height: 40, border: 0, borderRadius: 6, background: D.cta, color: "#fff", fontSize: 11.5, fontWeight: 700, cursor: "pointer", boxShadow: "0 7px 16px rgba(29,112,105,.18)", fontFamily: FONT_UI };
-const linkBtn: React.CSSProperties = { border: 0, background: "none", padding: 0, color: D.cta, fontSize: 10.5, fontWeight: 700, cursor: "pointer", fontFamily: FONT_UI };
+const field: React.CSSProperties = { width: "100%", boxSizing: "border-box", height: 46, padding: "0 14px", border: `1px solid #e3e7e4`, borderRadius: 6, background: "#fff", fontSize: 15, color: D.textAlt, outline: "none", fontFamily: FONT_UI };
+const lbl: React.CSSProperties = { display: "flex", flexDirection: "column", gap: 6, fontSize: 13.5, fontWeight: 600, color: D.textAlt };
+const cta: React.CSSProperties = { width: "100%", height: 40, border: 0, borderRadius: 6, background: D.cta, color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", boxShadow: "0 7px 16px rgba(29,112,105,.18)", fontFamily: FONT_UI };
+const linkBtn: React.CSSProperties = { border: 0, background: "none", padding: 0, color: D.cta, fontSize: 14.5, fontWeight: 700, cursor: "pointer", fontFamily: FONT_UI };
 
 function Side({ mode }: { mode: Mode }) {
   const t = mode === "signup"
@@ -42,17 +42,17 @@ function Side({ mode }: { mode: Mode }) {
       <span className="pointer-events-none absolute" style={{ right: -40, bottom: -80, width: 300, height: 300, borderRadius: "50%", border: "50px solid rgba(255,255,255,.03)" }} />
       <Link href="/derm" className="flex items-center no-underline" style={{ gap: 8 }}>
         <img src="/img/glowscan-africa-dark.png" alt="GlowScan Africa" style={{ width: 150, height: "auto" }} />
-        <span style={{ color: D.teal4, letterSpacing: 1.4, border: "1px solid rgba(46,209,196,.35)", borderRadius: 5, padding: "4px 6px", fontSize: 7, fontWeight: 800 }}>DERM</span>
+        <span style={{ color: D.teal4, letterSpacing: 1.4, border: "1px solid rgba(46,209,196,.35)", borderRadius: 5, padding: "4px 6px", fontSize: 11, fontWeight: 800 }}>DERM</span>
       </Link>
       <div className="relative z-[1]" style={{ margin: "auto 0" }}>
-        <span style={{ color: D.teal4, letterSpacing: 1.5, fontSize: 8, fontWeight: 700 }}>{t.k}</span>
+        <span style={{ color: D.teal4, letterSpacing: 1.5, fontSize: 12, fontWeight: 700 }}>{t.k}</span>
         <h1 style={{ margin: "18px 0 18px", font: `700 clamp(36px,4.2vw,50px)/1.05 ${FONT_HEAD}`, letterSpacing: -1.6 }}>{t.h}</h1>
-        <p style={{ margin: 0, maxWidth: 330, color: "#a9bfba", fontSize: 11, lineHeight: 1.6 }}>{t.p}</p>
+        <p style={{ margin: 0, maxWidth: 330, color: "#a9bfba", fontSize: 15, lineHeight: 1.6 }}>{t.p}</p>
       </div>
       {mode === "signin" && (
         <div className="relative z-[1] flex items-center" style={{ gap: 12, padding: "12px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.03)" }}>
-          <span className="grid place-items-center" style={{ width: 34, height: 34, borderRadius: 6, background: D.teal3, color: D.side, fontSize: 9, fontWeight: 800 }}>Glow</span>
-          <span style={{ fontSize: 9.5, color: "#c7d6d2" }}>Votre copilote clinique prépare déjà votre journée.</span>
+          <span className="grid place-items-center" style={{ width: 34, height: 34, borderRadius: 6, background: D.teal3, color: D.side, fontSize: 13, fontWeight: 800 }}>Glow</span>
+          <span style={{ fontSize: 13.5, color: "#c7d6d2" }}>Votre copilote clinique prépare déjà votre journée.</span>
         </div>
       )}
     </aside>
@@ -146,20 +146,20 @@ export default function ProConnexion({ initialMode = "signin" }: { initialMode?:
     catch (err: any) { setError(err.message); }
   };
   const verifyOff = busy || code.replace(/\s/g, "").length < 6 || (backupCodes.length > 0 && !codesSaved);
-  const err = error ? <div role="alert" style={{ padding: "9px 12px", borderRadius: 6, background: D.errBg, color: D.err, fontSize: 11 }}>{error}</div> : null;
+  const err = error ? <div role="alert" style={{ padding: "9px 12px", borderRadius: 6, background: D.errBg, color: D.err, fontSize: 15 }}>{error}</div> : null;
 
   return (
     <main className="flex" style={{ minHeight: "100vh", background: "#f4f5f1", fontFamily: FONT_UI, color: D.textAlt }}>
       <Side mode={mode} />
       <section className="flex flex-1 items-center justify-center" style={{ flexBasis: "50%", padding: "40px 20px" }}>
         <div className="w-full" style={{ maxWidth: 330 }}>
-          <Link href="/derm" className="mb-8 flex items-center no-underline md:hidden" style={{ gap: 8, color: D.textAlt, fontWeight: 700 }}>GlowScan <span style={{ fontSize: 8, color: D.cta }}>DERM</span></Link>
+          <Link href="/derm" className="mb-8 flex items-center no-underline md:hidden" style={{ gap: 8, color: D.textAlt, fontWeight: 700 }}>GlowScan <span style={{ fontSize: 12, color: D.cta }}>DERM</span></Link>
           {step === "login" ? (
             <form onSubmit={submit} noValidate className="flex flex-col" style={{ gap: 14 }}>
               <div>
-                <span style={{ color: D.teal2, letterSpacing: 1.6, fontSize: 7.5, fontWeight: 800 }}>{signup ? "CRÉATION DE COMPTE" : "BON RETOUR"}</span>
-                <h1 style={{ margin: "10px 0 8px", font: `600 26px/1.15 ${FONT_UI}`, letterSpacing: -.6, color: D.textAlt }}>{signup ? "Rejoignez GlowScan" : "Connectez-vous"}</h1>
-                <p style={{ margin: 0, fontSize: 10, color: D.muted }}>{signup ? "Quelques informations pour préparer votre espace." : "Accédez à votre cabinet numérique GlowScan Derm."}</p>
+                <span style={{ color: D.teal2, letterSpacing: 1.6, fontSize: 11.5, fontWeight: 800 }}>{signup ? "CRÉATION DE COMPTE" : "BON RETOUR"}</span>
+                <h1 style={{ margin: "10px 0 8px", font: `600 30px/1.15 ${FONT_UI}`, letterSpacing: -.6, color: D.textAlt }}>{signup ? "Rejoignez GlowScan" : "Connectez-vous"}</h1>
+                <p style={{ margin: 0, fontSize: 14, color: D.muted }}>{signup ? "Quelques informations pour préparer votre espace." : "Accédez à votre cabinet numérique GlowScan Derm."}</p>
               </div>
 
               {signup && (
@@ -186,19 +186,19 @@ export default function ProConnexion({ initialMode = "signin" }: { initialMode?:
 
               {signup && (
                 <>
-                  <label className="flex cursor-pointer items-start" style={{ gap: 8, fontSize: 10, lineHeight: 1.5, color: D.muted }}>
+                  <label className="flex cursor-pointer items-start" style={{ gap: 8, fontSize: 14, lineHeight: 1.5, color: D.muted }}>
                     <input type="checkbox" checked={consent} onChange={(e) => { setConsent(e.target.checked); setError(""); }} style={{ marginTop: 2, accentColor: D.cta }} data-testid="checkbox-consent" />
                     <span>J'accepte les <Link href="/derm/conditions" style={{ color: D.cta, fontWeight: 700 }}>conditions d'utilisation</Link> et la politique de confidentialité.</span>
                   </label>
                   {!otherProfile ? (
                     <button type="button" onClick={() => setOtherProfile(true)} style={{ ...linkBtn, alignSelf: "flex-start", fontWeight: 600, color: D.muted }}>Vous êtes relais communautaire ou une ONG ?</button>
                   ) : (
-                    <div className="flex flex-col" style={{ gap: 6, padding: 10, borderRadius: 6, background: "#eef2ee", fontSize: 10 }}>
+                    <div className="flex flex-col" style={{ gap: 6, padding: 10, borderRadius: 6, background: "#eef2ee", fontSize: 14 }}>
                       <span style={{ color: D.muted }}>Je m'inscris en tant que :</span>
                       <span className="flex flex-wrap" style={{ gap: 6 }}>
                         {([["derm", "Dermatologue"], ["relay", "Relais communautaire"], ["ngo", "ONG / programme"]] as [ProProfile, string][]).map(([k, l]) => (
                           <button key={k} type="button" onClick={() => setProfile(k)} aria-pressed={profile === k} data-testid={`profile-${k}`}
-                            style={{ padding: "5px 10px", borderRadius: 999, border: `1px solid ${profile === k ? D.cta : "#d5ddd9"}`, background: profile === k ? D.cta : "#fff", color: profile === k ? "#fff" : D.textAlt, fontSize: 10, fontWeight: 600, cursor: "pointer", fontFamily: FONT_UI }}>{l}</button>
+                            style={{ padding: "5px 10px", borderRadius: 999, border: `1px solid ${profile === k ? D.cta : "#d5ddd9"}`, background: profile === k ? D.cta : "#fff", color: profile === k ? "#fff" : D.textAlt, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: FONT_UI }}>{l}</button>
                         ))}
                       </span>
                       {profile === "relay" && <span style={{ color: D.muted }}>Les relais s'inscrivent avec leur téléphone, leur carte professionnelle et un code SMS : <Link href="/rejoindre" style={{ color: D.cta, fontWeight: 700 }}>continuer avec mon téléphone</Link>.</span>}
@@ -215,34 +215,34 @@ export default function ProConnexion({ initialMode = "signin" }: { initialMode?:
                   {magicSent ? `Lien envoyé à ${maskHint(email)} (valable 15 min)` : "Recevoir un lien de connexion par email"}
                 </button>
               )}
-              <span className="text-center" style={{ fontSize: 10, color: D.muted }}>
+              <span className="text-center" style={{ fontSize: 14, color: D.muted }}>
                 {signup ? <>Vous avez déjà un compte ? <button type="button" onClick={() => setMode("signin")} style={linkBtn} data-testid="tab-signin">Se connecter</button></>
                   : <>Nouveau sur GlowScan ? <button type="button" onClick={() => setMode("signup")} style={linkBtn} data-testid="tab-signup">Créer un compte</button></>}
               </span>
-              <span className="text-center" style={{ fontSize: 8.5, color: D.faint }}>{signup ? "14 jours gratuits · sans carte bancaire · paiement Mobile Money ensuite" : "Données de santé protégées · Vérification en 2 étapes · Session sécurisée"}</span>
+              <span className="text-center" style={{ fontSize: 12.5, color: D.faint }}>{signup ? "14 jours gratuits · sans carte bancaire · paiement Mobile Money ensuite" : "Données de santé protégées · Vérification en 2 étapes · Session sécurisée"}</span>
             </form>
           ) : (
             <form onSubmit={verify} noValidate className="flex flex-col" style={{ gap: 14 }}>
               <div>
-                <span style={{ color: D.teal2, letterSpacing: 1.6, fontSize: 7.5, fontWeight: 800 }}>VÉRIFICATION EN 2 ÉTAPES</span>
-                <h1 style={{ margin: "10px 0 8px", font: `600 24px/1.15 ${FONT_UI}`, letterSpacing: -.5 }}>Entrez votre code</h1>
-                <p style={{ margin: 0, fontSize: 10.5, color: D.muted }}>Nous avons envoyé un code à 6 chiffres à <b>{emailHint}</b>.</p>
+                <span style={{ color: D.teal2, letterSpacing: 1.6, fontSize: 11.5, fontWeight: 800 }}>VÉRIFICATION EN 2 ÉTAPES</span>
+                <h1 style={{ margin: "10px 0 8px", font: `600 28px/1.15 ${FONT_UI}`, letterSpacing: -.5 }}>Entrez votre code</h1>
+                <p style={{ margin: 0, fontSize: 14.5, color: D.muted }}>Nous avons envoyé un code à 6 chiffres à <b>{emailHint}</b>.</p>
               </div>
               {backupCodes.length > 0 && (
                 <div className="flex flex-col" style={{ gap: 8, padding: 12, borderRadius: 8, background: D.warnBg, color: "#7a4a1d" }}>
-                  <b style={{ fontSize: 11 }}>Vos codes de secours : notez-les maintenant</b>
-                  <span style={{ fontSize: 10 }}>Si vous perdez l'accès à votre email, un de ces codes vous connecte. Ils ne seront plus jamais affichés.</span>
-                  <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 6 }}>{backupCodes.map((c) => <span key={c} style={{ padding: "5px 6px", borderRadius: 4, background: "#fff", textAlign: "center", fontSize: 11, fontWeight: 700, letterSpacing: 1 }}>{c}</span>)}</div>
+                  <b style={{ fontSize: 15 }}>Vos codes de secours : notez-les maintenant</b>
+                  <span style={{ fontSize: 14 }}>Si vous perdez l'accès à votre email, un de ces codes vous connecte. Ils ne seront plus jamais affichés.</span>
+                  <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 6 }}>{backupCodes.map((c) => <span key={c} style={{ padding: "5px 6px", borderRadius: 4, background: "#fff", textAlign: "center", fontSize: 15, fontWeight: 700, letterSpacing: 1 }}>{c}</span>)}</div>
                   <div className="flex items-center justify-between">
                     <button type="button" onClick={() => { navigator.clipboard?.writeText(backupCodes.join("\n")); toast({ title: "Codes copiés" }); }} style={linkBtn}>Copier</button>
-                    <label className="flex cursor-pointer items-center" style={{ gap: 6, fontSize: 10, fontWeight: 600 }}><input type="checkbox" checked={codesSaved} onChange={(e) => setCodesSaved(e.target.checked)} data-testid="checkbox-codes-saved" />Je les ai notés</label>
+                    <label className="flex cursor-pointer items-center" style={{ gap: 6, fontSize: 14, fontWeight: 600 }}><input type="checkbox" checked={codesSaved} onChange={(e) => setCodesSaved(e.target.checked)} data-testid="checkbox-codes-saved" />Je les ai notés</label>
                   </div>
                 </div>
               )}
               <input style={{ ...field, height: 48, textAlign: "center", fontSize: 18, letterSpacing: ".4em" }} value={code} autoFocus
                 onChange={(e) => { setCode(e.target.value.replace(/[^0-9a-zA-Z-]/g, "").toUpperCase().slice(0, 9)); setError(""); }}
                 inputMode="numeric" autoComplete="one-time-code" placeholder="Code" aria-label="Code de vérification" data-testid="input-2fa-code" />
-              <span className="text-center" style={{ fontSize: 9.5, color: D.muted }}>Pas accès à votre email ? Entrez un de vos codes de secours.</span>
+              <span className="text-center" style={{ fontSize: 13.5, color: D.muted }}>Pas accès à votre email ? Entrez un de vos codes de secours.</span>
               {err}
               <button type="submit" disabled={verifyOff} style={{ ...cta, opacity: verifyOff ? .5 : 1, cursor: verifyOff ? "default" : "pointer" }} data-testid="button-verify-2fa">{busy ? "Vérification…" : "Vérifier"}</button>
               <div className="flex justify-between">
