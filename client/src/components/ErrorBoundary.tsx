@@ -1,6 +1,7 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { AlertCircle, RefreshCw } from "lucide-react";
 import * as Sentry from "@sentry/react";
+import { isChunkLoadError, reloadForNewVersion } from "@/lib/chunkReload";
 
 interface Props {
   children: ReactNode;
@@ -24,6 +25,8 @@ export default class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
+    // Nouvelle version du site déployée pendant que la page était ouverte : on recharge, sans écran d'erreur.
+    if (isChunkLoadError(error) && reloadForNewVersion()) return;
     console.error("[GlowScan] Erreur critique:", error.message, info.componentStack);
 
     // 🔴 SENTRY : Envoyer l'erreur à Sentry pour monitoring en temps réel

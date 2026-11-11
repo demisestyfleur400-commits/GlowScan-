@@ -37,10 +37,11 @@ import { useRealtimeScans } from "@/hooks/use-realtime";
 import { useQrCode } from "@/hooks/use-qrcode";
 import { useClinicalOverride } from "@/hooks/use-pro";
 import { ClinicalOverride, type ClinicalOverrideData } from "@/components/ClinicalOverride";
-import { lazy, Suspense } from "react";
-const ResultCard = lazy(() =>
+import { Suspense } from "react";
+import { lazyWithRetry } from "@/lib/chunkReload";
+const ResultCard = lazyWithRetry(() =>
   import("@/components/ResultCard").then((m) => ({ default: m.ResultCard }))
-);
+) as React.LazyExoticComponent<typeof import("@/components/ResultCard").ResultCard>;
 import { useToast } from "@/hooks/use-toast";
 import { SubscriptionExpiredBanner } from "@/components/pro/SubscriptionExpiredBanner";
 import { ContextualTip } from "@/components/pro/ContextualTip";

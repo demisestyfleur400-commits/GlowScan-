@@ -20,27 +20,9 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import PWAInstallBanner from "@/components/PWAInstallBanner";
 import { TabBar } from "@/components/b2c/TabBar";
 
-// Recharge la page UNE fois si un chunk lazy échoue à se charger. Après un
-// déploiement, les anciens fichiers hashés (ex. ProAnalyze-XXXX.js) sont supprimés ;
-// un onglet resté ouvert essaie de charger l'ancien nom → "Failed to fetch
-// dynamically imported module". On recharge → le navigateur récupère les nouveaux
-// fichiers. Un flag sessionStorage évite toute boucle de rechargement.
-function lazyWithRetry(factory: () => Promise<any>) {
-  return lazy(() =>
-    factory()
-      .then((m: any) => { try { sessionStorage.removeItem("gs_chunk_reload"); } catch {} return m; })
-      .catch((err: any) => {
-        try {
-          if (!sessionStorage.getItem("gs_chunk_reload")) {
-            sessionStorage.setItem("gs_chunk_reload", "1");
-            window.location.reload();
-            return new Promise(() => {}) as Promise<any>; // ne résout jamais : la page recharge
-          }
-        } catch {}
-        throw err;
-      })
-  );
-}
+// Rechargement automatique si un fichier du site a changé après un déploiement.
+import { lazyWithRetry, installChunkReloadHandler } from "@/lib/chunkReload";
+installChunkReloadHandler();
 
 // Écran de transition pendant le chargement d'une page : aux couleurs de la page
 // visée (plus d'écran noir). Espace médical : barre latérale et fond clair.
