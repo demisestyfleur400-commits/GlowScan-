@@ -158,7 +158,7 @@ export function registerRoutingRoutes(app: Express, deps: { checkAdmin: (req: an
   // D1 · Réseau entre pays
   app.get("/api/pro/network-settings", ...dermOnly, async (req: any, res) => {
     const me = Rows(await db.execute(sql`SELECT languages, network_daily_cap, country FROM pro_accounts WHERE id = ${req.proAccount.id}`))[0];
-    const lic = Rows(await db.execute(sql`SELECT id, country, kind, status, reject_reason, verified_at, (document_url IS NOT NULL) AS has_doc FROM derm_licenses WHERE derm_id = ${req.proAccount.id}`));
+    const lic = Rows(await db.execute(sql`SELECT id, country, kind, status, reject_reason, verified_at, (document_url IS NOT NULL) AS has_doc FROM derm_licenses WHERE derm_id = ${req.proAccount.id} ORDER BY kind DESC, country`));
     res.json({ languages: me?.languages || ["fr"], dailyCap: Number(me?.network_daily_cap) || 10, country: me?.country || "Cameroun", licenses: lic });
   });
   app.post("/api/pro/network-settings", ...dermOnly, async (req: any, res) => {
@@ -182,7 +182,7 @@ export function registerRoutingRoutes(app: Express, deps: { checkAdmin: (req: an
       VALUES (${req.proAccount.id}, ${d.data.country}, ${home ? "home" : "authorization"}, ${d.data.document}, 'pending')
       ON CONFLICT (derm_id, country) DO UPDATE SET document_url = EXCLUDED.document_url, status = 'pending', reject_reason = NULL, verified_at = NULL
       WHERE derm_licenses.status <> 'verified'`);
-    notifyOwner(`Autorisation à vérifier : ${req.proAccount.fullName} (${d.data.country})`, `<p>Justificatif envoyé par ${req.proAccount.fullName} pour ${d.data.country}. Admin › Relais › Dermatologues > Licences.</p>`).catch(() => {});
+    notifyOwner(`Autorisation à vérifier : ${req.proAccount.fullName} (${d.data.country})`, `<p>Justificatif envoyé par ${req.proAccount.fullName} pour ${d.data.country}. Admin › Relais › Autorisations d'exercer.</p>`, `Autorisation à vérifier : ${req.proAccount.fullName} (${d.data.country})`).catch(() => {});
     res.json({ success: true });
   });
 
