@@ -60,7 +60,7 @@ const Pro = lazyWithRetry(() => import("@/pages/Pro"));
 const ProInscription = lazyWithRetry(() => import("@/pages/pro/ProInscription"));
 const ProConnexion = lazyWithRetry(() => import("@/pages/pro/ProConnexion"));
 const ProMotDePasseOublie = lazyWithRetry(() => import("@/pages/pro/ProMotDePasseOublie"));
-const ProDashboard = lazyWithRetry(() => import("@/pages/pro/ProDashboard"));
+const DermVue = lazyWithRetry(() => import("@/pages/derm/DermVue"));
 const ProPatients = lazyWithRetry(() => import("@/pages/pro/ProPatients"));
 const ProPatient = lazyWithRetry(() => import("@/pages/pro/ProPatient"));
 const ProAnalyze = lazyWithRetry(() => import("@/pages/pro/ProAnalyze"));
@@ -137,7 +137,7 @@ function Router() {
       <Route path="/derm/conditions" component={DermConditions} />
       <Route path="/derm/connexion" component={ProConnexion} />
       <Route path="/derm/mot-de-passe-oublie" component={ProMotDePasseOublie} />
-      <Route path="/derm/dashboard" component={ProDashboard} />
+      <Route path="/derm/dashboard" component={DermVue} />
       <Route path="/derm/patients" component={ProPatients} />
       <Route path="/derm/patient/:id" component={ProPatient} />
       <Route path="/derm/analyse" component={ProAnalyze} />

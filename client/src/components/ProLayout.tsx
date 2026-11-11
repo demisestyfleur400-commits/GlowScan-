@@ -2,12 +2,13 @@ import { Link, useLocation } from "wouter";
 import { ReactNode, useState, useEffect } from "react";
 import {
   Home, Users, ScanLine, BarChart3, Settings, ArrowLeft, LogOut, MessageCircle, Calendar, Wallet,
-  ArrowLeftRight, Coins, Plus, ChevronRight, Network,
+  Coins, Plus, ChevronRight,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useProAccount } from "@/hooks/use-pro";
 import { asProProfile, proHomeOf } from "@shared/proProfile";
 import { useProNotifications } from "@/hooks/use-realtime";
+import { markDermVisited } from "@/components/derm/DermShell";
 
 // ════════════════════════════════════════════════════════════════════════
 // Cadre du portail GlowScan Derm (refonte Organic) — maquette « Derm Portal ».
@@ -36,10 +37,9 @@ const SEC_PAGES: NavItem[] = [
   { href: "/derm/agenda", icon: Calendar, label: "Agenda" },
 ];
 
-// Section « Réseau » (médecin). Pilotage (étape 6) s'ajoutera ici.
+// Section « Réseau » (médecin). Confrères et Réseau & formation sont sortis du
+// menu (espace médical, D1) : les pages restent accessibles par leur adresse.
 const NETWORK: NavItem[] = [
-  { href: "/derm/confreres", icon: ArrowLeftRight, label: "Confrères" },
-  { href: "/derm/reseau", icon: Network, label: "Réseau & formation" },
   { href: "/derm/portefeuille", icon: Coins, label: "Portefeuille" },
 ];
 
@@ -89,6 +89,7 @@ export function ProLayout({ children, title, back, onBack, hideBottomNav, rightA
   const acc = accData?.account as any;
   // Notifications temps réel (second avis confrères, etc.)
   useProNotifications((accData?.user as any)?.id);
+  useEffect(() => { markDermVisited(); }, []);
 
   const isSecretary = accData?.user?.role === "secretary";
   const isRelay = asProProfile(acc?.profile) === "relay";
