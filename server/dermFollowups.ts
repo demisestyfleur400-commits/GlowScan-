@@ -69,7 +69,7 @@ export async function recordPatientMessage(phoneRaw: string, body: string) {
 type Fu = { id: number; firstName: string; lastName: string; phone: string | null; reason: string | null; dx: string | null; due: string; lastVisit: string | null;
   status: "today" | "late" | "plan"; lateDays: number; apptStatus: string | null; relancedAt: string | null; lastMsg: string | null };
 
-async function loadFollowups(proId: number): Promise<Fu[]> {
+export async function loadFollowups(proId: number): Promise<Fu[]> {
   const rows = Rows(await db.execute(sql`
     SELECT p.id, p.first_name, p.last_name, p.whatsapp_number, p.followup_reason, p.created_at, p.last_scan_at,
       COALESCE(p.next_control_at, p.follow_up_at) AS due,

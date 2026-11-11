@@ -73,7 +73,7 @@ function caseText(c: any): string {
 }
 
 /** Génère avec la chaîne de secours ; renvoie le flux du premier modèle qui répond. */
-async function streamWithFallback(contents: any[], onChunk: (t: string) => void, opts: { search: boolean; system: string }) {
+export async function streamWithFallback(contents: any[], onChunk: (t: string) => void, opts: { search: boolean; system: string }) {
   let lastErr: any = null;
   for (const model of GEMINI_CHAIN) {
     for (const search of opts.search && SEARCH ? [true, false] : [false]) {

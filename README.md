@@ -6,9 +6,9 @@ Analyse de peau par IA pour les peaux africaines (appli patient) et portail Glow
 
 Les migrations SQL de `migrations/` s'appliquent **à la main, avant le déploiement** du code qui en dépend. Le serveur ne modifie pas ces tables au démarrage. Toutes sont idempotentes : on peut les relancer sans risque.
 
-Refonte Organic (étape 2), dans cet ordre : 0013 → 0014 → 0015 → 0016 → 0017 → 0018 → 0019 → 0020 → 0021 → 0022 → 0023 → 0024 → 0025 → 0026 → 0027 → 0028 → 0029 → 0030 → 0031 → 0032 → 0033 → 0034 → 0035 → 0036.
+Refonte Organic (étape 2), dans cet ordre : 0013 → 0014 → 0015 → 0016 → 0017 → 0018 → 0019 → 0020 → 0021 → 0022 → 0023 → 0024 → 0025 → 0026 → 0027 → 0028 → 0029 → 0030 → 0031 → 0032 → 0033 → 0034 → 0035 → 0036 → 0037.
 
-**État : 0013 à 0034 appliquées en production (projet Supabase `atjvlnzrwdeqhilvssyd`) le 30/09/2026, 0035 et 0036 le 11/11/2026**, après un essai complet dans une transaction annulée. Les relancer ne change rien (idempotentes).
+**État : 0013 à 0034 appliquées en production (projet Supabase `atjvlnzrwdeqhilvssyd`) le 30/09/2026, 0035 à 0037 le 11/11/2026**, après un essai complet dans une transaction annulée. Les relancer ne change rien (idempotentes).
 
 | Ordre | Fichier | Contenu |
 |---|---|---|
@@ -36,6 +36,7 @@ Refonte Organic (étape 2), dans cet ordre : 0013 → 0014 → 0015 → 0016 →
 | 22 | `0034_partner_api.sql` | Étape 16 — Bogou et API ouverte : `api_partners` (« partners » sert déjà à la boutique), clés hachées, `partner_access_log`, `webhook_deliveries`, cas `source` / `external_ref` / `partner_id`, export Bogou (`bogou_shared_at`, `programs.bogou_email`), RLS |
 | 23 | `0035_derm_records.sql` | Espace médical D2 — fiche administrative (`archived_at`, email, ville, date de naissance, contact d'urgence, représentant légal, canaux et usage des rappels), allergies, consentement photo, `patient_record_notes` (antécédents / prescriptions / examens), `patient_documents`, RLS |
 | 24 | `0036_derm_followups.sql` | Espace médical D4 — suivis : `next_control_at`, `followup_reason`, `followup_closed_at` sur `patients` ; `derm_followup_events` (observation, relance, message WhatsApp du patient, clôture) ; RLS |
+| 25 | `0037_derm_activity.sql` | Espace médical D6 — `derm_weekly_reviews` (bilan hebdomadaire), `derm_research_docs` (atelier de mémoire), `derm_patient_feedback` (avis des patients du cabinet par lien WhatsApp), RLS |
 
 Commande (base Postgres / Supabase, variable `DATABASE_URL` ou `SUPABASE_URL`) :
 

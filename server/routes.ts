@@ -13,6 +13,7 @@ import { registerReportRoutes } from "./reportRoutes";
 import { registerDermRecordRoutes } from "./dermRecords";
 import { registerGlowAssistantRoutes } from "./glowAssistant";
 import { registerDermFollowupRoutes, recordPatientMessage } from "./dermFollowups";
+import { registerDermActivityRoutes } from "./dermActivity";
 import { registerRelayOnboardingRoutes } from "./relayOnboarding";
 import { registerCaseThreadRoutes } from "./caseThreads";
 import { registerRelayCreditRoutes } from "./relayCredit";
@@ -437,6 +438,7 @@ export async function registerRoutes(
   registerDermRecordRoutes(app);
   registerGlowAssistantRoutes(app);
   registerDermFollowupRoutes(app);
+  registerDermActivityRoutes(app);
   registerRelayOnboardingRoutes(app, { checkAdmin: checkDatasetKey });
   registerCaseThreadRoutes(app);
   registerRelayCreditRoutes(app, { checkAdmin: checkDatasetKey });

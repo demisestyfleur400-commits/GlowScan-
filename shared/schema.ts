@@ -416,6 +416,42 @@ export const patients = pgTable("patients", {
   followupClosedAt: timestamp("followup_closed_at"),
 });
 
+// Bilan hebdomadaire du médecin (0037).
+export const dermWeeklyReviews = pgTable("derm_weekly_reviews", {
+  id: serial("id").primaryKey(),
+  proAccountId: integer("pro_account_id").notNull().references(() => proAccounts.id, { onDelete: "cascade" }),
+  weekStart: date("week_start").notNull(),
+  scores: smallint("scores").array().notNull().default([]),
+  good: text("good"),
+  goal: text("goal"),
+  retours: jsonb("retours").notNull().default([]),
+  doneAt: timestamp("done_at"),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Atelier « Recherche & mémoires », un document par médecin (0037).
+export const dermResearchDocs = pgTable("derm_research_docs", {
+  id: serial("id").primaryKey(),
+  proAccountId: integer("pro_account_id").notNull().unique().references(() => proAccounts.id, { onDelete: "cascade" }),
+  title: text("title").notNull().default(""),
+  sections: jsonb("sections").notNull().default([]),
+  library: jsonb("library").notNull().default([]),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Avis des patients du cabinet, recueillis par lien WhatsApp (0037).
+export const dermPatientFeedback = pgTable("derm_patient_feedback", {
+  id: serial("id").primaryKey(),
+  proAccountId: integer("pro_account_id").notNull().references(() => proAccounts.id, { onDelete: "cascade" }),
+  patientId: integer("patient_id").references(() => patients.id, { onDelete: "set null" }),
+  token: varchar("token", { length: 40 }).notNull().unique(),
+  rating: smallint("rating"),
+  comment: text("comment"),
+  sentAt: timestamp("sent_at"),
+  answeredAt: timestamp("answered_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 // Fil d'un suivi : observation, relance, message du patient, clôture (0036).
 export const dermFollowupEvents = pgTable("derm_followup_events", {
   id: serial("id").primaryKey(),
