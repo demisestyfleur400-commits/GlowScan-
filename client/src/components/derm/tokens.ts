@@ -45,7 +45,7 @@ export function ensureDermFonts() {
   const l = document.createElement("link");
   l.id = "derm-fonts";
   l.rel = "stylesheet";
-  l.href = "https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Manrope:wght@500;600;700;800&family=Lora:wght@500;600&display=swap";
+  l.href = "https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Manrope:wght@500;600;700;800&family=Lora:ital,wght@0,500;0,600;1,500&display=swap";
   document.head.appendChild(l);
 }
 
