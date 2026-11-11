@@ -1330,7 +1330,7 @@ export default function ProAnalyze() {
   };
 
   return (
-    <DermShell active="dossiers" showBack onBack={() => {
+    <DermShell active="consultation" showBack onBack={() => {
       // Retour ÉTAPE PAR ÉTAPE (ne quitte le parcours que depuis la 1re étape).
       if (step > 1 && !dossierSaved) { setStep((step - 1) as Step); return; }
       if (step === 1 && patientMode !== "choice") { setPatientMode("choice"); return; }

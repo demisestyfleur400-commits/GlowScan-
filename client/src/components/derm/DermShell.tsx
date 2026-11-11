@@ -15,7 +15,7 @@ import { D, FONT_UI, ensureDermFonts, patientCode } from "./tokens";
 // Les menus pas encore refaits (D2 à D7) ouvrent les pages actuelles.
 // ════════════════════════════════════════════════════════════════════════
 
-export type DermNavKey = "vue" | "agenda" | "patients" | "dossiers" | "suivis" | "activite" | "auto" | "messagerie" | "parametres";
+export type DermNavKey = "consultation" | "vue" | "agenda" | "patients" | "dossiers" | "suivis" | "activite" | "auto" | "messagerie" | "parametres";
 type NavItem = { key: DermNavKey; label: string; href: string; icon: typeof User };
 
 const NAV: NavItem[] = [

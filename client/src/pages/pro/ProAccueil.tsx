@@ -121,7 +121,7 @@ export default function ProAccueil() {
   const chip = (on: boolean) => `cursor-pointer rounded-pill border px-3.5 py-1.5 font-body text-[13px] font-semibold ${on ? "border-organic-accent bg-organic-accent text-organic-bg" : "border-organic-divider bg-transparent text-organic-text"}`;
 
   return (
-    <DermShell active="vue" showBack>
+    <DermShell active="consultation" showBack>
      <div className="derm-theme" style={{ maxWidth: 1000, margin: "auto", padding: "30px 32px 40px" }}>
       <header className="flex flex-col gap-1">
         <span className="text-[11px] font-bold uppercase tracking-[.12em] text-organic-accent-700">Accueil du cabinet</span>
