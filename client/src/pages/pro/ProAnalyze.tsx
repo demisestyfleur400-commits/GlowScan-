@@ -425,6 +425,12 @@ export default function ProAnalyze() {
 
   // Patient préparé par l'accueil (salle d'attente) : bandeau « Faire entrer ».
   const [waiting, setWaiting] = useState(false);
+  // Consultation démarrée depuis l'Agenda (?rdv=ID) : le rendez-vous passe à « terminé » une fois le dossier enregistré.
+  const rdvId = (() => { try { return Number(new URLSearchParams(window.location.search).get("rdv")) || null; } catch { return null; } })();
+  useEffect(() => {
+    if (!dossierSaved || !rdvId) return;
+    fetch(`/api/derm/appointments/${rdvId}`, { method: "PATCH", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "done" }) }).catch(() => {});
+  }, [dossierSaved]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Clinical Override
   const [showPartialOverride, setShowPartialOverride] = useState(false);

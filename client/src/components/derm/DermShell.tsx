@@ -23,7 +23,7 @@ const NAV: NavItem[] = [
   { key: "agenda", label: "Agenda", href: "/derm/agenda", icon: Calendar },
   { key: "patients", label: "Patients", href: "/derm/patients", icon: User },
   { key: "dossiers", label: "Dossiers médicaux", href: "/derm/dossiers", icon: Folder },
-  { key: "suivis", label: "Suivis", href: "/derm/patientele?filtre=monitoring", icon: Activity },
+  { key: "suivis", label: "Suivis", href: "/derm/suivis", icon: Activity },
   { key: "activite", label: "Votre activité", href: "/derm/statistiques", icon: BarChart3 },
   { key: "auto", label: "Auto-évaluation", href: "/derm/statistiques?vue=auto", icon: Check },
   { key: "messagerie", label: "Messagerie", href: "/derm/consultations", icon: MessageSquare },

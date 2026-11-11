@@ -124,7 +124,7 @@ export default function DermVue() {
   const metrics = [
     { icon: Calendar, label: "Rendez-vous", value: upcoming.length, sub: "dans votre agenda", href: "/derm/agenda" },
     { icon: Users, label: "Patients actifs", value: patients.length, sub: "dossiers centralisés", href: "/derm/patients" },
-    { icon: Activity, label: "Suivis à examiner", value: followed.length, sub: "priorisés par Glow", href: "/derm/patientele?filtre=monitoring" },
+    { icon: Activity, label: "Suivis à examiner", value: followed.length, sub: "priorisés par Glow", href: "/derm/suivis" },
   ];
   const tone = { info: [D.info, D.infoBg], warn: [D.warn, D.warnBg], err: [D.err, D.errBg] } as const;
 
@@ -184,9 +184,9 @@ export default function DermVue() {
                   right={<>{dayLabel(a.at)} · <b style={{ color: D.text }}>{hhmm(a.at)}</b></>} />
               ))}
           </Panel>
-          <Panel kicker="SUIVI CLINIQUE" title="Évolutions récentes" link="Tout voir" onLink={() => go("/derm/patientele?filtre=monitoring")}>
+          <Panel kicker="SUIVI CLINIQUE" title="Évolutions récentes" link="Tout voir" onLink={() => go("/derm/suivis")}>
             {evolutions.length === 0
-              ? <Empty icon={Activity} title="Aucun suivi actif" text="Les évolutions cliniques apparaîtront ici." cta="Créer un suivi" onCta={() => go("/derm/patients")} />
+              ? <Empty icon={Activity} title="Aucun suivi actif" text="Les évolutions cliniques apparaîtront ici." cta="Créer un suivi" onCta={() => go("/derm/suivis")} />
               : evolutions.map((p) => {
                 const t = p.scoreTrend as number[];
                 const a = t[t.length - 2], b = t[t.length - 1];

@@ -288,7 +288,7 @@ export function CompteRenduFlow({ pid, prefill, embedded, onDone }: { pid: numbe
                     ))}
                   </div>
                   <Input value={p.suiviText} onChange={(e) => up({ suiviText: e.target.value })} placeholder="Précisions sur le suivi (facultatif)" />
-                  <span style={{ fontSize: 9.5, color: D.muted }}>{control ? `À la validation, le contrôle du ${fr(control, { day: "numeric", month: "long" })} est programmé et le rappel photo part la veille.` : p.suiviChoice === "Aucun suivi" ? "Aucun contrôle ne sera programmé." : "Le contrôle choisi sera programmé à la validation."}</span>
+                  <span style={{ fontSize: 9.5, color: D.muted }}>{control ? `À la validation, le contrôle du ${fr(control, { day: "numeric", month: "long" })} est ajouté à l'Agenda et le rappel WhatsApp part la veille.` : p.suiviChoice === "Aucun suivi" ? "Aucun contrôle ne sera programmé." : "Le contrôle choisi sera ajouté à l'Agenda à la validation."}</span>
                 </div>
                 <div className="flex flex-col" style={{ gap: 10 }}>
                   <div className="flex items-baseline justify-between"><b style={{ fontSize: 12, fontWeight: 600 }}>Prescription</b><Btn kind="link" onClick={() => up({ meds: [...meds, emptyMed()] })} disabled={meds.length >= 12}>+ Ajouter un médicament</Btn></div>
@@ -342,7 +342,7 @@ export function CompteRenduFlow({ pid, prefill, embedded, onDone }: { pid: numbe
                   <b style={{ fontSize: 13, fontWeight: 600, color: D.actionDark }}>Ce que Glow a mis à jour</b>
                   {[...delivered,
                     `Compte rendu ${reportRef(rid!)} rangé dans le dossier de ${pt?.firstName || "votre patient"}`,
-                    control ? `Contrôle du ${fr(control, { day: "numeric", month: "long" })} programmé, rappel photo la veille` : "Aucun contrôle ajouté",
+                    control ? `Contrôle du ${fr(control, { day: "numeric", month: "long" })} ajouté à l'Agenda et aux Suivis, rappel WhatsApp la veille` : "Aucun contrôle ajouté",
                     `Document vérifiable sur glow-scan.com/verif/${reportRef(rid!)}`].map((t) => (
                     <span key={t} className="flex" style={{ gap: 8, fontSize: 11 }}><Check size={13} color={D.action} className="mt-0.5 flex-none" />{t}</span>
                   ))}

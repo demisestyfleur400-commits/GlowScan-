@@ -94,7 +94,7 @@ export default function DermDossier() {
     { l: "CONSULTATIONS", v: `${pad(visits)} depuis le ${fr(data.firstAt, { day: "numeric", month: "long", year: "numeric" })}` },
     { l: "DOCUMENTS CLINIQUES", v: `${pad(data.documents.length)} document${data.documents.length > 1 ? "s" : ""}` },
     { l: "PROCHAIN CONTRÔLE", v: data.nextControl ? fr(data.nextControl, { day: "numeric", month: "long", year: "numeric" }) : "Aucun contrôle programmé",
-      cta: data.nextControl ? "Ouvrir l'agenda →" : "Programmer un contrôle →", go: () => go("/derm/agenda") },
+      cta: data.nextControl ? "Ouvrir le suivi →" : "Programmer un contrôle →", go: () => go(`/derm/suivis/${p.id}`) },
   ];
   const consShown = tab === "vue" ? data.consultations.slice(0, 2) : data.consultations;
   const docsShown = tab === "vue" ? data.documents.slice(0, 3) : data.documents;

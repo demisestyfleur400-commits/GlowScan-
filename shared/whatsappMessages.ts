@@ -97,3 +97,13 @@ export function buildReportReadyMessage(o: { name?: string | null; derm?: string
     "GlowScan",
   ].join("\n");
 }
+
+/** Relance d'un contrôle dépassé (espace médical D4). Aucun détail médical. */
+export function buildControlRelanceMessage(o: { name?: string | null; derm?: string | null }): string {
+  const dr = `Dr ${String(o.derm || "").replace(/^(dr|pr)\.?\s*/i, "").trim()}`.trim();
+  return `Bonjour${o.name ? ` ${o.name}` : ""},
+
+${dr === "Dr" ? "Votre dermatologue" : dr} souhaite vous revoir pour votre rendez-vous de contrôle. Répondez à ce message pour convenir d'une date, ou appelez le cabinet.
+
+GlowScan`;
+}

@@ -273,7 +273,8 @@ export function registerDermRecordRoutes(app: Express) {
       const lastSigned = reports.filter((r) => r.signed_at).sort((a, b) => new Date(b.signed_at).getTime() - new Date(a.signed_at).getTime())[0];
       const ls = lastSigned ? reportPayloadSchema.parse(lastSigned.payload || {}) : null;
       const lastScan = scans[scans.length - 1];
-      const nextControl = ls?.controlPhotoDate && new Date(ls.controlPhotoDate).getTime() >= Date.now() - 86400000 ? ls.controlPhotoDate : null;
+      const ctl = p.followup_closed_at ? null : (p.next_control_at || p.follow_up_at || ls?.controlPhotoDate || null);
+      const nextControl = ctl && new Date(ctl).getTime() >= Date.now() - 86400000 ? iso(ctl) : null;
 
       res.json({
         patient: {

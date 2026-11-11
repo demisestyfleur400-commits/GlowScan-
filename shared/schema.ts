@@ -410,6 +410,23 @@ export const patients = pgTable("patients", {
   allergies: text("allergies"),
   allergiesAt: timestamp("allergies_at"),
   photoConsentAt: timestamp("photo_consent_at"),
+  // Suivi (espace médical D4, migration 0036)
+  nextControlAt: timestamp("next_control_at"),
+  followupReason: text("followup_reason"),
+  followupClosedAt: timestamp("followup_closed_at"),
+});
+
+// Fil d'un suivi : observation, relance, message du patient, clôture (0036).
+export const dermFollowupEvents = pgTable("derm_followup_events", {
+  id: serial("id").primaryKey(),
+  patientId: integer("patient_id").notNull().references(() => patients.id, { onDelete: "cascade" }),
+  proAccountId: integer("pro_account_id").references(() => proAccounts.id, { onDelete: "cascade" }),
+  kind: varchar("kind", { length: 12 }).notNull(), // created | obs | relance | patient_msg | close | reopen
+  body: text("body"),
+  evolution: varchar("evolution", { length: 60 }),
+  attachment: text("attachment"),
+  attachmentName: text("attachment_name"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 // Antécédents, prescriptions et examens ajoutés au dossier (0035).

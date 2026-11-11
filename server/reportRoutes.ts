@@ -12,6 +12,7 @@ import { buildReportReadyMessage } from "@shared/whatsappMessages";
 import { renderDermA4, type A4Doctor, type A4Patient } from "./dermA4";
 import { suiviDate } from "@shared/report";
 import { sendEmail, escHtml } from "./email";
+import { scheduleControl } from "./dermFollowups";
 
 // ════════════════════════════════════════════════════════════════════════
 // Compte rendu en 3 versions + ordonnance (étape 9a). Une saisie unique du
@@ -209,13 +210,19 @@ export async function signReport(reportId: number, proId: number): Promise<{ ref
       INSERT INTO prescriptions (ref, report_id, pro_account_id) VALUES (${rxRef}, ${reportId}, ${proId})
       ON CONFLICT (report_id) DO NOTHING`);
   }
-  // Modèle A4 : le suivi choisi fixe la date du contrôle (rappel photo existant)
-  // et place le patient « En suivi ».
+  // Modèle A4 : le suivi choisi crée le contrôle dans l'Agenda (rendez-vous
+  // « Suivi » à 9 h, rappel WhatsApp de la veille « Répondez 1 ») et ouvre le
+  // suivi du patient (D4). « Aucun suivi » : rien n'est programmé.
   if (p.format === "a4" && p.suiviChoice && p.suiviChoice !== "Aucun suivi") {
     const at = suiviDate(p.suiviChoice);
     if (at) {
       await db.execute(sql`UPDATE consult_reports SET payload = jsonb_set(payload, '{controlPhotoDate}', to_jsonb(${at}::text)) WHERE id = ${reportId}`);
-      if (r.patient_id) await db.execute(sql`UPDATE patients SET status = 'yellow' WHERE id = ${r.patient_id} AND COALESCE(status, 'green') <> 'red'`).catch(() => {});
+      if (r.patient_id) {
+        try {
+          await scheduleControl(proId, Number(r.patient_id), at, { reason: (p.conclusion || p.diagnosis || "").slice(0, 200) || undefined });
+          await db.execute(sql`INSERT INTO derm_followup_events (patient_id, pro_account_id, kind, body) VALUES (${r.patient_id}, ${proId}, 'created', ${`Contrôle à ${p.suiviChoice} décidé au compte rendu ${reportRef(reportId)}`})`);
+        } catch (e) { console.error("[reports sign] contrôle :", (e as any)?.message); }
+      }
     }
   }
   // Anciens écrans (colonne texte) : la consultation garde une version texte du traitement.

@@ -12,6 +12,7 @@ import { registerPeerRoutes } from "./peerRoutes";
 import { registerReportRoutes } from "./reportRoutes";
 import { registerDermRecordRoutes } from "./dermRecords";
 import { registerGlowAssistantRoutes } from "./glowAssistant";
+import { registerDermFollowupRoutes, recordPatientMessage } from "./dermFollowups";
 import { registerRelayOnboardingRoutes } from "./relayOnboarding";
 import { registerCaseThreadRoutes } from "./caseThreads";
 import { registerRelayCreditRoutes } from "./relayCredit";
@@ -435,6 +436,7 @@ export async function registerRoutes(
   registerReportRoutes(app);
   registerDermRecordRoutes(app);
   registerGlowAssistantRoutes(app);
+  registerDermFollowupRoutes(app);
   registerRelayOnboardingRoutes(app, { checkAdmin: checkDatasetKey });
   registerCaseThreadRoutes(app);
   registerRelayCreditRoutes(app, { checkAdmin: checkDatasetKey });
@@ -4451,6 +4453,8 @@ Réponds en 2-4 phrases max, sois direct et utile.`;
           if (state !== "unusable") return twiml(text);
         }
       }
+      // Message libre d'un patient suivi : visible dans sa fiche de suivi (« dernier message »).
+      if (phone && body.trim()) await recordPatientMessage(phone, body).catch((e) => console.error("[whatsapp-inbound] suivi :", e?.message));
       return twiml();
     } catch (err) {
       console.error("[whatsapp-inbound] erreur :", err);
