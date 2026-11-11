@@ -108,7 +108,7 @@ export default function DermDossier() {
           actions={<>
             <Btn kind="link" onClick={() => go("/derm/dossiers")}>← Tous les dossiers</Btn>
             <Btn kind="secondary" onClick={() => window.open(`${key}/export`, "_blank", "noopener")} data-testid="dossier-export">Exporter le dossier ↓</Btn>
-            <Btn kind="primary" onClick={() => go(`/derm/dossiers/${p.id}/compte-rendu`)} data-testid="dossier-new">Nouvelle consultation +</Btn>
+            <Btn kind="primary" onClick={() => go(`/derm/consultation?patient=${p.id}`)} data-testid="dossier-new">Nouvelle consultation +</Btn>
           </>} />
         {msg && <Notice tone={msg.tone} onClose={() => setMsg(null)}>{msg.t}</Notice>}
 

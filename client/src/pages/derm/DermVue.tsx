@@ -138,7 +138,7 @@ export default function DermVue() {
             <h1 style={{ margin: "7px 0 5px", font: `700 28px ${FONT_HEAD}`, letterSpacing: -1.1, color: D.textAlt }} data-testid="derm-hello">{hello}</h1>
             <p style={{ margin: 0, color: "#758681", fontSize: 10 }}>Glow a préparé l'essentiel de votre activité.</p>
           </div>
-          <button type="button" onClick={() => go("/derm/accueil")} className="flex cursor-pointer items-center justify-center"
+          <button type="button" onClick={() => go(isSecretary ? "/derm/accueil" : "/derm/consultation")} className="flex cursor-pointer items-center justify-center"
             style={{ gap: 7, minHeight: 39, padding: "0 15px", borderRadius: 9, background: D.cta, color: "#fff", fontSize: 9, fontWeight: 700, border: 0, boxShadow: "0 7px 16px rgba(29,112,105,.13)", whiteSpace: "nowrap" }}>
             <Plus size={13} strokeWidth={2} />Nouvelle consultation
           </button>

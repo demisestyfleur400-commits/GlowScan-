@@ -49,7 +49,6 @@ import type { AnalysisResult, Patient } from "@shared/schema";
 import { ProLayout, ProCard, ProInput } from "@/components/ProLayout";
 import { ClinicalDossierForm, type ClinicalRecord } from "@/components/pro/ClinicalDossierForm";
 import { ExamenPhysiqueForm, EMPTY_EXAMEN, type ExamenData } from "@/components/pro/ExamenPhysiqueForm";
-import { ClinicalReasoningPanel } from "@/components/pro/ClinicalReasoningPanel";
 import PDFViewerModal from "@/components/PDFViewerModal";
 import { PremiumPdfTemplate } from "@/templates/PremiumPdfTemplate";
 import { buildObservationDoc, type ObservationData } from "@/lib/observationPdf";
@@ -59,6 +58,10 @@ import { detectToxicProducts } from "@/lib/toxic-products";
 import { ClinicalRulesPanel } from "@/components/pro/ClinicalRulesPanel";
 import { evaluateRules } from "@/lib/clinicalRules";
 import { ConfidenceEscalation } from "@/components/pro/ConfidenceEscalation";
+import { DermShell } from "@/components/derm/DermShell";
+import { D as DD, patientCode } from "@/components/derm/tokens";
+import { GlowAssistant, type GlowCase } from "@/components/derm/GlowAssistant";
+import { CompteRenduFlow } from "@/components/derm/CompteRenduFlow";
 
 const NAVY = "var(--color-accent)";
 const INK = "var(--color-text)";
@@ -212,7 +215,7 @@ function QuickAnnotate({ scanId, condition }: { scanId?: number; condition?: str
 
   return (
     <div className="rounded-2xl p-4 mb-3 text-left" style={{ background: "var(--color-bg)", border: "1px solid #F1F5F9" }}>
-      <p className="text-[11px] font-extrabold mb-3" style={{ color: "#0891B2" }}>
+      <p className="text-[11px] font-extrabold mb-3" style={{ color: "#1f5c48" }}>
         Données cliniques complémentaires
       </p>
 
@@ -245,9 +248,9 @@ function QuickAnnotate({ scanId, condition }: { scanId?: number; condition?: str
             onClick={() => setLesions(prev => toggleArr(prev, l.id))}
             className="px-2.5 py-1 rounded-full text-[10px] font-bold transition-all"
             style={{
-              background: lesions.includes(l.id) ? "rgba(139,92,246,0.3)" : "var(--color-bg)",
+              background: lesions.includes(l.id) ? "rgba(42,107,79,0.14)" : "var(--color-bg)",
               color: lesions.includes(l.id) ? "#0891B2" : "#6b7280",
-              border: lesions.includes(l.id) ? "1px solid #7c3aed" : "1px solid #F1F5F9",
+              border: lesions.includes(l.id) ? "1px solid #2a6b4f" : "1px solid #F1F5F9",
             }}
           >{l.label}</button>
         ))}
@@ -309,7 +312,7 @@ function QuickAnnotate({ scanId, condition }: { scanId?: number; condition?: str
         disabled={!phototype || submitting}
         className="w-full py-2 rounded-xl text-xs font-extrabold transition-all"
         style={{
-          background: phototype ? "linear-gradient(135deg,#7c3aed,#4f46e5)" : "var(--color-bg)",
+          background: phototype ? "linear-gradient(135deg,#1f5c48,#2a6b4f)" : "var(--color-bg)",
           color: phototype ? "var(--color-neutral-100)" : "#4b5563",
           opacity: submitting ? 0.7 : 1,
         }}
@@ -420,6 +423,9 @@ export default function ProAnalyze() {
   // Étape 7 — choix du rapport remis au patient : fusionné (IA + clinique) / clinique seul / IA seul.
   const [reportMode, setReportMode] = useState<"fusionne" | "clinique" | "ia">("fusionne");
 
+  // Patient préparé par l'accueil (salle d'attente) : bandeau « Faire entrer ».
+  const [waiting, setWaiting] = useState(false);
+
   // Clinical Override
   const [showPartialOverride, setShowPartialOverride] = useState(false);
   const [showFullManual, setShowFullManual] = useState(false);
@@ -475,6 +481,7 @@ export default function ProAnalyze() {
         setSex((p.sex as any) || "—");
         setPhone(p.whatsappNumber || "");
         if (p.clinicalRecord && typeof p.clinicalRecord === "object") setClinicalRecord(p.clinicalRecord);
+        if (p.intakePending) setWaiting(true);
         setPatientMode("existing");
         setStep(2); // droit à l'examen
       } catch {}
@@ -1308,20 +1315,47 @@ export default function ProAnalyze() {
     allergies ? `Allergies : ${allergies}` : "",
   ].filter(Boolean).join(" · ") || undefined;
 
+  const glowCase: GlowCase = {
+    age, sex: sex === "—" ? "" : sex, motif: consultMotif || (clinicalRecord as any)?.motif || "", duration: problemDuration,
+    anamnese: (() => {
+      const cr: any = clinicalRecord || {};
+      const labels: Record<string, string> = { prurit: "Prurit", douleur: "Douleur/brûlure", soleil: "Aggravation au soleil", extension: "Extension des lésions", fievre: "Fièvre", atopie: "Terrain atopique", medicaments: "Médicaments en cours", familial: "Antécédents familiaux cutanés" };
+      return Object.keys(labels).map((k) => (cr[`anam_${k}`] ? `${labels[k]} : ${cr[`anam_${k}`]}` : "")).filter(Boolean).join(" · ");
+    })(),
+    antecedents: Object.entries(clinicalRecord || {}).filter(([k, v]) => !k.startsWith("anam_") && typeof v === "string" && v.trim()).map(([k, v]) => `${k} : ${v}`).join(" · ").slice(0, 1500),
+    products: previousProducts, allergies, phototype: examen.phototype, examen: examSignsText,
+    questionnaire: questionnaire.filter((q) => answers[q.id]).map((q) => `${q.label} : ${answers[q.id]}`).join(" · "),
+    analysis: result ? [result.condition, (result as any)?.severity, result.score ? `Glow Score ${result.score}/100` : ""].filter(Boolean).join(" · ") : "",
+    hypothesis: override?.condition || overrideCondition || "", notes: practitionerNotes,
+  };
+
   return (
-    <ProLayout onBack={() => {
-      // Retour ÉTAPE PAR ÉTAPE (ne quitte le wizard que depuis la 1re étape).
-      if (step > 1) { setStep(step - 1); return; }
-      if (patientMode !== "choice") { setPatientMode("choice"); return; }
-      setLocation("/derm/dashboard");
+    <DermShell active="dossiers" showBack onBack={() => {
+      // Retour ÉTAPE PAR ÉTAPE (ne quitte le parcours que depuis la 1re étape).
+      if (step > 1 && !dossierSaved) { setStep((step - 1) as Step); return; }
+      if (step === 1 && patientMode !== "choice") { setPatientMode("choice"); return; }
+      window.history.back();
     }}>
-      <div className="max-w-3xl mx-auto print:max-w-full">
-        <SubscriptionExpiredBanner />
-        <header className="mb-organic-4 flex flex-col gap-1 print:hidden">
-          <span className="text-[11px] font-bold uppercase tracking-[.12em] text-organic-accent-700">Nouvelle analyse · étape {step} sur 5</span>
-          <h1 className="m-0 text-[clamp(28px,4vw,38px)]">{STEPS[step - 1].label}</h1>
-        </header>
-        <ProgressBar current={step} onGo={(n) => { if (n < step) setStep(n); }} />
+     <div className="derm-theme print:max-w-full" style={{ maxWidth: 1320, margin: "auto", padding: "30px 32px 40px" }}>
+      <SubscriptionExpiredBanner />
+      <div className="flex flex-wrap items-end justify-between print:hidden" style={{ gap: 16, marginBottom: 18 }}>
+        <div>
+          <span style={{ display: "block", color: DD.action, fontSize: 10, fontWeight: 700, letterSpacing: .4 }}>NOUVELLE CONSULTATION · AU CABINET</span>
+          <h1 style={{ margin: "10px 0 8px", font: "600 31px/1.1 'DM Sans',sans-serif", letterSpacing: -.6, color: DD.text }}>Accueillir, examiner, documenter.</h1>
+          <p style={{ margin: 0, color: DD.muted, fontSize: 13 }}>Étape {step} sur 5 · {STEPS[step - 1].label}</p>
+        </div>
+        <button type="button" onClick={() => { if (step === 1 || window.confirm("Recommencer ? Les saisies de cette consultation seront effacées.")) resetAll(); }}
+          style={{ border: 0, background: "none", color: DD.action, fontSize: 12, fontWeight: 600, cursor: "pointer" }} data-testid="nc-restart">Recommencer</button>
+      </div>
+      <ProgressBar current={step} locked={dossierSaved} onGo={(n) => { if (n < step && !dossierSaved) setStep(n); }} />
+      <div className="flex flex-wrap items-start" style={{ gap: 20, marginTop: 18 }}>
+      <div style={{ flex: "3 1 560px", minWidth: 0 }}>
+        {waiting && step === 2 && (
+          <div className="flex flex-wrap items-center justify-between" style={{ gap: 12, padding: "14px 18px", borderRadius: 12, background: "#17392c", color: "#fff", marginBottom: 14 }} data-testid="nc-waiting">
+            <span className="flex flex-col"><b style={{ fontSize: 13 }}>En salle d'attente · dossier prêt</b><span style={{ fontSize: 11, color: "#bcd0c8" }}>Préparé par l'accueil : anamnèse et photos déjà saisies.</span></span>
+            <button type="button" onClick={() => setWaiting(false)} style={{ height: 36, padding: "0 16px", border: 0, borderRadius: 4, background: DD.wait, color: "#17392c", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Faire entrer →</button>
+          </div>
+        )}
 
         {/* ════════ STEP 1 : Patient ════════ */}
         {step === 1 && (
@@ -1395,7 +1429,7 @@ export default function ProAnalyze() {
                         onChange={(e) => setSex(e.target.value as any)}
                         data-testid="select-sex"
                         className="w-full px-3 py-2 rounded-xl text-sm outline-none"
-                        style={{ background: "var(--color-bg)", border: "1px solid rgba(167,139,250,0.2)", color: INK }}
+                        style={{ background: "var(--color-bg)", border: "1px solid rgba(42,107,79,0.2)", color: INK }}
                       >
                         <option value="—">—</option>
                         <option value="F">Femme</option>
@@ -1444,7 +1478,7 @@ export default function ProAnalyze() {
                     placeholder="Rechercher Mbarga, Marie, 677..."
                     data-testid="input-search-patient"
                     className="w-full pl-9 pr-3 py-2 rounded-xl text-sm outline-none"
-                    style={{ background: "var(--color-bg)", border: "1px solid rgba(167,139,250,0.2)", color: INK }}
+                    style={{ background: "var(--color-bg)", border: "1px solid rgba(42,107,79,0.2)", color: INK }}
                   />
                 </div>
                 <div className="space-y-1.5 max-h-80 overflow-y-auto">
@@ -1527,15 +1561,6 @@ export default function ProAnalyze() {
             {/* ── Examen physique du médecin — AVANT la photo et l'IA (§2, §3) ── */}
             <div className="mb-4">
               <ExamenPhysiqueForm value={examen} onChange={setExamen} />
-              {/* Raisonnement clinique IA — différentiels live sur les signes saisis */}
-              <ClinicalReasoningPanel
-                signesCliniques={examSignsText}
-                diagnostic={(result as any)?.condition}
-                fitzpatrick={examen.phototype}
-                age={age}
-                historiquePatient={patientHistoryText}
-                patientId={patientId || undefined}
-              />
             </div>
 
             {/* Rubrique : Visage ou Corps */}
@@ -1544,7 +1569,7 @@ export default function ProAnalyze() {
                 <button key={v} type="button" onClick={() => setExamArea(v)}
                   className="flex-1 py-2 rounded-xl text-xs font-extrabold transition-all"
                   style={examArea === v
-                    ? { background: "rgba(124,58,237,0.18)", border: "1.5px solid rgba(124,58,237,0.5)", color: "#0891B2" }
+                    ? { background: "rgba(42,107,79,0.18)", border: "1.5px solid rgba(42,107,79,0.5)", color: "#1f5c48" }
                     : { background: "var(--color-bg)", border: `1px solid ${DS.border}`, color: DS.muted }}>
                   {lab}
                 </button>
@@ -1563,7 +1588,7 @@ export default function ProAnalyze() {
                 <div key={slot.key}>
                   <button type="button" onClick={() => slot.ref.current?.click()}
                     className="w-full rounded-xl overflow-hidden relative"
-                    style={{ aspectRatio: "3/4", border: slot.src ? `1px solid ${DS.border}` : "2px dashed rgba(167,139,250,0.3)", background: "var(--color-bg)" }}>
+                    style={{ aspectRatio: "3/4", border: slot.src ? `1px solid ${DS.border}` : "2px dashed rgba(42,107,79,0.3)", background: "var(--color-bg)" }}>
                     {slot.src ? (
                       <img src={slot.src} alt={slot.label} className="w-full h-full object-cover" />
                     ) : (
@@ -1662,17 +1687,6 @@ export default function ProAnalyze() {
                   protocolText: getProtocolProducts(result).join(" · "),
                 })} />
 
-                {/* ── Raisonnement clinique IA unifié (trace auditable + fil interactif) ── */}
-                <ClinicalReasoningPanel
-                  signesCliniques={examSignsText}
-                  diagnostic={(result as any)?.condition}
-                  fitzpatrick={examen.phototype}
-                  age={age}
-                  historiquePatient={patientHistoryText}
-                  reasoningSteps={Array.isArray((result as any)?.reasoningSteps) ? (result as any).reasoningSteps : undefined}
-                  autoAnalyze={false}
-                  patientId={patientId || undefined}
-                />
 
                 <Suspense fallback={
                   <div className="flex justify-center py-12">
@@ -1708,9 +1722,9 @@ export default function ProAnalyze() {
                 </Suspense>
 
                 {/* Notes cliniques praticien */}
-                <div className="mt-5 rounded-2xl p-4" style={{ background: "var(--color-bg)", border: "1px solid rgba(167,139,250,0.15)" }}>
+                <div className="mt-5 rounded-2xl p-4" style={{ background: "var(--color-bg)", border: "1px solid rgba(42,107,79,0.15)" }}>
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-[10px] font-extrabold uppercase tracking-wider" style={{ color: "rgba(167,139,250,0.5)" }}>
+                    <p className="text-[10px] font-extrabold uppercase tracking-wider" style={{ color: "rgba(42,107,79,0.5)" }}>
                       Notes cliniques du praticien (optionnel) — incluses dans le PDF du patient
                     </p>
                     <VoiceButton value={practitionerNotes} onChange={(t) => setPractitionerNotes(t)} />
@@ -1723,7 +1737,7 @@ export default function ProAnalyze() {
                     className="w-full outline-none resize-none"
                     style={{
                       background: "var(--color-bg)",
-                      border: "1px solid rgba(167,139,250,0.2)",
+                      border: "1px solid rgba(42,107,79,0.2)",
                       borderRadius: 12,
                       padding: "12px 16px",
                       fontSize: 13,
@@ -1735,9 +1749,9 @@ export default function ProAnalyze() {
                 </div>
 
                 {/* ══ CLINICAL OVERRIDE ══ */}
-                <div className="mt-4 rounded-2xl overflow-hidden" style={{ border: "1px solid rgba(167,139,250,0.2)" }}>
+                <div className="mt-4 rounded-2xl overflow-hidden" style={{ border: "1px solid rgba(42,107,79,0.2)" }}>
                   {/* Header */}
-                  <div className="px-4 py-3 flex items-center justify-between" style={{ background: "rgba(124,58,237,0.08)" }}>
+                  <div className="px-4 py-3 flex items-center justify-between" style={{ background: "rgba(42,107,79,0.08)" }}>
                     <div>
                       <p className="text-xs font-extrabold" style={{ color: "var(--color-accent-700)" }}>
                         ✏️ Clinical Override
@@ -1747,11 +1761,11 @@ export default function ProAnalyze() {
                           </span>
                         )}
                       </p>
-                      <p className="text-[10px] mt-0.5" style={{ color: "rgba(167,139,250,0.5)" }}>Modifiez ou remplacez le diagnostic IA</p>
+                      <p className="text-[10px] mt-0.5" style={{ color: "rgba(42,107,79,0.5)" }}>Modifiez ou remplacez le diagnostic IA</p>
                     </div>
                     {overrideType !== "none" && (
                       <button onClick={() => { setOverrideType("none"); setShowPartialOverride(false); setShowFullManual(false); }}
-                        className="text-[10px] font-bold" style={{ color: "rgba(167,139,250,0.6)" }}>
+                        className="text-[10px] font-bold" style={{ color: "rgba(42,107,79,0.6)" }}>
                         Annuler
                       </button>
                     )}
@@ -1763,7 +1777,7 @@ export default function ProAnalyze() {
                       <button
                         onClick={() => { setShowPartialOverride(true); setOverrideCondition(result?.condition || ""); setOverrideScore(result?.score || 70); setOverrideSummary((result as any)?.clinicalSummary || result?.details || ""); }}
                         className="flex-1 text-xs font-extrabold py-2 rounded-xl transition-all active:scale-95"
-                        style={{ background: "rgba(124,58,237,0.1)", border: "1px solid rgba(124,58,237,0.3)", color: "var(--color-accent-700)" }}
+                        style={{ background: "rgba(42,107,79,0.1)", border: "1px solid rgba(42,107,79,0.3)", color: "var(--color-accent-700)" }}
                       >
                         ✏️ Corriger le diagnostic IA
                       </button>
@@ -1784,14 +1798,14 @@ export default function ProAnalyze() {
                         <label className="text-[10px] font-bold block mb-1" style={{ color: DS.muted }}>Condition corrigée</label>
                         <input type="text" value={overrideCondition} onChange={e => setOverrideCondition(e.target.value)}
                           className="w-full rounded-xl px-3 py-2 text-sm outline-none"
-                          style={{ background: "var(--color-bg)", border: "1px solid rgba(167,139,250,0.2)", color: "var(--color-text)" }} />
+                          style={{ background: "var(--color-bg)", border: "1px solid rgba(42,107,79,0.2)", color: "var(--color-text)" }} />
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <label className="text-[10px] font-bold block mb-1" style={{ color: DS.muted }}>Sévérité</label>
                           <select value={overrideSeverity} onChange={e => setOverrideSeverity(e.target.value)}
                             className="w-full rounded-xl px-3 py-2 text-sm outline-none"
-                            style={{ background: "var(--color-bg)", border: "1px solid rgba(167,139,250,0.2)", color: "var(--color-text)" }}>
+                            style={{ background: "var(--color-bg)", border: "1px solid rgba(42,107,79,0.2)", color: "var(--color-text)" }}>
                             {["Légère", "Modérée", "Sévère", "Critique"].map(s => <option key={s}>{s}</option>)}
                           </select>
                         </div>
@@ -1805,14 +1819,14 @@ export default function ProAnalyze() {
                         <label className="text-[10px] font-bold block mb-1" style={{ color: DS.muted }}>Évaluation clinique corrigée</label>
                         <textarea value={overrideSummary} onChange={e => setOverrideSummary(e.target.value)}
                           rows={3} className="w-full rounded-xl px-3 py-2 text-sm outline-none resize-none"
-                          style={{ background: "var(--color-bg)", border: "1px solid rgba(167,139,250,0.2)", color: "var(--color-text)" }} />
+                          style={{ background: "var(--color-bg)", border: "1px solid rgba(42,107,79,0.2)", color: "var(--color-text)" }} />
                       </div>
                       <div>
                         <label className="text-[10px] font-bold block mb-1" style={{ color: DS.muted }}>Motif de correction (optionnel)</label>
                         <input type="text" value={overrideReason} onChange={e => setOverrideReason(e.target.value)}
                           placeholder="Ex: aspect clinique non capté par la photo..."
                           className="w-full rounded-xl px-3 py-2 text-sm outline-none"
-                          style={{ background: "var(--color-bg)", border: "1px solid rgba(167,139,250,0.2)", color: "var(--color-text)" }} />
+                          style={{ background: "var(--color-bg)", border: "1px solid rgba(42,107,79,0.2)", color: "var(--color-text)" }} />
                       </div>
                       <button onClick={() => { setOverrideType("partial"); setShowPartialOverride(false); }}
                         className="w-full py-2.5 rounded-full text-sm font-extrabold" style={{ background: "var(--color-accent)", color: "var(--color-neutral-100)" }}>
@@ -1832,14 +1846,14 @@ export default function ProAnalyze() {
                         <input type="text" value={overrideCondition} onChange={e => setOverrideCondition(e.target.value)}
                           placeholder="Ex: Dermatite séborrhéique modérée..."
                           className="w-full rounded-xl px-3 py-2 text-sm outline-none"
-                          style={{ background: "var(--color-bg)", border: "1px solid rgba(167,139,250,0.2)", color: "var(--color-text)" }} />
+                          style={{ background: "var(--color-bg)", border: "1px solid rgba(42,107,79,0.2)", color: "var(--color-text)" }} />
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <label className="text-[10px] font-bold block mb-1" style={{ color: DS.muted }}>Sévérité</label>
                           <select value={overrideSeverity} onChange={e => setOverrideSeverity(e.target.value)}
                             className="w-full rounded-xl px-3 py-2 text-sm outline-none"
-                            style={{ background: "var(--color-bg)", border: "1px solid rgba(167,139,250,0.2)", color: "var(--color-text)" }}>
+                            style={{ background: "var(--color-bg)", border: "1px solid rgba(42,107,79,0.2)", color: "var(--color-text)" }}>
                             {["Légère", "Modérée", "Sévère", "Critique"].map(s => <option key={s}>{s}</option>)}
                           </select>
                         </div>
@@ -1854,7 +1868,7 @@ export default function ProAnalyze() {
                         <textarea value={overrideSummary} onChange={e => setOverrideSummary(e.target.value)}
                           rows={5} className="w-full rounded-xl px-3 py-2 text-sm outline-none resize-none"
                           placeholder="Rédigez votre diagnostic complet ici..."
-                          style={{ background: "var(--color-bg)", border: "1px solid rgba(167,139,250,0.2)", color: "var(--color-text)" }} />
+                          style={{ background: "var(--color-bg)", border: "1px solid rgba(42,107,79,0.2)", color: "var(--color-text)" }} />
                       </div>
                       <button onClick={() => { setOverrideType("full"); setShowFullManual(false); }}
                         className="w-full py-2.5 rounded-full text-sm font-extrabold" style={{ background: "var(--color-accent)", color: "var(--color-neutral-100)" }}>
@@ -1940,7 +1954,7 @@ export default function ProAnalyze() {
                       <div className="flex items-start gap-2 mb-2">
                         <span
                           className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-lg"
-                          style={{ background: "rgba(124,58,237,0.15)", color: NAVY }}
+                          style={{ background: "rgba(42,107,79,0.15)", color: NAVY }}
                         >
                           Q{i + 1}
                         </span>
@@ -2107,12 +2121,12 @@ export default function ProAnalyze() {
                   />
 
                   {/* ─── Classification patient (TÂCHE 4) ─── */}
-                  <div className="rounded-2xl p-4 mb-4" style={{ background: "var(--color-bg)", border: "1px solid rgba(167,139,250,0.15)" }}>
+                  <div className="rounded-2xl p-4 mb-4" style={{ background: "var(--color-bg)", border: "1px solid rgba(42,107,79,0.15)" }}>
                     <p className="text-[11px] font-extrabold uppercase tracking-wider mb-3" style={{ color: DS.muted }}>Classer ce patient :</p>
                     <div className="grid grid-cols-2 gap-2">
                       {([
                         { v: "priority" as PatientStatus, label: "Priorité haute", color: "var(--color-accent-700)", bg: "rgba(239,68,68,0.1)", border: "rgba(239,68,68,0.3)" },
-                        { v: "monitoring" as PatientStatus, label: "En suivi", color: NAVY, bg: "rgba(124,58,237,0.1)", border: "rgba(124,58,237,0.3)" },
+                        { v: "monitoring" as PatientStatus, label: "En suivi", color: NAVY, bg: "rgba(42,107,79,0.1)", border: "rgba(42,107,79,0.3)" },
                         { v: "stable" as PatientStatus, label: "Stable", color: GREEN, bg: "rgba(16,185,129,0.1)", border: "rgba(16,185,129,0.3)" },
                         { v: "resolved" as PatientStatus, label: "Résolu", color: DS.muted, bg: "var(--color-bg)", border: DS.border },
                       ]).map(opt => {
@@ -2145,31 +2159,15 @@ export default function ProAnalyze() {
                     )}
                   </div>
 
-                  {/* Tooltip contextuel — premier rapport PDF */}
-                  <ContextualTip tipKey="rapport_pdf"
-                    title="Rapport à votre nom"
-                    body="Ce rapport est généré avec votre nom et votre numéro d'ordre. Il part automatiquement sur le WhatsApp de votre patient à la clôture." />
-
-                  {/* Actions — Rapport clinique = observation médicale UNIQUEMENT
-                      (plus de pages patient B2C collées en haut). */}
-                  <button
-                    onClick={() => openPdfViewer()}
-                    data-testid="button-pdf"
-                    className="w-full inline-flex items-center justify-center gap-2 py-3.5 rounded-full text-white font-extrabold active:scale-[0.98] transition-all mb-3"
-                    style={{ background: NAVY, fontSize: 14 }}
-                  >
-                    <FileText className="w-4 h-4" />
-                    Voir le rapport clinique
-                  </button>
-                  <p className="text-[11px] text-center mb-4" style={{ color: DS.muted }}>
-                    Résultats de la consultation · Dr {lastName || "..."} — Modifier · Envoyer · Télécharger
+                  <p className="text-[11px] text-center mb-2" style={{ color: DS.muted }}>
+                    Le compte rendu de la consultation se rédige ci-dessous, au format A4 du cabinet.
                   </p>
 
                   {/* Examen physique désormais collecté AVANT l'analyse (étape 2) */}
 
                   <div className="grid grid-cols-2 gap-2 mt-3">
                     <button
-                      onClick={() => patientId && setLocation(`/derm/patient/${patientId}`)}
+                      onClick={() => patientId && setLocation(`/derm/dossiers/${patientId}`)}
                       data-testid="button-view-dossier"
                       className="inline-flex items-center justify-center gap-1.5 py-2.5 rounded-full text-xs font-extrabold active:scale-[0.97] transition-all"
                       style={{ background: "var(--color-divider)", border: "1px solid #E2E8F0", color: DS.body }}
@@ -2184,7 +2182,7 @@ export default function ProAnalyze() {
                       style={{ background: "var(--color-divider)", border: "1px solid #E2E8F0", color: DS.body }}
                     >
                       <RefreshCw className="w-3.5 h-3.5" />
-                      Nouvelle analyse
+                      Patient suivant
                     </button>
                   </div>
                 </>
@@ -2196,9 +2194,37 @@ export default function ProAnalyze() {
                 </div>
               )}
             </ProCard>
+            {dossierSaved && patientId && (
+              <div style={{ marginTop: 16 }}>
+                <CompteRenduFlow pid={patientId} embedded onDone={resetAll}
+                  prefill={{ motif: [consultMotif || (clinicalRecord as any)?.motif, problemDuration ? `Depuis ${problemDuration}` : ""].filter(Boolean).join(". "), exam: [examSignsText, practitionerNotes].filter(Boolean).join("\n") }} />
+              </div>
+            )}
           </div>
         )}
       </div>
+
+      <aside className="flex flex-col print:hidden" style={{ flex: "1 1 300px", minWidth: 280, gap: 14 }}>
+        <div style={{ background: "#fff", border: `1px solid ${DD.border}`, borderRadius: 12, padding: "16px 18px" }} data-testid="nc-patient">
+          <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: .8, color: DD.action }}>
+            {patientId ? (patientMode === "new" ? `NOUVEAU PATIENT · ${patientCode(patientId)}` : `PATIENT DU CABINET · ${patientCode(patientId)}`) : patientMode === "new" ? "NOUVEAU PATIENT" : "PATIENT"}
+          </span>
+          <b style={{ display: "block", margin: "6px 0 3px", fontSize: 15, fontWeight: 600, color: DD.text }}>{patientLabel !== "—" ? patientLabel : "À choisir"}</b>
+          <span style={{ fontSize: 11, color: DD.muted }}>{[age ? `${age} ans` : "", sex === "F" ? "Femme" : sex === "M" ? "Homme" : "", result?.condition || (patient as any)?.lastCondition || ""].filter(Boolean).join(" · ") || "Choisissez ou créez la fiche à l'étape 1."}</span>
+          {step >= 3 && consultMotif && <p style={{ margin: "10px 0 0", fontSize: 11.5, fontStyle: "italic", color: DD.text }}>« {consultMotif} »</p>}
+          {patientId && <button type="button" onClick={() => setLocation(`/derm/dossiers/${patientId}`)} style={{ display: "block", marginTop: 10, border: 0, background: "none", padding: 0, color: DD.action, fontSize: 11, fontWeight: 600, cursor: "pointer" }}>Ouvrir le dossier médical →</button>}
+        </div>
+        {isDoctor && (patientId || step >= 2) && (
+          <GlowAssistant patientId={patientId} images={[photoBase64, photoRight, photoLeft].filter(Boolean) as string[]}
+            analyzeKey={(result as any)?.savedScanId || null} caseData={glowCase} />
+        )}
+        <div style={{ background: DD.tintActive, borderRadius: 12, padding: "14px 18px" }}>
+          <b style={{ fontSize: 12, fontWeight: 600, color: DD.actionDark }}>Qui fait quoi</b>
+          <p style={{ margin: "6px 0 0", fontSize: 11, color: DD.text, lineHeight: 1.55 }}>L'accueil (secrétaire ou infirmière) enregistre le patient, l'anamnèse et les photos. Le dermatologue examine, échange avec Glow, conclut et signe. La signature est réservée au médecin.</p>
+        </div>
+      </aside>
+      </div>
+     </div>
 
       <style>{`
         @media print {
@@ -2218,22 +2244,26 @@ export default function ProAnalyze() {
         dermatologue={`Dr. ${lastName} ${firstName}`.trim()}
         patientId={patientId || undefined}
       />
-    </ProLayout>
+    </DermShell>
   );
 }
 
 // ─── Sub-components ────────────────────────────────────────────────────
-function ProgressBar({ current, onGo }: { current: Step; onGo?: (n: Step) => void }) {
+function ProgressBar({ current, onGo, locked }: { current: Step; onGo?: (n: Step) => void; locked?: boolean }) {
   return (
-    <div className="flex flex-wrap gap-1.5 print:hidden" role="list">
+    <div className="flex flex-wrap print:hidden" role="list" style={{ gap: 8 }}>
       {STEPS.map((s) => {
         const done = s.n < current;
         const active = s.n === current;
+        const reachable = done && !locked;
         return (
-          <button key={s.n} type="button" role="listitem" onClick={() => onGo?.(s.n as Step)} disabled={!done}
-            aria-current={active ? "step" : undefined}
-            className={`flex items-center gap-2 rounded-pill border-0 py-1.5 pl-1.5 pr-3.5 font-body text-[13px] font-bold ${active ? "bg-organic-surface" : "bg-transparent"} ${active || done ? "text-organic-text" : "text-organic-neutral-700"} ${done ? "cursor-pointer" : "cursor-default"}`}>
-            <span className={`flex h-6 w-6 items-center justify-center rounded-full text-[12px] ${active ? "bg-organic-accent text-organic-bg" : done ? "bg-organic-accent-2-600 text-organic-bg" : "bg-organic-neutral-200 text-organic-neutral-800"}`}>
+          <button key={s.n} type="button" role="listitem" onClick={() => onGo?.(s.n as Step)} disabled={!reachable}
+            aria-current={active ? "step" : undefined} data-testid={`nc-step-${s.n}`}
+            style={{ flex: "1 1 150px", display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 8, border: `1px solid ${active ? "#cfe0c4" : "#e4e8e3"}`,
+              background: active ? "#eef4e8" : "#fff", color: "#17392c", fontSize: 11.5, fontWeight: active ? 700 : 500, fontFamily: "'DM Sans',sans-serif",
+              opacity: !active && !done ? .5 : 1, cursor: reachable ? "pointer" : "default", textAlign: "left" }}>
+            <span style={{ flex: "none", width: 24, height: 24, borderRadius: 4, display: "grid", placeItems: "center", fontSize: 11, fontWeight: 700,
+              background: active ? "#1f5c48" : done ? "#cfe0c4" : "#f3f6f3", color: active ? "#fff" : "#17392c" }}>
               {done ? "✓" : s.n}
             </span>
             {s.label}
@@ -2289,7 +2319,7 @@ function ScanLoader({ photo }: { photo: string | null }) {
         ) : (
           <div className="absolute inset-0" style={{ background: "var(--color-bg)" }} />
         )}
-        <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, rgba(124,58,237,0.15), transparent, rgba(124,58,237,0.2))" }} />
+        <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, rgba(42,107,79,0.15), transparent, rgba(42,107,79,0.2))" }} />
         <span className="absolute top-2 left-2 w-5 h-5 border-t-2 border-l-2" style={{ borderColor: NAVY }} />
         <span className="absolute top-2 right-2 w-5 h-5 border-t-2 border-r-2" style={{ borderColor: NAVY }} />
         <span className="absolute bottom-2 left-2 w-5 h-5 border-b-2 border-l-2" style={{ borderColor: NAVY }} />
@@ -2306,7 +2336,7 @@ function ScanLoader({ photo }: { photo: string | null }) {
       <div className="text-center">
         <div
           className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-3"
-          style={{ background: "rgba(124,58,237,0.12)", border: "1px solid rgba(124,58,237,0.3)" }}
+          style={{ background: "rgba(42,107,79,0.12)", border: "1px solid rgba(42,107,79,0.3)" }}
         >
           <ScanLine className="w-3.5 h-3.5 animate-pulse" style={{ color: NAVY }} />
           <span className="text-xs font-extrabold" style={{ color: "var(--color-accent-700)" }}>{phases[phase]}</span>

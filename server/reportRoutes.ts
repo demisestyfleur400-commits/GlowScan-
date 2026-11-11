@@ -294,6 +294,19 @@ export function registerReportRoutes(app: Express) {
           VALUES (${req.proAccount.id}, ${source}, ${source === "consultation" ? target : null}, ${source === "visit" ? target : null}, ${JSON.stringify(payload)}::jsonb)
           RETURNING *`))[0];
       }
+      // Nouvelle consultation (D3) : motif et observations du parcours remplissent
+      // les champs encore vides du brouillon (jamais la conclusion ni la prescription).
+      const pre = req.body?.prefill;
+      if (a4 && pre && !r.signed_at) {
+        const q = reportPayloadSchema.parse(r.payload || {});
+        const motif = typeof pre.motif === "string" ? pre.motif.trim().slice(0, 600) : "";
+        const exam = typeof pre.exam === "string" ? pre.exam.trim().slice(0, 1500) : "";
+        if ((motif && !q.motif) || (exam && !q.exam)) {
+          const next = { ...q, motif: q.motif || motif, exam: q.exam || exam };
+          await db.execute(sql`UPDATE consult_reports SET payload = ${JSON.stringify(next)}::jsonb, updated_at = NOW() WHERE id = ${r.id}`);
+          r = { ...r, payload: next };
+        }
+      }
       const d = await loadDoctor(req.proAccount.id);
       res.json({ report: { ...(await summary(r)), payload: reportPayloadSchema.parse(r.payload || {}) }, doctor: { licenseNumber: d.licenseNumber, cabinetAddress: d.cabinetAddress, specialtyTitle: d.specialtyTitle || DEFAULT_SPECIALTY } });
     } catch (e) {

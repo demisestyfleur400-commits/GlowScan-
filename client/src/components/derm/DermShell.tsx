@@ -102,7 +102,7 @@ function PatientSearch() {
   );
 }
 
-export function DermShell({ active, children, showBack }: { active: DermNavKey; children: ReactNode; showBack?: boolean }) {
+export function DermShell({ active, children, showBack, onBack }: { active: DermNavKey; children: ReactNode; showBack?: boolean; onBack?: () => void }) {
   const [, navigate] = useLocation();
   const { logout } = useAuth();
   const { data: accData } = useProAccount();
@@ -189,14 +189,14 @@ export function DermShell({ active, children, showBack }: { active: DermNavKey; 
         <div className="sticky top-0 z-20 flex items-center px-4 md:px-[35px]" style={{ gap: 14, height: 72, background: "rgba(255,255,255,.82)", borderBottom: "1px solid #e2e8e4", WebkitBackdropFilter: "blur(12px)", backdropFilter: "blur(12px)" }}>
           <button type="button" onClick={() => setDrawer(true)} aria-label="Menu" className="flex-none cursor-pointer md:hidden" style={{ border: 0, background: "none", color: D.text, padding: 4 }}><Menu size={20} /></button>
           {back && (
-            <button type="button" onClick={() => window.history.back()} data-testid="derm-back"
+            <button type="button" onClick={() => (onBack ? onBack() : window.history.back())} data-testid="derm-back"
               className="flex flex-none cursor-pointer items-center hover:!bg-[#eef6f3]"
               style={{ gap: 6, height: 36, padding: "0 13px", border: "1px solid #dfe7e3", borderRadius: 9, background: "#fff", color: D.cta, fontSize: 10, fontWeight: 700, whiteSpace: "nowrap", fontFamily: FONT_UI }}>
               ← Retour
             </button>
           )}
           <PatientSearch />
-          <button type="button" onClick={() => navigate("/derm/accueil")} data-testid="derm-new-consult"
+          <button type="button" onClick={() => navigate(isSecretary ? "/derm/accueil" : "/derm/consultation")} data-testid="derm-new-consult"
             className="ml-auto flex flex-none cursor-pointer items-center justify-center"
             style={{ gap: 7, minHeight: 39, padding: "0 15px", borderRadius: 9, background: D.cta, color: "#fff", fontSize: 9, fontWeight: 700, border: 0, boxShadow: "0 7px 16px rgba(29,112,105,.13)", whiteSpace: "nowrap", fontFamily: FONT_UI }}>
             <Plus size={13} strokeWidth={2} /><span className="hidden sm:inline">Nouvelle consultation</span>

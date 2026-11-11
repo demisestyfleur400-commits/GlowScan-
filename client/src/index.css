@@ -218,3 +218,88 @@ select option {
     transform: translateY(0);
   }
 }
+
+/* ═══════════════════════════════════════════════════════
+   Espace médical Derm (D3) : les questionnaires et formulaires
+   existants (tokens Organic) prennent la palette Derm dans ce
+   périmètre, sans réécrire leur logique.
+   ═══════════════════════════════════════════════════════ */
+.derm-theme {
+  --color-bg: #f8faf7;
+  --color-surface: #ffffff;
+  --color-text: #17392c;
+  --color-accent: #2a6b4f;
+  --color-accent-2: #138b83;
+  --color-divider: #e4e8e3;
+
+  --color-neutral-100: #f8faf7;
+  --color-neutral-200: #eef1ec;
+  --color-neutral-300: #e4e8e3;
+  --color-neutral-400: #c9d3d0;
+  --color-neutral-500: #9fb0ab;
+  --color-neutral-600: #8a9894;
+  --color-neutral-700: #66766f;
+  --color-neutral-800: #3f5a4c;
+  --color-neutral-900: #17392c;
+
+  --color-accent-100: #f3f7f1;
+  --color-accent-200: #eaf2e5;
+  --color-accent-300: #cfe0c4;
+  --color-accent-400: #9dc3a9;
+  --color-accent-500: #3f8a67;
+  --color-accent-600: #2a6b4f;
+  --color-accent-700: #1f5c48;
+  --color-accent-800: #17392c;
+  --color-accent-900: #102c2c;
+
+  --color-accent-2-100: #e3f3ef;
+  --color-accent-2-200: #c9ebe5;
+  --color-accent-2-300: #9fd9d2;
+  --color-accent-2-400: #57d8cf;
+  --color-accent-2-500: #2fb3a8;
+  --color-accent-2-600: #138b83;
+  --color-accent-2-700: #0d746f;
+  --color-accent-2-800: #0b5c58;
+  --color-accent-2-900: #0d2929;
+
+  --font-heading: "Manrope", "DM Sans", system-ui, sans-serif;
+  --font-heading-weight: 700;
+  --font-body: "DM Sans", system-ui, sans-serif;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-card: 12px;
+  --shadow-sm: none;
+  --shadow-md: 0 4px 12px rgba(13, 41, 41, .06);
+  --shadow-lg: 0 10px 30px rgba(13, 41, 41, .1);
+
+  --background: 120 14.3% 97.3%;
+  --foreground: 155 43% 15.7%;
+  --primary: 154 43.5% 29.2%;
+  --primary-foreground: 0 0% 100%;
+  --primary-border: #1f5c48;
+  --secondary: 0 0% 100%;
+  --secondary-foreground: 155 43% 15.7%;
+  --secondary-border: #c9d8c0;
+  --accent: 100 25% 95.3%;
+  --accent-foreground: 155 43% 15.7%;
+  --accent-border: #cfe0c4;
+  --muted: 100 13% 93.5%;
+  --muted-foreground: 152 7.3% 43.1%;
+  --card: 0 0% 100%;
+  --card-foreground: 155 43% 15.7%;
+  --card-border: 100 10% 90%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 155 43% 15.7%;
+  --border: 100 10% 90%;
+  --input: 100 10% 90%;
+  --ring: 154 43.5% 29.2%;
+  --radius: .5rem;
+  --destructive: 9 59% 38%;
+  --destructive-foreground: 0 0% 100%;
+  font-family: var(--font-body);
+  color: var(--color-text);
+}
+.derm-theme h1, .derm-theme h2, .derm-theme h3 { font-family: var(--font-heading); font-weight: 700; letter-spacing: -.3px; }
+.derm-theme .rounded-card { border: 1px solid #e4e8e3; }

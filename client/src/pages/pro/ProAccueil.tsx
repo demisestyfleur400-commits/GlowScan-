@@ -2,7 +2,8 @@ import { useRef, useState } from "react";
 import { Link } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import { Camera, Check } from "lucide-react";
-import { ProLayout, ProInput } from "@/components/ProLayout";
+import { ProInput } from "@/components/ProLayout";
+import { DermShell } from "@/components/derm/DermShell";
 import { Button } from "@/components/ui/button";
 import { useProAccount, useProPendingPatients } from "@/hooks/use-pro";
 import { cmNational } from "@shared/phone";
@@ -120,7 +121,8 @@ export default function ProAccueil() {
   const chip = (on: boolean) => `cursor-pointer rounded-pill border px-3.5 py-1.5 font-body text-[13px] font-semibold ${on ? "border-organic-accent bg-organic-accent text-organic-bg" : "border-organic-divider bg-transparent text-organic-text"}`;
 
   return (
-    <ProLayout>
+    <DermShell active="vue" showBack>
+     <div className="derm-theme" style={{ maxWidth: 1000, margin: "auto", padding: "30px 32px 40px" }}>
       <header className="flex flex-col gap-1">
         <span className="text-[11px] font-bold uppercase tracking-[.12em] text-organic-accent-700">Accueil du cabinet</span>
         <h1 className="m-0 text-[clamp(30px,4vw,42px)]">Nouveau patient</h1>
@@ -242,6 +244,7 @@ export default function ProAccueil() {
           })}
         </div>
       </section>
-    </ProLayout>
+     </div>
+    </DermShell>
   );
 }

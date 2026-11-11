@@ -11,6 +11,7 @@ import { registerProgramRoutes } from "./programRoutes";
 import { registerPeerRoutes } from "./peerRoutes";
 import { registerReportRoutes } from "./reportRoutes";
 import { registerDermRecordRoutes } from "./dermRecords";
+import { registerGlowAssistantRoutes } from "./glowAssistant";
 import { registerRelayOnboardingRoutes } from "./relayOnboarding";
 import { registerCaseThreadRoutes } from "./caseThreads";
 import { registerRelayCreditRoutes } from "./relayCredit";
@@ -97,7 +98,7 @@ const GEMINI_MODEL  = process.env.GEMINI_MODEL || "gemini-flash-latest";
 // filtrés, modèle principal en tête.
 const GEMINI_FALLBACKS = [
   GEMINI_MODEL,
-  ...(process.env.GEMINI_FALLBACKS || "gemini-flash-lite-latest,gemini-2.5-flash,gemini-2.0-flash,gemini-2.0-flash-lite")
+  ...(process.env.GEMINI_FALLBACKS || "gemini-flash-lite-latest,gemini-3.5-flash-lite,gemini-3.1-flash-lite,gemini-3.5-flash")
     .split(",").map((s) => s.trim()).filter(Boolean),
 ].filter((v, i, a) => a.indexOf(v) === i);
 const AI_MODEL      = USE_GROQ ? GROQ_MODEL : USE_GEMINI ? GEMINI_MODEL : "gpt-4o";
@@ -433,6 +434,7 @@ export async function registerRoutes(
   registerPeerRoutes(app, { checkAdmin: checkDatasetKey });
   registerReportRoutes(app);
   registerDermRecordRoutes(app);
+  registerGlowAssistantRoutes(app);
   registerRelayOnboardingRoutes(app, { checkAdmin: checkDatasetKey });
   registerCaseThreadRoutes(app);
   registerRelayCreditRoutes(app, { checkAdmin: checkDatasetKey });

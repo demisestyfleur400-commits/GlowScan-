@@ -47,7 +47,7 @@ const ZONE_OPTS = ["Front", "Joue D", "Joue G", "Nez/Zone T", "Menton", "Cou", "
 const INK = "var(--color-text)";
 const MUTED = "var(--color-neutral-700)";
 const fieldBg = "var(--color-bg)";
-const fieldBorder = "1px solid rgba(167,139,250,0.2)";
+const fieldBorder = "1px solid rgba(42,107,79,0.2)";
 
 // ── Champs définis AU NIVEAU MODULE (jamais dans le render) : sinon React
 // démonte/remonte l'input à chaque frappe → perte de focus après 1 lettre. ──
@@ -94,7 +94,7 @@ export function ExamenPhysiqueForm({ value, onChange }: { value: ExamenData; onC
   const toggle = (arr: string[], v: string) => (arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
 
   return (
-    <div style={{ borderRadius: 16, overflow: "hidden", background: "rgba(124,58,237,0.06)", border: "1px solid rgba(124,58,237,0.2)" }}>
+    <div style={{ borderRadius: 16, overflow: "hidden", background: "rgba(42,107,79,0.06)", border: "1px solid rgba(42,107,79,0.2)" }}>
       <button type="button" onClick={() => setOpen(!open)}
         style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", background: "transparent", border: "none", cursor: "pointer", color: INK, fontSize: 13, fontWeight: 800 }}>
         <span>Examen physique</span>
@@ -126,8 +126,8 @@ export function ExamenPhysiqueForm({ value, onChange }: { value: ExamenData; onC
                 return (
                   <button key={l} type="button" onClick={() => set({ lesions: toggle(value.lesions, l) })}
                     style={{ padding: "5px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700, cursor: "pointer",
-                      background: on ? "rgba(139,92,246,0.3)" : "var(--color-bg)", color: on ? "var(--color-accent)" : "var(--color-neutral-700)",
-                      border: on ? "1px solid #7c3aed" : "1px solid #E2E8F0" }}>
+                      background: on ? "rgba(42,107,79,0.14)" : "var(--color-bg)", color: on ? "var(--color-accent)" : "var(--color-neutral-700)",
+                      border: on ? "1px solid #2a6b4f" : "1px solid #E2E8F0" }}>
                     {l}
                   </button>
                 );

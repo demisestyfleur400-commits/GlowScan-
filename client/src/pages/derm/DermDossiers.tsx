@@ -42,7 +42,7 @@ export default function DermDossiers() {
       <Page>
         <ScreenHeader kicker="DOSSIERS MÉDICAUX · ESPACE CLINIQUE" title="La mémoire clinique du cabinet."
           sub="Un dossier par patient pour relier toutes ses consultations et ses épisodes de soins."
-          actions={<><span style={{ fontSize: 12, color: D.muted }}>{month}</span><Btn kind="primary" onClick={() => go("/derm/accueil")} data-testid="dossiers-new">Nouvelle consultation +</Btn></>} />
+          actions={<><span style={{ fontSize: 12, color: D.muted }}>{month}</span><Btn kind="primary" onClick={() => go("/derm/consultation")} data-testid="dossiers-new">Nouvelle consultation +</Btn></>} />
 
         <section className="grid" style={{ gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))", gap: 14, marginBottom: 20 }}>
           <StatCard label="Dossiers consultés" value={pad(st.consulted)} sub={`En ${data?.month || "ce mois"}`} onClick={() => setF("all")} />

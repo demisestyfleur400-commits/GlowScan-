@@ -1,4 +1,5 @@
 import { intlPhone, phoneAccountEmail, maskPhone } from "@shared/relayOnboarding";
+import { geminiText, geminiReady } from "./glowAssistant";
 import type { Express } from "express";
 import { ensureRls } from "./ensureRls";
 import { db } from "./db";
@@ -272,7 +273,7 @@ function extractInlineImage(src: string): { mime: string; b64: string } | null {
 
 const EVOLUTION_MODELS = Array.from(new Set([
   process.env.GEMINI_MODEL || "gemini-flash-latest",
-  "gemini-flash-latest", "gemini-flash-lite-latest", "gemini-2.5-flash", "gemini-2.0-flash",
+  "gemini-flash-latest", "gemini-flash-lite-latest", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite",
 ]));
 
 async function compareEvolutionAI(opts: {
@@ -2448,7 +2449,7 @@ export function registerProRoutes(app: Express) {
   // N'AFFICHE JAMAIS de diagnostic final : le médecin décide toujours.
   // ═══════════════════════════════════════════════════════════════════════
   app.post("/api/pro/ai-assistant/analyze", requireProAccess, async (req: any, res) => {
-    if (!proGemini) return res.status(503).json({ message: "Assistant IA indisponible pour le moment." });
+    if (!geminiReady()) return res.status(503).json({ message: "Assistant IA indisponible pour le moment." });
     const b = req.body || {};
     const signes = String(b.signesCliniques || b.signesCliNiques || "").slice(0, 2000);
     const diagnostic = String(b.diagnostic || "").slice(0, 500);
@@ -2470,26 +2471,13 @@ export function registerProRoutes(app: Express) {
 
 Analyse ce cas selon tes règles. Vérifie particulièrement la cohérence entre le diagnostic, la prescription et le phototype.`;
 
-    // 1er essai AVEC grounding Google Search ; repli sans grounding si échec.
-    const modelId = process.env.GEMINI_MODEL || "gemini-flash-latest";
-    const run = async (withSearch: boolean) => {
-      const m = proGemini!.getGenerativeModel({ model: modelId, systemInstruction: CLINICAL_ASSISTANT_SYSTEM });
-      const cfg: any = { contents: [{ role: "user", parts: [{ text: userPrompt }] }] };
-      if (withSearch) cfg.tools = [{ googleSearch: {} }];
-      return Promise.race([
-        m.generateContent(cfg),
-        new Promise<never>((_, rej) => setTimeout(() => rej(new Error("Timeout")), 30000)),
-      ]);
-    };
-
+    // Chaîne de secours Gemini (5 modèles, quota propre à chacun), avec puis sans
+    // recherche Google : l'assistant ne tombe plus au premier quota atteint.
     let resp: any = null, grounded = false;
-    try { resp = (await run(true) as any).response; grounded = true; }
-    catch (e1) {
-      try { resp = (await run(false) as any).response; grounded = false; }
-      catch (e2) {
-        console.error("[ai-assistant] error:", (e2 as any)?.message || e2);
-        return res.status(500).json({ message: "Analyse IA momentanément indisponible. Réessayez." });
-      }
+    try { const out = await geminiText(CLINICAL_ASSISTANT_SYSTEM, userPrompt, { search: true }); resp = out.response; grounded = out.grounded; }
+    catch (e2) {
+      console.error("[ai-assistant] error:", (e2 as any)?.message || e2);
+      return res.status(500).json({ message: "Analyse IA momentanément indisponible. Réessayez." });
     }
 
     const txt = (resp?.text?.() || "").trim();
@@ -2530,7 +2518,7 @@ Analyse ce cas selon tes règles. Vérifie particulièrement la cohérence entre
   // dossier : le contexte du cas + l'historique du fil sont renvoyés au modèle.
   // ─────────────────────────────────────────────
   app.post("/api/pro/ai-assistant/followup", requireProAccess, async (req: any, res) => {
-    if (!proGemini) return res.status(503).json({ message: "Assistant IA indisponible." });
+    if (!geminiReady()) return res.status(503).json({ message: "Assistant IA indisponible." });
     const b = req.body || {};
     const question = String(b.question || "").trim().slice(0, 800);
     if (!question) return res.status(400).json({ message: "Question vide." });
@@ -2572,25 +2560,11 @@ Analyse ce cas selon tes règles. Vérifie particulièrement la cohérence entre
       : "";
     const userPrompt = `${caseBlock}${threadBlock}\n\nQuestion du médecin sur ce cas : ${question}`;
 
-    const modelId = process.env.GEMINI_MODEL || "gemini-flash-latest";
-    const run = async (withSearch: boolean) => {
-      const m = proGemini!.getGenerativeModel({ model: modelId, systemInstruction: CLINICAL_FOLLOWUP_SYSTEM });
-      const cfg: any = { contents: [{ role: "user", parts: [{ text: userPrompt }] }] };
-      if (withSearch) cfg.tools = [{ googleSearch: {} }];
-      return Promise.race([
-        m.generateContent(cfg),
-        new Promise<never>((_, rej) => setTimeout(() => rej(new Error("Timeout")), 30000)),
-      ]);
-    };
-
     let resp: any = null;
-    try { resp = (await run(true) as any).response; }
-    catch {
-      try { resp = (await run(false) as any).response; }
-      catch (e2) {
-        console.error("[ai-followup] error:", (e2 as any)?.message || e2);
-        return res.status(500).json({ message: "Réponse IA momentanément indisponible. Réessayez." });
-      }
+    try { resp = (await geminiText(CLINICAL_FOLLOWUP_SYSTEM, userPrompt, { search: true })).response; }
+    catch (e2) {
+      console.error("[ai-followup] error:", (e2 as any)?.message || e2);
+      return res.status(500).json({ message: "Réponse IA momentanément indisponible. Réessayez." });
     }
     const answer = (resp?.text?.() || "").trim().slice(0, 2500);
     if (!answer) return res.status(500).json({ message: "Réponse IA vide. Réessayez." });

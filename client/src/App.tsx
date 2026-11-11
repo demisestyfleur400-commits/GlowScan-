@@ -151,6 +151,7 @@ function Router() {
       <Route path="/derm/dossiers/:id/compte-rendu" component={DermCompteRendu} />
       <Route path="/derm/patient/:id" component={ProPatient} />
       <Route path="/derm/analyse" component={ProAnalyze} />
+      <Route path="/derm/consultation" component={ProAnalyze} />
       <Route path="/derm/statistiques" component={ProStats} />
       <Route path="/derm/paiements" component={ProPaiements} />
       <Route path="/derm/portefeuille" component={ProPayments} />

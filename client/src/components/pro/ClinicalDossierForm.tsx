@@ -14,7 +14,7 @@ const NAVY = "var(--color-accent)";
 const INK = "var(--color-text)";
 const MUTED = "var(--color-neutral-700)";
 const fieldBg = "var(--color-bg)";
-const fieldBorder = "1px solid rgba(167,139,250,0.2)";
+const fieldBorder = "1px solid rgba(42,107,79,0.2)";
 
 type FieldDef = { key: string; label: string; ml?: boolean; ph?: string; choices?: string[]; multi?: boolean };
 type Section = { id: string; title: string; icon: string; fields: FieldDef[] };
@@ -88,7 +88,7 @@ function Chips({ f, value, set }: { f: FieldDef; value: ClinicalRecord; set: (k:
           return (
             <button key={c} type="button" onClick={() => toggle(c)}
               style={{ padding: "7px 12px", borderRadius: 9999, fontSize: 12, fontWeight: 700, cursor: "pointer",
-                background: on ? "rgba(124,58,237,0.12)" : "var(--color-bg)", color: on ? NAVY : "var(--color-neutral-700)",
+                background: on ? "rgba(42,107,79,0.12)" : "var(--color-bg)", color: on ? NAVY : "var(--color-neutral-700)",
                 border: on ? `1px solid ${NAVY}` : "1px solid #E2E8F0" }}>
               {c}
             </button>
@@ -177,7 +177,7 @@ export function ClinicalDossierForm({ value, onChange, sex }: { value: ClinicalR
       {/* Un SEUL bouton pour tout le contexte clinique (optionnel) */}
       <button type="button" onClick={() => setShowContext((v) => !v)} data-testid="toggle-clinical-context"
         style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 14px",
-          background: "rgba(124,58,237,0.06)", border: "1px solid rgba(124,58,237,0.18)", borderRadius: 12, cursor: "pointer",
+          background: "rgba(42,107,79,0.06)", border: "1px solid rgba(42,107,79,0.18)", borderRadius: 12, cursor: "pointer",
           color: NAVY, fontSize: 13, fontWeight: 800 }}>
         <span>+ Contexte clinique <span style={{ color: MUTED, fontWeight: 600 }}>(optionnel)</span>{ctxFilled > 0 ? <span style={{ color: "var(--color-accent-700)", marginLeft: 6 }}>· {ctxFilled}</span> : null}</span>
         <span style={{ fontSize: 16, lineHeight: 1 }}>{showContext ? "−" : "+"}</span>
@@ -188,7 +188,7 @@ export function ClinicalDossierForm({ value, onChange, sex }: { value: ClinicalR
           {SECTIONS.map((sec) => {
             const isOpen = open === sec.id;
             return (
-              <div key={sec.id} style={{ borderRadius: 14, overflow: "hidden", background: "rgba(124,58,237,0.04)", border: "1px solid #E2E8F0" }}>
+              <div key={sec.id} style={{ borderRadius: 14, overflow: "hidden", background: "rgba(42,107,79,0.04)", border: "1px solid #E2E8F0" }}>
                 <button type="button" onClick={() => setOpen(isOpen ? "" : sec.id)}
                   style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 14px", background: "transparent", border: "none", cursor: "pointer", color: INK, fontSize: 13, fontWeight: 800 }}>
                   <span>{sec.icon} {sec.title}</span>
@@ -207,7 +207,7 @@ export function ClinicalDossierForm({ value, onChange, sex }: { value: ClinicalR
           {(() => {
             const isOpen = open === "anamYesNo";
             return (
-              <div style={{ borderRadius: 14, overflow: "hidden", background: "rgba(124,58,237,0.04)", border: "1px solid #E2E8F0" }}>
+              <div style={{ borderRadius: 14, overflow: "hidden", background: "rgba(42,107,79,0.04)", border: "1px solid #E2E8F0" }}>
                 <button type="button" onClick={() => setOpen(isOpen ? "" : "anamYesNo")}
                   style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 14px", background: "transparent", border: "none", cursor: "pointer", color: INK, fontSize: 13, fontWeight: 800 }}>
                   <span>❓ Signes fonctionnels <span style={{ color: MUTED, fontWeight: 600, fontSize: 11 }}>· rapide</span></span>
