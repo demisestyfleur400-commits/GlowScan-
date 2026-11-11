@@ -108,7 +108,7 @@ export default function DermVue() {
 
   const lines: BriefLine[] = [
     todayAppts.length ? { icon: Calendar, text: `${plural(todayAppts.length, "rendez-vous", "rendez-vous")} aujourd'hui, le premier à ${hhmm(todayAppts[0].at)}.`, href: "/derm/agenda", tone: "info" } : null,
-    priority.length ? { icon: AlertTriangle, text: `${plural(priority.length, "patient", "patients")} en priorité haute.`, href: "/derm/patients?filtre=priority", tone: "err" } : null,
+    priority.length ? { icon: AlertTriangle, text: `${plural(priority.length, "patient", "patients")} en priorité haute.`, href: "/derm/patientele?filtre=priority", tone: "err" } : null,
     pending.length ? { icon: ClipboardCheck, text: `${plural(pending.length, "analyse", "analyses")} à valider.`, href: `/derm/patient/${pending[0].patientId}`, tone: "warn" } : null,
     unreadN ? { icon: MessageSquare, text: `${plural(unreadN, "demande", "demandes")} en ligne en attente de réponse.`, href: "/derm/consultations", tone: "warn" } : null,
     intakeN ? { icon: Inbox, text: `${plural(intakeN, "dossier préparé", "dossiers préparés")} par l'accueil, en attente d'analyse.`, href: "/derm/patients", tone: "info" } : null,
@@ -124,7 +124,7 @@ export default function DermVue() {
   const metrics = [
     { icon: Calendar, label: "Rendez-vous", value: upcoming.length, sub: "dans votre agenda", href: "/derm/agenda" },
     { icon: Users, label: "Patients actifs", value: patients.length, sub: "dossiers centralisés", href: "/derm/patients" },
-    { icon: Activity, label: "Suivis à examiner", value: followed.length, sub: "priorisés par Glow", href: "/derm/patients?filtre=monitoring" },
+    { icon: Activity, label: "Suivis à examiner", value: followed.length, sub: "priorisés par Glow", href: "/derm/patientele?filtre=monitoring" },
   ];
   const tone = { info: [D.info, D.infoBg], warn: [D.warn, D.warnBg], err: [D.err, D.errBg] } as const;
 
@@ -184,7 +184,7 @@ export default function DermVue() {
                   right={<>{dayLabel(a.at)} · <b style={{ color: D.text }}>{hhmm(a.at)}</b></>} />
               ))}
           </Panel>
-          <Panel kicker="SUIVI CLINIQUE" title="Évolutions récentes" link="Tout voir" onLink={() => go("/derm/patients?filtre=monitoring")}>
+          <Panel kicker="SUIVI CLINIQUE" title="Évolutions récentes" link="Tout voir" onLink={() => go("/derm/patientele?filtre=monitoring")}>
             {evolutions.length === 0
               ? <Empty icon={Activity} title="Aucun suivi actif" text="Les évolutions cliniques apparaîtront ici." cta="Créer un suivi" onCta={() => go("/derm/patients")} />
               : evolutions.map((p) => {

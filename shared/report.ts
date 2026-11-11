@@ -46,6 +46,20 @@ export const reportPayloadSchema = z.object({
   }).default({ patient: "", secretariat: "", doctor: "" }),
   personalNote: z.string().trim().max(1500).default(""),   // mot personnel en tête de la version patient
   withPrescription: z.boolean().default(false),
+  // ── Modèle A4 de l'espace médical (D2) : « Relire, corriger, valider » ──
+  format: z.enum(["", "a4"]).default(""),
+  conclusion: z.string().trim().max(1500).default(""),     // Conclusion du dermatologue
+  conduite: z.string().trim().max(1500).default(""),       // Conduite à tenir
+  suiviChoice: z.enum(["", "J+14", "J+28", "3 mois", "Aucun suivi"]).default(""),
+  suiviText: z.string().trim().max(600).default(""),       // précisions sur le suivi
+  meds: z.array(z.object({
+    m: z.string().trim().max(160).default(""),  // médicament ou soin
+    f: z.string().trim().max(120).default(""),  // forme / dosage
+    v: z.string().trim().max(80).default(""),   // voie d'administration
+    p: z.string().trim().max(240).default(""),  // posologie
+    d: z.string().trim().max(80).default(""),   // durée
+    c: z.string().trim().max(400).default(""),  // consignes
+  })).max(12).default([]),
 });
 export type ReportPayload = z.infer<typeof reportPayloadSchema>;
 
@@ -64,9 +78,31 @@ export const DEFAULT_SPECIALTY = "Spécialiste en dermatologie et vénéréologi
 /** Lignes à délivrer (l'ordonnance ne reprend pas ce qui est arrêté). */
 export const activeLines = (p: ReportPayload) => p.lines.filter((l) => l.status !== "arrete");
 
+/** Choix de suivi du modèle A4 et délai en jours (« Aucun suivi » : pas de contrôle). */
+export const SUIVI_CHOICES = ["J+14", "J+28", "3 mois", "Aucun suivi"] as const;
+export const SUIVI_DAYS: Record<string, number> = { "J+14": 14, "J+28": 28, "3 mois": 91 };
+/** Date du contrôle (AAAA-MM-JJ) à partir d'une date de référence. */
+export function suiviDate(choice: string, from: Date = new Date()): string | null {
+  const n = SUIVI_DAYS[choice];
+  if (!n) return null;
+  const d = new Date(from); d.setDate(d.getDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+/** Les 3 points obligatoires du modèle A4. */
+export const a4Points = (p: ReportPayload) => [!!p.conclusion.trim(), !!p.conduite.trim(), !!p.suiviChoice];
+/** Médicaments réellement saisis (une ligne vide n'est pas imprimée). */
+export const a4Meds = (p: ReportPayload) => p.meds.filter((m) => m.m.trim());
+
 /** Ce qui manque avant de pouvoir signer. */
 export function reportMissing(p: ReportPayload, doctor: { licenseNumber?: string | null; cabinetAddress?: string | null }): string[] {
   const out: string[] = [];
+  if (p.format === "a4") {
+    const [c, t, s] = a4Points(p);
+    if (!c) out.push("la conclusion du dermatologue");
+    if (!t) out.push("la conduite à tenir");
+    if (!s) out.push("les modalités de suivi");
+    return out;
+  }
   if (!p.diagnosis.trim()) out.push("le diagnostic");
   if (!p.diagnosisPlain.trim()) out.push("« Ce que j'ai vu » en mots simples");
   if (p.withPrescription) {

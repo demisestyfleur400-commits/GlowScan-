@@ -10,6 +10,7 @@ import { registerRelayRoutes } from "./relayRoutes";
 import { registerProgramRoutes } from "./programRoutes";
 import { registerPeerRoutes } from "./peerRoutes";
 import { registerReportRoutes } from "./reportRoutes";
+import { registerDermRecordRoutes } from "./dermRecords";
 import { registerRelayOnboardingRoutes } from "./relayOnboarding";
 import { registerCaseThreadRoutes } from "./caseThreads";
 import { registerRelayCreditRoutes } from "./relayCredit";
@@ -431,6 +432,7 @@ export async function registerRoutes(
   registerProgramRoutes(app, { checkAdmin: checkDatasetKey });
   registerPeerRoutes(app, { checkAdmin: checkDatasetKey });
   registerReportRoutes(app);
+  registerDermRecordRoutes(app);
   registerRelayOnboardingRoutes(app, { checkAdmin: checkDatasetKey });
   registerCaseThreadRoutes(app);
   registerRelayCreditRoutes(app, { checkAdmin: checkDatasetKey });

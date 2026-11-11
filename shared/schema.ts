@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb, decimal, varchar, smallint, primaryKey } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, jsonb, decimal, varchar, smallint, primaryKey, date } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -397,6 +397,41 @@ export const patients = pgTable("patients", {
   lastScanAt: timestamp("last_scan_at"),
   lastOpenedAt: timestamp("last_opened_at"),            // dernière ouverture du dossier par le dermatologue (reprise auto)
   createdAt: timestamp("created_at").defaultNow(),
+  // Fiche administrative et dossier médical (espace médical D2, migration 0035)
+  archivedAt: timestamp("archived_at"),
+  email: text("email"),
+  city: text("city"),
+  birthDate: date("birth_date"),
+  emergencyName: text("emergency_name"),
+  emergencyPhone: text("emergency_phone"),
+  legalRep: text("legal_rep"),
+  contactChannels: text("contact_channels").array().notNull().default(["WhatsApp"]),
+  contactUsage: text("contact_usage").notNull().default("Rappels de rendez-vous uniquement."),
+  allergies: text("allergies"),
+  allergiesAt: timestamp("allergies_at"),
+  photoConsentAt: timestamp("photo_consent_at"),
+});
+
+// Antécédents, prescriptions et examens ajoutés au dossier (0035).
+export const patientRecordNotes = pgTable("patient_record_notes", {
+  id: serial("id").primaryKey(),
+  patientId: integer("patient_id").notNull().references(() => patients.id, { onDelete: "cascade" }),
+  proAccountId: integer("pro_account_id").notNull().references(() => proAccounts.id, { onDelete: "cascade" }),
+  kind: varchar("kind", { length: 4 }).notNull(), // ant | rx | ex
+  body: text("body").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Documents joints au dossier, réservés au médecin (0035).
+export const patientDocuments = pgTable("patient_documents", {
+  id: serial("id").primaryKey(),
+  patientId: integer("patient_id").notNull().references(() => patients.id, { onDelete: "cascade" }),
+  proAccountId: integer("pro_account_id").notNull().references(() => proAccounts.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  mime: varchar("mime", { length: 80 }).notNull(),
+  sizeBytes: integer("size_bytes").notNull(),
+  data: text("data").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 // Secrétaires d'un dermatologue (rôle distinct avec permissions limitées)

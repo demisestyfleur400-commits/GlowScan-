@@ -9,6 +9,9 @@ import { sendWhatsAppText } from "./whatsapp";
 import { renderPatientReport, renderCabinetReport, renderPrescription, type ReportDoctor, type ReportPatient, type ReportDoc, type ReportPrescription, type ReportEvolution } from "./reportHtml";
 import { reportPayloadSchema, emptyReport, reportRef, prescriptionRef, refNumber, reportMissing, linesAsText, DEFAULT_SPECIALTY, type ReportPayload } from "@shared/report";
 import { buildReportReadyMessage } from "@shared/whatsappMessages";
+import { renderDermA4, type A4Doctor, type A4Patient } from "./dermA4";
+import { suiviDate } from "@shared/report";
+import { sendEmail, escHtml } from "./email";
 
 // ════════════════════════════════════════════════════════════════════════
 // Compte rendu en 3 versions + ordonnance (étape 9a). Une saisie unique du
@@ -69,6 +72,30 @@ async function loadPrescription(reportId: number): Promise<ReportPrescription> {
   const qrDataUrl = await QRCode.toDataURL(verifyUrl, { margin: 1, width: 192, color: { dark: "#201e1d", light: "#fffaf2" } });
   return { ref: rx.ref, status: rx.status === "revoked" ? "revoked" : "valid", signedAt: iso(rx.signed_at)!, qrDataUrl, verifyUrl };
 }
+async function loadA4Doctor(proId: number): Promise<A4Doctor> {
+  const d = Rows(await db.execute(sql`
+    SELECT p.full_name, p.cabinet_name, p.city, p.license_number, p.cabinet_address, p.cabinet_phone, u.email
+    FROM pro_accounts p LEFT JOIN users u ON u.id = p.user_id WHERE p.id = ${proId}`))[0] || {};
+  return { name: d.full_name || "", cabinetName: d.cabinet_name || null, city: d.city || null, licenseNumber: d.license_number || null,
+    cabinetAddress: d.cabinet_address || null, cabinetPhone: d.cabinet_phone || null, email: d.email || null };
+}
+async function loadA4Patient(r: any): Promise<A4Patient & { email: string | null; phone: string | null }> {
+  if (r.patient_id) {
+    const p = Rows(await db.execute(sql`SELECT first_name, last_name, age, sex, birth_date, email, whatsapp_number FROM patients WHERE id = ${r.patient_id}`))[0] || {};
+    return { firstName: p.first_name || "", lastName: p.last_name || "", age: p.age ?? null, sex: p.sex || null,
+      birthDate: p.birth_date ? new Date(p.birth_date).toISOString().slice(0, 10) : null, email: p.email || null, phone: p.whatsapp_number || null };
+  }
+  const b = await loadPatient(r);
+  return { firstName: b.firstName, lastName: b.lastName, age: b.age, sex: b.sex, birthDate: null, email: null, phone: b.phone };
+}
+/** Page HTML du compte rendu A4 (modèle de l'espace médical). */
+export async function dermA4Html(reportId: number): Promise<string | null> {
+  const r = await loadReport(reportId);
+  if (!r) return null;
+  return renderDermA4(await loadA4Doctor(r.pro_account_id), await loadA4Patient(r),
+    { id: r.id, payload: reportPayloadSchema.parse(r.payload || {}), signedAt: iso(r.signed_at), createdAt: iso(r.created_at)! });
+}
+
 async function toDoc(r: any): Promise<ReportDoc> {
   let visitNumber: number | null = null;
   if (r.source === "visit" && r.patient_id) {
@@ -182,6 +209,15 @@ export async function signReport(reportId: number, proId: number): Promise<{ ref
       INSERT INTO prescriptions (ref, report_id, pro_account_id) VALUES (${rxRef}, ${reportId}, ${proId})
       ON CONFLICT (report_id) DO NOTHING`);
   }
+  // Modèle A4 : le suivi choisi fixe la date du contrôle (rappel photo existant)
+  // et place le patient « En suivi ».
+  if (p.format === "a4" && p.suiviChoice && p.suiviChoice !== "Aucun suivi") {
+    const at = suiviDate(p.suiviChoice);
+    if (at) {
+      await db.execute(sql`UPDATE consult_reports SET payload = jsonb_set(payload, '{controlPhotoDate}', to_jsonb(${at}::text)) WHERE id = ${reportId}`);
+      if (r.patient_id) await db.execute(sql`UPDATE patients SET status = 'yellow' WHERE id = ${r.patient_id} AND COALESCE(status, 'green') <> 'red'`).catch(() => {});
+    }
+  }
   // Anciens écrans (colonne texte) : la consultation garde une version texte du traitement.
   if (r.consultation_id) {
     await db.execute(sql`UPDATE consultations SET prescription = ${linesAsText(p) || null} WHERE id = ${r.consultation_id}`).catch(() => {});
@@ -228,6 +264,7 @@ export function registerReportRoutes(app: Express) {
   app.post("/api/pro/reports", requireProAccess, doctorOnly, async (req: any, res) => {
     try {
       const source = req.body?.source === "consultation" ? "consultation" : "visit";
+      const a4 = req.body?.format === "a4";
       const target = Number(source === "visit" ? req.body?.patientId : req.body?.consultationId);
       if (!target || !(await ownTarget(req.proAccount.id, source, target))) return res.status(404).json({ message: "Dossier introuvable" });
       let r = Rows(await db.execute(sql`
@@ -238,8 +275,20 @@ export function registerReportRoutes(app: Express) {
         // Une consultation n'a qu'un compte rendu : s'il est signé, on le renvoie tel quel.
         r = Rows(await db.execute(sql`SELECT * FROM consult_reports WHERE consultation_id = ${target}`))[0];
       }
+      if (r && a4 && !r.signed_at && reportPayloadSchema.parse(r.payload || {}).format !== "a4") {
+        const q = { ...reportPayloadSchema.parse(r.payload || {}), format: "a4" as const };
+        await db.execute(sql`UPDATE consult_reports SET payload = ${JSON.stringify(q)}::jsonb WHERE id = ${r.id}`);
+        r = { ...r, payload: q };
+      }
       if (!r) {
         const payload = await prefill(req.proAccount.id, source, target);
+        if (a4) {
+          payload.format = "a4";
+          if (source === "visit") {
+            const sc = Rows(await db.execute(sql`SELECT dermato_note FROM scans WHERE patient_id = ${target} ORDER BY created_at DESC LIMIT 1`))[0];
+            if (sc?.dermato_note && !payload.exam) payload.exam = String(sc.dermato_note).slice(0, 1500);
+          }
+        }
         r = Rows(await db.execute(sql`
           INSERT INTO consult_reports (pro_account_id, source, consultation_id, patient_id, payload)
           VALUES (${req.proAccount.id}, ${source}, ${source === "consultation" ? target : null}, ${source === "visit" ? target : null}, ${JSON.stringify(payload)}::jsonb)
@@ -292,8 +341,8 @@ export function registerReportRoutes(app: Express) {
       if (!r.signed_at) return res.status(409).json({ message: "Signez le compte rendu avant de l'envoyer." });
       const pt = await loadPatient(r);
       const d = await loadDoctor(r.pro_account_id);
-      const url = patientReportUrl(r.id);
       const p = reportPayloadSchema.parse(r.payload || {});
+      const url = p.format === "a4" ? patientReportUrl(r.id).replace("v=patient", "v=a4") : patientReportUrl(r.id);
       const wa = await sendWhatsAppText(pt.phone, buildReportReadyMessage({ name: pt.firstName, derm: d.name, url, withPrescription: p.withPrescription }));
       if (wa.ok) {
         await db.execute(sql`UPDATE consult_reports SET sent_patient_at = NOW() WHERE id = ${r.id}`);
@@ -305,6 +354,36 @@ export function registerReportRoutes(app: Express) {
       console.error("[reports send]", e);
       res.status(500).json({ message: "Erreur serveur" });
     }
+  });
+
+  // Remise par email (modèle A4) : lien signé vers le document, sans détail médical dans le message.
+  app.post("/api/pro/reports/:id/email", requireProAccess, async (req: any, res) => {
+    try {
+      const r = await loadReport(Number(req.params.id));
+      if (!r || r.pro_account_id !== req.proAccount.id) return res.status(404).json({ message: "Compte rendu introuvable" });
+      if (!r.signed_at) return res.status(409).json({ message: "Signez le compte rendu avant de le remettre." });
+      const pt = await loadA4Patient(r);
+      if (!pt.email) return res.status(400).json({ code: "NO_EMAIL", message: "Aucune adresse email dans la fiche du patient." });
+      const d = await loadA4Doctor(r.pro_account_id);
+      const url = patientReportUrl(r.id).replace("v=patient", "v=a4");
+      const dr = `Dr ${String(d.name || "").replace(/^(dr|pr)\.?\s+/i, "")}`;
+      const html = `<p>Bonjour ${escHtml(pt.firstName)},</p><p>${escHtml(dr)} vous remet le compte rendu de votre consultation.</p><p><a href="${url}">Ouvrir le compte rendu</a></p><p>Ce lien est personnel et reste valable 90 jours.</p>`;
+      const sent = await sendEmail(pt.email, `Votre compte rendu de consultation · ${dr}`, html, `${dr} vous remet le compte rendu de votre consultation : ${url}`);
+      if (sent.ok) await db.execute(sql`UPDATE consult_reports SET sent_patient_at = COALESCE(sent_patient_at, NOW()) WHERE id = ${r.id}`);
+      res.json({ sent: sent.ok, url });
+    } catch (e) {
+      console.error("[reports email]", e);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // Remis en main propre (impression).
+  app.post("/api/pro/reports/:id/handed", requireProAccess, async (req: any, res) => {
+    const r = Rows(await db.execute(sql`
+      UPDATE consult_reports SET sent_patient_at = COALESCE(sent_patient_at, NOW())
+      WHERE id = ${Number(req.params.id)} AND pro_account_id = ${req.proAccount.id} AND signed_at IS NOT NULL RETURNING id`));
+    if (!r.length) return res.status(404).json({ message: "Compte rendu introuvable ou non signé." });
+    res.json({ success: true });
   });
 
   // Annuler une ordonnance (elle apparaît « annulée » sur /verif).
@@ -343,6 +422,11 @@ export function registerReportRoutes(app: Express) {
       // Le patient ne voit que sa version, signée.
       if (viewer.kind !== "pro" && (v === "cabinet" || !r.signed_at)) return res.status(403).send("Accès refusé");
 
+      if (v === "a4") {
+        res.setHeader("Content-Type", "text/html; charset=utf-8");
+        res.setHeader("Cache-Control", "no-store");
+        return res.send(await dermA4Html(id));
+      }
       const [d, pt, doc, rx] = [await loadDoctor(r.pro_account_id), await loadPatient(r), await toDoc(r), await loadPrescription(r.id)];
       res.setHeader("Content-Type", "text/html; charset=utf-8");
       res.setHeader("Cache-Control", "no-store");

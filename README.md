@@ -6,9 +6,9 @@ Analyse de peau par IA pour les peaux africaines (appli patient) et portail Glow
 
 Les migrations SQL de `migrations/` s'appliquent **à la main, avant le déploiement** du code qui en dépend. Le serveur ne modifie pas ces tables au démarrage. Toutes sont idempotentes : on peut les relancer sans risque.
 
-Refonte Organic (étape 2), dans cet ordre : 0013 → 0014 → 0015 → 0016 → 0017 → 0018 → 0019 → 0020 → 0021 → 0022 → 0023 → 0024 → 0025 → 0026 → 0027 → 0028 → 0029 → 0030 → 0031 → 0032 → 0033 → 0034.
+Refonte Organic (étape 2), dans cet ordre : 0013 → 0014 → 0015 → 0016 → 0017 → 0018 → 0019 → 0020 → 0021 → 0022 → 0023 → 0024 → 0025 → 0026 → 0027 → 0028 → 0029 → 0030 → 0031 → 0032 → 0033 → 0034 → 0035.
 
-**État : 0013 à 0034 appliquées en production (projet Supabase `atjvlnzrwdeqhilvssyd`) le 30/09/2026**, après un essai complet dans une transaction annulée. Les relancer ne change rien (idempotentes).
+**État : 0013 à 0034 appliquées en production (projet Supabase `atjvlnzrwdeqhilvssyd`) le 30/09/2026, 0035 le 11/11/2026**, après un essai complet dans une transaction annulée. Les relancer ne change rien (idempotentes).
 
 | Ordre | Fichier | Contenu |
 |---|---|---|
@@ -34,6 +34,7 @@ Refonte Organic (étape 2), dans cet ordre : 0013 → 0014 → 0015 → 0016 →
 | 20 | `0032_referrals_quality.sql` | Étape 14b — `hospitals`, `hospital_referrals` (fiche REF-XXXX, code à 6 chiffres, arrivée et compte rendu de l'hôpital, relances J+7 / J+10 ; « referrals » sert déjà au parrainage B2C), `quality_reviews` (1 avis de programme sur 10), RLS |
 | 21 | `0033_dhis2.sql` | Étape 15 — export DHIS2 : `dhis2_connections` (jeton chiffré, variable Railway `DHIS2_TOKEN_KEY` requise), `dhis2_mappings`, `dhis2_exports` (essai, envoi, fichier), RLS |
 | 22 | `0034_partner_api.sql` | Étape 16 — Bogou et API ouverte : `api_partners` (« partners » sert déjà à la boutique), clés hachées, `partner_access_log`, `webhook_deliveries`, cas `source` / `external_ref` / `partner_id`, export Bogou (`bogou_shared_at`, `programs.bogou_email`), RLS |
+| 23 | `0035_derm_records.sql` | Espace médical D2 — fiche administrative (`archived_at`, email, ville, date de naissance, contact d'urgence, représentant légal, canaux et usage des rappels), allergies, consentement photo, `patient_record_notes` (antécédents / prescriptions / examens), `patient_documents`, RLS |
 
 Commande (base Postgres / Supabase, variable `DATABASE_URL` ou `SUPABASE_URL`) :
 
