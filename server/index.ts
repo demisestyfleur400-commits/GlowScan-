@@ -55,9 +55,11 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 });
 
 // ── Headers de sécurité HTTP (équivalent helmet) ──────────────────────────
-app.use((_req: Request, res: Response, next: NextFunction) => {
-  // Empêche le clickjacking
-  res.setHeader("X-Frame-Options", "DENY");
+app.use((req: Request, res: Response, next: NextFunction) => {
+  // Empêche le clickjacking. Exception : le compte rendu A4 s'affiche en aperçu
+  // dans l'espace médical (même site uniquement).
+  const framable = /^\/api\/reports\/\d+\/view$/.test(req.path);
+  res.setHeader("X-Frame-Options", framable ? "SAMEORIGIN" : "DENY");
   // Empêche le sniffing de type MIME
   res.setHeader("X-Content-Type-Options", "nosniff");
   // Active le filtre XSS du navigateur
@@ -87,7 +89,7 @@ app.use((_req: Request, res: Response, next: NextFunction) => {
     "connect-src 'self' https: wss:",
     // Paiement (Monetbil/CinetPay) + appel vidéo Jitsi ouverts en page/onglet.
     "frame-src 'self' https://meet.jit.si https://*.monetbil.com https://*.cinetpay.com",
-    "frame-ancestors 'none'",
+    framable ? "frame-ancestors 'self'" : "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self' https:",
     "object-src 'none'",

@@ -461,6 +461,8 @@ export default function ProAnalyze() {
 
   // Clinical override state
   const [override, setOverride] = useState<ClinicalOverrideData | null>(null);
+  // Diagnostic retenu par le médecin (validé ou corrigé) : remplace celui de l'IA à l'écran, pour Glow et dans le compte rendu.
+  const [finalDx, setFinalDx] = useState<string | null>(null);
   const [referenceNumber, setReferenceNumber] = useState("");
 
   // Classification (TÂCHE 4)
@@ -1302,6 +1304,7 @@ export default function ProAnalyze() {
 
   const resetAll = () => {
     setStep(1);
+    setFinalDx(null);
     setPatientMode("choice");
     setPatient(null); setPatientId(null);
     setLastName(""); setFirstName(""); setAge(""); setSex("—"); setPhone("");
@@ -1348,8 +1351,8 @@ export default function ProAnalyze() {
     antecedents: Object.entries(clinicalRecord || {}).filter(([k, v]) => !k.startsWith("anam_") && typeof v === "string" && v.trim()).map(([k, v]) => `${k} : ${v}`).join(" · ").slice(0, 1500),
     products: previousProducts, allergies, phototype: examen.phototype, examen: examSignsText,
     questionnaire: questionnaire.filter((q) => answers[q.id]).map((q) => `${q.label} : ${answers[q.id]}`).join(" · "),
-    analysis: result ? [result.condition, (result as any)?.severity, result.score ? `Glow Score ${result.score}/100` : ""].filter(Boolean).join(" · ") : "",
-    hypothesis: override?.condition || overrideCondition || "", notes: practitionerNotes,
+    analysis: result ? [`Proposition IA : ${result.condition}`, (result as any)?.severity, result.score ? `Glow Score ${result.score}/100` : "", finalDx ? `DIAGNOSTIC RETENU PAR LE MÉDECIN : ${finalDx}` : ""].filter(Boolean).join(" · ") : "",
+    hypothesis: finalDx || override?.condition || overrideCondition || "", notes: practitionerNotes,
   };
 
   return (
@@ -2082,7 +2085,7 @@ export default function ProAnalyze() {
                         <img src={photoBase64} alt="" className="w-full h-20 object-cover rounded-xl" style={{ border: `1px solid ${DS.border}` }} />
                       )}
                       <div className="col-span-2 space-y-1.5">
-                        <Mini label="Diagnostic" value={result?.condition || "—"} />
+                        <Mini label={finalDx && finalDx !== result?.condition ? "Diagnostic retenu" : "Diagnostic"} value={finalDx || result?.condition || "—"} />
                         <Mini label="Glow Score" value={`${result?.score || 0}/100`} accent={NAVY} />
                       </div>
                     </div>
@@ -2149,6 +2152,7 @@ export default function ProAnalyze() {
                   <LesionArgumentation
                     scanId={(result as any)?.savedScanId}
                     condition={result?.condition}
+                    onConfirmed={(dx) => setFinalDx(dx)}
                     score={result?.score}
                     fitzpatrick={examen.phototype}
                     age={age}
@@ -2232,7 +2236,7 @@ export default function ProAnalyze() {
             {dossierSaved && patientId && (
               <div style={{ marginTop: 16 }}>
                 <CompteRenduFlow pid={patientId} embedded onDone={resetAll}
-                  prefill={{ motif: [consultMotif || (clinicalRecord as any)?.motif, problemDuration ? `Depuis ${problemDuration}` : ""].filter(Boolean).join(". "), exam: [examSignsText, practitionerNotes].filter(Boolean).join("\n") }} />
+                  prefill={{ motif: [consultMotif || (clinicalRecord as any)?.motif, problemDuration ? `Depuis ${problemDuration}` : ""].filter(Boolean).join(". "), exam: [examSignsText, practitionerNotes].filter(Boolean).join("\n"), conclusion: finalDx ? `Diagnostic retenu : ${finalDx}.` : undefined }} />
               </div>
             )}
           </div>
@@ -2245,7 +2249,7 @@ export default function ProAnalyze() {
             {patientId ? (patientMode === "new" ? `NOUVEAU PATIENT · ${patientCode(patientId)}` : `PATIENT DU CABINET · ${patientCode(patientId)}`) : patientMode === "new" ? "NOUVEAU PATIENT" : "PATIENT"}
           </span>
           <b style={{ display: "block", margin: "6px 0 3px", fontSize: 15, fontWeight: 600, color: DD.text }}>{patientLabel !== "—" ? patientLabel : "À choisir"}</b>
-          <span style={{ fontSize: 11, color: DD.muted }}>{[age ? `${age} ans` : "", sex === "F" ? "Femme" : sex === "M" ? "Homme" : "", result?.condition || (patient as any)?.lastCondition || ""].filter(Boolean).join(" · ") || "Choisissez ou créez la fiche à l'étape 1."}</span>
+          <span style={{ fontSize: 11, color: DD.muted }}>{[age ? `${age} ans` : "", sex === "F" ? "Femme" : sex === "M" ? "Homme" : "", finalDx || result?.condition || (patient as any)?.lastCondition || ""].filter(Boolean).join(" · ") || "Choisissez ou créez la fiche à l'étape 1."}</span>
           {step >= 3 && consultMotif && <p style={{ margin: "10px 0 0", fontSize: 11.5, fontStyle: "italic", color: DD.text }}>« {consultMotif} »</p>}
           {patientId && <button type="button" onClick={() => setLocation(`/derm/dossiers/${patientId}`)} style={{ display: "block", marginTop: 10, border: 0, background: "none", padding: 0, color: DD.action, fontSize: 11, fontWeight: 600, cursor: "pointer" }}>Ouvrir le dossier médical →</button>}
         </div>

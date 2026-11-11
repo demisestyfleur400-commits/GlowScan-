@@ -71,9 +71,13 @@ section{margin-top:20px}h3{margin:0 0 5px;font-size:12px;font-weight:600;color:#
 footer{position:absolute;left:62px;right:62px;bottom:40px;padding-top:10px;border-top:1px solid #e4e8e3;display:flex;justify-content:space-between;gap:16px;color:#8a9894;font-size:8.5px}
 .wm{position:absolute;top:44%;left:-10%;right:-10%;text-align:center;transform:rotate(-24deg);color:rgba(176,101,42,.13);font:800 60px Inter,sans-serif;letter-spacing:4px;pointer-events:none}
 .note{width:794px;margin:0 auto 30px;color:#6b7a75;font-size:10px}
-@media print{html,body{background:#fff}.page{margin:0;box-shadow:none}.note{display:none}}
+.bar{position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 20px;background:#0d2929;color:#e4ede9;font-size:13px}
+.bar button{padding:10px 18px;border:0;border-radius:6px;background:#e6ec9c;color:#17392c;font:700 14px Inter,Arial,sans-serif;cursor:pointer}
+.bar span{line-height:1.45}
+@media print{html,body{background:#fff}.page{margin:0;box-shadow:none}.note,.bar{display:none}}
 @media screen and (max-width:640px){.page{width:auto;min-height:0;margin:0;padding:28px 22px 90px}footer{left:22px;right:22px}.note{width:auto;padding:0 22px}}</style></head>
-<body><div class="page">
+<body>${draft ? "" : `<div class="bar" id="bar"><span>Pour un PDF : cliquez sur le bouton, puis choisissez « Enregistrer au format PDF ».</span><button type="button" onclick="window.print()">Imprimer ou enregistrer en PDF</button></div>
+<script>(function(){try{if(window.self!==window.top){document.getElementById("bar").style.display="none"}if(/[?&]print=1/.test(location.search)){window.addEventListener("load",function(){setTimeout(function(){window.print()},400)})}}catch(e){}})()</script>`}<div class="page">
 ${draft ? '<div class="wm">BROUILLON · NON TRANSMISSIBLE</div>' : ""}
 <header><div><span class="k">DERMATOLOGIE</span><b class="cab">${esc(cab)}</b><div class="small">${[d.cabinetAddress, d.city].filter(Boolean).map(esc).join("<br>")}${contact ? `<br>${contact}` : ""}</div></div>
 <div class="dr"><b>${esc(drName(d.name))}</b><div class="small">Dermatologue${d.licenseNumber ? `<br>N° d'ordre ONMC : ${esc(d.licenseNumber)}` : ""}</div></div></header>

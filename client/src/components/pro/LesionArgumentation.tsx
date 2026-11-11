@@ -13,8 +13,10 @@ interface Refined {
   contradiction: { detectee: boolean; explication: string | null; suggestion: string | null };
 }
 
-export function LesionArgumentation({ scanId, condition, score, fitzpatrick, age, patientContext }: {
+export function LesionArgumentation({ scanId, condition, score, fitzpatrick, age, patientContext, onConfirmed }: {
   scanId?: number | null; condition?: string; score?: number; fitzpatrick?: string; age?: string | number; patientContext?: string;
+  /** Diagnostic retenu par le médecin (validé ou corrigé) : la page s'en sert partout ensuite. */
+  onConfirmed?: (finalDiagnosis: string, isCorrection: boolean) => void;
 }) {
   const [obs, setObs] = useState("");
   const [busy, setBusy] = useState(false);
@@ -58,7 +60,7 @@ export function LesionArgumentation({ scanId, condition, score, fitzpatrick, age
         body: JSON.stringify({ validated: mode === "validate", finalDiagnosis, severity, notes: notes.trim() }),
       });
       const d = await res.json();
-      if (res.ok) setConfirmed({ finalDiagnosis: d.finalDiagnosis, isCorrection: d.isCorrection });
+      if (res.ok) { setConfirmed({ finalDiagnosis: d.finalDiagnosis, isCorrection: d.isCorrection }); if (d.finalDiagnosis) onConfirmed?.(String(d.finalDiagnosis), !!d.isCorrection); }
       else setErr(d.message || "Erreur");
     } catch { setErr("Erreur réseau."); } finally { setConfirming(false); }
   };

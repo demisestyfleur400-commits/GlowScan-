@@ -5,7 +5,7 @@ import { sql } from "drizzle-orm";
 import { db } from "./db";
 import { requireProAccess } from "./proRoutes";
 import { verifySignPin, PIN_MESSAGES } from "./signPin";
-import { sendWhatsAppText } from "./whatsapp";
+import { sendWhatsAppText, whatsappDeepLink } from "./whatsapp";
 import { renderPatientReport, renderCabinetReport, renderPrescription, type ReportDoctor, type ReportPatient, type ReportDoc, type ReportPrescription, type ReportEvolution } from "./reportHtml";
 import { reportPayloadSchema, emptyReport, reportRef, prescriptionRef, refNumber, reportMissing, linesAsText, DEFAULT_SPECIALTY, type ReportPayload } from "@shared/report";
 import { buildReportReadyMessage } from "@shared/whatsappMessages";
@@ -153,7 +153,9 @@ async function prefill(proId: number, source: "visit" | "consultation", target: 
       SELECT condition, expert_corrected_condition, clinical_context FROM scans WHERE patient_id = ${target} ORDER BY created_at DESC LIMIT 1`))[0];
     if (s) {
       p.aiSuggestion = s.condition || null;
-      if (!p.diagnosis) p.diagnosis = s.expert_corrected_condition || s.condition || "";
+      // La correction du médecin sur la dernière analyse prime sur le diagnostic du compte rendu précédent.
+      if (s.expert_corrected_condition) p.diagnosis = s.expert_corrected_condition;
+      else if (!p.diagnosis) p.diagnosis = s.condition || "";
       const ph = s.clinical_context?.examen?.phototype;
       if (ph && !p.phototype) p.phototype = String(ph).slice(0, 10);
     }
@@ -318,14 +320,16 @@ export function registerReportRoutes(app: Express) {
           RETURNING *`))[0];
       }
       // Nouvelle consultation (D3) : motif et observations du parcours remplissent
-      // les champs encore vides du brouillon (jamais la conclusion ni la prescription).
+      // les champs encore vides du brouillon. La conclusion n'est préremplie qu'avec le
+      // diagnostic retenu PAR LE MÉDECIN (validé ou corrigé), jamais avec celui de l'IA.
       const pre = req.body?.prefill;
       if (a4 && pre && !r.signed_at) {
         const q = reportPayloadSchema.parse(r.payload || {});
         const motif = typeof pre.motif === "string" ? pre.motif.trim().slice(0, 600) : "";
         const exam = typeof pre.exam === "string" ? pre.exam.trim().slice(0, 1500) : "";
-        if ((motif && !q.motif) || (exam && !q.exam)) {
-          const next = { ...q, motif: q.motif || motif, exam: q.exam || exam };
+        const conclusion = typeof pre.conclusion === "string" ? pre.conclusion.trim().slice(0, 600) : "";
+        if ((motif && !q.motif) || (exam && !q.exam) || (conclusion && !q.conclusion)) {
+          const next = { ...q, motif: q.motif || motif, exam: q.exam || exam, conclusion: q.conclusion || conclusion };
           await db.execute(sql`UPDATE consult_reports SET payload = ${JSON.stringify(next)}::jsonb, updated_at = NOW() WHERE id = ${r.id}`);
           r = { ...r, payload: next };
         }
@@ -379,13 +383,22 @@ export function registerReportRoutes(app: Express) {
       const d = await loadDoctor(r.pro_account_id);
       const p = reportPayloadSchema.parse(r.payload || {});
       const url = p.format === "a4" ? patientReportUrl(r.id).replace("v=patient", "v=a4") : patientReportUrl(r.id);
-      const wa = await sendWhatsAppText(pt.phone, buildReportReadyMessage({ name: pt.firstName, derm: d.name, url, withPrescription: p.withPrescription }));
+      const text = buildReportReadyMessage({ name: pt.firstName, derm: d.name, url, withPrescription: p.withPrescription });
+      const waLink = whatsappDeepLink(pt.phone || "", text);
+      // mode « link » : le médecin envoie depuis son propre WhatsApp (message et lien
+      // déjà écrits). C'est la remise fiable tant que l'API WhatsApp n'est pas validée.
+      if (req.body?.mode === "link") {
+        await db.execute(sql`UPDATE consult_reports SET sent_patient_at = COALESCE(sent_patient_at, NOW()) WHERE id = ${r.id}`);
+        if (r.patient_id) await db.execute(sql`UPDATE patients SET report_sent_at = NOW() WHERE id = ${r.patient_id}`).catch(() => {});
+        return res.json({ sent: false, url, waLink });
+      }
+      const wa = await sendWhatsAppText(pt.phone, text);
       if (wa.ok) {
         await db.execute(sql`UPDATE consult_reports SET sent_patient_at = NOW() WHERE id = ${r.id}`);
         if (r.patient_id) await db.execute(sql`UPDATE patients SET report_sent_at = NOW() WHERE id = ${r.patient_id}`).catch(() => {});
       }
       // Sans WhatsApp configuré ou sans numéro : le médecin partage le lien lui-même.
-      res.json({ sent: wa.ok, url });
+      res.json({ sent: wa.ok, url, waLink });
     } catch (e) {
       console.error("[reports send]", e);
       res.status(500).json({ message: "Erreur serveur" });

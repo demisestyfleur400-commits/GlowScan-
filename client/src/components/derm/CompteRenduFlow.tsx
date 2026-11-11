@@ -54,7 +54,7 @@ function FieldBlock({ id, label, tag, required, value, onChange, ph, rows = 2 }:
   );
 }
 
-export type CrPrefill = { motif?: string; exam?: string };
+export type CrPrefill = { motif?: string; exam?: string; conclusion?: string };
 
 /** Écran « Relire, corriger, valider » puis « Remettre au patient ». Page (D2) ou étape 5 de la Nouvelle consultation (D3). */
 export function CompteRenduFlow({ pid, prefill, embedded, onDone }: { pid: number; prefill?: CrPrefill; embedded?: boolean; onDone?: () => void }) {
@@ -82,6 +82,7 @@ export function CompteRenduFlow({ pid, prefill, embedded, onDone }: { pid: numbe
   const [msg, setMsg] = useState<{ t: string; tone: "ok" | "warn" | "err" } | null>(null);
   const [ch, setCh] = useState({ wa: true, mail: false, print: false });
   const [delivered, setDelivered] = useState<string[] | null>(null);
+  const [links, setLinks] = useState<{ wa?: string; print?: string }>({});
   const opened = useRef(false);
 
   // Ouvre le brouillon en cours (ou en crée un, prérempli) au format A4.
@@ -99,6 +100,18 @@ export function CompteRenduFlow({ pid, prefill, embedded, onDone }: { pid: numbe
       .catch((e) => setMsg({ t: e.message, tone: "err" }));
   }, [pid, acc, isSecretary]);
   useEffect(() => { if (fiche?.patient?.email) setCh((c) => ({ ...c, mail: true })); }, [fiche?.patient?.email]);
+  // Le médecin valide ou corrige le diagnostic après l'ouverture du brouillon : la
+  // conclusion suit, tant qu'il ne l'a pas rédigée lui-même (vide ou texte prérempli).
+  const autoConcl = useRef<string>("");
+  useEffect(() => {
+    const c = prefill?.conclusion?.trim();
+    if (!c || !p || signedAt) return;
+    const cur = (p.conclusion || "").trim();
+    if (cur && cur !== autoConcl.current && !cur.startsWith("Diagnostic retenu :")) return;
+    if (cur === c) { autoConcl.current = c; return; }
+    autoConcl.current = c;
+    up({ conclusion: c });
+  }, [prefill?.conclusion, !!p, signedAt]);
 
   const up = (patch: Partial<ReportPayload>) => { setP((cur) => (cur ? { ...cur, ...patch } : cur)); setDirty(true); };
   const meds = p?.meds?.length ? p.meds : [emptyMed()];
@@ -152,25 +165,31 @@ export function CompteRenduFlow({ pid, prefill, embedded, onDone }: { pid: numbe
     if (!rid) return;
     setBusy(true); setMsg(null);
     const out: string[] = [];
+    const nl: { wa?: string; print?: string } = {};
+    // Onglet ouvert tout de suite (pendant le clic), sinon le navigateur le bloque.
+    const win = ch.wa || ch.print ? window.open("about:blank", "_blank") : null;
     try {
       if (ch.wa) {
-        const d = await api<{ sent: boolean; url: string }>(`/api/pro/reports/${rid}/send`, "POST", {});
-        out.push(d.sent ? "Lien du compte rendu envoyé sur WhatsApp" : "WhatsApp indisponible : lien à partager vous-même");
-        if (!d.sent) { try { await navigator.clipboard.writeText(d.url); out[out.length - 1] += " (lien copié)"; } catch {} }
+        const d = await api<{ sent: boolean; url: string; waLink: string }>(`/api/pro/reports/${rid}/send`, "POST", { mode: "link" });
+        nl.wa = d.waLink;
+        out.push(fiche?.patient?.phone ? `WhatsApp ouvert avec le message et le lien pour +${fiche.patient.phone} : appuyez sur Envoyer` : "WhatsApp ouvert avec le message et le lien : choisissez le contact du patient, puis Envoyer");
       }
       if (ch.mail) {
         try { const d = await api<{ sent: boolean }>(`/api/pro/reports/${rid}/email`, "POST", {}); out.push(d.sent ? "Compte rendu envoyé par email" : "Email non parti : réessayez plus tard"); }
         catch (e: any) { out.push(e.message); }
       }
       if (ch.print) {
-        window.open(`/api/reports/${rid}/view?v=a4`, "_blank", "noopener");
         await api(`/api/pro/reports/${rid}/handed`, "POST", {});
-        out.push("Document ouvert pour impression · remis en main propre");
+        nl.print = `/api/reports/${rid}/view?v=a4&print=1`;
+        out.push("Fenêtre d'impression ouverte · choisissez l'imprimante ou « Enregistrer au format PDF »");
       }
+      const first = nl.wa || nl.print;
+      if (win) { if (first) { try { win.opener = null; } catch {} win.location.href = first; } else win.close(); }
+      setLinks(nl);
       setSentAt(new Date().toISOString());
       setDelivered(out);
       qc.invalidateQueries({ queryKey: [`/api/derm/records/${pid}`] });
-    } catch (e: any) { setMsg({ t: e.message, tone: "err" }); }
+    } catch (e: any) { try { win?.close(); } catch {} setMsg({ t: e.message, tone: "err" }); }
     setBusy(false);
   };
 
@@ -315,7 +334,7 @@ export function CompteRenduFlow({ pid, prefill, embedded, onDone }: { pid: numbe
             <div className="min-w-0" style={{ border: `1px solid ${D.border}`, borderRadius: 10, background: "#fff" }}>
               <div className="flex flex-wrap items-center justify-between" style={{ gap: 8, padding: "12px 18px", borderBottom: `1px solid ${D.border}` }}>
                 <b style={{ fontSize: 12, fontWeight: 600 }}>Document remis au patient · A4</b>
-                <Btn kind="secondary" onClick={() => window.open(`/api/reports/${rid}/view?v=a4`, "_blank", "noopener")} style={{ height: 32 }}>Ouvrir · imprimer · image</Btn>
+                <Btn kind="secondary" onClick={() => window.open(`/api/reports/${rid}/view?v=a4&print=1`, "_blank", "noopener")} style={{ height: 32 }}>Imprimer ou enregistrer en PDF</Btn>
               </div>
               <iframe title="Compte rendu" src={`/api/reports/${rid}/view?v=a4`} style={{ width: "100%", height: 1140, border: 0, display: "block", background: "#f1f3f1" }} />
             </div>
@@ -323,7 +342,7 @@ export function CompteRenduFlow({ pid, prefill, embedded, onDone }: { pid: numbe
               <div className="flex flex-col" style={{ gap: 10, padding: 18, border: `1px solid ${D.border}`, borderRadius: 10, background: "#fff" }}>
                 <b style={{ fontSize: 14, fontWeight: 600 }}>Remettre au patient</b>
                 <span style={{ fontSize: 10.5, color: D.muted }}>Choisissez un ou plusieurs moyens.</span>
-                {([["wa", "WhatsApp", fiche?.patient?.phone ? `+${fiche.patient.phone}` : "Aucun numéro : lien à partager"], ["mail", "Email", fiche?.patient?.email || "Aucune adresse dans la fiche"], ["print", "Imprimer", "Remis en main propre"]] as const).map(([k, t, s]) => {
+                {([["wa", "WhatsApp", fiche?.patient?.phone ? `Depuis votre WhatsApp · +${fiche.patient.phone}` : "Depuis votre WhatsApp · contact à choisir"], ["mail", "Email", fiche?.patient?.email || "Aucune adresse dans la fiche"], ["print", "Imprimer", "Remis en main propre"]] as const).map(([k, t, s]) => {
                   const on = ch[k];
                   const off = k === "mail" && !fiche?.patient?.email;
                   return (
@@ -346,6 +365,12 @@ export function CompteRenduFlow({ pid, prefill, embedded, onDone }: { pid: numbe
                     `Document vérifiable sur glow-scan.com/verif/${reportRef(rid!)}`].map((t) => (
                     <span key={t} className="flex" style={{ gap: 8, fontSize: 11 }}><Check size={13} color={D.action} className="mt-0.5 flex-none" />{t}</span>
                   ))}
+                  {(links.wa || links.print) && (
+                    <div className="flex flex-wrap" style={{ gap: 8, marginTop: 4 }}>
+                      {links.wa && <a href={links.wa} target="_blank" rel="noopener noreferrer" data-testid="cr-open-wa" style={{ padding: "10px 16px", borderRadius: 6, background: "#1f7a4d", color: "#fff", fontSize: 12.5, fontWeight: 600, textDecoration: "none" }}>Ouvrir WhatsApp avec le message</a>}
+                      {links.print && <a href={links.print} target="_blank" rel="noopener noreferrer" data-testid="cr-open-print" style={{ padding: "10px 16px", borderRadius: 6, border: `1px solid ${D.borderAlt}`, background: "#fff", color: D.text, fontSize: 12.5, fontWeight: 600, textDecoration: "none" }}>Imprimer ou enregistrer en PDF</a>}
+                    </div>
+                  )}
                   <div className="flex flex-wrap" style={{ gap: 8, marginTop: 6 }}>
                     <Btn kind="primary" onClick={() => go(`/derm/dossiers/${pid}`)}>Ouvrir le dossier médical →</Btn>
                     {onDone ? <Btn kind="secondary" onClick={onDone}>Patient suivant</Btn> : <Btn kind="secondary" onClick={() => go("/derm/dossiers")}>Retour aux dossiers</Btn>}
