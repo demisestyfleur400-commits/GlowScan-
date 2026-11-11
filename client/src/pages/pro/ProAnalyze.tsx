@@ -37,11 +37,6 @@ import { useRealtimeScans } from "@/hooks/use-realtime";
 import { useQrCode } from "@/hooks/use-qrcode";
 import { useClinicalOverride } from "@/hooks/use-pro";
 import { ClinicalOverride, type ClinicalOverrideData } from "@/components/ClinicalOverride";
-import { Suspense } from "react";
-import { lazyWithRetry } from "@/lib/chunkReload";
-const ResultCard = lazyWithRetry(() =>
-  import("@/components/ResultCard").then((m) => ({ default: m.ResultCard }))
-) as React.LazyExoticComponent<typeof import("@/components/ResultCard").ResultCard>;
 import { useToast } from "@/hooks/use-toast";
 import { SubscriptionExpiredBanner } from "@/components/pro/SubscriptionExpiredBanner";
 import { ContextualTip } from "@/components/pro/ContextualTip";
@@ -63,6 +58,7 @@ import { DermShell } from "@/components/derm/DermShell";
 import { useQuery } from "@tanstack/react-query";
 import { D as DD, patientCode } from "@/components/derm/tokens";
 import { GlowAssistant, type GlowCase } from "@/components/derm/GlowAssistant";
+import { DermAnalysisCard } from "@/components/derm/DermAnalysisCard";
 import { CompteRenduFlow } from "@/components/derm/CompteRenduFlow";
 
 const NAVY = "var(--color-accent)";
@@ -378,8 +374,6 @@ export default function ProAnalyze() {
   const fileRef = useRef<HTMLInputElement>(null);
   const fileRefRight = useRef<HTMLInputElement>(null);
   const fileRefLeft = useRef<HTMLInputElement>(null);
-  // Fonction de génération du PDF unifié (B2C + pages médicales), exposée par ResultCard
-  const pdfFnRef = useRef<(() => void) | null>(null);
   const [dragOver, setDragOver] = useState(false);
 
   // Step 3 : Diagnostic
@@ -1720,44 +1714,15 @@ export default function ProAnalyze() {
                 })} />
 
 
-                <Suspense fallback={
-                  <div className="flex justify-center py-12">
-                    <Loader2 className="w-6 h-6 animate-spin" style={{ color: NAVY }} />
-                  </div>
-                }>
-                  <ResultCard
-                    result={result}
-                    imageUrl={photoBase64}
-                    userFirstName={firstName || lastName || undefined}
-                    area="face"
-                    isPro={true}
-                    doctorName={accountData?.account?.fullName || undefined}
-                    doctorLicense={(accountData?.account as any)?.licenseNumber || undefined}
-                    cabinetName={accountData?.account?.cabinetName || undefined}
-                    practitionerNotes={practitionerNotes || undefined}
-                    overrideNote={overrideType !== "none" ? `${overrideCondition || ""}${overrideReason ? " — " + overrideReason : (overrideSummary ? " — " + overrideSummary : "")}`.trim() : undefined}
-                    patientIntake={{
-                      fullName: `${firstName} ${lastName}`.trim() || undefined,
-                      phone: phone || undefined,
-                      age: age ? `${age} ans` : undefined,
-                      duration: problemDuration || undefined,
-                      previousProducts: previousProducts || undefined,
-                      allergies: allergies || undefined,
-                      region: patientRegion || undefined,
-                      motif: consultMotif || undefined,
-                    }}
-                    reportMode={reportMode}
-                    clinicalRecord={clinicalRecord}
-                    examen={examen}
-                    onPdfReady={(fn) => { pdfFnRef.current = fn; }}
-                  />
-                </Suspense>
+                <DermAnalysisCard result={result} imageUrl={photoBase64}
+                  patientName={`${firstName} ${lastName}`.trim() || undefined} age={age || undefined}
+                  duration={problemDuration || undefined} finalDx={finalDx} />
 
                 {/* Notes cliniques praticien */}
-                <div className="mt-5 rounded-2xl p-4" style={{ background: "var(--color-bg)", border: "1px solid rgba(42,107,79,0.15)" }}>
+                <div className="mt-5" style={{ padding: 16, borderRadius: 12, background: "#fff", border: "1px solid #e4e8e3" }}>
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-[10px] font-extrabold uppercase tracking-wider" style={{ color: "rgba(42,107,79,0.5)" }}>
-                      Notes cliniques du praticien (optionnel) — incluses dans le PDF du patient
+                    <p style={{ margin: 0, fontSize: 11, fontWeight: 700, letterSpacing: .8, textTransform: "uppercase", color: "#66766f" }}>
+                      Vos notes cliniques (optionnel) · reprises dans les observations du compte rendu
                     </p>
                     <VoiceButton value={practitionerNotes} onChange={(t) => setPractitionerNotes(t)} />
                   </div>
@@ -1768,11 +1733,11 @@ export default function ProAnalyze() {
                     rows={4}
                     className="w-full outline-none resize-none"
                     style={{
-                      background: "var(--color-bg)",
-                      border: "1px solid rgba(42,107,79,0.2)",
-                      borderRadius: 12,
-                      padding: "12px 16px",
-                      fontSize: 13,
+                      background: "#f8faf7",
+                      border: "1px solid #e4e8e3",
+                      borderRadius: 8,
+                      padding: "12px 14px",
+                      fontSize: 14,
                       color: "var(--color-text)",
                       minHeight: 100,
                       lineHeight: 1.6,
