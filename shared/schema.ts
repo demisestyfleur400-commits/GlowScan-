@@ -416,6 +416,31 @@ export const patients = pgTable("patients", {
   followupClosedAt: timestamp("followup_closed_at"),
 });
 
+// Réglages du cabinet, un par médecin (0038).
+export const dermClinicSettings = pgTable("derm_clinic_settings", {
+  proAccountId: integer("pro_account_id").primaryKey().references(() => proAccounts.id, { onDelete: "cascade" }),
+  signatureText: text("signature_text"),
+  cabinetEmail: text("cabinet_email"),
+  openTime: varchar("open_time", { length: 5 }).notNull().default("08:00"),
+  closeTime: varchar("close_time", { length: 5 }).notNull().default("18:00"),
+  slotMinutes: smallint("slot_minutes").notNull().default(30),
+  pauseStart: varchar("pause_start", { length: 5 }),
+  pauseEnd: varchar("pause_end", { length: 5 }),
+  openDays: smallint("open_days").array().notNull().default([1, 2, 3, 4, 5]),
+  remindJ1: boolean("remind_j1").notNull().default(true),
+  remindH2: boolean("remind_h2").notNull().default(true),
+  remindReport: boolean("remind_report").notNull().default(true),
+  remindPhoto: boolean("remind_photo").notNull().default(true),
+  remindMissed: boolean("remind_missed").notNull().default(false),
+  priceCabinetFcfa: integer("price_cabinet_fcfa"),
+  priceControlFcfa: integer("price_control_fcfa"),
+  photoConsentRequired: boolean("photo_consent_required").notNull().default(true),
+  dhis2Aggregate: boolean("dhis2_aggregate").notNull().default(false),
+  glowPreanalysis: boolean("glow_preanalysis").notNull().default(true),
+  retention20y: boolean("retention_20y").notNull().default(true),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
 // Bilan hebdomadaire du médecin (0037).
 export const dermWeeklyReviews = pgTable("derm_weekly_reviews", {
   id: serial("id").primaryKey(),

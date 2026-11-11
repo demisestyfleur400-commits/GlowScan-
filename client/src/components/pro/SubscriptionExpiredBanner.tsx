@@ -41,7 +41,7 @@ export function SubscriptionExpiredBanner() {
           Vos dossiers existants restent en sécurité.
         </p>
         <Link
-          href="/derm/cabinet"
+          href="/derm/cabinet-avance"
           style={{
             display: "inline-block",
             background: "var(--color-accent-800)",

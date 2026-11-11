@@ -11,6 +11,7 @@ import { a4Meds, reportRef, suiviDate, type ReportPayload } from "@shared/report
 export type A4Doctor = {
   name: string; cabinetName: string | null; city: string | null; licenseNumber: string | null;
   cabinetAddress: string | null; cabinetPhone: string | null; email: string | null;
+  signatureText?: string | null; // Paramètres › Profil & cabinet (D7)
 };
 export type A4Patient = { firstName: string; lastName: string; sex: string | null; age: number | null; birthDate: string | null };
 export type A4Doc = { id: number; payload: ReportPayload; signedAt: string | null; createdAt: string };
@@ -81,7 +82,7 @@ ${draft ? '<div class="wm">BROUILLON · NON TRANSMISSIBLE</div>' : ""}
 ${sec("Motif de consultation", p.motif)}${sec("Observations cliniques", p.exam)}${sec("Conclusion du dermatologue", p.conclusion)}${sec("Conduite à tenir", p.conduite)}
 <section><h3>Prescription</h3>${rx}</section>${sec("Suivi", a4SuiviText(p, dateRef))}
 <div class="sign"><div class="verif">${draft ? "Document non signé · non transmissible." : `Document vérifiable<br>glow-scan.com/verif/${ref}`}</div>
-<div class="sig"><b>${esc(drName(d.name))}</b>${draft ? '<span class="small" style="display:block;margin-top:6px">En attente de validation</span>' : `<span class="small" style="display:block">Validé le ${frDate(doc.signedAt, true)}</span><span class="s">${esc(drName(d.name))}</span>`}</div></div>
+<div class="sig"><b>${esc(drName(d.name))}</b>${draft ? '<span class="small" style="display:block;margin-top:6px">En attente de validation</span>' : `<span class="small" style="display:block">Validé le ${frDate(doc.signedAt, true)}</span><span class="s">${esc(d.signatureText || drName(d.name))}</span>`}</div></div>
 <footer><span>Document médical confidentiel · Remis au patient</span><span>1 / 1</span></footer>
 </div><p class="note">Seuls les éléments confirmés figurent dans la version remise. Aucun brouillon n'est transmis.</p></body></html>`;
 }

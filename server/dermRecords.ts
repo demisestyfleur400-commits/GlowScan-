@@ -135,7 +135,7 @@ export function registerDermRecordRoutes(app: Express) {
       res.json({
         patient: {
           ...adminRow(p), emergencyName: p.emergency_name || null, emergencyPhone: p.emergency_phone || null, legalRep: p.legal_rep || null,
-          contactChannels: p.contact_channels || [], contactUsage: p.contact_usage || USAGES[0],
+          contactChannels: p.contact_channels || [], contactUsage: p.contact_usage || USAGES[0], photoConsentAt: iso(p.photo_consent_at),
         },
         cabinet: { doctor: acc.fullName || "", cabinetName: acc.cabinetName || null, city: acc.city || null },
       });

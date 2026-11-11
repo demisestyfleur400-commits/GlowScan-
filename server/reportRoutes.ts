@@ -77,8 +77,10 @@ async function loadA4Doctor(proId: number): Promise<A4Doctor> {
   const d = Rows(await db.execute(sql`
     SELECT p.full_name, p.cabinet_name, p.city, p.license_number, p.cabinet_address, p.cabinet_phone, u.email
     FROM pro_accounts p LEFT JOIN users u ON u.id = p.user_id WHERE p.id = ${proId}`))[0] || {};
+  let st: any = {};
+  try { st = Rows(await db.execute(sql`SELECT signature_text, cabinet_email FROM derm_clinic_settings WHERE pro_account_id = ${proId}`))[0] || {}; } catch {}
   return { name: d.full_name || "", cabinetName: d.cabinet_name || null, city: d.city || null, licenseNumber: d.license_number || null,
-    cabinetAddress: d.cabinet_address || null, cabinetPhone: d.cabinet_phone || null, email: d.email || null };
+    cabinetAddress: d.cabinet_address || null, cabinetPhone: d.cabinet_phone || null, email: st.cabinet_email || d.email || null, signatureText: st.signature_text || null };
 }
 async function loadA4Patient(r: any): Promise<A4Patient & { email: string | null; phone: string | null }> {
   if (r.patient_id) {

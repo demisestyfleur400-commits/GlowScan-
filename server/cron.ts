@@ -138,6 +138,7 @@ async function sendFollowUpReminders() {
       WHERE p."follow_up_at" IS NOT NULL
         AND p."follow_up_at" <= NOW()
         AND COALESCE(p."follow_up_reminder_sent", FALSE) = FALSE
+        AND COALESCE((SELECT st.remind_photo FROM derm_clinic_settings st WHERE st.pro_account_id = p."dermatologist_id"), TRUE)
       LIMIT 200
     `);
     const rows = (r?.rows ?? r ?? []) as any[];
@@ -490,6 +491,7 @@ async function sendAppointmentH2Reminders() {
       FROM appointments a LEFT JOIN pro_accounts p ON p.id = a.dermatologue_id
       WHERE a.appointment_date BETWEEN NOW() + INTERVAL '1 hour 50 minutes' AND NOW() + INTERVAL '2 hours 10 minutes'
         AND a.reminder_h2_sent = false AND a.status IN ('scheduled','confirmed')
+        AND COALESCE((SELECT st.remind_h2 FROM derm_clinic_settings st WHERE st.pro_account_id = a.dermatologue_id), TRUE)
       LIMIT 200`);
     const rows = (r?.rows ?? r ?? []) as any[];
     if (!rows.length) return;
@@ -531,6 +533,34 @@ async function sendAppointmentH2Reminders() {
   }
 }
 
+// ── AGENDA — relance après un rendez-vous MANQUÉ (Paramètres › Agenda & rappels) ──
+// Tous les jours à 10 h : rendez-vous d'hier ni terminé ni annulé, sans visite du
+// patient depuis. Un seul message, sans détail médical, si le médecin l'a activé.
+async function sendMissedAppointmentRelances() {
+  try {
+    const r: any = await db.execute(sql`
+      SELECT a.id, a.patient_name, a.patient_contact, a.patient_record_id, p.full_name AS derm_name
+      FROM appointments a LEFT JOIN pro_accounts p ON p.id = a.dermatologue_id
+      WHERE (a.appointment_date AT TIME ZONE 'Africa/Douala')::date = ((NOW() AT TIME ZONE 'Africa/Douala')::date - 1)
+        AND a.status IN ('scheduled', 'confirmed') AND a.missed_relance_at IS NULL AND a.patient_contact IS NOT NULL
+        AND COALESCE((SELECT st.remind_missed FROM derm_clinic_settings st WHERE st.pro_account_id = a.dermatologue_id), FALSE)
+        AND NOT EXISTS (SELECT 1 FROM scans s WHERE a.patient_record_id IS NOT NULL AND s.patient_id = a.patient_record_id AND s.created_at >= a.appointment_date - INTERVAL '2 hours')
+        AND NOT EXISTS (SELECT 1 FROM consult_reports cr WHERE a.patient_record_id IS NOT NULL AND cr.patient_id = a.patient_record_id AND cr.created_at >= a.appointment_date - INTERVAL '2 hours')
+      LIMIT 200`);
+    const rows = (r?.rows ?? r ?? []) as any[];
+    let sent = 0;
+    for (const a of rows) {
+      if (await followupsStoppedAt({ phone: a.patient_contact })) { await db.execute(sql`UPDATE appointments SET missed_relance_at = NOW() WHERE id = ${a.id}`).catch(() => {}); continue; }
+      const dr = `Dr ${String(a.derm_name || "").replace(/^(dr|pr)\.?\s*/i, "")}`.trim();
+      const msg = withFollowupFooter(`Bonjour ${fn(a.patient_name || "")},\n\nNous ne vous avons pas vu à votre rendez-vous d'hier avec ${dr}. Répondez à ce message pour en fixer un nouveau, ou appelez le cabinet.\n\nGlowScan`);
+      const out = await sendWhatsAppText(a.patient_contact, msg).catch(() => ({ ok: false }));
+      await db.execute(sql`UPDATE appointments SET missed_relance_at = NOW() WHERE id = ${a.id}`).catch(() => {});
+      if (out.ok) sent++;
+    }
+    if (rows.length) log(`📅 Relances rendez-vous manqué : ${sent}/${rows.length} envoyées`);
+  } catch (err) { log(`❌ Erreur relance rendez-vous manqué : ${err instanceof Error ? err.message : String(err)}`); }
+}
+
 // ── AGENDA — rappel de la VEILLE (WhatsApp, « Répondez 1 pour confirmer ») ──
 // Tous les jours à 18 h (Douala) : rendez-vous de demain pas encore confirmés.
 async function sendAppointmentJ1Reminders() {
@@ -541,6 +571,7 @@ async function sendAppointmentJ1Reminders() {
       FROM appointments a LEFT JOIN pro_accounts p ON p.id = a.dermatologue_id
       WHERE (a.appointment_date AT TIME ZONE 'Africa/Douala')::date = ${tomorrow}::date
         AND a.status = 'scheduled' AND a.reminder_j1_sent_at IS NULL AND a.patient_contact IS NOT NULL
+        AND COALESCE((SELECT st.remind_j1 FROM derm_clinic_settings st WHERE st.pro_account_id = a.dermatologue_id), TRUE)
       LIMIT 300`);
     const rows = (r?.rows ?? r ?? []) as any[];
     let sent = 0;
@@ -578,6 +609,7 @@ async function sendVisitReportReminders() {
       LEFT JOIN pro_accounts pr ON pr.id = a.dermatologue_id
       LEFT JOIN users u ON u.id = pr.user_id
       WHERE a.status IN ('scheduled', 'confirmed', 'done') AND a.report_reminder_sent_at IS NULL
+        AND COALESCE((SELECT st.remind_report FROM derm_clinic_settings st WHERE st.pro_account_id = a.dermatologue_id), TRUE)
         AND a.appointment_date + make_interval(mins => COALESCE(a.duration_minutes, 30) + 60) < NOW()
         AND a.appointment_date > NOW() - INTERVAL '2 days'
         AND (pt.report_sent_at IS NULL OR pt.report_sent_at < a.appointment_date)
@@ -996,6 +1028,7 @@ export function startCronJobs() {
   // Agenda : rappel WhatsApp de la veille (18 h) et compte rendu à envoyer après la visite.
   cron.schedule("0 18 * * *", sendAppointmentJ1Reminders, { timezone: "Africa/Douala" });
   cron.schedule("*/30 * * * *", sendVisitReportReminders, { timezone: "Africa/Douala" });
+  cron.schedule("0 10 * * *", sendMissedAppointmentRelances, { timezone: "Africa/Douala" });
   // Réseau : délais des avis relais (simple 24 h, urgent 2 h).
   cron.schedule("*/10 * * * *", flagRelayDeadlines, { timezone: "Africa/Douala" });
   // Confrères : premier disponible sans preneur, rappel avant échéance, délai dépassé → remboursement.

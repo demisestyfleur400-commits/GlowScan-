@@ -59,6 +59,7 @@ import { ClinicalRulesPanel } from "@/components/pro/ClinicalRulesPanel";
 import { evaluateRules } from "@/lib/clinicalRules";
 import { ConfidenceEscalation } from "@/components/pro/ConfidenceEscalation";
 import { DermShell } from "@/components/derm/DermShell";
+import { useQuery } from "@tanstack/react-query";
 import { D as DD, patientCode } from "@/components/derm/tokens";
 import { GlowAssistant, type GlowCase } from "@/components/derm/GlowAssistant";
 import { CompteRenduFlow } from "@/components/derm/CompteRenduFlow";
@@ -425,6 +426,21 @@ export default function ProAnalyze() {
 
   // Patient préparé par l'accueil (salle d'attente) : bandeau « Faire entrer ».
   const [waiting, setWaiting] = useState(false);
+  // Paramètres du cabinet (D7) : consentement avant photo, pré-analyse Glow.
+  const { data: dcfg } = useQuery<{ settings: { photoConsentRequired: boolean; glowPreanalysis: boolean } }>({ queryKey: ["/api/derm/settings"] });
+  const consentRequired = dcfg?.settings?.photoConsentRequired !== false;
+  const preanalysis = dcfg?.settings?.glowPreanalysis !== false;
+  const [photoConsent, setPhotoConsent] = useState(false);
+  useEffect(() => {
+    setPhotoConsent(false);
+    if (!patientId) return;
+    fetch(`/api/derm/patients/${patientId}`, { credentials: "include" }).then((r) => (r.ok ? r.json() : null)).then((d) => { if (d?.patient?.photoConsentAt) setPhotoConsent(true); }).catch(() => {});
+  }, [patientId]);
+  const recordConsent = async () => {
+    setPhotoConsent(true);
+    if (patientId) fetch(`/api/derm/records/${patientId}`, { method: "PATCH", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ photoConsent: true }) }).catch(() => {});
+  };
+  const photosLocked = consentRequired && !photoConsent;
   // Consultation démarrée depuis l'Agenda (?rdv=ID) : le rendez-vous passe à « terminé » une fois le dossier enregistré.
   const rdvId = (() => { try { return Number(new URLSearchParams(window.location.search).get("rdv")) || null; } catch { return null; } })();
   useEffect(() => {
@@ -672,7 +688,7 @@ export default function ProAnalyze() {
           variant: "destructive",
         });
         setStep(1);
-        setLocation("/derm/cabinet");
+        setLocation("/derm/cabinet-avance");
         return;
       }
       console.warn("[pro] analyse IA indisponible", err?.message);
@@ -1585,7 +1601,13 @@ export default function ProAnalyze() {
             <p className="text-xs font-extrabold mb-2 px-1" style={{ color: "var(--color-accent-700)" }}>
               Photos cliniques <span style={{ color: DS.muted }}>— portrait requis, profils recommandés</span>
             </p>
-            <div className="grid grid-cols-3 gap-2 mb-3">
+            {photosLocked && (
+              <label className="flex items-start gap-2 mb-3 rounded-xl p-3 cursor-pointer" style={{ background: "#fdf6ea", border: "1px solid #efd9b0", fontSize: 12 }} data-testid="photo-consent">
+                <input type="checkbox" onChange={(e) => { if (e.target.checked) recordConsent(); }} style={{ marginTop: 2 }} />
+                <span><b>Consentement du patient à la prise de photos.</b> Le patient accepte la prise de vue et son usage au sein du cabinet uniquement. Il est tracé dans son dossier. <span style={{ color: DS.muted }}>(Paramètres › Confidentialité)</span></span>
+              </label>
+            )}
+            <div className="grid grid-cols-3 gap-2 mb-3" style={photosLocked ? { opacity: .4, pointerEvents: "none" } : undefined} aria-disabled={photosLocked}>
               {([
                 { key: "face" as const, label: "Portrait", src: photoBase64, ref: fileRef, set: (v: string | null) => { setPhotoBase64(v); if (!v) setPhotoSize(0); } },
                 { key: "right" as const, label: "Profil D", src: photoRight, ref: fileRefRight, set: setPhotoRight },
@@ -2015,6 +2037,12 @@ export default function ProAnalyze() {
                     Lancer l'analyse IA <Activity className="w-4 h-4" />
                   </button>
                 </div>
+                {!preanalysis && (
+                  <button type="button" onClick={() => { setDossierSaved(true); setStep(5); }} data-testid="button-skip-analysis"
+                    className="mt-3 w-full text-center text-sm font-extrabold" style={{ background: "none", border: 0, color: "var(--color-accent-700)", cursor: "pointer" }}>
+                    Continuer sans analyse → <span className="font-normal" style={{ color: DS.muted }}>(pré-analyse Glow désactivée dans vos Paramètres)</span>
+                  </button>
+                )}
               </>
             )}
           </ProCard>

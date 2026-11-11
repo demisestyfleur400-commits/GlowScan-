@@ -419,7 +419,7 @@ function IdLine({ label, value, onCopy }: { label: string; value: string; onCopy
 }
 
 // ── Sécurité : 2FA par email (activation/désactivation) ────────────────────
-function SecuritySection({ currentEmail }: { currentEmail?: string }) {
+export function SecuritySection({ currentEmail }: { currentEmail?: string }) {
   const { toast } = useToast();
   // Changement d'email
   const [emailStep, setEmailStep] = useState<"idle" | "confirm">("idle");

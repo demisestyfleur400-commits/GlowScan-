@@ -22,7 +22,8 @@ type Appt = {
 type PatientLite = { id: number; firstName: string; lastName: string; phone: string | null; archived: boolean };
 type View = "day" | "week" | "month";
 
-const H0 = 8, H1 = 18, PAUSE = [12, 13], PX = 50;
+const PX = 50;
+const hNum = (t: string | null | undefined, d: number) => { const m = /^(\d{2}):(\d{2})$/.exec(t || ""); return m ? Number(m[1]) + Number(m[2]) / 60 : d; };
 const DAYS = ["LUN.", "MAR.", "MER.", "JEU.", "VEN.", "SAM.", "DIM."];
 const startOfWeek = (d: Date) => { const x = new Date(d); x.setHours(0, 0, 0, 0); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x; };
 const addDays = (d: Date, n: number) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
@@ -75,6 +76,12 @@ export default function DermAgenda() {
   const { data: list } = useQuery<{ appointments: Appt[] }>({ queryKey: [listKey] });
   const { data: stats } = useQuery<{ appointments: Appt[] }>({ queryKey: [statsKey] });
   const { data: pts } = useQuery<{ items: PatientLite[] }>({ queryKey: ["/api/derm/patients"] });
+  // Horaires, pause et jours d'ouverture : Paramètres › Agenda & rappels (D7).
+  const { data: cfg } = useQuery<{ settings: { openTime: string; closeTime: string; pauseStart: string | null; pauseEnd: string | null; openDays: number[]; slotMinutes: number } }>({ queryKey: ["/api/derm/settings"] });
+  const S = cfg?.settings;
+  const H0 = Math.floor(hNum(S?.openTime, 8)), H1 = Math.max(H0 + 1, Math.ceil(hNum(S?.closeTime, 18)));
+  const PAUSE = S && S.pauseStart && S.pauseEnd ? [hNum(S.pauseStart, 12), hNum(S.pauseEnd, 13)] : S ? null : [12, 13];
+  const openDays = S?.openDays?.length ? S.openDays : [1, 2, 3, 4, 5];
   const refresh = () => { qc.invalidateQueries({ predicate: (q) => String(q.queryKey[0]).startsWith("/api/pro/appointments") }); };
 
   const appts = (list?.appointments || []).filter((a) => a.status !== "cancelled");
@@ -86,14 +93,14 @@ export default function DermAgenda() {
   const upcomingSuivis = all.filter((a) => a.type === "suivi" && new Date(a.appointment_date) > now && a.status !== "done").length;
   const confirmedW = weekAppts.filter((a) => a.status === "confirmed" || a.status === "done").length;
 
-  const days = view === "day" ? [new Date(range.from)] : [0, 1, 2, 3, 4].map((i) => addDays(range.from, i));
+  const days = view === "day" ? [new Date(range.from)] : openDays.map((d) => addDays(range.from, d - 1));
   const dayList = all.concat(appts).filter((a, i, arr) => arr.findIndex((x) => x.id === a.id) === i).filter((a) => sameDay(new Date(a.appointment_date), cursor)).sort((a, b) => +new Date(a.appointment_date) - +new Date(b.appointment_date));
   const canStart = (a: Appt) => !isSecretary && !!a.patient_record_id && sameDay(new Date(a.appointment_date), now) && a.status === "confirmed";
   const move = (dir: number) => setCursor((c) => (view === "month" ? new Date(c.getFullYear(), c.getMonth() + dir, 1) : addDays(c, dir * (view === "day" ? 1 : 7))));
   const title = view === "month" ? cap(cursor.toLocaleDateString("fr-FR", { month: "long", year: "numeric" }))
     : view === "day" ? cap(cursor.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" }))
     : `Semaine du ${range.from.toLocaleDateString("fr-FR", { day: "numeric", month: "long" })}`;
-  const rangeLabel = `${range.from.getDate()} – ${addDays(range.from, 4).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}`;
+  const rangeLabel = `${range.from.getDate()} – ${addDays(range.from, Math.max(...openDays) - 1).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}`;
 
   const patch = async (a: Appt, body: Record<string, unknown>, done: string) => {
     try { await api(`/api/derm/appointments/${a.id}`, "PATCH", body); setMsg({ t: done, tone: "ok" }); setSel(null); refresh(); }
@@ -172,7 +179,7 @@ export default function DermAgenda() {
                             setCreate({ date: ymd(d), time: `${pad(H0 + Math.floor(mins / 60))}:${pad(mins % 60)}` });
                           }}>
                           {hours.slice(0, -1).map((h) => <span key={h} className="pointer-events-none absolute left-0 right-0" style={{ top: (h - H0) * PX + 10, borderTop: `1px solid ${D.sep}` }} />)}
-                          <span className="pointer-events-none absolute left-0 right-0 flex items-center" style={{ top: (PAUSE[0] - H0) * PX + 10, height: (PAUSE[1] - PAUSE[0]) * PX, background: "#f1f4f0", paddingLeft: 8, fontSize: 9.5, color: D.faint }}>{d === days[0] || view === "day" ? "Pause déjeuner" : ""}</span>
+                          {PAUSE && <span className="pointer-events-none absolute left-0 right-0 flex items-center" style={{ top: (PAUSE[0] - H0) * PX + 10, height: (PAUSE[1] - PAUSE[0]) * PX, background: "#f1f4f0", paddingLeft: 8, fontSize: 9.5, color: D.faint }}>{d === days[0] || view === "day" ? "Pause déjeuner" : ""}</span>}
                           {t && nowTop > 0 && nowTop < gridH && (
                             <span className="pointer-events-none absolute left-0 right-0" style={{ top: nowTop + 10, borderTop: "1.5px solid #c8553d" }}><span style={{ position: "absolute", left: -4, top: -4, width: 7, height: 7, borderRadius: "50%", background: "#c8553d" }} /></span>
                           )}
@@ -218,7 +225,7 @@ export default function DermAgenda() {
               <span className="flex flex-wrap" style={{ gap: 14 }}>
                 {[["#e9efed", "Consultation"], ["#e5eedd", "Suivi"], ["#fdeee3", "À confirmer"]].map(([c, l]) => <span key={l} className="flex items-center" style={{ gap: 6 }}><span style={{ width: 10, height: 10, borderRadius: 2, background: c }} />{l}</span>)}
               </span>
-              <span>Horaires du cabinet · {pad(H0)}:00–{pad(H1)}:00</span>
+              <span>Horaires du cabinet · {S?.openTime || "08:00"}–{S?.closeTime || "18:00"} · <a href="/derm/cabinet?section=agenda" style={{ color: D.action }}>Modifier</a></span>
             </div>
           </Card>
 
@@ -351,7 +358,9 @@ function CreatePanel({ init, patients, onClose, onDone }: { init: { date: string
   const [phone, setPhone] = useState("");
   const [date, setDate] = useState(init.date);
   const [time, setTime] = useState(init.time);
+  const { data: cfg } = useQuery<{ settings: { slotMinutes: number } }>({ queryKey: ["/api/derm/settings"] });
   const [dur, setDur] = useState("30");
+  useEffect(() => { if (cfg?.settings?.slotMinutes) setDur(String(cfg.settings.slotMinutes)); }, [cfg?.settings?.slotMinutes]);
   const [type, setType] = useState<"consultation" | "suivi">("consultation");
   const [notes, setNotes] = useState("");
   const [err, setErr] = useState("");
@@ -399,7 +408,7 @@ function CreatePanel({ init, patients, onClose, onDone }: { init: { date: string
         <Label text="Heure"><Input type="time" step={900} value={time} onChange={(e) => setTime(e.target.value)} /></Label>
       </div>
       <Label text="Type"><span className="flex" style={{ gap: 6 }}><Chip on={type === "consultation"} onClick={() => setType("consultation")}>Consultation</Chip><Chip on={type === "suivi"} onClick={() => setType("suivi")}>Suivi</Chip></span></Label>
-      <Label text="Durée"><Select value={dur} onChange={(e) => setDur(e.target.value)} style={{ width: "100%" }}>{["15", "30", "45", "60"].map((m) => <option key={m} value={m}>{m} min</option>)}</Select></Label>
+      <Label text="Durée"><Select value={dur} onChange={(e) => setDur(e.target.value)} style={{ width: "100%" }}>{["15", "20", "30", "45", "60"].map((m) => <option key={m} value={m}>{m} min</option>)}</Select></Label>
       <Label text="Note (facultatif, sans détail médical si le patient la reçoit)"><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} /></Label>
       {err && <span style={{ fontSize: 11, color: D.err }}>{err}</span>}
       <div className="flex flex-wrap" style={{ gap: 8 }}>
