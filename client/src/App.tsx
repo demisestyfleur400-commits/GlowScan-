@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -202,6 +202,23 @@ function Router() {
   );
 }
 
+// Fond de la page derrière l'appli (visible en bas des pages courtes et en fin de
+// défilement) : aux couleurs de l'espace visité, plus de beige de l'ancien thème.
+// Les pages B2C déjà refaites prennent le blanc cassé de la nouvelle maquette.
+const B2C_NEW = ["/analyze"];
+function BodyBackground() {
+  const [loc] = useLocation();
+  useEffect(() => {
+    const bg = loc === "/derm" ? "#ffffff"
+      : loc.startsWith("/derm") ? "#f3f6f3"
+      : B2C_NEW.some((p) => loc === p || loc.startsWith(p + "/")) ? "#f8f8f6"
+      : "";
+    document.documentElement.style.backgroundColor = bg;
+    document.body.style.backgroundColor = bg;
+  }, [loc]);
+  return null;
+}
+
 function App() {
   useEffect(() => {
     if ("serviceWorker" in navigator) {
@@ -213,6 +230,7 @@ function App() {
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
+          <BodyBackground />
           <Router />
           <TabBar />
           <PWAInstallBanner />

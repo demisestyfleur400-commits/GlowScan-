@@ -359,6 +359,5 @@ select option {
   --shadow-lg: 0 10px 30px rgba(22, 64, 52, .1);
   font-family: var(--font-body);
   color: var(--color-text);
-  background: var(--color-bg);
 }
 .b2c-theme h1, .b2c-theme h2, .b2c-theme h3 { font-family: var(--font-heading); font-weight: 700; letter-spacing: -.4px; }

@@ -63,7 +63,7 @@ export function TabBar() {
       <div aria-hidden style={{ height: TAB_BAR_HEIGHT }} />
       <nav
         aria-label="Navigation principale"
-        className="fixed inset-x-0 bottom-0 z-50 flex items-center justify-around border-t border-organic-divider bg-organic-surface px-2 pt-2 font-body"
+        className="b2c-theme fixed inset-x-0 bottom-0 z-50 flex items-center justify-around border-t border-organic-divider bg-white px-2 pt-2 font-body"
         style={{ paddingBottom: "max(22px, env(safe-area-inset-bottom))" }}
       >
         {TABS.map((tab) => {
@@ -85,8 +85,8 @@ export function TabBar() {
                 className={cn(
                   "relative flex items-center justify-center rounded-pill",
                   mid
-                    ? "h-[50px] w-[50px] bg-organic-neutral-900 text-organic-neutral-100"
-                    : cn("h-[30px] w-[52px]", on ? "bg-organic-accent-100 text-organic-accent-800" : "bg-transparent"),
+                    ? cn("h-[48px] w-[48px] rounded-[14px]", on ? "bg-organic-accent-200 text-organic-accent" : "bg-organic-accent text-white")
+                    : cn("h-[30px] w-[52px]", on ? "bg-organic-accent-200 text-organic-accent" : "bg-transparent"),
                 )}
               >
                 <Icon size={mid ? 24 : 21} strokeWidth={1.75} />
