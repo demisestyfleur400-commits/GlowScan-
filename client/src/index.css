@@ -357,6 +357,30 @@ select option {
   --shadow-sm: none;
   --shadow-md: 0 4px 14px rgba(22, 64, 52, .06);
   --shadow-lg: 0 10px 30px rgba(22, 64, 52, .1);
+
+  --background: 60 9% 97%;
+  --foreground: 155 43% 16%;
+  --primary: 162 49% 17%;
+  --primary-foreground: 0 0% 100%;
+  --primary-border: #123429;
+  --secondary: 0 0% 100%;
+  --secondary-foreground: 155 43% 16%;
+  --secondary-border: #c9d3cc;
+  --accent: 87 30% 90%;
+  --accent-foreground: 162 49% 17%;
+  --accent-border: #cfdfc4;
+  --muted: 90 20% 95%;
+  --muted-foreground: 156 8% 40%;
+  --card: 0 0% 100%;
+  --card-foreground: 155 43% 16%;
+  --card-border: 100 10% 90%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 155 43% 16%;
+  --border: 100 10% 90%;
+  --input: 100 10% 90%;
+  --ring: 162 49% 17%;
+  --destructive: 9 59% 38%;
+  --destructive-foreground: 0 0% 100%;
   font-family: var(--font-body);
   color: var(--color-text);
 }

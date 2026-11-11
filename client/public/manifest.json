@@ -4,8 +4,8 @@
   "description": "Analyse dermatologique IA, Glow Score et routine personnalisée",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f5ead8",
-  "theme_color": "#f5ead8",
+  "background_color": "#f8f8f6",
+  "theme_color": "#f8f8f6",
   "orientation": "portrait",
   "icons": [
     {

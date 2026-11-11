@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
     <link rel="icon" type="image/jpeg" href="/logo-glowscan-square.jpeg" />
     <link rel="manifest" href="/manifest.json" />
-    <meta name="theme-color" content="#f5ead8" />
+    <meta name="theme-color" content="#f8f8f6" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
@@ -148,8 +148,20 @@
     </noscript>
 
     <style>
-      body { font-family: 'Figtree', system-ui, -apple-system, sans-serif; background: #f5ead8; color: #201e1d; }
+      body { font-family: 'Figtree', system-ui, -apple-system, sans-serif; background: #f8f8f6; color: #201e1d; }
     </style>
+    <script>
+      // Fond dès l'ouverture, avant le chargement de l'appli : espace médical en
+      // vert-gris clair, landing visiteur en beige, le reste en blanc cassé.
+      (function () {
+        try {
+          var p = location.pathname, had = !!localStorage.getItem("glowscan_had_account");
+          var bg = p === "/derm" ? "#ffffff" : p.indexOf("/derm") === 0 ? "#f3f6f3" : (p === "/" && !had) ? "#f5ead8" : "#f8f8f6";
+          document.documentElement.style.backgroundColor = bg;
+          document.addEventListener("DOMContentLoaded", function () { document.body.style.backgroundColor = bg; });
+        } catch (e) {}
+      })();
+    </script>
 
     <!-- Microsoft Clarity -->
     <script type="text/javascript">

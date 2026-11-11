@@ -1,4 +1,5 @@
 import { Switch, Route, useLocation } from "wouter";
+import { useAuth } from "@/hooks/use-auth";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -26,6 +27,14 @@ installChunkReloadHandler();
 
 // Écran de transition pendant le chargement d'une page : aux couleurs de la page
 // visée (plus d'écran noir). Espace médical : barre latérale et fond clair.
+// Appli patient (B2C) : toutes ses pages prennent la nouvelle palette (blanc
+// cassé, vert profond, sauge), sauf la landing vue par un visiteur non connecté.
+const B2C_PAGES = ["/", "/analyze", "/ma-peau", "/profile", "/shop", "/routine", "/consultations", "/chat", "/premium",
+  "/product-scan-camera", "/dermatologues", "/commande", "/auth", "/magic", "/consultation/confirmee", "/confidentialite", "/rejoindre"];
+const isB2CPage = (p: string) => B2C_PAGES.includes(p) || p.startsWith("/dr/");
+const hadAccount = () => { try { return !!localStorage.getItem("glowscan_had_account"); } catch { return false; } };
+const isVisitorLanding = (p: string, loggedIn?: boolean) => p === "/" && !(loggedIn ?? hadAccount());
+
 function RouteFallback() {
   const p = typeof window !== "undefined" ? window.location.pathname : "/";
   const dermPublic = /^\/derm(\/(connexion|inscription|mot-de-passe-oublie|conditions|demo|magic|register))?\/?$/.test(p);
@@ -37,7 +46,7 @@ function RouteFallback() {
       </div>
     );
   }
-  return <div style={{ minHeight: "100vh", background: p.startsWith("/derm") ? "#ffffff" : "#f5ead8" }} />;
+  return <div style={{ minHeight: "100vh", background: p.startsWith("/derm") ? "#ffffff" : isVisitorLanding(p) ? "#f5ead8" : "#f8f8f6" }} />;
 }
 
 const Home = lazyWithRetry(() => import("@/pages/Home"));
@@ -204,18 +213,23 @@ function Router() {
 
 // Fond de la page derrière l'appli (visible en bas des pages courtes et en fin de
 // défilement) : aux couleurs de l'espace visité, plus de beige de l'ancien thème.
-// Les pages B2C déjà refaites prennent le blanc cassé de la nouvelle maquette.
-const B2C_NEW = ["/analyze", "/routine", "/ma-peau", "/dermatologues", "/premium", "/shop", "/commande"];
+// Pages B2C : blanc cassé + palette de la nouvelle maquette (classe .b2c-theme
+// posée sur <html>, donc héritée par toute la page, fenêtres et bandeaux compris).
 function BodyBackground() {
   const [loc] = useLocation();
+  const { user, isLoading } = useAuth();
   useEffect(() => {
+    const b2c = isB2CPage(loc) && !isVisitorLanding(loc, isLoading ? undefined : !!user);
     const bg = loc === "/derm" ? "#ffffff"
       : loc.startsWith("/derm") ? "#f3f6f3"
-      : B2C_NEW.some((p) => loc === p || loc.startsWith(p + "/")) ? "#f8f8f6"
+      : b2c ? "#f8f8f6"
       : "";
+    document.documentElement.classList.toggle("b2c-theme", b2c);
     document.documentElement.style.backgroundColor = bg;
     document.body.style.backgroundColor = bg;
-  }, [loc]);
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute("content", bg || "#f5ead8");
+  }, [loc, user, isLoading]);
   return null;
 }
 
