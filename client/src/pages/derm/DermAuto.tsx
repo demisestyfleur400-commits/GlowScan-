@@ -149,7 +149,7 @@ export default function DermAuto() {
   const [mode, setMode] = useState<"learn" | "avis" | "research">(tab === "research" ? "research" : tab === "avis" ? "avis" : "learn");
   const [invite, setInvite] = useState(false);
   const [msg, setMsg] = useState<{ t: string; tone: "ok" | "err" | "warn" } | null>(null);
-  const { data: L } = useQuery<Learning>({ queryKey: ["/api/derm/learning"] });
+  const { data: L, isError: lErr, refetch: lRefetch } = useQuery<Learning>({ queryKey: ["/api/derm/learning"], retry: 1 });
   const { data: F } = useQuery<{ items: Fb[]; avg: number | null; invitations: number }>({ queryKey: ["/api/derm/feedback"], enabled: tab === "avis" });
   const goTab = (t: Tab) => { setTab(t); if (t !== "bilan") setMode(t === "research" ? "research" : t === "avis" ? "avis" : "learn"); window.history.replaceState(null, "", `/derm/auto-evaluation?onglet=${t}`); };
   const askIn = (m: "learn" | "avis" | "research", q: string) => { setMode(m); setAsk(q); };
@@ -230,6 +230,11 @@ export default function DermAuto() {
 
         <section className="grid items-start" style={{ gridTemplateColumns: tab === "bilan" ? "minmax(0,1.45fr) minmax(260px,.72fr)" : "minmax(0,1.5fr) minmax(330px,1fr)", gap: 18 }}>
           <div className="flex min-w-0 flex-col" style={{ gap: 16 }}>
+            {tab === "learn" && lErr && (
+              <Card><b style={{ fontSize: 15, fontWeight: 600 }}>Votre synthèse n'a pas pu être chargée.</b><p style={{ margin: "6px 0 12px", fontSize: 12, color: D.muted }}>Vérifiez votre connexion internet, puis réessayez. Le bilan hebdomadaire reste accessible.</p>
+                <span className="flex" style={{ gap: 8 }}><Btn kind="primary" onClick={() => lRefetch()}>Réessayer</Btn><Btn kind="secondary" onClick={() => goTab("bilan")}>Faire mon bilan</Btn></span></Card>
+            )}
+            {tab === "learn" && !L && !lErr && <span style={{ fontSize: 12, color: D.muted }}>Chargement…</span>}
             {tab === "learn" && L && (
               <>
                 <Card className="grid" style={{ gridTemplateColumns: "repeat(3,1fr)", padding: "18px 0" }}>

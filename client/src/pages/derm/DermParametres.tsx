@@ -174,7 +174,7 @@ export default function DermParametres() {
   const { data: acc } = useProAccount();
   const isSecretary = acc?.user?.role === "secretary";
   useEffect(() => { if (isSecretary) go("/derm/agenda"); }, [isSecretary, go]);
-  const { data } = useQuery<Resp>({ queryKey: ["/api/derm/settings"], enabled: !!acc && !isSecretary });
+  const { data, isError, refetch } = useQuery<Resp>({ queryKey: ["/api/derm/settings"], enabled: !!acc && !isSecretary, retry: 1 });
   const { data: team } = useQuery<{ items: unknown[] }>({ queryKey: ["/api/derm/team"], enabled: !!acc && !isSecretary });
   const [sec, setSec] = useState<Sec>(() => { try { const s = new URLSearchParams(window.location.search).get("section"); return (["profil", "equipe", "agenda", "tarifs", "securite", "donnees"].includes(s || "") ? s : "profil") as Sec; } catch { return "profil"; } });
   const [s, setS] = useState<Settings | null>(null);
@@ -199,6 +199,7 @@ export default function DermParametres() {
     } catch (e: any) { setMsg({ t: e.message, tone: "err" }); }
     setBusy(false);
   };
+  if (isError) return <DermShell active="parametres"><Page><Card><b style={{ fontSize: 16, fontWeight: 600 }}>Vos paramètres n'ont pas pu être chargés.</b><p style={{ margin: "6px 0 14px", fontSize: 12.5, color: D.muted }}>Vérifiez votre connexion internet, puis réessayez.</p><Btn kind="primary" onClick={() => refetch()}>Réessayer</Btn></Card></Page></DermShell>;
   if (!s || !p || !data) return <DermShell active="parametres"><Page><span style={{ fontSize: 12, color: D.muted }}>Chargement des paramètres…</span></Page></DermShell>;
 
   const op = opOf(p.phone);

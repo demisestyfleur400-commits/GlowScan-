@@ -102,6 +102,32 @@ function PatientSearch() {
   );
 }
 
+/** Abonnement du cabinet terminé : le serveur refuse les données. On le dit et on propose l'action, au lieu d'un chargement sans fin. */
+function SubscriptionGate({ isSecretary }: { isSecretary: boolean }) {
+  const wa = `https://wa.me/237674377959?text=${encodeURIComponent("Bonjour, j'ai une question sur mon abonnement GlowScan Derm.")}`;
+  return (
+    <div style={{ maxWidth: 760, margin: "48px auto", padding: "0 24px", fontFamily: FONT_UI }} data-testid="subscription-gate">
+      <div style={{ padding: "32px 32px", borderRadius: 14, background: "#fff", border: `1px solid ${D.border}` }}>
+        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: .6, color: D.warn }}>ABONNEMENT DU CABINET</span>
+        <h1 style={{ margin: "12px 0 10px", font: "600 28px/1.15 'DM Sans',sans-serif", letterSpacing: -.5, color: D.text }}>
+          {isSecretary ? "L'abonnement du cabinet est terminé." : "Votre période d'essai est terminée."}
+        </h1>
+        <p style={{ margin: 0, fontSize: 14, lineHeight: 1.6, color: D.muted }}>
+          {isSecretary
+            ? "Les patients, l'agenda et les dossiers sont conservés en sécurité. Prévenez le médecin : dès qu'il réactive l'abonnement, l'espace se rouvre."
+            : "Vos patients, vos dossiers et vos comptes rendus sont conservés en sécurité. Réactivez votre abonnement pour retrouver tout votre espace : 10 000 FCFA par mois, par Mobile Money."}
+        </p>
+        {!isSecretary && (
+          <div className="flex flex-wrap" style={{ gap: 10, marginTop: 22 }}>
+            <Link href="/derm/cabinet-avance" style={{ padding: "12px 20px", borderRadius: 6, background: D.action, color: "#fff", fontSize: 13, fontWeight: 600, textDecoration: "none" }} data-testid="gate-reactivate">Réactiver mon abonnement →</Link>
+            <a href={wa} target="_blank" rel="noopener noreferrer" style={{ padding: "12px 20px", borderRadius: 6, border: `1px solid ${D.borderAlt}`, color: D.text, fontSize: 13, fontWeight: 600, textDecoration: "none" }}>Une question ? WhatsApp</a>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function DermShell({ active, children, showBack, onBack }: { active: DermNavKey; children: ReactNode; showBack?: boolean; onBack?: () => void }) {
   const [, navigate] = useLocation();
   const { logout } = useAuth();
@@ -202,7 +228,7 @@ export function DermShell({ active, children, showBack, onBack }: { active: Derm
             <Plus size={13} strokeWidth={2} /><span className="hidden sm:inline">Nouvelle consultation</span>
           </button>
         </div>
-        {children}
+        {accData && (accData as any).active === false ? <SubscriptionGate isSecretary={isSecretary} /> : children}
       </main>
     </div>
   );

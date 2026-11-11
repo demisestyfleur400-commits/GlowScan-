@@ -71,7 +71,7 @@ export default function DermActivite() {
   const [, go] = useLocation();
   const [month, setMonth] = useState(() => new Date().toISOString().slice(0, 7));
   const [exp, setExp] = useState(false);
-  const { data: a } = useQuery<Act>({ queryKey: [`/api/derm/activity?month=${month}`] });
+  const { data: a, isError, refetch } = useQuery<Act>({ queryKey: [`/api/derm/activity?month=${month}`], retry: 1 });
   const months = a?.months || [month];
   const documented = a ? a.pathologies.filter((p) => p.count).length : 0;
   const avg = a && a.weeks.length ? Math.round(a.weeks.reduce((s, w) => s + w.patients, 0) / a.weeks.length) : 0;
@@ -93,8 +93,25 @@ export default function DermActivite() {
             </span>
           </>} />
 
-        {!a ? <span style={{ fontSize: 12, color: D.muted }}>Chargement de votre activité…</span> : (
+        {isError ? (
+          <Card style={{ padding: "26px 26px" }}>
+            <b style={{ fontSize: 16, fontWeight: 600 }}>Votre activité n'a pas pu être chargée.</b>
+            <p style={{ margin: "6px 0 14px", fontSize: 12.5, color: D.muted }}>Vérifiez votre connexion internet, puis réessayez.</p>
+            <Btn kind="primary" onClick={() => refetch()}>Réessayer</Btn>
+          </Card>
+        ) : !a ? <span style={{ fontSize: 12, color: D.muted }}>Chargement de votre activité…</span> : (
           <>
+            {a.consultations === 0 && a.patients === 0 && (
+              <Card style={{ marginBottom: 18, background: D.tint3, border: 0, padding: "22px 24px" }} testid="act-empty">
+                <b style={{ fontSize: 16, fontWeight: 600 }}>Pour l'instant, aucune activité en {monthLabel(a.month).toLowerCase()}.</b>
+                <p style={{ margin: "6px 0 14px", fontSize: 12.5, color: D.muted }}>Vos chiffres apparaîtront ici dès votre première consultation ou votre premier rendez-vous.</p>
+                <span className="flex flex-wrap" style={{ gap: 10 }}>
+                  <Btn kind="primary" onClick={() => go("/derm/consultation")}>Démarrer une consultation →</Btn>
+                  <Btn kind="secondary" onClick={() => go("/derm/patients")}>Ajouter mes patients</Btn>
+                  <Btn kind="secondary" onClick={() => go("/derm/agenda")}>Planifier un rendez-vous</Btn>
+                </span>
+              </Card>
+            )}
             <section className="grid" style={{ gridTemplateColumns: "repeat(auto-fit,minmax(210px,1fr))", gap: 14, marginBottom: 18 }}>
               <StatCard label="Patients suivis" value={a.patients} sub={<><span style={{ color: D.action, fontWeight: 600 }}>{delta(a.patients, a.prevPatients)} vs {prevName(a.month)}</span><br />{a.newPatients} nouveau{a.newPatients > 1 ? "x" : ""} patient{a.newPatients > 1 ? "s" : ""}</>} onClick={() => go("/derm/patients")} />
               <StatCard label="Consultations" value={a.consultations} sub={<><span style={{ color: D.action, fontWeight: 600 }}>{delta(a.consultations, a.prevConsultations)} vs {prevName(a.month)}</span><br />{a.suiviVisits} visite{a.suiviVisits > 1 ? "s" : ""} de suivi · {a.online} en ligne</>} onClick={() => go("/derm/dossiers")} />
