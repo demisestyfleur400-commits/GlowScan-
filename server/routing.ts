@@ -6,7 +6,7 @@ import { requireActivePro, notifyProAccount, notifyOwner } from "./proRoutes";
 import { RELAY_TIERS } from "@shared/relay";
 import { NETWORK_COUNTRIES } from "@shared/peer";
 
-// ════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════
 // Envoi du cas au bon dermatologue (étape 13, ADDENDUM §4, écran D1).
 //  0. le référent du relais (décision du fondateur), s'il est actif et parle la langue ;
 //  1. un dermatologue du même pays, disponible, même langue, quota du jour non atteint ;
@@ -14,7 +14,7 @@ import { NETWORK_COUNTRIES } from "@shared/peer";
 //     patient a accepté l'envoi hors de son pays.
 // Sans prise en charge après 25 % du délai : dermatologue suivant (la part en
 // séquestre suit). Délai dépassé : remboursement (cron existant).
-// ════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════
 
 const Rows = (x: any): any[] => (x?.rows ?? x ?? []) as any[];
 export type RouteStep = "program" | "referent" | "country" | "network";
@@ -114,10 +114,21 @@ export async function routeNewCase(caseId: number): Promise<{ dermId: number; st
 // ── Cron : sans prise en charge après 25 % du délai → dermatologue suivant ──
 export async function runRoutingTimeouts(): Promise<number> {
   const rows = Rows(await db.execute(sql`
-    SELECT c.id, c.derm_id, c.tier, c.routing_log FROM relay_cases c
-    WHERE c.status = 'awaiting_review' AND c.accepted_at IS NULL AND c.paused_at IS NULL AND c.derm_id IS NOT NULL
-      AND NOW() > GREATEST(COALESCE(c.routed_at, c.paid_at), COALESCE(c.paid_at, c.routed_at))
-                  + make_interval(mins => (CASE WHEN c.tier = 'urgent' THEN ${RELAY_TIERS.urgent.hours} ELSE ${RELAY_TIERS.simple.hours} END) * 15)
+    SELECT c.id, c.derm_id, c.tier, c.routing_log
+    FROM relay_cases c
+    WHERE c.status = 'awaiting_review'
+      AND c.accepted_at IS NULL
+      AND c.paused_at IS NULL
+      AND c.derm_id IS NOT NULL
+      AND NOW() > GREATEST(
+            COALESCE(c.routed_at, c.paid_at),
+            COALESCE(c.paid_at, c.routed_at)
+          ) + make_interval(
+            mins => CASE
+              WHEN c.tier = 'urgent' THEN ${Number(RELAY_TIERS.urgent.hours) * 15}::int
+              ELSE ${Number(RELAY_TIERS.simple.hours) * 15}::int
+            END
+          )
     LIMIT 100`));
   let moved = 0;
   for (const c of rows) {
@@ -147,7 +158,7 @@ export function registerRoutingRoutes(app: Express, deps: { checkAdmin: (req: an
   // D1 · Réseau entre pays
   app.get("/api/pro/network-settings", ...dermOnly, async (req: any, res) => {
     const me = Rows(await db.execute(sql`SELECT languages, network_daily_cap, country FROM pro_accounts WHERE id = ${req.proAccount.id}`))[0];
-    const lic = Rows(await db.execute(sql`SELECT id, country, kind, status, reject_reason, verified_at, (document_url IS NOT NULL) AS has_doc FROM derm_licenses WHERE derm_id = ${req.proAccount.id} ORDER BY kind DESC, country`));
+    const lic = Rows(await db.execute(sql`SELECT id, country, kind, status, reject_reason, verified_at, (document_url IS NOT NULL) AS has_doc FROM derm_licenses WHERE derm_id = ${req.proAccount.id}`));
     res.json({ languages: me?.languages || ["fr"], dailyCap: Number(me?.network_daily_cap) || 10, country: me?.country || "Cameroun", licenses: lic });
   });
   app.post("/api/pro/network-settings", ...dermOnly, async (req: any, res) => {
@@ -171,7 +182,7 @@ export function registerRoutingRoutes(app: Express, deps: { checkAdmin: (req: an
       VALUES (${req.proAccount.id}, ${d.data.country}, ${home ? "home" : "authorization"}, ${d.data.document}, 'pending')
       ON CONFLICT (derm_id, country) DO UPDATE SET document_url = EXCLUDED.document_url, status = 'pending', reject_reason = NULL, verified_at = NULL
       WHERE derm_licenses.status <> 'verified'`);
-    notifyOwner(`Autorisation à vérifier : ${req.proAccount.fullName} (${d.data.country})`, `<p>Justificatif envoyé par ${req.proAccount.fullName} pour ${d.data.country}. Admin › Relais › Autorisations d'exercer.</p>`, `Autorisation à vérifier : ${req.proAccount.fullName} (${d.data.country})`).catch(() => {});
+    notifyOwner(`Autorisation à vérifier : ${req.proAccount.fullName} (${d.data.country})`, `<p>Justificatif envoyé par ${req.proAccount.fullName} pour ${d.data.country}. Admin › Relais › Dermatologues > Licences.</p>`).catch(() => {});
     res.json({ success: true });
   });
 
