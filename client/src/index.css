@@ -303,3 +303,62 @@ select option {
 }
 .derm-theme h1, .derm-theme h2, .derm-theme h3 { font-family: var(--font-heading); font-weight: 700; letter-spacing: -.3px; }
 .derm-theme .rounded-card { border: 1px solid #e4e8e3; }
+
+/* ════════════════════════════════════════════════════════════════════════
+   Appli patient B2C · nouvelle maquette (blanc cassé, vert profond, sauge).
+   Appliqué page par page via la classe .b2c-theme : la landing (/) garde son
+   style. Remappe les variables Organic, comme .derm-theme.
+   ════════════════════════════════════════════════════════════════════════ */
+.b2c-theme {
+  --color-bg: #f8f8f6;
+  --color-surface: #ffffff;
+  --color-text: #17392c;
+  --color-accent: #164034;
+  --color-accent-2: #2a6b4f;
+  --color-divider: #e3e8e2;
+
+  --color-neutral-100: #ffffff;
+  --color-neutral-200: #f1f3ee;
+  --color-neutral-300: #e3e8e2;
+  --color-neutral-400: #c9d3cc;
+  --color-neutral-500: #9fb0a6;
+  --color-neutral-600: #7d8d85;
+  --color-neutral-700: #5f6f69;
+  --color-neutral-800: #3d4f48;
+  --color-neutral-900: #17392c;
+
+  --color-accent-100: #f1f5ec;
+  --color-accent-200: #e7eedc;
+  --color-accent-300: #cfdfc4;
+  --color-accent-400: #9db592;
+  --color-accent-500: #2a6b4f;
+  --color-accent-600: #1f5c48;
+  --color-accent-700: #164034;
+  --color-accent-800: #123429;
+  --color-accent-900: #0d2620;
+
+  --color-accent-2-100: #eef3d9;
+  --color-accent-2-200: #e6ec9c;
+  --color-accent-2-300: #d4df86;
+  --color-accent-2-400: #9db592;
+  --color-accent-2-500: #3f8a67;
+  --color-accent-2-600: #2a6b4f;
+  --color-accent-2-700: #1f5c48;
+  --color-accent-2-800: #164034;
+  --color-accent-2-900: #123429;
+
+  --font-heading: "Manrope", "DM Sans", system-ui, sans-serif;
+  --font-heading-weight: 700;
+  --font-body: "DM Sans", system-ui, sans-serif;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-card: 16px;
+  --shadow-sm: none;
+  --shadow-md: 0 4px 14px rgba(22, 64, 52, .06);
+  --shadow-lg: 0 10px 30px rgba(22, 64, 52, .1);
+  font-family: var(--font-body);
+  color: var(--color-text);
+  background: var(--color-bg);
+}
+.b2c-theme h1, .b2c-theme h2, .b2c-theme h3 { font-family: var(--font-heading); font-weight: 700; letter-spacing: -.4px; }

@@ -27,6 +27,8 @@ import { GS, GsButton, GsMono, GsSteps, GsCheck, GsOption, GsMarks } from "@/lib
 import type { AnalysisResult } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import { ensureDermFonts } from "@/components/derm/tokens";
+import { Check } from "lucide-react";
 
 const LOADING_STEPS = [
   { msg: "Réception de la matrice de pixels", icon: "📸", pct: 10 },
@@ -186,7 +188,7 @@ export default function Analyze() {
     }
   }, [user]);
 
-  useEffect(() => { trackPageVisit("/analyze"); }, []);
+  useEffect(() => { trackPageVisit("/analyze"); ensureDermFonts(); }, []);
 
   useEffect(() => {
     if (isAnalyzing) {
@@ -478,15 +480,15 @@ export default function Analyze() {
   const photoCount = [uploadedImage, uploadedRight, uploadedLeft].filter(Boolean).length;
   const chip = (on: boolean) => cn(
     "whitespace-nowrap rounded-pill border px-4 py-[9px] text-[14px] font-semibold",
-    on ? "border-organic-accent bg-organic-accent text-organic-bg" : "border-organic-divider bg-transparent text-organic-text",
+    on ? "border-organic-accent bg-organic-accent text-white" : "border-organic-divider bg-organic-surface text-organic-text",
   );
   const seg = (on: boolean) => cn(
-    "flex-1 rounded-pill border-0 p-2.5 text-[14px] font-bold",
-    on ? "bg-organic-accent text-organic-bg" : "bg-transparent text-organic-text",
+    "flex-1 rounded-sm border-0 p-2.5 text-[14px] font-semibold",
+    on ? "bg-organic-accent-200 text-organic-accent" : "bg-transparent text-organic-neutral-700",
   );
 
   return (
-    <div className="min-h-screen bg-organic-bg font-body text-organic-text">
+    <div className="b2c-theme min-h-screen bg-organic-bg font-body text-organic-text">
       <main className="mx-auto max-w-[480px] px-5 pb-6 pt-4">
         <AnimatePresence mode="wait">
 
@@ -525,8 +527,23 @@ export default function Analyze() {
           {/* ══════════ SCANNER ══════════ */}
           {(step === "select" || step === "upload") && !isAnalyzing && !photoUnusable && (
             <motion.div key="scanner" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="flex flex-col gap-4">
-              <h1 className="m-0 text-[28px]">Scanner</h1>
-              <div className="flex gap-1.5 rounded-pill bg-organic-surface p-1">
+              <div className="flex items-center gap-2.5">
+                <button type="button" onClick={() => (window.history.length > 1 ? window.history.back() : setLocation("/"))} aria-label="Retour"
+                  className="-ml-1 border-0 bg-transparent p-1 text-organic-accent">
+                  <ArrowLeft size={20} strokeWidth={1.9} />
+                </button>
+                <span className="text-[16px] font-semibold">{scanMode === "skin" ? "Analyser ma peau" : "Scanner un produit"}</span>
+              </div>
+
+              {scanMode === "skin" && (
+                <div className="flex flex-col gap-2.5">
+                  <span className="self-start rounded-pill bg-organic-accent-200 px-3 py-1 text-[11px] font-bold uppercase tracking-[.08em] text-organic-accent">Gratuit · sans abonnement</span>
+                  <h1 className="m-0 text-[30px] leading-[1.12]">Un premier regard<br />sur votre peau.</h1>
+                  <p className="m-0 text-[15px] leading-relaxed text-organic-neutral-700">Prenez une photo nette pour recevoir des indications personnalisées.</p>
+                </div>
+              )}
+
+              <div className="flex gap-1 rounded-md border border-organic-divider bg-organic-surface p-1">
                 <button type="button" onClick={() => setScanMode("skin")} className={seg(scanMode === "skin")}>Ma peau</button>
                 <button type="button" onClick={() => setScanMode("product")} className={seg(scanMode === "product")}>Un produit</button>
               </div>
@@ -569,7 +586,7 @@ export default function Analyze() {
                     </>
                   ) : (
                     <div className="flex flex-col gap-2">
-                      <button type="button" onClick={() => setStep("intake")} className="inline-flex items-center justify-center rounded-pill border-0 bg-organic-accent p-4 text-[16px] font-bold text-organic-neutral-100 hover:bg-organic-accent-600">
+                      <button type="button" onClick={() => setStep("intake")} className="inline-flex items-center justify-center rounded-md border-0 bg-organic-accent p-4 text-[16px] font-semibold text-white hover:bg-organic-accent-600">
                         Continuer
                       </button>
                       <button type="button" onClick={resetShots} className="rounded-pill border-0 bg-transparent px-2 py-1 text-[14px] font-bold text-organic-accent hover:bg-organic-accent/10">
@@ -577,7 +594,12 @@ export default function Analyze() {
                       </button>
                     </div>
                   )}
-                  <span className="text-center text-[12px] text-organic-neutral-700">Vos photos restent privées. Résultat indicatif, pas un diagnostic.</span>
+                  <div className="flex flex-col gap-2">
+                    {(selectedArea === "hair" ? ["Cuir chevelu dégagé, bien éclairé", "Cheveux propres, sans produit coiffant"] : ["Lumière naturelle, sans filtre", "Peau propre, sans maquillage"]).map((t) => (
+                      <span key={t} className="flex items-center gap-2.5 text-[14px]"><Check size={16} strokeWidth={2.2} className="text-organic-accent" />{t}</span>
+                    ))}
+                  </div>
+                  <span className="text-center text-[12.5px] text-organic-neutral-700">L'IA fournit une aide indicative, pas un diagnostic médical.</span>
                 </>
               ) : (
                 <>
@@ -585,7 +607,7 @@ export default function Analyze() {
                     <span className="h-[140px] w-[240px] rounded-[20px] border-[3px] border-organic-accent-300" />
                   </div>
                   <span className="text-center text-[14px]">Visez la <b>liste des ingrédients</b> au dos du produit.</span>
-                  <button type="button" onClick={() => setLocation("/product-scan-camera")} className="inline-flex items-center justify-center rounded-pill border-0 bg-organic-accent p-4 text-[16px] font-bold text-organic-neutral-100 hover:bg-organic-accent-600">
+                  <button type="button" onClick={() => setLocation("/product-scan-camera")} className="inline-flex items-center justify-center rounded-md border-0 bg-organic-accent p-4 text-[16px] font-semibold text-white hover:bg-organic-accent-600">
                     Scanner le produit
                   </button>
                   <span className="text-center text-[12px] text-organic-neutral-700">
@@ -688,7 +710,7 @@ export default function Analyze() {
                   </label>
                 </div>
 
-                <button type="submit" className="inline-flex items-center justify-center rounded-pill border-0 bg-organic-accent p-4 text-[16px] font-bold text-organic-neutral-100 hover:bg-organic-accent-600">
+                <button type="submit" className="inline-flex items-center justify-center rounded-md border-0 bg-organic-accent p-4 text-[16px] font-semibold text-white hover:bg-organic-accent-600">
                   Voir mon résultat
                 </button>
                 <span className="text-center text-[12px] text-organic-neutral-700">Vos photos restent privées. Résultat indicatif, pas un diagnostic.</span>

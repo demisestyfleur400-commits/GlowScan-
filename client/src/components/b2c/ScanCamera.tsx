@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Camera } from "lucide-react";
 
 // ════════════════════════════════════════════════════════════════════════
 // Viseur du Scanner (refonte Organic) — maquette « GlowScan App » › Scanner.
@@ -99,11 +100,16 @@ export function ScanCamera({ shotLabel, hint, oval = true, facing = "user", fram
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="relative flex h-[300px] flex-none items-center justify-center overflow-hidden rounded-card bg-[#4a3322]">
+      <div className={`relative flex h-[300px] flex-none items-center justify-center overflow-hidden rounded-card ${camOk ? "bg-[#1d2a25]" : "bg-organic-accent-200"}`}>
         {camOk !== false && (
           <video ref={videoRef} playsInline muted className={`absolute inset-0 h-full w-full object-cover ${facing === "user" ? "-scale-x-100" : ""}`} />
         )}
-        {guide === "oval" && (
+        {camOk === false && (
+          <span className="relative flex h-[130px] w-[150px] items-center justify-center rounded-[22px] border-2 border-dashed border-organic-accent-400 text-organic-accent">
+            <Camera size={30} strokeWidth={1.6} />
+          </span>
+        )}
+        {camOk !== false && guide === "oval" && (
           <span className="relative h-[240px] w-[190px] rounded-[50%] border-[3px] border-dashed" style={{ borderColor: "color-mix(in srgb, var(--color-neutral-100) 80%, transparent)" }} />
         )}
         {guide === "label" && <span className="relative h-[140px] w-[240px] rounded-[20px] border-[3px] border-organic-accent-300" />}
@@ -117,8 +123,8 @@ export function ScanCamera({ shotLabel, hint, oval = true, facing = "user", fram
           ) : <span />}
           {shotLabel ? <span className="rounded-pill bg-organic-neutral-900 px-3 py-1.5 text-[12px] font-bold text-organic-neutral-100">{shotLabel}</span> : <span />}
         </span>
-        <span className="absolute inset-x-0 bottom-3.5 px-4 text-center text-[13px] font-semibold text-organic-neutral-100">
-          {camOk === false ? "Caméra indisponible : importez une photo" : hint}
+        <span className={`absolute inset-x-0 bottom-3.5 px-4 text-center text-[13px] font-semibold ${camOk === false ? "text-organic-neutral-700" : "text-white"}`}>
+          {camOk === false ? "Caméra indisponible : votre photo apparaîtra ici après import" : hint}
         </span>
       </div>
 
@@ -127,7 +133,7 @@ export function ScanCamera({ shotLabel, hint, oval = true, facing = "user", fram
           type="button"
           onClick={capture}
           disabled={!camOk}
-          className="inline-flex items-center justify-center rounded-pill border-0 bg-organic-accent p-4 text-[16px] font-bold text-organic-neutral-100 hover:bg-organic-accent-600 disabled:opacity-45"
+          className="inline-flex items-center justify-center rounded-md border-0 bg-organic-accent p-4 text-[16px] font-semibold text-white hover:bg-organic-accent-600 disabled:opacity-45"
         >
           {captureLabel}
         </button>
@@ -136,8 +142,8 @@ export function ScanCamera({ shotLabel, hint, oval = true, facing = "user", fram
         type="button"
         onClick={() => fileRef.current?.click()}
         className={camOk === false
-          ? "inline-flex items-center justify-center rounded-pill border-0 bg-organic-accent p-4 text-[16px] font-bold text-organic-neutral-100 hover:bg-organic-accent-600"
-          : "inline-flex items-center justify-center rounded-pill border-0 bg-transparent px-2 py-1 text-[14px] font-bold text-organic-accent hover:bg-organic-accent/10"}
+          ? "inline-flex items-center justify-center rounded-md border-0 bg-organic-accent p-4 text-[16px] font-semibold text-white hover:bg-organic-accent-600"
+          : "inline-flex items-center justify-center rounded-md border-0 bg-transparent px-2 py-1.5 text-[14px] font-semibold text-organic-accent underline-offset-4 hover:underline"}
       >
         Importer depuis la galerie
       </button>
