@@ -1745,145 +1745,85 @@ export default function ProAnalyze() {
                   />
                 </div>
 
-                {/* ══ CLINICAL OVERRIDE ══ */}
-                <div className="mt-4 rounded-2xl overflow-hidden" style={{ border: "1px solid rgba(42,107,79,0.2)" }}>
-                  {/* Header */}
-                  <div className="px-4 py-3 flex items-center justify-between" style={{ background: "rgba(42,107,79,0.08)" }}>
-                    <div>
-                      <p className="text-xs font-extrabold" style={{ color: "var(--color-accent-700)" }}>
-                        ✏️ Clinical Override
-                        {overrideType !== "none" && (
-                          <span className="ml-2 text-[10px] px-2 py-0.5 rounded-full font-bold" style={{ background: "var(--color-accent)", color: "var(--color-neutral-100)" }}>
-                            {overrideType === "partial" ? "Corrigé partiellement" : "Diagnostic manuel"}
+                {/* ══ Correction du diagnostic de l'IA (style espace médical) ══ */}
+                {(() => {
+                  const fld: React.CSSProperties = { width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 8, border: `1px solid ${DD.border}`, background: DD.field, fontSize: 14, color: DD.text, outline: "none", fontFamily: "inherit" };
+                  const lab: React.CSSProperties = { display: "block", marginBottom: 6, fontSize: 12.5, fontWeight: 600, color: DD.text };
+                  const primary: React.CSSProperties = { width: "100%", padding: "12px 16px", borderRadius: 8, border: 0, background: DD.action, color: "#fff", fontSize: 14, fontWeight: 600, cursor: "pointer" };
+                  const sevField = (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div><label style={lab}>Sévérité</label>
+                        <select value={overrideSeverity} onChange={e => setOverrideSeverity(e.target.value)} style={fld}>
+                          {["Légère", "Modérée", "Sévère", "Critique"].map(s => <option key={s}>{s}</option>)}
+                        </select></div>
+                      <div><label style={lab}>Score : {overrideScore}/100</label>
+                        <input type="range" min={0} max={100} value={overrideScore} onChange={e => setOverrideScore(Number(e.target.value))} className="w-full mt-3" style={{ accentColor: DD.action }} /></div>
+                    </div>
+                  );
+                  const open = showPartialOverride || showFullManual;
+                  return (
+                    <div className="mt-4" style={{ borderRadius: 12, border: `1px solid ${DD.border}`, background: "#fff", overflow: "hidden" }} data-testid="override-panel">
+                      <div className="flex items-center justify-between" style={{ gap: 12, padding: "14px 18px", borderBottom: open || overrideType !== "none" ? `1px solid ${DD.sep}` : 0 }}>
+                        <div>
+                          <span className="flex flex-wrap items-center" style={{ gap: 8 }}>
+                            <b style={{ fontSize: 15, fontWeight: 600, color: DD.text }}>Corriger le diagnostic de l'IA</b>
+                            {overrideType !== "none" && <span style={{ padding: "2px 10px", borderRadius: 999, background: DD.tintChip, color: DD.actionDark, fontSize: 12, fontWeight: 600 }}>{overrideType === "partial" ? "Corrigé" : "Diagnostic manuel"}</span>}
                           </span>
+                          <span style={{ display: "block", marginTop: 3, fontSize: 13, color: DD.muted }}>Modifiez la proposition ou rédigez votre propre diagnostic.</span>
+                        </div>
+                        {(overrideType !== "none" || open) && (
+                          <button type="button" onClick={() => { setOverrideType("none"); setShowPartialOverride(false); setShowFullManual(false); setFinalDx(null); }}
+                            style={{ background: "none", border: 0, color: DD.muted, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Annuler</button>
                         )}
-                      </p>
-                      <p className="text-[10px] mt-0.5" style={{ color: "rgba(42,107,79,0.5)" }}>Modifiez ou remplacez le diagnostic IA</p>
-                    </div>
-                    {overrideType !== "none" && (
-                      <button onClick={() => { setOverrideType("none"); setShowPartialOverride(false); setShowFullManual(false); }}
-                        className="text-[10px] font-bold" style={{ color: "rgba(42,107,79,0.6)" }}>
-                        Annuler
-                      </button>
-                    )}
-                  </div>
+                      </div>
 
-                  {/* Actions si pas encore d'override */}
-                  {overrideType === "none" && !showPartialOverride && !showFullManual && (
-                    <div className="px-4 py-3 flex gap-2 flex-wrap">
-                      <button
-                        onClick={() => { setShowPartialOverride(true); setOverrideCondition(result?.condition || ""); setOverrideScore(result?.score || 70); setOverrideSummary((result as any)?.clinicalSummary || result?.details || ""); }}
-                        className="flex-1 text-xs font-extrabold py-2 rounded-xl transition-all active:scale-95"
-                        style={{ background: "rgba(42,107,79,0.1)", border: "1px solid rgba(42,107,79,0.3)", color: "var(--color-accent-700)" }}
-                      >
-                        ✏️ Corriger le diagnostic IA
-                      </button>
-                      <button
-                        onClick={() => { setShowFullManual(true); }}
-                        className="flex-1 text-xs font-extrabold py-2 rounded-xl transition-all active:scale-95"
-                        style={{ background: "var(--color-bg)", border: "1px solid #E2E8F0", color: DS.muted }}
-                      >
-                        Diagnostic manuel complet
-                      </button>
-                    </div>
-                  )}
+                      {overrideType === "none" && !open && (
+                        <div className="flex flex-wrap" style={{ gap: 10, padding: "14px 18px" }}>
+                          <button type="button" onClick={() => { setShowPartialOverride(true); setOverrideCondition(result?.condition || ""); setOverrideScore(result?.score || 70); setOverrideSummary((result as any)?.clinicalSummary || result?.details || ""); }}
+                            style={{ flex: "1 1 200px", padding: "11px 14px", borderRadius: 8, border: `1px solid ${DD.borderAlt}`, background: DD.tintActive, color: DD.actionDark, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
+                            Corriger la proposition
+                          </button>
+                          <button type="button" onClick={() => setShowFullManual(true)}
+                            style={{ flex: "1 1 200px", padding: "11px 14px", borderRadius: 8, border: `1px solid ${DD.border}`, background: "#fff", color: DD.text, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
+                            Rédiger mon diagnostic complet
+                          </button>
+                        </div>
+                      )}
 
-                  {/* Formulaire correction partielle */}
-                  {showPartialOverride && overrideType !== "full" && (
-                    <div className="px-4 py-4 space-y-3">
-                      <div>
-                        <label className="text-[10px] font-bold block mb-1" style={{ color: DS.muted }}>Condition corrigée</label>
-                        <input type="text" value={overrideCondition} onChange={e => setOverrideCondition(e.target.value)}
-                          className="w-full rounded-xl px-3 py-2 text-sm outline-none"
-                          style={{ background: "var(--color-bg)", border: "1px solid rgba(42,107,79,0.2)", color: "var(--color-text)" }} />
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="text-[10px] font-bold block mb-1" style={{ color: DS.muted }}>Sévérité</label>
-                          <select value={overrideSeverity} onChange={e => setOverrideSeverity(e.target.value)}
-                            className="w-full rounded-xl px-3 py-2 text-sm outline-none"
-                            style={{ background: "var(--color-bg)", border: "1px solid rgba(42,107,79,0.2)", color: "var(--color-text)" }}>
-                            {["Légère", "Modérée", "Sévère", "Critique"].map(s => <option key={s}>{s}</option>)}
-                          </select>
+                      {showPartialOverride && overrideType !== "full" && (
+                        <div className="flex flex-col" style={{ gap: 14, padding: 18 }}>
+                          <div><label style={lab}>Diagnostic corrigé</label>
+                            <input type="text" value={overrideCondition} onChange={e => setOverrideCondition(e.target.value)} style={fld} /></div>
+                          {sevField}
+                          <div><label style={lab}>Évaluation clinique corrigée</label>
+                            <textarea value={overrideSummary} onChange={e => setOverrideSummary(e.target.value)} rows={3} style={{ ...fld, resize: "none", lineHeight: 1.55 }} /></div>
+                          <div><label style={lab}>Motif de la correction (optionnel)</label>
+                            <input type="text" value={overrideReason} onChange={e => setOverrideReason(e.target.value)} placeholder="Ex. : aspect clinique non visible sur la photo" style={fld} /></div>
+                          <button type="button" style={primary} onClick={() => { setOverrideType("partial"); setShowPartialOverride(false); if (overrideCondition.trim()) setFinalDx(overrideCondition.trim()); }}>Valider ma correction</button>
                         </div>
-                        <div>
-                          <label className="text-[10px] font-bold block mb-1" style={{ color: DS.muted }}>Score ({overrideScore}/100)</label>
-                          <input type="range" min={0} max={100} value={overrideScore} onChange={e => setOverrideScore(Number(e.target.value))}
-                            className="w-full mt-2" style={{ accentColor: "var(--color-accent)" }} />
-                        </div>
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-bold block mb-1" style={{ color: DS.muted }}>Évaluation clinique corrigée</label>
-                        <textarea value={overrideSummary} onChange={e => setOverrideSummary(e.target.value)}
-                          rows={3} className="w-full rounded-xl px-3 py-2 text-sm outline-none resize-none"
-                          style={{ background: "var(--color-bg)", border: "1px solid rgba(42,107,79,0.2)", color: "var(--color-text)" }} />
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-bold block mb-1" style={{ color: DS.muted }}>Motif de correction (optionnel)</label>
-                        <input type="text" value={overrideReason} onChange={e => setOverrideReason(e.target.value)}
-                          placeholder="Ex: aspect clinique non capté par la photo..."
-                          className="w-full rounded-xl px-3 py-2 text-sm outline-none"
-                          style={{ background: "var(--color-bg)", border: "1px solid rgba(42,107,79,0.2)", color: "var(--color-text)" }} />
-                      </div>
-                      <button onClick={() => { setOverrideType("partial"); setShowPartialOverride(false); }}
-                        className="w-full py-2.5 rounded-full text-sm font-extrabold" style={{ background: "var(--color-accent)", color: "var(--color-neutral-100)" }}>
-                        ✓ Valider ma correction
-                      </button>
-                    </div>
-                  )}
+                      )}
 
-                  {/* Formulaire diagnostic manuel complet */}
-                  {showFullManual && overrideType !== "partial" && (
-                    <div className="px-4 py-4 space-y-3">
-                      <p className="text-[11px] font-bold" style={{ color: "var(--color-accent-600)" }}>
-                        Votre diagnostic remplace entièrement celui de l'IA dans le PDF
-                      </p>
-                      <div>
-                        <label className="text-[10px] font-bold block mb-1" style={{ color: DS.muted }}>Diagnostic principal</label>
-                        <input type="text" value={overrideCondition} onChange={e => setOverrideCondition(e.target.value)}
-                          placeholder="Ex: Dermatite séborrhéique modérée..."
-                          className="w-full rounded-xl px-3 py-2 text-sm outline-none"
-                          style={{ background: "var(--color-bg)", border: "1px solid rgba(42,107,79,0.2)", color: "var(--color-text)" }} />
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="text-[10px] font-bold block mb-1" style={{ color: DS.muted }}>Sévérité</label>
-                          <select value={overrideSeverity} onChange={e => setOverrideSeverity(e.target.value)}
-                            className="w-full rounded-xl px-3 py-2 text-sm outline-none"
-                            style={{ background: "var(--color-bg)", border: "1px solid rgba(42,107,79,0.2)", color: "var(--color-text)" }}>
-                            {["Légère", "Modérée", "Sévère", "Critique"].map(s => <option key={s}>{s}</option>)}
-                          </select>
+                      {showFullManual && overrideType !== "partial" && (
+                        <div className="flex flex-col" style={{ gap: 14, padding: 18 }}>
+                          <span style={{ fontSize: 13, color: DD.muted }}>Votre diagnostic remplace celui de l'IA dans le dossier et le compte rendu.</span>
+                          <div><label style={lab}>Diagnostic principal</label>
+                            <input type="text" value={overrideCondition} onChange={e => setOverrideCondition(e.target.value)} placeholder="Ex. : dermatite séborrhéique modérée" style={fld} /></div>
+                          {sevField}
+                          <div><label style={lab}>Évaluation clinique complète</label>
+                            <textarea value={overrideSummary} onChange={e => setOverrideSummary(e.target.value)} rows={5} placeholder="Rédigez votre évaluation clinique" style={{ ...fld, resize: "none", lineHeight: 1.55 }} /></div>
+                          <button type="button" style={primary} onClick={() => { setOverrideType("full"); setShowFullManual(false); if (overrideCondition.trim()) setFinalDx(overrideCondition.trim()); }}>Valider mon diagnostic</button>
                         </div>
-                        <div>
-                          <label className="text-[10px] font-bold block mb-1" style={{ color: DS.muted }}>Score ({overrideScore}/100)</label>
-                          <input type="range" min={0} max={100} value={overrideScore} onChange={e => setOverrideScore(Number(e.target.value))}
-                            className="w-full mt-2" style={{ accentColor: "var(--color-accent)" }} />
-                        </div>
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-bold block mb-1" style={{ color: DS.muted }}>Évaluation clinique complète</label>
-                        <textarea value={overrideSummary} onChange={e => setOverrideSummary(e.target.value)}
-                          rows={5} className="w-full rounded-xl px-3 py-2 text-sm outline-none resize-none"
-                          placeholder="Rédigez votre diagnostic complet ici..."
-                          style={{ background: "var(--color-bg)", border: "1px solid rgba(42,107,79,0.2)", color: "var(--color-text)" }} />
-                      </div>
-                      <button onClick={() => { setOverrideType("full"); setShowFullManual(false); }}
-                        className="w-full py-2.5 rounded-full text-sm font-extrabold" style={{ background: "var(--color-accent)", color: "var(--color-neutral-100)" }}>
-                        ✓ Valider mon diagnostic
-                      </button>
-                    </div>
-                  )}
+                      )}
 
-                  {/* Confirmation override validé */}
-                  {overrideType !== "none" && !showPartialOverride && !showFullManual && (
-                    <div className="px-4 py-3 flex items-center gap-2" style={{ background: "rgba(16,185,129,0.06)", borderTop: "1px solid rgba(16,185,129,0.2)" }}>
-                      <span style={{ color: "var(--color-accent-2-700)", fontSize: 14 }}>✓</span>
-                      <p className="text-xs font-bold" style={{ color: "var(--color-accent-2-700)" }}>
-                        {overrideType === "partial" ? `Corrigé partiellement — "${overrideCondition}"` : `Diagnostic manuel — "${overrideCondition}"`}
-                      </p>
+                      {overrideType !== "none" && !open && (
+                        <div className="flex items-center" style={{ gap: 8, padding: "12px 18px", background: DD.tintActive }}>
+                          <Check className="w-4 h-4" style={{ color: DD.action }} />
+                          <span style={{ fontSize: 14, color: DD.actionDark }}>{overrideType === "partial" ? "Diagnostic corrigé" : "Diagnostic manuel"} : <b style={{ fontWeight: 600 }}>{overrideCondition}</b></span>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
+                  );
+                })()}
 
                 <div className="flex gap-2 mt-4">
                   <button
