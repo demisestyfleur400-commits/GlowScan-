@@ -12,8 +12,7 @@ import { D, FONT_UI, FONT_HEAD, ensureDermFonts } from "@/components/derm/tokens
 // /derm/inscription). Sécurités inchangées : vérification en 2 étapes par
 // email (codes de secours acceptés), lien de connexion par email, mot de passe
 // oublié, connexion par téléphone des relais, conditions d'utilisation
-// obligatoires à l'inscription. Pas d'identifiants publics de démonstration :
-// la démo interactive (/derm/demo) se visite sans compte.
+// obligatoires à l'inscription. Pas d'identifiants publics de démonstration.
 // ════════════════════════════════════════════════════════════════════════
 
 // Doit rester synchronisé avec DERM_TERMS_VERSION dans DermConditions.tsx
@@ -162,14 +161,6 @@ export default function ProConnexion({ initialMode = "signin" }: { initialMode?:
                 <h1 style={{ margin: "10px 0 8px", font: `600 26px/1.15 ${FONT_UI}`, letterSpacing: -.6, color: D.textAlt }}>{signup ? "Rejoignez GlowScan" : "Connectez-vous"}</h1>
                 <p style={{ margin: 0, fontSize: 10, color: D.muted }}>{signup ? "Quelques informations pour préparer votre espace." : "Accédez à votre cabinet numérique GlowScan Derm."}</p>
               </div>
-
-              {!signup && (
-                <Link href="/derm/demo" className="flex items-center justify-between no-underline" data-testid="link-demo"
-                  style={{ gap: 10, padding: "11px 12px", borderRadius: 6, border: "1px solid #cfe7df", background: "#e9f4f0", color: D.textAlt }}>
-                  <span className="flex flex-col" style={{ gap: 3 }}><span style={{ color: D.cta, letterSpacing: 1, fontSize: 7, fontWeight: 800 }}>DÉCOUVRIR SANS COMPTE</span><span style={{ fontSize: 10 }}>Essayer la démonstration interactive</span></span>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: D.cta }}>→</span>
-                </Link>
-              )}
 
               {signup && (
                 <>
