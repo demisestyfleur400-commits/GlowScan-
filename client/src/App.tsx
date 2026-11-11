@@ -205,7 +205,7 @@ function Router() {
 // Fond de la page derrière l'appli (visible en bas des pages courtes et en fin de
 // défilement) : aux couleurs de l'espace visité, plus de beige de l'ancien thème.
 // Les pages B2C déjà refaites prennent le blanc cassé de la nouvelle maquette.
-const B2C_NEW = ["/analyze", "/routine", "/ma-peau", "/dermatologues"];
+const B2C_NEW = ["/analyze", "/routine", "/ma-peau", "/dermatologues", "/premium"];
 function BodyBackground() {
   const [loc] = useLocation();
   useEffect(() => {

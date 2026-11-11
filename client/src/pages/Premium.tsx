@@ -1,21 +1,24 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Star, ScanFace, ScanBarcode, MessageCircle, Images, HeartHandshake } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
 import { useToast } from "@/hooks/use-toast";
 import { PREMIUM_PERKS, PREMIUM_PLANS, type PremiumPlan } from "@shared/premium";
 import { OPERATORS, cmNational, opOf } from "@shared/phone";
 import { PAY_METHODS, formatF } from "@shared/delivery";
+import { ensureDermFonts } from "@/components/derm/tokens";
 
 // ════════════════════════════════════════════════════════════════════════
-// Premium (refonte Organic) — maquette « GlowScan App » › Premium.
-// 500 F / semaine ou 2 000 F / mois : le navigateur n'envoie QUE la formule,
-// le serveur fixe le montant et la durée. Les consultations restent payées à
-// part (chaque médecin fixe son prix). Activation par l'admin après
-// vérification de l'ID de transaction de l'opérateur.
+// GlowScan Plus (nouvelle maquette B2C). 500 F / semaine ou 2 000 F / mois :
+// le navigateur n'envoie QUE la formule, le serveur fixe le montant et la
+// durée. Les consultations restent payées à part (chaque médecin fixe son
+// prix). Activation par l'admin après vérification de l'ID de transaction.
 // ════════════════════════════════════════════════════════════════════════
+
+const G = { dark: "#164034", text: "#17392c", muted: "#5f6f69", line: "#e3e8e2", sage: "#e7eedc", soft: "#f1f5ec", lime: "#cfe08a" };
+const PERK_ICON = [ScanFace, ScanBarcode, MessageCircle, Images, HeartHandshake];
 
 export default function Premium() {
   const [, setLocation] = useLocation();
@@ -32,12 +35,14 @@ export default function Premium() {
   const [busy, setBusy] = useState(false);
   const [ownerWaUrl, setOwnerWaUrl] = useState<string | null>(null);
 
+  useEffect(() => { ensureDermFonts(); }, []);
   useEffect(() => { if (!authLoading && !user) setLocation("/auth"); }, [authLoading, user, setLocation]);
 
   const op = opOf(phone);
   const pm = op === "mtn" ? PAY_METHODS.mtn : PAY_METHODS.orange;
   const pending = statusData?.request?.status === "pending" ? statusData.request : null;
   const price = PREMIUM_PLANS[plan].amountFcfa;
+  const per = plan === "week" ? "semaine" : "mois";
 
   const submit = async () => {
     if (!cmNational(phone) || !op) { toast({ title: "Numéro requis", description: "Le numéro MTN ou Orange qui a payé (9 chiffres).", variant: "destructive" }); return; }
@@ -56,81 +61,125 @@ export default function Premium() {
     } finally { setBusy(false); }
   };
 
-  const back = () => (paying && !ownerWaUrl ? setPaying(false) : setLocation("/profile"));
+  const back = () => (paying && !ownerWaUrl ? setPaying(false) : window.history.length > 1 ? window.history.back() : setLocation("/profile"));
+  const btn = "inline-flex items-center justify-center gap-2 rounded-[12px] border-0 p-4 text-[15px] font-semibold text-white disabled:opacity-45";
+
   const perks = (
-    <div className="flex flex-col gap-2">
-      {PREMIUM_PERKS.map((t) => (
-        <span key={t} className="flex gap-2.5 text-[14px]"><span className="font-bold text-organic-accent-2-700">✓</span>{t}</span>
-      ))}
+    <div className="flex flex-col gap-3.5 rounded-[16px] border bg-white p-4" style={{ borderColor: G.line }}>
+      {PREMIUM_PERKS.map((t, i) => {
+        const I = PERK_ICON[i] || Check;
+        return (
+          <div key={t} className="flex items-center gap-3">
+            <span className="flex h-10 w-10 flex-none items-center justify-center rounded-[12px]" style={{ background: G.sage, color: G.dark }}><I size={18} strokeWidth={1.7} /></span>
+            <span className="text-[14.5px] font-medium leading-snug">{t}</span>
+          </div>
+        );
+      })}
     </div>
   );
 
-
   return (
-    <div className="min-h-screen bg-organic-bg font-body text-organic-text">
+    <div className="b2c-theme min-h-screen bg-organic-bg font-body text-organic-text">
       <main className="mx-auto flex max-w-[480px] flex-col gap-4 px-5 pb-6 pt-4">
-        <button type="button" onClick={back} className="flex items-center gap-1 self-start border-0 bg-transparent p-0 font-bold text-organic-accent-700">
-          <ArrowLeft size={18} strokeWidth={1.75} /> Retour
-        </button>
-        <h1 className="m-0 text-[28px]">Premium</h1>
+        <div className="flex items-center gap-2.5">
+          <button type="button" onClick={back} aria-label="Retour" className="-ml-1 border-0 bg-transparent p-1" style={{ color: G.dark }}>
+            <ArrowLeft size={20} strokeWidth={1.9} />
+          </button>
+          <span className="flex-1 text-[16px] font-semibold">GlowScan Plus</span>
+        </div>
 
         {isPremium ? (
           <>
-            <div className="flex flex-col gap-1 rounded-lg bg-organic-accent-2-100 p-4 text-organic-accent-2-900">
-              <span className="text-[16px] font-bold">Premium actif</span>
-              {sub?.subscription?.expiresAt && <span className="text-[13px]">Jusqu'au {new Date(sub.subscription.expiresAt).toLocaleDateString("fr-FR", { day: "numeric", month: "long" })}</span>}
+            <h1 className="m-0 text-[30px] leading-[1.12]">Merci, votre peau<br />est bien suivie.</h1>
+            <div className="flex flex-col gap-1 rounded-[18px] p-5 text-white" style={{ background: G.dark }}>
+              <span className="text-[11px] font-bold uppercase tracking-[.1em] opacity-80">GlowScan Plus · actif</span>
+              {sub?.subscription?.expiresAt
+                ? <span className="text-[17px] font-semibold">Jusqu'au {new Date(sub.subscription.expiresAt).toLocaleDateString("fr-FR", { day: "numeric", month: "long" })}</span>
+                : <span className="text-[17px] font-semibold">Abonnement en cours</span>}
+              <span className="text-[13px] opacity-80">Rien ne se renouvelle sans vous : vous serez prévenu avant la fin.</span>
             </div>
             {perks}
           </>
         ) : pending || ownerWaUrl ? (
-          <div className="flex flex-col gap-3 rounded-lg bg-organic-surface p-4">
-            <span className="text-[16px] font-bold">Demande en cours de vérification</span>
-            <span className="text-[13px]">Nous vérifions votre paiement auprès de l'opérateur. Premium s'active dès la confirmation{pending?.reference ? ` (réf. ${pending.reference})` : ""}.</span>
-            {ownerWaUrl && (
-              <button type="button" onClick={() => window.open(ownerWaUrl, "_blank", "noopener,noreferrer")} className="self-start rounded-pill border-0 bg-organic-accent px-4 py-2.5 text-[14px] font-bold text-organic-neutral-100">
-                Envoyer la capture sur WhatsApp
-              </button>
-            )}
-          </div>
+          <>
+            <h1 className="m-0 text-[30px] leading-[1.12]">Presque prêt.</h1>
+            <div className="flex flex-col gap-3 rounded-[16px] p-4" style={{ background: "#f7e8dc", color: "#7a3f1d" }}>
+              <b className="text-[16px] font-semibold">Paiement en cours de vérification</b>
+              <span className="text-[14px] leading-relaxed">Nous vérifions votre paiement auprès de l'opérateur. Plus s'active dès la confirmation{pending?.reference ? ` (réf. ${pending.reference})` : ""}.</span>
+              {ownerWaUrl && (
+                <button type="button" onClick={() => window.open(ownerWaUrl, "_blank", "noopener,noreferrer")} className="self-start rounded-[10px] border-0 px-4 py-2.5 text-[14px] font-semibold text-white" style={{ background: G.dark }}>
+                  Envoyer la capture sur WhatsApp
+                </button>
+              )}
+            </div>
+            <button type="button" onClick={() => setLocation("/analyze")} className="self-center border-0 bg-transparent p-1 text-[14px] font-semibold" style={{ color: G.dark }}>Continuer avec l'analyse gratuite</button>
+          </>
         ) : !paying ? (
           <>
-            <div className="grid grid-cols-2 gap-2.5">
-              {(Object.keys(PREMIUM_PLANS) as PremiumPlan[]).map((k) => {
-                const p = PREMIUM_PLANS[k];
-                return (
-                  <button key={k} type="button" onClick={() => setPlan(k)}
-                    className="flex flex-col gap-1 rounded-lg border-2 bg-organic-surface p-4 text-left text-organic-text"
-                    style={{ borderColor: plan === k ? "var(--color-accent)" : "transparent" }}>
-                    <span className="text-[13px] text-organic-neutral-700">{p.label}</span>
-                    <span className="font-heading text-[24px]">{formatF(p.amountFcfa)}</span>
-                    <span className="text-[12px] text-organic-neutral-700">{p.note}</span>
-                  </button>
-                );
-              })}
+            <div className="flex flex-col gap-1.5">
+              <h1 className="m-0 text-[30px] leading-[1.12]">Votre peau mérite<br />de la régularité.</h1>
+              <span className="text-[14px]" style={{ color: G.muted }}>L'analyse reste gratuite. Le suivi va plus loin.</span>
             </div>
+
+            <div className="flex flex-col gap-2 rounded-[18px] p-5 text-white" style={{ background: G.dark }}>
+              <span className="flex items-center justify-between">
+                <span className="text-[11px] font-bold uppercase tracking-[.1em] opacity-80">GlowScan Plus</span>
+                <Star size={19} strokeWidth={1.6} />
+              </span>
+              <span className="flex items-baseline gap-1.5"><b className="font-heading text-[38px] font-bold leading-none">{formatF(price)}</b><span className="text-[14px] opacity-80">/ {per}</span></span>
+              <span className="text-[13.5px] leading-snug opacity-85">Un accompagnement au quotidien, sans engagement.</span>
+              <div className="mt-2 flex gap-1 rounded-[10px] p-1" style={{ background: "rgba(255,255,255,.12)" }}>
+                {(Object.keys(PREMIUM_PLANS) as PremiumPlan[]).map((k) => (
+                  <button key={k} type="button" onClick={() => setPlan(k)} aria-pressed={plan === k}
+                    className="flex-1 rounded-[8px] border-0 py-2 text-[13px] font-semibold"
+                    style={{ background: plan === k ? G.lime : "transparent", color: plan === k ? G.dark : "#fff" }}>
+                    {PREMIUM_PLANS[k].label} · {formatF(PREMIUM_PLANS[k].amountFcfa)}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {perks}
-            <span className="text-[12px] text-organic-neutral-700">Les consultations avec un dermatologue restent payées à part : c'est le médecin qui fixe son prix.</span>
-            <button type="button" onClick={() => setPaying(true)} className="rounded-pill border-0 bg-organic-accent p-4 text-[16px] font-bold text-organic-neutral-100 hover:bg-organic-accent-600">
-              S'abonner · {formatF(price)} par Mobile Money
+
+            <div className="flex items-start gap-2.5 rounded-[14px] p-3.5" style={{ background: G.sage, color: G.dark }}>
+              <Check size={17} strokeWidth={2.2} className="mt-0.5 flex-none" />
+              <span className="flex flex-col">
+                <b className="text-[14px] font-semibold">L'analyse IA reste gratuite pour tous.</b>
+                <span className="text-[13px]" style={{ color: G.muted }}>Aucun abonnement n'est nécessaire pour commencer.</span>
+              </span>
+            </div>
+
+            <button type="button" onClick={() => setPaying(true)} className={btn} style={{ background: G.dark }}>
+              S'abonner · {formatF(price)} / {per} <ArrowRight size={17} />
             </button>
+            <span className="text-center text-[12.5px] leading-relaxed" style={{ color: G.muted }}>
+              Paiement Mobile Money, sans renouvellement automatique : vous restez libre chaque {per}. Consultations et produits non inclus.
+            </span>
+            <button type="button" onClick={() => setLocation("/analyze")} className="self-center border-0 bg-transparent p-1 text-[14px] font-semibold" style={{ color: G.dark }}>Continuer avec l'analyse gratuite</button>
           </>
         ) : (
           <>
-            <label className="flex flex-col gap-1.5 text-[13px] font-bold">Votre numéro Mobile Money
+            <div className="flex flex-col gap-1.5">
+              <h1 className="m-0 text-[28px] leading-[1.12]">Paiement<br />Mobile Money</h1>
+              <span className="text-[14px]" style={{ color: G.muted }}>GlowScan Plus · {formatF(price)} / {per}</span>
+            </div>
+            <label className="flex flex-col gap-1.5 text-[14px] font-semibold">Votre numéro Mobile Money
               <span className="relative">
                 <input value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" placeholder="677 12 45 90"
-                  className="h-11 w-full rounded-pill border border-organic-divider bg-organic-surface px-3.5 pr-28 text-[15px] font-normal focus-visible:border-organic-accent focus-visible:outline-none" />
+                  className="h-12 w-full rounded-[12px] border bg-white px-3.5 pr-28 text-[15px] font-normal focus-visible:outline-none" style={{ borderColor: G.line }} />
                 {op && <span className="absolute right-2 top-1/2 -translate-y-1/2 rounded-pill px-2.5 py-[3px] text-[11px] font-bold" style={{ background: OPERATORS[op].bg, color: OPERATORS[op].fg }}>{OPERATORS[op].name}</span>}
               </span>
             </label>
-            {op && (
-              <div className="flex flex-col gap-2 rounded-lg bg-organic-accent-100 p-4 text-organic-accent-900">
-                <span className="text-[13px]">Envoyez <b>{formatF(price)}</b> ({PREMIUM_PLANS[plan].label.toLowerCase()}) par {pm.label} au :</span>
-                <span className="font-heading text-[22px]">{pm.num}</span>
-                <span className="text-[13px]">Code {pm.ussd}</span>
+            {op ? (
+              <div className="flex flex-col gap-1.5 rounded-[16px] p-4" style={{ background: G.sage, color: G.dark }}>
+                <span className="text-[14px]">Envoyez <b>{formatF(price)}</b> ({PREMIUM_PLANS[plan].label.toLowerCase()}) par {pm.label} au :</span>
+                <span className="font-heading text-[24px] font-bold">{pm.num}</span>
+                <span className="text-[13px]" style={{ color: G.muted }}>Code {pm.ussd}</span>
               </div>
+            ) : (
+              <span className="text-[13px]" style={{ color: G.muted }}>Saisissez votre numéro MTN ou Orange : le numéro de paiement s'affiche ici.</span>
             )}
-            <button type="button" onClick={submit} disabled={busy || !op} className="rounded-pill border-0 bg-organic-accent p-4 text-[16px] font-bold text-organic-neutral-100 disabled:opacity-45">
+            <button type="button" onClick={submit} disabled={busy || !op} className={btn} style={{ background: G.dark }}>
               {busy ? "Envoi…" : "J'ai payé"}
             </button>
           </>
