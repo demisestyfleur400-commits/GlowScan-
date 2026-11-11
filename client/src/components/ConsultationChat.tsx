@@ -32,8 +32,11 @@ async function compressToBase64(file: File, maxDim = 1000, quality = 0.72): Prom
   return canvas.toDataURL("image/jpeg", quality);
 }
 
-export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
+export function ConsultationChat({ consultationId, myUserId, dark, onBack, derm, title }: {
   consultationId: number; myUserId: string | null; dark?: boolean; onBack?: () => void;
+  // Espace médical D5 : le compte rendu et le rattachement au dossier passent dans
+  // la colonne « Rapport & ordonnance » (ConsultReportPanel) ; titre « Patiente GP-148 ».
+  derm?: boolean; title?: string;
 }) {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [side, setSide] = useState<"patient" | "doctor" | null>(null);
@@ -600,7 +603,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
         )}
         <div style={{ minWidth: 0, flex: 1 }}>
           <p style={{ fontSize: 13, fontWeight: 800, color: INK, margin: 0, display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-            {side === "patient" ? (doctor?.fullName ? `Dr ${doctor.fullName.replace(/^dr\.?\s*/i, "")}` : "Consultation") : (dossier?.patient?.firstName || "Patient")}
+            {side === "patient" ? (doctor?.fullName ? `Dr ${doctor.fullName.replace(/^dr\.?\s*/i, "")}` : "Consultation") : derm && title ? `${title} · ${dossier?.patient?.firstName || "Patient"}` : (dossier?.patient?.firstName || "Patient")}
             {side === "patient" && doctor?.certified && (
               <span title="Dermatologue Certifié GlowScan" style={{ color: "var(--color-accent-2-700)", fontSize: 12 }}>✦</span>
             )}
@@ -629,7 +632,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
           </button>
         )}
         {/* Dermatologue : convertir en dossier patient DERM */}
-        {side === "doctor" && (
+        {side === "doctor" && !derm && (
           <button
             onClick={async () => {
               try {
@@ -643,7 +646,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
             + Dossier patient
           </button>
         )}
-        {side === "doctor" && ctx?.status !== "closed" && (
+        {side === "doctor" && ctx?.status !== "closed" && !derm && (
           <button
             onClick={() => setShowFollowUp(true)}
             disabled={closing}
@@ -918,7 +921,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack }: {
 
                 {/* Compte rendu structuré (étape 9a) : une saisie → patient, dossier, ordonnance.
                     Signé avec le code à 4 chiffres à la validation de la consultation. */}
-                {ctx?.status !== "closed" && (
+                {ctx?.status !== "closed" && !derm && (
                   <ReportEditor source="consultation" consultationId={consultationId} saveRef={reportSaveRef} onReportId={setReportId} narrow />
                 )}
               </div>

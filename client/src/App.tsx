@@ -67,6 +67,7 @@ const DermDossiers = lazyWithRetry(() => import("@/pages/derm/DermDossiers"));
 const DermDossier = lazyWithRetry(() => import("@/pages/derm/DermDossier"));
 const DermCompteRendu = lazyWithRetry(() => import("@/pages/derm/DermCompteRendu"));
 const DermAgenda = lazyWithRetry(() => import("@/pages/derm/DermAgenda"));
+const DermMessagerie = lazyWithRetry(() => import("@/pages/derm/DermMessagerie"));
 const DermSuivis = lazyWithRetry(() => import("@/pages/derm/DermSuivis"));
 const DermSuivi = lazyWithRetry(() => import("@/pages/derm/DermSuivi"));
 const ProPatients = lazyWithRetry(() => import("@/pages/pro/ProPatients"));
@@ -160,7 +161,7 @@ function Router() {
       <Route path="/derm/portefeuille" component={ProPayments} />
       <Route path="/derm/cabinet" component={ProCabinet} />
       <Route path="/derm/profil-public" component={ProPublicProfile} />
-      <Route path="/derm/consultations" component={ProConsultations} />
+      <Route path="/derm/consultations" component={DermMessagerie} />
       <Route path="/derm/agenda" component={DermAgenda} />
       <Route path="/derm/suivis" component={DermSuivis} />
       <Route path="/derm/suivis/:id" component={DermSuivi} />

@@ -121,6 +121,7 @@ async function evolutionOf(r: any): Promise<ReportEvolution> {
 export async function patientReportHtml(reportId: number): Promise<string | null> {
   const r = await loadReport(reportId);
   if (!r) return null;
+  if (reportPayloadSchema.parse(r.payload || {}).format === "a4") return dermA4Html(reportId);
   return renderPatientReport(await loadDoctor(r.pro_account_id), await loadPatient(r), await toDoc(r), await loadPrescription(r.id));
 }
 /** Compte rendu signé d'une consultation en ligne, s'il existe. */
@@ -294,6 +295,19 @@ export function registerReportRoutes(app: Express) {
           if (source === "visit") {
             const sc = Rows(await db.execute(sql`SELECT dermato_note FROM scans WHERE patient_id = ${target} ORDER BY created_at DESC LIMIT 1`))[0];
             if (sc?.dermato_note && !payload.exam) payload.exam = String(sc.dermato_note).slice(0, 1500);
+          } else {
+            const c = Rows(await db.execute(sql`SELECT condition, patient_context FROM consultations WHERE id = ${target}`))[0] || {};
+            const ctx = typeof c.patient_context === "string" ? JSON.parse(c.patient_context) : c.patient_context || {};
+            const yes = (v: any) => (v === "oui" || v === "yes" || v === true ? "oui" : v === "non" || v === "no" || v === false ? "non" : null);
+            const parts = [
+              ctx.duration ? `Depuis ${ctx.duration}` : "",
+              ctx.products ? `Produits déjà utilisés : ${ctx.products}` : "",
+              ctx.allergies ? `Allergies : ${ctx.allergies}` : "Aucune allergie déclarée dans le questionnaire",
+              yes(ctx.itching) ? `Démangeaisons : ${yes(ctx.itching)}` : "",
+              yes(ctx.lightener) ? `Produits éclaircissants : ${yes(ctx.lightener)}` : "",
+            ].filter(Boolean);
+            if (!payload.exam) payload.exam = parts.join(". ").slice(0, 1500);
+            if (!payload.motif && c.condition) payload.motif = `Motif rapporté par le patient : ${String(c.condition)}`.slice(0, 600);
           }
         }
         r = Rows(await db.execute(sql`

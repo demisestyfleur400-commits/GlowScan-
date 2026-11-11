@@ -1788,7 +1788,33 @@ export function registerProRoutes(app: Express) {
         const dr = Rows(await db.execute(sql`SELECT id FROM consultations WHERE pro_account_id = ${req.proAccount.id} AND is_demo = true`));
         demoIds = new Set(dr.map((r: any) => Number(r.id)));
       } catch {}
-      res.json({ consultations: rows.map((r: any) => ({ ...r, isDemo: demoIds.has(Number(r.id)) })) });
+      // Espace médical D5 : contexte (âge, sexe, ville), dernier message, état du compte rendu.
+      const extra: Record<number, any> = {};
+      try {
+        const ids = rows.map((r: any) => Number(r.id));
+        if (ids.length) {
+          const ex = Rows(await db.execute(sql`
+            SELECT c.id, c.patient_context,
+              (SELECT m.body FROM consultation_messages m WHERE m.consultation_id = c.id AND m.body IS NOT NULL ORDER BY m.created_at DESC LIMIT 1) AS last_body,
+              (SELECT m.sender_type FROM consultation_messages m WHERE m.consultation_id = c.id ORDER BY m.created_at DESC LIMIT 1) AS last_sender,
+              (SELECT COUNT(*)::int FROM consultation_messages m WHERE m.consultation_id = c.id AND m.sender_type = 'doctor') AS doctor_msgs,
+              (SELECT r.signed_at FROM consult_reports r WHERE r.consultation_id = c.id LIMIT 1) AS report_signed,
+              (SELECT r.sent_patient_at FROM consult_reports r WHERE r.consultation_id = c.id LIMIT 1) AS report_sent,
+              (SELECT r.id FROM consult_reports r WHERE r.consultation_id = c.id LIMIT 1) AS report_id
+            FROM consultations c WHERE c.id IN (${sql.join(ids.map((i) => sql`${i}`), sql`, `)})`));
+          for (const e of ex) {
+            const ctx = typeof e.patient_context === "string" ? JSON.parse(e.patient_context) : (e.patient_context || {});
+            extra[Number(e.id)] = {
+              patientAge: ctx.age || null, patientSex: ctx.sex === "F" || ctx.sex === "M" ? ctx.sex : null, patientCity: ctx.city || null,
+              linkedPatientId: ctx.linkedPatientId || null,
+              lastBody: e.last_body ? String(e.last_body).slice(0, 90) : null, lastSender: e.last_sender || null,
+              doctorMessages: Number(e.doctor_msgs) || 0, reportId: e.report_id ? Number(e.report_id) : null,
+              reportSignedAt: e.report_signed ? new Date(e.report_signed).toISOString() : null, reportSentAt: e.report_sent ? new Date(e.report_sent).toISOString() : null,
+            };
+          }
+        }
+      } catch (e) { console.warn("[pro/consultations] contexte :", (e as any)?.message); }
+      res.json({ consultations: rows.map((r: any) => ({ ...r, ...(extra[Number(r.id)] || {}), isDemo: demoIds.has(Number(r.id)) })) });
     } catch (e) {
       res.json({ consultations: [] });
     }
@@ -2214,12 +2240,29 @@ export function registerProRoutes(app: Express) {
       if (!c) return res.status(404).json({ message: "Consultation introuvable" });
       const [u] = await db.select().from(users).where(eq(users.id, c.userId));
       const firstName = (u?.firstName || "Patient").toString().slice(0, 60);
+      let pctx: any = {};
+      try { const row = (Rows(await db.execute(sql`SELECT patient_context FROM consultations WHERE id = ${id}`))[0] as any)?.patient_context; if (row) pctx = typeof row === "string" ? JSON.parse(row) : row; } catch {}
+      // Déjà rattachée : on renvoie le même dossier (pas de doublon).
+      if (pctx.linkedPatientId) {
+        const [ex] = await db.select().from(patients).where(and(eq(patients.id, Number(pctx.linkedPatientId)), eq(patients.dermatologistId, req.proAccount.id)));
+        if (ex) return res.json({ patientId: ex.id, scanLinked: false, existing: true });
+      }
+      const ageN = parseInt(String(pctx.age || ""), 10);
       const [p] = await db.insert(patients).values({
         dermatologistId: req.proAccount.id,
         firstName,
-        lastName: "(consultation en ligne)",
+        lastName: (u?.lastName || "(consultation en ligne)").toString().slice(0, 60),
+        age: Number.isFinite(ageN) && ageN > 0 && ageN < 130 ? ageN : null,
+        sex: pctx.sex === "F" || pctx.sex === "M" ? pctx.sex : null,
         intakePending: false,
       }).returning();
+      try {
+        pctx.linkedPatientId = p.id;
+        await db.execute(sql`UPDATE consultations SET patient_context = ${JSON.stringify(pctx)}::jsonb WHERE id = ${id}`);
+        if (pctx.city) await db.execute(sql`UPDATE patients SET city = ${String(pctx.city).slice(0, 120)} WHERE id = ${p.id}`);
+        // Le compte rendu de la consultation apparaît dans le dossier médical.
+        await db.execute(sql`UPDATE consult_reports SET patient_id = ${p.id} WHERE consultation_id = ${id} AND patient_id IS NULL`);
+      } catch (e) { console.warn("[to-patient] rattachement :", (e as any)?.message); }
 
       // ── Chantier n°2 : boucle prédiction IA ↔ vérité terrain ──────────────
       // Le scan B2C d'origine (photo + diagnostic IA de la consultation) est
@@ -2371,7 +2414,7 @@ export function registerProRoutes(app: Express) {
       // ── Suivi programmé (facultatif) — sélectionné par le médecin à la clôture ──
       let followUpDate: string | null = null;
       const fu = String(req.body?.followUp || "").trim();
-      const DAYS: Record<string, number> = { "2_weeks": 14, "1_month": 30, "2_months": 60 };
+      const DAYS: Record<string, number> = { "2_weeks": 14, "1_month": 30, "2_months": 60, "3_months": 91 };
       if (DAYS[fu]) {
         try {
           await db.execute(sql`CREATE TABLE IF NOT EXISTS follow_up_reminders (
