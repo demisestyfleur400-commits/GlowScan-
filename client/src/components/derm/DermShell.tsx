@@ -7,6 +7,7 @@ import {
 import { useAuth } from "@/hooks/use-auth";
 import { useProAccount } from "@/hooks/use-pro";
 import { D, FONT_UI, ensureDermFonts, patientCode } from "./tokens";
+import { prefetchDermScreens } from "@/lib/dermPrefetch";
 
 // ════════════════════════════════════════════════════════════════════════
 // Cadre de l'espace médical GlowScan Derm (handoff « espace médical », §2).
@@ -137,6 +138,7 @@ export function DermShell({ active, children, showBack, onBack }: { active: Derm
   const [drawer, setDrawer] = useState(false);
   const [menu, setMenu] = useState(false);
   useEffect(() => { ensureDermFonts(); }, []);
+  useEffect(() => { if (acc) prefetchDermScreens(); }, [acc]);
 
   const items = isSecretary ? NAV.filter((n) => SECRETARY_KEYS.includes(n.key)) : NAV;
   const meName = isSecretary

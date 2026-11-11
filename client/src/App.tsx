@@ -42,6 +42,22 @@ function lazyWithRetry(factory: () => Promise<any>) {
   );
 }
 
+// Écran de transition pendant le chargement d'une page : aux couleurs de la page
+// visée (plus d'écran noir). Espace médical : barre latérale et fond clair.
+function RouteFallback() {
+  const p = typeof window !== "undefined" ? window.location.pathname : "/";
+  const dermPublic = /^\/derm(\/(connexion|inscription|mot-de-passe-oublie|conditions|demo|magic|register))?\/?$/.test(p);
+  if (p.startsWith("/derm") && !dermPublic) {
+    return (
+      <div style={{ display: "flex", minHeight: "100vh", background: "#f3f6f3" }}>
+        <div className="hidden md:block" style={{ width: 250, flex: "none", background: "#0d2929" }} />
+        <div style={{ flex: 1 }}><div style={{ height: 72, background: "rgba(255,255,255,.82)", borderBottom: "1px solid #e2e8e4" }} /></div>
+      </div>
+    );
+  }
+  return <div style={{ minHeight: "100vh", background: p.startsWith("/derm") ? "#ffffff" : "#f5ead8" }} />;
+}
+
 const Home = lazyWithRetry(() => import("@/pages/Home"));
 const Analyze = lazyWithRetry(() => import("@/pages/Analyze"));
 const Profile = lazyWithRetry(() => import("@/pages/Profile"));
@@ -122,7 +138,7 @@ function RefRedirect() {
 
 function Router() {
   return (
-    <Suspense fallback={<div style={{ background: "#0d0a0e", minHeight: "100vh" }} />}>
+    <Suspense fallback={<RouteFallback />}>
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/analyze" component={Analyze} />

@@ -1,4 +1,5 @@
 import express, { type Express } from "express";
+import compression from "compression";
 import fs from "fs";
 import path from "path";
 
@@ -34,6 +35,11 @@ export function serveStatic(app: Express) {
   }
 
   console.log(`✅ Serving static files from: ${distPath}`);
+
+  // Compression gzip des fichiers du site (JS, CSS, HTML, SVG) : 3 à 4 fois moins
+  // de données sur les réseaux mobiles. Montée ici seulement, après les routes
+  // /api : les réponses en flux (assistant Glow, SSE) ne sont jamais tamponnées.
+  app.use(compression({ threshold: 1024, filter: (req, res) => !String(req.path || "").startsWith("/api") && compression.filter(req, res) }));
 
   // Serve static assets (JS, CSS, images) with long-term caching
   // Vite generates hashed filenames so these are safe to cache aggressively
