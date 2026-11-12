@@ -7,7 +7,10 @@ import { Settings, Download, Crown, CheckCircle2, Loader2, Phone, Clock, UserPlu
 import { useProAccount, useProPatients, useUpdateProAccount, useSecretaries, useCreateSecretary, useDeleteSecretary } from "@/hooks/use-pro";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
-import { ProLayout, ProCard, ProInput, LogoutButton, LoadingScreen } from "@/components/ProLayout";
+import { ProCard, ProInput, LogoutButton } from "@/components/ProLayout";
+import { DermShell } from "@/components/derm/DermShell";
+import { Page, ScreenHeader, Card, Btn, Notice } from "@/components/derm/ui";
+import { D } from "@/components/derm/tokens";
 import { Button } from "@/components/ui/button";
 import { formatF } from "@shared/delivery";
 import { PRO_SUBSCRIPTION_FCFA } from "@shared/premium";
@@ -134,11 +137,18 @@ export default function ProCabinet() {
     }
   }, [accData?.account]);
 
-  if (!accData?.account) return <LoadingScreen />;
+  if (!accData?.account) {
+    return <DermShell active="parametres" allowExpired><Page><span style={{ fontSize: 12, color: D.muted }}>Chargement des paramètres avancés…</span></Page></DermShell>;
+  }
 
   const acc = accData.account;
   const patients = patientsData?.patients || [];
   const isTrial = acc.subscriptionStatus === "trial";
+  // Accès réel (essai en cours OU abonnement payé non expiré), calculé par le serveur.
+  const isActive = (accData as any)?.active !== false;
+  const expiresAt = (acc as any).subscriptionExpiresAt ? new Date((acc as any).subscriptionExpiresAt) : null;
+  const frDate = (d: Date) => d.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+  const pendingReq = statusData?.request?.status === "pending" ? statusData.request : null;
 
   const handleSave = async () => {
     try {
@@ -191,9 +201,15 @@ export default function ProCabinet() {
   // Secrétaire : pas d'accès aux réglages du cabinet → ses patients.
   if (accData?.user?.role === "secretary") {
     return (
-      <ProLayout>
-        <div className="rounded-card bg-organic-surface p-organic-6 text-[14px]">Les réglages du cabinet sont réservés au médecin.</div>
-      </ProLayout>
+      <DermShell active="parametres" allowExpired>
+        <Page>
+          <Card style={{ maxWidth: 620 }}>
+            <b style={{ fontSize: 16, fontWeight: 600 }}>Les réglages du cabinet sont réservés au médecin.</b>
+            <p style={{ margin: "6px 0 14px", fontSize: 12.5, color: D.muted }}>Vous pouvez continuer l'accueil des patients et la préparation des dossiers.</p>
+            <Btn kind="primary" onClick={() => { window.location.href = "/derm/accueil"; }}>Aller à l'accueil du cabinet</Btn>
+          </Card>
+        </Page>
+      </DermShell>
     );
   }
 
@@ -206,13 +222,15 @@ export default function ProCabinet() {
   );
 
   return (
-    <ProLayout>
-      <header className="flex flex-col gap-1">
-        <span className="text-[11px] font-bold uppercase tracking-[.12em] text-organic-accent-700">Réglages</span>
-        <h1 className="m-0 text-[clamp(30px,4vw,42px)]">Cabinet</h1>
-      </header>
-
-      <section className="grid items-start gap-organic-4 lg:grid-cols-2">
+    <DermShell active="parametres" allowExpired showBack>
+     <Page>
+      <ScreenHeader kicker="PARAMÈTRES AVANCÉS" title="Cabinet, abonnement et sécurité"
+        sub="Mentions de l'ordonnance, consultation en ligne, abonnement, équipe, vérification en 2 étapes et code de signature."
+        actions={<Btn kind="secondary" onClick={() => { window.location.href = "/derm/cabinet"; }}>← Paramètres</Btn>} />
+      {!isActive && (
+        <Notice tone="warn">{isTrial ? "Votre période d'essai est terminée." : "Votre abonnement est terminé."} Vos données sont conservées : réactivez votre abonnement ci-dessous pour rouvrir votre espace.</Notice>
+      )}
+      <section className="derm-theme grid items-start gap-organic-4 lg:grid-cols-2">
         <div className="flex flex-col gap-organic-4">
           {/* Profil du cabinet */}
           <div className={card}>
@@ -275,24 +293,29 @@ export default function ProCabinet() {
             </Button>
           </div>
 
-          {/* Abonnement */}
-          <div className={card}>
+          {/* Abonnement : statut réel (essai, actif, terminé) */}
+          <div className={card} id="abonnement" style={!isActive ? { order: -1, border: `1.5px solid ${D.warn}`, background: D.warnBg } : undefined} data-testid="subscription-card">
             <h3 className="m-0 text-[22px]">Abonnement</h3>
-            {isTrial ? (
+            {!isActive ? (
               <>
-                <p className="m-0 text-[14px]">Essai gratuit · <b>{accData.daysLeftTrial} jours restants</b></p>
+                <p className="m-0 text-[14px] font-bold" style={{ color: D.warn }}>{isTrial ? "Votre période d'essai est terminée." : `Votre abonnement est terminé${expiresAt ? ` depuis le ${frDate(expiresAt)}` : ""}.`}</p>
+                <p className="m-0 text-[13px] text-organic-neutral-800">Vos patients et vos dossiers sont conservés. Réactivez pour retrouver tout votre espace : {formatF(PRO_PRICE)} / mois par Mobile Money.</p>
+              </>
+            ) : isTrial ? (
+              <>
+                <p className="m-0 text-[14px]">Essai gratuit · <b>{accData.daysLeftTrial} jour{accData.daysLeftTrial === 1 ? "" : "s"} restant{accData.daysLeftTrial === 1 ? "" : "s"}</b></p>
                 <p className="m-0 text-[13px] text-organic-neutral-700">Ensuite {formatF(PRO_PRICE)} / mois via Mobile Money. Vos gains en consultations et en avis sont déduits automatiquement.</p>
-                {statusData?.request?.status === "pending" ? (
-                  <div className="rounded-pill bg-organic-accent-100 px-4 py-2.5 text-[13px] font-semibold text-organic-accent-900">
-                    Demande de paiement en attente · {statusData.request.reference}
-                  </div>
-                ) : (
-                  <Button onClick={() => setShowSubscribe(true)} className="self-start" data-testid="button-subscribe">Activer mon abonnement</Button>
-                )}
               </>
             ) : (
-              <p className="m-0 text-[14px] font-bold text-organic-accent-2-700">Abonnement actif</p>
+              <p className="m-0 text-[14px] font-bold text-organic-accent-2-700">Abonnement actif{expiresAt ? ` jusqu'au ${frDate(expiresAt)}` : ""}</p>
             )}
+            {pendingReq ? (
+              <div className="rounded-pill bg-organic-accent-100 px-4 py-2.5 text-[13px] font-semibold text-organic-accent-900">
+                Paiement en cours de vérification · {pendingReq.reference}
+              </div>
+            ) : (!isActive || isTrial) ? (
+              <Button onClick={() => setShowSubscribe(true)} className="self-start" data-testid="button-subscribe">{isActive ? "Activer mon abonnement" : "Réactiver mon abonnement"}</Button>
+            ) : null}
           </div>
 
           <NotifSettingsCard />
@@ -396,7 +419,8 @@ export default function ProCabinet() {
           onClose={() => setShowSubscribe(false)}
         />
       )}
-    </ProLayout>
+     </Page>
+    </DermShell>
   );
 }
 

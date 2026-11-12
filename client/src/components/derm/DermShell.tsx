@@ -129,7 +129,8 @@ function SubscriptionGate({ isSecretary }: { isSecretary: boolean }) {
   );
 }
 
-export function DermShell({ active, children, showBack, onBack }: { active: DermNavKey; children: ReactNode; showBack?: boolean; onBack?: () => void }) {
+/** allowExpired : la page reste accessible même abonnement terminé (page de réactivation). */
+export function DermShell({ active, children, showBack, onBack, allowExpired }: { active: DermNavKey; children: ReactNode; showBack?: boolean; onBack?: () => void; allowExpired?: boolean }) {
   const [, navigate] = useLocation();
   const { logout } = useAuth();
   const { data: accData } = useProAccount();
@@ -230,7 +231,7 @@ export function DermShell({ active, children, showBack, onBack }: { active: Derm
             <Plus size={13} strokeWidth={2} /><span className="hidden sm:inline">Nouvelle consultation</span>
           </button>
         </div>
-        {accData && (accData as any).active === false ? <SubscriptionGate isSecretary={isSecretary} /> : children}
+        {accData && (accData as any).active === false && !allowExpired ? <SubscriptionGate isSecretary={isSecretary} /> : children}
       </main>
     </div>
   );
