@@ -4,13 +4,14 @@ import { ArrowLeft, ShieldCheck, FileText, Globe, Trash2, Download, Mail, Lock }
 import { useSEO } from "@/hooks/useSEO";
 
 const DS = {
-  base: "#0d0a0e",
-  surface: "#13101f",
-  text: "#f3f0ff",
-  body: "rgba(200,185,255,0.65)",
-  muted: "rgba(255,255,255,0.35)",
-  border: "rgba(255,255,255,0.07)",
+  base: "#f8f8f6",
+  surface: "#ffffff",
+  text: "#17392c",
+  body: "#3d4f48",
+  muted: "#5f6f69",
+  border: "#e3e8e2",
 };
+const ACCENT = "#164034";
 
 export default function Privacy() {
   useSEO({
@@ -20,14 +21,14 @@ export default function Privacy() {
   });
 
   return (
-    <div className="min-h-screen pb-24" style={{ background: DS.base, fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif' }}>
+    <div className="b2c-theme min-h-screen pb-24" style={{ background: DS.base, fontFamily: "'DM Sans', system-ui, sans-serif" }}>
       <GsTopBar />
 
       <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Link href="/profile">
           <button
             className="flex items-center gap-2 text-sm font-medium mb-6 active:scale-95 transition-all"
-            style={{ color: "#a78bfa" }}
+            style={{ color: ACCENT }}
             data-testid="link-back-profile"
           >
             <ArrowLeft className="w-4 h-4" /> Retour au profil
@@ -37,12 +38,12 @@ export default function Privacy() {
         <div className="flex items-center gap-4 mb-6">
           <div
             className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0"
-            style={{ background: "rgba(124,58,237,0.15)", border: "1px solid rgba(167,139,250,0.3)" }}
+            style={{ background: "#e7eedc", border: "1px solid #cfdfc4" }}
           >
-            <ShieldCheck className="w-6 h-6" style={{ color: "#a78bfa" }} />
+            <ShieldCheck className="w-6 h-6" style={{ color: ACCENT }} />
           </div>
           <div>
-            <h1 className="text-xl font-extrabold" style={{ color: DS.text }} data-testid="text-privacy-title">
+            <h1 className="text-2xl font-bold" style={{ color: DS.text, fontFamily: "Manrope, 'DM Sans', sans-serif" }} data-testid="text-privacy-title">
               Politique de confidentialité
             </h1>
             <p className="text-xs mt-0.5" style={{ color: DS.muted }}>Dernière mise à jour : 15 septembre 2026 · version 2026-09-15</p>
@@ -50,23 +51,23 @@ export default function Privacy() {
         </div>
 
         <p className="text-sm leading-relaxed mb-6" style={{ color: DS.body }}>
-          Chez <strong style={{ color: DS.text }}>GlowScan</strong>, ta vie privée compte. Cette page t'explique
-          clairement quelles données nous collectons, pourquoi, et quels droits tu as.
+          Chez <strong style={{ color: DS.text }}>GlowScan</strong>, votre vie privée compte. Cette page vous explique
+          clairement quelles données nous collectons, pourquoi, et quels droits vous avez.
         </p>
 
-        <Section icon={<FileText className="w-4 h-4" style={{ color: "#a78bfa" }} />} title="1. Qui sommes-nous ?">
+        <Section icon={<FileText className="w-4 h-4" style={{ color: ACCENT }} />} title="1. Qui sommes-nous ?">
           <p>
             GlowScan est une application d'analyse dermatologique assistée par IA, créée et opérée depuis Douala, Cameroun,
             par <strong style={{ color: DS.text }}>Démise Essawe</strong>. Site :{" "}
-            <a href="https://glow-scan.com" style={{ color: "#a78bfa" }}>glow-scan.com</a>. Contact :{" "}
-            <a href="mailto:demiseessawe12@gmail.com" style={{ color: "#a78bfa" }}>demiseessawe12@gmail.com</a>
+            <a href="https://glow-scan.com" style={{ color: ACCENT }}>glow-scan.com</a>. Contact :{" "}
+            <a href="mailto:demiseessawe12@gmail.com" style={{ color: ACCENT }}>demiseessawe12@gmail.com</a>
           </p>
         </Section>
 
-        <Section icon={<FileText className="w-4 h-4" style={{ color: "#a78bfa" }} />} title="2. Données collectées">
+        <Section icon={<FileText className="w-4 h-4" style={{ color: ACCENT }} />} title="2. Données collectées">
           <ul className="list-disc ml-5 space-y-1.5">
             <li><strong style={{ color: DS.text }}>Identité</strong> : prénom, email ou numéro de téléphone, mot de passe (haché bcrypt — jamais visible).</li>
-            <li><strong style={{ color: DS.text }}>Photos de peau</strong> : images envoyées pour l'analyse. Elles sont <strong style={{ color: DS.text }}>conservées de façon sécurisée et à accès restreint</strong> le temps de ton suivi, et <strong style={{ color: DS.text }}>anonymisées</strong> (métadonnées EXIF/GPS retirées). Tu peux les supprimer à tout moment.</li>
+            <li><strong style={{ color: DS.text }}>Photos de peau</strong> : images envoyées pour l'analyse. Elles sont <strong style={{ color: DS.text }}>conservées de façon sécurisée et à accès restreint</strong> le temps de votre suivi, et <strong style={{ color: DS.text }}>anonymisées</strong> (métadonnées EXIF/GPS retirées). Vous pouvez les supprimer à tout moment.</li>
             <li><strong style={{ color: DS.text }}>Informations médicales (intake)</strong> : âge, sexe, durée du problème, produits utilisés, allergies déclarées.</li>
             <li><strong style={{ color: DS.text }}>Diagnostics</strong> : type de peau, Glow Score, conditions détectées, recommandations.</li>
             <li><strong style={{ color: DS.text }}>Localisation approximative</strong> : pays / ville (jamais de position GPS précise).</li>
@@ -75,35 +76,35 @@ export default function Privacy() {
           </ul>
         </Section>
 
-        <Section icon={<FileText className="w-4 h-4" style={{ color: "#a78bfa" }} />} title="3. Utilisation des données">
+        <Section icon={<FileText className="w-4 h-4" style={{ color: ACCENT }} />} title="3. Utilisation des données">
           <ul className="list-disc ml-5 space-y-1.5">
-            <li>Générer ton <strong style={{ color: DS.text }}>diagnostic cutané personnalisé</strong>.</li>
-            <li>Te recommander des routines et produits adaptés à ta peau.</li>
-            <li>Suivre l'évolution de ta peau dans le temps.</li>
+            <li>Générer votre <strong style={{ color: DS.text }}>diagnostic cutané personnalisé</strong>.</li>
+            <li>Vous recommander des routines et produits adaptés à votre peau.</li>
+            <li>Suivre l'évolution de votre peau dans le temps.</li>
             <li>Améliorer le modèle IA GlowScan (données anonymisées uniquement).</li>
           </ul>
         </Section>
 
-        <Section icon={<Globe className="w-4 h-4" style={{ color: "#a78bfa" }} />} title="4. Partage & mesure d'audience">
+        <Section icon={<Globe className="w-4 h-4" style={{ color: ACCENT }} />} title="4. Partage & mesure d'audience">
           <p className="mb-3">
-            Nous ne vendons <strong style={{ color: DS.text }}>jamais</strong> tes données personnelles.
-            Tes <strong style={{ color: DS.text }}>photos et tes diagnostics ne sont jamais transmis à des fins publicitaires</strong>.
+            Nous ne vendons <strong style={{ color: DS.text }}>jamais</strong> vos données personnelles.
+            Vos <strong style={{ color: DS.text }}>photos et vos diagnostics ne sont jamais transmis à des fins publicitaires</strong>.
           </p>
           <div
             className="rounded-xl p-3 mb-3"
-            style={{ background: "rgba(251,191,36,0.06)", border: "1px solid rgba(251,191,36,0.2)" }}
+            style={{ background: "#f7e8dc", border: "1px solid #ecd2bd" }}
           >
-            <p className="text-xs font-bold mb-1" style={{ color: "#fbbf24" }}>Prestataires IA (sous-traitants)</p>
+            <p className="text-xs font-bold mb-1" style={{ color: "#7a3f1d" }}>Prestataires IA (sous-traitants)</p>
             <p>
-              Pour analyser ta peau, GlowScan s'appuie sur <strong style={{ color: DS.text }}>Google Gemini</strong> (analyse d'image par IA)
+              Pour analyser votre peau, GlowScan s'appuie sur <strong style={{ color: DS.text }}>Google Gemini</strong> (analyse d'image par IA)
               et <strong style={{ color: DS.text }}>Groq</strong> (transcription vocale et traitement IA de secours). Ils traitent la
-              donnée le temps nécessaire au service, sans autre usage. Aucun humain ne consulte tes photos en dehors d'une
-              consultation que tu as toi-même demandée avec un dermatologue.
+              donnée le temps nécessaire au service, sans autre usage. Aucun humain ne consulte vos photos en dehors d'une
+              consultation que vous avez vous-même demandée avec un dermatologue.
             </p>
           </div>
           <div
             className="rounded-xl p-3 mb-3"
-            style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}
+            style={{ background: "#f8f8f6", border: "1px solid #e3e8e2" }}
           >
             <p className="text-xs font-bold mb-1" style={{ color: DS.text }}>Mesure d'audience & amélioration</p>
             <p>
@@ -111,16 +112,16 @@ export default function Privacy() {
               communication, nous utilisons <strong style={{ color: DS.text }}>Microsoft Clarity</strong> (statistiques d'usage
               et d'ergonomie — clics, navigation, de façon agrégée) et le <strong style={{ color: DS.text }}>pixel Meta / Facebook</strong>
               (mesure publicitaire). Ces outils reçoivent des données de navigation et d'interaction et déposent des cookies de
-              mesure. En utilisant GlowScan, tu en acceptes l'usage ; tu peux t'y opposer via les réglages de ton navigateur.
+              mesure. En utilisant GlowScan, vous en acceptez l'usage ; vous pouvez vous y opposer via les réglages de votre navigateur.
             </p>
           </div>
           <div
             className="rounded-xl p-3"
-            style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}
+            style={{ background: "#f8f8f6", border: "1px solid #e3e8e2" }}
           >
             <p className="text-xs font-bold mb-1" style={{ color: DS.text }}>Hébergement (transparence)</p>
             <p>
-              Tes données, <strong style={{ color: DS.text }}>y compris tes photos</strong>, sont hébergées sur
+              Vos données, <strong style={{ color: DS.text }}>y compris vos photos</strong>, sont hébergées sur
               <strong style={{ color: DS.text }}> Supabase (PostgreSQL)</strong> et <strong style={{ color: DS.text }}>Railway</strong>.
               Leurs serveurs peuvent être situés <strong style={{ color: DS.text }}>hors d'Afrique (Union Européenne ou États-Unis)</strong>.
               Les échanges sont chiffrés (HTTPS) et l'accès à la base est restreint.
@@ -128,7 +129,7 @@ export default function Privacy() {
           </div>
         </Section>
 
-        <Section icon={<Lock className="w-4 h-4" style={{ color: "#a78bfa" }} />} title="5. Sécurité">
+        <Section icon={<Lock className="w-4 h-4" style={{ color: ACCENT }} />} title="5. Sécurité">
           <ul className="list-disc ml-5 space-y-1.5">
             <li>Connexion <strong style={{ color: DS.text }}>HTTPS</strong> chiffrée pour toutes les communications.</li>
             <li>Mots de passe hachés avec <strong style={{ color: DS.text }}>bcrypt</strong> — nous ne les voyons jamais en clair.</li>
@@ -137,61 +138,61 @@ export default function Privacy() {
           </ul>
         </Section>
 
-        <Section icon={<FileText className="w-4 h-4" style={{ color: "#a78bfa" }} />} title="6. Durée de conservation">
+        <Section icon={<FileText className="w-4 h-4" style={{ color: ACCENT }} />} title="6. Durée de conservation">
           <ul className="list-disc ml-5 space-y-1.5">
-            <li><strong style={{ color: DS.text }}>Compte actif</strong> : tes données sont conservées tant que ton compte existe.</li>
+            <li><strong style={{ color: DS.text }}>Compte actif</strong> : vos données sont conservées tant que votre compte existe.</li>
             <li><strong style={{ color: DS.text }}>Analyses anonymes</strong> (sans compte) : conservées au maximum <strong style={{ color: DS.text }}>24 mois</strong>, puis la photo est retirée (anonymisation renforcée).</li>
-            <li><strong style={{ color: DS.text }}>Suppression de compte</strong> : toutes tes données sont effacées définitivement, immédiatement.</li>
-            <li><strong style={{ color: DS.text }}>Données de recherche</strong> : seules les analyses pour lesquelles tu as donné ton accord explicite alimentent, sous forme <strong style={{ color: DS.text }}>anonymisée</strong>, l'amélioration de l'IA.</li>
+            <li><strong style={{ color: DS.text }}>Suppression de compte</strong> : toutes vos données sont effacées définitivement, immédiatement.</li>
+            <li><strong style={{ color: DS.text }}>Données de recherche</strong> : seules les analyses pour lesquelles vous avez donné votre accord explicite alimentent, sous forme <strong style={{ color: DS.text }}>anonymisée</strong>, l'amélioration de l'IA.</li>
           </ul>
         </Section>
 
-        <Section icon={<ShieldCheck className="w-4 h-4" style={{ color: "#a78bfa" }} />} title="7. Tes droits">
-          <p className="mb-3">Tu peux à tout moment :</p>
+        <Section icon={<ShieldCheck className="w-4 h-4" style={{ color: ACCENT }} />} title="7. Vos droits">
+          <p className="mb-3">Vous pouvez à tout moment :</p>
           <ul className="list-disc ml-5 space-y-1.5 mb-3">
             <li>
               <strong className="inline-flex items-center gap-1" style={{ color: DS.text }}>
-                <Download className="w-3.5 h-3.5" /> Exporter tes données
+                <Download className="w-3.5 h-3.5" /> Exporter vos données
               </strong>{" "}
-              — depuis ton profil, au format JSON.
+              — depuis votre profil, au format JSON.
             </li>
             <li>
               <strong className="inline-flex items-center gap-1" style={{ color: DS.text }}>
-                <Trash2 className="w-3.5 h-3.5" /> Demander la suppression de ton compte
+                <Trash2 className="w-3.5 h-3.5" /> Demander la suppression de votre compte
               </strong>{" "}
-              — tout est effacé définitivement. Envoie un email à{" "}
-              <a href="mailto:demiseessawe12@gmail.com" style={{ color: "#a78bfa" }}>demiseessawe12@gmail.com</a>.
+              — tout est effacé définitivement. Envoyez un email à{" "}
+              <a href="mailto:demiseessawe12@gmail.com" style={{ color: ACCENT }}>demiseessawe12@gmail.com</a>.
             </li>
-            <li>Rectifier tes informations personnelles depuis les paramètres de ton profil.</li>
-            <li>Retirer ton consentement à tout moment.</li>
+            <li>Rectifier vos informations personnelles depuis les paramètres de votre profil.</li>
+            <li>Retirer votre consentement à tout moment.</li>
           </ul>
         </Section>
 
-        <Section icon={<Mail className="w-4 h-4" style={{ color: "#a78bfa" }} />} title="8. Contact — protection des données">
+        <Section icon={<Mail className="w-4 h-4" style={{ color: ACCENT }} />} title="8. Contact — protection des données">
           <p className="mb-1">
             Responsable de la protection des données : <strong style={{ color: DS.text }}>Démise Essawe</strong> (GlowScan Africa).
             Pour toute question, demande d'accès, de rectification, d'export ou de suppression :
           </p>
           <p>
-            📧{" "}
-            <a href="mailto:demiseessawe12@gmail.com" style={{ color: "#a78bfa" }} className="font-bold">
+            Email :{" "}
+            <a href="mailto:demiseessawe12@gmail.com" style={{ color: ACCENT }} className="font-bold">
               demiseessawe12@gmail.com
             </a>
           </p>
           <p className="mt-1">
-            🌐{" "}
-            <a href="https://glow-scan.com" style={{ color: "#a78bfa" }}>glow-scan.com</a>
+            Site :{" "}
+            <a href="https://glow-scan.com" style={{ color: ACCENT }}>glow-scan.com</a>
           </p>
         </Section>
 
         <div
           className="mt-8 p-4 rounded-2xl"
-          style={{ background: "rgba(167,139,250,0.06)", border: "1px solid rgba(167,139,250,0.18)" }}
+          style={{ background: "#e7eedc", border: "1px solid #cfdfc4" }}
         >
           <p className="text-xs italic" style={{ color: DS.body }}>
-            En créant ton compte et en utilisant GlowScan, tu acceptes l'ensemble de cette politique — un seul
-            consentement couvre le traitement de tes données pour l'analyse, la mesure d'audience et les cookies décrits
-            ci-dessus. Nous t'informerons de tout changement important par email ou via une notification dans l'app.
+            En créant votre compte et en utilisant GlowScan, vous acceptez l'ensemble de cette politique : un seul
+            consentement couvre le traitement de vos données pour l'analyse, la mesure d'audience et les cookies décrits
+            ci-dessus. Nous vous informerons de tout changement important par email ou via une notification dans l'app.
           </p>
         </div>
       </main>
@@ -203,14 +204,14 @@ function Section({ icon, title, children }: { icon: React.ReactNode; title: stri
   return (
     <section
       className="mb-5 rounded-2xl p-5"
-      style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}
+      style={{ background: "#ffffff", border: "1px solid #e3e8e2" }}
       data-testid={`section-${title.split(".")[0]}`}
     >
       <div className="flex items-center gap-2 mb-3">
         {icon}
-        <h2 className="text-sm font-extrabold" style={{ color: "#f3f0ff" }}>{title}</h2>
+        <h2 className="text-[15px] font-bold" style={{ color: "#17392c", fontFamily: "Manrope, 'DM Sans', sans-serif" }}>{title}</h2>
       </div>
-      <div className="text-sm leading-relaxed" style={{ color: "rgba(200,185,255,0.65)" }}>{children}</div>
+      <div className="text-[14px] leading-relaxed" style={{ color: "#3d4f48" }}>{children}</div>
     </section>
   );
 }
