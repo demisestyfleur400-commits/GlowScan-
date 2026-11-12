@@ -3,7 +3,46 @@ import { useLocation } from "wouter";
 import { ArrowRight, ArrowLeft, Eye, EyeOff, Mail, Check, ShieldCheck, Info } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { GS, GsScreen, GsMono, GsSteps, GsButton } from "@/lib/gs-ui";
+import { useEffect, type CSSProperties, type ReactNode } from "react";
+import { GS as GS_BASE } from "@/lib/gs-ui";
+import { ensureDermFonts } from "@/components/derm/tokens";
+
+// Inscription patient : palette de la nouvelle maquette B2C (blanc cassé,
+// vert profond, sauge ; DM Sans / Manrope). Versions locales des composants
+// gs-ui pour ne pas modifier les écrans qui les partagent (Derm, analyse).
+const GS = {
+  ...GS_BASE,
+  ink: "#17392c", inkSoft: "#164034", muted: "#5f6f69", faint: "#7d8d85", hint: "#9fb0a6", disabled: "#c9d3cc",
+  accent: "#164034", accentMint: "#cfdfc4", teal: "#164034", tealHover: "#123429",
+  line: "#e3e8e2", line2: "#e3e8e2", hair: "#f1f5ec", panel: "#e7eedc", mintBg: "#f1f5ec", mintTint: "#e7eedc",
+  sans: "'DM Sans', system-ui, sans-serif", mono: "'DM Sans', system-ui, sans-serif",
+} as const;
+
+function GsScreen({ children }: { children: ReactNode }) {
+  useEffect(() => { ensureDermFonts(); }, []);
+  return (
+    <div className="b2c-theme" style={{ minHeight: "100dvh", background: "#f8f8f6", fontFamily: GS.sans, WebkitFontSmoothing: "antialiased", color: GS.ink, display: "flex", flexDirection: "column" }}>
+      <div style={{ width: "100%", maxWidth: 430, margin: "0 auto", flex: 1, display: "flex", flexDirection: "column", padding: "14px 24px 0", boxSizing: "border-box" }}>{children}</div>
+    </div>
+  );
+}
+function GsMono({ children, size = 11, color = GS.muted, style }: { children: ReactNode; size?: number; color?: string; style?: CSSProperties }) {
+  return <span style={{ fontFamily: GS.sans, fontSize: Math.max(size, 11), fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", color, ...style }}>{children}</span>;
+}
+function GsSteps({ total, current }: { total: number; current: number }) {
+  return (
+    <div style={{ flex: 1, display: "flex", gap: 4 }}>
+      {Array.from({ length: total }).map((_, i) => <span key={i} style={{ flex: 1, height: 4, borderRadius: 99, background: i < current ? GS.accent : GS.panel }} />)}
+    </div>
+  );
+}
+function GsButton({ children, onClick, variant = "primary", icon, disabled, style, type }: {
+  children: ReactNode; onClick?: () => void; variant?: "primary" | "secondary"; icon?: ReactNode; disabled?: boolean; style?: CSSProperties; type?: "button" | "submit";
+}) {
+  const base: CSSProperties = { width: "100%", boxSizing: "border-box", padding: 16, borderRadius: 12, cursor: disabled ? "not-allowed" : "pointer", fontFamily: GS.sans, fontSize: 15, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: 10, opacity: disabled ? 0.5 : 1 };
+  const v: CSSProperties = variant === "secondary" ? { background: "#fff", color: GS.accent, border: `1px solid ${GS.accentMint}` } : { background: GS.accent, color: "#fff", border: "none" };
+  return <button type={type || "button"} onClick={onClick} disabled={disabled} style={{ ...base, ...v, ...style }}>{children}{icon}</button>;
+}
 
 // ════════════════════════════════════════════════════════════════════════
 // Refonte B2C — Inscription fractionnée « une info par écran » (01A→01).
@@ -129,7 +168,7 @@ export function AuthRegisterWizard({ onGoLogin }: { onGoLogin: () => void }) {
           <div style={{ fontFamily: GS.mono, fontSize: 9, color: GS.faint, marginTop: 9, letterSpacing: ".05em" }}>FORMAT CAMEROUN · 9 CHIFFRES</div>
           <div style={{ marginTop: "auto", paddingBottom: 26 }}>
             <div style={{ fontSize: 11, lineHeight: 1.55, color: GS.muted, marginBottom: 14 }}>Une seule information par écran. Vous pourrez tout modifier plus tard depuis votre dossier.</div>
-            <GsButton onClick={() => { if (phoneDigits.length < 8) { toast({ title: "Numéro à 9 chiffres", variant: "destructive" }); return; } setStep(2); }} icon={<ArrowRight size={16} style={{ color: GS.accent }} strokeWidth={2} />}>Continuer</GsButton>
+            <GsButton onClick={() => { if (phoneDigits.length < 8) { toast({ title: "Numéro à 9 chiffres", variant: "destructive" }); return; } setStep(2); }} icon={<ArrowRight size={16} style={{ color: "#fff" }} strokeWidth={2} />}>Continuer</GsButton>
             <div style={{ textAlign: "center", fontSize: 12, color: GS.muted, marginTop: 14 }}>Déjà inscrit ? <a onClick={onGoLogin} style={{ color: GS.teal, fontWeight: 600, cursor: "pointer" }}>Se connecter</a></div>
           </div>
         </>
@@ -154,7 +193,7 @@ export function AuthRegisterWizard({ onGoLogin }: { onGoLogin: () => void }) {
             <div style={{ fontSize: 11, lineHeight: 1.55, color: GS.muted }}>Jamais utilisée pour de la publicité. Vous choisirez à l'étape 5 si vous acceptez les rappels.</div>
           </div>
           <div style={{ marginTop: "auto", paddingBottom: 26 }}>
-            <GsButton onClick={() => { if (!emailValid) { toast({ title: "E-mail invalide", variant: "destructive" }); return; } setStep(3); }} icon={<ArrowRight size={16} style={{ color: GS.accent }} strokeWidth={2} />}>Continuer</GsButton>
+            <GsButton onClick={() => { if (!emailValid) { toast({ title: "E-mail invalide", variant: "destructive" }); return; } setStep(3); }} icon={<ArrowRight size={16} style={{ color: "#fff" }} strokeWidth={2} />}>Continuer</GsButton>
           </div>
         </>
       )}
@@ -191,7 +230,7 @@ export function AuthRegisterWizard({ onGoLogin }: { onGoLogin: () => void }) {
           </div>
           <div style={{ marginTop: "auto", paddingBottom: 26 }}>
             <div style={{ border: `1px solid ${GS.line}`, padding: 13, fontSize: 11, lineHeight: 1.55, color: GS.muted, marginBottom: 14 }}>Oublié plus tard ? La récupération passe par le code e-mail, jamais par une question secrète.</div>
-            <GsButton onClick={() => { if (!pwdLen) { toast({ title: "8 caractères minimum", variant: "destructive" }); return; } setStep(4); }} icon={<ArrowRight size={16} style={{ color: GS.accent }} strokeWidth={2} />}>Continuer</GsButton>
+            <GsButton onClick={() => { if (!pwdLen) { toast({ title: "8 caractères minimum", variant: "destructive" }); return; } setStep(4); }} icon={<ArrowRight size={16} style={{ color: "#fff" }} strokeWidth={2} />}>Continuer</GsButton>
           </div>
         </>
       )}
@@ -249,7 +288,7 @@ export function AuthRegisterWizard({ onGoLogin }: { onGoLogin: () => void }) {
             <div style={{ fontSize: 11, lineHeight: 1.55, color: GS.muted }}>Rien reçu ? Regardez dans les spams, ou <a onClick={() => setStep(2)} style={{ color: GS.teal, fontWeight: 600, cursor: "pointer" }}>corrigez votre adresse</a> sans recommencer.</div>
           </div>
           <div style={{ marginTop: "auto", paddingBottom: 26 }}>
-            <GsButton onClick={verifyCode} disabled={loading} icon={<ArrowRight size={16} style={{ color: GS.accent }} strokeWidth={2} />}>{loading ? "Vérification…" : "Vérifier"}</GsButton>
+            <GsButton onClick={verifyCode} disabled={loading} icon={<ArrowRight size={16} style={{ color: "#fff" }} strokeWidth={2} />}>{loading ? "Vérification…" : "Vérifier"}</GsButton>
           </div>
         </>
       )}

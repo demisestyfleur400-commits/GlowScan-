@@ -70,7 +70,7 @@ export default function AuthPage() {
         setTwofaHint(data.emailHint || emailToSend);
         setTwofaCode("");
         setMode("twofa");
-        toast({ title: "Code envoyé 📧", description: data.devFallback ? "Mode dev : voir les logs serveur." : `Entrez le code reçu sur ${data.emailHint || "votre email"}.` });
+        toast({ title: "Code envoyé", description: data.devFallback ? "Mode dev : voir les logs serveur." : `Entrez le code reçu sur ${data.emailHint || "votre email"}.` });
         return;
       }
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
@@ -78,7 +78,7 @@ export default function AuthPage() {
     } catch (err: any) {
       toast({
         title: "Email ou mot de passe incorrect",
-        description: parseError(err) || "Vérifie tes identifiants et réessaie.",
+        description: parseError(err) || "Vérifiez vos identifiants et réessayez.",
         variant: "destructive",
       });
     } finally {
@@ -94,7 +94,7 @@ export default function AuthPage() {
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       setLocation("/");
     } catch (err: any) {
-      toast({ title: "Code incorrect", description: parseError(err) || "Réessaie ou renvoie un code.", variant: "destructive" });
+      toast({ title: "Code incorrect", description: parseError(err) || "Réessayez ou demandez un nouveau code.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -102,10 +102,10 @@ export default function AuthPage() {
 
   async function requestMagicLink() {
     const trimmed = loginEmail.trim();
-    if (!trimmed.includes("@")) { toast({ title: "Entre ton email d'abord", variant: "destructive" }); return; }
+    if (!trimmed.includes("@")) { toast({ title: "Indiquez d'abord votre email", variant: "destructive" }); return; }
     try {
       await apiRequest("POST", "/api/auth/login/magic/request", { email: trimmed.toLowerCase() });
-      toast({ title: "Lien envoyé 📧", description: `Si un compte existe, un lien de connexion a été envoyé à ${trimmed} (15 min).` });
+      toast({ title: "Lien envoyé", description: `Si un compte existe, un lien de connexion a été envoyé à ${trimmed} (15 min).` });
     } catch (err: any) {
       toast({ title: "Erreur", description: parseError(err), variant: "destructive" });
     }
@@ -116,11 +116,11 @@ export default function AuthPage() {
     e.preventDefault();
     setAccountExistsHint(false);
     if (!firstName.trim()) {
-      toast({ title: "Prénom requis", description: "Entre ton prénom pour continuer.", variant: "destructive" });
+      toast({ title: "Prénom requis", description: "Indiquez votre prénom pour continuer.", variant: "destructive" });
       return;
     }
     if (firstName.trim().length < 2) {
-      toast({ title: "Prénom invalide", description: "Entre un prénom valide (2 lettres minimum).", variant: "destructive" });
+      toast({ title: "Prénom invalide", description: "Indiquez un prénom valide (2 lettres minimum).", variant: "destructive" });
       return;
     }
     const trimmed = contact.trim();
@@ -128,12 +128,12 @@ export default function AuthPage() {
     // Validation stricte : fini « t » partout.
     if (isEmail) {
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(trimmed)) {
-        toast({ title: "Email invalide", description: "Entre une adresse email valide (ex : nom@mail.com).", variant: "destructive" });
+        toast({ title: "Email invalide", description: "Indiquez une adresse email valide (ex. : nom@mail.com).", variant: "destructive" });
         return;
       }
     } else {
       if (trimmed.replace(/\D/g, "").length < 8) {
-        toast({ title: "Numéro invalide", description: "Entre un numéro de téléphone valide (8 chiffres minimum) ou un email.", variant: "destructive" });
+        toast({ title: "Numéro invalide", description: "Indiquez un numéro de téléphone valide (8 chiffres minimum) ou un email.", variant: "destructive" });
         return;
       }
     }
@@ -159,7 +159,7 @@ export default function AuthPage() {
         setTwofaHint(data.emailHint || trimmed);
         setTwofaCode("");
         setMode("twofa");
-        toast({ title: "Code de vérification envoyé 📧", description: data.devFallback ? "Mode dev : voir les logs serveur." : `Entre le code reçu sur ${data.emailHint || "ton email"} pour activer ton compte.` });
+        toast({ title: "Code de vérification envoyé", description: data.devFallback ? "Mode dev : voir les logs serveur." : `Entrez le code reçu sur ${data.emailHint || "votre email"} pour activer votre compte.` });
         setLoading(false);
         return;
       }
@@ -261,17 +261,17 @@ export default function AuthPage() {
     <div
       className="min-h-screen w-full flex flex-col px-6 py-10 relative overflow-hidden"
       style={{
-        background: "#fbfdfb",
-        fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
-        color: "#1f2a26",
+        background: "#f8f8f6",
+        fontFamily: "'DM Sans', system-ui, sans-serif",
+        color: "#17392c",
       }}
     >
       {/* Ambient glows */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[400px] h-[400px] rounded-full"
-          style={{ background: "radial-gradient(circle, rgba(47,158,110,0.15), transparent)" }} />
+          style={{ background: "radial-gradient(circle, rgba(231,238,220,0.6), transparent)" }} />
         <div className="absolute bottom-[-5%] right-[-10%] w-[300px] h-[300px] rounded-full"
-          style={{ background: "radial-gradient(circle, rgba(47,158,110,0.10), transparent)" }} />
+          style={{ background: "radial-gradient(circle, rgba(231,238,220,0.4), transparent)" }} />
       </div>
 
       {/* Header */}
@@ -279,11 +279,11 @@ export default function AuthPage() {
         <button
           onClick={() => mode === "login" ? setLocation("/") : setMode("login")}
           className="w-10 h-10 rounded-xl flex items-center justify-center transition-all active:scale-95"
-          style={{ background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.07)", color: "#4a5a52" }}
+          style={{ background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.07)", color: "#5f6f69" }}
         >
           <ArrowLeft className="w-4 h-4" />
         </button>
-        <div className="rounded-xl p-2" style={{ background: "#ffffff", border: "1px solid rgba(47,158,110,0.2)" }}>
+        <div className="rounded-xl p-2" style={{ background: "#ffffff", border: "1px solid #e3e8e2" }}>
           <img src="/logo-glowscan.jpeg" alt="GlowScan" className="h-7 w-auto object-contain" />
         </div>
         <div className="w-10 h-10" />
@@ -298,9 +298,9 @@ export default function AuthPage() {
             className="flex-1 flex flex-col justify-center relative z-10 space-y-4 max-w-sm mx-auto w-full"
           >
             <div className="text-center mb-2">
-              <h1 className="text-2xl font-bold" style={{ color: "#1f2a26" }}>Connexion</h1>
-              <p className="text-xs font-medium mt-1" style={{ color: "#4a5a52" }}>
-                Retrouve ton historique de diagnostics
+              <h1 className="text-2xl font-bold" style={{ color: "#17392c", fontFamily: "Manrope, 'DM Sans', sans-serif" }}>Connexion</h1>
+              <p className="text-xs font-medium mt-1" style={{ color: "#5f6f69" }}>
+                Retrouvez votre historique d'analyses
               </p>
             </div>
 
@@ -311,25 +311,25 @@ export default function AuthPage() {
             <div className="flex justify-end -mt-1">
               <button type="button" onClick={() => goForgot(loginEmail)}
                 className="text-[11px] font-semibold"
-                style={{ color: "#a78bfa" }}>
+                style={{ color: "#164034" }}>
                 Mot de passe oublié ?
               </button>
             </div>
 
             <button type="submit" disabled={loading} data-testid="button-login-submit"
               className="w-full py-4 text-sm font-bold mt-1 transition-all active:scale-[0.98] disabled:opacity-50"
-              style={{ background: "#2f9e6e", borderRadius: "14px", color: "#fff" }}>
+              style={{ background: "#164034", borderRadius: "14px", color: "#fff" }}>
               {loading ? "Connexion..." : "Se connecter"}
             </button>
 
             <button type="button" onClick={requestMagicLink} data-testid="button-magic-link"
-              className="w-full text-center text-[12px] font-semibold" style={{ color: "#a78bfa" }}>
+              className="w-full text-center text-[12px] font-semibold" style={{ color: "#164034" }}>
               Se connecter par lien email (sans mot de passe)
             </button>
 
-            <p className="text-center text-xs font-medium pt-1" style={{ color: "#4a5a52" }}>
+            <p className="text-center text-xs font-medium pt-1" style={{ color: "#5f6f69" }}>
               Première visite ?{" "}
-              <button type="button" onClick={() => setMode("register")} className="font-bold" style={{ color: "#a78bfa" }}>
+              <button type="button" onClick={() => setMode("register")} className="font-bold" style={{ color: "#164034" }}>
                 Créer un profil gratuit
               </button>
             </p>
@@ -342,27 +342,27 @@ export default function AuthPage() {
             initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.3 }}
             className="flex-1 flex flex-col justify-center relative z-10 space-y-4 max-w-sm mx-auto w-full">
             <div className="text-center mb-2">
-              <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: "rgba(167,139,250,0.12)", border: "1px solid rgba(167,139,250,0.25)" }}>
-                <KeyRound className="w-7 h-7" style={{ color: "#a78bfa" }} />
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: "#e7eedc", border: "1px solid #cfdfc4" }}>
+                <KeyRound className="w-7 h-7" style={{ color: "#164034" }} />
               </div>
-              <h1 className="text-2xl font-bold" style={{ color: "#1f2a26" }}>Vérification en 2 étapes</h1>
-              <p className="text-xs font-medium mt-1" style={{ color: "#4a5a52" }}>
+              <h1 className="text-2xl font-bold" style={{ color: "#17392c", fontFamily: "Manrope, 'DM Sans', sans-serif" }}>Vérification en 2 étapes</h1>
+              <p className="text-xs font-medium mt-1" style={{ color: "#5f6f69" }}>
                 Entrez le code envoyé à {twofaHint}
               </p>
             </div>
             <input value={twofaCode} onChange={(e) => setTwofaCode(e.target.value.replace(/[^0-9a-zA-Z-]/g, "").toUpperCase())} maxLength={9} autoFocus
               placeholder="000000" data-testid="input-2fa-code"
               className="w-full py-4 text-center text-2xl font-bold tracking-widest outline-none"
-              style={{ background: "#f4f7f5", border: "1px solid #dbe5df", borderRadius: "14px", color: "#1f2a26" }} />
-            <p className="text-center text-[11px]" style={{ color: "#4a5a52" }}>Pas accès à votre email ? Entrez un <strong>code de secours</strong>.</p>
+              style={{ background: "#f4f7f5", border: "1px solid #dbe5df", borderRadius: "14px", color: "#17392c" }} />
+            <p className="text-center text-[11px]" style={{ color: "#5f6f69" }}>Pas accès à votre email ? Entrez un <strong>code de secours</strong>.</p>
             <button type="submit" disabled={loading || twofaCode.length < 6} data-testid="button-verify-2fa"
               className="w-full py-4 text-sm font-bold transition-all active:scale-[0.98] disabled:opacity-50"
-              style={{ background: "#2f9e6e", borderRadius: "14px", color: "#fff" }}>
+              style={{ background: "#164034", borderRadius: "14px", color: "#fff" }}>
               {loading ? "Vérification..." : "Vérifier"}
             </button>
             <div className="flex justify-between text-[12px] font-semibold">
-              <button type="button" onClick={() => setMode("login")} style={{ color: "#4a5a52" }}>← Retour</button>
-              <button type="button" onClick={async () => { try { await apiRequest("POST", "/api/auth/login/2fa/resend", {}); toast({ title: "Nouveau code envoyé" }); } catch {} }} style={{ color: "#a78bfa" }}>Renvoyer le code</button>
+              <button type="button" onClick={() => setMode("login")} style={{ color: "#5f6f69" }}>← Retour</button>
+              <button type="button" onClick={async () => { try { await apiRequest("POST", "/api/auth/login/2fa/resend", {}); toast({ title: "Nouveau code envoyé" }); } catch {} }} style={{ color: "#164034" }}>Renvoyer le code</button>
             </div>
           </motion.form>
         )}
@@ -379,8 +379,8 @@ export default function AuthPage() {
                     style={{ background: "rgba(37,211,102,0.1)", border: "1px solid rgba(37,211,102,0.2)" }}>
                     <MessageCircle className="w-7 h-7" style={{ color: "#25d366" }} />
                   </div>
-                  <h1 className="text-2xl font-bold" style={{ color: "#1f2a26" }}>Mot de passe oublié</h1>
-                  <p className="text-xs font-medium mt-1" style={{ color: "#4a5a52" }}>
+                  <h1 className="text-2xl font-bold" style={{ color: "#17392c", fontFamily: "Manrope, 'DM Sans', sans-serif" }}>Mot de passe oublié</h1>
+                  <p className="text-xs font-medium mt-1" style={{ color: "#5f6f69" }}>
                     On t'envoie un code par SMS
                   </p>
                 </div>
@@ -388,7 +388,7 @@ export default function AuthPage() {
                 <Field
                   icon={forgotContact.includes("@") ? <Mail className="w-4 h-4" /> : <Phone className="w-4 h-4" />}
                   type="text"
-                  placeholder="Ton email ou numéro (+237...)"
+                  placeholder="Votre email ou numéro (+237...)"
                   value={forgotContact}
                   onChange={setForgotContact}
                   testId="input-forgot-contact"
@@ -399,8 +399,8 @@ export default function AuthPage() {
                   style={{ background: "linear-gradient(135deg, #25d366, #128c7e)", borderRadius: "14px", color: "#fff" }}>
                   {loading ? "Envoi en cours..." : "Recevoir mon code par SMS →"}
                 </button>
-                <p className="text-center text-xs" style={{ color: "#4a5a52" }}>
-                  <button type="button" onClick={goLogin} style={{ color: "#a78bfa" }}>← Retour à la connexion</button>
+                <p className="text-center text-xs" style={{ color: "#5f6f69" }}>
+                  <button type="button" onClick={goLogin} style={{ color: "#164034" }}>← Retour à la connexion</button>
                 </p>
               </form>
             ) : (
@@ -412,23 +412,23 @@ export default function AuthPage() {
                   <>
                     <div className="text-center">
                       <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
-                        style={{ background: "rgba(47,158,110,0.1)", border: "1px solid rgba(47,158,110,0.2)" }}>
-                        <KeyRound className="w-8 h-8" style={{ color: "#a78bfa" }} />
+                        style={{ background: "rgba(47,158,110,0.1)", border: "1px solid #e3e8e2" }}>
+                        <KeyRound className="w-8 h-8" style={{ color: "#164034" }} />
                       </div>
-                      <h2 className="text-xl font-bold" style={{ color: "#1f2a26" }}>Ton code de réinitialisation</h2>
+                      <h2 className="text-xl font-bold" style={{ color: "#17392c" }}>Votre code de réinitialisation</h2>
                       {forgotResult.maskedContact && (
-                        <p className="text-xs mt-1" style={{ color: "#4a5a52" }}>
+                        <p className="text-xs mt-1" style={{ color: "#5f6f69" }}>
                           Compte : <strong>{forgotResult.maskedContact}</strong>
                         </p>
                       )}
                     </div>
                     <div className="rounded-2xl p-6 text-center"
                       style={{ background: "rgba(47,158,110,0.12)", border: "2px solid rgba(47,158,110,0.4)" }}>
-                      <p className="text-xs font-bold mb-2" style={{ color: "#4a5a52" }}>📋 TON CODE À 6 CHIFFRES</p>
-                      <p className="text-5xl font-black tracking-widest my-3" style={{ color: "#1f2a26", fontFamily: "monospace", letterSpacing: "8px" }}>
+                      <p className="text-xs font-bold mb-2" style={{ color: "#5f6f69" }}>VOTRE CODE À 6 CHIFFRES</p>
+                      <p className="text-5xl font-black tracking-widest my-3" style={{ color: "#17392c", fontFamily: "monospace", letterSpacing: "8px" }}>
                         {forgotResult.code}
                       </p>
-                      <p className="text-[11px]" style={{ color: "#4a5a52" }}>⏰ Valide 15 minutes</p>
+                      <p className="text-[11px]" style={{ color: "#5f6f69" }}>Valable 15 minutes</p>
                     </div>
                     <button onClick={() => {
                       if (forgotResult.code) {
@@ -437,8 +437,8 @@ export default function AuthPage() {
                       }
                     }}
                       className="w-full py-4 text-sm font-extrabold"
-                      style={{ background: "#2f9e6e", borderRadius: "14px", color: "#fff" }}>
-                      ✅ J'ai noté le code →
+                      style={{ background: "#164034", borderRadius: "14px", color: "#fff" }}>
+                      J'ai noté le code →
                     </button>
                   </>
                 ) : (forgotResult.viaSms || forgotResult.viaEmail) ? (
@@ -450,19 +450,19 @@ export default function AuthPage() {
                           style={{ background: "rgba(37,211,102,0.1)", border: "1px solid rgba(37,211,102,0.2)" }}>
                           <CheckCircle2 className="w-8 h-8" style={{ color: "#25d366" }} />
                         </div>
-                        <h2 className="text-xl font-bold" style={{ color: "#1f2a26" }}>
-                          {forgotResult.viaSms ? "SMS envoyé ✅" : "Email envoyé ✅"}
+                        <h2 className="text-xl font-bold" style={{ color: "#17392c" }}>
+                          {forgotResult.viaSms ? "SMS envoyé" : "Email envoyé"}
                         </h2>
-                        <p className="text-xs mt-2" style={{ color: "#4a5a52" }}>
+                        <p className="text-xs mt-2" style={{ color: "#5f6f69" }}>
                           Un code a été envoyé à <strong>{forgotResult.maskedContact}</strong>
                         </p>
-                        <p className="text-[11px] mt-1" style={{ color: "#4a5a52" }}>
-                          Valide 15 minutes — {forgotResult.viaSms ? "Vérifie tes SMS" : "Vérifie tes emails"}
+                        <p className="text-[11px] mt-1" style={{ color: "#5f6f69" }}>
+                          Valable 15 minutes · {forgotResult.viaSms ? "Consultez vos SMS" : "Consultez vos emails"}
                         </p>
                       </div>
                       <button onClick={() => setMode("reset")}
                         className="w-full py-4 text-sm font-extrabold"
-                        style={{ background: "#2f9e6e", borderRadius: "14px", color: "#fff" }}>
+                        style={{ background: "#164034", borderRadius: "14px", color: "#fff" }}>
                         J'ai reçu le code → Continuer →
                       </button>
                     </div>
@@ -476,21 +476,21 @@ export default function AuthPage() {
                       <KeyRound className="w-8 h-8" style={{ color: "#dc2626" }} />
                     </div>
                     <div>
-                      <h2 className="text-xl font-bold" style={{ color: "#1f2a26" }}>Code non envoyé</h2>
-                      <p className="text-xs mt-1" style={{ color: "#4a5a52" }}>
-                        L'envoi du code a échoué. Réessaie dans un instant.
+                      <h2 className="text-xl font-bold" style={{ color: "#17392c" }}>Code non envoyé</h2>
+                      <p className="text-xs mt-1" style={{ color: "#5f6f69" }}>
+                        L'envoi du code a échoué. Réessayez dans un instant.
                       </p>
                     </div>
                     <button onClick={() => { setForgotResult(null); }}
                       className="w-full py-4 text-sm font-extrabold"
-                      style={{ background: "#2f9e6e", borderRadius: "14px", color: "#fff" }}>
+                      style={{ background: "#164034", borderRadius: "14px", color: "#fff" }}>
                       Réessayer →
                     </button>
                   </div>
                 )}
                 <button onClick={() => { setForgotResult(null); setForgotContact(""); }}
                   className="w-full py-2 text-xs font-bold"
-                  style={{ background: "rgba(0,0,0,0.05)", border: "1px solid rgba(0,0,0,0.1)", borderRadius: "12px", color: "#4a5a52" }}>
+                  style={{ background: "rgba(0,0,0,0.05)", border: "1px solid rgba(0,0,0,0.1)", borderRadius: "12px", color: "#5f6f69" }}>
                   Pas reçu? Renvoyer le code
                 </button>
               </div>
@@ -510,14 +510,14 @@ export default function AuthPage() {
                   <CheckCircle2 className="w-8 h-8" style={{ color: "#10b981" }} />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold" style={{ color: "#1f2a26" }}>Mot de passe mis à jour !</h2>
-                  <p className="text-xs mt-1" style={{ color: "#4a5a52" }}>
-                    Tu peux maintenant te connecter avec ton nouveau mot de passe.
+                  <h2 className="text-xl font-bold" style={{ color: "#17392c" }}>Mot de passe mis à jour.</h2>
+                  <p className="text-xs mt-1" style={{ color: "#5f6f69" }}>
+                    Vous pouvez maintenant vous connecter avec votre nouveau mot de passe.
                   </p>
                 </div>
                 <button onClick={goLogin}
                   className="w-full py-4 text-sm font-extrabold"
-                  style={{ background: "#2f9e6e", borderRadius: "14px", color: "#fff" }}>
+                  style={{ background: "#164034", borderRadius: "14px", color: "#fff" }}>
                   Se connecter →
                 </button>
               </div>
@@ -525,12 +525,12 @@ export default function AuthPage() {
               <form onSubmit={handleReset} className="space-y-4">
                 <div className="text-center mb-2">
                   <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
-                    style={{ background: "rgba(47,158,110,0.1)", border: "1px solid rgba(47,158,110,0.2)" }}>
-                    <KeyRound className="w-7 h-7" style={{ color: "#a78bfa" }} />
+                    style={{ background: "rgba(47,158,110,0.1)", border: "1px solid #e3e8e2" }}>
+                    <KeyRound className="w-7 h-7" style={{ color: "#164034" }} />
                   </div>
-                  <h1 className="text-2xl font-bold" style={{ color: "#1f2a26" }}>Nouveau mot de passe</h1>
-                  <p className="text-xs font-medium mt-1" style={{ color: "#4a5a52" }}>
-                    Saisis le code reçu et choisis un nouveau mot de passe
+                  <h1 className="text-2xl font-bold" style={{ color: "#17392c", fontFamily: "Manrope, 'DM Sans', sans-serif" }}>Nouveau mot de passe</h1>
+                  <p className="text-xs font-medium mt-1" style={{ color: "#5f6f69" }}>
+                    Saisissez le code reçu et choisissez un nouveau mot de passe
                   </p>
                 </div>
 
@@ -539,13 +539,13 @@ export default function AuthPage() {
 
                 <button type="submit" disabled={loading || resetCode.length < 6 || newPwd.length < 6}
                   className="w-full py-4 text-sm font-extrabold transition-all active:scale-[0.98] disabled:opacity-40"
-                  style={{ background: "linear-gradient(135deg, #2f9e6e, #5b21b6)", borderRadius: "14px", color: "#fff" }}>
+                  style={{ background: "linear-gradient(135deg, #164034, #5b21b6)", borderRadius: "14px", color: "#fff" }}>
                   {loading ? "Mise à jour..." : "Enregistrer le nouveau mot de passe →"}
                 </button>
 
-                <p className="text-center text-xs" style={{ color: "#4a5a52" }}>
+                <p className="text-center text-xs" style={{ color: "#5f6f69" }}>
                   Pas reçu le code ?{" "}
-                  <button type="button" onClick={() => goForgot(forgotContact)} style={{ color: "#a78bfa" }}>Renvoyer</button>
+                  <button type="button" onClick={() => goForgot(forgotContact)} style={{ color: "#164034" }}>Renvoyer</button>
                 </p>
               </form>
             )}
@@ -579,9 +579,9 @@ function Field({ icon, type, placeholder, value, onChange, testId, autoFocus }: 
         onChange={e => onChange(e.target.value)}
         autoFocus={autoFocus} data-testid={testId}
         className="w-full pl-11 pr-4 py-4 text-xs font-medium outline-none transition-all"
-        style={{ background: "#ffffff", border: "1px solid rgba(47,158,110,0.2)", borderRadius: "12px", color: "#1f2a26" }}
+        style={{ background: "#ffffff", border: "1px solid #e3e8e2", borderRadius: "12px", color: "#17392c" }}
         onFocus={e => (e.target.style.borderColor = "rgba(47,158,110,0.5)")}
-        onBlur={e => (e.target.style.borderColor = "rgba(47,158,110,0.2)")}
+        onBlur={e => (e.target.style.borderColor = "#e3e8e2")}
       />
     </div>
   );
@@ -599,9 +599,9 @@ function PwdField({ value, onChange, show, onToggle, testId, placeholder, autoFo
         onChange={e => onChange(e.target.value)}
         autoFocus={autoFocus} required data-testid={testId}
         className="w-full pl-11 pr-12 py-4 text-xs font-medium outline-none transition-all"
-        style={{ background: "#ffffff", border: "1px solid rgba(47,158,110,0.2)", borderRadius: "12px", color: "#1f2a26" }}
+        style={{ background: "#ffffff", border: "1px solid #e3e8e2", borderRadius: "12px", color: "#17392c" }}
         onFocus={e => (e.target.style.borderColor = "rgba(47,158,110,0.5)")}
-        onBlur={e => (e.target.style.borderColor = "rgba(47,158,110,0.2)")}
+        onBlur={e => (e.target.style.borderColor = "#e3e8e2")}
       />
       <button type="button" onClick={onToggle}
         className="absolute right-4 top-1/2 -translate-y-1/2 transition-colors"
