@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { ensureDermFonts } from "@/components/derm/tokens";
 import { useLocation } from "wouter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
@@ -22,15 +23,16 @@ type ScanResult = {
 };
 
 const RISK_COLOR: Record<IngredientRisk, string> = {
-  danger: "var(--color-accent)",
-  caution: "var(--color-accent-300)",
-  ok: "var(--color-accent-2-600)",
+  danger: "#9b3a28",
+  caution: "#d9a441",
+  ok: "#2a6b4f",
 };
 
 
 export default function ProductScanCamera() {
   const [, setLocation] = useLocation();
   const { user, isLoading: authLoading } = useAuth();
+  useEffect(() => { ensureDermFonts(); }, []);
   const { toast } = useToast();
   const qc = useQueryClient();
   const { data: quota } = useQuery<Quota>({ queryKey: ["/api/product-scan/quota"], enabled: !!user });
@@ -68,7 +70,7 @@ export default function ProductScanCamera() {
   const exhausted = !!quota && !quota.isPremium && (quota.remaining ?? 0) <= 0;
 
   return (
-    <div className="min-h-screen bg-organic-bg font-body text-organic-text">
+    <div className="b2c-theme min-h-screen bg-organic-bg font-body text-organic-text">
       <main className="mx-auto flex max-w-[480px] flex-col gap-4 px-5 pb-6 pt-4">
         <button type="button" onClick={back} className="flex items-center gap-1 self-start border-0 bg-transparent p-0 font-bold text-organic-accent-700">
           <ArrowLeft size={18} strokeWidth={1.75} /> Retour
@@ -78,7 +80,7 @@ export default function ProductScanCamera() {
           <div className="flex flex-col gap-3 rounded-lg bg-organic-surface p-5">
             <h1 className="m-0 text-[26px]">Scanner un produit</h1>
             <p className="m-0 text-[14px]">Connectez-vous pour vérifier vos produits : 3 scans gratuits par semaine.</p>
-            <button type="button" onClick={() => setLocation("/auth")} className="rounded-pill border-0 bg-organic-accent p-3.5 text-[15px] font-bold text-organic-neutral-100 hover:bg-organic-accent-600">
+            <button type="button" onClick={() => setLocation("/auth")} className="rounded-[12px] border-0 bg-organic-accent p-3.5 text-[15px] font-semibold text-white hover:bg-organic-accent-600">
               Se connecter
             </button>
           </div>
@@ -91,10 +93,10 @@ export default function ProductScanCamera() {
               <h1 className="m-0 text-[26px]">{result.productName || "Produit analysé"}</h1>
             </div>
             <div
-              className="flex flex-col gap-1.5 rounded-lg p-4"
+              className="flex flex-col gap-1.5 rounded-[16px] p-4"
               style={result.verdict === "avoid"
-                ? { background: "var(--color-accent-700)", color: "var(--color-bg)" }
-                : { background: "var(--color-accent-2-100)", color: "var(--color-accent-2-900)" }}
+                ? { background: "#9b3a28", color: "#ffffff" }
+                : { background: "#e7eedc", color: "#164034" }}
             >
               <span className="text-[18px] font-bold">{result.title}</span>
               <span className="text-[13px] leading-normal">{result.text}</span>
@@ -104,7 +106,7 @@ export default function ProductScanCamera() {
                 {[...result.ingredients]
                   .sort((a, b) => ["danger", "caution", "ok"].indexOf(a.risk) - ["danger", "caution", "ok"].indexOf(b.risk))
                   .map((g, i) => (
-                    <div key={`${g.name}-${i}`} className="flex items-center gap-2.5 rounded-pill bg-organic-surface px-3.5 py-2.5">
+                    <div key={`${g.name}-${i}`} className="flex items-center gap-2.5 rounded-[12px] border border-organic-divider bg-white px-3.5 py-2.5">
                       <span className="h-2.5 w-2.5 flex-none rounded-pill" style={{ background: RISK_COLOR[g.risk] }} />
                       <span className="flex-1 text-[13px] font-semibold">{g.name}</span>
                       {g.why && <span className="text-[12px] text-organic-neutral-700">{g.why}</span>}
@@ -115,11 +117,11 @@ export default function ProductScanCamera() {
               <p className="m-0 text-[13px] text-organic-neutral-700">La liste des ingrédients n'était pas lisible. Reprenez la photo au dos du produit.</p>
             )}
             {result.verdict === "avoid" ? (
-              <button type="button" onClick={() => setLocation("/shop")} className="rounded-pill border border-organic-divider bg-transparent p-3 text-[14px] font-bold hover:bg-organic-text/[.07]">
+              <button type="button" onClick={() => setLocation("/shop")} className="rounded-[12px] border border-organic-divider bg-white p-3 text-[14px] font-semibold hover:bg-organic-text/[.07]">
                 Voir une alternative sans danger
               </button>
             ) : (
-              <button type="button" onClick={() => setResult(null)} className="rounded-pill border border-organic-divider bg-transparent p-3 text-[14px] font-bold hover:bg-organic-text/[.07]">
+              <button type="button" onClick={() => setResult(null)} className="rounded-[12px] border border-organic-divider bg-white p-3 text-[14px] font-semibold hover:bg-organic-text/[.07]">
                 Scanner un autre produit
               </button>
             )}
@@ -128,9 +130,9 @@ export default function ProductScanCamera() {
         ) : exhausted ? (
           <div className="flex flex-col gap-3 rounded-lg bg-organic-surface p-5">
             <h1 className="m-0 text-[24px]">Vos 3 scans gratuits sont utilisés</h1>
-            <p className="m-0 text-[14px]">Ils se renouvellent sur 7 jours glissants. Avec Premium, les scans produit sont illimités.</p>
-            <button type="button" onClick={() => setLocation("/premium")} className="rounded-pill border-0 bg-organic-accent p-3.5 text-[15px] font-bold text-organic-neutral-100 hover:bg-organic-accent-600">
-              Voir Premium
+            <p className="m-0 text-[14px]">Ils se renouvellent sur 7 jours glissants. Avec GlowScan Plus, les scans produit sont illimités.</p>
+            <button type="button" onClick={() => setLocation("/premium")} className="rounded-[12px] border-0 bg-organic-accent p-3.5 text-[15px] font-semibold text-white hover:bg-organic-accent-600">
+              Voir GlowScan Plus
             </button>
           </div>
         ) : busy ? (
