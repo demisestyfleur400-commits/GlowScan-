@@ -2,9 +2,9 @@ import { useRef, useState } from "react";
 import { Link } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import { Camera, Check } from "lucide-react";
-import { ProInput } from "@/components/ProLayout";
 import { DermShell } from "@/components/derm/DermShell";
-import { Button } from "@/components/ui/button";
+import { Page, ScreenHeader, Card, Btn, Input, Textarea, Chip, Tag, Label, Notice } from "@/components/derm/ui";
+import { D, FONT_UI } from "@/components/derm/tokens";
 import { useProAccount, useProPendingPatients } from "@/hooks/use-pro";
 import { cmNational } from "@shared/phone";
 
@@ -117,134 +117,144 @@ export default function ProAccueil() {
     }
   };
 
-  const card = "flex flex-col gap-organic-3 rounded-card bg-organic-surface p-organic-6";
-  const chip = (on: boolean) => `cursor-pointer rounded-pill border px-3.5 py-1.5 font-body text-[13px] font-semibold ${on ? "border-organic-accent bg-organic-accent text-organic-bg" : "border-organic-divider bg-transparent text-organic-text"}`;
+  const name = [firstName, lastName].filter(Boolean).join(" ");
+  const ready = waiting.filter((w) => w.intakeReady).length;
+  const stepIdx = step === "identite" ? 0 : step === "photos" ? 1 : 2;
 
   return (
     <DermShell active="consultation" showBack>
-     <div className="derm-theme" style={{ maxWidth: 1000, margin: "auto", padding: "30px 32px 40px" }}>
-      <header className="flex flex-col gap-1">
-        <span className="text-[11px] font-bold uppercase tracking-[.12em] text-organic-accent-700">Accueil du cabinet</span>
-        <h1 className="m-0 text-[clamp(30px,4vw,42px)]">Nouveau patient</h1>
-      </header>
+      <Page>
+        <ScreenHeader kicker="ACCUEIL DU CABINET" title="Nouveau patient"
+          sub="Identité et motif, puis trois photos. L'analyse Glow se fait avant la consultation : le médecin trouve le dossier prêt." />
 
-      <section className="grid items-start gap-organic-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-        <div className={card}>
-          {step === "identite" && (
-            <>
-              <h3 className="m-0 text-[22px]">Identité et motif</h3>
-              <div className="grid grid-cols-1 gap-organic-3 sm:grid-cols-2">
-                <ProInput label="Prénom" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Samuel" testid="input-first-name" />
-                <ProInput label="Nom" value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Etoga" testid="input-last-name" />
-                <ProInput label="Âge" value={age} onChange={(e) => setAge(e.target.value.replace(/\D/g, "").slice(0, 3))} inputMode="numeric" placeholder="34" testid="input-age" />
-                <ProInput label="WhatsApp (facultatif)" value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" placeholder="6XX XXX XXX" testid="input-phone" />
+        <div className="grid items-start" style={{ gap: 18, gridTemplateColumns: "minmax(0,1.45fr) minmax(300px,1fr)" }}>
+          <Card style={{ padding: "22px 24px" }}>
+            {/* Étapes */}
+            <div className="flex" style={{ gap: 8, marginBottom: 18 }}>
+              {["Identité et motif", "Photos", "Salle d'attente"].map((t, i) => (
+                <span key={t} className="flex items-center" style={{ gap: 7, fontSize: 11.5, fontWeight: i === stepIdx ? 600 : 500, color: i <= stepIdx ? D.text : D.muted }}>
+                  <span className="grid place-items-center" style={{ width: 20, height: 20, borderRadius: 999, background: i < stepIdx ? D.action : i === stepIdx ? D.text : D.sep, color: i <= stepIdx ? "#fff" : D.muted, fontSize: 10, fontWeight: 700 }}>
+                    {i < stepIdx ? <Check size={11} strokeWidth={3} /> : i + 1}
+                  </span>
+                  {t}{i < 2 && <span style={{ width: 22, height: 1, background: D.border, marginLeft: 4 }} />}
+                </span>
+              ))}
+            </div>
+
+            {step === "identite" && (
+              <div className="flex flex-col" style={{ gap: 14 }}>
+                <div className="grid" style={{ gap: 12, gridTemplateColumns: "1fr 1fr" }}>
+                  <Label text="Prénom"><Input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Samuel" data-testid="input-first-name" /></Label>
+                  <Label text="Nom *"><Input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Etoga" data-testid="input-last-name" /></Label>
+                  <Label text="Âge"><Input value={age} onChange={(e) => setAge(e.target.value.replace(/\D/g, "").slice(0, 3))} inputMode="numeric" placeholder="34" data-testid="input-age" /></Label>
+                  <Label text="WhatsApp (facultatif)"><Input value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" placeholder="6XX XXX XXX" data-testid="input-phone" /></Label>
+                </div>
+                <Label text="Sexe">
+                  <span className="flex" style={{ gap: 6 }}>
+                    {([["F", "Femme"], ["M", "Homme"]] as const).map(([k, l]) => <Chip key={k} on={sex === k} onClick={() => setSex(sex === k ? "" : k)}>{l}</Chip>)}
+                  </span>
+                </Label>
+                <Label text="Motif de consultation *">
+                  <Textarea value={motif} onChange={(e) => setMotif(e.target.value)} rows={3} placeholder="Depuis quand, où, ce qui aggrave…" data-testid="input-motif" />
+                </Label>
+                {err && <Notice tone="err">{err}</Notice>}
+                <div className="flex justify-end"><Btn kind="primary" onClick={toPhotos} data-testid="button-to-photos">Suivant · Photos →</Btn></div>
               </div>
-              <div className="flex flex-col gap-1.5">
-                <span className="text-[12px] text-organic-neutral-700">Sexe</span>
-                <div className="flex gap-1.5">
-                  {([["F", "Femme"], ["M", "Homme"]] as const).map(([k, l]) => (
-                    <button key={k} type="button" className={chip(sex === k)} onClick={() => setSex(sex === k ? "" : k)}>{l}</button>
-                  ))}
+            )}
+
+            {step === "photos" && (
+              <div className="flex flex-col" style={{ gap: 14 }}>
+                <div className="grid" style={{ gap: 10, gridTemplateColumns: "repeat(3,1fr)" }}>
+                  {SLOTS.map((s) => {
+                    const src = shots[s.key];
+                    return (
+                      <button key={s.key} type="button" onClick={() => inputs.current[s.key]?.click()} data-testid={`shot-${s.key}`}
+                        className="relative flex cursor-pointer flex-col items-center justify-center overflow-hidden"
+                        style={{ aspectRatio: "3/4", gap: 6, borderRadius: 10, border: src ? `2px solid ${D.action}` : `1.5px dashed ${D.borderAlt}`, background: src ? D.tintChip : D.field, color: D.muted, fontFamily: FONT_UI }}>
+                        {src ? <img src={src} alt={s.label} className="absolute inset-0 h-full w-full object-cover" /> : <Camera size={24} strokeWidth={1.6} />}
+                        <span className="relative z-10 inline-flex items-center" style={{ gap: 4, padding: "3px 8px", borderRadius: 999, fontSize: 10.5, fontWeight: 600, background: src ? D.action : "transparent", color: src ? "#fff" : D.text }}>
+                          {src && <Check size={11} strokeWidth={3} />}{s.label}{s.key === "face" && !src ? " *" : ""}
+                        </span>
+                        <input ref={(el) => { inputs.current[s.key] = el; }} type="file" accept="image/*" capture="environment" className="hidden"
+                          onChange={(e) => { onFile(s.key, e.target.files?.[0]); e.target.value = ""; }} />
+                      </button>
+                    );
+                  })}
+                </div>
+                <span style={{ fontSize: 11, color: D.muted }}>Lumière naturelle, sans flash, visage dégagé. Le portrait est obligatoire, les profils aident l'analyse.</span>
+                <label className="flex cursor-pointer items-start" style={{ gap: 10, padding: "12px 14px", borderRadius: 8, border: `1px solid ${consent ? "#9dc3a9" : D.border}`, background: consent ? D.tintActive : "#fff", fontSize: 11.5, color: D.text, lineHeight: 1.5 }}>
+                  <input type="checkbox" checked={consent} onChange={(e) => { setConsent(e.target.checked); setErr(""); }} className="mt-0.5 h-4 w-4 flex-none" style={{ accentColor: D.action }} data-testid="checkbox-photo-consent" />
+                  Le patient accepte que ses photos soient jointes à son dossier médical.
+                </label>
+                {err && <Notice tone="err">{err}</Notice>}
+                <div className="flex flex-wrap justify-between" style={{ gap: 10 }}>
+                  <Btn kind="secondary" onClick={() => { setErr(""); setStep("identite"); }}>← Précédent</Btn>
+                  <Btn kind="primary" onClick={submit} disabled={!shots.face} data-testid="button-submit-intake">
+                    Analyser et envoyer en salle d'attente{shotCount ? ` (${shotCount} photo${shotCount > 1 ? "s" : ""})` : ""}
+                  </Btn>
                 </div>
               </div>
-              <label className="flex flex-col gap-1.5">
-                <span className="text-[12px] text-organic-neutral-700">Motif de consultation</span>
-                <textarea value={motif} onChange={(e) => setMotif(e.target.value)} rows={3} placeholder="Depuis quand, où, ce qui aggrave…"
-                  className="min-h-[90px] resize-y rounded-2xl border border-organic-divider bg-organic-bg px-3.5 py-2.5 font-body text-[14px] text-organic-text outline-none focus:border-organic-accent"
-                  data-testid="input-motif" />
-              </label>
-              {err && <div role="alert" className="rounded-pill bg-organic-accent-100 px-4 py-2.5 text-[13px] font-semibold text-organic-accent-900">{err}</div>}
-              <Button onClick={toPhotos} className="self-end" data-testid="button-to-photos">Suivant →</Button>
-            </>
-          )}
+            )}
 
-          {step === "photos" && (
-            <>
-              <h3 className="m-0 text-[22px]">Photos</h3>
-              <div className="grid grid-cols-3 gap-organic-2">
-                {SLOTS.map((s) => {
-                  const src = shots[s.key];
-                  return (
-                    <button key={s.key} type="button" onClick={() => inputs.current[s.key]?.click()}
-                      className={`relative flex aspect-[3/4] cursor-pointer flex-col items-center justify-center gap-1.5 overflow-hidden rounded-2xl border-2 font-body ${src ? "border-organic-accent-2-600 bg-organic-accent-2-200 text-organic-accent-2-800" : "border-dashed border-organic-neutral-400 bg-transparent text-organic-neutral-700"}`}
-                      data-testid={`shot-${s.key}`}>
-                      {src ? <img src={src} alt={s.label} className="absolute inset-0 h-full w-full object-cover" /> : <Camera size={26} strokeWidth={1.75} />}
-                      <span className={`relative z-10 rounded-pill px-2 py-0.5 text-[12px] font-bold ${src ? "bg-organic-accent-2-600 text-organic-bg" : ""}`}>
-                        {src ? <span className="inline-flex items-center gap-1"><Check size={12} /> {s.label}</span> : s.label}
-                      </span>
-                      <input ref={(el) => { inputs.current[s.key] = el; }} type="file" accept="image/*" capture="environment" className="hidden"
-                        onChange={(e) => { onFile(s.key, e.target.files?.[0]); e.target.value = ""; }} />
-                    </button>
-                  );
-                })}
+            {step === "analyse" && (
+              <div className="flex flex-col items-center text-center" style={{ gap: 10, padding: "36px 0" }}>
+                <span className="animate-pulse" style={{ width: 72, height: 72, borderRadius: 999, background: D.tint3 }} />
+                <b style={{ fontSize: 17, fontWeight: 600 }}>Analyse Glow en cours…</b>
+                <span style={{ fontSize: 12, color: D.muted }}>Le dossier de {name || "votre patient"} sera prêt pour le médecin dans un instant.</span>
               </div>
-              <span className="text-[12px] text-organic-neutral-700">Lumière naturelle, sans flash, visage dégagé.</span>
-              <label className="flex cursor-pointer items-start gap-2.5 text-[13px] leading-snug text-organic-neutral-800">
-                <input type="checkbox" checked={consent} onChange={(e) => { setConsent(e.target.checked); setErr(""); }} className="mt-0.5 h-4 w-4 flex-none accent-[var(--color-accent)]" data-testid="checkbox-photo-consent" />
-                Le patient accepte que ses photos soient jointes à son dossier médical.
-              </label>
-              {err && <div role="alert" className="rounded-pill bg-organic-accent-100 px-4 py-2.5 text-[13px] font-semibold text-organic-accent-900">{err}</div>}
-              <div className="flex flex-wrap justify-between gap-2">
-                <Button variant="secondary" onClick={() => { setErr(""); setStep("identite"); }}>← Précédent</Button>
-                <Button onClick={submit} disabled={!shots.face} data-testid="button-submit-intake">
-                  Analyser et envoyer en salle d'attente{shotCount ? ` (${shotCount} photo${shotCount > 1 ? "s" : ""})` : ""}
-                </Button>
+            )}
+
+            {step === "fini" && (
+              <div className="flex flex-col" style={{ gap: 12 }}>
+                <span className="inline-flex items-center self-start" style={{ gap: 6 }}><Tag tone={outcome === "ready" ? "ok" : "warn"}>{outcome === "ready" ? "Dossier prêt" : "Analyse à lancer par le médecin"}</Tag></span>
+                <b style={{ fontSize: 19, fontWeight: 600 }}>{name} est en salle d'attente.</b>
+                <p style={{ margin: 0, fontSize: 12.5, color: D.muted, lineHeight: 1.6 }}>
+                  {outcome === "ready"
+                    ? "Le médecin trouvera l'analyse et les photos dans son dossier."
+                    : "L'analyse n'a pas pu se faire maintenant : le médecin la lancera depuis le dossier. Les photos sont bien enregistrées."}
+                </p>
+                <Btn kind="primary" onClick={reset} style={{ alignSelf: "flex-start" }} data-testid="button-next-patient">Patient suivant</Btn>
               </div>
-            </>
-          )}
+            )}
+          </Card>
 
-          {step === "analyse" && (
-            <div className="flex flex-col items-center gap-organic-3 py-organic-8 text-center">
-              <div className="h-[88px] w-[88px] animate-pulse rounded-full bg-organic-accent-2-300" />
-              <span className="font-heading text-[20px]">Analyse en cours…</span>
-              <span className="text-[13px] text-organic-neutral-700">Le dossier sera prêt pour le médecin dans un instant.</span>
+          {/* Salle d'attente */}
+          <Card style={{ padding: "20px 20px" }}>
+            <div className="flex items-baseline justify-between" style={{ gap: 10, marginBottom: 4 }}>
+              <b style={{ fontSize: 15, fontWeight: 600 }}>Salle d'attente</b>
+              <Tag tone={waiting.length ? "ok" : "muted"}>{waiting.length} patient{waiting.length > 1 ? "s" : ""}</Tag>
             </div>
-          )}
-
-          {step === "fini" && (
-            <div className="flex flex-col gap-organic-3">
-              <span className="font-heading text-[24px]">{outcome === "ready" ? "Dossier prêt" : "Dossier envoyé"}</span>
-              <p className="m-0 text-[14px] text-organic-neutral-800">
-                {outcome === "ready"
-                  ? `${[firstName, lastName].filter(Boolean).join(" ")} est en salle d'attente. Le médecin trouvera l'analyse et les photos dans son dossier.`
-                  : `${[firstName, lastName].filter(Boolean).join(" ")} est en salle d'attente. L'analyse n'a pas pu se faire maintenant : le médecin la lancera.`}
-              </p>
-              <Button onClick={reset} className="self-start" data-testid="button-next-patient">Patient suivant</Button>
+            <span style={{ display: "block", fontSize: 11, color: D.muted, marginBottom: 12 }}>{waiting.length ? `${ready} dossier${ready > 1 ? "s" : ""} prêt${ready > 1 ? "s" : ""} pour le médecin` : "Les patients enregistrés ici apparaissent dans la salle d'attente du médecin."}</span>
+            {waiting.length === 0 && (
+              <div style={{ padding: "18px 14px", borderRadius: 8, background: D.field, fontSize: 12, color: D.muted, textAlign: "center" }}>
+                Pour l'instant, personne en attente. Enregistrez le prochain patient avec le formulaire.
+              </div>
+            )}
+            <div className="flex flex-col" style={{ gap: 8 }}>
+              {waiting.map((w) => {
+                const inner = (
+                  <>
+                    <span className="grid flex-none place-items-center" style={{ width: 34, height: 34, borderRadius: 999, background: D.tintChip, color: D.actionDark, fontSize: 11, fontWeight: 700 }}>
+                      {`${(w.firstName || "").trim()[0] || ""}${(w.lastName || "").trim()[0] || ""}`.toUpperCase()}
+                    </span>
+                    <span className="flex min-w-0 flex-1 flex-col">
+                      <b className="truncate" style={{ fontSize: 12.5, fontWeight: 600 }}>{w.firstName} {w.lastName}</b>
+                      <span style={{ fontSize: 10.5, color: D.muted }}>{[w.age ? `${w.age} ans` : null, w.createdAt ? `arrivé à ${hhmm(w.createdAt)}` : null].filter(Boolean).join(" · ")}</span>
+                    </span>
+                    <Tag tone={w.intakeReady ? "ok" : "draft"}>{w.intakeReady ? "Dossier prêt" : "À analyser"}</Tag>
+                  </>
+                );
+                const st: React.CSSProperties = { gap: 10, padding: "9px 10px", borderRadius: 8, border: `1px solid ${D.border}`, background: "#fff", color: D.text, textDecoration: "none" };
+                return isDoctor ? (
+                  <Link key={w.id} href={w.intakeReady ? `/derm/patient/${w.id}` : `/derm/analyse?patient=${w.id}`} className="flex items-center" style={st}>{inner}</Link>
+                ) : (
+                  <div key={w.id} className="flex items-center" style={st}>{inner}</div>
+                );
+              })}
             </div>
-          )}
+          </Card>
         </div>
-
-        <div className={card}>
-          <div className="flex items-baseline justify-between gap-3">
-            <h3 className="m-0 text-[22px]">Salle d'attente</h3>
-            <span className="rounded-pill bg-organic-accent-200 px-2.5 py-1 text-[12px] font-semibold text-organic-accent-900">{waiting.length}</span>
-          </div>
-          {waiting.length === 0 && <span className="text-[14px] text-organic-neutral-700">Personne en attente.</span>}
-          {waiting.map((w) => {
-            const inner = (
-              <>
-                <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-organic-accent-200 text-[12px] font-bold text-organic-accent-800">
-                  {`${(w.firstName || "").trim()[0] || ""}${(w.lastName || "").trim()[0] || ""}`.toUpperCase()}
-                </span>
-                <span className="flex min-w-0 flex-1 flex-col">
-                  <span className="truncate text-[14px] font-bold">{w.firstName} {w.lastName}</span>
-                  <span className="text-[12px] text-organic-neutral-700">{[w.age ? `${w.age} ans` : null, w.createdAt ? `arrivé à ${hhmm(w.createdAt)}` : null].filter(Boolean).join(" · ")}</span>
-                </span>
-                <span className={`flex-none rounded-pill px-2.5 py-1 text-[12px] font-semibold ${w.intakeReady ? "bg-organic-accent-2-200 text-organic-accent-2-900" : "bg-organic-neutral-200 text-organic-neutral-900"}`}>
-                  {w.intakeReady ? "Dossier prêt" : "À analyser"}
-                </span>
-              </>
-            );
-            const cls = "flex items-center gap-3 rounded-pill bg-organic-bg py-2 pl-2 pr-3 text-organic-text no-underline";
-            return isDoctor ? (
-              <Link key={w.id} href={w.intakeReady ? `/derm/patient/${w.id}` : `/derm/analyse?patient=${w.id}`} className={cls}>{inner}</Link>
-            ) : (
-              <div key={w.id} className={cls}>{inner}</div>
-            );
-          })}
-        </div>
-      </section>
-     </div>
+      </Page>
     </DermShell>
   );
 }
