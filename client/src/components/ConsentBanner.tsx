@@ -89,7 +89,7 @@ export function ConsentBanner({ onAccept, onDecline, userId }: ConsentBannerProp
       {visible && (
         <motion.div
           className="fixed inset-0 z-[250] flex items-end sm:items-center justify-center px-4"
-          style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)" }}
+          style={{ background: "rgba(13,38,32,0.55)", backdropFilter: "blur(6px)" }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -101,9 +101,10 @@ export function ConsentBanner({ onAccept, onDecline, userId }: ConsentBannerProp
           <motion.div
             className="w-full max-w-md rounded-t-[28px] sm:rounded-[28px] p-6"
             style={{
-              background: "#13101f",
-              border: "1px solid rgba(167,139,250,0.18)",
-              fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
+              background: "#ffffff",
+              border: "1px solid #e3e8e2",
+              color: "#17392c",
+              fontFamily: "'DM Sans', system-ui, sans-serif",
             }}
             initial={{ y: 80, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
@@ -117,7 +118,7 @@ export function ConsentBanner({ onAccept, onDecline, userId }: ConsentBannerProp
                   width: 40,
                   height: 4,
                   borderRadius: 9999,
-                  background: "rgba(255,255,255,0.15)",
+                  background: "#e3e8e2",
                 }}
               />
             </div>
@@ -127,24 +128,24 @@ export function ConsentBanner({ onAccept, onDecline, userId }: ConsentBannerProp
               <div
                 className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
                 style={{
-                  background: "rgba(167,139,250,0.06)",
-                  border: "1px solid rgba(167,139,250,0.18)",
+                  background: "#e7eedc",
+                  border: "1px solid #cfdfc4",
                 }}
               >
-                <ShieldCheck className="w-5 h-5" style={{ color: "#a78bfa" }} />
+                <ShieldCheck className="w-5 h-5" style={{ color: "#164034" }} />
               </div>
               <div className="flex-1">
                 <h2
                   id="consent-title"
-                  className="text-sm font-bold leading-tight"
-                  style={{ color: "#f3f0ff" }}
+                  className="text-[17px] font-bold leading-tight"
+                  style={{ color: "#17392c", fontFamily: "Manrope, 'DM Sans', sans-serif" }}
                   data-testid="text-consent-title"
                 >
                   Respect de ta vie privée
                 </h2>
                 <p
-                  className="text-[11px] font-medium mt-0.5"
-                  style={{ color: "rgba(255,255,255,0.35)" }}
+                  className="text-[12px] font-medium mt-0.5"
+                  style={{ color: "#5f6f69" }}
                 >
                   Loi camerounaise n° 2010-012 &amp; RGPD
                 </p>
@@ -153,12 +154,12 @@ export function ConsentBanner({ onAccept, onDecline, userId }: ConsentBannerProp
 
             {/* Contenu */}
             <div
-              className="space-y-3 text-xs mb-5 leading-relaxed"
-              style={{ color: "rgba(200,185,255,0.65)" }}
+              className="space-y-3 text-[13.5px] mb-5 leading-relaxed"
+              style={{ color: "#3d4f48" }}
             >
               <p>
                 Ta photo est analysée de manière strictement confidentielle par notre technologie de{" "}
-                <strong style={{ color: "#f3f0ff", fontWeight: 700 }}>
+                <strong style={{ color: "#17392c", fontWeight: 700 }}>
                   cartographie faciale GlowScan AI
                 </strong>{" "}
                 pour générer ton score et ta routine de soins.
@@ -167,14 +168,14 @@ export function ConsentBanner({ onAccept, onDecline, userId }: ConsentBannerProp
               <div
                 className="flex items-start gap-2.5 p-3 rounded-xl"
                 style={{
-                  background: "rgba(16,185,129,0.08)",
-                  border: "1px solid rgba(16,185,129,0.2)",
+                  background: "#e7eedc",
+                  border: "1px solid #cfdfc4",
                 }}
               >
-                <Lock className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" style={{ color: "#6ee7b7" }} />
+                <Lock className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" style={{ color: "#164034" }} />
                 <p
-                  className="text-[11px] leading-normal"
-                  style={{ color: "#6ee7b7" }}
+                  className="text-[12.5px] leading-normal"
+                  style={{ color: "#164034" }}
                 >
                   Sécurisé : ta photo est conservée de façon chiffrée et à accès restreint pour ton suivi.
                   Aucun humain ne la consulte hors d'une consultation que tu demandes. Tu peux la supprimer à tout moment.
@@ -183,20 +184,20 @@ export function ConsentBanner({ onAccept, onDecline, userId }: ConsentBannerProp
 
               <div
                 className="p-3 rounded-xl"
-                style={{ background: "rgba(167,139,250,0.06)", border: "1px solid rgba(167,139,250,0.18)" }}
+                style={{ background: "#f8f8f6", border: "1px solid #e3e8e2" }}
               >
-                <p className="text-[11px] leading-normal" style={{ color: "rgba(200,185,255,0.85)" }}>
-                  <strong style={{ color: "#f3f0ff" }}>Aider la recherche (optionnel).</strong> Ta photo <strong>anonymisée</strong> (sans nom, sans localisation) peut servir à améliorer l'IA pour les peaux africaines. C'est <strong>ton choix</strong> — le refus ne change rien à ton analyse.
+                <p className="text-[12.5px] leading-normal" style={{ color: "#3d4f48" }}>
+                  <strong style={{ color: "#17392c" }}>Aider la recherche (optionnel).</strong> Ta photo <strong>anonymisée</strong> (sans nom, sans localisation) peut servir à améliorer l'IA pour les peaux africaines. C'est <strong>ton choix</strong> — le refus ne change rien à ton analyse.
                 </p>
               </div>
 
-              <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.35)" }}>
+              <p className="text-[12px]" style={{ color: "#5f6f69" }}>
                 Tu gardes le contrôle total. Tu peux exporter ou supprimer définitivement tes données
                 à tout moment depuis ton profil.{" "}
                 <Link href="/confidentialite">
                   <span
                     className="font-bold underline cursor-pointer"
-                    style={{ color: "#c4b5fd" }}
+                    style={{ color: "#164034" }}
                     data-testid="link-privacy-policy"
                   >
                     Lire notre politique de confidentialité
@@ -211,7 +212,7 @@ export function ConsentBanner({ onAccept, onDecline, userId }: ConsentBannerProp
                 onClick={() => proceed(true)}
                 className="w-full py-3.5 text-white font-extrabold text-sm active:scale-[0.98] transition-transform"
                 style={{
-                  background: "linear-gradient(135deg, #E91E8C, #f43f5e)",
+                  background: "#164034",
                   borderRadius: 12,
                 }}
                 data-testid="button-consent-accept"
@@ -221,7 +222,7 @@ export function ConsentBanner({ onAccept, onDecline, userId }: ConsentBannerProp
               <button
                 onClick={() => proceed(false)}
                 className="w-full py-3 text-sm font-extrabold active:scale-[0.98] transition-transform"
-                style={{ color: "#f3f0ff", background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 12 }}
+                style={{ color: "#164034", background: "#ffffff", border: "1px solid #cfdfc4", borderRadius: 12 }}
                 data-testid="button-consent-analyze-only"
               >
                 Analyser sans partager pour la recherche
@@ -229,7 +230,7 @@ export function ConsentBanner({ onAccept, onDecline, userId }: ConsentBannerProp
               <button
                 onClick={handleDecline}
                 className="w-full py-2 text-xs font-bold transition-colors"
-                style={{ color: "rgba(255,255,255,0.3)" }}
+                style={{ color: "#5f6f69" }}
                 data-testid="button-consent-decline"
               >
                 Annuler
