@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
-import { ProLayout, ProCard } from "@/components/ProLayout";
+import { DermShell } from "@/components/derm/DermShell";
+import { Page, ScreenHeader, Card, Btn, Input, Textarea, Chip, Tag, Label, Toggle } from "@/components/derm/ui";
+import { D, FONT_UI } from "@/components/derm/tokens";
 import { useToast } from "@/hooks/use-toast";
-import { DERM } from "@/lib/design-tokens";
-import { Loader2, Copy, ExternalLink, Camera, CheckCircle2 } from "lucide-react";
+import { Copy, ExternalLink, Camera, BadgeCheck, Clock } from "lucide-react";
 
 import { SUB_SPECIALTIES } from "@shared/dermSpecialties";
 const SPECIALTIES = SUB_SPECIALTIES;
@@ -27,7 +28,7 @@ export default function ProPublicProfile() {
   const [bio, setBio] = useState("");
   const [specialties, setSpecialties] = useState<string[]>([]);
   const [whatsapp, setWhatsapp] = useState("");
-  const [price, setPrice] = useState(3500);
+  const [price, setPrice] = useState(4800);
   const [available, setAvailable] = useState(false);
   const [publicEnabled, setPublicEnabled] = useState(true);
   const [certified, setCertified] = useState(false);
@@ -38,7 +39,7 @@ export default function ProPublicProfile() {
       const p = d.profile; if (!p) return;
       setSlug(p.slug); setFullName(p.fullName || ""); setPhotoUrl(p.photoUrl || null);
       setBio(p.bio || ""); setSpecialties(p.specialties || []); setWhatsapp(p.whatsapp || "");
-      setPrice(p.price || 3500); setAvailable(!!p.b2cAvailable); setPublicEnabled(p.publicProfileEnabled !== false);
+      setPrice(p.price || 4800); setAvailable(!!p.b2cAvailable); setPublicEnabled(p.publicProfileEnabled !== false);
       setCertified(!!p.certified); setCertifiedAt(p.certifiedAt || null);
     }).catch(() => {}).finally(() => setLoading(false));
   };
@@ -59,133 +60,148 @@ export default function ProPublicProfile() {
         body: JSON.stringify({ bio, specialties, photoUrl, whatsapp, consultPriceFcfa: price, b2cAvailable: available, publicProfileEnabled: publicEnabled }),
       });
       const d = await res.json();
-      if (res.ok) { if (d.profile?.slug) setSlug(d.profile.slug); toast({ title: "Profil enregistré " }); load(); }
+      if (res.ok) { if (d.profile?.slug) setSlug(d.profile.slug); toast({ title: "Profil enregistré" }); load(); }
       else toast({ title: d.message || "Échec de l'enregistrement", variant: "destructive" });
     } catch { toast({ title: "Erreur réseau", variant: "destructive" }); }
     finally { setSaving(false); }
   };
 
   const publicUrl = slug ? `https://glow-scan.com/dr/${slug}` : null;
-  const copyLink = () => { if (publicUrl) { navigator.clipboard.writeText(publicUrl); toast({ title: "Lien copié " }); } };
+  const copyLink = () => { if (publicUrl) { navigator.clipboard.writeText(publicUrl); toast({ title: "Lien copié" }); } };
+  const drFull = `Dr ${fullName.replace(/^dr\.?\s*/i, "")}`;
+  const initials = fullName.replace(/^dr\.?\s*/i, "").split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join("");
+  const missing = [!photoUrl && "photo", !bio.trim() && "présentation", specialties.length === 0 && "spécialités"].filter(Boolean) as string[];
 
-  if (loading) return <ProLayout title="Mon profil public" back="/derm/dashboard"><div style={{ display: "flex", justifyContent: "center", padding: 40 }}><Loader2 className="animate-spin" style={{ color: DERM.violetMid }} /></div></ProLayout>;
-
-  const lbl = { fontSize: 12, fontWeight: 700, color: DERM.textMuted, marginBottom: 6, display: "block" } as const;
-  const inputStyle = { width: "100%", boxSizing: "border-box" as const, background: "#F1F5F9", border: `1px solid ${DERM.border}`, borderRadius: 10, padding: "10px 12px", color: DERM.text, fontSize: 13 };
+  if (loading) {
+    return <DermShell active="parametres" showBack><Page><span style={{ fontSize: 12, color: D.muted }}>Chargement de votre profil public…</span></Page></DermShell>;
+  }
 
   return (
-    <ProLayout title="Mon profil public" back="/derm/dashboard">
-      <div style={{ display: "flex", flexDirection: "column", gap: 12, paddingBottom: 24 }}>
+    <DermShell active="parametres" showBack>
+      <Page>
+        <ScreenHeader kicker="VISIBLE PAR LES PATIENTS" title="Mon profil public"
+          sub="La fiche que les patients voient dans l'appli GlowScan et sur votre lien à partager."
+          actions={<Btn kind="primary" onClick={save} disabled={saving} data-testid="button-save-public">{saving ? "Enregistrement…" : "Enregistrer mon profil"}</Btn>} />
 
-        {/* Certification */}
-        <ProCard className="p-4">
-          {certified ? (
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ color: DERM.violet, fontSize: 16 }}>✦</span>
-              <div>
-                <p style={{ fontSize: 13, fontWeight: 800, color: DERM.text, margin: 0 }}>Dermatologue Certifié GlowScan</p>
-                <p style={{ fontSize: 11, color: DERM.textMuted, margin: 0 }}>{certifiedAt ? `Depuis le ${new Date(certifiedAt).toLocaleDateString("fr-FR")}` : "Actif"}</p>
-              </div>
-            </div>
-          ) : (
-            <p style={{ fontSize: 12, color: DERM.textMuted, margin: 0 }}>⏳ Badge de certification en attente. Complète ton profil (photo + bio + spécialités) — l'équipe GlowScan vérifie ton n° d'ordre puis active le badge.</p>
-          )}
-        </ProCard>
-
-        {/* Photo + nom */}
-        <ProCard className="p-5">
-          <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
-            <label style={{ position: "relative", cursor: "pointer", flexShrink: 0 }}>
-              {photoUrl ? (
-                <img src={photoUrl} alt="" style={{ width: 72, height: 72, borderRadius: "50%", objectFit: "cover" }} />
+        <div className="grid items-start" style={{ gap: 18, gridTemplateColumns: "minmax(0,1.45fr) minmax(300px,1fr)" }}>
+          <div className="flex flex-col" style={{ gap: 14 }}>
+            {/* Certification */}
+            <Card style={{ padding: "16px 20px", background: certified ? D.tintActive : "#fff" }}>
+              {certified ? (
+                <span className="flex items-center" style={{ gap: 10 }}>
+                  <BadgeCheck size={20} color={D.action} />
+                  <span className="flex flex-col">
+                    <b style={{ fontSize: 13, fontWeight: 600 }}>Dermatologue certifié GlowScan</b>
+                    <span style={{ fontSize: 11, color: D.muted }}>{certifiedAt ? `Depuis le ${new Date(certifiedAt).toLocaleDateString("fr-FR")}` : "Actif"}</span>
+                  </span>
+                </span>
               ) : (
-                <div style={{ width: 72, height: 72, borderRadius: "50%", background: "rgba(124,58,237,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28 }}></div>
+                <span className="flex items-start" style={{ gap: 10 }}>
+                  <Clock size={18} color={D.warn} className="mt-0.5 flex-none" />
+                  <span style={{ fontSize: 12, color: D.text, lineHeight: 1.55 }}>
+                    <b style={{ fontWeight: 600 }}>Badge de certification en attente.</b> Complétez votre profil (photo, présentation, spécialités) : l'équipe GlowScan vérifie votre n° d'ordre puis active le badge.
+                    {missing.length > 0 && <span style={{ display: "block", marginTop: 4, color: D.warn }}>Il manque : {missing.join(", ")}.</span>}
+                  </span>
+                </span>
               )}
-              <div style={{ position: "absolute", bottom: 0, right: 0, background: DERM.violet, borderRadius: "50%", width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Camera style={{ width: 13, height: 13, color: "#fff" }} />
+            </Card>
+
+            {/* Photo + présentation */}
+            <Card>
+              <b style={{ display: "block", fontSize: 14, fontWeight: 600, marginBottom: 14 }}>Photo et présentation</b>
+              <div className="flex items-center" style={{ gap: 14, marginBottom: 14 }}>
+                <label className="relative flex-none cursor-pointer">
+                  {photoUrl
+                    ? <img src={photoUrl} alt="" style={{ width: 72, height: 72, borderRadius: 14, objectFit: "cover" }} />
+                    : <span className="grid place-items-center" style={{ width: 72, height: 72, borderRadius: 14, background: D.tintChip, color: D.actionDark, fontSize: 22, fontWeight: 700 }}>{initials || "Dr"}</span>}
+                  <span className="absolute grid place-items-center" style={{ right: -4, bottom: -4, width: 26, height: 26, borderRadius: 999, background: D.action, color: "#fff", border: "2px solid #fff" }}><Camera size={13} /></span>
+                  <input type="file" accept="image/*" className="hidden" onChange={(e) => onPhoto(e.target.files?.[0])} />
+                </label>
+                <span className="flex flex-col">
+                  <b style={{ fontSize: 15, fontWeight: 600 }}>{drFull}</b>
+                  <span style={{ fontSize: 11, color: D.muted }}>Cliquez sur la photo pour la modifier. Une photo nette inspire confiance.</span>
+                </span>
               </div>
-              <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => onPhoto(e.target.files?.[0])} />
-            </label>
-            <div>
-              <p style={{ fontSize: 15, fontWeight: 800, color: DERM.text, margin: 0 }}>Dr {fullName.replace(/^dr\.?\s*/i, "")}</p>
-              <p style={{ fontSize: 11, color: DERM.textMuted, margin: "2px 0 0" }}>Touche la photo pour la modifier</p>
+              <Label text={`Présentation courte (${bio.length}/200)`}>
+                <Textarea value={bio} maxLength={200} onChange={(e) => setBio(e.target.value)} rows={3}
+                  placeholder="Ex. : Dermatologue, peaux noires et métissées, 8 ans d'expérience à Douala." />
+              </Label>
+            </Card>
+
+            {/* Spécialités */}
+            <Card>
+              <b style={{ display: "block", fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Spécialités</b>
+              <span style={{ display: "block", fontSize: 11, color: D.muted, marginBottom: 12 }}>Celles que vous cochez apparaissent sur votre fiche et aident les patients à vous trouver.</span>
+              <div className="flex flex-wrap" style={{ gap: 6 }}>
+                {SPECIALTIES.map((s) => <Chip key={s.key} on={specialties.includes(s.key)} onClick={() => toggleSpec(s.key)}>{specialties.includes(s.key) ? "✓ " : ""}{s.label}</Chip>)}
+              </div>
+            </Card>
+
+            {/* Consultation en ligne */}
+            <Card>
+              <b style={{ display: "block", fontSize: 14, fontWeight: 600, marginBottom: 12 }}>Consultation en ligne</b>
+              <div className="flex items-center justify-between" style={{ gap: 12, marginBottom: 14 }}>
+                <span style={{ fontSize: 12.5 }}>Je prends des consultations en ligne</span>
+                <Toggle on={available} onChange={setAvailable} label="Consultation en ligne" />
+              </div>
+              <div className="grid" style={{ gap: 12, gridTemplateColumns: "1fr 1fr" }}>
+                <Label text="Prix de la consultation (FCFA)"><Input type="number" value={price} onChange={(e) => setPrice(parseInt(e.target.value) || 4800)} /></Label>
+                <Label text="WhatsApp pour « Prendre contact »"><Input value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} placeholder="2376XXXXXXXX" /></Label>
+              </div>
+            </Card>
+
+            {/* Lien public */}
+            <Card>
+              <div className="flex items-center justify-between" style={{ gap: 12, marginBottom: 12 }}>
+                <b style={{ fontSize: 14, fontWeight: 600 }}>Profil visible par les patients</b>
+                <Toggle on={publicEnabled} onChange={setPublicEnabled} label="Profil public visible" />
+              </div>
+              {publicUrl ? (
+                <>
+                  <Label text="Votre lien à partager (WhatsApp, LinkedIn…)">
+                    <span className="flex" style={{ gap: 8 }}>
+                      <Input readOnly value={publicUrl} style={{ color: D.actionDark }} />
+                      <Btn kind="secondary" onClick={copyLink}><Copy size={13} /> Copier</Btn>
+                    </span>
+                  </Label>
+                  <a href={publicUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center" style={{ gap: 5, marginTop: 10, fontSize: 11.5, fontWeight: 600, color: D.action, textDecoration: "none" }}>
+                    <ExternalLink size={13} /> Voir mon profil comme un patient
+                  </a>
+                </>
+              ) : (
+                <span style={{ fontSize: 11.5, color: D.muted }}>Votre lien sera créé au premier enregistrement.</span>
+              )}
+            </Card>
+          </div>
+
+          {/* Aperçu patient */}
+          <div className="flex flex-col" style={{ gap: 10, position: "sticky", top: 90 }}>
+            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: .6, color: D.muted }}>APERÇU · CE QUE VOIT LE PATIENT</span>
+            <div style={{ borderRadius: 18, padding: 18, background: "#164034", color: "#fff", fontFamily: FONT_UI }}>
+              <span className="flex items-center" style={{ gap: 12 }}>
+                {photoUrl
+                  ? <img src={photoUrl} alt="" style={{ width: 56, height: 56, borderRadius: 14, objectFit: "cover" }} />
+                  : <span className="grid place-items-center" style={{ width: 56, height: 56, borderRadius: 14, background: "#cfe08a", color: "#164034", fontSize: 17, fontWeight: 700 }}>{initials || "Dr"}</span>}
+                <span className="flex flex-col">
+                  <b style={{ fontSize: 17, fontWeight: 700 }}>{drFull}</b>
+                  <span style={{ fontSize: 11.5, opacity: .85 }}>Dermatologue{certified ? " · certifié GlowScan" : ""}</span>
+                </span>
+              </span>
+              <span className="flex items-baseline justify-between" style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid rgba(255,255,255,.15)" }}>
+                <span style={{ fontSize: 11.5, opacity: .85 }}>{available ? "Consultation en ligne" : "Consultation en ligne désactivée"}</span>
+                {available && <b style={{ fontSize: 17 }}>{price.toLocaleString("fr-FR")} F</b>}
+              </span>
             </div>
-          </div>
-        </ProCard>
-
-        {/* Bio */}
-        <ProCard className="p-5">
-          <label style={lbl}>Bio courte ({bio.length}/200)</label>
-          <textarea value={bio} maxLength={200} onChange={(e) => setBio(e.target.value)} rows={3}
-            placeholder="Ex : Dermatologue spécialisée sur les peaux africaines, 8 ans d'expérience à Douala."
-            style={{ ...inputStyle, resize: "vertical" }} />
-        </ProCard>
-
-        {/* Spécialités */}
-        <ProCard className="p-5">
-          <label style={lbl}>Spécialités (cochées = visibles sur votre profil)</label>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-            {SPECIALTIES.map((s) => {
-              const on = specialties.includes(s.key);
-              return (
-                <button key={s.key} onClick={() => toggleSpec(s.key)}
-                  style={{ fontSize: 12, fontWeight: 700, padding: "7px 12px", borderRadius: 9999, cursor: "pointer",
-                    background: on ? "rgba(124,58,237,0.25)" : "#F1F5F9",
-                    border: `1px solid ${on ? DERM.violet : DERM.border}`, color: on ? DERM.violetLight : DERM.textMuted }}>
-                  {on ? "✓ " : ""}{s.label}
-                </button>
-              );
-            })}
-          </div>
-        </ProCard>
-
-        {/* Consultation en ligne */}
-        <ProCard className="p-5">
-          <label style={lbl}>Consultation en ligne</label>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-            <span style={{ fontSize: 13, color: DERM.textBody }}>Disponible pour consulter des patients</span>
-            <button onClick={() => setAvailable((v) => !v)}
-              style={{ width: 46, height: 26, borderRadius: 9999, border: "none", cursor: "pointer", background: available ? DERM.violet : "#E2E8F0", position: "relative", transition: "background .2s" }}>
-              <span style={{ position: "absolute", top: 3, left: available ? 23 : 3, width: 20, height: 20, borderRadius: "50%", background: "#fff", transition: "left .2s" }} />
-            </button>
-          </div>
-          <label style={lbl}>Prix de la consultation (FCFA)</label>
-          <input type="number" value={price} onChange={(e) => setPrice(parseInt(e.target.value) || 3500)} style={inputStyle} />
-          <label style={{ ...lbl, marginTop: 12 }}>Numéro WhatsApp (pour "Prendre contact")</label>
-          <input value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} placeholder="2376XXXXXXXX" style={inputStyle} />
-        </ProCard>
-
-        {/* Lien public */}
-        <ProCard className="p-5">
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-            <span style={{ fontSize: 13, color: DERM.textBody }}>Profil public visible</span>
-            <button onClick={() => setPublicEnabled((v) => !v)}
-              style={{ width: 46, height: 26, borderRadius: 9999, border: "none", cursor: "pointer", background: publicEnabled ? DERM.violet : "#E2E8F0", position: "relative" }}>
-              <span style={{ position: "absolute", top: 3, left: publicEnabled ? 23 : 3, width: 20, height: 20, borderRadius: "50%", background: "#fff", transition: "left .2s" }} />
-            </button>
-          </div>
-          {publicUrl ? (
-            <>
-              <label style={lbl}>Ton lien à partager (WhatsApp, LinkedIn…)</label>
-              <div style={{ display: "flex", gap: 8 }}>
-                <div style={{ ...inputStyle, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: DERM.violetLight }}>{publicUrl}</div>
-                <button onClick={copyLink} style={{ background: DERM.violet, border: "none", borderRadius: 10, padding: "0 12px", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 700 }}><Copy style={{ width: 13, height: 13 }} /> Copier</button>
+            {specialties.length > 0 && (
+              <div className="flex flex-wrap" style={{ gap: 5 }}>
+                {SPECIALTIES.filter((s) => specialties.includes(s.key)).map((s) => <span key={s.key} style={{ padding: "3px 10px", borderRadius: 999, background: "#e7eedc", color: "#164034", fontSize: 10.5, fontWeight: 600 }}>{s.label}</span>)}
               </div>
-              <a href={publicUrl} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 5, marginTop: 10, fontSize: 12, fontWeight: 700, color: DERM.violetMid, textDecoration: "none" }}>
-                <ExternalLink style={{ width: 13, height: 13 }} /> Voir mon profil public
-              </a>
-            </>
-          ) : (
-            <p style={{ fontSize: 12, color: DERM.textMuted, margin: 0 }}>Ton lien sera généré après le premier enregistrement.</p>
-          )}
-        </ProCard>
-
-        <button onClick={save} disabled={saving}
-          style={{ position: "sticky", bottom: 12, background: DERM.violet, color: "#fff", border: "none", borderRadius: 9999, padding: "14px", fontSize: 14, fontWeight: 800, cursor: "pointer", opacity: saving ? 0.6 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-          {saving ? <Loader2 className="animate-spin" style={{ width: 16, height: 16 }} /> : <CheckCircle2 style={{ width: 16, height: 16 }} />}
-          Enregistrer mon profil
-        </button>
-      </div>
-    </ProLayout>
+            )}
+            <span style={{ fontSize: 11.5, color: D.muted, lineHeight: 1.55 }}>{bio.trim() || "Votre présentation apparaîtra ici."}</span>
+            {!publicEnabled && <Tag tone="warn">Profil masqué : les patients ne le voient pas</Tag>}
+          </div>
+        </div>
+      </Page>
+    </DermShell>
   );
 }
