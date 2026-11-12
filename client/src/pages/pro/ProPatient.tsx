@@ -37,13 +37,15 @@ import {
 } from "@/hooks/use-pro";
 import { Users, Lock } from "lucide-react";
 import { useLocation as useWouterLocation } from "wouter";
-import { ProLayout, ProCard, ProInput, PATIENT_STATUS, patientStatusOf, type PatientStatus } from "@/components/ProLayout";
+import { ProCard, ProInput, PATIENT_STATUS, patientStatusOf, type PatientStatus } from "@/components/ProLayout";
+import { DermShell } from "@/components/derm/DermShell";
+import { Page } from "@/components/derm/ui";
+import { D } from "@/components/derm/tokens";
 import { Button } from "@/components/ui/button";
 import { formatCmPhone } from "@shared/phone";
 import { CaseAuditTrail } from "@/components/pro/CaseAuditTrail";
 import PDFViewerModal from "@/components/PDFViewerModal";
 import { useToast } from "@/hooks/use-toast";
-import { LoadingScreen } from "./ProDashboard";
 
 const NAVY = "var(--color-accent)";
 const INK = "var(--color-text)";
@@ -80,7 +82,9 @@ export default function ProPatient() {
   const [noteDraft, setNoteDraft] = useState<string | null>(null);
   const [noteSaving, setNoteSaving] = useState(false);
 
-  if (isLoading || !data) return <LoadingScreen />;
+  if (isLoading || !data) {
+    return <DermShell active="patients" showBack><Page><span style={{ fontSize: 12, color: D.muted }}>Chargement du dossier patient…</span></Page></DermShell>;
+  }
 
   const { patient: p, scans } = data;
   const lastScan = scans[0];
@@ -346,8 +350,15 @@ export default function ProPatient() {
   const card = "flex flex-col gap-organic-3 rounded-card bg-organic-surface p-organic-6";
 
   return (
-    <ProLayout>
-      <Link href="/derm/patients" className="inline-flex min-h-[40px] items-center self-start text-[13px] font-bold text-organic-accent-700 no-underline" data-testid="link-back">← Patientèle</Link>
+    <DermShell active="patients" showBack>
+     <Page>
+     <div className="derm-theme flex flex-col gap-organic-4">
+      <span className="flex flex-wrap items-center" style={{ gap: 14 }}>
+        <Link href="/derm/patients" className="inline-flex min-h-[32px] items-center text-[12px] font-semibold text-organic-accent-700 no-underline" data-testid="link-back">← Patients</Link>
+        <Link href={`/derm/patients/${p.id}`} className="inline-flex min-h-[32px] items-center text-[12px] font-semibold text-organic-accent-700 no-underline">Fiche administrative</Link>
+        <Link href={`/derm/dossiers/${p.id}`} className="inline-flex min-h-[32px] items-center text-[12px] font-semibold text-organic-accent-700 no-underline">Dossier médical</Link>
+      </span>
+      <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: .4, color: D.action }}>ANALYSES GLOW · VALIDATION ET SUIVI</span>
 
       <header className="flex flex-wrap items-center gap-organic-4">
         <span className="flex h-[72px] w-[72px] flex-none items-center justify-center rounded-full bg-organic-accent-200 font-heading text-[26px] text-organic-accent-800">
@@ -744,7 +755,9 @@ export default function ProPatient() {
         dermatologue={dermato?.fullName || undefined}
         patientId={p.id}
       />
-    </ProLayout>
+     </div>
+     </Page>
+    </DermShell>
   );
 }
 
