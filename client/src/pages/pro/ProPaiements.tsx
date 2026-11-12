@@ -1,7 +1,9 @@
 import { useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { ProLayout, LoadingScreen } from "@/components/ProLayout";
+import { LoadingScreen } from "@/components/ProLayout";
+import { DermShell } from "@/components/derm/DermShell";
+import { Page, ScreenHeader, Btn } from "@/components/derm/ui";
 import { useProAccount } from "@/hooks/use-pro";
 import { formatF } from "@shared/delivery";
 
@@ -43,11 +45,12 @@ export default function ProPaiements() {
   const amount = (n: number) => formatF(n).replace(/\s?F$/, "");
 
   return (
-    <ProLayout>
-      <header className="flex flex-col gap-1">
-        <span className="text-[11px] font-bold uppercase tracking-[.12em] text-organic-accent-700">Séparé du dossier clinique</span>
-        <h1 className="m-0 text-[clamp(30px,4vw,42px)]">Paiements</h1>
-      </header>
+    <DermShell active="activite" showBack>
+     <Page>
+      <ScreenHeader kicker="SÉPARÉ DU DOSSIER CLINIQUE" title="Paiements"
+        sub="Une ligne par consultation en ligne : ce que le patient a payé, votre part et l'état du versement."
+        actions={<Btn kind="primary" onClick={() => setLocation("/derm/portefeuille")}>Ouvrir mon portefeuille →</Btn>} />
+      <div className="derm-theme flex flex-col gap-organic-3">
 
       <section className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,240px),1fr))] gap-organic-3">
         <div className="flex flex-col gap-1 rounded-card bg-organic-surface p-organic-6">
@@ -69,11 +72,12 @@ export default function ProPaiements() {
       {isLoading ? (
         <div className="rounded-card bg-organic-surface p-organic-6 text-[14px] text-organic-neutral-700">Chargement…</div>
       ) : isError ? (
-        <div className="rounded-card bg-organic-surface p-organic-6 text-[14px]">Paiements indisponibles pour le moment.</div>
+        <div className="flex flex-col items-start gap-2 rounded-card bg-organic-surface p-organic-6 text-[14px]">Vos paiements n'ont pas pu être chargés. Vérifiez votre connexion.<Btn kind="primary" onClick={() => window.location.reload()}>Réessayer</Btn></div>
       ) : !data?.items.length ? (
-        <div className="flex flex-col gap-1 rounded-card bg-organic-surface p-organic-8">
-          <span className="font-heading text-[17px]">Aucun paiement pour l'instant</span>
-          <p className="m-0 text-[13px] opacity-80">Les consultations en ligne payées par vos patients apparaîtront ici.</p>
+        <div className="flex flex-col items-start gap-2 rounded-card bg-organic-surface p-organic-8">
+          <span className="font-heading text-[17px]">Pour l'instant, aucun paiement.</span>
+          <p className="m-0 text-[13px] opacity-80">Les consultations en ligne payées par vos patients apparaîtront ici. Vérifiez que la consultation en ligne est activée et que votre prix est fixé.</p>
+          <Btn kind="secondary" onClick={() => setLocation("/derm/cabinet-avance")}>Régler la consultation en ligne</Btn>
         </div>
       ) : (
         <div className="flex flex-col gap-organic-2">
@@ -91,6 +95,8 @@ export default function ProPaiements() {
           ))}
         </div>
       )}
-    </ProLayout>
+      </div>
+     </Page>
+    </DermShell>
   );
 }

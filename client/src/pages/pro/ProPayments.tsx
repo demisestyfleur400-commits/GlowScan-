@@ -3,6 +3,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useProAccount } from "@/hooks/use-pro";
 import { useToast } from "@/hooks/use-toast";
 import { ProLayout } from "@/components/ProLayout";
+import { DermShell } from "@/components/derm/DermShell";
+import { Page, ScreenHeader, Btn } from "@/components/derm/ui";
 import { OPERATORS, formatCmPhone, opOf } from "@shared/phone";
 import { PRO_SUBSCRIPTION_FCFA } from "@shared/premium";
 import { SPLITS } from "@shared/splits";
@@ -71,10 +73,10 @@ export default function ProPayments() {
   const amountNum = amount ? Number(amount.replace(/\D/g, "")) : (w?.available ?? 0);
   const thisMonthSub = w?.moves.find((m) => m.type === "subscription" && new Date(m.created_at).getMonth() === new Date().getMonth());
   const name = (pro as any)?.account?.fullName as string | undefined;
+  const isRelay = (pro as any)?.account?.profile === "relay";
 
-  return (
-    <ProLayout title="Portefeuille" back={(pro as any)?.account?.profile === "relay" ? "/derm/relais" : "/derm/paiements"}>
-      <div className="flex w-full max-w-[900px] flex-col gap-4 font-body text-organic-text">
+  const content = (
+      <div className="derm-theme flex w-full max-w-[900px] flex-col gap-4 font-body text-organic-text">
         <span className="text-[12px] text-organic-neutral-700">
           {(pro as any)?.account?.profile === "relay"
             ? `${name ? `${name} · ` : ""}avis de télé-expertise (${SPLITS.relay.relay} %)`
@@ -82,7 +84,7 @@ export default function ProPayments() {
         </span>
 
         {isLoading ? <span className="text-[13px] text-organic-neutral-700">Chargement…</span>
-          : isError || !w ? <div className="rounded-lg bg-organic-surface p-4 text-[14px]">Portefeuille indisponible pour le moment.</div>
+          : isError || !w ? <div className="flex flex-col items-start gap-2 rounded-lg bg-organic-surface p-4 text-[14px]">Votre portefeuille n'a pas pu être chargé. Vérifiez votre connexion.<button type="button" onClick={refresh} className="rounded-pill border-0 bg-organic-accent px-4 py-2 text-[13px] font-bold text-white">Réessayer</button></div>
           : (
           <>
             <div className="grid grid-cols-2 gap-2.5">
@@ -159,7 +161,7 @@ export default function ProPayments() {
             {/* Mouvements */}
             <div className="flex flex-col gap-2">
               <span className="text-[13px] font-bold">Mouvements</span>
-              {w.moves.length === 0 && <span className="text-[12px] text-organic-neutral-700">Aucun mouvement pour l'instant.</span>}
+              {w.moves.length === 0 && <span className="text-[12px] text-organic-neutral-700">Pour l'instant, aucun mouvement. Vos gains apparaîtront ici dès votre première consultation en ligne payée.</span>}
               {w.moves.map((m) => {
                 const { label, sub } = moveLabel(m);
                 const color = m.status === "escrow" || m.status === "refunded" ? "var(--color-neutral-700)" : m.amount_fcfa > 0 ? "var(--color-accent-2-700)" : "var(--color-text)";
@@ -176,6 +178,17 @@ export default function ProPayments() {
           </>
         )}
       </div>
-    </ProLayout>
+  );
+  // Médecin : cadre de l'espace médical. Relais : son cadre habituel.
+  if (isRelay) return <ProLayout title="Portefeuille" back="/derm/relais">{content}</ProLayout>;
+  return (
+    <DermShell active="activite" showBack>
+      <Page>
+        <ScreenHeader kicker="PORTEFEUILLE" title="Vos gains et vos retraits"
+          sub="Disponible, montants bloqués jusqu'à votre réponse, comptes Mobile Money et mouvements."
+          actions={<Btn kind="secondary" onClick={() => { window.location.href = "/derm/paiements"; }}>← Paiements</Btn>} />
+        {content}
+      </Page>
+    </DermShell>
   );
 }
