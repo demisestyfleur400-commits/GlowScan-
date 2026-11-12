@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { LogOut } from "lucide-react";
+import { ensureDermFonts } from "@/components/derm/tokens";
 import { Button } from "@/components/ui/button";
 import { LoadingScreen } from "@/components/ProLayout";
 import { DermBrand } from "@/components/pro/DermAuthShell";
@@ -31,6 +32,7 @@ export default function ProPilotage() {
   const [creating, setCreating] = useState(false);
   const qc = useQueryClient();
 
+  useEffect(() => { ensureDermFonts(); }, []);
   useEffect(() => {
     if (isLoading) return;
     if (!acc) setLocation(accData?.user?.role === "secretary" ? proHomeOf(null, "secretary") : "/derm/connexion");
@@ -48,7 +50,8 @@ export default function ProPilotage() {
   if (isLoading || !isNgo || !me) return <LoadingScreen />;
 
   return (
-    <div className="min-h-screen bg-organic-bg font-body text-organic-text">
+    <div className="derm-theme min-h-screen font-body text-organic-text" style={{ background: "#f3f6f3", fontFamily: "'DM Sans', sans-serif" }}>
+      <div style={{ background: "#ffffff", borderBottom: "1px solid #e2e8e4" }}>
       <header className="mx-auto box-border flex w-full max-w-[1160px] items-center justify-between gap-3 px-4 py-3.5 md:px-organic-8">
         <span className="flex items-center gap-3">
           <DermBrand />
@@ -58,7 +61,8 @@ export default function ProPilotage() {
           <LogOut size={16} /><span className="hidden sm:inline">Déconnexion</span>
         </Button>
       </header>
-      <main className="mx-auto box-border flex w-full max-w-[1160px] flex-col gap-organic-4 px-4 pb-16 md:px-organic-8">
+      </div>
+      <main className="mx-auto box-border flex w-full max-w-[1160px] flex-col gap-organic-4 px-4 pb-16 pt-6 md:px-organic-8">
         <div className="flex flex-wrap items-center gap-1.5">
           {me.programs.map((p) => (
             <button key={p.id} type="button" onClick={() => { setProgramId(p.id); setCreating(false); }}
@@ -76,9 +80,9 @@ export default function ProPilotage() {
             <ProgramBudget programId={pid} />
           </>
         ) : isError ? (
-          <div className="rounded-card bg-organic-surface p-organic-6 text-[14px]">Tableau de bord indisponible pour le moment.</div>
+          <div className="flex flex-col items-start gap-3 rounded-card bg-organic-surface p-organic-6 text-[14px]">Le tableau de bord n'a pas pu être chargé. Vérifiez votre connexion, puis réessayez.<Button size="sm" onClick={() => qc.invalidateQueries()}>Réessayer</Button></div>
         ) : !dash ? (
-          <div className="rounded-card bg-organic-surface p-organic-6 text-[14px] text-organic-neutral-700">Chargement…</div>
+          <div className="rounded-card bg-organic-surface p-organic-6 text-[14px] text-organic-neutral-700">Chargement du tableau de bord…</div>
         ) : (
           <>
             <PilotageView d={dash} range={range} onRange={setRange} />

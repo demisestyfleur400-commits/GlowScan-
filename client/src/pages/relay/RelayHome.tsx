@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Camera, Check, Coins, LogOut } from "lucide-react";
+import { ensureDermFonts } from "@/components/derm/tokens";
 import { Button } from "@/components/ui/button";
 import { ProInput, LoadingScreen } from "@/components/ProLayout";
 import { DermBrand } from "@/components/pro/DermAuthShell";
@@ -85,6 +86,7 @@ export default function RelayHome() {
   const acc: any = accData?.account;
   const isRelay = asProProfile(acc?.profile) === "relay";
 
+  useEffect(() => { ensureDermFonts(); }, []);
   useEffect(() => {
     if (accLoading) return;
     if (!acc) setLocation(accData?.user?.role === "secretary" ? proHomeOf(null, "secretary") : "/derm/connexion");
@@ -111,7 +113,8 @@ export default function RelayHome() {
   const card = "flex flex-col gap-organic-3 rounded-card bg-organic-surface p-organic-6";
 
   return (
-    <div className="min-h-screen bg-organic-bg font-body text-organic-text">
+    <div className="derm-theme min-h-screen font-body text-organic-text" style={{ background: "#f3f6f3", fontFamily: "'DM Sans', sans-serif" }}>
+      <div style={{ background: "#ffffff", borderBottom: "1px solid #e2e8e4" }}>
       <header className="mx-auto box-border flex w-full max-w-[1160px] items-center justify-between gap-3 px-4 py-3.5 md:px-organic-8">
         <DermBrand />
         <span className="flex items-center gap-1">
@@ -123,7 +126,8 @@ export default function RelayHome() {
           </Button>
         </span>
       </header>
-      <main className="mx-auto box-border flex w-full max-w-[1160px] flex-col gap-organic-6 px-4 pb-16 md:px-organic-8">
+      </div>
+      <main className="mx-auto box-border flex w-full max-w-[1160px] flex-col gap-organic-6 px-4 pb-16 pt-6 md:px-organic-8">
         <header className="flex flex-col gap-1">
           <span className="text-[11px] font-bold uppercase tracking-[.12em] text-organic-accent-700">
             {[me.center, me.city].filter(Boolean).join(" · ") || "Relais GlowScan"}
@@ -290,7 +294,13 @@ function ReferentPicker({ onDone }: { onDone: () => void }) {
       <h3 className="m-0 text-[22px]">Choisissez votre dermatologue référent</h3>
       <p className="m-0 text-[14px] text-organic-neutral-800">Il valide vos cas et vous explique le signe qui compte. Vous pourrez en changer plus tard.</p>
       {isLoading && <span className="text-[14px] text-organic-neutral-700">Chargement…</span>}
-      {!isLoading && !data?.referents.length && <span className="text-[14px] text-organic-neutral-700">Aucun dermatologue disponible pour le moment.</span>}
+      {!isLoading && !data?.referents.length && (
+        <div className="flex flex-col items-start gap-2 text-[14px] text-organic-neutral-700">
+          Pour l'instant, aucun dermatologue référent n'est disponible dans votre réseau. L'équipe GlowScan peut vous en attribuer un.
+          <a href={`https://wa.me/237674377959?text=${encodeURIComponent("Bonjour, je suis relais GlowScan et je cherche un dermatologue référent.")}`} target="_blank" rel="noopener noreferrer"
+            className="rounded-pill bg-organic-accent px-4 py-2 text-[13px] font-semibold text-white no-underline">Demander un référent sur WhatsApp</a>
+        </div>
+      )}
       {data?.referents.map((r) => (
         <div key={r.id} className="flex items-center gap-3 rounded-pill bg-organic-bg py-2 pl-2 pr-2">
           <span className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-organic-accent-2-200 text-[13px] font-bold text-organic-accent-2-800">

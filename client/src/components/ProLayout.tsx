@@ -335,7 +335,7 @@ export function LogoutButton() {
 
 export function LoadingScreen() {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-organic-bg font-body text-organic-text">
+    <div className="derm-theme flex min-h-screen flex-col items-center justify-center gap-4 font-body text-organic-text" style={{ background: "#f3f6f3" }}>
       <img src="/glowscan-mark.png" alt="GlowScan" width={56} height={56} className="animate-pulse rounded-full" />
       <span className="font-heading text-[18px]">GlowScan <span className="text-organic-accent-2-700">Derm</span></span>
     </div>
