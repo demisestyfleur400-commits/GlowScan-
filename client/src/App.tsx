@@ -92,7 +92,6 @@ const ProConfreres = lazyWithRetry(() => import("@/pages/pro/ProConfreres"));
 const Verif = lazyWithRetry(() => import("@/pages/Verif"));
 const HospitalRef = lazyWithRetry(() => import("@/pages/HospitalRef"));
 const Developpeurs = lazyWithRetry(() => import("@/pages/Developpeurs"));
-const ProProfil = lazyWithRetry(() => import("@/pages/pro/ProProfil"));
 const ProMagicLink = lazyWithRetry(() => import("@/pages/pro/ProMagicLink"));
 const DermOnboarding = lazyWithRetry(() => import("@/pages/pro/DermOnboarding"));
 const DermConditions = lazyWithRetry(() => import("@/pages/pro/DermConditions"));
@@ -111,7 +110,6 @@ const ProReseau = lazyWithRetry(() => import("@/pages/pro/ProReseau"));
 const Privacy = lazyWithRetry(() => import("@/pages/Privacy"));
 const DermatoPortal = lazyWithRetry(() => import("@/pages/DermatoPortal"));
 const DermLanding = lazyWithRetry(() => import("@/pages/DermLanding"));
-const DermDemo = lazyWithRetry(() => import("@/pages/DermDemo"));
 const NotFound = lazyWithRetry(() => import("@/pages/not-found"));
 
 function RefRedirect() {
@@ -182,7 +180,8 @@ function Router() {
       <Route path="/derm/suivis/:id" component={DermSuivi} />
       <Route path="/derm/accueil" component={ProAccueil} />
       <Route path="/derm/confreres" component={ProConfreres} />
-      <Route path="/derm/profil" component={ProProfil} />
+      {/* Ancienne étape « profil 2/2 » sans lien : le profil se règle dans Paramètres. */}
+      <Route path="/derm/profil">{() => { window.location.replace("/derm/cabinet"); return null; }}</Route>
       <Route path="/derm/magic" component={ProMagicLink} />
       <Route path="/derm/relais" component={RelayHome} />
       <Route path="/derm/reseau" component={ProReseau} />
@@ -197,7 +196,8 @@ function Router() {
       }} />
       <Route path="/confidentialite" component={Privacy} />
       <Route path="/dermato" component={DermatoPortal} />
-      <Route path="/derm/demo" component={DermDemo} />
+      {/* Démo interactive retirée (landing et connexion) : renvoie vers la présentation. */}
+      <Route path="/derm/demo">{() => { window.location.replace("/derm"); return null; }}</Route>
       <Route path="/derm/register" component={ProInscription} />
       <Route path="/challenge/:token" component={Challenge} />
       <Route path="/ref/:code" component={RefRedirect} />
