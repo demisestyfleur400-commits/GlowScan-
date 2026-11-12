@@ -81,7 +81,6 @@ const DermParametres = lazyWithRetry(() => import("@/pages/derm/DermParametres")
 const AvisPatient = lazyWithRetry(() => import("@/pages/AvisPatient"));
 const DermSuivis = lazyWithRetry(() => import("@/pages/derm/DermSuivis"));
 const DermSuivi = lazyWithRetry(() => import("@/pages/derm/DermSuivi"));
-const ProPatients = lazyWithRetry(() => import("@/pages/pro/ProPatients"));
 const ProPatient = lazyWithRetry(() => import("@/pages/pro/ProPatient"));
 const ProAnalyze = lazyWithRetry(() => import("@/pages/pro/ProAnalyze"));
 const ProStats = lazyWithRetry(() => import("@/pages/pro/ProStats"));
@@ -158,7 +157,8 @@ function Router() {
       <Route path="/derm/dashboard" component={DermVue} />
       <Route path="/derm/patients" component={DermPatients} />
       <Route path="/derm/patients/:id" component={DermPatientFiche} />
-      <Route path="/derm/patientele" component={ProPatients} />
+      {/* Ancienne liste : le filtre de suivi est maintenant dans Patients. */}
+      <Route path="/derm/patientele">{() => { window.location.replace(`/derm/patients${window.location.search}`); return null; }}</Route>
       <Route path="/derm/dossiers" component={DermDossiers} />
       <Route path="/derm/dossiers/:id" component={DermDossier} />
       <Route path="/derm/dossiers/:id/compte-rendu" component={DermCompteRendu} />

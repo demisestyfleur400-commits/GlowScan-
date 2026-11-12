@@ -51,6 +51,7 @@ function adminRow(p: any) {
     birthDate: p.birth_date ? new Date(p.birth_date).toISOString().slice(0, 10) : null,
     phone: p.whatsapp_number || null, email: p.email || null, city: p.city || null,
     archived: !!p.archived_at, archivedAt: iso(p.archived_at), createdAt: iso(p.created_at), lastVisit: iso(p.last_visit),
+    status: p.status || null,
   };
 }
 

@@ -14,7 +14,12 @@ import { Page, ScreenHeader, StatCard, Card, Btn, Input, Select, Chip, Tabs, Tag
 export type AdminPatient = {
   id: number; firstName: string; lastName: string; age: number | null; sex: string | null; birthDate: string | null;
   phone: string | null; email: string | null; city: string | null; archived: boolean; createdAt: string | null; lastVisit: string | null;
+  status?: string | null;
 };
+// Statut de suivi clinique (même règle que la page Analyses Glow).
+type Suivi = "priority" | "monitoring" | "stable" | "resolved";
+const suiviOf = (s?: string | null): Suivi => (s === "red" || s === "priority" ? "priority" : s === "yellow" || s === "monitoring" ? "monitoring" : s === "resolved" ? "resolved" : "stable");
+const SUIVI_LABEL: Record<Suivi, string> = { priority: "Priorité haute", monitoring: "En suivi", stable: "Stable", resolved: "Résolu" };
 type ListResp = { items: AdminPatient[]; stats: { total: number; seenThisMonth: number; newThisMonth: number; archived: number }; month: string };
 type ImportRow = { firstName: string; lastName: string; age: string; sex: string; phone: string };
 
@@ -65,6 +70,8 @@ export default function DermPatients() {
   const [tab, setTab] = useState<"all" | "active" | "arch">("all");
   const [when, setWhen] = useState<"all" | "7" | "month" | "old">("all");
   const [sex, setSex] = useState<"all" | "F" | "M">("all");
+  // ?filtre=priority (tableau de bord « patients en priorité haute »).
+  const [suivi, setSuivi] = useState<"all" | Suivi>(() => { try { const f = new URLSearchParams(window.location.search).get("filtre"); return f === "priority" || f === "monitoring" || f === "stable" || f === "resolved" ? f : "all"; } catch { return "all"; } });
   const [more, setMore] = useState(false);
   const [sort, setSort] = useState<"last" | "code">("last");
   const [imp, setImp] = useState<{ file: string; rows: ImportRow[] } | null>(null);
@@ -85,11 +92,13 @@ export default function DermPatients() {
     let r = items.filter((p) =>
       (tab === "all" || (tab === "arch" ? p.archived : !p.archived)) &&
       (sex === "all" || p.sex === sex) &&
+      (suivi === "all" || suiviOf(p.status) === suivi) &&
       (when === "all" || (when === "7" ? !!p.lastVisit && now - new Date(p.lastVisit).getTime() <= 7 * 86400000 : when === "month" ? thisMonth(p.lastVisit) : !thisMonth(p.lastVisit))) &&
       (!term || `${patientCode(p.id)} ${p.firstName} ${p.lastName} ${profil(p.age, p.sex)} ${fr(p.lastVisit)} ${p.phone || ""}`.toLowerCase().includes(term)));
     r = r.slice().sort((a, b) => sort === "code" ? a.id - b.id : new Date(b.lastVisit || 0).getTime() - new Date(a.lastVisit || 0).getTime());
     return r;
-  }, [items, q, tab, sex, when, sort]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [items, q, tab, sex, when, sort, suivi]); // eslint-disable-line react-hooks/exhaustive-deps
+  const nPrio = items.filter((p) => !p.archived && suiviOf(p.status) === "priority").length;
 
   const nArch = items.filter((p) => p.archived).length;
   const recent = recentIds().map((id) => items.find((p) => p.id === id)).filter(Boolean) as AdminPatient[];
@@ -191,6 +200,10 @@ export default function DermPatients() {
               <option value="all">Dernière visite : toutes</option><option value="7">7 derniers jours</option>
               <option value="month">{month ? month.charAt(0).toUpperCase() + month.slice(1) : "Ce mois-ci"}</option><option value="old">Avant ce mois</option>
             </Select>
+            <Select value={suivi} onChange={(e) => setSuivi(e.target.value as any)} style={{ height: 34 }} data-testid="patients-suivi">
+              <option value="all">Suivi : tous</option><option value="priority">Priorité haute{nPrio ? ` · ${nPrio}` : ""}</option>
+              <option value="monitoring">En suivi</option><option value="stable">Stable</option><option value="resolved">Résolu</option>
+            </Select>
             <Btn kind="secondary" onClick={() => setMore(!more)} style={{ height: 34, background: more ? D.tintChip : "#fff", borderColor: more ? "#9dc3a9" : D.border }}>Plus de filtres</Btn>
           </div>
           {more && (
@@ -220,7 +233,7 @@ export default function DermPatients() {
                   <span>{profil(p.age, p.sex)}</span>
                   <span>{p.phone ? phoneFmt(p.phone) : <span style={{ color: D.faint }}>Non renseigné</span>}</span>
                   <span>{fr(p.lastVisit)}</span>
-                  <span>{p.archived ? <Tag tone="muted">Archivée</Tag> : <Tag>Active</Tag>}</span>
+                  <span className="flex flex-wrap" style={{ gap: 4 }}>{p.archived ? <Tag tone="muted">Archivée</Tag> : <Tag>Active</Tag>}{!p.archived && suiviOf(p.status) === "priority" && <Tag tone="err">{SUIVI_LABEL.priority}</Tag>}</span>
                   <span style={{ color: D.action, fontWeight: 600 }}>Ouvrir →</span>
                 </div>
               ))}

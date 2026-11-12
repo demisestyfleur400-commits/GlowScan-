@@ -108,7 +108,7 @@ export default function DermVue() {
 
   const lines: BriefLine[] = [
     todayAppts.length ? { icon: Calendar, text: `${plural(todayAppts.length, "rendez-vous", "rendez-vous")} aujourd'hui, le premier à ${hhmm(todayAppts[0].at)}.`, href: "/derm/agenda", tone: "info" } : null,
-    priority.length ? { icon: AlertTriangle, text: `${plural(priority.length, "patient", "patients")} en priorité haute.`, href: "/derm/patientele?filtre=priority", tone: "err" } : null,
+    priority.length ? { icon: AlertTriangle, text: `${plural(priority.length, "patient", "patients")} en priorité haute.`, href: "/derm/patients?filtre=priority", tone: "err" } : null,
     pending.length ? { icon: ClipboardCheck, text: `${plural(pending.length, "analyse", "analyses")} à valider.`, href: `/derm/patient/${pending[0].patientId}`, tone: "warn" } : null,
     unreadN ? { icon: MessageSquare, text: `${plural(unreadN, "demande", "demandes")} en ligne en attente de réponse.`, href: "/derm/consultations", tone: "warn" } : null,
     intakeN ? { icon: Inbox, text: `${plural(intakeN, "dossier préparé", "dossiers préparés")} par l'accueil, en attente d'analyse.`, href: "/derm/patients", tone: "info" } : null,
