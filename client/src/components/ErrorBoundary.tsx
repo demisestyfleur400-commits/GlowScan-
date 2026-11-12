@@ -50,65 +50,55 @@ export default class ErrorBoundary extends Component<Props, State> {
 
   render() {
     if (this.state.hasError) {
+      // Couleurs de l'espace visité : espace médical (Derm) ou appli patient.
+      const path = typeof window !== "undefined" ? window.location.pathname : "/";
+      const derm = path.startsWith("/derm");
+      const c = derm
+        ? { bg: "#f3f6f3", card: "#ffffff", text: "#17392c", muted: "#66766f", btn: "#2a6b4f", soft: "#eef4e8", line: "#e4e8e3", font: "'DM Sans', system-ui, sans-serif" }
+        : { bg: "#f8f8f6", card: "#ffffff", text: "#17392c", muted: "#5f6f69", btn: "#164034", soft: "#e7eedc", line: "#e3e8e2", font: "'DM Sans', system-ui, sans-serif" };
+      const home = derm ? "/derm/dashboard" : "/";
       return (
-        <div
-          className="fixed inset-0 flex flex-col items-center justify-center p-6 text-center z-[999]"
-          style={{ background: "#0d0a0e", fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif' }}
-        >
-          {/* Glow orb */}
-          <div
-            className="pointer-events-none absolute top-1/4 left-1/2 -translate-x-1/2 w-[300px] h-[300px]"
-            style={{ background: "radial-gradient(circle, rgba(124,58,237,0.12) 0%, transparent 70%)" }}
-          />
+        <div className="fixed inset-0 z-[999] flex items-center justify-center overflow-auto p-5" style={{ background: c.bg, fontFamily: c.font, color: c.text }}>
+          <div className="flex w-full max-w-[420px] flex-col items-center text-center" style={{ gap: 14, padding: "32px 24px", borderRadius: 18, background: c.card, border: `1px solid ${c.line}` }}>
+            <span className="flex items-center justify-center" style={{ width: 56, height: 56, borderRadius: 16, background: c.soft, color: c.btn }}>
+              <AlertCircle className="h-6 w-6" />
+            </span>
+            <h2 style={{ margin: 0, fontSize: 21, fontWeight: 700, letterSpacing: -.3, fontFamily: "Manrope, 'DM Sans', system-ui, sans-serif", color: c.text }}>Cette page n'a pas pu s'afficher.</h2>
+            <p style={{ margin: 0, fontSize: 14, lineHeight: 1.6, color: c.muted }}>
+              Un problème d'affichage est survenu. Vos données sont conservées : actualisez la page, cela suffit le plus souvent.
+            </p>
+            <button onClick={this.handleReload} data-testid="button-error-reload"
+              className="flex w-full items-center justify-center gap-2 border-0 text-white"
+              style={{ padding: "14px 18px", borderRadius: 12, background: c.btn, fontSize: 15, fontWeight: 600, cursor: "pointer" }}>
+              <RefreshCw className="h-4 w-4" /> Actualiser la page
+            </button>
+            <a href={home} style={{ fontSize: 14, fontWeight: 600, color: c.btn, textDecoration: "none" }}>Retour à l'accueil</a>
 
-          <div
-            className="w-16 h-16 rounded-2xl flex items-center justify-center mb-5"
-            style={{ background: "rgba(233,30,140,0.1)", border: "1px solid rgba(233,30,140,0.25)" }}
-          >
-            <AlertCircle className="w-7 h-7" style={{ color: "#f9a8d4" }} />
-          </div>
-
-          <h2 className="text-base font-extrabold mb-2" style={{ color: "#f3f0ff" }}>
-            Mise à jour de l'interface…
-          </h2>
-          <p className="text-xs font-medium mb-6 max-w-xs leading-relaxed" style={{ color: "rgba(200,185,255,0.65)" }}>
-            Une petite perturbation est survenue sur le serveur de diagnostic GlowScan. Pas de panique, ta routine et tes photos sont en parfaite sécurité.
-          </p>
-
-          <button
-            onClick={this.handleReload}
-            className="flex items-center justify-center gap-2 px-6 py-3.5 rounded-full text-xs font-extrabold text-white active:scale-[0.98] transition-all"
-            style={{ background: "#7c3aed" }}
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-            Actualiser GlowScan
-          </button>
-
-          {this.state.error && (
-            <div className="mt-12 w-full max-w-xs" style={{ opacity: 0.4 }}>
-              <button
-                onClick={() => this.setState((s) => ({ showDetails: !s.showDetails }))}
-                className="text-[10px] font-bold uppercase tracking-widest underline cursor-pointer"
-                style={{ color: "rgba(255,255,255,0.35)" }}
-              >
-                {this.state.showDetails ? "Masquer le rapport" : "Rapport de maintenance"}
-              </button>
-
-              {this.state.showDetails && (
-                <pre
-                  className="mt-3 text-[9px] text-left overflow-auto max-h-40 whitespace-pre-wrap break-words rounded-xl p-3"
-                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(200,185,255,0.65)" }}
-                  data-testid="text-error-details"
+            {this.state.error && (
+              <div className="w-full" style={{ marginTop: 8, borderTop: `1px solid ${c.line}`, paddingTop: 12 }}>
+                <button
+                  onClick={() => this.setState((s) => ({ showDetails: !s.showDetails }))}
+                  className="cursor-pointer border-0 bg-transparent"
+                  style={{ fontSize: 12, color: c.muted }}
                 >
-                  {this.state.error.message}
-                  {"\n\n"}
-                  {this.state.error.stack}
-                  {"\n\n"}
-                  {this.state.errorInfo}
-                </pre>
-              )}
-            </div>
-          )}
+                  {this.state.showDetails ? "Masquer les détails techniques" : "Détails techniques (pour le support)"}
+                </button>
+                {this.state.showDetails && (
+                  <pre
+                    className="mt-3 max-h-40 overflow-auto whitespace-pre-wrap break-words text-left"
+                    style={{ fontSize: 10, padding: 12, borderRadius: 10, background: c.soft, color: c.muted }}
+                    data-testid="text-error-details"
+                  >
+                    {this.state.error.message}
+                    {"\n\n"}
+                    {this.state.error.stack}
+                    {"\n\n"}
+                    {this.state.errorInfo}
+                  </pre>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       );
     }
