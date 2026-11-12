@@ -1,9 +1,14 @@
-import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Crown, Zap, MessageCircle, Sparkles, Bot, ShieldCheck } from "lucide-react";
+import { useLocation } from "wouter";
+import { X, Star, Check, ArrowRight } from "lucide-react";
+import { PREMIUM_PERKS, PREMIUM_PLANS } from "@shared/premium";
+import { formatF } from "@shared/delivery";
 
-const ADMIN_WHATSAPP = "+237674377959";
-const PREMIUM_PRICE = 2000;
+// ════════════════════════════════════════════════════════════════════════
+// Quota d'analyses gratuites atteint → GlowScan Plus. Mêmes avantages et
+// mêmes prix que la page Plus (shared/premium) ; le paiement se fait sur la
+// page Plus (numéros officiels, suivi de la demande jusqu'à l'activation).
+// ════════════════════════════════════════════════════════════════════════
 
 interface UpgradeModalProps {
   isOpen: boolean;
@@ -12,298 +17,73 @@ interface UpgradeModalProps {
   scansLimit?: number;
 }
 
+const G = { dark: "#164034", text: "#17392c", muted: "#5f6f69", line: "#e3e8e2", sage: "#e7eedc", lime: "#cfe08a" };
+
 export function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
-  const [loading, setLoading] = useState(false);
-
-  const handleWhatsApp = () => {
-    setLoading(true);
-    const text = `🌟 *ACTIVATION GLOWSCAN PREMIUM*\n\nJe souhaite activer mon abonnement GlowScan Premium.\n\n💵 *Tarif :* ${PREMIUM_PRICE.toLocaleString()} FCFA/mois\n📲 *Paiement :*\n• Orange Money au *690 501 392*\n• MTN MoMo au *674 377 959*\n\nJe vous envoie la capture d'écran de mon reçu de paiement pour activer mon accès immédiatement ! ✨`;
-
-    window.open(`https://wa.me/${ADMIN_WHATSAPP.replace(/\D/g, "")}?text=${encodeURIComponent(text)}`, "_blank");
-
-    setTimeout(() => {
-      setLoading(false);
-      onClose();
-    }, 1000);
-  };
+  const [, setLocation] = useLocation();
+  const goPlus = () => { onClose(); setLocation("/premium"); };
 
   return (
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[250] flex items-end sm:items-center justify-center p-0 sm:p-4"
-          style={{
-            background: "rgba(0,0,0,0.75)",
-            backdropFilter: "blur(8px)",
-            fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
-          }}
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[250] flex items-end justify-center p-0 sm:items-center sm:p-4"
+          style={{ background: "rgba(13,38,32,0.55)", backdropFilter: "blur(6px)", fontFamily: "'DM Sans', system-ui, sans-serif" }}
           onClick={onClose}
+          role="dialog" aria-modal="true" aria-labelledby="upgrade-title"
         >
           <motion.div
-            initial={{ y: "100%", opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: "100%", opacity: 0 }}
+            initial={{ y: "100%", opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: "100%", opacity: 0 }}
             transition={{ type: "spring", damping: 30, stiffness: 300 }}
-            className="w-full max-w-md rounded-t-[28px] sm:rounded-[28px] overflow-hidden flex flex-col max-h-[95vh]"
-            style={{
-              background: "#13101f",
-              border: "1px solid rgba(167,139,250,0.18)",
-            }}
-            onClick={e => e.stopPropagation()}
+            className="flex max-h-[95vh] w-full max-w-md flex-col overflow-y-auto rounded-t-[24px] sm:rounded-[24px]"
+            style={{ background: "#ffffff", border: `1px solid ${G.line}`, color: G.text }}
+            onClick={(e) => e.stopPropagation()}
           >
-            {/* Handle bar */}
-            <div className="flex justify-center pt-4 pb-1 flex-shrink-0">
-              <div
-                style={{
-                  width: 40,
-                  height: 4,
-                  borderRadius: 9999,
-                  background: "rgba(255,255,255,0.15)",
-                }}
-              />
-            </div>
+            <div className="flex justify-center pb-1 pt-3"><span style={{ width: 40, height: 4, borderRadius: 999, background: G.line }} /></div>
 
-            {/* Header */}
-            <div
-              className="px-6 pt-5 pb-6 relative flex-shrink-0"
-              style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}
-            >
-              <button
-                onClick={onClose}
-                className="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center active:scale-90 transition-all"
-                style={{
-                  background: "rgba(255,255,255,0.08)",
-                  border: "1px solid rgba(255,255,255,0.15)",
-                }}
-              >
-                <X className="w-4 h-4" style={{ color: "rgba(200,185,255,0.65)" }} />
+            <div className="relative flex flex-col gap-2 px-6 pb-4 pt-3">
+              <button type="button" onClick={onClose} aria-label="Fermer"
+                className="absolute right-4 top-1 flex h-8 w-8 items-center justify-center rounded-full border-0" style={{ background: G.sage, color: G.dark }}>
+                <X className="h-4 w-4" />
               </button>
-
-              <div className="flex justify-center mb-4">
-                <div
-                  className="w-12 h-12 rounded-2xl flex items-center justify-center"
-                  style={{
-                    background: "rgba(167,139,250,0.06)",
-                    border: "1px solid rgba(167,139,250,0.18)",
-                  }}
-                >
-                  <Crown className="w-6 h-6" style={{ color: "#a78bfa" }} />
-                </div>
-              </div>
-
-              <h2
-                className="text-xl font-bold text-center"
-                style={{ color: "#f3f0ff" }}
-              >
-                Débloque l'accès Premium
+              <span className="self-start rounded-pill px-3 py-1 text-[11px] font-bold uppercase tracking-[.08em]" style={{ background: G.sage, color: G.dark }}>Analyses gratuites utilisées</span>
+              <h2 id="upgrade-title" className="m-0 text-[24px] font-bold leading-tight" style={{ fontFamily: "Manrope, 'DM Sans', sans-serif", color: G.text }}>
+                Continuez avec<br />GlowScan Plus.
               </h2>
-              <p
-                className="text-xs text-center font-medium mt-1"
-                style={{ color: "rgba(200,185,255,0.65)" }}
-              >
-                GlowScan AI &amp; Scan Nutritionnel
+              <p className="m-0 text-[14px] leading-relaxed" style={{ color: G.muted }}>
+                Vous avez utilisé vos analyses gratuites pour cette période. Plus vous permet de continuer sans limite.
               </p>
             </div>
 
-            {/* Corps défilant */}
-            <div className="px-6 py-5 overflow-y-auto flex-1 space-y-4">
-
-              {/* Prix */}
-              <div
-                className="rounded-2xl p-4 text-center relative overflow-hidden"
-                style={{
-                  background: "rgba(167,139,250,0.06)",
-                  border: "1px solid rgba(167,139,250,0.18)",
-                  borderRadius: 24,
-                }}
-              >
-                <div
-                  className="absolute top-0 right-0 text-[8px] font-extrabold px-2.5 py-1 rounded-bl-xl tracking-widest"
-                  style={{
-                    background: "rgba(167,139,250,0.15)",
-                    border: "1px solid rgba(167,139,250,0.3)",
-                    borderRadius: 8,
-                    color: "#c4b5fd",
-                  }}
-                >
-                  Offre de lancement
-                </div>
-                <p
-                  className="text-xs font-medium tracking-wide"
-                  style={{ color: "rgba(255,255,255,0.35)" }}
-                >
-                  Accès privé unique
-                </p>
-                <div className="mt-1.5 flex items-baseline justify-center gap-1.5">
-                  <span className="text-3xl font-extrabold" style={{ color: "#f3f0ff" }}>
-                    {PREMIUM_PRICE.toLocaleString()}
-                  </span>
-                  <span className="text-sm font-bold" style={{ color: "#f3f0ff" }}>FCFA</span>
-                  <span
-                    className="text-xs font-bold px-1.5 py-0.5 ml-1"
-                    style={{
-                      color: "#c4b5fd",
-                      background: "rgba(167,139,250,0.15)",
-                      border: "1px solid rgba(167,139,250,0.3)",
-                      borderRadius: 8,
-                    }}
-                  >
-                    /mois
-                  </span>
-                </div>
-                <p
-                  className="text-[10px] mt-1.5 font-medium"
-                  style={{ color: "rgba(255,255,255,0.35)" }}
-                >
-                  Paye une seule fois, utilise ces outils avancés sans limite pour toujours. Aucun abonnement caché.
-                </p>
-              </div>
-
-              {/* Bénéfices */}
-              <div className="space-y-2.5">
-                <p
-                  className="text-[10px] font-bold tracking-widest"
-                  style={{ color: "rgba(255,255,255,0.35)" }}
-                >
-                  Ce que tu débloques immédiatement :
-                </p>
-
-                {[
-                  { icon: Bot, text: "GlowScan AI : Ton coach personnel anti-boutons disponible 24h/24" },
-                  { icon: Sparkles, text: "Le Scan Nutritionnel : Découvre l'impact direct de ton alimentation sur tes imperfections" },
-                  { icon: Zap, text: "Adaptation intelligente de tes conseils selon la météo et l'humidité locale" },
-                  { icon: ShieldCheck, text: "Suivi d'évolution rigoureux et analyse comparative de tes boutons à J+7" },
-                ].map(({ icon: Icon, text }) => (
-                  <div
-                    key={text}
-                    className="flex items-start gap-3 p-3 rounded-2xl"
-                    style={{
-                      background: "rgba(255,255,255,0.04)",
-                      border: "1px solid rgba(255,255,255,0.07)",
-                    }}
-                  >
-                    <div
-                      className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
-                      style={{
-                        background: "rgba(167,139,250,0.06)",
-                        border: "1px solid rgba(167,139,250,0.18)",
-                      }}
-                    >
-                      <Icon className="w-3.5 h-3.5" style={{ color: "#a78bfa" }} />
-                    </div>
-                    <p
-                      className="text-xs font-medium leading-snug"
-                      style={{ color: "rgba(200,185,255,0.65)" }}
-                    >
-                      {text}
-                    </p>
-                  </div>
-                ))}
-              </div>
-
-              {/* Comptes Mobile Money */}
-              <div
-                className="rounded-2xl p-4 space-y-2.5"
-                style={{
-                  background: "rgba(255,255,255,0.04)",
-                  border: "1px solid rgba(255,255,255,0.07)",
-                  borderRadius: 24,
-                }}
-              >
-                <p
-                  className="text-[10px] font-bold tracking-widest"
-                  style={{ color: "rgba(255,255,255,0.35)" }}
-                >
-                  Comptes de dépôt officiels GlowScan :
-                </p>
-                <div className="grid grid-cols-1 gap-2">
-                  <div
-                    className="flex items-center justify-between px-3 py-2.5 rounded-xl"
-                    style={{
-                      background: "rgba(167,139,250,0.06)",
-                      border: "1px solid rgba(167,139,250,0.18)",
-                    }}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm">🟠</span>
-                      <span
-                        className="text-xs font-medium"
-                        style={{ color: "rgba(200,185,255,0.65)" }}
-                      >
-                        Orange Money
-                      </span>
-                    </div>
-                    <span
-                      className="text-xs font-bold px-2 py-1"
-                      style={{
-                        color: "#c4b5fd",
-                        background: "rgba(167,139,250,0.15)",
-                        border: "1px solid rgba(167,139,250,0.3)",
-                        borderRadius: 8,
-                      }}
-                    >
-                      674 37 79 59
-                    </span>
-                  </div>
-                  <div
-                    className="flex items-center justify-between px-3 py-2.5 rounded-xl"
-                    style={{
-                      background: "rgba(167,139,250,0.06)",
-                      border: "1px solid rgba(167,139,250,0.18)",
-                    }}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm">🟡</span>
-                      <span
-                        className="text-xs font-medium"
-                        style={{ color: "rgba(200,185,255,0.65)" }}
-                      >
-                        MTN MoMo
-                      </span>
-                    </div>
-                    <span
-                      className="text-xs font-bold px-2 py-1"
-                      style={{
-                        color: "#c4b5fd",
-                        background: "rgba(167,139,250,0.15)",
-                        border: "1px solid rgba(167,139,250,0.3)",
-                        borderRadius: 8,
-                      }}
-                    >
-                      674 37 79 59
-                    </span>
-                  </div>
-                </div>
-              </div>
+            <div className="mx-6 flex flex-col gap-1.5 rounded-[18px] p-5 text-white" style={{ background: G.dark }}>
+              <span className="flex items-center justify-between">
+                <span className="text-[11px] font-bold uppercase tracking-[.1em] opacity-80">GlowScan Plus</span>
+                <Star className="h-[18px] w-[18px]" strokeWidth={1.6} />
+              </span>
+              <span className="flex items-baseline gap-1.5">
+                <b className="text-[32px] font-bold leading-none" style={{ fontFamily: "Manrope, 'DM Sans', sans-serif" }}>{formatF(PREMIUM_PLANS.month.amountFcfa)}</b>
+                <span className="text-[14px] opacity-80">/ mois</span>
+              </span>
+              <span className="text-[13px] opacity-85">ou {formatF(PREMIUM_PLANS.week.amountFcfa)} / semaine · sans engagement, sans renouvellement automatique</span>
             </div>
 
-            {/* CTA */}
-            <div
-              className="px-6 pb-8 pt-4 flex-shrink-0"
-              style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}
-            >
-              <button
-                onClick={handleWhatsApp}
-                disabled={loading}
-                data-testid="button-upgrade-whatsapp"
-                className="w-full text-white font-extrabold text-sm py-4 flex items-center justify-center gap-2 transition-all duration-200 active:scale-[0.98] disabled:opacity-60"
-                style={{
-                  background: "linear-gradient(135deg, #E91E8C, #f43f5e)",
-                  borderRadius: 12,
-                }}
-              >
-                <MessageCircle className="w-4 h-4 fill-current" />
-                {loading ? "Ouverture de WhatsApp…" : "Activer mon abonnement — 2 000 FCFA/mois"}
+            <div className="flex flex-col gap-2.5 px-6 py-5">
+              {PREMIUM_PERKS.map((t) => (
+                <span key={t} className="flex items-start gap-2.5 text-[14px] leading-snug">
+                  <span className="mt-0.5 flex h-5 w-5 flex-none items-center justify-center rounded-pill" style={{ background: G.sage, color: G.dark }}><Check className="h-3 w-3" strokeWidth={3} /></span>
+                  {t}
+                </span>
+              ))}
+            </div>
+
+            <div className="flex flex-col gap-2 px-6 pb-7">
+              <button type="button" onClick={goPlus} data-testid="button-upgrade-plus"
+                className="flex w-full items-center justify-center gap-2 rounded-[12px] border-0 py-4 text-[15px] font-semibold text-white" style={{ background: G.dark }}>
+                Voir GlowScan Plus <ArrowRight className="h-4 w-4" />
               </button>
-              <p
-                className="text-[10px] text-center mt-2.5 font-medium"
-                style={{ color: "rgba(255,255,255,0.35)" }}
-              >
-                Envoie ton reçu par WhatsApp — Activation validée par notre équipe en 5 min.
-              </p>
+              <button type="button" onClick={onClose} className="border-0 bg-transparent py-2 text-[14px] font-semibold" style={{ color: G.muted }}>Plus tard</button>
+              <span className="text-center text-[12px]" style={{ color: G.muted }}>Paiement Mobile Money sur la page Plus. Votre accès s'active dès la vérification.</span>
             </div>
           </motion.div>
         </motion.div>
