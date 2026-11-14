@@ -13,8 +13,10 @@ interface Refined {
   contradiction: { detectee: boolean; explication: string | null; suggestion: string | null };
 }
 
-export function LesionArgumentation({ scanId, condition, score, fitzpatrick, age, patientContext, onConfirmed }: {
+export function LesionArgumentation({ scanId, condition, retained, score, fitzpatrick, age, patientContext, onConfirmed }: {
   scanId?: number | null; condition?: string; score?: number; fitzpatrick?: string; age?: string | number; patientContext?: string;
+  /** Diagnostic déjà retenu par le médecin (correction faite à l'étape Analyse) : c'est lui qu'on valide, pas celui de l'IA. */
+  retained?: string;
   /** Diagnostic retenu par le médecin (validé ou corrigé) : la page s'en sert partout ensuite. */
   onConfirmed?: (finalDiagnosis: string, isCorrection: boolean) => void;
 }) {
@@ -31,6 +33,7 @@ export function LesionArgumentation({ scanId, condition, score, fitzpatrick, age
   const [confirming, setConfirming] = useState(false);
   const [confirmed, setConfirmed] = useState<{ finalDiagnosis?: string; isCorrection?: boolean } | null>(null);
 
+  const kept = (retained || condition || "").trim();
   const NAVY = "var(--color-accent)", INK = "var(--color-text)", MUTED = "var(--color-neutral-700)", BORDER = "var(--color-divider)";
 
   const refine = async () => {
@@ -51,13 +54,14 @@ export function LesionArgumentation({ scanId, condition, score, fitzpatrick, age
 
   const confirmDiagnosis = async () => {
     if (confirming) return;
-    const finalDiagnosis = mode === "correct" ? correction.trim() : (condition || "");
+    const finalDiagnosis = mode === "correct" ? correction.trim() : kept;
     if (mode === "correct" && !finalDiagnosis) { setErr("Saisissez le diagnostic corrigé."); return; }
     setConfirming(true); setErr("");
     try {
       const res = await fetch(`/api/pro/scans/${scanId}/final-diagnosis`, {
         method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ validated: mode === "validate", finalDiagnosis, severity, notes: notes.trim() }),
+        // Valider un diagnostic déjà corrigé reste une correction de l'IA (pas une validation).
+        body: JSON.stringify({ validated: mode === "validate" && kept === (condition || ""), finalDiagnosis, severity, notes: notes.trim() }),
       });
       const d = await res.json();
       if (res.ok) { setConfirmed({ finalDiagnosis: d.finalDiagnosis, isCorrection: d.isCorrection }); if (d.finalDiagnosis) onConfirmed?.(String(d.finalDiagnosis), !!d.isCorrection); }
@@ -142,9 +146,9 @@ export function LesionArgumentation({ scanId, condition, score, fitzpatrick, age
               <button onClick={() => setMode("validate")}
                 style={{ textAlign: "left", display: "flex", alignItems: "center", gap: 8, background: mode === "validate" ? "rgba(16,185,129,0.08)" : "var(--color-bg)", border: `1px solid ${mode === "validate" ? "rgba(16,185,129,0.4)" : BORDER}`, borderRadius: 10, padding: "10px 12px", cursor: "pointer" }}>
                 <span style={{ fontSize: 15 }}></span>
-                <span style={{ fontSize: 12.5, fontWeight: 700, color: INK }}>Je valide le diagnostic{condition ? ` — ${condition}` : ""}</span>
+                <span style={{ fontSize: 12.5, fontWeight: 700, color: INK }}>Je valide le diagnostic{kept ? ` — ${kept}` : ""}</span>
               </button>
-              <button onClick={() => { setMode("correct"); if (!correction) setCorrection(condition || ""); }}
+              <button onClick={() => { setMode("correct"); if (!correction) setCorrection(kept); }}
                 style={{ textAlign: "left", display: "flex", alignItems: "center", gap: 8, background: mode === "correct" ? "rgba(124,58,237,0.06)" : "var(--color-bg)", border: `1px solid ${mode === "correct" ? "rgba(124,58,237,0.4)" : BORDER}`, borderRadius: 10, padding: "10px 12px", cursor: "pointer" }}>
                 <span style={{ fontSize: 15 }}>✏️</span>
                 <span style={{ fontSize: 12.5, fontWeight: 700, color: INK }}>Je corrige le diagnostic</span>

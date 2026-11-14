@@ -2057,6 +2057,7 @@ export default function ProAnalyze() {
                   <LesionArgumentation
                     scanId={(result as any)?.savedScanId}
                     condition={result?.condition}
+                    retained={finalDx || undefined}
                     onConfirmed={(dx) => setFinalDx(dx)}
                     score={result?.score}
                     fitzpatrick={examen.phototype}
