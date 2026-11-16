@@ -1,3 +1,4 @@
+import { takeReturnPath } from "@/lib/postLogin";
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useSEO } from "@/hooks/useSEO";
@@ -74,7 +75,7 @@ export default function AuthPage() {
         return;
       }
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      setLocation("/");
+      setLocation(takeReturnPath());
     } catch (err: any) {
       toast({
         title: "Email ou mot de passe incorrect",
@@ -92,7 +93,7 @@ export default function AuthPage() {
     try {
       await apiRequest("POST", "/api/auth/login/2fa", { code: twofaCode });
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      setLocation("/");
+      setLocation(takeReturnPath());
     } catch (err: any) {
       toast({ title: "Code incorrect", description: parseError(err) || "Réessayez ou demandez un nouveau code.", variant: "destructive" });
     } finally {
@@ -169,7 +170,7 @@ export default function AuthPage() {
           (window as any).fbq("track", "CompleteRegistration", { content_name: "GlowScan" });
         }
       } catch {}
-      setLocation("/");
+      setLocation(takeReturnPath());
     } catch (err: any) {
       const msg = parseError(err) || "";
       // Compte déjà existant → guider vers connexion/reset

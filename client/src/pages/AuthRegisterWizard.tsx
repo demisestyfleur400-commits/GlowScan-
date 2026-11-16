@@ -1,3 +1,4 @@
+import { takeReturnPath } from "@/lib/postLogin";
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { ArrowRight, ArrowLeft, Eye, EyeOff, Mail, Check, ShieldCheck, Info } from "lucide-react";
@@ -127,7 +128,7 @@ export function AuthRegisterWizard({ onGoLogin }: { onGoLogin: () => void }) {
         return;
       }
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      setLocation("/");
+      setLocation(takeReturnPath());
     } catch (err: any) {
       const msg = (err?.message || "").toLowerCase();
       if (msg.includes("déjà") || msg.includes("exist")) {
@@ -145,7 +146,7 @@ export function AuthRegisterWizard({ onGoLogin }: { onGoLogin: () => void }) {
     try {
       await apiRequest("POST", "/api/auth/login/2fa", { code: code.trim() });
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      setLocation("/");
+      setLocation(takeReturnPath());
     } catch (err: any) {
       toast({ title: "Code incorrect", description: err?.message || "Réessayez ou renvoyez un code.", variant: "destructive" });
     } finally { setLoading(false); }

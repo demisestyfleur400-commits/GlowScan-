@@ -1,3 +1,4 @@
+import { rememberReturnPath } from "@/lib/postLogin";
 import { useEffect, useState } from "react";
 import { PRIVACY_POLICY_VERSION } from "@/components/ConsentBanner";
 import { GS, GsMono, useGsFonts } from "@/lib/gs-ui";
@@ -208,7 +209,7 @@ export function ConsultationLauncher({ scanId, condition, imageUrl }: { scanId?:
             </div>
             <div style={{ fontSize: 18, fontWeight: 600, letterSpacing: "-.4px", marginBottom: 6 }}>Créez votre compte pour consulter</div>
             <p style={{ fontSize: 12.5, color: GS.muted, margin: "0 0 16px", lineHeight: 1.6 }}>Un compte protège votre consultation et vos échanges avec le dermatologue.</p>
-            <a href="/auth" onClick={() => { try { sessionStorage.setItem("postLoginIntent", "consultation"); } catch {} }}
+            <a href="/auth" onClick={() => { try { sessionStorage.setItem("postLoginIntent", "consultation"); } catch {} rememberReturnPath(); }}
               style={{ display: "inline-block", background: GS.ink, color: "#fff", padding: "13px 26px", fontSize: 13.5, fontWeight: 600, textDecoration: "none" }}>Me connecter</a>
             <button onClick={() => setNeedLogin(false)} style={{ display: "block", margin: "12px auto 0", background: "none", border: "none", color: GS.faint, fontFamily: GS.mono, fontSize: 10, fontWeight: 600, letterSpacing: ".08em", cursor: "pointer" }}>RETOUR</button>
           </div>

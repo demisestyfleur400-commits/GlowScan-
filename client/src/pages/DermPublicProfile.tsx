@@ -1,3 +1,4 @@
+import { rememberReturnPath } from "@/lib/postLogin";
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useRoute } from "wouter";
 import { ArrowLeft, ArrowRight, Check, Clock, FolderLock, ShieldCheck, Star } from "lucide-react";
@@ -97,7 +98,7 @@ export default function DermPublicProfile() {
           body: JSON.stringify({ proAccountId: d.id, scanId: last?.id, condition: last?.condition, imageUrl: last?.imageUrl }),
         });
         const data = await res.json();
-        if (res.status === 401) { setLocation("/auth"); return; }
+        if (res.status === 401) { rememberReturnPath(); setLocation("/auth"); return; }
         if (!res.ok) throw new Error(data?.message || "Consultation impossible");
         id = data.consultation.id as number;
         setConsultationId(id);
@@ -218,7 +219,7 @@ export default function DermPublicProfile() {
         ) : !authLoading && !user ? (
           <div className="flex flex-col gap-3 rounded-[16px] p-4" style={{ background: G.sage }}>
             <span className="text-[14.5px]">Consultation en ligne : <b>{formatF(d.price)}</b>, prix fixé par le médecin.</span>
-            <button type="button" onClick={() => setLocation("/auth")} className={btn} style={{ background: G.dark }}>Se connecter pour réserver</button>
+            <button type="button" onClick={() => { rememberReturnPath(); setLocation("/auth"); }} className={btn} style={{ background: G.dark }}>Se connecter pour réserver</button>
           </div>
         ) : stage === "paid" ? (
           <div className="flex flex-col gap-3 rounded-[16px] p-4" style={{ background: G.sage, color: G.dark }}>
