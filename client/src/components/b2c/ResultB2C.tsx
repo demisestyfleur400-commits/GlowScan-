@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { ensureDermFonts } from "@/components/derm/tokens";
 import { trackFunnel } from "@/lib/analytics";
+import { formatF } from "@shared/delivery";
 
 // ════════════════════════════════════════════════════════════════════════
 // Résultat patient (refonte Organic) — maquette « GlowScan App » › Résultat.
@@ -36,7 +37,7 @@ const TONE = {
 const HEADLINE: Record<string, [string, string]> = {
   good: ["Mieux comprendre,", "sans s'inquiéter."],
   watch: ["Mieux comprendre,", "sans s'inquiéter."],
-  medical: ["Mieux comprendre,", "sans s'inquiéter."],
+  medical: ["Votre peau a besoin", "d'un avis médical."],
   urgent: ["Un examen rapide", "est conseillé."],
   unusable: ["Reprenons", "cette photo."],
 };
@@ -64,6 +65,20 @@ export function ResultB2C({ result, area = "face", imageUrl, createdAt, photoCou
   useEffect(() => { ensureDermFonts(); }, []);
   const v = useMemo(() => buildResultView(result, area), [result, area]);
   const { copy, usable, score, zones } = v;
+  // État « avis médical » : tarif réel des médecins disponibles (le plus bas, « dès »
+  // s'il y en a plusieurs). Liste vide ou échec : bouton sans prix, sans promesse.
+  const [medPrice, setMedPrice] = useState<string | null>(null);
+  useEffect(() => {
+    if (v.state !== "medical") return;
+    let live = true;
+    fetch("/api/b2c/dermatologists").then((r) => (r.ok ? r.json() : null)).then((d) => {
+      const prices = ((d?.dermatologists || []) as { price?: number }[]).map((x) => Number(x.price)).filter((n) => Number.isFinite(n) && n > 0);
+      if (!live || !prices.length) return;
+      const min = Math.min(...prices);
+      setMedPrice(`${prices.length > 1 ? "dès " : ""}${formatF(min)}`);
+    }).catch(() => {});
+    return () => { live = false; };
+  }, [v.state]);
   // Mesure : un résultat vient d'être affiché (pas une analyse relue depuis l'historique).
   useEffect(() => { if (fresh) trackFunnel("result_view", v.state); }, [fresh, v.state]);
 
@@ -274,8 +289,13 @@ export function ResultB2C({ result, area = "face", imageUrl, createdAt, photoCou
       <button type="button" onClick={() => go(copy.cta.to)}
         className="inline-flex items-center justify-center gap-2 rounded-[12px] border-0 p-4 text-[15px] font-semibold text-white"
         style={{ background: G.dark }}>
-        {copy.cta.label} <ArrowRight size={17} />
+        {v.state === "medical" && medPrice ? `${copy.cta.label} · ${medPrice}` : copy.cta.label} <ArrowRight size={17} />
       </button>
+      {v.state === "medical" && medPrice && (
+        <span className="-mt-1 text-center text-[13px] leading-relaxed" style={{ color: G.muted }}>
+          Compte rendu signé et ordonnance si besoin, envoyés sur WhatsApp. Réponse sous 24 h, ou vous êtes remboursé.
+        </span>
+      )}
       {copy.cta2 && (
         <button type="button" onClick={() => go(copy.cta2!.to)}
           className="-mt-1 self-center border-0 bg-transparent px-2 py-1 text-[14px] font-semibold underline-offset-4 hover:underline" style={{ color: G.dark }}>

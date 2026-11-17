@@ -101,7 +101,7 @@ export default function DermPublicList() {
           <button type="button" onClick={back} aria-label="Retour" className="-ml-1 border-0 bg-transparent p-1" style={{ color: G.dark }}>
             <ArrowLeft size={20} strokeWidth={1.9} />
           </button>
-          <span className="flex-1 text-[16px] font-semibold">{view === "intro" ? "Un avis expert" : "Choisir un dermatologue"}</span>
+          <span className="flex-1 text-[16px] font-semibold">{view === "intro" ? "Un avis expert" : "Qui va regarder votre peau ?"}</span>
         </div>
 
         {view === "intro" ? (

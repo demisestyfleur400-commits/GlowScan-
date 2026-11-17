@@ -234,18 +234,18 @@ export default function DermPublicProfile() {
         ) : !authLoading && !user ? (
           <div className="flex flex-col gap-3 rounded-[16px] p-4" style={{ background: G.sage }}>
             <span className="text-[14.5px]">Consultation en ligne : <b>{formatF(d.price)}</b>, prix fixé par le médecin.</span>
-            <button type="button" onClick={() => { rememberReturnPath(); setLocation("/auth"); }} className={btn} style={{ background: G.dark }}>Se connecter pour réserver</button>
+            <button type="button" onClick={() => { rememberReturnPath(); setLocation("/auth"); }} className={btn} style={{ background: G.dark }}>Créer mon compte pour envoyer mon dossier</button>
           </div>
         ) : stage === "paid" ? (
           <div className="flex flex-col gap-3 rounded-[16px] p-4" style={{ background: G.sage, color: G.dark }}>
             <b className="flex items-center gap-2 text-[16px] font-semibold"><Check size={18} strokeWidth={2.4} />Paiement reçu</b>
-            <span className="text-[14px] leading-relaxed">Il reste bloqué jusqu'à la réponse de {drName(d.fullName)}. Sans réponse sous 24 h, le remboursement est déclenché automatiquement.</span>
+            <span className="text-[14px] leading-relaxed">{drName(d.fullName)} a reçu votre dossier. Sans réponse sous 24 h, nous vous remboursons sur votre numéro Mobile Money.</span>
             <button type="button" onClick={() => setLocation(`/consultations?open=${consultationId}`)} className={btn} style={{ background: G.dark }}>Ouvrir la conversation</button>
           </div>
         ) : stage === "waiting" ? (
           <div className="flex flex-col gap-2.5 rounded-[16px] p-4" style={{ background: G.peach, color: G.peachFg }}>
-            <b className="flex items-center gap-2 text-[16px] font-semibold"><Clock size={17} strokeWidth={2} />Paiement en cours de vérification</b>
-            <span className="text-[14px] leading-relaxed">Vous serez prévenu dès qu'il est confirmé. La conversation s'ouvre alors dans Messages.</span>
+            <b className="flex items-center gap-2 text-[16px] font-semibold"><Clock size={17} strokeWidth={2} />Paiement reçu, nous le vérifions</b>
+            <span className="text-[14px] leading-relaxed">{drName(d.fullName)} vous répond ici, dans Messages. Vous êtes prévenu dès que c'est confirmé.</span>
             <button type="button" onClick={() => setLocation("/consultations")} className="self-start rounded-[10px] border-0 px-4 py-2.5 text-[14px] font-semibold text-white" style={{ background: G.dark }}>Aller à Messages</button>
           </div>
         ) : stage === "manual" ? (
@@ -284,9 +284,9 @@ export default function DermPublicProfile() {
                 ? <span className="h-12 w-12 flex-none rounded-[12px] bg-cover bg-center" style={{ backgroundImage: `url(${last.imageUrl})`, backgroundColor: G.sage }} />
                 : <span className="flex h-12 w-12 flex-none items-center justify-center rounded-[12px]" style={{ background: G.sage, color: G.dark }}><FolderLock size={20} strokeWidth={1.7} /></span>}
               <span className="flex flex-1 flex-col">
-                <b className="text-[14.5px] font-semibold">Votre dossier pour le médecin</b>
+                <b className="text-[14.5px] font-semibold">{last ? `${drName(d.fullName)} recevra vos photos et votre analyse.` : "Votre dossier pour le médecin"}</b>
                 <span className="text-[12.5px]" style={{ color: G.muted }}>
-                  {last ? `Photos, Glow Score${lastState !== "unusable" && typeof last.score === "number" ? ` ${last.score}` : ""} et historique` : "Aucune analyse : le médecin verra seulement vos réponses"}
+                  {last ? "Vous n'avez rien à refaire." : "Aucune analyse : le médecin verra seulement vos réponses"}
                 </span>
               </span>
             </div>
@@ -320,7 +320,7 @@ export default function DermPublicProfile() {
 
             <div className="flex items-start gap-2.5 rounded-[14px] p-3.5 text-[13.5px] leading-snug" style={{ background: G.sage, color: G.dark }}>
               <ShieldCheck size={18} strokeWidth={1.8} className="mt-0.5 flex-none" />
-              <span>Votre paiement reste bloqué jusqu'à la réponse du médecin. Sans réponse sous 24 h, le remboursement est déclenché automatiquement.</span>
+              <span>Vous payez {formatF(d.price)}. Si {drName(d.fullName)} ne répond pas sous 24 h, nous vous remboursons sur votre numéro Mobile Money.</span>
             </div>
             {err && <span className="text-[13.5px]" style={{ color: G.red }}>{err}</span>}
             <button type="button" onClick={startPayment} disabled={!canPay} className={`${btn} inline-flex items-center justify-center gap-2`} style={{ background: G.dark }}>

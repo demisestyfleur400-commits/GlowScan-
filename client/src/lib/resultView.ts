@@ -49,8 +49,9 @@ export const STATES: Record<ResultStateKey, StateCopy> = {
   medical: {
     level: STATE_LEVEL.medical, tag: "accent", ring: HEX.accent, vBg: HEX.accent100, vFg: HEX.accent900,
     vTitle: "Un dermatologue doit voir votre peau",
-    vText: "Sous 60, GlowScan ne conseille aucun produit seul. Votre dossier est prêt : photos et historique partent au médecin.",
-    cta: { label: "Consulter un dermatologue", to: "/dermatologues", bg: HEX.accent, fg: HEX.bg },
+    vText: "Une crème choisie au hasard peut aggraver ce que nous voyons. Un dermatologue peut regarder vos photos et vous dire quoi faire.",
+    // Le tarif (« · {prix} » ou « · dès {prix} ») est ajouté à l'écran quand la liste des médecins est connue.
+    cta: { label: "Faire voir mes photos à un dermatologue", to: "/dermatologues", bg: HEX.accent, fg: HEX.bg },
   },
   urgent: {
     level: STATE_LEVEL.urgent, tag: "accent", ring: HEX.accent800, vBg: HEX.accent800, vFg: HEX.n100,
