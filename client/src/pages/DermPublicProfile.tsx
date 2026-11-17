@@ -80,7 +80,9 @@ export default function DermPublicProfile() {
     return () => { if (poll.current) clearInterval(poll.current); };
   }, [slug]);
 
-  const last: any = Array.isArray(scans) && scans.length ? scans[0] : null;
+  // L'analyse venue du résultat (?scan=ID) prime sur la plus récente du compte.
+  const wantedScan = Number(new URLSearchParams(window.location.search).get("scan")) || null;
+  const last: any = Array.isArray(scans) && scans.length ? (scans.find((s: any) => s.id === wantedScan) || scans[0]) : null;
   const lastState = last ? resultStateOf(last.recommendations?._fullResult ?? { score: last.score, condition: last.condition }) : null;
   const op = opOf(phone);
   const phoneOk = !!cmNational(phone) && !!op;

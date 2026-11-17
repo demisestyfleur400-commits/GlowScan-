@@ -883,8 +883,22 @@ export async function registerRoutes(
     const userId = getUID(req);
     if (!userId) return res.status(401).json({ message: "Connexion requise" });
     try {
-      const { proAccountId, scanId, condition, imageUrl } = req.body || {};
+      const { proAccountId, scanId: rawScanId } = req.body || {};
       if (!proAccountId) return res.status(400).json({ message: "Dermatologue requis" });
+      // Sécurité : l'analyse jointe doit appartenir au patient (son compte, ou sa
+      // session si elle n'est pas encore rattachée). Condition et photo sont lues
+      // en base, jamais reprises du navigateur. Analyse d'un autre → ignorée.
+      let scanId: number | null = null, condition: string | null = null, imageUrl: string | null = null;
+      if (rawScanId != null && Number.isFinite(Number(rawScanId))) {
+        const [s] = await db.select().from(scans).where(eq(scans.id, Number(rawScanId)));
+        const owns = !!s && (s.userId === userId || (!s.userId && !!s.sessionId && s.sessionId === req.session?.id));
+        if (owns) {
+          if (!s.userId) { try { await db.update(scans).set({ userId }).where(eq(scans.id, s.id)); } catch {} }
+          scanId = s.id; condition = s.condition || null; imageUrl = s.imageUrl || null;
+        } else if (s) {
+          console.warn(`[consultations create] scan #${rawScanId} non rattaché au patient : ignoré`);
+        }
+      }
       const pr = Rows(await db.execute(sql`SELECT COALESCE(consult_price_fcfa,4800) AS p, b2c_available FROM pro_accounts WHERE id = ${Number(proAccountId)}`));
       if (!pr[0] || pr[0].b2c_available !== true) return res.status(400).json({ message: "Ce dermatologue n'est pas disponible en consultation." });
       // Étape 13 : consultation directe seulement si le dermatologue est autorisé dans le pays du patient.
@@ -898,9 +912,9 @@ export async function registerRoutes(
       const [c] = await db.insert(consultations).values({
         userId,
         proAccountId: Number(proAccountId),
-        scanId: scanId ? Number(scanId) : null,
-        condition: condition || null,
-        imageUrl: imageUrl || null,
+        scanId,
+        condition,
+        imageUrl,
         status: "pending_payment",
         paymentStatus: "unpaid",
         priceFcfa: price,
@@ -3008,6 +3022,13 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
           motivation: finalResult.motivation,
         });
         savedScanId = savedScan.id;
+        // Analyse sans compte : on marque la session pour qu'elle soit CONSERVÉE
+        // (saveUninitialized: false → sinon l'identifiant est jetable et l'analyse
+        // ne peut jamais être rattachée au compte créé ensuite).
+        if (!userId && req.session) {
+          const prev: number[] = Array.isArray((req.session as any).anonScanIds) ? (req.session as any).anonScanIds : [];
+          (req.session as any).anonScanIds = [...prev.slice(-9), savedScanId];
+        }
         if (missingAiFields.length > 0 && !isProRequest) {
           console.warn(`[analyze] ⚠️ Champs IA manquants (scan ${savedScanId}) : ${missingAiFields.join(", ")}`);
         }

@@ -121,6 +121,8 @@ export function ResultB2C({ result, area = "face", imageUrl, createdAt, photoCou
 
   const go = (to: string | "retake") => {
     if (to === "retake") return onRetake ? onRetake() : setLocation("/analyze");
+    // Vers un dermatologue : l'analyse suit (?scan=ID) jusqu'au médecin.
+    if (scanId && to.startsWith("/dermatologues")) return setLocation(`${to}${to.includes("?") ? "&" : "?"}scan=${scanId}`);
     setLocation(to);
   };
   const tone = TONE[v.state as keyof typeof TONE] ?? TONE.watch;

@@ -40,6 +40,9 @@ export default function DermPublicList() {
   const [failed, setFailed] = useState(false);
   const [spec, setSpec] = useState<string>("all");
   const urgent = new URLSearchParams(window.location.search).get("urgent") === "1";
+  // Analyse venue du résultat : elle suit jusqu'au profil du médecin.
+  const fromScan = Number(new URLSearchParams(window.location.search).get("scan")) || null;
+  const drQuery = (() => { const q = new URLSearchParams(); if (urgent) q.set("urgent", "1"); if (fromScan) q.set("scan", String(fromScan)); const s = q.toString(); return s ? `?${s}` : ""; })();
   const [view, setView] = useState<"intro" | "list">(urgent ? "list" : "intro");
 
   useSEO({
@@ -150,7 +153,7 @@ export default function DermPublicList() {
               </div>
             ) : (
               (urgent ? [...list].sort((a, b) => (a.responseHours ?? 999) - (b.responseHours ?? 999)) : list).map((d) => (
-                <button key={d.id} type="button" disabled={!d.slug} onClick={() => d.slug && setLocation(`/dr/${d.slug}${urgent ? "?urgent=1" : ""}`)}
+                <button key={d.id} type="button" disabled={!d.slug} onClick={() => d.slug && setLocation(`/dr/${d.slug}${drQuery}`)}
                   className="flex flex-col gap-3 rounded-[16px] border bg-white p-4 text-left disabled:opacity-60" style={{ borderColor: G.line, color: G.text }}>
                   <span className="flex items-center gap-3">
                     {d.photoUrl
