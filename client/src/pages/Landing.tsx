@@ -33,9 +33,9 @@ export default function Landing() {
   const [, setLocation] = useLocation();
 
   useSEO({
-    title: "GlowScan — Analyse de peau IA pour peaux africaines | Glow Score",
+    title: "GlowScan Africa — Dermatologue en ligne et analyse de peau IA",
     description:
-      "Analysez votre peau en quelques secondes avec l'IA. Diagnostic dermatologique et routine personnalisée pour peaux africaines. Gratuit pour commencer.",
+      "Analyse de peau par IA et consultation dermatologique dans l'app : l'IA prépare le dossier, le dermatologue valide et prescrit. Pensé pour les peaux africaines.",
     canonical: "https://glow-scan.com/",
   });
 
