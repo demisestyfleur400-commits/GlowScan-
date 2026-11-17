@@ -22,7 +22,9 @@ export const users = pgTable("users", {
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
   passwordHash: varchar("password_hash"),
-  role: varchar("role").default("doctor"), // "doctor" | "secretary"
+  // "patient" | "doctor" | "secretary" | "relay" | "partner". Chaque création de compte
+  // fixe son rôle explicitement ; défaut « patient » (jamais un accès médecin par défaut).
+  role: varchar("role").default("patient"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

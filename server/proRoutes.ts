@@ -598,6 +598,10 @@ export function registerProRoutes(app: Express) {
         if (existingPro) {
           return res.status(409).json({ message: "Vous avez déjà un compte GlowScan Derm. Connectez-vous." });
         }
+        // Compte patient qui ouvre son espace Derm : il devient médecin.
+        if (!existing.role || existing.role === "patient") {
+          await db.update(users).set({ role: "doctor" }).where(eq(users.id, userId));
+        }
       } else {
         const passwordHash = await bcrypt.hash(data.password, 10);
         const [u] = await db.insert(users).values({
@@ -728,7 +732,13 @@ export function registerProRoutes(app: Express) {
       // OBLIGATOIRE pour tous les médecins (les comptes existants sont migrés à la
       // volée : le flag est activé à la première connexion). On met l'utilisateur
       // "en attente de 2FA" et on envoie un code par email.
-      const force2fa = user.role === "doctor";
+      // Compte sans espace Derm (patient) : refus AVANT tout code ou activation de 2FA
+      // (sinon un patient recevait un code et gardait la 2FA sur l'appli patient).
+      const accEarly = await getProAccountForUser(user.id);
+      if (!accEarly && user.role !== "secretary") {
+        return res.status(403).json({ message: "Aucun compte GlowScan Derm lié à cet email. Créez d'abord votre compte." });
+      }
+      const force2fa = user.role === "doctor" && !!accEarly;
       if (force2fa || await is2faEmailEnabled(user.id)) {
         if (force2fa) await db.execute(sql`UPDATE "users" SET "twofa_email_enabled" = TRUE WHERE "id" = ${user.id}`).catch(() => {});
         (req.session as any).pending2faUserId = user.id;

@@ -201,6 +201,7 @@ export function registerAuthRoutes(app: Express): void {
         email: emailLower,
         firstName: firstName.trim(),
         passwordHash,
+        role: "patient", // Explicite : un compte patient n'est jamais « doctor »
       }).returning();
 
       console.log(`[register] ✅ Nouveau compte créé — id=${user.id} email=${emailLower}`);
