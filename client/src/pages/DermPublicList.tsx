@@ -43,7 +43,20 @@ export default function DermPublicList() {
   // Analyse venue du résultat : elle suit jusqu'au profil du médecin.
   const fromScan = Number(new URLSearchParams(window.location.search).get("scan")) || null;
   const drQuery = (() => { const q = new URLSearchParams(); if (urgent) q.set("urgent", "1"); if (fromScan) q.set("scan", String(fromScan)); const s = q.toString(); return s ? `?${s}` : ""; })();
-  const [view, setView] = useState<"intro" | "list">(urgent ? "list" : "intro");
+  // Venue d'un résultat (ou urgence) : liste directe, sans l'écran d'introduction.
+  const direct = urgent || !!fromScan;
+  const [view, setView] = useState<"intro" | "list">(direct ? "list" : "intro");
+  // Liste vide : rappel dès qu'un dermatologue est disponible (accord explicite).
+  const [cbPhone, setCbPhone] = useState("");
+  const [cbConsent, setCbConsent] = useState(false);
+  const [cbState, setCbState] = useState<"idle" | "busy" | "done" | "error">("idle");
+  const sendCallback = async () => {
+    setCbState("busy");
+    try {
+      const r = await fetch("/api/derm-callback", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: cbPhone, consent: cbConsent }) });
+      setCbState(r.ok ? "done" : "error");
+    } catch { setCbState("error"); }
+  };
 
   useSEO({
     title: "Dermatologues certifiés — Peaux africaines | GlowScan",
@@ -70,7 +83,13 @@ export default function DermPublicList() {
   }, [derms]);
   const list = derms.filter((d) => spec === "all" || d.specialties.includes(spec));
   const chip = (on: boolean) => cn("whitespace-nowrap rounded-pill border px-4 py-[9px] text-[14px] font-semibold", on ? "text-white" : "bg-white");
-  const back = () => (view === "list" && !urgent ? setView("intro") : window.history.length > 1 ? window.history.back() : setLocation("/consultations"));
+  // Un seul dermatologue disponible : on va directement sur son profil.
+  useEffect(() => {
+    if (view === "list" && !loading && !failed && spec === "all" && list.length === 1 && list[0].slug) {
+      setLocation(`/dr/${list[0].slug}${drQuery}`, { replace: true });
+    }
+  }, [view, loading, failed, spec, list.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  const back = () => (view === "list" && !direct ? setView("intro") : window.history.length > 1 ? window.history.back() : setLocation("/consultations"));
 
   return (
     <div className="b2c-theme min-h-screen bg-organic-bg font-body text-organic-text">
@@ -146,10 +165,29 @@ export default function DermPublicList() {
               </div>
             ) : list.length === 0 ? (
               <div className="flex flex-col items-start gap-2 rounded-[16px] border bg-white p-4 text-[14px] leading-relaxed" style={{ borderColor: G.line, color: G.muted }}>
-                Pour l'instant, aucun dermatologue n'est disponible{spec !== "all" ? " pour cette spécialité" : ""}. En attendant, vos questions peuvent être posées à l'assistant GlowScan.
-                {spec !== "all"
-                  ? <button type="button" onClick={() => setSpec("all")} className="border-0 bg-transparent p-0 text-[14px] font-semibold" style={{ color: G.dark }}>Voir tous les dermatologues →</button>
-                  : <button type="button" onClick={() => setLocation("/chat")} className="border-0 bg-transparent p-0 text-[14px] font-semibold" style={{ color: G.dark }}>Écrire à l'assistant →</button>}
+                {spec !== "all" ? (
+                  <>
+                    Pour l'instant, aucun dermatologue n'est disponible pour cette spécialité.
+                    <button type="button" onClick={() => setSpec("all")} className="border-0 bg-transparent p-0 text-[14px] font-semibold" style={{ color: G.dark }}>Voir tous les dermatologues →</button>
+                  </>
+                ) : cbState === "done" ? (
+                  <span style={{ color: G.text }}>C'est noté. Nous vous appelons dès qu'un dermatologue est disponible.</span>
+                ) : (
+                  <>
+                    <span style={{ color: G.text }}>Pour l'instant, aucun dermatologue n'est disponible. Laissez votre numéro : nous vous appelons dès qu'un dermatologue l'est.</span>
+                    <input type="tel" inputMode="tel" value={cbPhone} onChange={(e) => setCbPhone(e.target.value)} placeholder="677 12 45 90" aria-label="Votre numéro"
+                      className="h-12 w-full rounded-[12px] border bg-white px-3.5 text-[15px] focus-visible:outline-none" style={{ borderColor: G.line, color: G.text }} />
+                    <label className="flex items-start gap-2.5 text-[13.5px]" style={{ color: G.text }}>
+                      <input type="checkbox" checked={cbConsent} onChange={(e) => setCbConsent(e.target.checked)} className="mt-0.5 h-4 w-4" />
+                      J'accepte que GlowScan m'appelle à ce numéro pour me proposer un dermatologue.
+                    </label>
+                    {cbState === "error" && <span className="text-[13px]" style={{ color: G.red }}>Envoi impossible. Vérifiez le numéro et réessayez.</span>}
+                    <button type="button" onClick={sendCallback} disabled={!cbConsent || cbPhone.replace(/\D/g, "").length < 9 || cbState === "busy"}
+                      className="w-full rounded-[12px] border-0 p-3.5 text-[15px] font-semibold text-white disabled:opacity-45" style={{ background: G.dark }}>
+                      {cbState === "busy" ? "Envoi…" : "Être rappelé"}
+                    </button>
+                  </>
+                )}
               </div>
             ) : (
               (urgent ? [...list].sort((a, b) => (a.responseHours ?? 999) - (b.responseHours ?? 999)) : list).map((d) => (

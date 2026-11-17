@@ -24,7 +24,7 @@ import { registerProgramBudgetRoutes } from "./programBudget";
 import { registerReferralRoutes } from "./referrals";
 import { registerDhis2Routes } from "./dhis2";
 import { registerPartnerRoutes } from "./partnerApi";
-import { registerProRoutes } from "./proRoutes";
+import { registerProRoutes, notifyOwner } from "./proRoutes";
 import { analyzeLimiter, consultationLimiter, paymentLimiter, emailReportLimiter } from "./rateLimit";
 import { objectStorageClient } from "./replit_integrations/object_storage/objectStorage";
 import { api } from "@shared/routes";
@@ -927,6 +927,27 @@ export async function registerRoutes(
       res.json({ consultation: c });
     } catch (err) {
       console.error("[consultations create] error:", err);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // Aucun dermatologue disponible : le patient laisse son numéro pour être rappelé.
+  // Accord explicite obligatoire. Rien n'est stocké en base ; aucune donnée de santé
+  // n'est transmise : seul le numéro part au propriétaire, qui rappelle.
+  app.post("/api/derm-callback", consultationLimiter, async (req: any, res) => {
+    try {
+      const phone = normalizeCmPhone(String(req.body?.phone || ""));
+      if (!phone) return res.status(400).json({ message: "Numéro invalide." });
+      if (req.body?.consent !== true) return res.status(400).json({ message: "Votre accord est nécessaire pour être rappelé." });
+      const when = new Date().toLocaleString("fr-FR", { timeZone: "Africa/Douala" });
+      await notifyOwner(
+        "📞 Rappel demandé : aucun dermatologue disponible",
+        `<p>Un patient demande à être rappelé dès qu'un dermatologue est disponible.</p><p>Numéro : <strong>${formatCmPhone(phone)}</strong></p><p>Accord donné le ${when}.</p>`,
+        `Rappel demandé (aucun dermatologue disponible). Numéro : ${formatCmPhone(phone)}. Accord donné le ${when}.`,
+      );
+      res.json({ ok: true });
+    } catch (err) {
+      console.error("[derm-callback] error:", err);
       res.status(500).json({ message: "Erreur serveur" });
     }
   });
