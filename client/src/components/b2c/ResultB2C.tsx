@@ -8,6 +8,7 @@ import { downloadResultPdf, resultPdfBase64 } from "@/lib/resultPdf";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { ensureDermFonts } from "@/components/derm/tokens";
+import { trackFunnel } from "@/lib/analytics";
 
 // ════════════════════════════════════════════════════════════════════════
 // Résultat patient (refonte Organic) — maquette « GlowScan App » › Résultat.
@@ -53,14 +54,18 @@ export type ResultB2CProps = {
   whatsappAvailable?: boolean;
   onBack?: () => void;
   onRetake?: () => void;
+  /** Résultat qui vient d'être calculé (mesure de l'entonnoir) ; absent pour l'historique. */
+  fresh?: boolean;
 };
 
-export function ResultB2C({ result, area = "face", imageUrl, createdAt, photoCount, scanId, autoEmailTo, whatsappAvailable, onBack, onRetake }: ResultB2CProps) {
+export function ResultB2C({ result, area = "face", imageUrl, createdAt, photoCount, scanId, autoEmailTo, whatsappAvailable, onBack, onRetake, fresh }: ResultB2CProps) {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   useEffect(() => { ensureDermFonts(); }, []);
   const v = useMemo(() => buildResultView(result, area), [result, area]);
   const { copy, usable, score, zones } = v;
+  // Mesure : un résultat vient d'être affiché (pas une analyse relue depuis l'historique).
+  useEffect(() => { if (fresh) trackFunnel("result_view", v.state); }, [fresh, v.state]);
 
   const [selZone, setSelZone] = useState<FaceZoneKey | null>(null);
   const zoneKey = selZone ?? v.worstZone;
@@ -121,6 +126,7 @@ export function ResultB2C({ result, area = "face", imageUrl, createdAt, photoCou
 
   const go = (to: string | "retake") => {
     if (to === "retake") return onRetake ? onRetake() : setLocation("/analyze");
+    if (to.startsWith("/dermatologues")) trackFunnel("cta_derm_click");
     // Vers un dermatologue : l'analyse suit (?scan=ID) jusqu'au médecin.
     if (scanId && to.startsWith("/dermatologues")) return setLocation(`${to}${to.includes("?") ? "&" : "?"}scan=${scanId}`);
     setLocation(to);

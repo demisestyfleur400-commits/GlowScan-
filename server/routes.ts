@@ -43,6 +43,21 @@ import { eq, and, sql, gte, count, lte, desc, avg, inArray, isNull } from "drizz
 import { whatsappClicks, orders, pageVisits } from "@shared/schema";
 import { emitToUser, isUserOnline } from "./ws";
 import { normalizeCmPhone, formatCmPhone } from "@shared/phone";
+
+// ── Entonnoir « analyse → consultation payée » ──
+// Événements enregistrés dans page_visits (page = "evt:<nom>[:<détail>]"), avec la
+// session analytique du navigateur. Ni IP, ni géolocalisation, ni donnée de santé.
+export const FUNNEL_STEPS = ["result_view", "cta_derm_click", "derm_list_view", "derm_profile_view", "auth_wall_shown",
+  "booking_started", "pay_click", "payment_ref_submitted", "paid"] as const;
+const FUNNEL_DETAIL: Record<string, RegExp> = { result_view: /^(good|watch|medical|urgent|unusable)$/, derm_list_view: /^\d{1,3}$/ };
+async function recordFunnelEvent(name: string, sessionId: string | null, detail?: string | null) {
+  if (!(FUNNEL_STEPS as readonly string[]).includes(name)) return false;
+  const d = detail != null && FUNNEL_DETAIL[name]?.test(String(detail)) ? `:${detail}` : "";
+  try {
+    await storage.recordPageVisit({ sessionId: sessionId ? String(sessionId).slice(0, 64) : null, page: `evt:${name}${d}`, country: null, city: null, ip: null, userAgent: null });
+    return true;
+  } catch (e) { console.warn("[funnel]", (e as any)?.message); return false; }
+}
 import { isMissingColumnError, ORDERS_MIGRATION_HINT } from "./dbErrors";
 import { recordConsent, stopReminders, verifyStopLinkSig, stopFollowups, followupsStoppedAt, resumeFollowups } from "./consents";
 import { buildResultWhatsApp, resultRequestText, RESULT_REF_RE, isStopMessage, isFollowupStopMessage, isApptConfirmMessage, buildApptConfirmedReply } from "@shared/whatsappMessages";
@@ -1142,6 +1157,7 @@ export async function registerRoutes(
       catch (e: any) { console.error(`[consultations] paid_at non enregistré (migration 0016 appliquée ?) : ${e?.message}`); }
       // Notifie les DEUX parties (dermatologue + patient) : WS + push + email.
       await notifyConsultationOpened(c);
+      recordFunnelEvent("paid", `consult:${c.id}`).catch(() => {});
       // Meta Conversions API — événement Purchase (serveur→serveur). Fire-and-forget :
       // ne bloque JAMAIS la réponse ni la confirmation du paiement.
       sendPurchaseEvent({
@@ -1214,6 +1230,7 @@ export async function registerRoutes(
     catch (e: any) { console.error(`[consultations] paid_at non enregistré (migration 0016 appliquée ?) : ${e?.message}`); }
     // Notifie les DEUX parties (dermatologue + patient) : WS + push + email.
     await notifyConsultationOpened(c);
+    recordFunnelEvent("paid", `consult:${c.id}`).catch(() => {});
     return c;
   };
 
@@ -3427,6 +3444,34 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
 
   // === Analytics Tracking ===
   
+  // Étapes de l'entonnoir (côté navigateur). Liste fermée de noms, détail contrôlé.
+  app.post("/api/analytics/event", async (req, res) => {
+    const { name, sessionId, detail } = req.body || {};
+    const ok = await recordFunnelEvent(String(name || ""), sessionId ? String(sessionId) : null, detail != null ? String(detail) : null);
+    res.status(ok ? 204 : 400).end();
+  });
+
+  // Admin : sessions distinctes par étape, sur 7 et 30 jours.
+  app.get("/api/admin/funnel", async (req: any, res) => {
+    if (!verifyAdminKey(req.headers["x-admin-key"])) return res.status(403).json({ message: "Accès refusé" });
+    try {
+      const rows = Rows(await db.execute(sql`
+        SELECT split_part(page, ':', 2) AS step,
+               COUNT(DISTINCT session_id) FILTER (WHERE created_at >= NOW() - INTERVAL '7 days') AS d7,
+               COUNT(DISTINCT session_id) FILTER (WHERE created_at >= NOW() - INTERVAL '30 days') AS d30
+        FROM page_visits WHERE page LIKE 'evt:%' AND created_at >= NOW() - INTERVAL '30 days'
+        GROUP BY 1`));
+      const by = Object.fromEntries(rows.map((r: any) => [r.step, { d7: Number(r.d7) || 0, d30: Number(r.d30) || 0 }]));
+      const states = Rows(await db.execute(sql`
+        SELECT split_part(page, ':', 3) AS state, COUNT(DISTINCT session_id) FILTER (WHERE created_at >= NOW() - INTERVAL '7 days') AS d7, COUNT(DISTINCT session_id) AS d30
+        FROM page_visits WHERE page LIKE 'evt:result_view:%' AND created_at >= NOW() - INTERVAL '30 days' GROUP BY 1`));
+      res.json({ steps: FUNNEL_STEPS.map((s) => ({ step: s, ...(by[s] || { d7: 0, d30: 0 }) })), resultStates: states.map((r: any) => ({ state: r.state, d7: Number(r.d7) || 0, d30: Number(r.d30) || 0 })) });
+    } catch (err) {
+      console.error("[admin/funnel]", err);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
   app.post("/api/analytics/visit", async (req, res) => {
     try {
       const { page, sessionId } = req.body;

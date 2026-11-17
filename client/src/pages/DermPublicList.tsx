@@ -7,6 +7,7 @@ import { SPECIALTY_LABEL } from "@shared/dermSpecialties";
 import { formatF } from "@shared/delivery";
 import { ensureDermFonts } from "@/components/derm/tokens";
 import { cn } from "@/lib/utils";
+import { trackFunnel } from "@/lib/analytics";
 
 // ════════════════════════════════════════════════════════════════════════
 // « Un avis expert » (nouvelle maquette B2C) puis la liste des dermatologues.
@@ -83,6 +84,8 @@ export default function DermPublicList() {
   }, [derms]);
   const list = derms.filter((d) => spec === "all" || d.specialties.includes(spec));
   const chip = (on: boolean) => cn("whitespace-nowrap rounded-pill border px-4 py-[9px] text-[14px] font-semibold", on ? "text-white" : "bg-white");
+  // Mesure : liste affichée, avec le nombre de médecins (aucune donnée personnelle).
+  useEffect(() => { if (view === "list" && !loading && !failed) trackFunnel("derm_list_view", derms.length); }, [view, loading, failed, derms.length]);
   // Un seul dermatologue disponible : on va directement sur son profil.
   useEffect(() => {
     if (view === "list" && !loading && !failed && spec === "all" && list.length === 1 && list[0].slug) {

@@ -1,4 +1,5 @@
 import { rememberReturnPath } from "@/lib/postLogin";
+import { trackFunnel } from "@/lib/analytics";
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useRoute } from "wouter";
 import { ArrowLeft, ArrowRight, Check, Clock, FolderLock, ShieldCheck, Star } from "lucide-react";
@@ -80,6 +81,11 @@ export default function DermPublicProfile() {
     return () => { if (poll.current) clearInterval(poll.current); };
   }, [slug]);
 
+  // Mesure de l'entonnoir (une fois par session et par étape, sans donnée personnelle).
+  useEffect(() => { if (d) trackFunnel("derm_profile_view"); }, [d]);
+  useEffect(() => { if (d && !authLoading && !user) trackFunnel("auth_wall_shown"); }, [d, authLoading, user]);
+  useEffect(() => { if (Object.keys(ans).length > 0) trackFunnel("booking_started"); }, [ans]);
+
   // L'analyse venue du résultat (?scan=ID) prime sur la plus récente du compte.
   const wantedScan = Number(new URLSearchParams(window.location.search).get("scan")) || null;
   const last: any = Array.isArray(scans) && scans.length ? (scans.find((s: any) => s.id === wantedScan) || scans[0]) : null;
@@ -91,6 +97,8 @@ export default function DermPublicProfile() {
 
   const startPayment = async () => {
     if (!d) return;
+    trackFunnel("pay_click");
+    try { if (typeof (window as any).fbq === "function") (window as any).fbq("track", "InitiateCheckout", { value: d.price, currency: "XAF", content_name: "Consultation dermatologue" }); } catch {}
     setBusy(true); setErr("");
     try {
       let id = consultationId;
@@ -145,6 +153,7 @@ export default function DermPublicProfile() {
         method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ref: txn.trim() }),
       });
+      trackFunnel("payment_ref_submitted");
       setStage("waiting");
     } catch { setErr("Erreur réseau. Réessayez."); } finally { setBusy(false); }
   };

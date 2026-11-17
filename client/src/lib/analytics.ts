@@ -42,6 +42,25 @@ export function trackPageVisit(page: string) {
   } catch {}
 }
 
+/** Étape de l'entonnoir « analyse → consultation payée » (une fois par session et par étape).
+ *  Aucune donnée personnelle ni de santé : un nom d'étape fixe et, au plus, un état ou un nombre. */
+export type FunnelStep = "result_view" | "cta_derm_click" | "derm_list_view" | "derm_profile_view" | "auth_wall_shown"
+  | "booking_started" | "pay_click" | "payment_ref_submitted";
+export function trackFunnel(name: FunnelStep, detail?: string | number) {
+  try {
+    const sessionId = getStableSessionId();
+    const key = `gs_tracked_${sessionId}_evt_${name}${detail != null ? `_${detail}` : ""}`;
+    if (localStorage.getItem(key)) return;
+    localStorage.setItem(key, "1");
+    fetch("/api/analytics/event", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, sessionId, detail: detail != null ? String(detail) : undefined }),
+      keepalive: true,
+    }).catch(() => {});
+  } catch {}
+}
+
 export function trackWhatsappClick(productId: string, productName: string, brand: string, whatsappNumber: string) {
   fetch("/api/analytics/whatsapp-click", {
     method: "POST",

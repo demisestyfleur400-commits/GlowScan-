@@ -780,6 +780,7 @@ export default function Analyze() {
                 autoEmailTo={intake.emailConsent ? intake.email : null}
                 whatsappAvailable={!!cmNational(intake.phone)}
                 onRetake={() => { setResult(null); setStep("upload"); }}
+                fresh
               />
             </motion.div>
           )}

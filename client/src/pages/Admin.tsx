@@ -176,7 +176,7 @@ export default function Admin() {
     if (adminTab === "retention") fetchRetention(adminKey);
     if (adminTab === "dermatologues") { fetchDermActivity(adminKey); fetchDermCert(adminKey); }
     if (adminTab === "iavsdoc") fetchIaVsDoc(adminKey);
-    if (adminTab === "consults") fetchConsults(adminKey);
+    if (adminTab === "consults") { fetchConsults(adminKey); fetchFunnel(adminKey); }
     if (adminTab === "rapprochement") fetchRecon(adminKey);
     if (adminTab === "revenus") fetchRevenue(adminKey);
     if (adminTab === "prospects") fetchProspects(adminKey);
@@ -204,6 +204,15 @@ export default function Admin() {
     try { const res = await fetch(`/api/admin/revenue/${id}`, { method: "DELETE", headers: { "x-admin-key": adminKey } }); if (res.ok) fetchRevenue(adminKey); } catch {}
   };
 
+  // Entonnoir « analyse → consultation payée » : sessions distinctes par étape.
+  const [funnel, setFunnel] = useState<{ steps: { step: string; d7: number; d30: number }[]; resultStates: { state: string; d7: number; d30: number }[] } | null>(null);
+  const [funnelErr, setFunnelErr] = useState(false);
+  const fetchFunnel = async (key: string) => {
+    try {
+      const res = await fetch("/api/admin/funnel", { headers: { "x-admin-key": key } });
+      if (res.ok) { setFunnel(await res.json()); setFunnelErr(false); } else setFunnelErr(true);
+    } catch { setFunnelErr(true); }
+  };
   const fetchConsults = async (key: string) => {
     try {
       const res = await fetch("/api/admin/consultations", { headers: { "x-admin-key": key } });
@@ -1431,6 +1440,31 @@ export default function Admin() {
             <div>
               <h3 className="text-lg font-extrabold" style={{ color: DS.text }}>Consultations en ligne</h3>
               <p className="text-[11px]" style={{ color: DS.muted }}>Suivi de chaque consultation : paiement, statut (terminée) et rapport envoyé au patient.</p>
+            </div>
+            <div className="rounded-2xl p-4" style={{ background: DS.surface, border: `1px solid ${DS.border}` }}>
+              <p className="text-sm font-extrabold mb-1" style={{ color: DS.text }}>Parcours analyse → consultation payée</p>
+              <p className="text-[11px] mb-3" style={{ color: DS.muted }}>Nombre de sessions qui atteignent chaque étape. Mesure active depuis la mise en ligne de cette version : les périodes antérieures sont vides.</p>
+              {funnelErr ? (
+                <p className="text-xs" style={{ color: DS.muted }}>Chiffres indisponibles pour l'instant. <button type="button" className="underline" onClick={() => fetchFunnel(adminKey)}>Réessayer</button></p>
+              ) : !funnel ? (
+                <p className="text-xs" style={{ color: DS.muted }}>Chargement…</p>
+              ) : (
+                <table className="w-full text-xs">
+                  <thead><tr style={{ color: DS.muted }}><th className="text-left font-semibold py-1">Étape</th><th className="text-right font-semibold">7 jours</th><th className="text-right font-semibold">30 jours</th></tr></thead>
+                  <tbody>
+                    {funnel.steps.map((s) => (
+                      <tr key={s.step} style={{ borderTop: `1px solid ${DS.border}`, color: DS.text }}>
+                        <td className="py-1.5">{({ result_view: "Résultat affiché", cta_derm_click: "Clic « dermatologue »", derm_list_view: "Liste des médecins vue", derm_profile_view: "Profil d'un médecin vu", auth_wall_shown: "Demande de connexion", booking_started: "Réservation commencée", pay_click: "Clic « Payer »", payment_ref_submitted: "ID de transaction envoyé", paid: "Paiement confirmé" } as Record<string, string>)[s.step] || s.step}</td>
+                        <td className="text-right font-bold">{s.d7}</td>
+                        <td className="text-right font-bold">{s.d30}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+              {funnel && funnel.resultStates.length > 0 && (
+                <p className="text-[11px] mt-2" style={{ color: DS.muted }}>Résultats par état (30 jours) : {funnel.resultStates.map((r) => `${r.state} ${r.d30}`).join(" · ")}</p>
+              )}
             </div>
             {consults.length === 0 && (
               <div className="rounded-2xl p-6 text-center" style={{ background: DS.surface, border: `1px solid ${DS.border}` }}>
