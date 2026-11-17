@@ -10,7 +10,7 @@ import { useScans } from "@/hooks/use-scans";
 import { PRIVACY_POLICY_VERSION } from "@/components/ConsentBanner";
 import { SPECIALTY_LABEL } from "@shared/dermSpecialties";
 import { OPERATORS, cmNational, opOf } from "@shared/phone";
-import { PAY_METHODS, formatF } from "@shared/delivery";
+import { PAY_METHODS, ORDER_WHATSAPP, formatF } from "@shared/delivery";
 import { resultStateOf } from "@shared/resultB2C";
 
 // ════════════════════════════════════════════════════════════════════════
@@ -159,6 +159,10 @@ export default function DermPublicProfile() {
   };
 
   const pm = op === "mtn" ? PAY_METHODS.mtn : PAY_METHODS.orange;
+  const [copied, setCopied] = useState(false);
+  const copyNum = async () => {
+    try { await navigator.clipboard.writeText(pm.num.replace(/\D/g, "")); setCopied(true); setTimeout(() => setCopied(false), 2500); } catch { /* copie refusée : le numéro reste affiché */ }
+  };
   const btn = "w-full rounded-[12px] border-0 p-4 text-[15px] font-semibold text-white disabled:opacity-45";
   const input = "h-12 w-full rounded-[12px] border bg-white px-3.5 text-[15px] font-normal focus-visible:outline-none";
   const backBtn = (
@@ -252,11 +256,25 @@ export default function DermPublicProfile() {
               <b className="font-heading text-[24px] font-bold">{pm.num}</b>
               <span className="text-[13px]" style={{ color: G.muted }}>Code {pm.ussd} · Référence : <b style={{ color: G.text }}>Consultation {consultationId}</b></span>
             </div>
+            {/* Moins d'allers-retours : composer le code, copier le numéro. */}
+            <div className="grid grid-cols-2 gap-2">
+              <a href={`tel:${pm.ussd.replace(/#/g, "%23")}`} className="inline-flex items-center justify-center rounded-[12px] border bg-white p-3 text-[14px] font-semibold no-underline" style={{ borderColor: G.line, color: G.dark }}>
+                Composer {pm.ussd}
+              </a>
+              <button type="button" onClick={copyNum} className="rounded-[12px] border bg-white p-3 text-[14px] font-semibold" style={{ borderColor: G.line, color: G.dark }}>
+                {copied ? "Numéro copié" : "Copier le numéro"}
+              </button>
+            </div>
             <label className="flex flex-col gap-1.5 text-[13.5px] font-semibold">ID de la transaction (dans le SMS de l'opérateur)
               <input value={txn} onChange={(e) => setTxn(e.target.value)} className={input} style={{ borderColor: G.line }} />
             </label>
             {err && <span className="text-[13.5px]" style={{ color: G.red }}>{err}</span>}
             <button type="button" onClick={submitTxn} disabled={busy || txn.trim().length < 6} className={btn} style={{ background: G.dark }}>J'ai payé</button>
+            <span className="text-center text-[12.5px]" style={{ color: G.muted }}>ou, si vous n'avez pas l'ID sous la main :</span>
+            <a href={`https://wa.me/${ORDER_WHATSAPP}?text=${encodeURIComponent(`Bonjour GlowScan,\nJ'ai payé ${formatF(d.price)} par ${pm.label} pour ma consultation avec ${drName(d.fullName)}.\nRéférence : Consultation ${consultationId || "—"}\nVoici ma preuve de paiement :`)}`}
+              target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center rounded-[12px] border-0 p-4 text-[15px] font-semibold text-white no-underline" style={{ background: "#25D366" }}>
+              Envoyer ma preuve sur WhatsApp
+            </a>
           </div>
         ) : (
           <>
