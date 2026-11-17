@@ -782,14 +782,20 @@ async function flagConsultationTimeouts() {
   }
 
   // 2) Décision de remboursement à 24 h
+  //    Toute consultation payée, sans réponse, encore active : pas seulement « open »
+  //    (l'ancien cron posait « timeout » à 2 h, et ces consultations n'étaient plus
+  //    jamais reprises). Les consultations payées AVANT ce correctif (#4, #5, #11, #13
+  //    au statut « timeout ») sont laissées à la décision manuelle du propriétaire.
   try {
     const r: any = await db.execute(sql`
       UPDATE consultations SET status = 'refund_due', refund_due_at = NOW()
       WHERE id IN (
         SELECT id FROM consultations
-        WHERE payment_status = 'paid' AND status = 'open'
-          AND first_doctor_reply_at IS NULL AND refund_due_at IS NULL
+        WHERE payment_status = 'paid'
+          AND COALESCE(status, 'open') NOT IN ('refund_due', 'refunded', 'closed', 'answered', 'pending_payment')
+          AND first_doctor_reply_at IS NULL AND refund_due_at IS NULL AND refunded_at IS NULL AND closed_at IS NULL
           AND paid_at < (NOW() - INTERVAL '24 hours')
+          AND (COALESCE(status, 'open') = 'open' OR paid_at >= TIMESTAMP '2026-11-17 00:00:00')
         LIMIT 100)
       RETURNING id, user_id, pro_account_id, price_fcfa, patient_phone, payment_ref`);
     const rows = (r?.rows ?? r ?? []) as any[];

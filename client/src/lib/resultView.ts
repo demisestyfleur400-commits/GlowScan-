@@ -56,7 +56,7 @@ export const STATES: Record<ResultStateKey, StateCopy> = {
     level: STATE_LEVEL.urgent, tag: "accent", ring: HEX.accent800, vBg: HEX.accent800, vFg: HEX.n100,
     vTitle: "Faites-vous examiner rapidement",
     vText: "Ces signes ne veulent pas dire que c'est grave, mais un médecin doit les voir cette semaine.",
-    cta: { label: "Avis urgent · réponse sous 2 h", to: "/dermatologues?urgent=1", bg: HEX.n100, fg: HEX.accent900 },
+    cta: { label: "Consulter un dermatologue rapidement", to: "/dermatologues?urgent=1", bg: HEX.n100, fg: HEX.accent900 },
   },
   unusable: {
     level: "", tag: "neutral", ring: HEX.n400, vBg: HEX.surface, vFg: HEX.text,
