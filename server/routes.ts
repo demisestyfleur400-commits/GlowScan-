@@ -25,6 +25,7 @@ import { registerReferralRoutes } from "./referrals";
 import { registerDhis2Routes } from "./dhis2";
 import { registerPartnerRoutes } from "./partnerApi";
 import { registerProRoutes, notifyOwner } from "./proRoutes";
+import { registerGoogleAuth } from "./googleAuth";
 import { analyzeLimiter, consultationLimiter, paymentLimiter, emailReportLimiter } from "./rateLimit";
 import { objectStorageClient } from "./replit_integrations/object_storage/objectStorage";
 import { api } from "@shared/routes";
@@ -449,6 +450,7 @@ export async function registerRoutes(
   trackSessionDevice(app);
   registerAuthRoutes(app);
   registerProRoutes(app);
+  registerGoogleAuth(app); // « Continuer avec Google » (actif si GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET)
   registerRelayRoutes(app, { checkAdmin: checkDatasetKey });
   registerProgramRoutes(app, { checkAdmin: checkDatasetKey });
   registerPeerRoutes(app, { checkAdmin: checkDatasetKey });

@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useEffect, type CSSProperties, type ReactNode } from "react";
 import { GS as GS_BASE } from "@/lib/gs-ui";
 import { ensureDermFonts } from "@/components/derm/tokens";
+import { GoogleButton, OrDivider } from "@/components/GoogleButton";
 
 // Inscription patient : palette de la nouvelle maquette B2C (blanc cassé,
 // vert profond, sauge ; DM Sans / Manrope). Versions locales des composants
@@ -161,7 +162,11 @@ export function AuthRegisterWizard({ onGoLogin }: { onGoLogin: () => void }) {
           <GsMono style={{ display: "block", marginBottom: 9 }}>Étape 1 · identification</GsMono>
           <Title>Votre numéro de téléphone</Title>
           <Sub>C'est lui qui identifie votre dossier médical et qui reçoit vos ordonnances.</Sub>
-          <div style={{ marginTop: 28, display: "flex", gap: 9 }}>
+          <div style={{ marginTop: 22, display: "flex", flexDirection: "column", gap: 12 }}>
+            <GoogleButton target="patient" label="S'inscrire avec Google" />
+            <OrDivider />
+          </div>
+          <div style={{ marginTop: 12, display: "flex", gap: 9 }}>
             <div style={{ border: `1px solid ${GS.line}`, padding: "15px 13px", fontFamily: GS.mono, fontSize: 15, color: GS.ink, display: "flex", alignItems: "center", gap: 8, flex: "none" }}>+237</div>
             <input value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" placeholder="6 78 91 23 45"
               style={{ flex: 1, border: `1px solid ${GS.ink}`, padding: 15, fontFamily: GS.mono, fontSize: 17, color: GS.ink, letterSpacing: ".08em", outline: "none", borderRadius: 0, boxSizing: "border-box" }} />

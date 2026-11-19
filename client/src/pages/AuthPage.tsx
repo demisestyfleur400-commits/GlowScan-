@@ -7,6 +7,7 @@ import { Eye, EyeOff, Mail, Lock, User, ArrowLeft, Phone, ShieldAlert, Sparkles,
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { AuthRegisterWizard } from "@/pages/AuthRegisterWizard";
+import { GoogleButton, OrDivider, googleErrorMessage } from "@/components/GoogleButton";
 
 type Mode = "register" | "login" | "forgot" | "reset" | "twofa";
 
@@ -304,6 +305,9 @@ export default function AuthPage() {
                 Retrouvez votre historique d'analyses
               </p>
             </div>
+            {googleErrorMessage() && <p role="alert" className="text-center text-[13px]" style={{ color: "#9b3a28" }}>{googleErrorMessage()}</p>}
+            <GoogleButton target="patient" />
+            <OrDivider />
 
             <Field icon={loginEmail.includes("@") ? <Mail className="w-4 h-4" /> : <Phone className="w-4 h-4" />} type="text" placeholder="Email ou numéro (+237...)" value={loginEmail} onChange={setLoginEmail} testId="input-login-email" autoFocus />
             <PwdField value={loginPwd} onChange={setLoginPwd} show={showPwd} onToggle={() => setShowPwd(v => !v)} testId="input-login-password" placeholder="Mot de passe" />

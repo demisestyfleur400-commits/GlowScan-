@@ -591,7 +591,9 @@ export function registerProRoutes(app: Express) {
         // fullName reste accepté (rétro-compat) mais optionnel.
         fullName: z.string().optional().nullable(),
         email: z.string().email(),
-        password: z.string().min(8), // 8 car. min pour des données médicales
+        // 8 car. min pour des données médicales. Facultatif seulement après « Continuer
+        // avec Google » (adresse vérifiée par Google, session.googleVerifiedEmail).
+        password: z.string().min(8).optional(),
         cabinetName: z.string().optional().nullable(),
         phone: z.string().optional().nullable(),
         city: z.string().optional().nullable(),
@@ -617,12 +619,16 @@ export function registerProRoutes(app: Express) {
         console.log(`[pro/register] 🪪 Numéro d'ordre déclaré par ${emailLower} : ${data.licenseNumber} (à vérifier manuellement)`);
       }
 
+      // Inscription après « Continuer avec Google » : adresse déjà vérifiée par Google.
+      const googleOk = !!(req.session as any)?.googleVerifiedEmail && (req.session as any).googleVerifiedEmail === emailLower;
+      if (!googleOk && !data.password) return res.status(400).json({ message: "Mot de passe requis (8 caractères minimum)." });
+
       // 1. Vérifier email existant
       const [existing] = await db.select().from(users).where(eq(users.email, emailLower));
       let userId: string;
       if (existing) {
-        // Si user existe déjà : vérifier mot de passe et ajouter compte Pro
-        if (!existing.passwordHash || !(await bcrypt.compare(data.password, existing.passwordHash))) {
+        // Si user existe déjà : vérifier mot de passe (sauf adresse vérifiée par Google) et ajouter compte Pro
+        if (!googleOk && (!existing.passwordHash || !(await bcrypt.compare(data.password!, existing.passwordHash)))) {
           return res.status(409).json({ message: "Cet email a déjà un compte. Mot de passe incorrect." });
         }
         userId = existing.id;
@@ -635,7 +641,7 @@ export function registerProRoutes(app: Express) {
           await db.update(users).set({ role: "doctor" }).where(eq(users.id, userId));
         }
       } else {
-        const passwordHash = await bcrypt.hash(data.password, 10);
+        const passwordHash = data.password ? await bcrypt.hash(data.password, 10) : null;
         const [u] = await db.insert(users).values({
           email: emailLower,
           firstName: displayName,
@@ -692,6 +698,24 @@ export function registerProRoutes(app: Express) {
             } catch {}
           }
         } catch (e) { console.warn("[pro/register] parrainage:", (e as any)?.message); }
+      }
+
+      // 3a. Inscription via Google : adresse vérifiée par Google → session ouverte
+      // directement (pas de code email), comme pour la connexion Google.
+      if (googleOk) {
+        delete (req.session as any).googleVerifiedEmail;
+        delete (req.session as any).googleProfile;
+        await db.execute(sql`UPDATE users SET email_verified = TRUE, twofa_email_enabled = TRUE WHERE id = ${userId}`).catch(() => {});
+        try {
+          const base = (process.env.PUBLIC_BASE_URL || "https://glow-scan.com").replace(/\/$/, "");
+          const w = buildWelcomeEmail(displayName, `${base}/derm/profil-public`);
+          sendEmail(emailLower, w.subject, w.html, w.text).catch(() => {});
+        } catch {}
+        req.session.userId = userId; touchLastLogin(userId);
+        return req.session.save((err: any) => {
+          if (err) return res.status(500).json({ message: "Erreur session" });
+          res.json({ success: true, account: acc, role: "doctor", google: true });
+        });
       }
 
       // 3. 2FA OBLIGATOIRE dès la création : on n'ouvre PAS la session tout de

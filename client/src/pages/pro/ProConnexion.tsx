@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useProAccount } from "@/hooks/use-pro";
 import { proHomeOf, type ProProfile } from "@shared/proProfile";
 import { D, FONT_UI, FONT_HEAD, ensureDermFonts } from "@/components/derm/tokens";
+import { GoogleButton, OrDivider, googleErrorMessage } from "@/components/GoogleButton";
 
 // ════════════════════════════════════════════════════════════════════════
 // Connexion / création de compte GlowScan Derm (maquettes « Connectez-vous »
@@ -88,6 +89,18 @@ export default function ProConnexion({ initialMode = "signin" }: { initialMode?:
   const [backupCodes, setBackupCodes] = useState<string[]>([]);
   const [codesSaved, setCodesSaved] = useState(false);
   const signup = mode === "signup";
+  // Retour de « Continuer avec Google » sans espace Derm : inscription préremplie,
+  // email vérifié par Google, aucun mot de passe à créer.
+  const [google, setGoogle] = useState<{ email: string; firstName: string; lastName: string } | null>(null);
+  useEffect(() => {
+    const ge = googleErrorMessage();
+    if (ge) setError(ge);
+    if (new URLSearchParams(window.location.search).get("google") !== "1") return;
+    fetch("/api/auth/google/pending", { credentials: "include" }).then((r) => r.json()).then((p) => {
+      if (!p?.email) return;
+      setGoogle(p); setEmail(p.email); if (p.firstName) setFirst(p.firstName); if (p.lastName) setLast(p.lastName);
+    }).catch(() => {});
+  }, []);
 
   // Déjà connecté : on renvoie vers la page de son rôle.
   useEffect(() => {
@@ -115,7 +128,7 @@ export default function ProConnexion({ initialMode = "signin" }: { initialMode?:
     // Relais : inscription par téléphone sur /rejoindre (écran R1).
     if (signup && profile === "relay") { setLocation("/rejoindre"); return; }
     if (!email.includes("@") && (signup || email.replace(/\D/g, "").length < 9)) return setError(signup ? "Entrez un email valide." : "Entrez votre email ou, pour un relais, votre téléphone.");
-    if (pw.length < (signup ? 8 : 1)) return setError(signup ? "Mot de passe trop court : 8 caractères minimum." : "Entrez votre mot de passe.");
+    if (!(signup && google) && pw.length < (signup ? 8 : 1)) return setError(signup ? "Mot de passe trop court : 8 caractères minimum." : "Entrez votre mot de passe.");
     if (signup && (!first.trim() || !last.trim())) return setError("Entrez votre prénom et votre nom.");
     if (signup && !consent) return setError("Acceptez les conditions d'utilisation pour continuer.");
     setBusy(true); setError("");
@@ -123,7 +136,7 @@ export default function ProConnexion({ initialMode = "signin" }: { initialMode?:
       const data = signup
         ? await postJson("/api/pro/register", {
             fullName: `${first.trim()} ${last.trim()}`, cabinetName: cabinet.trim() || null,
-            email: email.trim().toLowerCase(), password: pw, profile, consent: true, consentVersion: DERM_TERMS_VERSION,
+            email: email.trim().toLowerCase(), password: google ? undefined : pw, profile, consent: true, consentVersion: DERM_TERMS_VERSION,
             ref: new URLSearchParams(window.location.search).get("ref") || undefined, // parrainage confrère
           })
         : await postJson("/api/pro/login", { email: email.trim(), password: pw });
@@ -163,6 +176,16 @@ export default function ProConnexion({ initialMode = "signin" }: { initialMode?:
                 <h1 style={{ margin: "10px 0 8px", font: `600 30px/1.15 ${FONT_UI}`, letterSpacing: -.6, color: D.textAlt }}>{signup ? "Rejoignez GlowScan" : "Connectez-vous"}</h1>
                 <p style={{ margin: 0, fontSize: 14, color: D.muted }}>{signup ? "Quelques informations pour préparer votre espace." : "Accédez à votre cabinet numérique GlowScan Derm."}</p>
               </div>
+              {google ? (
+                <div style={{ padding: "10px 12px", borderRadius: 8, background: "#eef6f1", fontSize: 14, color: D.textAlt }}>
+                  Compte Google vérifié : <b>{google.email}</b>. Complétez ces informations : aucun mot de passe à créer.
+                </div>
+              ) : (
+                <>
+                  <GoogleButton target="derm" label={signup ? "S'inscrire avec Google" : "Continuer avec Google"} />
+                  <OrDivider />
+                </>
+              )}
 
               {signup && (
                 <>
@@ -174,16 +197,17 @@ export default function ProConnexion({ initialMode = "signin" }: { initialMode?:
                 </>
               )}
               <label style={lbl}>{signup ? "Email professionnel" : "Email professionnel (ou téléphone pour les relais)"}
-                <input style={field} type={signup ? "email" : "text"} value={email} onChange={(e) => { setEmail(e.target.value); setError(""); }}
+                <input style={{ ...field, ...(google ? { background: "#f1f4f2", color: D.muted } : {}) }} type={signup ? "email" : "text"} value={email} readOnly={!!google}
+                  onChange={(e) => { setEmail(e.target.value); setError(""); }}
                   placeholder="docteur@cabinet.com" autoComplete={signup ? "email" : "username"} data-testid="input-email" />
               </label>
-              <label style={lbl}>Mot de passe
+              {!(signup && google) && <label style={lbl}>Mot de passe
                 <span className="relative">
                   <input style={{ ...field, paddingRight: 70 }} type={showPw ? "text" : "password"} value={pw} onChange={(e) => { setPw(e.target.value); setError(""); }}
                     placeholder={signup ? "8 caractères minimum" : ""} autoComplete={signup ? "new-password" : "current-password"} data-testid="input-password" />
                   <button type="button" onClick={() => setShowPw(!showPw)} style={{ ...linkBtn, position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)" }} data-testid="button-toggle-password">{showPw ? "Masquer" : "Afficher"}</button>
                 </span>
-              </label>
+              </label>}
               {!signup && <Link href="/derm/mot-de-passe-oublie" style={{ ...linkBtn, alignSelf: "flex-end", marginTop: -6, textDecoration: "none" }} data-testid="link-forgot-password">Mot de passe oublié ?</Link>}
 
               {signup && (
