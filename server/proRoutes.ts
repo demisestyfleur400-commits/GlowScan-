@@ -371,6 +371,38 @@ Règles STRICTES :
 Réponds en texte simple (pas de JSON, pas de Markdown lourd).`;
 
 const OWNER_WHATSAPP = "237674377959";
+// ── « Se souvenir de cet ordinateur » (connexion Derm) ─────────────────────
+// Après un code valide, le médecin peut demander que CET ordinateur soit reconnu
+// 30 jours : cookie httpOnly signé (HMAC), propre au compte, lié à son mot de passe
+// (un changement de mot de passe l'annule). Le mot de passe reste toujours demandé.
+const TRUST_DAYS = 30;
+const trustCookieName = (userId: string) => `gs_td_${crypto.createHash("sha256").update(String(userId)).digest("hex").slice(0, 12)}`;
+function trustSig(user: { id: string; passwordHash?: string | null }, exp: number) {
+  const secret = process.env.SESSION_SECRET || "";
+  return crypto.createHmac("sha256", secret).update(`${user.id}.${exp}.${String(user.passwordHash || "").slice(-24)}`).digest("hex");
+}
+function readCookie(req: any, name: string): string | null {
+  const raw = String(req.headers?.cookie || "");
+  for (const part of raw.split(";")) {
+    const i = part.indexOf("=");
+    if (i > 0 && part.slice(0, i).trim() === name) return decodeURIComponent(part.slice(i + 1).trim());
+  }
+  return null;
+}
+export function isTrustedDevice(req: any, user: { id: string; passwordHash?: string | null }): boolean {
+  if (!process.env.SESSION_SECRET) return false;
+  const v = readCookie(req, trustCookieName(user.id));
+  const m = v ? /^(\d{10,13})\.([0-9a-f]{64})$/.exec(v) : null;
+  if (!m || Number(m[1]) < Date.now()) return false;
+  const expected = trustSig(user, Number(m[1]));
+  try { return crypto.timingSafeEqual(Buffer.from(m[2], "hex"), Buffer.from(expected, "hex")); } catch { return false; }
+}
+export function rememberDevice(res: any, user: { id: string; passwordHash?: string | null }) {
+  if (!process.env.SESSION_SECRET) return;
+  const exp = Date.now() + TRUST_DAYS * 864e5;
+  res.cookie(trustCookieName(user.id), `${exp}.${trustSig(user, exp)}`, { httpOnly: true, secure: true, sameSite: "lax", maxAge: TRUST_DAYS * 864e5, path: "/" });
+}
+
 // Email du propriétaire de la plateforme (notifications d'activité). Surchargeable.
 const OWNER_EMAIL = process.env.OWNER_EMAIL || "demiseessawe12@gmail.com";
 export async function notifyOwner(subject: string, html: string, text: string) {
@@ -739,7 +771,9 @@ export function registerProRoutes(app: Express) {
         return res.status(403).json({ message: "Aucun compte GlowScan Derm lié à cet email. Créez d'abord votre compte." });
       }
       const force2fa = user.role === "doctor" && !!accEarly;
-      if (force2fa || await is2faEmailEnabled(user.id)) {
+      // Ordinateur reconnu (« Se souvenir de cet ordinateur », 30 jours) : pas de code.
+      const trusted = isTrustedDevice(req, user);
+      if (!trusted && (force2fa || await is2faEmailEnabled(user.id))) {
         if (force2fa) await db.execute(sql`UPDATE "users" SET "twofa_email_enabled" = TRUE WHERE "id" = ${user.id}`).catch(() => {});
         (req.session as any).pending2faUserId = user.id;
         const otp = await issueEmailOtp(user.id, user.email, (user as any).firstName);
@@ -814,6 +848,7 @@ export function registerProRoutes(app: Express) {
       delete (req.session as any).pending2faUserId;
       req.session.userId = user.id; touchLastLogin(user.id);
       const acc = await getProAccountForUser(user.id);
+      if (req.body?.remember === true) rememberDevice(res, user);
       req.session.save((err: any) => {
         if (err) return res.status(500).json({ message: "Erreur session" });
         if (!acc) return res.json({ success: true, role: user.role === "secretary" ? "secretary" : "doctor" });

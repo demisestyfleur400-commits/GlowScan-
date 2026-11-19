@@ -81,6 +81,8 @@ export default function ProConnexion({ initialMode = "signin" }: { initialMode?:
   const [busy, setBusy] = useState(false);
   const [magicSent, setMagicSent] = useState(false);
   const [code, setCode] = useState("");
+  // « Se souvenir de cet ordinateur » : plus de code pendant 30 jours sur ce poste.
+  const [remember, setRemember] = useState(false);
   const [emailHint, setEmailHint] = useState("");
   const [resent, setResent] = useState(false);
   const [backupCodes, setBackupCodes] = useState<string[]>([]);
@@ -131,7 +133,7 @@ export default function ProConnexion({ initialMode = "signin" }: { initialMode?:
   };
   const verify = async (e: React.FormEvent) => {
     e.preventDefault(); setBusy(true); setError("");
-    try { await goHome(await postJson("/api/pro/login/2fa", { code })); }
+    try { await goHome(await postJson("/api/pro/login/2fa", { code, remember })); }
     catch (err: any) { setError(err.message); }
     finally { setBusy(false); }
   };
@@ -243,6 +245,10 @@ export default function ProConnexion({ initialMode = "signin" }: { initialMode?:
                 onChange={(e) => { setCode(e.target.value.replace(/[^0-9a-zA-Z-]/g, "").toUpperCase().slice(0, 9)); setError(""); }}
                 inputMode="numeric" autoComplete="one-time-code" placeholder="Code" aria-label="Code de vérification" data-testid="input-2fa-code" />
               <span className="text-center" style={{ fontSize: 13.5, color: D.muted }}>Pas accès à votre email ? Entrez un de vos codes de secours.</span>
+              <label className="flex cursor-pointer items-start" style={{ gap: 9, padding: "11px 12px", borderRadius: 10, background: "#f3f6f3", fontSize: 14 }}>
+                <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} data-testid="checkbox-remember-device" style={{ marginTop: 3 }} />
+                <span><b>Se souvenir de cet ordinateur</b><br /><span style={{ fontSize: 13, color: D.muted }}>Plus de code pendant 30 jours sur ce poste. À ne pas cocher sur un ordinateur partagé.</span></span>
+              </label>
               {err}
               <button type="submit" disabled={verifyOff} style={{ ...cta, opacity: verifyOff ? .5 : 1, cursor: verifyOff ? "default" : "pointer" }} data-testid="button-verify-2fa">{busy ? "Vérification…" : "Vérifier"}</button>
               <div className="flex justify-between">
