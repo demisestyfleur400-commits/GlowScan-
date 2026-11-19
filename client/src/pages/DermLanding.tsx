@@ -52,7 +52,7 @@ function LightShot({ src, label, alt }: { src: string; label: string; alt: strin
 export default function DermLanding() {
   useSEO({
     title: "GlowScan Derm · Le logiciel du cabinet dermatologique",
-    description: "Agenda, dossiers, suivis et consultations : GlowScan Derm réunit le quotidien du cabinet dermatologique pour garder le fil de chaque patient. 14 jours gratuits.",
+    description: "Agenda, dossiers, suivis et consultations préparées par l'IA : vous validez, l'ordonnance est générée en quelques secondes. Le logiciel du cabinet dermatologique. 14 jours gratuits.",
     canonical: "https://glow-scan.com/derm",
   });
   // Déjà connecté : on va directement à la page de son rôle.
