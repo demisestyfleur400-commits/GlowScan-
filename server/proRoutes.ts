@@ -1543,6 +1543,23 @@ export function registerProRoutes(app: Express) {
   // ───────────────────────────────────────────
   // DELETE /api/pro/patients/:id
   // ───────────────────────────────────────────
+  // Avant de supprimer un dossier : ce qui sera effacé, pour une confirmation éclairée.
+  app.get("/api/pro/patients/:id/delete-preview", requireActivePro, async (req: any, res) => {
+    const id = parseInt(req.params.id);
+    const [existing] = await db.select().from(patients)
+      .where(and(eq(patients.id, id), eq(patients.dermatologistId, req.proAccount.id)));
+    if (!existing) return res.status(404).json({ message: "Patient introuvable" });
+    const n = async (q: any) => { try { return Number((Rows(await db.execute(q))[0] as any)?.n) || 0; } catch { return 0; } };
+    res.json({
+      analyses: await n(sql`SELECT COUNT(*) AS n FROM scans WHERE patient_id = ${id}`),
+      reports: await n(sql`SELECT COUNT(*) AS n FROM consult_reports WHERE patient_id = ${id}`),
+      signedReports: await n(sql`SELECT COUNT(*) AS n FROM consult_reports WHERE patient_id = ${id} AND signed_at IS NOT NULL`),
+      documents: await n(sql`SELECT COUNT(*) AS n FROM patient_documents WHERE patient_id = ${id}`),
+      notes: await n(sql`SELECT COUNT(*) AS n FROM patient_record_notes WHERE patient_id = ${id}`),
+      appointments: await n(sql`SELECT COUNT(*) AS n FROM appointments WHERE patient_record_id = ${id}`),
+    });
+  });
+
   app.delete("/api/pro/patients/:id", requireActivePro, async (req: any, res) => {
     const id = parseInt(req.params.id);
     const [existing] = await db.select().from(patients)

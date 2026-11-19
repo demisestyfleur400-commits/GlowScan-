@@ -67,6 +67,26 @@ export default function DermPatientFiche() {
     } catch (e: any) { setMsg({ t: e.message, tone: "err" }); return false; }
     finally { setBusy(false); }
   };
+  // Suppression du dossier : aperçu de ce qui part, puis confirmation par l'identifiant.
+  type DelPreview = { analyses: number; reports: number; signedReports: number; documents: number; notes: number; appointments: number };
+  const [del, setDel] = useState<DelPreview | "loading" | null>(null);
+  const [delConfirm, setDelConfirm] = useState("");
+  const [delBusy, setDelBusy] = useState(false);
+  const openDelete = async () => {
+    setDelConfirm(""); setDel("loading");
+    try { setDel(await api<DelPreview>(`/api/pro/patients/${id}/delete-preview`, "GET")); }
+    catch (e: any) { setDel(null); setMsg({ t: e.message || "Impossible de préparer la suppression.", tone: "err" }); }
+  };
+  const doDelete = async () => {
+    setDelBusy(true);
+    try {
+      await api(`/api/pro/patients/${id}`, "DELETE");
+      qc.invalidateQueries({ queryKey: ["/api/derm/patients"] });
+      qc.invalidateQueries({ queryKey: ["/api/pro/patients"] });
+      go("/derm/patients?supprime=1");
+    } catch (e: any) { setMsg({ t: e.message || "Suppression impossible.", tone: "err" }); setDel(null); }
+    finally { setDelBusy(false); }
+  };
   const saveFiche = async () => { if (await save(f, "Fiche enregistrée.")) { setEdit(false); setF({}); } };
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement>) => setF((cur) => ({ ...cur, [k]: e.target.value }));
 
@@ -187,6 +207,49 @@ export default function DermPatientFiche() {
             )}
           </div>
         </section>
+
+        {/* Suppression manuelle : doublon, dossier de test ou à recommencer (médecin uniquement). */}
+        {isDoctor && (
+          <Card style={{ marginTop: 16, border: "1px solid #f0c9bf", background: "#fffaf8" }}>
+            <div className="flex flex-wrap items-center justify-between" style={{ gap: 12 }}>
+              <div>
+                <b style={{ fontSize: 14, fontWeight: 600 }}>Supprimer ce dossier</b>
+                <div style={{ fontSize: 11.5, color: D.muted, marginTop: 3 }}>Pour un doublon, un dossier de test ou un dossier à recommencer. Pour simplement le ranger, préférez « Archiver la fiche ».</div>
+              </div>
+              <Btn kind="secondary" onClick={openDelete} data-testid="fiche-delete" style={{ color: "#9b3a28", borderColor: "#e5b3a6" }}>Supprimer le dossier…</Btn>
+            </div>
+          </Card>
+        )}
+
+        {del && (
+          <div className="fixed inset-0 z-[60] grid place-items-center p-4" style={{ background: "rgba(13,41,41,.45)" }} onClick={() => !delBusy && setDel(null)}>
+            <div role="dialog" aria-modal="true" aria-labelledby="del-title" onClick={(e) => e.stopPropagation()}
+              style={{ width: "100%", maxWidth: 460, background: "#fff", borderRadius: 16, padding: 22, color: D.text }}>
+              <b id="del-title" style={{ fontSize: 16 }}>Supprimer le dossier {code} ?</b>
+              <p style={{ fontSize: 13, lineHeight: 1.55, color: "#4a5d57", margin: "10px 0 12px" }}>
+                {`${p.firstName} ${p.lastName}`.trim().replace(/\.?$/, ".")} Cette suppression est <b>définitive</b>.
+              </p>
+              {del === "loading" ? <span style={{ fontSize: 12.5, color: D.muted }}>Vérification du contenu du dossier…</span> : (
+                <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, lineHeight: 1.7, listStyle: "disc" }}>
+                  <li>Fiche, notes ({del.notes}) et documents ({del.documents}) : <b>supprimés</b>.</li>
+                  <li>Comptes rendus ({del.reports}{del.signedReports ? `, dont ${del.signedReports} signé${del.signedReports > 1 ? "s" : ""}` : ""}) : <b>supprimés</b>.</li>
+                  <li>Analyses ({del.analyses}) : conservées, mais détachées du patient.</li>
+                  <li>Rendez-vous ({del.appointments}) : conservés dans l'agenda, sans lien vers ce dossier.</li>
+                </ul>
+              )}
+              {del !== "loading" && del.signedReports > 0 && (
+                <Notice tone="warn">Ce dossier contient un compte rendu signé. Assurez-vous de ne pas avoir à le conserver avant de supprimer.</Notice>
+              )}
+              <label style={{ display: "block", fontSize: 12.5, fontWeight: 600, margin: "14px 0 6px" }}>Pour confirmer, tapez l'identifiant <b>{code}</b></label>
+              <Input value={delConfirm} onChange={(e) => setDelConfirm(e.target.value)} placeholder={code} data-testid="fiche-delete-confirm" />
+              <div className="flex justify-end" style={{ gap: 8, marginTop: 16 }}>
+                <Btn kind="secondary" onClick={() => setDel(null)} disabled={delBusy}>Annuler</Btn>
+                <Btn kind="primary" onClick={doDelete} disabled={delBusy || del === "loading" || delConfirm.trim().toUpperCase() !== code.toUpperCase()}
+                  data-testid="fiche-delete-go" style={{ background: "#9b3a28" }}>{delBusy ? "Suppression…" : "Supprimer définitivement"}</Btn>
+              </div>
+            </div>
+          </div>
+        )}
       </Page>
     </DermShell>
   );

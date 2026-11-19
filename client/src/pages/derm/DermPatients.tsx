@@ -75,7 +75,9 @@ export default function DermPatients() {
   const [more, setMore] = useState(false);
   const [sort, setSort] = useState<"last" | "code">("last");
   const [imp, setImp] = useState<{ file: string; rows: ImportRow[] } | null>(null);
-  const [msg, setMsg] = useState<{ t: string; tone: "ok" | "warn" | "err" } | null>(null);
+  const [msg, setMsg] = useState<{ t: string; tone: "ok" | "warn" | "err" } | null>(() => {
+    try { return new URLSearchParams(window.location.search).get("supprime") === "1" ? { t: "Dossier supprimé.", tone: "ok" } : null; } catch { return null; }
+  });
   const [creating, setCreating] = useState(false);
   const [nf, setNf] = useState({ lastName: "", firstName: "", age: "", sex: "", phone: "" });
   const [busy, setBusy] = useState(false);
