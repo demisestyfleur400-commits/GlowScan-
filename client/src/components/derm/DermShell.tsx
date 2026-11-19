@@ -2,9 +2,10 @@ import { ReactNode, useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
 import {
   LayoutGrid, Calendar, User, Folder, Activity, BarChart3, Check, MessageSquare, Settings,
-  LogOut, Search, Plus, Menu, X, Globe, Coins, Wallet, ScanLine,
+  LogOut, Search, Plus, Menu, X, Globe, Coins, Wallet, ScanLine, Monitor,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { useDermInstall } from "@/hooks/use-derm-install";
 import { useProAccount } from "@/hooks/use-pro";
 import { D, FONT_UI, ensureDermFonts, patientCode } from "./tokens";
 import { prefetchDermScreens } from "@/lib/dermPrefetch";
@@ -138,6 +139,9 @@ export function DermShell({ active, children, showBack, onBack, allowExpired }: 
   const isSecretary = accData?.user?.role === "secretary";
   const [drawer, setDrawer] = useState(false);
   const [menu, setMenu] = useState(false);
+  const { state: installState, install } = useDermInstall();
+  const [installHelp, setInstallHelp] = useState(false);
+  const onInstall = async () => { if (installState === "ready" && (await install())) return; setInstallHelp(true); };
   useEffect(() => { ensureDermFonts(); }, []);
   useEffect(() => { if (acc) prefetchDermScreens(); }, [acc]);
 
@@ -169,6 +173,19 @@ export function DermShell({ active, children, showBack, onBack, allowExpired }: 
         })}
       </nav>
       <div style={{ marginTop: "auto" }} />
+      {/* Logiciel sur l'ordinateur du cabinet : bouton toujours au même endroit, tant que
+          GlowScan Derm n'est pas installé sur ce poste. */}
+      {(installState === "ready" || installState === "manual") && (
+        <button type="button" onClick={onInstall} data-testid="derm-install"
+          className="flex cursor-pointer items-center text-left hover:!bg-white/10"
+          style={{ gap: 10, margin: "0 0 12px", padding: "11px 12px", borderRadius: 10, border: "1px solid rgba(46,209,196,.35)", background: "rgba(22,194,181,.08)", color: "#fff", fontFamily: FONT_UI }}>
+          <Monitor size={17} strokeWidth={1.8} className="flex-none" style={{ color: D.teal4 }} />
+          <span className="flex flex-col">
+            <b style={{ fontSize: 11 }}>Installer sur cet ordinateur</b>
+            <span style={{ fontSize: 8.5, color: D.sideMuted, marginTop: 1 }}>Une icône GlowScan Derm sur le bureau</span>
+          </span>
+        </button>
+      )}
       <div className="relative">
         {menu && (
           <div className="absolute left-0 right-0 z-10 flex flex-col overflow-hidden" style={{ bottom: 58, background: "#123433", border: "1px solid rgba(255,255,255,.08)", borderRadius: 10, padding: 6 }} data-testid="derm-me-menu">
@@ -233,6 +250,27 @@ export function DermShell({ active, children, showBack, onBack, allowExpired }: 
         </div>
         {accData && (accData as any).active === false && !allowExpired ? <SubscriptionGate isSecretary={isSecretary} /> : children}
       </main>
+      {installHelp && (
+        <div className="fixed inset-0 z-[60] grid place-items-center p-4" style={{ background: "rgba(13,41,41,.45)" }} onClick={() => setInstallHelp(false)}>
+          <div role="dialog" aria-modal="true" aria-labelledby="derm-install-title" onClick={(e) => e.stopPropagation()}
+            style={{ width: "100%", maxWidth: 440, background: "#fff", borderRadius: 16, padding: 22, fontFamily: FONT_UI, color: D.text }}>
+            <div className="flex items-start justify-between" style={{ gap: 12 }}>
+              <b id="derm-install-title" style={{ fontSize: 16 }}>Installer GlowScan Derm sur cet ordinateur</b>
+              <button type="button" aria-label="Fermer" onClick={() => setInstallHelp(false)} className="cursor-pointer" style={{ border: 0, background: "none", color: D.text, padding: 2 }}><X size={18} /></button>
+            </div>
+            <p style={{ fontSize: 13, lineHeight: 1.55, color: "#4a5d57", margin: "10px 0 14px" }}>
+              Le logiciel s'ouvre ensuite dans sa propre fenêtre, depuis une icône sur le bureau. Vos données restent les mêmes.
+            </p>
+            <ol style={{ margin: 0, paddingLeft: 20, fontSize: 13, lineHeight: 1.7, listStyle: "decimal" }}>
+              <li>Ouvrez GlowScan Derm dans <b>Google Chrome</b> ou <b>Microsoft Edge</b>.</li>
+              <li>Cliquez sur l'icône d'installation à droite de la barre d'adresse, ou ouvrez le menu <b>⋮</b> puis <b>« Installer GlowScan Derm »</b>.</li>
+              <li>Confirmez avec <b>« Installer »</b>. L'icône apparaît sur le bureau et dans le menu Démarrer.</li>
+            </ol>
+            <p style={{ fontSize: 12, color: "#6b7d77", margin: "14px 0 0" }}>Besoin d'aide ? L'équipe GlowScan peut l'installer pour vous, sur place ou à distance.</p>
+            <button type="button" onClick={() => setInstallHelp(false)} className="cursor-pointer" style={{ marginTop: 16, width: "100%", height: 42, border: 0, borderRadius: 10, background: D.cta, color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: FONT_UI }}>Compris</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

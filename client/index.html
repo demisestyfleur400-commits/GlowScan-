@@ -6,6 +6,19 @@
     <link rel="icon" type="image/jpeg" href="/logo-glowscan-square.jpeg" />
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#f8f8f6" />
+    <script>
+      // Espace médical : c'est le logiciel « GlowScan Derm » qui s'installe (icône,
+      // nom, page d'accueil propres), pas l'appli patient. On garde aussi l'invitation
+      // d'installation du navigateur pour le bouton « Installer sur cet ordinateur ».
+      (function () {
+        if (location.pathname.indexOf("/derm") !== 0) return;
+        var m = document.querySelector('link[rel="manifest"]'); if (m) m.setAttribute("href", "/manifest-derm.json");
+        var i = document.querySelector('link[rel="icon"]'); if (i) { i.setAttribute("type", "image/png"); i.setAttribute("href", "/icon-derm-192.png"); }
+        window.addEventListener("beforeinstallprompt", function (e) {
+          e.preventDefault(); window.__gsDermInstall = e; window.dispatchEvent(new Event("gs:derm-installable"));
+        });
+      })();
+    </script>
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />

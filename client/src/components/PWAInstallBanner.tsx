@@ -1,3 +1,4 @@
+import { useLocation } from "wouter";
 import { usePWAInstall } from "@/hooks/use-pwa-install";
 
 // ── Icônes inline SVG (0 dépendance, 0 layout shift) ─────────────────
@@ -150,6 +151,9 @@ function IOSModal({ onClose }: { onClose: () => void }) {
 // ─────────────────────────────────────────────────────────────────────
 export default function PWAInstallBanner() {
   const { showBanner, showIOSModal, install, dismiss, closeIOSModal } = usePWAInstall();
+  // Espace médical : le logiciel GlowScan Derm a son propre bouton d'installation.
+  const [loc] = useLocation();
+  if (loc.startsWith("/derm")) return null;
 
   return (
     <>
