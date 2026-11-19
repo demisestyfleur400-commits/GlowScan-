@@ -143,6 +143,8 @@ export function DermShell({ active, children, showBack, onBack, allowExpired }: 
   const [installHelp, setInstallHelp] = useState(false);
   const onInstall = async () => { if (installState === "ready" && (await install())) return; setInstallHelp(true); };
   useEffect(() => { ensureDermFonts(); }, []);
+  // Le logiciel s'appelle « GlowScan Derm » dans la fenêtre et la barre des tâches.
+  useEffect(() => { document.title = "GlowScan Derm"; }, [active]);
   useEffect(() => { if (acc) prefetchDermScreens(); }, [acc]);
 
   const items = isSecretary ? NAV.filter((n) => SECRETARY_KEYS.includes(n.key)) : NAV;
