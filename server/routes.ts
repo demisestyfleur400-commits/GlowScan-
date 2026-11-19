@@ -1973,6 +1973,13 @@ export async function registerRoutes(
       const objectPath = `/objects/scans/${req.params.filename}`;
       const userScans = await storage.getScansByUser(userId);
       let owns = userScans.some((s) => s.imageUrl === objectPath);
+      // Photos au dermatoscope des scans du médecin lui-même (colonne SQL dermo_images).
+      if (!owns) {
+        try {
+          owns = Rows(await db.execute(sql`SELECT 1 FROM scans WHERE user_id = ${userId}
+            AND dermo_images IS NOT NULL AND dermo_images @> ${JSON.stringify([objectPath])}::jsonb LIMIT 1`)).length > 0;
+        } catch {}
+      }
       // Autorise aussi le DERMATOLOGUE à voir les photos (principale + angles
       // supplémentaires) des scans rattachés à SES consultations en ligne.
       if (!owns) {
@@ -2784,6 +2791,16 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
           });
           dermScanId = savedScan.id;
           console.log(`[analyze][derm] ✅ Scan #${dermScanId} sauvegardé (mode DERM)`);
+          // Photos au dermatoscope (migration 0040) : rangées à part, JAMAIS envoyées à
+          // l'IA photo. Le médecin les retrouve au dossier, au suivi et en télé-expertise.
+          try {
+            const dermoRaw = Array.isArray((req.body as any)?.dermoImages) ? ((req.body as any).dermoImages as unknown[]) : [];
+            const dermoList = dermoRaw.filter((x): x is string => typeof x === "string" && x.startsWith("data:image/")).slice(0, 2);
+            if (dermoList.length) {
+              const paths = ((await Promise.all(dermoList.map((im) => uploadScanImageToStorage(im).catch(() => null)))).filter(Boolean)) as string[];
+              if (paths.length) await db.execute(sql`UPDATE scans SET dermo_images = ${JSON.stringify(paths)}::jsonb WHERE id = ${dermScanId}`);
+            }
+          } catch (e) { console.warn("[analyze][derm] photos dermatoscope non enregistrées :", (e as any)?.message); }
           // Accueil secrétaire : le scan est rattaché au dossier, avec les 3 photos et
           // le motif ; le patient reste « en attente » (salle d'attente) jusqu'à ce que
           // le médecin valide ou corrige le diagnostic.

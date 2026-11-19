@@ -303,6 +303,7 @@ function DermatologistSection({
 
 import React, { useState } from "react";
 import { motion } from "framer-motion";
+import { dermoscopyText } from "@/components/pro/ExamenPhysiqueForm";
 import {
   Sparkles, MessageCircle, AlertTriangle, Eye, Droplets, ShieldAlert,
   Scan as ScanIcon, Truck, Camera,
@@ -1582,7 +1583,7 @@ export function ResultCard({ result, scanId, savedScanId, area, imageUrl, userFi
         nombre: ex.lesionNombre, morphologie: ex.lesionMorphologie, distribution: ex.lesionDistribution,
         examPeau: ex.examPeau, examPhaneres: ex.examPhaneres, examMuqueuses: ex.examMuqueuses,
         examGanglions: ex.examGanglions, autresSignes: ex.autresSignes,
-        dermoscopie: joinNZ(...(ex.dermoStructures || []), ex.dermoDescription),
+        dermoscopie: dermoscopyText(ex) || undefined,
         keloidRisk: ex.keloidRisk,
         keloidDetails: joinNZ(ex.keloidAntecedents, ex.keloidLocalisation, ex.keloidAnciennete, ex.keloidSymptomes),
         // 9 · Résumé syndromique

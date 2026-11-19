@@ -27,17 +27,61 @@ export interface ExamenData {
   keloidLocalisation: string;
   keloidAnciennete: string;
   keloidSymptomes: string;
-  // Dermoscopie (demande des dermatologues) : structures observées + description.
-  // Optionnels : les examens enregistrés avant cet ajout n'ont pas ces champs.
+  // Dermoscopie : bloc dédié (DermoscopyForm), rempli AVANT l'analyse IA.
+  dermo?: DermoData;
+  // Ancien format (quelques jours seulement) : encore lu pour les examens enregistrés.
   dermoStructures?: string[];
   dermoDescription?: string;
 }
 
+/** Dermoscopie structurée (bloc à part de l'examen physique). */
+export interface DermoData {
+  done: "" | "oui" | "non";
+  zone: string;           // 1 · lésion / zone examinée
+  mode: string[];         // 2 · mode d'examen
+  couleurs: string[];     // 3 · couleurs observées
+  motif: string;          // 4 · motif global
+  pigmentaires: string[]; // 5a · structures pigmentaires
+  folliculaires: string[];// 5b · structures folliculaires et de surface
+  vaisseaux: string[];    // 5c · vaisseaux
+  conclusion: string;     // 6 · conclusion dermoscopique
+  hypothese: string;      // 6 · hypothèse dermoscopique
+  description: string;    // 7 · description libre
+}
+export const EMPTY_DERMO: DermoData = { done: "", zone: "", mode: [], couleurs: [], motif: "", pigmentaires: [], folliculaires: [], vaisseaux: [], conclusion: "", hypothese: "", description: "" };
+
+export const DERMO_CHOICES = {
+  mode: ["Lumière polarisée", "Lumière non polarisée (contact)"],
+  couleurs: ["Brun clair", "Brun foncé", "Noir", "Bleu-gris", "Rouge / rose", "Blanc", "Jaune"],
+  motif: ["Réticulé", "Globulaire", "Homogène", "En étoile (starburst)", "Multicomposant", "Non spécifique"],
+  pigmentaires: ["Réseau pigmentaire régulier", "Réseau pigmentaire atypique", "Pseudo-réseau", "Globules", "Points", "Stries / pseudopodes", "Voile bleu-blanc", "Structures de régression"],
+  folliculaires: ["Épargne des orifices folliculaires", "Pigmentation périfolliculaire", "Structures arciformes brun-gris", "Bouchons cornés", "Kystes miliaires", "Squames"],
+  vaisseaux: ["Punctiformes", "En virgule", "Arborescents", "Glomérulaires", "Linéaires irréguliers"],
+  conclusion: ["En faveur d'une lésion bénigne", "Suspecte : avis ou exérèse à discuter", "Non concluante"],
+};
+
 /** Texte de la dermoscopie (vide si non réalisée) — partagé par l'IA, Glow, le dossier et les PDF. */
 export function dermoscopyText(e: Partial<ExamenData> | null | undefined): string {
+  const d = e?.dermo;
+  if (d && d.done === "oui") {
+    const j = (a: string[]) => a.filter(Boolean).join(", ");
+    return [
+      d.zone && `Zone examinée : ${d.zone}`,
+      d.mode.length && `Mode : ${j(d.mode)}`,
+      d.couleurs.length && `Couleurs : ${j(d.couleurs)}`,
+      d.motif && `Motif global : ${d.motif}`,
+      d.pigmentaires.length && `Structures pigmentaires : ${j(d.pigmentaires)}`,
+      d.folliculaires.length && `Structures folliculaires et de surface : ${j(d.folliculaires)}`,
+      d.vaisseaux.length && `Vaisseaux : ${j(d.vaisseaux)}`,
+      d.conclusion && `Conclusion dermoscopique : ${d.conclusion}`,
+      d.hypothese && `Hypothèse dermoscopique : ${d.hypothese}`,
+      d.description && `Description : ${d.description}`,
+    ].filter(Boolean).join(" · ");
+  }
+  // Ancien format
   const s = (e?.dermoStructures || []).filter(Boolean);
-  const d = String(e?.dermoDescription || "").trim();
-  return [s.length ? s.join(", ") : "", d].filter(Boolean).join(". ");
+  const desc = String(e?.dermoDescription || "").trim();
+  return [s.length ? s.join(", ") : "", desc].filter(Boolean).join(". ");
 }
 
 export const EMPTY_EXAMEN: ExamenData = {
@@ -45,17 +89,8 @@ export const EMPTY_EXAMEN: ExamenData = {
   lesionDistribution: "", examPeau: "", examPhaneres: "", examMuqueuses: "",
   examGanglions: "", autresSignes: "", pihRisk: "", keloidRisk: "",
   keloidAntecedents: "", keloidLocalisation: "", keloidAnciennete: "", keloidSymptomes: "",
-  dermoStructures: [], dermoDescription: "",
+  dermo: EMPTY_DERMO,
 };
-
-// Structures dermoscopiques courantes (pigmentaires, vasculaires, folliculaires).
-// Le médecin coche ce qu'il voit ; la description libre reste la référence.
-const DERMO_OPTS = [
-  "Réseau pigmentaire régulier", "Réseau pigmentaire atypique", "Pseudo-réseau", "Globules", "Points",
-  "Stries / pseudopodes", "Voile bleu-blanc", "Structures de régression", "Épargne des orifices folliculaires",
-  "Pigmentation périfolliculaire", "Structures arciformes brun-gris", "Vaisseaux punctiformes", "Vaisseaux arborescents",
-  "Vaisseaux glomérulaires", "Squames", "Bouchons cornés", "Kystes miliaires",
-];
 
 const PHOTOTYPES = [
   { id: "IV", label: "IV", bg: "#c8956c", title: "Phototype IV — brun clair / métissée" },
@@ -184,29 +219,6 @@ export function ExamenPhysiqueForm({ value, onChange }: { value: ExamenData; onC
           <TextField value={value} set={set} k="examMuqueuses" label="Muqueuses" />
           <TextField value={value} set={set} k="examGanglions" label="Aires ganglionnaires" />
           <TextField value={value} set={set} k="autresSignes" label="Autres signes cliniques pertinents" ml />
-
-          {/* Dermoscopie (facultative) — prise en compte par l'IA et par Glow */}
-          <div style={{ borderRadius: 12, padding: 12, background: "rgba(42,107,79,0.05)", border: "1px solid rgba(42,107,79,0.18)", display: "flex", flexDirection: "column", gap: 10 }}>
-            <div>
-              <p style={{ fontSize: 11, fontWeight: 800, color: INK, margin: 0 }}>Dermoscopie</p>
-              <p style={{ fontSize: 10.5, color: MUTED, margin: "2px 0 0" }}>Facultatif. Vos constatations sont prises en compte par l'analyse IA et par Glow.</p>
-            </div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-              {DERMO_OPTS.map((o) => {
-                const cur = value.dermoStructures || [];
-                const on = cur.includes(o);
-                return (
-                  <button key={o} type="button" onClick={() => set({ dermoStructures: toggle(cur, o) })}
-                    style={{ padding: "5px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700, cursor: "pointer",
-                      background: on ? "rgba(42,107,79,0.14)" : "var(--color-bg)", color: on ? "var(--color-accent)" : "var(--color-neutral-700)",
-                      border: on ? "1px solid #2a6b4f" : "1px solid #E2E8F0" }}>
-                    {o}
-                  </button>
-                );
-              })}
-            </div>
-            <TextField value={value} set={set} k="dermoDescription" label="Description dermoscopique" ml ph="couleurs, structures, répartition, aspect des orifices folliculaires…" />
-          </div>
 
           {/* Risques */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>

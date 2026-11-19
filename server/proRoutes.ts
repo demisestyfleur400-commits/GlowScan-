@@ -1320,10 +1320,11 @@ export function registerProRoutes(app: Express) {
     try {
       const ids = patientScans.map((s) => s.id);
       if (ids.length) {
-        const r: any = await db.execute(sql`SELECT "id", "follow_up_photos" FROM "scans" WHERE "patient_id" = ${id}`);
+        const r: any = await db.execute(sql`SELECT "id", "follow_up_photos", "dermo_images" FROM "scans" WHERE "patient_id" = ${id}`);
         const rows = (r?.rows ?? r ?? []) as any[];
         const map = new Map<number, any>(rows.map((row) => [Number(row.id), row.follow_up_photos ?? []]));
-        scansWithFollowUp = patientScans.map((s) => ({ ...s, followUpPhotos: map.get(s.id) ?? [] }));
+        const dermo = new Map<number, string[]>(rows.map((row) => [Number(row.id), Array.isArray(row.dermo_images) ? row.dermo_images : []]));
+        scansWithFollowUp = patientScans.map((s) => ({ ...s, followUpPhotos: map.get(s.id) ?? [], dermoImages: dermo.get(s.id) ?? [] }));
       }
     } catch { /* colonne pas encore migrée → followUpPhotos absent, non bloquant */ }
     // « ARRÊT SUIVI » : note en lecture seule pour le médecin (il ne peut pas réactiver).

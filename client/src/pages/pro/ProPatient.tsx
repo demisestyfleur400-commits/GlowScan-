@@ -552,6 +552,18 @@ export default function ProPatient() {
                         <strong style={{ color: DS.body }}>Note :</strong> {s.dermatoNote}
                       </p>
                     )}
+                    {Array.isArray((s as any).dermoImages) && (s as any).dermoImages.length > 0 && (
+                      <div className="mt-2 pt-2" style={{ borderTop: `1px solid ${DS.border}` }}>
+                        <p className="text-[10px] font-extrabold uppercase tracking-wider mb-1.5" style={{ color: DS.muted }}>Photos au dermatoscope</p>
+                        <div className="flex gap-2">
+                          {((s as any).dermoImages as string[]).map((src, i) => (
+                            <a key={src} href={src} target="_blank" rel="noopener noreferrer">
+                              <img src={src} alt={`Photo au dermatoscope ${i + 1}`} className="h-20 w-20 rounded-lg object-cover" style={{ border: `1px solid ${DS.border}` }} />
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })()}

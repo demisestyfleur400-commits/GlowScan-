@@ -13,6 +13,8 @@ export interface AnalyzeRequest {
   // sont typés (patientId: number, examen: objet structuré, grossesseAllaitement…).
   intake?: Record<string, any>;
   images?: string[];
+  /** Photos au dermatoscope (max 2) : stockées à part, jamais envoyées à l'IA photo. */
+  dermoImages?: string[];
 }
 
 /**

@@ -45,6 +45,7 @@ import type { AnalysisResult, Patient } from "@shared/schema";
 import { ProLayout, ProCard, ProInput } from "@/components/ProLayout";
 import { ClinicalDossierForm, type ClinicalRecord } from "@/components/pro/ClinicalDossierForm";
 import { ExamenPhysiqueForm, EMPTY_EXAMEN, dermoscopyText, type ExamenData } from "@/components/pro/ExamenPhysiqueForm";
+import { DermoscopyForm } from "@/components/pro/DermoscopyForm";
 import PDFViewerModal from "@/components/PDFViewerModal";
 import { PremiumPdfTemplate } from "@/templates/PremiumPdfTemplate";
 import { buildObservationDoc, type ObservationData } from "@/lib/observationPdf";
@@ -402,6 +403,8 @@ export default function ProAnalyze() {
 
   // Examen physique (Étape 2/3) — documenté AVANT la photo et l'IA
   const [examen, setExamen] = useState<ExamenData>({ ...EMPTY_EXAMEN });
+  // Photos au dermatoscope : rangées à part (dermo_images), jamais envoyées à l'IA photo.
+  const [dermoPhotos, setDermoPhotos] = useState<string[]>([]);
 
   // Dossier clinique structuré (Étape 1) — stocké en JSON, miroir vers le pipeline IA
   const [clinicalRecord, setClinicalRecord] = useState<ClinicalRecord>({});
@@ -618,6 +621,8 @@ export default function ProAnalyze() {
       const r = await analyze.mutateAsync({
         image: photoBase64,
         images: [photoBase64, photoRight, photoLeft].filter(Boolean) as string[],
+        // Photos au dermatoscope : stockées par le serveur, pas analysées par l'IA photo.
+        dermoImages: examen.dermo?.done === "oui" && dermoPhotos.length ? dermoPhotos : undefined,
         area: examArea,
         intake: {
           // Patient existant → permet au serveur de lire l'historique de diagnostics
@@ -1312,6 +1317,7 @@ export default function ProAnalyze() {
     setProblemDuration(""); setPreviousProducts(""); setAllergies(""); setConsultMotif("");
     setClinicalRecord({});
     setExamen({ ...EMPTY_EXAMEN });
+    setDermoPhotos([]);
     setPractitionerNotes("");
     setSelectedStatus(null); setAntecedentsOpen(false);
   };
@@ -1585,6 +1591,12 @@ export default function ProAnalyze() {
             {/* ── Examen physique du médecin — AVANT la photo et l'IA (§2, §3) ── */}
             <div className="mb-4">
               <ExamenPhysiqueForm value={examen} onChange={setExamen} />
+            </div>
+
+            {/* ── Dermoscopie — bloc à part, AVANT l'analyse IA (elle oriente les diagnostics) ── */}
+            <div className="mb-4">
+              <DermoscopyForm value={examen.dermo} onChange={(dermo) => setExamen({ ...examen, dermo })}
+                photos={dermoPhotos} onPhotos={setDermoPhotos} compress={(f) => compressImage(f)} />
             </div>
 
             {/* Rubrique : Visage ou Corps */}
