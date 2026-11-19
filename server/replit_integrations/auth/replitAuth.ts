@@ -32,6 +32,22 @@ export async function setupAuth(app: Express) {
   app.set("trust proxy", 1);
   app.use(getSession());
 
+  // Connexion qui dure : un compte connecté reste connecté tant qu'il revient au
+  // moins une fois tous les 30 jours (logiciel du cabinet, appli patient). La session
+  // et le cookie sont prolongés au plus une fois par jour (pas d'écriture à chaque
+  // requête). Une déconnexion volontaire ou une inactivité de 30 jours y met fin.
+  app.use((req: any, _res, next) => {
+    const s = req.session;
+    if (s?.userId) {
+      const day = Math.floor(Date.now() / 86400000);
+      if (s.lastSeenDay !== day) {
+        s.lastSeenDay = day;      // session modifiée → enregistrée et cookie renvoyé
+        s.touch?.();              // remet l'expiration à 30 jours à partir d'aujourd'hui
+      }
+    }
+    next();
+  });
+
   // Les routes d'API génériques
   app.get("/api/login", (req, res) => {
     res.redirect("/login"); // Redirige vers ta page de connexion locale
