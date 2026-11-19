@@ -44,6 +44,7 @@ import { D } from "@/components/derm/tokens";
 import { Button } from "@/components/ui/button";
 import { formatCmPhone } from "@shared/phone";
 import { CaseAuditTrail } from "@/components/pro/CaseAuditTrail";
+import { dermoscopyText } from "@/components/pro/ExamenPhysiqueForm";
 import PDFViewerModal from "@/components/PDFViewerModal";
 import { useToast } from "@/hooks/use-toast";
 
@@ -241,6 +242,7 @@ export default function ProPatient() {
       if (ex.examMuqueuses) rows.push(["Muqueuses", ex.examMuqueuses]);
       if (ex.examGanglions) rows.push(["Ganglions", ex.examGanglions]);
       if (ex.autresSignes) rows.push(["Autres signes", ex.autresSignes]);
+      if (dermoscopyText(ex)) rows.push(["Dermoscopie", dermoscopyText(ex)]);
       if (ex.keloidRisk) rows.push(["Risque chéloïde", ex.keloidRisk]);
       if (ex.keloidAntecedents) rows.push(["Chéloïde — antécédents", ex.keloidAntecedents]);
       if (ex.keloidLocalisation) rows.push(["Chéloïde — localisation", ex.keloidLocalisation]);
@@ -518,6 +520,7 @@ export default function ProPatient() {
                   if (ex.examMuqueuses) rows.push(["Muqueuses", ex.examMuqueuses]);
                   if (ex.examGanglions) rows.push(["Ganglions", ex.examGanglions]);
                   if (ex.autresSignes) rows.push(["Autres signes", ex.autresSignes]);
+                  if (dermoscopyText(ex)) rows.push(["Dermoscopie", dermoscopyText(ex)]);
                   if (ex.pihRisk) rows.push(["Risque PIH", ex.pihRisk]);
                   if (ex.keloidRisk) rows.push(["Risque chéloïde", ex.keloidRisk]);
                   if (ex.keloidAntecedents) rows.push(["Chéloïde — antécédents", ex.keloidAntecedents]);

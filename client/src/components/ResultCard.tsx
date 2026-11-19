@@ -1582,6 +1582,7 @@ export function ResultCard({ result, scanId, savedScanId, area, imageUrl, userFi
         nombre: ex.lesionNombre, morphologie: ex.lesionMorphologie, distribution: ex.lesionDistribution,
         examPeau: ex.examPeau, examPhaneres: ex.examPhaneres, examMuqueuses: ex.examMuqueuses,
         examGanglions: ex.examGanglions, autresSignes: ex.autresSignes,
+        dermoscopie: joinNZ(...(ex.dermoStructures || []), ex.dermoDescription),
         keloidRisk: ex.keloidRisk,
         keloidDetails: joinNZ(ex.keloidAntecedents, ex.keloidLocalisation, ex.keloidAnciennete, ex.keloidSymptomes),
         // 9 · Résumé syndromique

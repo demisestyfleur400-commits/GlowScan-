@@ -2522,7 +2522,8 @@ export function registerProRoutes(app: Express) {
 - Prescription envisagée : ${prescription || "—"}
 - Historique / antécédents : ${historique || "—"}
 
-Analyse ce cas selon tes règles. Vérifie particulièrement la cohérence entre le diagnostic, la prescription et le phototype.`;
+Analyse ce cas selon tes règles. Vérifie particulièrement la cohérence entre le diagnostic, la prescription et le phototype.${/dermoscopie/i.test(signes) ? `
+Les signes contiennent une DERMOSCOPIE faite par le médecin : classe tes diagnostics différentiels selon leur compatibilité avec les structures dermoscopiques notées, et cite celles qui orientent. Ne décris aucune structure que le médecin n'a pas notée.` : ""}`;
 
     // Chaîne de secours Gemini (5 modèles, quota propre à chacun), avec puis sans
     // recherche Google : l'assistant ne tombe plus au premier quota atteint.

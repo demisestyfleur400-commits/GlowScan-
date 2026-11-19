@@ -27,6 +27,17 @@ export interface ExamenData {
   keloidLocalisation: string;
   keloidAnciennete: string;
   keloidSymptomes: string;
+  // Dermoscopie (demande des dermatologues) : structures observées + description.
+  // Optionnels : les examens enregistrés avant cet ajout n'ont pas ces champs.
+  dermoStructures?: string[];
+  dermoDescription?: string;
+}
+
+/** Texte de la dermoscopie (vide si non réalisée) — partagé par l'IA, Glow, le dossier et les PDF. */
+export function dermoscopyText(e: Partial<ExamenData> | null | undefined): string {
+  const s = (e?.dermoStructures || []).filter(Boolean);
+  const d = String(e?.dermoDescription || "").trim();
+  return [s.length ? s.join(", ") : "", d].filter(Boolean).join(". ");
 }
 
 export const EMPTY_EXAMEN: ExamenData = {
@@ -34,7 +45,17 @@ export const EMPTY_EXAMEN: ExamenData = {
   lesionDistribution: "", examPeau: "", examPhaneres: "", examMuqueuses: "",
   examGanglions: "", autresSignes: "", pihRisk: "", keloidRisk: "",
   keloidAntecedents: "", keloidLocalisation: "", keloidAnciennete: "", keloidSymptomes: "",
+  dermoStructures: [], dermoDescription: "",
 };
+
+// Structures dermoscopiques courantes (pigmentaires, vasculaires, folliculaires).
+// Le médecin coche ce qu'il voit ; la description libre reste la référence.
+const DERMO_OPTS = [
+  "Réseau pigmentaire régulier", "Réseau pigmentaire atypique", "Pseudo-réseau", "Globules", "Points",
+  "Stries / pseudopodes", "Voile bleu-blanc", "Structures de régression", "Épargne des orifices folliculaires",
+  "Pigmentation périfolliculaire", "Structures arciformes brun-gris", "Vaisseaux punctiformes", "Vaisseaux arborescents",
+  "Vaisseaux glomérulaires", "Squames", "Bouchons cornés", "Kystes miliaires",
+];
 
 const PHOTOTYPES = [
   { id: "IV", label: "IV", bg: "#c8956c", title: "Phototype IV — brun clair / métissée" },
@@ -59,10 +80,10 @@ function TextField({ k, label, ml, ph, value, set }: { k: keyof ExamenData; labe
       <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: MUTED, marginBottom: 4 }}>{label}</label>
       <div style={{ display: "flex", alignItems: ml ? "flex-start" : "center", gap: 6 }}>
         {ml ? (
-          <textarea value={value[k] as string} onChange={(e) => set({ [k]: e.target.value } as any)} rows={2} placeholder={ph}
+          <textarea value={(value[k] as string) ?? ""} onChange={(e) => set({ [k]: e.target.value } as any)} rows={2} placeholder={ph}
             style={{ flex: 1, padding: "9px 12px", borderRadius: 10, background: fieldBg, border: fieldBorder, color: INK, fontSize: 13, outline: "none", resize: "vertical", fontFamily: "inherit", boxSizing: "border-box" }} />
         ) : (
-          <input type="text" value={value[k] as string} onChange={(e) => set({ [k]: e.target.value } as any)} placeholder={ph}
+          <input type="text" value={(value[k] as string) ?? ""} onChange={(e) => set({ [k]: e.target.value } as any)} placeholder={ph}
             style={{ flex: 1, padding: "9px 12px", borderRadius: 10, background: fieldBg, border: fieldBorder, color: INK, fontSize: 13, outline: "none", boxSizing: "border-box" }} />
         )}
         <VoiceButton value={(value[k] as string) || ""} onChange={(t) => set({ [k]: t } as any)} />
@@ -163,6 +184,29 @@ export function ExamenPhysiqueForm({ value, onChange }: { value: ExamenData; onC
           <TextField value={value} set={set} k="examMuqueuses" label="Muqueuses" />
           <TextField value={value} set={set} k="examGanglions" label="Aires ganglionnaires" />
           <TextField value={value} set={set} k="autresSignes" label="Autres signes cliniques pertinents" ml />
+
+          {/* Dermoscopie (facultative) — prise en compte par l'IA et par Glow */}
+          <div style={{ borderRadius: 12, padding: 12, background: "rgba(42,107,79,0.05)", border: "1px solid rgba(42,107,79,0.18)", display: "flex", flexDirection: "column", gap: 10 }}>
+            <div>
+              <p style={{ fontSize: 11, fontWeight: 800, color: INK, margin: 0 }}>Dermoscopie</p>
+              <p style={{ fontSize: 10.5, color: MUTED, margin: "2px 0 0" }}>Facultatif. Vos constatations sont prises en compte par l'analyse IA et par Glow.</p>
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {DERMO_OPTS.map((o) => {
+                const cur = value.dermoStructures || [];
+                const on = cur.includes(o);
+                return (
+                  <button key={o} type="button" onClick={() => set({ dermoStructures: toggle(cur, o) })}
+                    style={{ padding: "5px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700, cursor: "pointer",
+                      background: on ? "rgba(42,107,79,0.14)" : "var(--color-bg)", color: on ? "var(--color-accent)" : "var(--color-neutral-700)",
+                      border: on ? "1px solid #2a6b4f" : "1px solid #E2E8F0" }}>
+                    {o}
+                  </button>
+                );
+              })}
+            </div>
+            <TextField value={value} set={set} k="dermoDescription" label="Description dermoscopique" ml ph="couleurs, structures, répartition, aspect des orifices folliculaires…" />
+          </div>
 
           {/* Risques */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>

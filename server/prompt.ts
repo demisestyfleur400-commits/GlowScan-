@@ -467,6 +467,19 @@ RÈGLE ABSOLUE :
   brièvement dans clinicalSummary.
 - Si l'examen du médecin est vide, raisonne alors normalement sur la photo.
 
+DERMOSCOPIE (champ "dermoscopie" de examenPhysiqueMedecin, s'il est rempli) :
+- Ce sont les constatations du médecin au dermatoscope : structures (réseau, globules,
+  points, vaisseaux, orifices folliculaires, pigmentation…) et sa description.
+- Utilise-les pour CONSTRUIRE et HIÉRARCHISER "differentialDiagnosis" : chaque
+  hypothèse doit être compatible avec les structures décrites ; écarte ou rétrograde
+  celles qui ne le sont pas.
+- Cite brièvement dans "clinicalSummary" les éléments dermoscopiques qui orientent
+  (ex. « épargne des orifices folliculaires en dermoscopie : en faveur de … »).
+- Tu ne vois PAS l'image dermoscopique : ne décris jamais de structure que le médecin
+  n'a pas notée, et n'invente pas de dermoscopie s'il n'en a pas fait.
+- Structure inquiétante notée (réseau atypique, voile bleu-blanc, régression, stries
+  irrégulières) → signale-le dans "redFlags" et conseille un examen approfondi.
+
 ══════════════════════════════════════════════
 COHÉRENCE INTERNE DE L'ANALYSE (OBLIGATOIRE)
 ══════════════════════════════════════════════

@@ -44,7 +44,7 @@ import { LesionArgumentation } from "@/components/pro/LesionArgumentation";
 import type { AnalysisResult, Patient } from "@shared/schema";
 import { ProLayout, ProCard, ProInput } from "@/components/ProLayout";
 import { ClinicalDossierForm, type ClinicalRecord } from "@/components/pro/ClinicalDossierForm";
-import { ExamenPhysiqueForm, EMPTY_EXAMEN, type ExamenData } from "@/components/pro/ExamenPhysiqueForm";
+import { ExamenPhysiqueForm, EMPTY_EXAMEN, dermoscopyText, type ExamenData } from "@/components/pro/ExamenPhysiqueForm";
 import PDFViewerModal from "@/components/PDFViewerModal";
 import { PremiumPdfTemplate } from "@/templates/PremiumPdfTemplate";
 import { buildObservationDoc, type ObservationData } from "@/lib/observationPdf";
@@ -659,6 +659,8 @@ export default function ProAnalyze() {
             muqueuses: examen.examMuqueuses || undefined,
             ganglions: examen.examGanglions || undefined,
             autresSignes: examen.autresSignes || undefined,
+            // Dermoscopie du médecin : utilisée par l'IA pour le diagnostic différentiel.
+            dermoscopie: dermoscopyText(examen) || undefined,
             keloidRisk: examen.keloidRisk || undefined,
             keloidDetails: (examen.keloidAntecedents || examen.keloidLocalisation || examen.keloidAnciennete || examen.keloidSymptomes)
               ? [examen.keloidAntecedents, examen.keloidLocalisation, examen.keloidAnciennete, examen.keloidSymptomes].filter(Boolean).join(" · ")
@@ -980,6 +982,7 @@ export default function ProAnalyze() {
       nombre: examen.lesionNombre, morphologie: examen.lesionMorphologie, distribution: examen.lesionDistribution,
       examPeau: examen.examPeau, examPhaneres: examen.examPhaneres, examMuqueuses: examen.examMuqueuses,
       examGanglions: examen.examGanglions, autresSignes: examen.autresSignes,
+      dermoscopie: dermoscopyText(examen) || undefined,
       keloidRisk: examen.keloidRisk, keloidDetails,
       // 9 · Résumé syndromique
       resumeSyndromique: effectiveSummary || clinicalSummary,
@@ -1328,6 +1331,7 @@ export default function ProAnalyze() {
     examen.examPhaneres ? `Phanères : ${examen.examPhaneres}` : "",
     examen.examMuqueuses ? `Muqueuses : ${examen.examMuqueuses}` : "",
     examen.autresSignes ? `Autres : ${examen.autresSignes}` : "",
+    dermoscopyText(examen) ? `Dermoscopie : ${dermoscopyText(examen)}` : "",
   ].filter(Boolean).join(" · ");
   const patientHistoryText = [
     consultMotif ? `Motif : ${consultMotif}` : "",

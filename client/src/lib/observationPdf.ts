@@ -84,6 +84,7 @@ export interface ObservationData {
   examMuqueuses?: string;
   examGanglions?: string;
   autresSignes?: string;
+  dermoscopie?: string;
   keloidRisk?: string;
   keloidDetails?: string;
 
@@ -321,6 +322,7 @@ ${rubric("Examen dermatologique",
   row("Muqueuses", d.examMuqueuses),
   row("Aires ganglionnaires", d.examGanglions),
   group("Autres signes", freeText(d.autresSignes)),
+  group("Dermoscopie", freeText(d.dermoscopie)),
   group("Risque chéloïde", row("Niveau", d.keloidRisk), freeText(d.keloidDetails)),
 )}
 
