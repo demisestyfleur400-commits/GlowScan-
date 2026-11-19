@@ -1304,7 +1304,62 @@ export default function ProAnalyze() {
     setShowPdfViewer(true);
   };
 
+  // ─── Brouillon automatique de la consultation en cours ─────────────────
+  // Rechargement, coupure, ordinateur éteint : la saisie n'est plus perdue. Gardé sur
+  // CET ordinateur (par médecin et par patient), 7 jours au plus ; effacé dès que le
+  // dossier est enregistré, quand le médecin recommence, ou à la déconnexion.
+  const draftUser = String((accountData as any)?.user?.id || "me");
+  const draftKey = patientId ? `gs_derm_draft_${draftUser}_${patientId}` : null;
+  const [draftOffer, setDraftOffer] = useState<{ savedAt: number; data: any } | null>(null);
+  useEffect(() => {
+    setDraftOffer(null);
+    if (!draftKey || dossierSaved) return;
+    try {
+      const raw = localStorage.getItem(draftKey);
+      if (!raw) return;
+      const d = JSON.parse(raw);
+      if (!d?.savedAt || Date.now() - d.savedAt > 7 * 864e5) { localStorage.removeItem(draftKey); return; }
+      setDraftOffer(d);
+    } catch { /* stockage indisponible : pas de reprise */ }
+  }, [draftKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    // Tant que le médecin n'a pas choisi « Reprendre » ou « Recommencer », on n'écrase pas le brouillon.
+    if (!draftKey || dossierSaved || step < 2 || draftOffer) return;
+    const t = setTimeout(() => {
+      const data = { step: result ? 4 : Math.min(step, 3), examen, clinicalRecord, consultMotif, problemDuration, previousProducts, allergies,
+        patientRegion, examArea, photoConsent, questionnaire, answers, practitionerNotes, result, finalDx };
+      const save = (o: any) => localStorage.setItem(draftKey, JSON.stringify({ savedAt: Date.now(), data: o }));
+      try { save({ ...data, photoBase64, photoRight, photoLeft, dermoPhotos }); }
+      catch { try { save(data); } catch { /* stockage plein : on garde au moins le texte si possible */ } }
+    }, 800);
+    return () => clearTimeout(t);
+  }, [draftKey, dossierSaved, step, examen, clinicalRecord, consultMotif, problemDuration, previousProducts, allergies, patientRegion,
+    examArea, photoConsent, questionnaire, answers, practitionerNotes, result, finalDx, photoBase64, photoRight, photoLeft, dermoPhotos, draftOffer]);
+  useEffect(() => { if (dossierSaved && draftKey) { try { localStorage.removeItem(draftKey); } catch {} } }, [dossierSaved, draftKey]);
+  const resumeDraft = () => {
+    const d = draftOffer?.data;
+    if (!d) return;
+    if (d.clinicalRecord) setClinicalRecord(d.clinicalRecord);
+    setExamen({ ...EMPTY_EXAMEN, ...(d.examen || {}) });
+    setConsultMotif(d.consultMotif || ""); setProblemDuration(d.problemDuration || ""); setPreviousProducts(d.previousProducts || "");
+    setAllergies(d.allergies || ""); setPatientRegion(d.patientRegion || ""); setExamArea(d.examArea === "body" ? "body" : "face");
+    if (d.photoConsent) setPhotoConsent(true);
+    if (d.photoBase64) { setPhotoBase64(d.photoBase64); setPhotoSize(Math.round((d.photoBase64.length * 3) / 4 / 1024)); }
+    if (d.photoRight) setPhotoRight(d.photoRight);
+    if (d.photoLeft) setPhotoLeft(d.photoLeft);
+    if (Array.isArray(d.dermoPhotos)) setDermoPhotos(d.dermoPhotos);
+    if (Array.isArray(d.questionnaire)) setQuestionnaire(d.questionnaire);
+    if (d.answers) setAnswers(d.answers);
+    setPractitionerNotes(d.practitionerNotes || "");
+    if (d.result) setResult(d.result);
+    setFinalDx(d.finalDx || null);
+    setStep((d.step === 4 && !d.result ? 3 : d.step || 2) as Step);
+    setDraftOffer(null);
+  };
+  const discardDraft = () => { if (draftKey) { try { localStorage.removeItem(draftKey); } catch {} } setDraftOffer(null); };
+
   const resetAll = () => {
+    if (draftKey) { try { localStorage.removeItem(draftKey); } catch {} }
     setStep(1);
     setFinalDx(null);
     setPatientMode("choice");
@@ -1378,6 +1433,21 @@ export default function ProAnalyze() {
           style={{ border: 0, background: "none", color: DD.action, fontSize: 12, fontWeight: 600, cursor: "pointer" }} data-testid="nc-restart">Recommencer</button>
       </div>
       <ProgressBar current={step} locked={dossierSaved} onGo={(n) => { if (n < step && !dossierSaved) setStep(n); }} />
+      {draftOffer && (
+        <div role="status" data-testid="draft-offer" className="flex flex-wrap items-center"
+          style={{ gap: 12, marginTop: 14, padding: "14px 16px", borderRadius: 12, background: "#eef6f1", border: "1px solid #b9d8c6", color: DD.text }}>
+          <div style={{ flex: "1 1 320px" }}>
+            <b style={{ fontSize: 14 }}>{`Une consultation en cours a été enregistrée${patientLabel !== "—" ? ` pour ${patientLabel}` : ""}`.replace(/\.?$/, ".")}</b>
+            <div style={{ fontSize: 12.5, marginTop: 2, color: "#4a5d57" }}>
+              Dernière saisie le {new Date(draftOffer.savedAt).toLocaleString("fr-FR", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })}. Reprenez là où vous en étiez.
+            </div>
+          </div>
+          <button type="button" onClick={resumeDraft} data-testid="draft-resume"
+            style={{ height: 38, padding: "0 18px", borderRadius: 10, border: 0, background: DD.action, color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Reprendre</button>
+          <button type="button" onClick={discardDraft} data-testid="draft-discard"
+            style={{ height: 38, padding: "0 14px", borderRadius: 10, border: "1px solid #cfdcd4", background: "#fff", color: DD.text, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Recommencer</button>
+        </div>
+      )}
       <div className="flex flex-wrap items-start" style={{ gap: 20, marginTop: 18 }}>
       <div style={{ flex: "3 1 560px", minWidth: 0 }}>
         {waiting && step === 2 && (

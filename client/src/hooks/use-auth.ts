@@ -57,6 +57,8 @@ export function useAuth() {
     onSuccess: () => {
       queryClient.setQueryData(["/api/auth/user"], null);
       queryClient.clear();
+      // Brouillons de consultation (données patients) : jamais laissés sur un poste après déconnexion.
+      try { Object.keys(localStorage).filter((k) => k.startsWith("gs_derm_draft_")).forEach((k) => localStorage.removeItem(k)); } catch {}
       window.location.href = "/";
     },
   });
