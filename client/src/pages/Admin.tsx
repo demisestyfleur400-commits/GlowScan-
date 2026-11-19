@@ -320,6 +320,17 @@ export default function Admin() {
     } catch (e) { console.error("[certify] err", e); }
   };
 
+  // Livraison du logiciel : l'essai de 14 jours repart du jour de l'installation.
+  const startTrialAtDelivery = async (id: number, name: string) => {
+    if (!confirm(`Livraison chez ${name || "ce dermatologue"} : démarrer ses 14 jours d'essai à partir d'aujourd'hui ?`)) return;
+    try {
+      const res = await fetch(`/api/admin/dermatologues/${id}/start-trial`, { method: "POST", headers: { "x-admin-key": adminKey } });
+      const d = await res.json().catch(() => ({}));
+      if (res.ok) { alert(`Essai démarré : il court jusqu'au ${d.trialEndsAt ? new Date(d.trialEndsAt).toLocaleDateString("fr-FR") : "—"}.`); fetchDermActivity(adminKey); fetchDermCert(adminKey); }
+      else alert(d.message || "Erreur");
+    } catch (e) { console.error("[start-trial] err", e); }
+  };
+
   const activateSubscription = async (id: number, name: string) => {
     const months = parseInt(prompt(`Activer l'abonnement de ${name || "ce dermatologue"} pour combien de mois ?`, "12") || "12", 10);
     if (!months || months < 1) return;
@@ -1597,6 +1608,11 @@ export default function Admin() {
                             </p>
                           </div>
                           <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                            <button onClick={() => startTrialAtDelivery(d.id, d.fullName)} data-testid={`admin-start-trial-${d.id}`}
+                              title="Remet les 14 jours d'essai à zéro à partir d'aujourd'hui (jour de l'installation)"
+                              style={{ fontSize: 11, fontWeight: 800, padding: "7px 12px", borderRadius: 9999, cursor: "pointer", border: "1px solid #059669", background: "#fff", color: "#047857" }}>
+                              Démarrer l'essai à la livraison
+                            </button>
                             <button onClick={() => activateSubscription(d.id, d.fullName)}
                               style={{ fontSize: 11, fontWeight: 800, padding: "7px 12px", borderRadius: 9999, cursor: "pointer", border: "none", background: "#059669", color: "#fff" }}>
                               Activer l'abo

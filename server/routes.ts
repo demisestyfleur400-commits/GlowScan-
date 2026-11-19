@@ -863,6 +863,29 @@ export async function registerRoutes(
   // Active / prolonge l'abonnement d'un dermatologue depuis l'admin (paiement reçu
   // hors plateforme). Corrige le cas « profil activé mais toujours expiré » : la
   // certification ne suffit pas, il faut poser subscription_status='active'.
+  // Livraison du logiciel : les 14 jours d'essai repartent du jour de l'installation
+  // (sinon l'essai, compté depuis l'inscription, est déjà entamé). Jamais sur un
+  // abonnement payé en cours.
+  app.post("/api/admin/dermatologues/:id/start-trial", async (req: any, res) => {
+    if (!checkDatasetKey(req)) return res.status(403).json({ message: "Accès refusé" });
+    try {
+      const id = parseInt(req.params.id);
+      const cur = Rows(await db.execute(sql`SELECT subscription_status, subscription_expires_at FROM pro_accounts WHERE id = ${id}`))[0] as any;
+      if (!cur) return res.status(404).json({ message: "Dermatologue introuvable" });
+      if (cur.subscription_status === "active" && cur.subscription_expires_at && new Date(cur.subscription_expires_at).getTime() > Date.now()) {
+        return res.status(409).json({ message: `Abonnement payé en cours jusqu'au ${new Date(cur.subscription_expires_at).toLocaleDateString("fr-FR")} : l'essai n'est pas nécessaire.` });
+      }
+      const [row] = Rows(await db.execute(sql`
+        UPDATE pro_accounts SET subscription_status = 'trial', trial_ends_at = NOW() + INTERVAL '14 days'
+        WHERE id = ${id} RETURNING user_id, trial_ends_at`));
+      try { if (row?.user_id) pushToUser(row.user_id, "Votre essai de 14 jours commence", "GlowScan Derm est installé. Votre essai gratuit court jusqu'au " + new Date(row.trial_ends_at).toLocaleDateString("fr-FR") + ".", "/derm/dashboard"); } catch {}
+      res.json({ ok: true, trialEndsAt: row?.trial_ends_at });
+    } catch (e) {
+      console.error("[admin start-trial] error:", e);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
   app.post("/api/admin/dermatologues/:id/activate-subscription", async (req: any, res) => {
     if (!checkDatasetKey(req)) return res.status(403).json({ message: "Accès refusé" });
     try {
