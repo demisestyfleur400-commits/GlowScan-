@@ -6,6 +6,7 @@ import { D, FONT_UI } from "@/components/derm/tokens";
 import { Page, ScreenHeader, Card, Btn, Input, Select, Label, Toggle, Chip, Tag, Notice, fr, api } from "@/components/derm/ui";
 import { useProAccount } from "@/hooks/use-pro";
 import { SecuritySection } from "@/pages/pro/ProCabinet";
+import { DermPushCard } from "@/components/derm/DermPushCard";
 import { SPLITS, splitConsultation } from "@shared/splits";
 import { RELAY_TIERS } from "@shared/relay";
 import { PRO_SUBSCRIPTION_FCFA } from "@shared/premium";
@@ -134,6 +135,7 @@ function Security() {
         <span style={{ fontSize: 10.5, color: D.muted }}>{pin?.set ? "Le nouveau code doit être différent de l'actuel." : "Aucun code défini : choisissez-en un."}</span>
         <Btn kind="primary" disabled={!ok} onClick={save} data-testid="pin-save">Enregistrer le code</Btn>
       </span>
+      <div style={{ paddingTop: 12, borderTop: `1px solid ${D.sep}` }}><DermPushCard variant="settings" /></div>
       <div style={{ paddingTop: 12, borderTop: `1px solid ${D.sep}` }}>
         <b style={{ fontSize: 13, fontWeight: 600 }}>Appareils connectés</b>
         {(ses?.items || []).map((s) => (

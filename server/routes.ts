@@ -3868,6 +3868,16 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
     }
   });
 
+  // Notification de test : le médecin vérifie que les alertes arrivent sur ce poste.
+  app.post("/api/push/test", async (req: any, res) => {
+    const userId = isAuth(req) ? getUID(req) : null;
+    if (!userId) return res.status(401).json({ message: "Connexion requise" });
+    const subs = await storage.getPushSubscriptionsByUser(userId).catch(() => []);
+    if (!subs.length) return res.status(404).json({ message: "Aucun appareil abonné pour ce compte." });
+    await pushToUser(userId, "Notifications GlowScan Derm activées", "Vous serez prévenu ici : patient en attente, message, paiement, compte rendu à envoyer.", "/derm/dashboard");
+    res.json({ ok: true, devices: subs.length });
+  });
+
   app.post("/api/push/unsubscribe", async (req, res) => {
     try {
       const { endpoint } = req.body;
