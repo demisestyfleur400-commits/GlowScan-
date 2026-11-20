@@ -5,6 +5,7 @@ import { Camera, Check } from "lucide-react";
 import { DermShell } from "@/components/derm/DermShell";
 import { Page, ScreenHeader, Card, Btn, Input, Textarea, Chip, Tag, Label, Notice } from "@/components/derm/ui";
 import { D, FONT_UI } from "@/components/derm/tokens";
+import { RemindersQueue } from "@/components/derm/RemindersQueue";
 import { useProAccount, useProPendingPatients } from "@/hooks/use-pro";
 import { cmNational } from "@shared/phone";
 
@@ -126,6 +127,7 @@ export default function ProAccueil() {
       <Page>
         <ScreenHeader kicker="ACCUEIL DU CABINET" title="Nouveau patient"
           sub="Identité et motif, puis trois photos. L'analyse Glow se fait avant la consultation : le médecin trouve le dossier prêt." />
+        <RemindersQueue />
 
         <div className="grid items-start" style={{ gap: 18, gridTemplateColumns: "minmax(0,1.45fr) minmax(300px,1fr)" }}>
           <Card style={{ padding: "22px 24px" }}>

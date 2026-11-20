@@ -2,10 +2,10 @@ import type { Express } from "express";
 import { sql } from "drizzle-orm";
 import { db } from "./db";
 import { requireProAccess } from "./proRoutes";
-import { sendWhatsAppText } from "./whatsapp";
+import { sendWhatsAppText, whatsappDeepLink } from "./whatsapp";
 import { followupsStoppedAt } from "./consents";
 import { normalizeCmPhone } from "@shared/phone";
-import { buildControlRelanceMessage, withFollowupFooter } from "@shared/whatsappMessages";
+import { buildControlRelanceMessage, withFollowupFooter, buildApptJ1Message } from "@shared/whatsappMessages";
 import { reportPayloadSchema, reportRef } from "@shared/report";
 
 // ════════════════════════════════════════════════════════════════════════
@@ -277,6 +277,63 @@ export function registerDermFollowupRoutes(app: Express) {
       res.json({ ok: true });
     } catch (e) {
       console.error("[derm followup close]", e);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // ── File d'envoi en un clic (rappels du jour) ─────────────────────────────
+  // En attendant l'envoi WhatsApp automatique : le cabinet voit chaque matin les
+  // messages à envoyer, déjà rédigés ; un clic ouvre WhatsApp avec le texte prêt.
+  //   - rdv   : rendez-vous de demain non confirmés, rappel pas encore envoyé par le cabinet ;
+  //   - suivi : contrôle du jour ou en retard, pas relancé depuis 3 jours.
+  // Ouvert au médecin et à la secrétaire (requireProAccess). Aucun détail médical.
+  app.get("/api/derm/reminders-queue", requireProAccess, async (req: any, res) => {
+    try {
+      const me = req.proAccount.id, derm = req.proAccount.fullName;
+      const tomorrow = new Date(Date.now() + 86400000).toLocaleDateString("fr-CA", { timeZone: "Africa/Douala" });
+      const appts = Rows(await db.execute(sql`
+        SELECT a.id, a.appointment_date, a.patient_name, a.patient_contact, a.type FROM appointments a
+        WHERE a.dermatologue_id = ${me} AND (a.appointment_date AT TIME ZONE 'Africa/Douala')::date = ${tomorrow}::date
+          AND a.status = 'scheduled' AND a.reminder_manual_at IS NULL AND a.patient_contact IS NOT NULL
+        ORDER BY a.appointment_date LIMIT 100`));
+      const items: any[] = [];
+      for (const a of appts) {
+        if (await followupsStoppedAt({ phone: a.patient_contact })) continue;
+        const d = new Date(a.appointment_date);
+        const first = String(a.patient_name || "").trim().split(/\s+/)[0] || "";
+        const time = d.toLocaleTimeString("fr-FR", { timeZone: "Africa/Douala", hour: "2-digit", minute: "2-digit" });
+        const message = buildApptJ1Message({ name: first, derm, day: d.toLocaleDateString("fr-FR", { timeZone: "Africa/Douala", weekday: "long", day: "numeric", month: "long" }), time, online: a.type === "glowscan" || a.type === "online" });
+        items.push({ kind: "rdv", id: Number(a.id), name: a.patient_name || "Patient", label: `Rendez-vous demain à ${time}`, message, waLink: whatsappDeepLink(a.patient_contact, message) });
+      }
+      const fus = (await loadFollowups(me)).filter((f) => (f.status === "late" || f.status === "today") && f.phone && f.apptStatus !== "scheduled" && f.apptStatus !== "confirmed"
+        && (!f.relancedAt || Date.now() - new Date(f.relancedAt).getTime() > 3 * 86400000));
+      for (const f of fus) {
+        if (await followupsStoppedAt({ phone: f.phone })) continue;
+        const message = withFollowupFooter(buildControlRelanceMessage({ name: f.firstName, derm }));
+        items.push({ kind: "suivi", id: f.id, name: `${f.firstName} ${f.lastName}`.trim(), label: f.status === "today" ? "Contrôle prévu aujourd'hui" : `Contrôle en retard de ${f.lateDays} jour${f.lateDays > 1 ? "s" : ""}`, message, waLink: whatsappDeepLink(f.phone!, message) });
+      }
+      res.json({ items });
+    } catch (e) {
+      console.error("[derm reminders-queue]", e);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // WhatsApp ouvert depuis la file : le rappel est noté comme envoyé par le cabinet.
+  app.post("/api/derm/reminders-queue/done", requireProAccess, async (req: any, res) => {
+    try {
+      const me = req.proAccount.id, id = Number(req.body?.id), kind = req.body?.kind;
+      if (!id || (kind !== "rdv" && kind !== "suivi")) return res.status(400).json({ message: "Rappel invalide." });
+      if (kind === "rdv") {
+        await db.execute(sql`UPDATE appointments SET reminder_manual_at = NOW(), reminder_j1_sent_at = COALESCE(reminder_j1_sent_at, NOW()) WHERE id = ${id} AND dermatologue_id = ${me}`);
+      } else {
+        const p = Rows(await db.execute(sql`SELECT id FROM patients WHERE id = ${id} AND dermatologist_id = ${me}`))[0];
+        if (!p) return res.status(404).json({ message: "Patient introuvable" });
+        await db.execute(sql`INSERT INTO derm_followup_events (patient_id, pro_account_id, kind, body) VALUES (${id}, ${me}, 'relance', 'Relance WhatsApp envoyée par le cabinet')`);
+      }
+      res.json({ ok: true });
+    } catch (e) {
+      console.error("[derm reminders-queue done]", e);
       res.status(500).json({ message: "Erreur serveur" });
     }
   });

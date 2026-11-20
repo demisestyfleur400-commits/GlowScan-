@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { DermPushCard } from "@/components/derm/DermPushCard";
+import { RemindersQueue } from "@/components/derm/RemindersQueue";
 import { Calendar, Users, Activity, Sparkles, ArrowRight, Plus, X, ClipboardCheck, MessageSquare, AlertTriangle, Inbox } from "lucide-react";
 import { DermShell } from "@/components/derm/DermShell";
 import { D, FONT_HEAD, patientCode } from "@/components/derm/tokens";
@@ -134,6 +135,7 @@ export default function DermVue() {
       <div className="px-4 md:px-[35px]" style={{ maxWidth: 1480, margin: "auto", paddingTop: 31, paddingBottom: 60 }}>
         {isDoctor && <div className="mb-4"><SubscriptionExpiredBanner /></div>}
         <DermPushCard variant="banner" />
+        <RemindersQueue />
         <div className="flex flex-wrap items-end justify-between" style={{ marginBottom: 25, gap: 16 }}>
           <div>
             <span style={{ color: D.teal2, letterSpacing: 1.7, fontSize: 8, fontWeight: 800 }}>CENTRE CLINIQUE</span>
