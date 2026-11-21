@@ -10,6 +10,7 @@ import twilio from "twilio";
 import { sendEmail, buildResetEmail, buildSecurityAlertEmail, buildB2CWelcomeEmail, buildMagicLinkEmail, verifyUnsubToken } from "../../email";
 import { is2faEmailEnabled, issueEmailOtp, verifyEmailOtp, verifyBackupCode, generateAndStoreBackupCodes, countBackupCodes, maskEmail as maskEmailAddr, securityAlert } from "../../proRoutes";
 import crypto from "crypto";
+import { CGU_VERSION } from "@shared/cgu";
 
 // Tokens de lien magique B2C (usage unique, 15 min).
 const b2cMagicTokens = new Map<string, { userId: string; expiresAt: number }>();
@@ -139,7 +140,7 @@ export function registerAuthRoutes(app: Express): void {
   app.post("/api/auth/register", authLimiter, async (req: any, res) => {
     const ip = req.headers["x-forwarded-for"] || req.socket?.remoteAddress || "?";
     try {
-      const { firstName, email, password, website, phone, consentDataset, consentWhatsapp } = req.body;
+      const { firstName, email, password, website, phone, consentDataset, consentWhatsapp, cguVersion } = req.body;
 
       // ── Anti-bot 1 : honeypot. Un champ caché que seuls les robots remplissent. ──
       if (typeof website === "string" && website.trim() !== "") {
@@ -219,6 +220,12 @@ export function registerAuthRoutes(app: Express): void {
           await db.execute(sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "consent_dataset" boolean`).catch(() => {});
           await db.execute(sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "consent_whatsapp" boolean`).catch(() => {});
           await db.execute(sql`UPDATE "users" SET "consent_dataset" = ${consentDataset === true}, "consent_whatsapp" = ${consentWhatsapp === true} WHERE "id" = ${user.id}`).catch(() => {});
+          // Choix recherche fait avec le texte v2 : sa version évite une remise à zéro (migration 0042).
+          if (consentDataset === true && cguVersion === CGU_VERSION) await db.execute(sql`UPDATE "users" SET "dataset_consent_version" = ${CGU_VERSION} WHERE "id" = ${user.id}`).catch(() => {});
+        }
+        // CGU acceptées (case obligatoire de l'inscription) : version et date (migration 0042).
+        if (cguVersion === CGU_VERSION) {
+          await db.execute(sql`UPDATE "users" SET "cgu_version" = ${CGU_VERSION}, "cgu_accepted_at" = NOW() WHERE "id" = ${user.id}`).catch(() => {});
         }
       } catch (e) { console.warn("[register] infos inscription (phone/consent) non enregistrées:", (e as any)?.message); }
 
@@ -485,8 +492,50 @@ export function registerAuthRoutes(app: Express): void {
     const consent = req.body?.consent === true;
     try {
       await db.execute(sql`UPDATE "users" SET "dataset_consent" = ${consent}, "dataset_consent_at" = ${consent ? new Date().toISOString() : null} WHERE "id" = ${userId}`);
+      await db.execute(sql`UPDATE "users" SET "dataset_consent_version" = ${consent ? CGU_VERSION : null} WHERE "id" = ${userId}`).catch(() => {});
       res.json({ success: true, consent });
     } catch (e) { res.status(500).json({ message: "Erreur serveur" }); }
+  });
+
+  // ── CGU versionnées (migration 0042) ──
+  // GET : version acceptée par le compte ; « ok » = version en vigueur acceptée.
+  // Colonnes absentes (migration non appliquée) : on ne bloque personne (ok = true).
+  app.get("/api/me/cgu", async (req: any, res) => {
+    const userId = req.session?.userId;
+    if (!userId) return res.status(401).json({ message: "Non connecté" });
+    try {
+      const r: any = await db.execute(sql`
+        SELECT u.cgu_version, u.cgu_accepted_at, u.role, (p.id IS NOT NULL) AS has_pro
+        FROM users u LEFT JOIN pro_accounts p ON p.user_id = u.id WHERE u.id = ${userId}`);
+      const row = (r?.rows ?? r ?? [])[0] || {};
+      const pro = row.has_pro === true || row.role === "doctor" || row.role === "relay";
+      res.json({ required: CGU_VERSION, version: row.cgu_version ?? null, acceptedAt: row.cgu_accepted_at ?? null, ok: row.cgu_version === CGU_VERSION, pro });
+    } catch (e: any) {
+      console.error(`[me/cgu] (migration 0042 appliquée ?) : ${e?.message}`);
+      res.json({ required: CGU_VERSION, version: null, acceptedAt: null, ok: true, pro: false, unavailable: true });
+    }
+  });
+  // POST : acceptation EXPLICITE (case cochée) de la version en vigueur et, s'il est
+  // fourni, le choix recherche fait sur le même écran (texte v2).
+  app.post("/api/me/cgu", async (req: any, res) => {
+    const userId = req.session?.userId;
+    if (!userId) return res.status(401).json({ message: "Non connecté" });
+    if (req.body?.version !== CGU_VERSION || req.body?.accepted !== true) return res.status(400).json({ message: "Cochez la case pour accepter les conditions." });
+    try {
+      await db.execute(sql`UPDATE users SET cgu_version = ${CGU_VERSION}, cgu_accepted_at = NOW() WHERE id = ${userId}`);
+      await db.execute(sql`UPDATE pro_accounts SET cgu_version = ${CGU_VERSION}, cgu_accepted_at = NOW(), consent_version = ${CGU_VERSION} WHERE user_id = ${userId}`).catch(() => {});
+      if (typeof req.body?.research === "boolean") {
+        const yes = req.body.research === true;
+        await db.execute(sql`UPDATE users SET dataset_consent = ${yes}, dataset_consent_at = ${yes ? new Date().toISOString() : null}, dataset_consent_version = ${yes ? CGU_VERSION : null} WHERE id = ${userId}`);
+        await db.execute(sql`
+          INSERT INTO consents (user_id, research, research_version, updated_at) VALUES (${userId}, ${yes}, ${yes ? CGU_VERSION : null}, NOW())
+          ON CONFLICT (user_id) WHERE user_id IS NOT NULL DO UPDATE SET research = EXCLUDED.research, research_version = EXCLUDED.research_version, updated_at = NOW()`).catch(() => {});
+      }
+      res.json({ success: true, version: CGU_VERSION });
+    } catch (e: any) {
+      console.error(`[me/cgu] acceptation non enregistrée : ${e?.message}`);
+      res.status(503).json({ message: "Enregistrement indisponible pour le moment. Réessayez dans un instant." });
+    }
   });
 
   // ── GET /api/email/unsubscribe ── Désabonnement des emails marketing (lien signé) ──

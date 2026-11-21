@@ -283,6 +283,8 @@ export function ConsultationLauncher({ scanId, condition, imageUrl }: { scanId?:
               <span style={{ fontSize: 11.5, color: GS.muted, lineHeight: 1.6 }}>
                 Vos photos et informations sont partagées uniquement avec le dermatologue chargé de votre consultation. Elles sont traitées conformément aux règles de confidentialité applicables.{" "}
                 <a href="/confidentialite" target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} style={{ color: GS.teal, fontWeight: 600 }}>Voir la confidentialité</a>
+                {" · "}
+                <a href="/cgu" target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} style={{ color: GS.teal, fontWeight: 600 }}>Conditions générales</a>
               </span>
             </label>
 

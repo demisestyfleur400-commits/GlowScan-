@@ -39,6 +39,7 @@ Refonte Organic (étape 2), dans cet ordre : 0013 → 0014 → 0015 → 0016 →
 | 25 | `0037_derm_activity.sql` | Espace médical D6 — `derm_weekly_reviews` (bilan hebdomadaire), `derm_research_docs` (atelier de mémoire), `derm_patient_feedback` (avis des patients du cabinet par lien WhatsApp), RLS |
 | 26 | `0038_derm_settings.sql` | Espace médical D7 — `derm_clinic_settings` (signature, email du cabinet, horaires, rappels, tarifs affichés, confidentialité), rôle et téléphone des membres (`secretary_accounts`), `appointments.missed_relance_at`, RLS |
 | 27 | `0039_skin_journal.sql` | Appli patient B4 « Mon évolution » — `skin_journal` : bilan du jour (confort de peau 1 à 5 + note), un par patient et par jour, RLS |
+| 28 | `0042_cgu_v2.sql` | CGU 2026-11-v2 — `cgu_version` / `cgu_accepted_at` sur `users` et `pro_accounts` (écran de ré-acceptation) ; version du consentement recherche (`users.dataset_consent_version`, `consents.research_version`) ; consentements recherche antérieurs à la v2 remis à « non » (redemandés) |
 
 Commande (base Postgres / Supabase, variable `DATABASE_URL` ou `SUPABASE_URL`) :
 

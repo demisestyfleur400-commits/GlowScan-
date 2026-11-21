@@ -2,20 +2,28 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "wouter";
 import { ShieldCheck, Globe, Lock } from "lucide-react";
+import { CGU_VERSION, RESEARCH_CONSENT_TITLE, RESEARCH_CONSENT_TEXT } from "@shared/cgu";
 
 const CONSENT_KEY_BASE = "glowscan_consent_v1";
 // Version de la politique de confidentialité acceptée (à incrémenter si la politique change).
 export const PRIVACY_POLICY_VERSION = "2026-09-15";
 
-// Choix explicite de contribution au dataset de recherche anonymisé (true = accepté).
+// Version du texte « Recherche et IA » : celle des CGU (2026-11-v2). Un choix fait
+// sous un ancien texte n'est plus valable : la bannière le redemande.
+export const RESEARCH_CONSENT_VERSION = CGU_VERSION;
+const datasetVerOk = (userId?: string | null) => {
+  try { return localStorage.getItem(`${consentKey(userId)}_dataset_ver`) === RESEARCH_CONSENT_VERSION; } catch { return false; }
+};
+
+// Choix explicite de contribution au dataset de recherche (true = accepté sous le texte v2).
 export function getDatasetConsent(userId?: string | null): boolean {
-  try { return localStorage.getItem(`${consentKey(userId)}_dataset`) === "yes"; } catch { return false; }
+  try { return datasetVerOk(userId) && localStorage.getItem(`${consentKey(userId)}_dataset`) === "yes"; } catch { return false; }
 }
 function setDatasetConsent(accepted: boolean, userId?: string | null) {
   try {
     localStorage.setItem(`${consentKey(userId)}_dataset`, accepted ? "yes" : "no");
     localStorage.setItem(`${consentKey(userId)}_dataset_at`, new Date().toISOString());
-    localStorage.setItem(`${consentKey(userId)}_dataset_ver`, PRIVACY_POLICY_VERSION);
+    localStorage.setItem(`${consentKey(userId)}_dataset_ver`, RESEARCH_CONSENT_VERSION);
   } catch {}
 }
 
@@ -28,7 +36,8 @@ function consentKey(userId: string | null | undefined): string {
 
 export function hasUserConsented(userId?: string | null): boolean {
   try {
-    return localStorage.getItem(consentKey(userId)) === "accepted";
+    // Le choix recherche doit avoir été fait avec le texte en vigueur (sinon : redemandé).
+    return localStorage.getItem(consentKey(userId)) === "accepted" && datasetVerOk(userId);
   } catch {
     return false;
   }
@@ -187,7 +196,7 @@ export function ConsentBanner({ onAccept, onDecline, userId }: ConsentBannerProp
                 style={{ background: "#f8f8f6", border: "1px solid #e3e8e2" }}
               >
                 <p className="text-[12.5px] leading-normal" style={{ color: "#3d4f48" }}>
-                  <strong style={{ color: "#17392c" }}>Aider la recherche (optionnel).</strong> Ta photo <strong>anonymisée</strong> (sans nom, sans localisation) peut servir à améliorer l'IA pour les peaux africaines. C'est <strong>ton choix</strong> — le refus ne change rien à ton analyse.
+                  <strong style={{ color: "#17392c" }}>{RESEARCH_CONSENT_TITLE}</strong> {RESEARCH_CONSENT_TEXT}
                 </p>
               </div>
 
@@ -201,6 +210,12 @@ export function ConsentBanner({ onAccept, onDecline, userId }: ConsentBannerProp
                     data-testid="link-privacy-policy"
                   >
                     Lire notre politique de confidentialité
+                  </span>
+                </Link>
+                {" · "}
+                <Link href="/cgu">
+                  <span className="font-bold underline cursor-pointer" style={{ color: "#164034" }} data-testid="link-cgu">
+                    Conditions générales
                   </span>
                 </Link>
               </p>

@@ -1,5 +1,6 @@
 import { NETWORK_COUNTRIES } from "@shared/peer";
 import { countryOfPhone } from "@shared/relayOnboarding";
+import { CGU_VERSION } from "@shared/cgu";
 import type { Express } from "express";
 import { ensureRls } from "./ensureRls";
 import { createServer, type Server } from "http";
@@ -165,6 +166,15 @@ function getUID(req: any): string | null {
     || req.user?.id
     || (req.user as any)?.claims?.sub
     || null;
+}
+
+/** Choix « recherche » envoyé avec une analyse. Un « oui » ne compte que s'il a été
+ *  donné avec le texte v2 des CGU (modèles open source, accès chercheurs) ; un « oui »
+ *  sous l'ancien texte est ignoré (null), un « non » est toujours respecté. */
+function researchChoice(body: any): boolean | null {
+  if (body?.datasetConsent === false) return false;
+  if (body?.datasetConsent === true) return body?.researchConsentVersion === CGU_VERSION ? true : null;
+  return null;
 }
 
 /** Vérifie qu'un utilisateur est connecté (auth custom OU Replit OIDC) */
@@ -3131,7 +3141,7 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
             userId: userId || null,
             phone,
             reminders: !!phone && whatsappConsent,
-            research: typeof req.body?.datasetConsent === "boolean" ? req.body.datasetConsent : null,
+            research: researchChoice(req.body),
           });
         }
         // Persiste les angles supplémentaires (colonne hors schéma Drizzle, résiliente).
@@ -3324,11 +3334,12 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
             isAnonymized: !userId,
             // Consentement recherche : B2B = couvert par les CGU dermatologue ;
             // B2C = choix EXPLICITE du patient (accepter/refuser), jamais défaut.
-            gdprConsent: isProMode ? true : (req.body?.datasetConsent === true),
+            gdprConsent: isProMode ? true : (researchChoice(req.body) === true),
             annotation: {
               ...(enrichedAnnotation && typeof enrichedAnnotation === "object" ? enrichedAnnotation : {}),
               consent: isProMode ? { source: "derm_terms" } : {
-                datasetConsent: req.body?.datasetConsent === true,
+                datasetConsent: researchChoice(req.body) === true,
+                researchConsentVersion: researchChoice(req.body) === true ? CGU_VERSION : null,
                 policyVersion: typeof req.body?.consentPolicyVersion === "string" ? req.body.consentPolicyVersion : null,
                 at: new Date().toISOString(),
               },
@@ -4694,6 +4705,10 @@ Réponds en 2-4 phrases max, sois direct et utile.`;
         await db.execute(sql`
           INSERT INTO consents (user_id, research, updated_at) VALUES (${userId}, ${b.research}, NOW())
           ON CONFLICT (user_id) WHERE user_id IS NOT NULL DO UPDATE SET research = EXCLUDED.research, updated_at = NOW()`);
+        // Texte v2 du consentement recherche (migration 0042) : la version évite une remise à zéro.
+        const rv = b.research ? CGU_VERSION : null;
+        await db.execute(sql`UPDATE users SET dataset_consent_version = ${rv} WHERE id = ${userId}`).catch(() => {});
+        await db.execute(sql`UPDATE consents SET research_version = ${rv} WHERE user_id = ${userId}`).catch(() => {});
       }
       if (typeof b.reminders === "boolean") {
         if (b.reminders) {

@@ -6,6 +6,7 @@
 // ════════════════════════════════════════════════════════════════════════
 import crypto from "crypto";
 import { sql } from "drizzle-orm";
+import { CGU_VERSION } from "@shared/cgu";
 import { db } from "./db";
 import { normalizeCmPhone } from "@shared/phone";
 
@@ -46,6 +47,12 @@ export async function recordConsent(opts: {
     }
   } catch (e: any) {
     console.warn("[consents] écriture impossible (migration 0013 appliquée ?) :", e?.message || e);
+  }
+  // Consentement recherche : version du texte accepté (migration 0042, non bloquant).
+  if (research !== null) {
+    const v = research ? CGU_VERSION : null;
+    if (opts.userId) await db.execute(sql`UPDATE consents SET research_version = ${v} WHERE user_id = ${opts.userId}`).catch(() => {});
+    else if (phone) await db.execute(sql`UPDATE consents SET research_version = ${v} WHERE user_id IS NULL AND phone = ${phone}`).catch(() => {});
   }
 }
 

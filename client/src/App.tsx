@@ -20,6 +20,7 @@ if (process.env.NODE_ENV === "production") {
 import ErrorBoundary from "@/components/ErrorBoundary";
 import PWAInstallBanner from "@/components/PWAInstallBanner";
 import { TabBar } from "@/components/b2c/TabBar";
+import { CguGate } from "@/components/CguGate";
 
 // Rechargement automatique si un fichier du site a changé après un déploiement.
 import { lazyWithRetry, installChunkReloadHandler } from "@/lib/chunkReload";
@@ -30,7 +31,7 @@ installChunkReloadHandler();
 // Appli patient (B2C) : toutes ses pages prennent la nouvelle palette (blanc
 // cassé, vert profond, sauge), sauf la landing vue par un visiteur non connecté.
 const B2C_PAGES = ["/", "/analyze", "/ma-peau", "/profile", "/shop", "/routine", "/consultations", "/chat", "/premium",
-  "/product-scan-camera", "/dermatologues", "/commande", "/auth", "/magic", "/consultation/confirmee", "/confidentialite", "/rejoindre"];
+  "/product-scan-camera", "/dermatologues", "/commande", "/auth", "/magic", "/consultation/confirmee", "/confidentialite", "/cgu", "/rejoindre"];
 const isB2CPage = (p: string) => B2C_PAGES.includes(p) || p.startsWith("/dr/");
 const hadAccount = () => { try { return !!localStorage.getItem("glowscan_had_account"); } catch { return false; } };
 const isVisitorLanding = (p: string, loggedIn?: boolean) => p === "/" && !(loggedIn ?? hadAccount());
@@ -107,6 +108,7 @@ const RelayHome = lazyWithRetry(() => import("@/pages/relay/RelayHome"));
 const Rejoindre = lazyWithRetry(() => import("@/pages/relay/Rejoindre"));
 const ProReseau = lazyWithRetry(() => import("@/pages/pro/ProReseau"));
 const Privacy = lazyWithRetry(() => import("@/pages/Privacy"));
+const Cgu = lazyWithRetry(() => import("@/pages/Cgu"));
 const DermatoPortal = lazyWithRetry(() => import("@/pages/DermatoPortal"));
 const DermLanding = lazyWithRetry(() => import("@/pages/DermLanding"));
 const NotFound = lazyWithRetry(() => import("@/pages/not-found"));
@@ -195,6 +197,7 @@ function Router() {
         return null;
       }} />
       <Route path="/confidentialite" component={Privacy} />
+      <Route path="/cgu" component={Cgu} />
       <Route path="/dermato" component={DermatoPortal} />
       {/* Démo interactive retirée (landing et connexion) : renvoie vers la présentation. */}
       <Route path="/derm/demo">{() => { window.location.replace("/derm"); return null; }}</Route>
@@ -246,6 +249,7 @@ function App() {
         <TooltipProvider>
           <BodyBackground />
           <Router />
+          <CguGate />
           <TabBar />
           <PWAInstallBanner />
           <Toaster />

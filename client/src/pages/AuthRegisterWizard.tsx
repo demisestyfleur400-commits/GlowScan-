@@ -4,6 +4,7 @@ import { useLocation } from "wouter";
 import { ArrowRight, ArrowLeft, Eye, EyeOff, Mail, Check, ShieldCheck, Info } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { CGU_VERSION, CGU_CHECK_PATIENT, RESEARCH_CONSENT_TITLE, RESEARCH_CONSENT_TEXT } from "@shared/cgu";
 import { useEffect, type CSSProperties, type ReactNode } from "react";
 import { GS as GS_BASE } from "@/lib/gs-ui";
 import { ensureDermFonts } from "@/components/derm/tokens";
@@ -72,6 +73,7 @@ export function AuthRegisterWizard({ onGoLogin }: { onGoLogin: () => void }) {
   const [showPwd, setShowPwd] = useState(false);
   const [cDataset, setCDataset] = useState(false);
   const [cWhatsapp, setCWhatsapp] = useState(false);
+  const [cCgu, setCCgu] = useState(false); // CGU + confidentialité : case obligatoire, jamais pré-cochée
   const [code, setCode] = useState("");
   const [emailHint, setEmailHint] = useState("");
 
@@ -108,6 +110,7 @@ export function AuthRegisterWizard({ onGoLogin }: { onGoLogin: () => void }) {
   async function submitRegister() {
     if (!emailValid) { toast({ title: "E-mail invalide", variant: "destructive" }); setStep(2); return; }
     if (!pwdLen) { toast({ title: "Mot de passe trop court", description: "8 caractères minimum.", variant: "destructive" }); setStep(3); return; }
+    if (!cCgu) { toast({ title: "Conditions à accepter", description: "Cochez la case des Conditions générales pour créer votre dossier.", variant: "destructive" }); return; }
     setLoading(true);
     try {
       const res = await apiRequest("POST", "/api/auth/register", {
@@ -118,6 +121,7 @@ export function AuthRegisterWizard({ onGoLogin }: { onGoLogin: () => void }) {
         phone: phoneDigits ? `+237${phoneDigits}` : undefined,
         consentDataset: cDataset,
         consentWhatsapp: cWhatsapp,
+        cguVersion: cCgu ? CGU_VERSION : undefined,
       });
       const data = await res.json().catch(() => ({} as any));
       if (data?.requires2fa) {
@@ -257,12 +261,22 @@ export function AuthRegisterWizard({ onGoLogin }: { onGoLogin: () => void }) {
             {/* dataset */}
             <button onClick={() => setCDataset((v) => !v)} style={{ textAlign: "left", cursor: "pointer", background: "#fff", border: `1px solid ${cDataset ? GS.ink : GS.line}`, padding: 14, display: "flex", gap: 13, alignItems: "flex-start" }}>
               <span style={{ width: 20, height: 20, flex: "none", marginTop: 1, ...(cDataset ? { background: GS.ink, display: "flex", alignItems: "center", justifyContent: "center" } : { border: `1px solid ${GS.disabled}` }) }}>{cDataset && <Check size={13} style={{ color: GS.accent }} strokeWidth={3} />}</span>
-              <div><div style={{ fontSize: 13, fontWeight: 600, color: GS.ink }}>Contribuer à la base africaine</div><div style={{ fontSize: 11, color: GS.muted, lineHeight: 1.5, marginTop: 3 }}>Mes images anonymisées entraînent le modèle sur peaux noires. Facultatif.</div></div>
+              <div><div style={{ fontSize: 13, fontWeight: 600, color: GS.ink }}>{RESEARCH_CONSENT_TITLE}</div><div style={{ fontSize: 11, color: GS.muted, lineHeight: 1.5, marginTop: 3 }}>{RESEARCH_CONSENT_TEXT}</div></div>
             </button>
             {/* whatsapp */}
             <button onClick={() => setCWhatsapp((v) => !v)} style={{ textAlign: "left", cursor: "pointer", background: "#fff", border: `1px solid ${cWhatsapp ? GS.ink : GS.line}`, padding: 14, display: "flex", gap: 13, alignItems: "flex-start" }}>
               <span style={{ width: 20, height: 20, flex: "none", marginTop: 1, ...(cWhatsapp ? { background: GS.ink, display: "flex", alignItems: "center", justifyContent: "center" } : { border: `1px solid ${GS.disabled}` }) }}>{cWhatsapp && <Check size={13} style={{ color: GS.accent }} strokeWidth={3} />}</span>
               <div><div style={{ fontSize: 13, fontWeight: 600, color: GS.ink }}>Rappels WhatsApp</div><div style={{ fontSize: 11, color: GS.muted, lineHeight: 1.5, marginTop: 3 }}>Suivi de traitement et contrôles. Facultatif.</div></div>
+            </button>
+            {/* CGU — obligatoire */}
+            <button onClick={() => setCCgu((v) => !v)} data-testid="checkbox-cgu" style={{ textAlign: "left", cursor: "pointer", background: "#fff", border: `1px solid ${cCgu ? GS.ink : GS.line}`, padding: 14, display: "flex", gap: 13, alignItems: "flex-start" }}>
+              <span style={{ width: 20, height: 20, flex: "none", marginTop: 1, ...(cCgu ? { background: GS.ink, display: "flex", alignItems: "center", justifyContent: "center" } : { border: `1px solid ${GS.disabled}` }) }}>{cCgu && <Check size={13} style={{ color: GS.accent }} strokeWidth={3} />}</span>
+              <div style={{ fontSize: 11.5, color: GS.ink, lineHeight: 1.55 }}>
+                {CGU_CHECK_PATIENT}{" "}
+                <a href="/cgu" target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} style={{ color: GS.teal, fontWeight: 600 }}>Conditions générales</a>
+                {" · "}
+                <a href="/confidentialite" target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} style={{ color: GS.teal, fontWeight: 600 }}>Confidentialité</a>
+              </div>
             </button>
           </div>
           <div style={{ marginTop: "auto", paddingBottom: 26 }}>
@@ -270,7 +284,7 @@ export function AuthRegisterWizard({ onGoLogin }: { onGoLogin: () => void }) {
               <ShieldCheck size={13} style={{ color: GS.teal }} strokeWidth={1.8} />
               <GsMono style={{ letterSpacing: ".04em" }}>Chiffrement AES-256 · hébergeur certifié santé</GsMono>
             </div>
-            <GsButton onClick={submitRegister} disabled={loading}>{loading ? "Création…" : "Créer mon dossier"}</GsButton>
+            <GsButton onClick={submitRegister} disabled={loading || !cCgu}>{loading ? "Création…" : "Créer mon dossier"}</GsButton>
             <div style={{ textAlign: "center", fontSize: 12, color: GS.muted, marginTop: 14 }}>Déjà inscrit ? <a onClick={onGoLogin} style={{ color: GS.teal, fontWeight: 600, cursor: "pointer" }}>Se connecter</a></div>
           </div>
         </>

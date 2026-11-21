@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Lock } from "lucide-react";
+import { RESEARCH_CONSENT_TITLE, RESEARCH_CONSENT_TEXT } from "@shared/cgu";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
 import { useToast } from "@/hooks/use-toast";
@@ -142,7 +143,7 @@ export default function Profile() {
             <Switch on locked label="Partager avec mes médecins (obligatoire)" />
           </div>
           <div className={row}>
-            <span className="flex flex-1 flex-col"><span className="text-[14px] font-semibold">Aider la recherche</span><span className="text-[12px] text-organic-neutral-700">Photos anonymisées pour l'atlas des peaux africaines</span></span>
+            <span className="flex flex-1 flex-col"><span className="text-[14px] font-semibold">{RESEARCH_CONSENT_TITLE}</span><span className="text-[12px] text-organic-neutral-700">{RESEARCH_CONSENT_TEXT}</span></span>
             <Switch on={!!consents?.research} label="Aider la recherche" onClick={() => consents && busy !== "research" && save("research", !consents.research)} />
           </div>
           <div className={row}>

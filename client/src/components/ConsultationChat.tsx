@@ -715,6 +715,7 @@ export function ConsultationChat({ consultationId, myUserId, dark, onBack, derm,
                     ✓ Consentement patient enregistré{dossier.intake.consent.at ? ` le ${new Date(dossier.intake.consent.at).toLocaleDateString("fr-FR")}` : ""}
                   </span>
                   <a href="/confidentialite" target="_blank" rel="noreferrer" style={{ color: "var(--color-accent-2-700)", fontWeight: 700 }}>Voir les informations de confidentialité</a>
+                  <a href="/cgu" target="_blank" rel="noreferrer" style={{ color: "var(--color-accent-2-700)", fontWeight: 700 }}>Conditions générales</a>
                 </div>
               )}
 

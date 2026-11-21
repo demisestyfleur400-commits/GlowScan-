@@ -1,5 +1,6 @@
 import { intlPhone, phoneAccountEmail, maskPhone } from "@shared/relayOnboarding";
 import { geminiText, geminiReady } from "./glowAssistant";
+import { CGU_VERSION } from "@shared/cgu";
 import type { Express } from "express";
 import { ensureRls } from "./ensureRls";
 import { db } from "./db";
@@ -216,7 +217,7 @@ export async function notifyProAccount(
 // Version des Conditions d'utilisation & Politique de confidentialité DERM en vigueur.
 // Le dermatologue (responsable de la plateforme) les accepte à l'inscription.
 // Incrémenter à chaque modification du texte (preuve opposable de la version acceptée).
-const TERMS_VERSION = "v1-2026-07";
+const TERMS_VERSION = CGU_VERSION;
 
 // Même logique provider que routes.ts : Groq > Gemini > OpenAI
 const _proGroqKey   = process.env.GROQ_API_KEY || "";
@@ -676,6 +677,11 @@ export function registerProRoutes(app: Express) {
       }
       // Version des Conditions & Confidentialité acceptée (preuve opposable, SQL brut)
       db.execute(sql`UPDATE "pro_accounts" SET "consent_version" = ${data.consentVersion || TERMS_VERSION} WHERE "id" = ${acc.id}`).catch(() => {});
+      // CGU 2026-11-v2 : acceptation versionnée (migration 0042) — seulement si la case v2 a été cochée.
+      if (data.consentVersion === CGU_VERSION) {
+        db.execute(sql`UPDATE "pro_accounts" SET "cgu_version" = ${CGU_VERSION}, "cgu_accepted_at" = NOW() WHERE "id" = ${acc.id}`).catch(() => {});
+        db.execute(sql`UPDATE "users" SET "cgu_version" = ${CGU_VERSION}, "cgu_accepted_at" = NOW() WHERE "id" = ${acc.userId}`).catch(() => {});
+      }
 
       // Parrainage confrère : on relie le nouveau compte au parrain (id valide, pas soi-même).
       const refId = data.ref != null ? parseInt(String(data.ref), 10) : NaN;

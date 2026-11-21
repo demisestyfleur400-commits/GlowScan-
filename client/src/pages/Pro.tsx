@@ -395,6 +395,7 @@ export default function Pro() {
               <p className="text-xs font-extrabold uppercase tracking-widest" style={{ color: DS.text }}>Sécurité</p>
               <ul className="space-y-2 text-xs font-medium" style={{ color: DS.body }}>
                 <li><Link href="/confidentialite" className="hover:text-white transition-colors">Politique de confidentialité</Link></li>
+                <li><Link href="/cgu" className="hover:text-white transition-colors">Conditions générales</Link></li>
                 <li><Link href="/confidentialite" className="hover:text-white transition-colors">Réglementation des données</Link></li>
               </ul>
             </div>

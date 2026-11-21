@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
+import { CGU_VERSION, CGU_CHECK_PRO } from "@shared/cgu";
 import { useToast } from "@/hooks/use-toast";
 import { useProAccount } from "@/hooks/use-pro";
 import { proHomeOf, type ProProfile } from "@shared/proProfile";
@@ -16,8 +17,8 @@ import { GoogleButton, OrDivider, googleErrorMessage } from "@/components/Google
 // obligatoires à l'inscription. Pas d'identifiants publics de démonstration.
 // ════════════════════════════════════════════════════════════════════════
 
-// Doit rester synchronisé avec DERM_TERMS_VERSION dans DermConditions.tsx
-const DERM_TERMS_VERSION = "v1-2026-07";
+// Version des CGU acceptée à l'inscription (source unique : shared/cgu.ts).
+const DERM_TERMS_VERSION = CGU_VERSION;
 type Mode = "signin" | "signup";
 
 const maskHint = (email: string) => (email.includes("@") ? email.replace(/^(.).*(@.*)$/, "$1•••$2") : "votre email");
@@ -214,7 +215,7 @@ export default function ProConnexion({ initialMode = "signin" }: { initialMode?:
                 <>
                   <label className="flex cursor-pointer items-start" style={{ gap: 8, fontSize: 14, lineHeight: 1.5, color: D.muted }}>
                     <input type="checkbox" checked={consent} onChange={(e) => { setConsent(e.target.checked); setError(""); }} style={{ marginTop: 2, accentColor: D.cta }} data-testid="checkbox-consent" />
-                    <span>J'accepte les <Link href="/derm/conditions" style={{ color: D.cta, fontWeight: 700 }}>conditions d'utilisation</Link> et la politique de confidentialité.</span>
+                    <span>{CGU_CHECK_PRO} <Link href="/derm/conditions" style={{ color: D.cta, fontWeight: 700 }}>Conditions générales</Link> · <Link href="/confidentialite" style={{ color: D.cta, fontWeight: 700 }}>Confidentialité</Link></span>
                   </label>
                   {!otherProfile ? (
                     <button type="button" onClick={() => setOtherProfile(true)} style={{ ...linkBtn, alignSelf: "flex-start", fontWeight: 600, color: D.muted }}>Vous êtes relais communautaire ou une ONG ?</button>

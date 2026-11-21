@@ -8,7 +8,7 @@ import { useSubscription } from "@/hooks/use-subscription";
 import { GsTopBar } from "@/components/GsTopBar";
 import { FileUpload } from "@/components/FileUpload";
 import { UpgradeModal } from "@/components/UpgradeModal";
-import { ConsentBanner, hasUserConsented, getDatasetConsent, PRIVACY_POLICY_VERSION } from "@/components/ConsentBanner";
+import { ConsentBanner, hasUserConsented, getDatasetConsent, PRIVACY_POLICY_VERSION, RESEARCH_CONSENT_VERSION } from "@/components/ConsentBanner";
 import { ToxicAlert } from "@/components/ToxicAlert";
 import { PRODUCT_SUGGESTIONS, detectToxicProducts } from "@/lib/toxic-products";
 import { TriageBadge } from "@/components/TriageBadge";
@@ -322,6 +322,7 @@ export default function Analyze() {
           // Consentement recherche (choix explicite du patient) + version de la politique.
           datasetConsent: getDatasetConsent(user?.id),
           consentPolicyVersion: PRIVACY_POLICY_VERSION,
+          researchConsentVersion: RESEARCH_CONSENT_VERSION,
         }),
         maxRetries: 2,
         baseDelayMs: 800,
