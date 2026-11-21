@@ -21,31 +21,46 @@ const pad = (n: number) => String(n).padStart(2, "0");
 const hm = (v: string) => new Date(v).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
 const ST: Record<Fu["status"], [string, "draft" | "err" | "ok"]> = { today: ["Aujourd'hui", "draft"], late: ["À relancer", "err"], plan: ["Planifié", "ok"] };
 
-export function RelanceModal({ items, text, onClose, onSent }: { items: { id: number; label: string; phone: string | null }[]; text: string; onClose: () => void; onSent: (msg: string) => void }) {
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState("");
-  const send = async () => {
-    setBusy(true); setErr("");
-    try {
-      const d = await api<{ sent: number; results: { id: number; sent: boolean; reason?: string }[] }>("/api/derm/followups/relance", "POST", { patientIds: items.map((x) => x.id) });
-      const fails = d.results.filter((r) => !r.sent);
-      onSent(`${d.sent} relance${d.sent > 1 ? "s" : ""} envoyée${d.sent > 1 ? "s" : ""}${fails.length ? ` · ${fails.length} non envoyée${fails.length > 1 ? "s" : ""} (${Array.from(new Set(fails.map((f) => f.reason))).join(", ")})` : ""}.`);
-    } catch (e: any) { setErr(e.message); }
-    setBusy(false);
+// Lien WhatsApp « cliquer pour écrire » : numéro camerounais normalisé, texte pré-rempli.
+export function waLink(phone: string, text: string) {
+  const d = String(phone || "").replace(/\D/g, "");
+  return `https://wa.me/${d.startsWith("237") ? d : d.length === 9 ? "237" + d : d}?text=${encodeURIComponent(text)}`;
+}
+
+// Relance en un clic : l'envoi automatique WhatsApp n'est pas encore en service (Twilio
+// acceptait sans délivrer). Chaque patient a son bouton : WhatsApp s'ouvre avec le
+// message déjà écrit (prénom compris), il ne reste qu'à appuyer sur Envoyer.
+export function RelanceModal({ items, text, onClose, onSent }: { items: { id: number; label: string; phone: string | null; firstName?: string }[]; text: string; onClose: () => void; onSent: (msg: string) => void }) {
+  const [done, setDone] = useState<Record<number, boolean>>({});
+  const footer = "\n\nPour ne plus recevoir ces rappels, répondez ARRÊT SUIVI";
+  const msgFor = (x: { firstName?: string }) => text.replace(/\[prénom[^\]]*\]/g, x.firstName || "").replace(/Bonjour\s+,/, "Bonjour,") + footer;
+  const open = async (x: { id: number; phone: string | null; firstName?: string }) => {
+    if (!x.phone) return;
+    window.open(waLink(x.phone, msgFor(x)), "_blank", "noopener");
+    setDone((d) => ({ ...d, [x.id]: true }));
+    try { await api("/api/derm/reminders-queue/done", "POST", { kind: "suivi", id: x.id }); } catch { /* reste marqué ici ; la liste se recalculera */ }
   };
+  const n = Object.keys(done).length;
   return (
     <div className="fixed inset-0 z-50 grid place-items-center" style={{ padding: 16 }}>
-      <div className="absolute inset-0" style={{ background: "rgba(13,41,41,.35)" }} onClick={onClose} />
-      <div className="relative flex w-full max-w-[520px] flex-col" style={{ gap: 14, padding: 24, borderRadius: 12, background: "#fff", fontFamily: FONT_UI, color: D.text }} data-testid="relance-modal">
-        <div className="flex items-center justify-between"><b style={{ fontSize: 17, fontWeight: 600 }}>Préparer une relance</b>
-          <button type="button" aria-label="Fermer" onClick={onClose} className="cursor-pointer" style={{ border: 0, background: "none", color: D.muted }}><X size={18} /></button></div>
-        <span style={{ fontSize: 11.5, color: D.muted }}>Message WhatsApp envoyé à {items.length} patient{items.length > 1 ? "s" : ""}, sans aucun détail médical :</span>
-        <div style={{ padding: 14, borderRadius: 8, background: "#e7f3e8", fontSize: 12, lineHeight: 1.55, whiteSpace: "pre-wrap" }}>{text}{"\n\n"}Pour ne plus recevoir ces rappels, répondez ARRÊT SUIVI</div>
-        <div style={{ fontSize: 11 }}>{items.map((x) => <div key={x.id} style={{ padding: "4px 0", borderBottom: `1px solid ${D.sep}` }}>{x.label}{x.phone ? "" : <span style={{ color: D.err }}> · pas de numéro</span>}</div>)}</div>
-        {err && <span style={{ fontSize: 11, color: D.err }}>{err}</span>}
-        <div className="flex justify-end" style={{ gap: 8 }}>
-          <Btn kind="secondary" onClick={onClose}>Annuler</Btn>
-          <Btn kind="primary" disabled={busy || !items.some((x) => x.phone)} onClick={send} data-testid="relance-send">Envoyer {items.length > 1 ? `les ${items.length} relances` : "la relance"}</Btn>
+      <div className="absolute inset-0" style={{ background: "rgba(13,41,41,.35)" }} onClick={() => (n ? onSent(`${n} relance${n > 1 ? "s" : ""} ouverte${n > 1 ? "s" : ""} dans WhatsApp.`) : onClose())} />
+      <div className="relative flex w-full max-w-[560px] flex-col" style={{ gap: 14, padding: 24, borderRadius: 12, background: "#fff", fontFamily: FONT_UI, color: D.text }} data-testid="relance-modal">
+        <div className="flex items-center justify-between"><b style={{ fontSize: 17, fontWeight: 600 }}>Relancer {items.length > 1 ? `${items.length} patients` : "le patient"}</b>
+          <button type="button" aria-label="Fermer" onClick={() => (n ? onSent(`${n} relance${n > 1 ? "s" : ""} ouverte${n > 1 ? "s" : ""} dans WhatsApp.`) : onClose())} className="cursor-pointer" style={{ border: 0, background: "none", color: D.muted }}><X size={18} /></button></div>
+        <span style={{ fontSize: 12, color: D.muted }}>Pour chaque patient, « Ouvrir WhatsApp » ouvre la conversation avec le message déjà écrit, sans détail médical. Appuyez ensuite sur Envoyer dans WhatsApp.</span>
+        <div style={{ padding: 14, borderRadius: 8, background: "#e7f3e8", fontSize: 12, lineHeight: 1.55, whiteSpace: "pre-wrap" }}>{msgFor(items.length === 1 ? items[0] : { firstName: "[prénom]" })}</div>
+        <div className="flex flex-col" style={{ maxHeight: 280, overflowY: "auto" }}>
+          {items.map((x) => (
+            <div key={x.id} className="flex items-center justify-between" style={{ gap: 10, padding: "8px 0", borderBottom: `1px solid ${D.sep}`, fontSize: 12.5 }}>
+              <span>{x.label}{x.phone ? "" : <span style={{ color: D.err }}> · pas de numéro</span>}</span>
+              {done[x.id] ? <Tag tone="ok">Ouvert ✓</Tag>
+                : <button type="button" disabled={!x.phone} onClick={() => open(x)} data-testid={`relance-wa-${x.id}`}
+                    style={{ height: 32, padding: "0 12px", borderRadius: 8, border: 0, background: x.phone ? "#25D366" : "#cfd8d3", color: "#fff", fontSize: 12, fontWeight: 700, cursor: x.phone ? "pointer" : "default" }}>Ouvrir WhatsApp</button>}
+            </div>
+          ))}
+        </div>
+        <div className="flex justify-end">
+          <Btn kind="secondary" onClick={() => (n ? onSent(`${n} relance${n > 1 ? "s" : ""} ouverte${n > 1 ? "s" : ""} dans WhatsApp.`) : onClose())}>{n ? "Terminé" : "Fermer"}</Btn>
         </div>
       </div>
     </div>
@@ -67,7 +82,7 @@ export function CreateFollowup({ onClose, onDone, presetId }: { onClose: () => v
   const submit = async () => {
     if (!pid) return;
     setBusy(true); setErr("");
-    try { await api("/api/derm/followups", "POST", { patientId: pid, date, time, reason }); onDone("Suivi créé : le contrôle est dans l'Agenda, rappel WhatsApp la veille.", pid); }
+    try { await api("/api/derm/followups", "POST", { patientId: pid, date, time, reason }); onDone("Suivi créé : le contrôle est dans l'Agenda, son rappel apparaîtra la veille dans « Rappels à envoyer aujourd'hui ».", pid); }
     catch (e: any) { setErr(e.message); }
     setBusy(false);
   };
@@ -94,7 +109,7 @@ export function CreateFollowup({ onClose, onDone, presetId }: { onClose: () => v
           <Label text="Date du contrôle"><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></Label>
           <Label text="Heure"><Input type="time" step={900} value={time} onChange={(e) => setTime(e.target.value)} /></Label>
         </div>
-        <span style={{ fontSize: 10.5, color: D.muted }}>Le contrôle est ajouté à l'Agenda (décalé de 30 min si le créneau est pris). Le patient reçoit le rappel WhatsApp la veille.</span>
+        <span style={{ fontSize: 10.5, color: D.muted }}>Le contrôle est ajouté à l'Agenda (décalé de 30 min si le créneau est pris). La veille, le rappel apparaît dans « Rappels à envoyer aujourd'hui » : un clic l'ouvre dans WhatsApp.</span>
         {err && <span style={{ fontSize: 11, color: D.err }}>{err}</span>}
         <Btn kind="primary" disabled={busy || !pid || !date} onClick={submit} data-testid="create-followup-submit">Créer le suivi</Btn>
       </aside>
@@ -216,7 +231,7 @@ export default function DermSuivis() {
           </div>
         </section>
       </Page>
-      {relance && <RelanceModal items={relance.map((x) => ({ id: x.id, label: `Patient ${patientCode(x.id)} · ${x.firstName} ${x.lastName}`, phone: x.phone }))} text={data?.relanceText.replace("[prénom]", relance.length === 1 ? relance[0].firstName : "[prénom du patient]") || ""}
+      {relance && <RelanceModal items={relance.map((x) => ({ id: x.id, label: `Patient ${patientCode(x.id)} · ${x.firstName} ${x.lastName}`, phone: x.phone, firstName: x.firstName }))} text={data?.relanceText || ""}
         onClose={() => setRelance(null)} onSent={(t) => { setRelance(null); setMsg({ t, tone: "ok" }); refresh(); }} />}
       {creating && <CreateFollowup onClose={() => setCreating(false)} onDone={(t, id) => { setCreating(false); setMsg({ t, tone: "ok" }); refresh(); go(`/derm/suivis/${id}`); }} />}
     </DermShell>

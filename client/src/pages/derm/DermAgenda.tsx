@@ -342,7 +342,7 @@ function ApptPanel({ a, canStart, isSecretary, onClose, onPatch, go }: { a: Appt
             <Label text="Nouvelle date"><Input type="date" value={d} onChange={(e) => setD(e.target.value)} /></Label>
             <Label text="Heure"><Input type="time" step={900} value={t} onChange={(e) => setT(e.target.value)} /></Label>
           </div>
-          <Btn kind="primary" disabled={!d || !t} onClick={() => onPatch({ appointmentDate: new Date(`${d}T${t}:00`).toISOString() }, "Rendez-vous déplacé. Le patient recevra un nouveau rappel la veille.")}>Enregistrer le nouveau créneau</Btn>
+          <Btn kind="primary" disabled={!d || !t} onClick={() => onPatch({ appointmentDate: new Date(`${d}T${t}:00`).toISOString() }, "Rendez-vous déplacé. Le rappel apparaîtra la veille dans « Rappels à envoyer aujourd'hui ».")}>Enregistrer le nouveau créneau</Btn>
         </div>
       )}
       {a.patient_record_id && <Btn kind="link" onClick={() => go(isSecretary ? `/derm/patients/${a.patient_record_id}` : `/derm/dossiers/${a.patient_record_id}`)} style={{ alignSelf: "flex-start" }}>{isSecretary ? "Ouvrir la fiche patient →" : "Ouvrir le dossier médical →"}</Btn>}
@@ -375,7 +375,7 @@ function CreatePanel({ init, patients, onClose, onDone }: { init: { date: string
         appointmentDate: new Date(`${date}T${time}:00`).toISOString(), durationMinutes: Number(dur), type, notes,
         patientName: p ? `${p.firstName} ${p.lastName}` : name, patientContact: p ? p.phone : phone, patientRecordId: p?.id, forceConflict: force,
       });
-      onDone("Rendez-vous ajouté. Le patient recevra le rappel WhatsApp la veille.");
+      onDone("Rendez-vous ajouté. Le rappel apparaîtra la veille dans « Rappels à envoyer aujourd'hui ».");
     } catch (e: any) {
       if (e.status === 409) setConflict(true);
       setErr(e.message);

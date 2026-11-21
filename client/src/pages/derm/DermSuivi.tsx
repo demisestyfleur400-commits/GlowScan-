@@ -187,7 +187,7 @@ export default function DermSuivi() {
                 <span style={{ fontSize: 11, color: D.err }}>Le patient a demandé l'arrêt des rappels de suivi le {fr(data.remindersStoppedAt, { day: "numeric", month: "long" })}. Contactez-le directement.</span>
               ) : (
                 <>
-                  <span style={{ fontSize: 11, color: D.muted }}>{data.followup?.relancedAt ? `Dernière relance le ${fr(data.followup.relancedAt, { day: "numeric", month: "long" })}.` : "Le rappel de la veille part automatiquement avant chaque contrôle confirmé."}</span>
+                  <span style={{ fontSize: 11, color: D.muted }}>{data.followup?.relancedAt ? `Dernière relance le ${fr(data.followup.relancedAt, { day: "numeric", month: "long" })}.` : "La veille de chaque contrôle, le rappel apparaît dans « Rappels à envoyer aujourd'hui » : un clic l'ouvre dans WhatsApp."}</span>
                   <Btn kind={data.followup?.status === "late" ? "primary" : "secondary"} disabled={!p.phone || closed} onClick={() => setRelance(true)} data-testid="suivi-relance">{p.phone ? "Préparer un rappel" : "Pas de numéro WhatsApp"}</Btn>
                 </>
               )}
@@ -195,7 +195,7 @@ export default function DermSuivi() {
           </div>
         </section>
       </Page>
-      {relance && <RelanceModal items={[{ id: p.id, label: `Patient ${code} · ${p.firstName} ${p.lastName}`, phone: p.phone }]} text={data.relanceText} onClose={() => setRelance(false)} onSent={(t) => { setRelance(false); setMsg({ t, tone: "ok" }); refresh(); }} />}
+      {relance && <RelanceModal items={[{ id: p.id, label: `Patient ${code} · ${p.firstName} ${p.lastName}`, phone: p.phone, firstName: p.firstName }]} text={data.relanceText} onClose={() => setRelance(false)} onSent={(t) => { setRelance(false); setMsg({ t, tone: "ok" }); refresh(); }} />}
       {planning && <CreateFollowup presetId={p.id} onClose={() => setPlanning(false)} onDone={(t) => { setPlanning(false); setMsg({ t, tone: "ok" }); refresh(); }} />}
     </DermShell>
   );
