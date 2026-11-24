@@ -272,8 +272,8 @@ function extractInlineImage(src: string): { mime: string; b64: string } | null {
 }
 
 const EVOLUTION_MODELS = Array.from(new Set([
-  process.env.GEMINI_MODEL || "gemini-flash-latest",
-  "gemini-flash-latest", "gemini-flash-lite-latest", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite",
+  process.env.GEMINI_MODEL || "gemini-flash-lite-latest",
+  "gemini-flash-lite-latest", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-flash-latest",
 ]));
 
 async function compareEvolutionAI(opts: {

@@ -325,7 +325,9 @@ export default function Analyze() {
         }),
         maxRetries: 2,
         baseDelayMs: 800,
-        retryOn5xx: true,
+        // Le serveur essaie déjà toute la chaîne de modèles IA : renvoyer l'analyse
+        // sur une erreur 5xx triplait l'attente. On ne réessaie que si le réseau coupe.
+        retryOn5xx: false,
       });
 
       // Gestion des statuts d'erreur connus

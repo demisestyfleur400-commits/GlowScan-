@@ -108,7 +108,13 @@ const GROQ_MODEL    = process.env.GROQ_MODEL || "qwen/qwen3.6-27b";
 // gemini-2.5-flash-lite…) finissent par être retirées aux nouveaux projets et
 // renvoient 404 ; les alias « *-latest » évitent ça. Surchargeable via
 // GEMINI_MODEL dans Railway.
-const GEMINI_MODEL  = process.env.GEMINI_MODEL || "gemini-flash-latest";
+// 24/11/2026 : gemini-flash-latest répondait 503 (« high demand ») ou très lentement,
+// alors que les « flash-lite » répondaient en ~1 s → on commence par un « lite ».
+const GEMINI_MODEL  = process.env.GEMINI_MODEL || "gemini-flash-lite-latest";
+// Temps laissé à CHAQUE modèle avant de passer au suivant, et budget total de la
+// chaîne : un modèle saturé ne doit pas faire attendre le patient 2 minutes.
+const GEMINI_PER_MODEL_TIMEOUT_MS = Number(process.env.GEMINI_PER_MODEL_TIMEOUT_MS) || 35000;
+const GEMINI_CHAIN_BUDGET_MS = Number(process.env.GEMINI_CHAIN_BUDGET_MS) || 90000;
 // Chaîne de secours : si un modèle Gemini sature (429/quota) ou disparaît (404),
 // le code bascule automatiquement sur le suivant. Chaque modèle gratuit a son
 // PROPRE quota journalier → la chaîne multiplie la capacité et évite que
@@ -118,7 +124,7 @@ const GEMINI_MODEL  = process.env.GEMINI_MODEL || "gemini-flash-latest";
 // filtrés, modèle principal en tête.
 const GEMINI_FALLBACKS = [
   GEMINI_MODEL,
-  ...(process.env.GEMINI_FALLBACKS || "gemini-flash-lite-latest,gemini-3.5-flash-lite,gemini-3.1-flash-lite,gemini-3.5-flash")
+  ...(process.env.GEMINI_FALLBACKS || "gemini-3.5-flash-lite,gemini-3.1-flash-lite,gemini-flash-latest,gemini-3.5-flash")
     .split(",").map((s) => s.trim()).filter(Boolean),
 ].filter((v, i, a) => a.indexOf(v) === i);
 const AI_MODEL      = USE_GROQ ? GROQ_MODEL : USE_GEMINI ? GEMINI_MODEL : "gpt-4o";
@@ -2597,6 +2603,8 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
           // Sur quota/404/surcharge → on passe au suivant (quotas séparés).
           let lastErr: any = null;
           for (const modelId of GEMINI_FALLBACKS) {
+            const left = GEMINI_CHAIN_BUDGET_MS - (Date.now() - t0);
+            if (left < 5000) { console.warn(`[analyze] budget IA épuisé avant ${modelId}`); break; }
             try {
               const m = gemini.getGenerativeModel({ model: modelId, systemInstruction: activeSystemPrompt });
               const gemResult = await Promise.race([
@@ -2611,7 +2619,7 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
                     temperature: 0.2,
                   },
                 }),
-                new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Timeout")), 120000)),
+                new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Timeout (unavailable)")), Math.min(GEMINI_PER_MODEL_TIMEOUT_MS, left))),
               ]);
               c = (gemResult as any).response.text() || "";
               if (modelId !== GEMINI_FALLBACKS[0]) console.log(`[analyze] ✅ Bascule Gemini réussie sur ${modelId}`);
