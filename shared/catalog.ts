@@ -786,14 +786,14 @@ export const catalog: Product[] = [
   },
 
   // ── KITS — une routine complète par besoin (recommandés après l'analyse) ──
-  // Les photos et la « valeur séparée » sont calculées depuis kitItems (kitValue).
+  // Prix d'un kit = somme des prix de ses produits (recalculé au chargement, cf. fin du fichier).
   {
     id: "kit-peau-nette-30j",
     name: "Kit Acné & Points Noirs",
     brand: "GlowScan",
     description: "Routine anti-acné de 30 jours : nettoyer sans agresser, désincruster les pores, calmer les boutons. Traiter l'acné tôt limite les taches qu'elle laisse sur les peaux foncées.",
     category: "visage",
-    price: 25000,
+    price: 32500,
     kitItems: ["cerave-gel-moussant", "gs-lotion-bha-acne", "gs-serum-niacinamide"],
     targets: ["acné", "boutons", "points noirs", "comédons", "pores dilatés", "peau grasse", "sébum excessif", "imperfections", "peau mixte", "brillance"],
     usagePoints: [
@@ -809,7 +809,7 @@ export const catalog: Product[] = [
     brand: "GlowScan",
     description: "Routine anti-taches pensée pour les peaux riches en mélanine : atténuer les taches et marques post-acné sans éclaircir la peau, et les empêcher de revenir grâce à la protection solaire. Sans hydroquinone ni corticoïdes.",
     category: "visage",
-    price: 25000,
+    price: 40000,
     kitItems: ["nubiance-creme-eclat", "gs-creme-antitaches-nuit", "gs-spf50-dermo"],
     targets: ["hyperpigmentation", "taches brunes", "taches", "melasma", "teint irrégulier", "unification teint", "taches post-acné", "masque de grossesse", "taches solaires", "teint terne"],
     usagePoints: [
@@ -825,7 +825,7 @@ export const catalog: Product[] = [
     brand: "GlowScan",
     description: "Routine d'entretien pour garder une peau nette, lumineuse et uniforme : un nettoyant doux pour peaux noires et métissées, un sérum qui affine le grain de peau, et la protection solaire qui prévient les taches.",
     category: "visage",
-    price: 25000,
+    price: 36500,
     kitItems: ["nubiance-nettoyant", "gs-serum-niacinamide", "gs-spf50-dermo"],
     targets: ["peau normale", "entretien", "éclat", "éclat visage", "prévention", "pores", "grain de peau", "teint terne", "peau mixte", "prévention taches"],
     usagePoints: [
@@ -841,7 +841,7 @@ export const catalog: Product[] = [
     brand: "GlowScan",
     description: "Routine pour peau sèche, déshydratée ou terne : nettoyer sans dessécher, réhydrater en profondeur et réparer la barrière cutanée. Redonne souplesse et éclat aux peaux qui tiraillent ou paraissent ternes.",
     category: "visage",
-    price: 25000,
+    price: 36500,
     kitItems: ["cerave-creme-lavante", "uriage-serum-booster-ha", "gs-creme-barriere-hydra"],
     targets: ["peau sèche", "peau déshydratée", "déshydratation", "hydratation", "tiraillements", "barrière cutanée", "peau terne", "peau sensible", "sécheresse", "peau fragilisée"],
     usagePoints: [
@@ -857,7 +857,7 @@ export const catalog: Product[] = [
     brand: "GlowScan",
     description: "Routine anti-âge : rétinol doux le soir, vitamine C le matin et baume aux céramides pour lisser les ridules, raviver l'éclat et garder la peau confortable.",
     category: "visage",
-    price: 25000,
+    price: 38000,
     kitItems: ["gs-serum-retinol", "gs-serum-vitamine-c", "gs-creme-barriere-hydra"],
     targets: ["rides", "ridules", "anti-âge", "vieillissement cutané", "affaissement cutané", "perte de fermeté", "peau mature", "éclat", "taches brunes"],
     usagePoints: [
@@ -873,7 +873,7 @@ export const catalog: Product[] = [
     brand: "GlowScan",
     description: "Routine corps : une douche surgras qui respecte la peau, un gommage doux pour les zones rugueuses, et un lait hydratant formulé pour les peaux noires et métissées.",
     category: "corps",
-    price: 20000,
+    price: 24000,
     kitItems: ["cav-gel-bain-douche", "cav-baume-gommant", "nubiance-lait-corps"],
     targets: ["corps", "peau sèche", "peau rugueuse", "texture irrégulière", "hydratation corps", "teint irrégulier", "sécheresse", "peau terne"],
     usagePoints: [
@@ -982,3 +982,7 @@ export function productPhotos(p: Product): string[] {
   if (isKit(p)) return kitProducts(p).map((c) => c.image).filter((u): u is string => !!u);
   return p.image ? [p.image] : [];
 }
+
+// Prix d'un kit = somme exacte des prix de ses produits, toujours à jour
+// si le prix d'un produit change (boutique, résultat, commande, prompt IA).
+for (const p of catalog) if (isKit(p)) p.price = kitValue(p);
