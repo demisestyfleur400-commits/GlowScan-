@@ -63,7 +63,7 @@ export function TabBar() {
       <div aria-hidden style={{ height: TAB_BAR_HEIGHT }} />
       <nav
         aria-label="Navigation principale"
-        className="b2c-theme fixed inset-x-0 bottom-0 z-50 flex items-center justify-around border-t border-organic-divider bg-white px-2 pt-2 font-body"
+        className="b2c-theme fixed inset-x-0 bottom-0 z-50 mx-auto flex max-w-[480px] items-center justify-around border-t border-organic-divider bg-white px-2 pt-2 font-body"
         style={{ paddingBottom: "max(22px, env(safe-area-inset-bottom))" }}
       >
         {TABS.map((tab) => {

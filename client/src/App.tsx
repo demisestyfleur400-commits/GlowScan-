@@ -46,7 +46,7 @@ function RouteFallback() {
       </div>
     );
   }
-  return <div style={{ minHeight: "100vh", background: p.startsWith("/derm") ? "#ffffff" : isVisitorLanding(p) ? "#f5ead8" : "#f8f8f6" }} />;
+  return <div style={{ minHeight: "100vh", background: p.startsWith("/derm") ? "#ffffff" : isVisitorLanding(p) ? "#F6F8F7" : "#f8f8f6" }} />;
 }
 
 const Home = lazyWithRetry(() => import("@/pages/Home"));

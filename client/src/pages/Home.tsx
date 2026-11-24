@@ -40,5 +40,7 @@ export default function Home() {
   const firstName = (user.firstName || user.lastName || user.email || "").split(/[\s@]/)[0];
   const lastScan: any = Array.isArray(scans) && scans.length > 0 ? scans[0] : null;
 
-  return <HomeAccueil firstName={firstName} lastScan={lastScan} go={setLocation} />;
+  const scanCount = Array.isArray(scans) ? scans.length : 0;
+
+  return <HomeAccueil firstName={firstName} lastScan={lastScan} scanCount={scanCount} go={setLocation} />;
 }
