@@ -2436,7 +2436,7 @@ Retourne UNIQUEMENT ce JSON valide et complet, sans texte avant ni après :
   },
   "recommendations": {
     "products": [
-      "UN SEUL produit partenaire GlowScan — RÈGLE ABSOLUE. Marque maison GLOWSCAN DERMO uniquement : Kit Peau Nette 30J, Kit Éclat Anti-Taches, Kit Anti-Âge, Gel Nettoyant Anti-Sébum, Sérum Niacinamide 10%, Lotion Exfoliante BHA 2%, Sérum Vitamine C 15%, Crème Anti-Taches Nuit, Sérum Rétinol, Crème SPF50+, Crème Barrière Céramides. Problème cuir chevelu/cheveux → AUCUN produit, orienter dermatologue. INTERDIT ABSOLU dans ce champ : Bioderma, Uriage, Topicrem, Nubiance, La Roche-Posay, Eucerin, CeraVe, Garnier, Nivea, L'Oréal — boutique /shop uniquement, jamais ici."
+      "UN SEUL kit GlowScan, nom exact : Kit Acné & Points Noirs, Kit Taches & Teint Unifié, Kit Peau Parfaite, Kit Peau Sèche & Hydratation, Kit Anti-Âge, Kit Corps Doux & Unifié. (Le kit affiché est recalculé par le serveur à partir des mesures.) Problème cuir chevelu/cheveux → AUCUN produit, orienter dermatologue."
     ],
     "morning": [
       "Étape 1 matin précise avec produit nommé",
@@ -2854,65 +2854,14 @@ RÈGLE ABSOLUE : si la photo actuelle ressemble à un de ces cas corrigés, appl
         return res.json({ ...dermResult, savedScanId: dermScanId, reference: ref, isAnonymous: false });
       }
 
-      const { catalog } = await import("@shared/catalog");
-      // ─── Règles métier B2B strictes ────────────────────────────────
-      // ResultCard recommande UNIQUEMENT la marque maison GlowScan Dermo
-      // (kits & produits) → marge propre.
-      // Les marques internationales (Bioderma, Uriage, Topicrem, etc.)
-      // sont dans la boutique /shop UNIQUEMENT — jamais dans le ResultCard.
-      // Raison : pas de commission sur les internationales → casse le modèle B2B.
-      const PRICE_CAP_LOCAL = 12000; // plafond hérité (marques locales retirées)
-      const LOCAL_BRANDS = new Set<string>([]); // marques locales partenaires retirées
-      const INTL_BRANDS  = new Set(["Bioderma", "Topicrem", "Uriage", "Nubiance", "La Roche-Posay", "Eucerin", "CeraVe"]);
-
-      const isLocal        = (item: any) => LOCAL_BRANDS.has(item.brand || "");
-      const isGlowScanDerm = (item: any) => item.brand === "GlowScan Dermo";
-      const isIntl         = (item: any) => INTL_BRANDS.has(item.brand || "");
-
-      // Catalogue éligible ResultCard : local ≤ 12k + GlowScan Dermo (tous prix)
-      // Les marques internationales sont EXCLUES du ResultCard
-      const recommendableCatalog = catalog.filter((item) =>
-        (isLocal(item) && (!item.price || item.price <= PRICE_CAP_LOCAL)) ||
-        isGlowScanDerm(item)
-      );
-
-      const findBestMatch = (query: string) => {
-        const q = query.toLowerCase();
-        const candidates = recommendableCatalog.filter((item) => {
-          const name = item.name.toLowerCase();
-          return (
-            name.includes(q) ||
-            q.includes(name) ||
-            q.includes(item.id.replace(/-/g, " ")) ||
-            item.targets.some((t: string) => q.includes(t.toLowerCase()) || t.toLowerCase().includes(q.split(" ")[0]))
-          );
-        });
-        // Priorité : local (0) > GlowScan Dermo kit (1) > GlowScan Dermo produit (2)
-        candidates.sort((a, b) => {
-          const pa = isLocal(a) ? 0 : (isGlowScanDerm(a) && (a.id.startsWith("kit") || a.id.includes("kit")) ? 1 : 2);
-          const pb = isLocal(b) ? 0 : (isGlowScanDerm(b) && (b.id.startsWith("kit") || b.id.includes("kit")) ? 1 : 2);
-          if (pa !== pb) return pa - pb;
-          return (a.price || 0) - (b.price || 0);
-        });
-        return candidates[0];
-      };
-
-      const productList: string[] = analysisResult.recommendations?.products || [];
-      const firstSuggestion = productList[0];
-      let chosen = firstSuggestion ? findBestMatch(firstSuggestion) : undefined;
-      // Fallback : mots-clés du diagnostic
-      if (!chosen && analysisResult.condition) {
-        chosen = findBestMatch(String(analysisResult.condition));
-      }
-      // Ultime fallback : produit local selon la zone
-      if (!chosen) {
-        const zoneIsHair = (area === "hair") || /cheveux|cuir chevelu|alopécie|pellicule/i.test(String(analysisResult.condition || ""));
-        const category = zoneIsHair ? "cheveux" : "visage";
-        chosen = recommendableCatalog.find((p) => isLocal(p) && p.category === category)
-          ?? recommendableCatalog.find((p) => isGlowScanDerm(p) && p.category === category);
-      }
+      // ─── Kit recommandé : même règle que l'écran Résultat (shared/kits.ts) ──
+      // Choisi depuis les mesures de l'analyse (taches, imperfections, hydratation,
+      // sébum) et le diagnostic écrit. Cheveux / cuir chevelu → aucun kit.
+      const { pickKit } = await import("@shared/kits");
+      const zoneIsHair = area === "hair" || /cheveux|cuir chevelu|alopécie|pellicule/i.test(String(analysisResult.condition || ""));
+      const chosen = zoneIsHair ? null : pickKit(analysisResult, area);
       const recommendedProducts = chosen ? [chosen.name] : [];
-      console.log(`[analyze] 🛒 Recommandation: ${chosen?.name || "aucune"} (${chosen?.brand || "-"}, ${chosen?.price || 0} FCFA, local=${chosen ? isLocal(chosen) : false})`);
+      console.log(`[analyze] 🛒 Kit recommandé : ${chosen?.name || "aucun"} (${chosen?.price || 0} FCFA)`);
 
       // Score RÉEL renvoyé par l'IA, calibré 0-100. Pas de plafond artificiel.
       // Score absent → null : jamais de score inventé. Le Résultat patient passe

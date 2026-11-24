@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { ensureDermFonts } from "@/components/derm/tokens";
 import { trackFunnel } from "@/lib/analytics";
 import { formatF } from "@shared/delivery";
+import { cart } from "@/lib/cart";
 
 // ════════════════════════════════════════════════════════════════════════
 // Résultat patient (refonte Organic) — maquette « GlowScan App » › Résultat.
@@ -303,22 +304,45 @@ export function ResultB2C({ result, area = "face", imageUrl, createdAt, photoCou
         </button>
       )}
 
-      {/* Routine conseillée (jamais sous 60 ni en urgent) */}
-      {v.products.length > 0 && (
-        <div className="flex flex-col gap-2.5 rounded-[16px] p-4" style={{ background: G.sage }}>
-          <b className="text-[15px] font-semibold">Votre routine conseillée</b>
-          {v.products.map((p) => (
-            <div key={p.id} className="flex items-center gap-3 rounded-[12px] bg-white px-3 py-2.5">
-              {p.image ? <img src={p.image} alt="" className="h-11 w-11 flex-none rounded-[10px] object-cover" /> : <span className="h-11 w-11 flex-none rounded-[10px]" style={{ background: G.soft }} />}
-              <span className="flex min-w-0 flex-1 flex-col">
-                <span className="text-[14px] font-semibold">{p.name}</span>
-                <span className="truncate text-[12px]" style={{ color: G.muted }}>{p.description}</span>
+      {/* Kit conseillé (jamais sous 60 ni en urgent) — cf. shared/kits.ts */}
+      {v.kit && (
+        <div className="flex flex-col gap-3 rounded-[16px] p-4" style={{ background: G.sage }} data-testid="result-kit">
+          <span className="text-[11px] font-bold uppercase tracking-[.08em]" style={{ color: G.dark }}>Votre kit conseillé</span>
+          <div className="grid h-[132px] grid-cols-3 items-center gap-1.5 rounded-[12px] bg-white p-2.5">
+            {v.kit.items.map((it) => (
+              it.image
+                ? <img key={it.id} src={it.image} alt={`${it.brand} ${it.name}`} loading="lazy" className="h-full w-full object-contain" />
+                : <span key={it.id} className="h-full w-full rounded-[10px]" style={{ background: G.soft }} />
+            ))}
+          </div>
+          <div className="flex items-start justify-between gap-3">
+            <b className="text-[17px] font-semibold leading-snug" style={{ color: G.text }}>{v.kit.name}</b>
+            <span className="flex flex-col items-end whitespace-nowrap">
+              <b className="text-[17px] font-bold" style={{ color: G.text }}>{formatF(v.kit.price)}</b>
+              {v.kit.saving > 0 && <span className="text-[12px] line-through" style={{ color: G.muted }}>{formatF(v.kit.value)}</span>}
+            </span>
+          </div>
+          <span className="text-[13.5px] leading-[1.5]" style={{ color: G.muted }}>{v.kit.reason}</span>
+          <div className="flex flex-col gap-1.5">
+            {v.kit.items.map((it) => (
+              <span key={it.id} className="flex items-center gap-2 text-[13px]" style={{ color: G.text }}>
+                <Check size={14} strokeWidth={2.4} style={{ color: G.dark }} className="flex-none" />
+                <span><b className="font-semibold">{it.brand}</b> — {it.name}</span>
               </span>
-              {p.price && <span className="whitespace-nowrap text-[13px] font-semibold">{p.price}</span>}
-            </div>
-          ))}
-          <button type="button" onClick={() => setLocation("/shop")} className="self-start border-0 bg-transparent p-0 text-[14px] font-semibold" style={{ color: G.dark }}>
-            Ajouter à ma routine →
+            ))}
+          </div>
+          {v.kit.saving > 0 && (
+            <span className="self-start rounded-pill bg-white px-2.5 py-1 text-[12px] font-semibold" style={{ color: G.dark }}>
+              {formatF(v.kit.saving)} d'économie par rapport aux produits séparés
+            </span>
+          )}
+          <button type="button" data-testid="result-kit-add"
+            onClick={() => { cart.add(v.kit!.id); setLocation("/shop?p=" + v.kit!.id); }}
+            className="mt-1 flex h-12 items-center justify-center gap-2 rounded-pill border-0 text-[15px] font-semibold text-white" style={{ background: G.dark }}>
+            Ajouter le kit au panier <ArrowRight size={17} />
+          </button>
+          <button type="button" onClick={() => setLocation("/shop")} className="self-center border-0 bg-transparent p-0 text-[13.5px] font-semibold" style={{ color: G.dark }}>
+            Voir les autres kits
           </button>
         </div>
       )}

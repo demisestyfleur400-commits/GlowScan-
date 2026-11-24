@@ -3,8 +3,9 @@ import { useLocation } from "wouter";
 import { ArrowLeft, ArrowRight, Check, Plus, Receipt, Search, ShoppingBag } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useScans } from "@/hooks/use-scans";
-import { catalog, getProductBrand, type Product } from "@shared/catalog";
+import { catalog, getProductBrand, isKit, kitProducts, kitValue, productPhotos, type Product } from "@shared/catalog";
 import { productsAllowed, resultStateOf } from "@shared/resultB2C";
+import { pickKit } from "@shared/kits";
 import { formatF } from "@shared/delivery";
 import { productImages } from "@/lib/productImages";
 import { cart, useCart } from "@/lib/cart";
@@ -32,10 +33,11 @@ const imgOf = (p: Product) => productImages[p.id] || p.image || null;
 
 // Photo produit (packshot sur fond blanc) ou mosaïque des produits inclus pour un kit.
 function ProductVisual({ p, alt, lazy }: { p: Product; alt: string; lazy?: boolean }) {
-  if (p.images && p.images.length > 1) {
+  const photos = isKit(p) ? productPhotos(p) : [];
+  if (photos.length > 1) {
     return (
       <div className="grid h-full w-full grid-cols-3 items-center gap-1 bg-white p-2">
-        {p.images.slice(0, 3).map((src, i) => (
+        {photos.slice(0, 3).map((src, i) => (
           <img key={i} src={src} alt={i === 0 ? alt : ""} loading={lazy ? "lazy" : undefined} className="h-full w-full object-contain" />
         ))}
       </div>
@@ -44,7 +46,12 @@ function ProductVisual({ p, alt, lazy }: { p: Product; alt: string; lazy?: boole
   const img = imgOf(p);
   return img ? <img src={img} alt={alt} loading={lazy ? "lazy" : undefined} className="h-full w-full bg-white object-contain p-2" /> : null;
 }
-const firstSentence = (s: string) => (s || "").split(/(?<=[.!?])\s/)[0].slice(0, 110);
+const firstSentence = (s: string) => {
+  const t = (s || "").split(/(?<=[.!?])\s/)[0];
+  if (t.length <= 110) return t;
+  const cut = t.slice(0, 110);
+  return cut.slice(0, Math.max(cut.lastIndexOf(" "), 60)).replace(/[\s,;:]+$/, "") + "…";
+};
 
 function CartButton({ count, onClick }: { count: number; onClick: () => void }) {
   return (
@@ -70,7 +77,9 @@ export default function Shop() {
   const full = last?.recommendations?._fullResult;
   const lastState = last ? resultStateOf(full ?? { score: last.score, condition: last.condition }) : null;
   const canRecommend = !!lastState && productsAllowed(lastState);
-  const recommended = new Set<string>(canRecommend ? (full?.recommendations?.products ?? []) : []);
+  // Kit conseillé par la dernière analyse (même règle que l'écran Résultat).
+  const recoKit = canRecommend && full ? pickKit(full, last?.area || "face") : null;
+  const recommended = new Set<string>(recoKit ? [recoKit.id] : []);
   const lastDate = last?.createdAt ? new Date(last.createdAt).toLocaleDateString("fr-FR", { day: "numeric", month: "long" }) : null;
   const isReco = (p: Product) => recommended.has(p.name) || recommended.has(p.id);
   const why = (p: Product) => (isReco(p) ? `Conseillé par votre analyse${lastDate ? ` du ${lastDate}` : ""}` : firstSentence(p.description));
@@ -80,7 +89,8 @@ export default function Shop() {
     const list = catalog.filter((p) => typeof p.price === "number" && p.price > 0
       && (cat === "all" || p.category === cat)
       && (!term || p.name.toLowerCase().includes(term) || (p.description || "").toLowerCase().includes(term) || (p.targets || []).some((t) => t.toLowerCase().includes(term))));
-    return [...list].sort((a, b) => Number(isReco(b)) - Number(isReco(a)));
+    // Kit conseillé d'abord, puis les kits, puis les soins.
+    return [...list].sort((a, b) => Number(isReco(b)) - Number(isReco(a)) || Number(isKit(b)) - Number(isKit(a)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cat, q, canRecommend, full]);
 
@@ -114,7 +124,7 @@ export default function Shop() {
             <button type="button" onClick={() => openDetail(null)} aria-label="Retour à la boutique" className="-ml-1 border-0 bg-transparent p-1" style={{ color: G.dark }}>
               <ArrowLeft size={20} strokeWidth={1.9} />
             </button>
-            <span className="flex-1 text-[16px] font-semibold" style={{ color: G.text }}>Le soin en détail</span>
+            <span className="flex-1 text-[16px] font-semibold" style={{ color: G.text }}>{isKit(detail) ? "Le kit en détail" : "Le soin en détail"}</span>
             <CartButton count={count} onClick={goCart} />
           </div>
 
@@ -139,8 +149,29 @@ export default function Shop() {
               )}
             </div>
 
+            {isKit(detail) && (
+              <div className="flex flex-col gap-2 border-t pt-4" style={{ borderColor: G.line }}>
+                <b className="text-[16px] font-semibold">Dans ce kit</b>
+                {kitProducts(detail).map((c) => (
+                  <button key={c.id} type="button" onClick={() => openDetail(c.id)} className="flex items-center gap-3 rounded-[12px] border-0 bg-white p-2 text-left" style={{ boxShadow: `inset 0 0 0 1px ${G.line}` }}>
+                    {c.image ? <img src={c.image} alt="" loading="lazy" className="h-12 w-12 flex-none rounded-[8px] object-contain" /> : <span className="h-12 w-12 flex-none rounded-[8px]" style={{ background: G.sage }} />}
+                    <span className="flex min-w-0 flex-1 flex-col">
+                      <span className="text-[11px] font-bold uppercase tracking-[.08em]" style={{ color: G.muted }}>{c.brand}</span>
+                      <span className="text-[14px] font-semibold leading-snug" style={{ color: G.text }}>{c.name}</span>
+                    </span>
+                    {typeof c.price === "number" && <span className="whitespace-nowrap text-[12.5px]" style={{ color: G.muted }}>{formatF(c.price)}</span>}
+                  </button>
+                ))}
+                {kitValue(detail) > (detail.price || 0) && (
+                  <span className="text-[13.5px] font-semibold" style={{ color: G.dark }}>
+                    Séparément : {formatF(kitValue(detail))} — vous économisez {formatF(kitValue(detail) - (detail.price || 0))}
+                  </span>
+                )}
+              </div>
+            )}
+
             <div className="flex flex-col gap-1.5 border-t pt-4" style={{ borderColor: G.line }}>
-              <b className="text-[16px] font-semibold">Pourquoi ce soin ?</b>
+              <b className="text-[16px] font-semibold">{isKit(detail) ? "Pourquoi ce kit ?" : "Pourquoi ce soin ?"}</b>
               <p className="m-0 text-[14.5px] leading-relaxed" style={{ color: G.muted }}>{detail.description}</p>
             </div>
 
@@ -238,7 +269,7 @@ export default function Shop() {
                       {on ? <Check size={17} strokeWidth={2.4} /> : <Plus size={18} strokeWidth={2.2} />}
                     </button>
                   </div>
-                  <button type="button" onClick={() => openDetail(p.id)} className="self-start border-0 bg-transparent p-0 text-[13px] font-semibold" style={{ color: G.dark }}>Voir le soin →</button>
+                  <button type="button" onClick={() => openDetail(p.id)} className="self-start border-0 bg-transparent p-0 text-[13px] font-semibold" style={{ color: G.dark }}>{isKit(p) ? "Voir le kit" : "Voir le soin"} →</button>
                 </div>
               );
             })}

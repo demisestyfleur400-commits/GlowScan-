@@ -5,8 +5,8 @@
   category: "corps" | "visage" | "cheveux";
   price?: number;
   image?: string;
-  /** Kits : photos des produits inclus, affichées en mosaïque dans la boutique */
-  images?: string[];
+  /** Kits : identifiants des produits inclus (photos, valeur séparée et contenu calculés depuis le catalogue) */
+  kitItems?: string[];
   targets: string[];
   usagePoints?: string[];
   whatsapp?: string;
@@ -785,60 +785,103 @@ export const catalog: Product[] = [
     whatsapp: "+237674377959",
   },
 
-  // ── KITS PREMIUM — Circuit GlowScan fermé, AOV élevé ─────────────
+  // ── KITS — une routine complète par besoin (recommandés après l'analyse) ──
+  // Les photos et la « valeur séparée » sont calculées depuis kitItems (kitValue).
   {
     id: "kit-peau-nette-30j",
-    name: "Kit Peau Nette 30J — Acné & Pores",
-    brand: "GlowScan Dermo",
-    description: "Protocole anti-acné complet sur 30 jours. Inclus : CeraVe Gel Moussant Nettoyant + Paula's Choice BHA 2% + The Ordinary Niacinamide 10%. Valeur séparée : 36 500 FCFA — kit à 25 000 FCFA.",
+    name: "Kit Acné & Points Noirs",
+    brand: "GlowScan",
+    description: "Routine anti-acné de 30 jours : nettoyer sans agresser, désincruster les pores, calmer les boutons. Traiter l'acné tôt limite les taches qu'elle laisse sur les peaux foncées.",
     category: "visage",
     price: 25000,
-    image: "https://www.cerave.fr/-/media/project/loreal/brand-sites/cerave/emea/fr/fr-all-product-details-latest/new-pdp-images/gel-moussant/foaming-cleanser-icon-fr-lg.webp?rev=-1?w=800&hash=EE5DD2512B635A34E8274222581A4DEE",
-    images: ["https://www.cerave.fr/-/media/project/loreal/brand-sites/cerave/emea/fr/fr-all-product-details-latest/new-pdp-images/gel-moussant/foaming-cleanser-icon-fr-lg.webp?rev=-1?w=800&hash=EE5DD2512B635A34E8274222581A4DEE", "https://www.sephora.co.uk/img/prod/pid/P10036262/paula_039_s_choice_skin_perfecting_2_bha_liquid_exfoliant_118ml_1570105752_main.jpg", "https://theordinary.com/dw/image/v2/BFKJ_PRD/on/demandware.static/-/Sites-deciem-master/default/dwce8a7cdf/Images/products/The%20Ordinary/rdn-niacinamide-10pct-zinc-1pct-30ml.png?sw=800&sh=800&sm=fit"],
-    targets: ["acné", "peau grasse", "pores dilatés", "points noirs", "comédons", "boutons", "sébum excessif", "imperfections", "peau mixte"],
+    kitItems: ["cerave-gel-moussant", "gs-lotion-bha-acne", "gs-serum-niacinamide"],
+    targets: ["acné", "boutons", "points noirs", "comédons", "pores dilatés", "peau grasse", "sébum excessif", "imperfections", "peau mixte", "brillance"],
     usagePoints: [
-      "3 produits synergiques — valeur séparée 36 500 FCFA",
-      "Une routine complète pour 30 jours",
-      "Nettoyant CeraVe + BHA Paula's Choice + Niacinamide The Ordinary"
+      "Matin et soir : gel moussant, puis niacinamide",
+      "Le soir, 1 jour sur 2 au début : BHA 2 %",
+      "Limite les marques brunes laissées par les boutons"
     ],
     whatsapp: "+237674377959",
-    sourceRef: "① CeraVe Gel Moussant 236ml  ② Paula's Choice BHA 2% 118ml  ③ The Ordinary Niacinamide 10% 30ml",
   },
   {
     id: "kit-eclat-antitaches-30j",
-    name: "Kit Éclat & Teint Unifié — Taches & Hyperpigmentation",
-    brand: "GlowScan Dermo",
-    description: "Protocole anti-taches complet. Inclus : The Ordinary Vitamine C 23% + The Ordinary Acide Azélaïque 10% + La Roche-Posay Anthelios SPF50+. Valeur séparée : 39 000 FCFA — kit à 25 000 FCFA.",
+    name: "Kit Taches & Teint Unifié",
+    brand: "GlowScan",
+    description: "Routine anti-taches pensée pour les peaux riches en mélanine : atténuer les taches et marques post-acné sans éclaircir la peau, et les empêcher de revenir grâce à la protection solaire. Sans hydroquinone ni corticoïdes.",
     category: "visage",
     price: 25000,
-    image: "https://theordinary.com/dw/image/v2/BFKJ_PRD/on/demandware.static/-/Sites-deciem-master/default/dwd0597332/Images/products/The%20Ordinary/rdn-vitamin-c-suspension-23pct-ha-spheres-2pct-30ml.png?sw=800&sh=800&sm=fit",
-    images: ["https://theordinary.com/dw/image/v2/BFKJ_PRD/on/demandware.static/-/Sites-deciem-master/default/dwd0597332/Images/products/The%20Ordinary/rdn-vitamin-c-suspension-23pct-ha-spheres-2pct-30ml.png?sw=800&sh=800&sm=fit", "https://theordinary.com/dw/image/v2/BFKJ_PRD/on/demandware.static/-/Sites-deciem-master/default/dwedfce090/Images/products/The%20Ordinary/rdn-azelaic-acid-suspension-10pct-100ml.png?sw=800&sh=800&sm=fit", "https://static.thcdn.com/productimg/original/13494906-1715332633881423.jpg"],
-    targets: ["hyperpigmentation", "taches brunes", "melasma", "teint terne", "unification teint", "éclat visage", "taches solaires", "masque de grossesse", "taches post-acné"],
+    kitItems: ["nubiance-creme-eclat", "gs-creme-antitaches-nuit", "gs-spf50-dermo"],
+    targets: ["hyperpigmentation", "taches brunes", "taches", "melasma", "teint irrégulier", "unification teint", "taches post-acné", "masque de grossesse", "taches solaires", "teint terne"],
     usagePoints: [
-      "3 produits synergiques — valeur séparée 39 000 FCFA",
-      "Une routine complète pour 30 jours",
-      "Vitamine C + Acide azélaïque + SPF50+ inclus"
+      "Nubiance, une marque formulée pour les peaux noires et métissées",
+      "Acide azélaïque : unifie le teint en douceur",
+      "SPF50+ chaque matin : sans soleil, les taches ne reviennent pas"
     ],
     whatsapp: "+237674377959",
-    sourceRef: "① The Ordinary Vit C 23% 30ml  ② The Ordinary Azelaic Acid 10% 30ml  ③ La Roche-Posay Anthelios UVMune 400 SPF50+ 50ml",
+  },
+  {
+    id: "kit-peau-parfaite-30j",
+    name: "Kit Peau Parfaite",
+    brand: "GlowScan",
+    description: "Routine d'entretien pour garder une peau nette, lumineuse et uniforme : un nettoyant doux pour peaux noires et métissées, un sérum qui affine le grain de peau, et la protection solaire qui prévient les taches.",
+    category: "visage",
+    price: 25000,
+    kitItems: ["nubiance-nettoyant", "gs-serum-niacinamide", "gs-spf50-dermo"],
+    targets: ["peau normale", "entretien", "éclat", "éclat visage", "prévention", "pores", "grain de peau", "teint terne", "peau mixte", "prévention taches"],
+    usagePoints: [
+      "3 gestes simples, matin et soir",
+      "Affine le grain de peau et la brillance",
+      "Prévient les taches au quotidien"
+    ],
+    whatsapp: "+237674377959",
+  },
+  {
+    id: "kit-hydratation-30j",
+    name: "Kit Peau Sèche & Hydratation",
+    brand: "GlowScan",
+    description: "Routine pour peau sèche, déshydratée ou terne : nettoyer sans dessécher, réhydrater en profondeur et réparer la barrière cutanée. Redonne souplesse et éclat aux peaux qui tiraillent ou paraissent ternes.",
+    category: "visage",
+    price: 25000,
+    kitItems: ["cerave-creme-lavante", "uriage-serum-booster-ha", "gs-creme-barriere-hydra"],
+    targets: ["peau sèche", "peau déshydratée", "déshydratation", "hydratation", "tiraillements", "barrière cutanée", "peau terne", "peau sensible", "sécheresse", "peau fragilisée"],
+    usagePoints: [
+      "Crème lavante qui ne dessèche pas",
+      "Sérum à l'acide hyaluronique",
+      "Baume aux céramides : répare la barrière cutanée"
+    ],
+    whatsapp: "+237674377959",
   },
   {
     id: "kit-anti-age-30j",
-    name: "Kit Anti-Âge Restructurant 30J",
-    brand: "GlowScan Dermo",
-    description: "Protocole anti-âge complet. Inclus : The Ordinary Rétinol 0.2% + The Ordinary Vitamine C 23% + CeraVe Baume Hydratant. Valeur séparée : 38 000 FCFA — kit à 25 000 FCFA.",
+    name: "Kit Anti-Âge",
+    brand: "GlowScan",
+    description: "Routine anti-âge : rétinol doux le soir, vitamine C le matin et baume aux céramides pour lisser les ridules, raviver l'éclat et garder la peau confortable.",
     category: "visage",
     price: 25000,
-    image: "https://theordinary.com/dw/image/v2/BFKJ_PRD/on/demandware.static/-/Sites-deciem-master/default/dw30e9d48b/Images/products/The%20Ordinary/rdn-retinol-0-2pct-in-squalane-30ml.png?sw=800&sh=800&sm=fit",
-    images: ["https://theordinary.com/dw/image/v2/BFKJ_PRD/on/demandware.static/-/Sites-deciem-master/default/dw30e9d48b/Images/products/The%20Ordinary/rdn-retinol-0-2pct-in-squalane-30ml.png?sw=800&sh=800&sm=fit", "https://theordinary.com/dw/image/v2/BFKJ_PRD/on/demandware.static/-/Sites-deciem-master/default/dwd0597332/Images/products/The%20Ordinary/rdn-vitamin-c-suspension-23pct-ha-spheres-2pct-30ml.png?sw=800&sh=800&sm=fit", "https://www.boticinal.com/media/catalog/product/c/e/cerave-soin-corps-baume-hydratant-177ml-001-3337875598996-front.jpg"],
-    targets: ["rides", "anti-âge", "affaissement cutané", "vieillissement cutané", "taches brunes", "perte de fermeté", "peau mature", "ridules", "éclat"],
+    kitItems: ["gs-serum-retinol", "gs-serum-vitamine-c", "gs-creme-barriere-hydra"],
+    targets: ["rides", "ridules", "anti-âge", "vieillissement cutané", "affaissement cutané", "perte de fermeté", "peau mature", "éclat", "taches brunes"],
     usagePoints: [
-      "3 produits synergiques — valeur séparée 38 000 FCFA",
-      "Rétinol le soir, vitamine C le matin",
-      "Rétinol 0.2% + Vitamine C 23% + Baume aux céramides inclus"
+      "Rétinol 0,2 % le soir, idéal pour débuter",
+      "Vitamine C le matin pour l'éclat",
+      "Baume aux céramides pour le confort"
     ],
     whatsapp: "+237674377959",
-    sourceRef: "① The Ordinary Retinol 0.2% in Squalane 30ml  ② The Ordinary Vit C 23% 30ml  ③ CeraVe Baume Hydratant 177ml",
+  },
+  {
+    id: "kit-corps-30j",
+    name: "Kit Corps Doux & Unifié",
+    brand: "GlowScan",
+    description: "Routine corps : une douche surgras qui respecte la peau, un gommage doux pour les zones rugueuses, et un lait hydratant formulé pour les peaux noires et métissées.",
+    category: "corps",
+    price: 20000,
+    kitItems: ["cav-gel-bain-douche", "cav-baume-gommant", "nubiance-lait-corps"],
+    targets: ["corps", "peau sèche", "peau rugueuse", "texture irrégulière", "hydratation corps", "teint irrégulier", "sécheresse", "peau terne"],
+    usagePoints: [
+      "Douche surgras sans savon",
+      "Gommage doux 1 à 2 fois par semaine",
+      "Lait corps Nubiance pour peaux noires et métissées"
+    ],
+    whatsapp: "+237674377959",
   },
 
   // ═══════════════════════════════════════════════════════════════
@@ -921,3 +964,21 @@ export const catalog: Product[] = [
   },
 ];
 
+// ─── Kits ────────────────────────────────────────────────────────────
+export const isKit = (p: Product): boolean => Array.isArray(p.kitItems) && p.kitItems.length > 0;
+
+/** Produits contenus dans un kit, dans l'ordre de la routine. */
+export function kitProducts(p: Product): Product[] {
+  return (p.kitItems || []).map((id) => catalog.find((c) => c.id === id)).filter((c): c is Product => !!c);
+}
+
+/** Somme des prix des produits du kit achetés séparément. */
+export function kitValue(p: Product): number {
+  return kitProducts(p).reduce((sum, c) => sum + (c.price || 0), 0);
+}
+
+/** Photos à afficher pour un produit : celles des produits inclus pour un kit, sinon la sienne. */
+export function productPhotos(p: Product): string[] {
+  if (isKit(p)) return kitProducts(p).map((c) => c.image).filter((u): u is string => !!u);
+  return p.image ? [p.image] : [];
+}
