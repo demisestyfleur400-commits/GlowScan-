@@ -233,6 +233,21 @@ function BodyBackground() {
   return null;
 }
 
+// Chaque nouvelle page s'ouvre EN HAUT (avant : elle gardait le défilement de la page
+// précédente et s'ouvrait au milieu). Retour / Suivant du navigateur : on laisse le
+// navigateur remettre la position d'où l'on venait. Les ancres (#faq) ne changent pas
+// le chemin, donc ne sont pas concernées.
+let cameFromHistory = false;
+if (typeof window !== "undefined") window.addEventListener("popstate", () => { cameFromHistory = true; });
+function ScrollToTop() {
+  const [loc] = useLocation();
+  useEffect(() => {
+    if (cameFromHistory) { cameFromHistory = false; return; }
+    window.scrollTo(0, 0);
+  }, [loc]);
+  return null;
+}
+
 function App() {
   useEffect(() => {
     if ("serviceWorker" in navigator) {
@@ -245,6 +260,7 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <BodyBackground />
+          <ScrollToTop />
           <Router />
           <TabBar />
           <PWAInstallBanner />
