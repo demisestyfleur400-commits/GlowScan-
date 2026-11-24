@@ -5,6 +5,8 @@
   category: "corps" | "visage" | "cheveux";
   price?: number;
   image?: string;
+  /** Kits : identifiants des produits inclus (photos, valeur séparée et contenu calculés depuis le catalogue) */
+  kitItems?: string[];
   targets: string[];
   usagePoints?: string[];
   whatsapp?: string;
@@ -45,134 +47,142 @@ export const catalog: Product[] = [
   // ── VISAGE — Nettoyants ──────────────────────────────────────────
   {
     id: "gs-gel-nettoyant-sebum",
-    name: "Gel Nettoyant Anti-Sébum Pores Net",
-    brand: "GlowScan Dermo",
-    description: "Gel nettoyant dermatologique adapté aux peaux grasses et à tendance acnéique. Aide à maintenir un équilibre sébacé, nettoie en profondeur, préserve le film hydrolipidique. Sans savon. 200ml.",
+    name: "Gel Moussant Nettoyant 236ml",
+    brand: "CeraVe",
+    description: "Gel nettoyant moussant pour peaux normales à grasses, aux 3 céramides essentiels, niacinamide et acide hyaluronique. Élimine l'excès de sébum sans dessécher ni agresser la barrière cutanée. 236ml.",
     category: "visage",
     price: 14000,
+    image: "https://www.cerave.fr/-/media/project/loreal/brand-sites/cerave/emea/fr/fr-all-product-details-latest/new-pdp-images/gel-moussant/foaming-cleanser-icon-fr-lg.webp?rev=-1?w=800&hash=EE5DD2512B635A34E8274222581A4DEE",
     targets: ["acné", "peau grasse", "pores dilatés", "points noirs", "excès de sébum", "brillance", "comédons", "impuretés visage"],
     usagePoints: [
-      "Purifie les pores sans agresser la barrière cutanée",
-      "Régule la production de sébum dès 2 semaines",
-      "Formule dermo testée dermatologiquement"
+      "Nettoie l'excès de sébum en douceur",
+      "Céramides et niacinamide pour respecter la barrière cutanée",
+      "Sans parfum, non comédogène"
     ],
     whatsapp: "+237674377959",
-    sourceRef: "CeraVe Foaming Facial Cleanser 236ml — ou — Bioderma Sebium Gel Moussant 200ml",
+    sourceRef: "CeraVe Gel Moussant Nettoyant 236ml",
   },
   // ── VISAGE — Sérums actifs ────────────────────────────────────────
   {
     id: "gs-serum-niacinamide",
-    name: "Sérum Niacinamide 10% + Zinc PCA",
-    brand: "GlowScan Dermo",
-    description: "Sérum haute concentration en Niacinamide (Vitamine B3) et Zinc PCA. Resserre les pores, atténue les taches post-acné et régule le film sébacé. 30ml.",
+    name: "Niacinamide 10% + Zinc 1%",
+    brand: "The Ordinary",
+    description: "Sérum à forte concentration de niacinamide (vitamine B3) et de zinc PCA. Aide à réduire l'apparence des pores, l'excès de sébum et le teint terne. 30ml.",
     category: "visage",
     price: 11000,
+    image: "https://theordinary.com/dw/image/v2/BFKJ_PRD/on/demandware.static/-/Sites-deciem-master/default/dwce8a7cdf/Images/products/The%20Ordinary/rdn-niacinamide-10pct-zinc-1pct-30ml.png?sw=800&sh=800&sm=fit",
     targets: ["pores dilatés", "taches post-acné", "peau grasse", "teint terne", "texture irrégulière", "acné", "hyperpigmentation", "imperfections"],
     usagePoints: [
-      "Resserre les pores visibles en 4 semaines",
-      "Atténue les taches et irrégularités de teint",
-      "Adapté aux peaux séborrhéiques sans effet desséchant"
+      "Réduit l'apparence des pores et de la brillance",
+      "Aide à unifier le teint",
+      "Matin et soir, après le nettoyage"
     ],
     whatsapp: "+237674377959",
-    sourceRef: "The Ordinary Niacinamide 10% + Zinc 1% — 30ml",
+    sourceRef: "The Ordinary Niacinamide 10% + Zinc 1% 30ml",
   },
   {
     id: "gs-lotion-bha-acne",
-    name: "Lotion Exfoliante BHA 2% Anti-Comédons",
-    brand: "GlowScan Dermo",
-    description: "Lotion exfoliante à l'acide salicylique (BHA 2%). Pénètre dans les pores pour déloger comédons ouverts et fermés. Texture légère, non grasse. 200ml.",
+    name: "Skin Perfecting 2% BHA Liquid Exfoliant",
+    brand: "Paula's Choice",
+    description: "Exfoliant liquide sans rinçage à 2% d'acide salicylique (BHA) et extrait de thé vert. Désincruste les pores et aide à réduire points noirs et imperfections. Texture légère. 118ml.",
     category: "visage",
     price: 11500,
+    image: "https://www.sephora.co.uk/img/prod/pid/P10036262/paula_039_s_choice_skin_perfecting_2_bha_liquid_exfoliant_118ml_1570105752_main.jpg",
     targets: ["comédons", "points noirs", "pores dilatés", "acné", "texture irrégulière", "peau grasse", "exfoliation chimique", "bouchons sébacés"],
     usagePoints: [
-      "Désengorge les pores et déloger les comédons dès 2 semaines",
-      "Exfoliation chimique douce, sans abrasion",
-      "Régularise la texture du grain de peau"
+      "Désincruste les pores et les points noirs",
+      "Exfoliation chimique douce, sans grains",
+      "Commencer un jour sur deux, puis jusqu'à 2 fois par jour"
     ],
     whatsapp: "+237674377959",
-    sourceRef: "Paula's Choice Skin Perfecting 2% BHA Liquid 118ml — ou — The Ordinary Salicylic Acid 2% Solution 30ml",
+    sourceRef: "Paula's Choice Skin Perfecting 2% BHA Liquid Exfoliant 118ml",
   },
   {
     id: "gs-serum-vitamine-c",
-    name: "Sérum Éclat Vitamine C 15% Stabilisée",
-    brand: "GlowScan Dermo",
-    description: "Sérum antioxydant à haute dose de Vitamine C pure stabilisée. Illumine le teint, unifie les irrégularités et protège contre le photovieillissement. 30ml.",
+    name: "Vitamin C Suspension 23% + HA Spheres 2%",
+    brand: "The Ordinary",
+    description: "Suspension sans eau de vitamine C pure (acide L-ascorbique 23%) avec sphères d'acide hyaluronique. Illumine le teint et aide à atténuer les irrégularités. Légers picotements possibles. 30ml.",
     category: "visage",
     price: 14000,
+    image: "https://theordinary.com/dw/image/v2/BFKJ_PRD/on/demandware.static/-/Sites-deciem-master/default/dwd0597332/Images/products/The%20Ordinary/rdn-vitamin-c-suspension-23pct-ha-spheres-2pct-30ml.png?sw=800&sh=800&sm=fit",
     targets: ["teint terne", "taches brunes", "éclat visage", "anti-âge", "hyperpigmentation", "unification teint", "fatigue cutanée", "taches solaires"],
     usagePoints: [
-      "Illumine et unifie le teint en 2 à 3 semaines",
-      "Antioxydant puissant contre le vieillissement solaire",
-      "Réduit l'apparence des taches brunes et solaires"
+      "Illumine et unifie le teint",
+      "Vitamine C pure, stable car sans eau",
+      "Peut se diluer dans une crème pour habituer la peau"
     ],
     whatsapp: "+237674377959",
-    sourceRef: "The Ordinary Vitamin C Suspension 23% + HA Spheres 2% 30ml — ou — Timeless Vitamin C + E Ferulic Serum 30ml",
+    sourceRef: "The Ordinary Vitamin C Suspension 23% + HA Spheres 2% 30ml",
   },
   {
     id: "gs-creme-antitaches-nuit",
-    name: "Crème Dermo Anti-Taches Nuit Acide Azélaïque",
-    brand: "GlowScan Dermo",
-    description: "Crème de nuit dépigmentante à l'acide azélaïque 10% et niacinamide. Estompe le mélasma, les taches post-acné et les irrégularités de teint progressivement. 50ml.",
+    name: "Azelaic Acid Suspension 10%",
+    brand: "The Ordinary",
+    description: "Crème légère à 10% d'acide azélaïque. Aide à unifier le teint, atténuer les taches post-acné et améliorer la texture de la peau. Non comédogène, tous types de peau. 30ml.",
     category: "visage",
     price: 11000,
+    image: "https://theordinary.com/dw/image/v2/BFKJ_PRD/on/demandware.static/-/Sites-deciem-master/default/dwedfce090/Images/products/The%20Ordinary/rdn-azelaic-acid-suspension-10pct-100ml.png?sw=800&sh=800&sm=fit",
     targets: ["melasma", "taches brunes", "hyperpigmentation", "taches post-acné", "teint irrégulier", "peau terne", "masque de grossesse"],
     usagePoints: [
-      "Réduit les taches visibles dès 4 semaines d'utilisation",
-      "Formule nuit à action prolongée sur la mélanine",
-      "Compatible peaux sensibles, peaux noires et métissées"
+      "Aide à atténuer taches et marques post-acné",
+      "Améliore la texture de la peau",
+      "Matin et/ou soir, protection solaire le jour"
     ],
     whatsapp: "+237674377959",
-    sourceRef: "The Ordinary Azelaic Acid Suspension 10% 30ml — ou — COSRX AHA/BHA Clarifying Treatment Toner 150ml",
+    sourceRef: "The Ordinary Azelaic Acid Suspension 10% 30ml",
   },
   {
     id: "gs-serum-retinol",
-    name: "Sérum Réparateur Rétinol 0.3% Nuit",
-    brand: "GlowScan Dermo",
-    description: "Sérum anti-âge au rétinol 0.3% encapsulé pour libération progressive. Renouvelle les cellules, lisse les ridules et améliore la densité cutanée. 30ml.",
+    name: "Retinol 0.2% in Squalane",
+    brand: "The Ordinary",
+    description: "Sérum au rétinol 0,2% dans du squalane, idéal pour débuter le rétinol. Cible ridules, texture irrégulière et teint inégal. Sans eau. 30ml. Déconseillé pendant la grossesse et l'allaitement.",
     category: "visage",
     price: 13000,
+    image: "https://theordinary.com/dw/image/v2/BFKJ_PRD/on/demandware.static/-/Sites-deciem-master/default/dw30e9d48b/Images/products/The%20Ordinary/rdn-retinol-0-2pct-in-squalane-30ml.png?sw=800&sh=800&sm=fit",
     targets: ["rides", "ridules", "anti-âge", "vieillissement cutané", "taches brunes", "texture irrégulière", "affaissement cutané", "renouvellement cellulaire"],
     usagePoints: [
-      "Stimule le renouvellement cellulaire nuit après nuit",
-      "Lisse les ridules en 4 à 8 semaines",
-      "Rétinol encapsulé — tolérance maximale même sur peaux sensibles"
+      "Rétinol doux, idéal pour débuter",
+      "Lisse progressivement ridules et texture",
+      "Le soir uniquement, protection solaire le jour"
     ],
     whatsapp: "+237674377959",
-    sourceRef: "The Ordinary Retinol 0.3% in Squalane 30ml — ou — CeraVe Resurfacing Retinol Serum 30ml",
+    sourceRef: "The Ordinary Retinol 0.2% in Squalane 30ml",
   },
 
   // ── VISAGE — Protection & Crèmes ─────────────────────────────────
   {
     id: "gs-spf50-dermo",
-    name: "Crème Solaire Dermo SPF 50+ Invisible",
-    brand: "GlowScan Dermo",
-    description: "Protection solaire dermatologique haute protection SPF 50+. Texture ultra-légère, fini invisible et non blanc sur toutes les carnations africaines. 50ml.",
+    name: "Anthelios UVMune 400 Fluide Invisible SPF50+",
+    brand: "La Roche-Posay",
+    description: "Fluide solaire très haute protection SPF50+ contre les UVA, UVA ultra-longs et UVB, enrichi en Eau Thermale de La Roche-Posay. Texture ultra-légère, fini invisible et non gras. Peaux sensibles. 50ml.",
     category: "visage",
     price: 14000,
+    image: "https://static.thcdn.com/productimg/original/13494906-1715332633881423.jpg",
     targets: ["protection solaire", "anti-taches", "photovieillissement", "teint terne", "peau sensible", "hyperpigmentation", "prévention taches", "rides solaires"],
     usagePoints: [
-      "Protection SPF 50+ validée dermo — résiste à la chaleur équatoriale",
-      "Fini invisible sur peau noire, métissée et caramel",
-      "Prévient activement la reformation des taches traitées"
+      "Très haute protection SPF50+ visage",
+      "Fini invisible et non gras",
+      "Indispensable avec les soins anti-taches"
     ],
     whatsapp: "+237674377959",
-    sourceRef: "La Roche-Posay Anthelios Invisible SPF50+ Fluid 50ml — ou — Bioderma Photoderm MAX SPF50+ Spray 150ml",
+    sourceRef: "La Roche-Posay Anthelios UVMune 400 Fluide Invisible SPF50+ 50ml",
   },
   {
     id: "gs-creme-barriere-hydra",
-    name: "Crème Barrière Hydra-Repair Céramides",
-    brand: "GlowScan Dermo",
-    description: "Crème réparatrice riche en céramides, acide hyaluronique et beurre de karité. Restaure la barrière cutanée affaiblie et scelle l'hydratation. 50ml.",
+    name: "Baume Hydratant Visage et Corps 177ml",
+    brand: "CeraVe",
+    description: "Baume hydratant riche aux 3 céramides essentiels et à l'acide hyaluronique, pour peaux sèches à très sèches. Nourrit, hydrate et aide à restaurer la barrière cutanée. Sans parfum. Visage et corps. 177ml.",
     category: "visage",
     price: 11000,
+    image: "https://www.boticinal.com/media/catalog/product/c/e/cerave-soin-corps-baume-hydratant-177ml-001-3337875598996-front.jpg",
     targets: ["peau sèche", "peau déshydratée", "barrière cutanée", "tiraillements", "peau sensible", "réparation cutanée", "eczéma léger", "peau fragilisée"],
     usagePoints: [
-      "Restaure la barrière cutanée affaiblie en 72h",
-      "Formule riche en céramides identiques aux céramides naturels",
-      "Hydratation non-grasse, compatible toutes saisons"
+      "Aide à restaurer la barrière cutanée",
+      "Hydrate les peaux sèches à très sèches",
+      "Sans parfum, visage et corps"
     ],
     whatsapp: "+237674377959",
-    sourceRef: "CeraVe Moisturizing Cream 177ml — ou — Bioderma Atoderm Intensive Baume 200ml",
+    sourceRef: "CeraVe Baume Hydratant 177ml",
   },
 
   // ═══════════════════════════════════════════════════════════════════
@@ -775,54 +785,380 @@ export const catalog: Product[] = [
     whatsapp: "+237674377959",
   },
 
-  // ── KITS PREMIUM — Circuit GlowScan fermé, AOV élevé ─────────────
+  // ═══════════════════════════════════════════════════════════════
+  // SÉLECTION E-COMMERCE — produits des boutiques partenaires (sans stock)
+  // Prix estimés (marché camerounais) — à aligner sur les prix des boutiques
+  // ═══════════════════════════════════════════════════════════════
   {
-    id: "kit-peau-nette-30j",
-    name: "Kit Peau Nette 30J — Acné & Pores",
-    brand: "GlowScan Dermo",
-    description: "Protocole anti-acné complet sur 30 jours. Inclus : Gel Nettoyant Anti-Sébum + Lotion BHA 2% + Sérum Niacinamide 10%. Valeur séparée : 33 500 FCFA — kit à 25 000 FCFA.",
+    id: "eucerin-antipigment-serum-duo",
+    name: "Anti-Pigment Sérum Duo 30ml",
+    brand: "Eucerin",
+    description: "Sérum double anti-taches au Thiamidol breveté et à l'acide hyaluronique. Réduit les taches brunes et aide à prévenir leur réapparition. Sans hydroquinone. 30ml.",
     category: "visage",
-    price: 25000,
-    targets: ["acné", "peau grasse", "pores dilatés", "points noirs", "comédons", "boutons", "sébum excessif", "imperfections", "peau mixte"],
+    price: 32500,
+    image: "https://static.thcdn.com/productimg/original/13308998-1865232051669945.jpg",
+    targets: ["taches brunes", "hyperpigmentation", "taches", "melasma", "taches post-acné", "teint irrégulier", "unification teint"],
     usagePoints: [
-      "3 produits synergiques — valeur séparée 33 500 FCFA",
-      "Résultats visibles et mesurables en 4 semaines",
-      "Gel Nettoyant + Lotion BHA + Sérum Niacinamide inclus"
+      "Thiamidol breveté contre les taches brunes",
+      "Hydrate grâce à l'acide hyaluronique",
+      "À associer à une protection solaire le jour"
     ],
     whatsapp: "+237674377959",
-    sourceRef: "① CeraVe Foaming Cleanser 236ml  ② Paula's Choice BHA 2% 118ml  ③ The Ordinary Niacinamide 10% 30ml",
+  },
+  {
+    id: "to-alpha-arbutin",
+    name: "Alpha Arbutin 2% + HA 30ml",
+    brand: "The Ordinary",
+    description: "Sérum à 2% d'alpha-arbutine et acide hyaluronique pour atténuer l'apparence des taches et unifier le teint. Matin et soir, avec une protection solaire le jour. 30ml.",
+    category: "visage",
+    price: 11000,
+    image: "https://static.thcdn.com/productimg/original/15464526-1535328246720597.jpg",
+    targets: ["taches", "taches brunes", "hyperpigmentation", "taches post-acné", "teint irrégulier", "teint terne"],
+    usagePoints: [
+      "Atténue l'apparence des taches",
+      "Unifie le teint en douceur",
+      "Protection solaire indispensable le jour"
+    ],
+    whatsapp: "+237674377959",
+  },
+  {
+    id: "to-hyaluronic-b5",
+    name: "Hyaluronic Acid 2% + B5 30ml",
+    brand: "The Ordinary",
+    description: "Sérum hydratant à l'acide hyaluronique, aux céramides et à la provitamine B5. Hydrate, repulpe et lisse la peau. Convient à tous les types de peau. 30ml.",
+    category: "visage",
+    price: 10000,
+    image: "https://theordinary.com/dw/image/v2/BFKJ_PRD/on/demandware.static/-/Sites-deciem-master/default/dw67286abd/Images/products/The%20Ordinary/ord-hyaluronic-acid-2pct-B5-30ml-Clr-Acu.png?sw=800&sh=800&sm=fit",
+    targets: ["hydratation", "peau déshydratée", "peau sèche", "tiraillements", "ridules", "peau terne"],
+    usagePoints: [
+      "Hydratation immédiate et durable",
+      "Céramides pour la barrière cutanée",
+      "Matin et soir, avant la crème"
+    ],
+    whatsapp: "+237674377959",
+  },
+  {
+    id: "to-glycolic-toner",
+    name: "Glycolic Acid 7% Exfoliating Toner 240ml",
+    brand: "The Ordinary",
+    description: "Lotion exfoliante à 7% d'acide glycolique (AHA). Affine le grain de peau, ravive l'éclat et unifie le teint. Le soir, quelques fois par semaine au début. 240ml.",
+    category: "visage",
+    price: 12000,
+    image: "https://static.thcdn.com/productimg/original/11429303-4805145975363423.jpg",
+    targets: ["teint terne", "texture irrégulière", "grain de peau", "éclat", "taches", "pores"],
+    usagePoints: [
+      "Exfoliation douce sans grains",
+      "Ravive l'éclat du teint",
+      "Le soir, protection solaire le lendemain"
+    ],
+    whatsapp: "+237674377959",
+  },
+  {
+    id: "cerave-sa-cleanser",
+    name: "SA Smoothing Cleanser 236ml",
+    brand: "CeraVe",
+    description: "Gel nettoyant à l'acide salicylique, aux 3 céramides et à l'acide hyaluronique. Exfolie en douceur, lisse les peaux rugueuses et aide contre les imperfections, sans dessécher. Visage et corps. 236ml.",
+    category: "visage",
+    price: 13000,
+    image: "https://static.thcdn.com/productimg/original/12207663-6915324621754024.jpg",
+    targets: ["peau rugueuse", "texture irrégulière", "imperfections", "acné", "boutons", "pores", "kératose pilaire"],
+    usagePoints: [
+      "Exfolie en douceur grâce à l'acide salicylique",
+      "Céramides : ne dessèche pas",
+      "Visage et corps"
+    ],
+    whatsapp: "+237674377959",
+  },
+  {
+    id: "lrp-effaclar-duo-m",
+    name: "Effaclar Duo+M 40ml",
+    brand: "La Roche-Posay",
+    description: "Soin anti-imperfections pour peaux grasses à tendance acnéique. Désobstrue les pores, réduit boutons et points noirs et aide à atténuer les marques post-acné. Hydrate 24h. 40ml.",
+    category: "visage",
+    price: 18500,
+    image: "https://static.thcdn.com/productimg/original/11091821-1415335527893589.jpg",
+    targets: ["acné", "boutons", "points noirs", "peau grasse", "imperfections", "taches post-acné", "pores"],
+    usagePoints: [
+      "Réduit boutons et points noirs",
+      "Aide à atténuer les marques post-acné",
+      "Matin et/ou soir après le nettoyage"
+    ],
+    whatsapp: "+237674377959",
+  },
+  {
+    id: "avene-cleanance-gel",
+    name: "Cleanance Gel Nettoyant 400ml",
+    brand: "Avène",
+    description: "Gel nettoyant sans savon pour peaux grasses à imperfections, à l'Eau thermale d'Avène. Purifie, réduit l'excès de sébum et matifie sans dessécher. Visage et corps. 400ml.",
+    category: "visage",
+    price: 17000,
+    image: "https://static.thcdn.com/productimg/original/12743427-1095185188324138.jpg",
+    targets: ["peau grasse", "imperfections", "acné", "sébum excessif", "brillance", "pores"],
+    usagePoints: [
+      "Purifie et matifie",
+      "Sans savon, ne dessèche pas",
+      "Grand format 400ml, visage et corps"
+    ],
+    whatsapp: "+237674377959",
+  },
+  {
+    id: "lrp-cicaplast-b5",
+    name: "Cicaplast Baume B5+ 40ml",
+    brand: "La Roche-Posay",
+    description: "Baume réparateur apaisant au panthénol 5% et madécassoside. Soulage les peaux irritées, sèches ou abîmées. Visage, corps et lèvres, pour toute la famille. 40ml.",
+    category: "visage",
+    price: 9500,
+    image: "https://pharmacie-citypharma.fr/229731-large_default/la-roche-posay-cicaplast-baume-b5-40ml.jpg",
+    targets: ["peau irritée", "réparation", "peau sèche", "peau sensible", "rougeurs", "irritation", "après-rasage"],
+    usagePoints: [
+      "Apaise et répare les peaux irritées",
+      "Visage, corps et lèvres",
+      "Pour toute la famille, dès la naissance"
+    ],
+    whatsapp: "+237674377959",
+  },
+  {
+    id: "vichy-mineral-89",
+    name: "Minéral 89 Booster Hydratant 50ml",
+    brand: "Vichy",
+    description: "Booster quotidien à l'acide hyaluronique et à l'eau volcanique de Vichy. Hydrate, repulpe et renforce la barrière de la peau. Formule minimaliste de 11 ingrédients. 50ml.",
+    category: "visage",
+    price: 26000,
+    image: "https://static.thcdn.com/productimg/original/11499284-1435152226994972.jpg",
+    targets: ["hydratation", "peau déshydratée", "peau sèche", "peau sensible", "éclat", "barrière cutanée"],
+    usagePoints: [
+      "Hydrate et repulpe",
+      "Renforce la barrière cutanée",
+      "Le matin avant la crème"
+    ],
+    whatsapp: "+237674377959",
+  },
+  {
+    id: "garnier-vitc-booster",
+    name: "Even & Matte Vitamin C Booster Serum 30ml",
+    brand: "Garnier",
+    description: "Sérum à la vitamine C, niacinamide et acide salicylique. Aide à atténuer les taches, ravive l'éclat et matifie. Petit prix, idéal pour débuter. 30ml.",
+    category: "visage",
+    price: 7500,
+    image: "https://ke.jumia.is/unsafe/fit-in/680x680/filters:fill(white)/product/49/109074/1.jpg?4586",
+    targets: ["taches", "teint terne", "éclat", "peau grasse", "taches post-acné", "brillance"],
+    usagePoints: [
+      "Vitamine C + niacinamide + acide salicylique",
+      "Ravive l'éclat et matifie",
+      "Protection solaire le jour"
+    ],
+    whatsapp: "+237674377959",
+  },
+  {
+    id: "palmers-cocoa-lotion",
+    name: "Cocoa Butter Formula Lotion 400ml",
+    brand: "Palmer's",
+    description: "Lait corps au beurre de cacao et à la vitamine E. Hydrate 48h, adoucit les peaux sèches et rugueuses et aide à lisser l'apparence des marques. 400ml.",
+    category: "corps",
+    price: 6500,
+    image: "https://media.superdrug.com//medias/sys_master/prd-images/he3/h05/12502235217950/prd-front-100757_600x600/prd-front-100757-600x600.jpg",
+    targets: ["corps", "peau sèche", "hydratation corps", "peau rugueuse", "marques", "vergetures"],
+    usagePoints: [
+      "Beurre de cacao et vitamine E",
+      "Hydratation 48h",
+      "Adoucit les peaux sèches"
+    ],
+    whatsapp: "+237674377959",
+  },
+  {
+    id: "eucerin-urearepair-lotion",
+    name: "UreaRepair Plus Lotion 10% Urée 400ml",
+    brand: "Eucerin",
+    description: "Lait corps à 10% d'urée pour peaux très sèches et rugueuses. Hydrate 48h, restaure la barrière cutanée et lisse la peau. 400ml.",
+    category: "corps",
+    price: 18500,
+    image: "https://static.thcdn.com/productimg/original/14759755-1505077068754506.jpg",
+    targets: ["corps", "peau très sèche", "peau rugueuse", "sécheresse", "desquamation", "hydratation corps"],
+    usagePoints: [
+      "10% d'urée pour peaux très sèches",
+      "Hydratation 48h",
+      "Lisse les zones rugueuses"
+    ],
+    whatsapp: "+237674377959",
+  },
+  {
+    id: "eucerin-urearepair-pieds",
+    name: "UreaRepair Plus Crème Pieds 10% Urée 100ml",
+    brand: "Eucerin",
+    description: "Crème pieds à 10% d'urée pour pieds très secs, rugueux et talons craquelés. Hydrate et répare. 100ml.",
+    category: "corps",
+    price: 11500,
+    image: "https://static.thcdn.com/productimg/original/11115981-2135111285371404.jpg",
+    targets: ["pieds secs", "talons craquelés", "corps", "peau rugueuse", "sécheresse"],
+    usagePoints: [
+      "Talons craquelés et pieds très secs",
+      "10% d'urée",
+      "Matin et soir sur pieds propres"
+    ],
+    whatsapp: "+237674377959",
+  },
+  {
+    id: "cantu-leave-in",
+    name: "Shea Butter Leave-In Conditioning Repair Cream 453g",
+    brand: "Cantu",
+    description: "Crème sans rinçage au beurre de karité pur et huiles naturelles pour cheveux secs, abîmés, crépus ou bouclés. Aide à limiter la casse et les fourches, apporte souplesse et brillance. Sans silicone. 453g.",
+    category: "cheveux",
+    price: 8000,
+    image: "https://static.thcdn.com/productimg/original/12042573-1995049338699247.jpg",
+    targets: ["cheveux secs", "cheveux crépus", "cheveux bouclés", "casse", "fourches", "cheveux abîmés", "hydratation cheveux"],
+    usagePoints: [
+      "Beurre de karité pur",
+      "Limite la casse et les fourches",
+      "Sans silicone, sans alcool desséchant"
+    ],
+    whatsapp: "+237674377959",
+  },
+  {
+    id: "cantu-shampoo",
+    name: "Shea Butter Sulfate-Free Cleansing Cream Shampoo 400ml",
+    brand: "Cantu",
+    description: "Shampooing crème sans sulfates au beurre de karité. Nettoie en douceur les cheveux secs, crépus ou bouclés sans les dessécher. 400ml.",
+    category: "cheveux",
+    price: 8000,
+    image: "https://static.thcdn.com/productimg/original/12042579-1855019065909787.jpg",
+    targets: ["cheveux secs", "cheveux crépus", "cheveux bouclés", "cuir chevelu", "lavage doux"],
+    usagePoints: [
+      "Sans sulfates",
+      "Nettoie sans dessécher",
+      "Pour cheveux crépus et bouclés"
+    ],
+    whatsapp: "+237674377959",
+  },
+  {
+    id: "sheamoisture-curl-smoothie",
+    name: "Coconut & Hibiscus Curl Enhancing Smoothie 326ml",
+    brand: "SheaMoisture",
+    description: "Crème coiffante au beurre de karité, huile de coco et protéines de soie. Définit les boucles, hydrate et réduit les frisottis des cheveux épais, bouclés ou crépus. Sans silicone ni sulfates. 326ml.",
+    category: "cheveux",
+    price: 13000,
+    image: "https://static.thcdn.com/productimg/original/11309661-1974942313600445.jpg",
+    targets: ["cheveux bouclés", "cheveux crépus", "frisottis", "cheveux secs", "définition boucles", "hydratation cheveux"],
+    usagePoints: [
+      "Définit les boucles et réduit les frisottis",
+      "Karité, coco et protéines de soie",
+      "Sans silicone ni sulfates"
+    ],
+    whatsapp: "+237674377959",
+  },
+  {
+    id: "sheamoisture-curl-shampoo",
+    name: "Coconut & Hibiscus Curl & Shine Shampoo 379ml",
+    brand: "SheaMoisture",
+    description: "Shampooing au beurre de karité et à l'huile de coco pour cheveux bouclés et crépus. Nettoie en douceur, hydrate et apporte de la brillance. 379ml.",
+    category: "cheveux",
+    price: 12500,
+    image: "https://static.thcdn.com/productimg/original/11309659-3014946154246711.jpg",
+    targets: ["cheveux bouclés", "cheveux crépus", "cheveux secs", "brillance", "lavage doux"],
+    usagePoints: [
+      "Nettoie en douceur",
+      "Hydrate et fait briller",
+      "À associer au Curl Enhancing Smoothie"
+    ],
+    whatsapp: "+237674377959",
+  },
+
+  // ── KITS — une routine complète par besoin (recommandés après l'analyse) ──
+  // Prix d'un kit = somme des prix de ses produits (recalculé au chargement, cf. fin du fichier).
+  {
+    id: "kit-peau-nette-30j",
+    name: "Kit Acné & Points Noirs",
+    brand: "GlowScan",
+    description: "Routine anti-acné de 30 jours : nettoyer sans agresser, désincruster les pores, calmer les boutons. Traiter l'acné tôt limite les taches qu'elle laisse sur les peaux foncées.",
+    category: "visage",
+    price: 32500,
+    kitItems: ["cerave-gel-moussant", "gs-lotion-bha-acne", "gs-serum-niacinamide"],
+    targets: ["acné", "boutons", "points noirs", "comédons", "pores dilatés", "peau grasse", "sébum excessif", "imperfections", "peau mixte", "brillance"],
+    usagePoints: [
+      "Matin et soir : gel moussant, puis niacinamide",
+      "Le soir, 1 jour sur 2 au début : BHA 2 %",
+      "Limite les marques brunes laissées par les boutons"
+    ],
+    whatsapp: "+237674377959",
   },
   {
     id: "kit-eclat-antitaches-30j",
-    name: "Kit Éclat & Teint Unifié — Taches & Hyperpigmentation",
-    brand: "GlowScan Dermo",
-    description: "Protocole dermo anti-taches complet. Inclus : Sérum Vitamine C 15% + Crème Anti-Taches Nuit + Crème Solaire SPF50+. Valeur séparée : 39 000 FCFA — kit à 25 000 FCFA.",
+    name: "Kit Taches & Teint Unifié",
+    brand: "GlowScan",
+    description: "Routine anti-taches pensée pour les peaux riches en mélanine : atténuer les taches et marques post-acné sans éclaircir la peau, et les empêcher de revenir grâce à la protection solaire. Sans hydroquinone ni corticoïdes.",
     category: "visage",
-    price: 25000,
-    targets: ["hyperpigmentation", "taches brunes", "melasma", "teint terne", "unification teint", "éclat visage", "taches solaires", "masque de grossesse", "taches post-acné"],
+    price: 40000,
+    kitItems: ["nubiance-creme-eclat", "gs-creme-antitaches-nuit", "gs-spf50-dermo"],
+    targets: ["hyperpigmentation", "taches brunes", "taches", "melasma", "teint irrégulier", "unification teint", "taches post-acné", "masque de grossesse", "taches solaires", "teint terne"],
     usagePoints: [
-      "3 produits synergiques — valeur séparée 39 000 FCFA",
-      "Résultats visibles en 30 jours d'utilisation régulière",
-      "Vitamine C + Anti-Taches Nuit + SPF50+ inclus"
+      "Nubiance, une marque formulée pour les peaux noires et métissées",
+      "Acide azélaïque : unifie le teint en douceur",
+      "SPF50+ chaque matin : sans soleil, les taches ne reviennent pas"
     ],
     whatsapp: "+237674377959",
-    sourceRef: "① The Ordinary Vit C 23% 30ml  ② The Ordinary Azelaic Acid 10% 30ml  ③ La Roche-Posay Anthelios SPF50+ 50ml",
+  },
+  {
+    id: "kit-peau-parfaite-30j",
+    name: "Kit Peau Parfaite",
+    brand: "GlowScan",
+    description: "Routine d'entretien pour garder une peau nette, lumineuse et uniforme : un nettoyant doux pour peaux noires et métissées, un sérum qui affine le grain de peau, et la protection solaire qui prévient les taches.",
+    category: "visage",
+    price: 36500,
+    kitItems: ["nubiance-nettoyant", "gs-serum-niacinamide", "gs-spf50-dermo"],
+    targets: ["peau normale", "entretien", "éclat", "éclat visage", "prévention", "pores", "grain de peau", "teint terne", "peau mixte", "prévention taches"],
+    usagePoints: [
+      "3 gestes simples, matin et soir",
+      "Affine le grain de peau et la brillance",
+      "Prévient les taches au quotidien"
+    ],
+    whatsapp: "+237674377959",
+  },
+  {
+    id: "kit-hydratation-30j",
+    name: "Kit Peau Sèche & Hydratation",
+    brand: "GlowScan",
+    description: "Routine pour peau sèche, déshydratée ou terne : nettoyer sans dessécher, réhydrater en profondeur et réparer la barrière cutanée. Redonne souplesse et éclat aux peaux qui tiraillent ou paraissent ternes.",
+    category: "visage",
+    price: 36500,
+    kitItems: ["cerave-creme-lavante", "uriage-serum-booster-ha", "gs-creme-barriere-hydra"],
+    targets: ["peau sèche", "peau déshydratée", "déshydratation", "hydratation", "tiraillements", "barrière cutanée", "peau terne", "peau sensible", "sécheresse", "peau fragilisée"],
+    usagePoints: [
+      "Crème lavante qui ne dessèche pas",
+      "Sérum à l'acide hyaluronique",
+      "Baume aux céramides : répare la barrière cutanée"
+    ],
+    whatsapp: "+237674377959",
   },
   {
     id: "kit-anti-age-30j",
-    name: "Kit Anti-Âge Restructurant 30J",
-    brand: "GlowScan Dermo",
-    description: "Protocole anti-âge haute performance. Inclus : Sérum Rétinol 0.3% + Sérum Vitamine C 15% + Crème Barrière Céramides. Valeur séparée : 38 000 FCFA — kit à 25 000 FCFA.",
+    name: "Kit Anti-Âge",
+    brand: "GlowScan",
+    description: "Routine anti-âge : rétinol doux le soir, vitamine C le matin et baume aux céramides pour lisser les ridules, raviver l'éclat et garder la peau confortable.",
     category: "visage",
-    price: 25000,
-    targets: ["rides", "anti-âge", "affaissement cutané", "vieillissement cutané", "taches brunes", "perte de fermeté", "peau mature", "ridules", "éclat"],
+    price: 38000,
+    kitItems: ["gs-serum-retinol", "gs-serum-vitamine-c", "gs-creme-barriere-hydra"],
+    targets: ["rides", "ridules", "anti-âge", "vieillissement cutané", "affaissement cutané", "perte de fermeté", "peau mature", "éclat", "taches brunes"],
     usagePoints: [
-      "3 produits synergiques — valeur séparée 38 000 FCFA",
-      "Résultats sur rides et fermeté en 6 à 8 semaines",
-      "Rétinol 0.3% + Vitamine C 15% + Céramides inclus"
+      "Rétinol 0,2 % le soir, idéal pour débuter",
+      "Vitamine C le matin pour l'éclat",
+      "Baume aux céramides pour le confort"
     ],
     whatsapp: "+237674377959",
-    sourceRef: "① The Ordinary Retinol 0.3% 30ml  ② Timeless Vit C+E Ferulic 30ml  ③ CeraVe Moisturizing Cream 177ml",
+  },
+  {
+    id: "kit-corps-30j",
+    name: "Kit Corps Doux & Unifié",
+    brand: "GlowScan",
+    description: "Routine corps : une douche surgras qui respecte la peau, un gommage doux pour les zones rugueuses, et un lait hydratant formulé pour les peaux noires et métissées.",
+    category: "corps",
+    price: 24000,
+    kitItems: ["cav-gel-bain-douche", "cav-baume-gommant", "nubiance-lait-corps"],
+    targets: ["corps", "peau sèche", "peau rugueuse", "texture irrégulière", "hydratation corps", "teint irrégulier", "sécheresse", "peau terne"],
+    usagePoints: [
+      "Douche surgras sans savon",
+      "Gommage doux 1 à 2 fois par semaine",
+      "Lait corps Nubiance pour peaux noires et métissées"
+    ],
+    whatsapp: "+237674377959",
   },
 
   // ═══════════════════════════════════════════════════════════════
@@ -905,3 +1241,25 @@ export const catalog: Product[] = [
   },
 ];
 
+// ─── Kits ────────────────────────────────────────────────────────────
+export const isKit = (p: Product): boolean => Array.isArray(p.kitItems) && p.kitItems.length > 0;
+
+/** Produits contenus dans un kit, dans l'ordre de la routine. */
+export function kitProducts(p: Product): Product[] {
+  return (p.kitItems || []).map((id) => catalog.find((c) => c.id === id)).filter((c): c is Product => !!c);
+}
+
+/** Somme des prix des produits du kit achetés séparément. */
+export function kitValue(p: Product): number {
+  return kitProducts(p).reduce((sum, c) => sum + (c.price || 0), 0);
+}
+
+/** Photos à afficher pour un produit : celles des produits inclus pour un kit, sinon la sienne. */
+export function productPhotos(p: Product): string[] {
+  if (isKit(p)) return kitProducts(p).map((c) => c.image).filter((u): u is string => !!u);
+  return p.image ? [p.image] : [];
+}
+
+// Prix d'un kit = somme exacte des prix de ses produits, toujours à jour
+// si le prix d'un produit change (boutique, résultat, commande, prompt IA).
+for (const p of catalog) if (isKit(p)) p.price = kitValue(p);

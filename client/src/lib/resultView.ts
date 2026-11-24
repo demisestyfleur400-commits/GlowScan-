@@ -1,5 +1,5 @@
 import type { AnalysisResult } from "@shared/schema";
-import { catalog, formatPrice } from "@shared/catalog";
+import { pickKit, kitCard } from "@shared/kits";
 import {
   FACE_ZONES, STATE_LEVEL, faceZonesOf, levelWord, productsAllowed, resultStateOf,
   type FaceZoneKey, type FaceZones, type ResultStateKey, type ZoneStatus,
@@ -149,14 +149,10 @@ export function buildResultView(result: AnalysisResult, area = "face") {
     .filter(([, v]) => v !== null)
     .map(([name, v, better]) => ({ name, v: v!, word: levelWord(v!), c: barColor(v!, better) }));
 
-  // Produits : seulement en « bonne santé » et « à surveiller ».
-  const products = productsAllowed(state)
-    ? (r.recommendations?.products || [])
-        .map((name) => catalog.find((p) => p.name === name || p.id === name))
-        .filter((p): p is (typeof catalog)[number] => !!p)
-        .slice(0, 3)
-        .map((p) => ({ id: p.id, name: p.name, description: p.description, image: p.image, price: typeof p.price === "number" ? formatPrice(p.price) : null }))
-    : [];
+  // Kit conseillé : seulement en « bonne santé » et « à surveiller ».
+  // Choisi à partir des mesures de l'analyse (cf. shared/kits.ts).
+  const kitProduct = productsAllowed(state) ? pickKit(r, area) : null;
+  const kit = kitProduct ? kitCard(kitProduct) : null;
 
   const delta = r.predictiveInsights?.progression?.delta;
   const deltaLabel = typeof delta === "number"
@@ -166,7 +162,7 @@ export function buildResultView(result: AnalysisResult, area = "face") {
   const flags = state === "urgent" ? (r.urgentSigns || []) : copy.flags || [];
 
   return {
-    state, copy, usable, score, zones, worstZone, observations, tiles, bars, products,
+    state, copy, usable, score, zones, worstZone, observations, tiles, bars, kit,
     deltaLabel, title, flags, showObservations: state === "medical" || state === "urgent",
     showWaitTips: state === "medical",
   };

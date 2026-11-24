@@ -84,9 +84,12 @@ export function buildResultPdfHtml({ result, area = "face", imageUrl, createdAt,
       ${v.bars.map((b) => `<div style="margin:0 0 8px"><div style="display:flex;justify-content:space-between;font-size:12px"><span style="font-weight:600">${b.name}</span><span style="font-weight:700">${b.word}</span></div><div style="height:7px;border-radius:999px;background:${HEX.n200};margin-top:3px"><div style="height:100%;width:${b.v}%;border-radius:999px;background:${b.c}"></div></div></div>`).join("")}
     </div>` : "";
 
-  const products = v.products.length ? `
-    <div style="${card}">${h("Votre routine conseillée")}
-      ${v.products.map((p) => `<div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;padding:4px 0"><span><b>${esc(p.name)}</b><br><span style="color:${HEX.a2_800}">${esc(p.description).slice(0, 110)}</span></span><b style="white-space:nowrap">${esc(p.price || "")}</b></div>`).join("")}
+  const fcfa = (n: number) => `${n.toLocaleString("fr-FR").replace(/\u202f|\u00a0/g, " ")} FCFA`;
+  const products = v.kit ? `
+    <div style="${card}">${h("Votre kit conseillé")}
+      <div style="display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:2px 0 6px"><b>${esc(v.kit.name)}</b><b style="white-space:nowrap">${fcfa(v.kit.price)}</b></div>
+      <div style="font-size:12px;color:${HEX.a2_800};margin:0 0 6px">${esc(v.kit.reason)}</div>
+      ${v.kit.items.map((p) => `<div style="font-size:12px;padding:2px 0">• ${esc(p.brand)} — ${esc(p.name)}</div>`).join("")}
     </div>` : "";
 
   const wait = v.showWaitTips ? `
