@@ -785,6 +785,283 @@ export const catalog: Product[] = [
     whatsapp: "+237674377959",
   },
 
+  // ═══════════════════════════════════════════════════════════════
+  // SÉLECTION E-COMMERCE — produits des boutiques partenaires (sans stock)
+  // Prix estimés (marché camerounais) — à aligner sur les prix des boutiques
+  // ═══════════════════════════════════════════════════════════════
+  {
+    id: "eucerin-antipigment-serum-duo",
+    name: "Anti-Pigment Sérum Duo 30ml",
+    brand: "Eucerin",
+    description: "Sérum double anti-taches au Thiamidol breveté et à l'acide hyaluronique. Réduit les taches brunes et aide à prévenir leur réapparition. Sans hydroquinone. 30ml.",
+    category: "visage",
+    price: 32500,
+    image: "https://static.thcdn.com/productimg/original/13308998-1865232051669945.jpg",
+    targets: ["taches brunes", "hyperpigmentation", "taches", "melasma", "taches post-acné", "teint irrégulier", "unification teint"],
+    usagePoints: [
+      "Thiamidol breveté contre les taches brunes",
+      "Hydrate grâce à l'acide hyaluronique",
+      "À associer à une protection solaire le jour"
+    ],
+    whatsapp: "+237674377959",
+  },
+  {
+    id: "to-alpha-arbutin",
+    name: "Alpha Arbutin 2% + HA 30ml",
+    brand: "The Ordinary",
+    description: "Sérum à 2% d'alpha-arbutine et acide hyaluronique pour atténuer l'apparence des taches et unifier le teint. Matin et soir, avec une protection solaire le jour. 30ml.",
+    category: "visage",
+    price: 11000,
+    image: "https://static.thcdn.com/productimg/original/15464526-1535328246720597.jpg",
+    targets: ["taches", "taches brunes", "hyperpigmentation", "taches post-acné", "teint irrégulier", "teint terne"],
+    usagePoints: [
+      "Atténue l'apparence des taches",
+      "Unifie le teint en douceur",
+      "Protection solaire indispensable le jour"
+    ],
+    whatsapp: "+237674377959",
+  },
+  {
+    id: "to-hyaluronic-b5",
+    name: "Hyaluronic Acid 2% + B5 30ml",
+    brand: "The Ordinary",
+    description: "Sérum hydratant à l'acide hyaluronique, aux céramides et à la provitamine B5. Hydrate, repulpe et lisse la peau. Convient à tous les types de peau. 30ml.",
+    category: "visage",
+    price: 10000,
+    image: "https://theordinary.com/dw/image/v2/BFKJ_PRD/on/demandware.static/-/Sites-deciem-master/default/dw67286abd/Images/products/The%20Ordinary/ord-hyaluronic-acid-2pct-B5-30ml-Clr-Acu.png?sw=800&sh=800&sm=fit",
+    targets: ["hydratation", "peau déshydratée", "peau sèche", "tiraillements", "ridules", "peau terne"],
+    usagePoints: [
+      "Hydratation immédiate et durable",
+      "Céramides pour la barrière cutanée",
+      "Matin et soir, avant la crème"
+    ],
+    whatsapp: "+237674377959",
+  },
+  {
+    id: "to-glycolic-toner",
+    name: "Glycolic Acid 7% Exfoliating Toner 240ml",
+    brand: "The Ordinary",
+    description: "Lotion exfoliante à 7% d'acide glycolique (AHA). Affine le grain de peau, ravive l'éclat et unifie le teint. Le soir, quelques fois par semaine au début. 240ml.",
+    category: "visage",
+    price: 12000,
+    image: "https://static.thcdn.com/productimg/original/11429303-4805145975363423.jpg",
+    targets: ["teint terne", "texture irrégulière", "grain de peau", "éclat", "taches", "pores"],
+    usagePoints: [
+      "Exfoliation douce sans grains",
+      "Ravive l'éclat du teint",
+      "Le soir, protection solaire le lendemain"
+    ],
+    whatsapp: "+237674377959",
+  },
+  {
+    id: "cerave-sa-cleanser",
+    name: "SA Smoothing Cleanser 236ml",
+    brand: "CeraVe",
+    description: "Gel nettoyant à l'acide salicylique, aux 3 céramides et à l'acide hyaluronique. Exfolie en douceur, lisse les peaux rugueuses et aide contre les imperfections, sans dessécher. Visage et corps. 236ml.",
+    category: "visage",
+    price: 13000,
+    image: "https://static.thcdn.com/productimg/original/12207663-6915324621754024.jpg",
+    targets: ["peau rugueuse", "texture irrégulière", "imperfections", "acné", "boutons", "pores", "kératose pilaire"],
+    usagePoints: [
+      "Exfolie en douceur grâce à l'acide salicylique",
+      "Céramides : ne dessèche pas",
+      "Visage et corps"
+    ],
+    whatsapp: "+237674377959",
+  },
+  {
+    id: "lrp-effaclar-duo-m",
+    name: "Effaclar Duo+M 40ml",
+    brand: "La Roche-Posay",
+    description: "Soin anti-imperfections pour peaux grasses à tendance acnéique. Désobstrue les pores, réduit boutons et points noirs et aide à atténuer les marques post-acné. Hydrate 24h. 40ml.",
+    category: "visage",
+    price: 18500,
+    image: "https://static.thcdn.com/productimg/original/11091821-1415335527893589.jpg",
+    targets: ["acné", "boutons", "points noirs", "peau grasse", "imperfections", "taches post-acné", "pores"],
+    usagePoints: [
+      "Réduit boutons et points noirs",
+      "Aide à atténuer les marques post-acné",
+      "Matin et/ou soir après le nettoyage"
+    ],
+    whatsapp: "+237674377959",
+  },
+  {
+    id: "avene-cleanance-gel",
+    name: "Cleanance Gel Nettoyant 400ml",
+    brand: "Avène",
+    description: "Gel nettoyant sans savon pour peaux grasses à imperfections, à l'Eau thermale d'Avène. Purifie, réduit l'excès de sébum et matifie sans dessécher. Visage et corps. 400ml.",
+    category: "visage",
+    price: 17000,
+    image: "https://static.thcdn.com/productimg/original/12743427-1095185188324138.jpg",
+    targets: ["peau grasse", "imperfections", "acné", "sébum excessif", "brillance", "pores"],
+    usagePoints: [
+      "Purifie et matifie",
+      "Sans savon, ne dessèche pas",
+      "Grand format 400ml, visage et corps"
+    ],
+    whatsapp: "+237674377959",
+  },
+  {
+    id: "lrp-cicaplast-b5",
+    name: "Cicaplast Baume B5+ 40ml",
+    brand: "La Roche-Posay",
+    description: "Baume réparateur apaisant au panthénol 5% et madécassoside. Soulage les peaux irritées, sèches ou abîmées. Visage, corps et lèvres, pour toute la famille. 40ml.",
+    category: "visage",
+    price: 9500,
+    image: "https://pharmacie-citypharma.fr/229731-large_default/la-roche-posay-cicaplast-baume-b5-40ml.jpg",
+    targets: ["peau irritée", "réparation", "peau sèche", "peau sensible", "rougeurs", "irritation", "après-rasage"],
+    usagePoints: [
+      "Apaise et répare les peaux irritées",
+      "Visage, corps et lèvres",
+      "Pour toute la famille, dès la naissance"
+    ],
+    whatsapp: "+237674377959",
+  },
+  {
+    id: "vichy-mineral-89",
+    name: "Minéral 89 Booster Hydratant 50ml",
+    brand: "Vichy",
+    description: "Booster quotidien à l'acide hyaluronique et à l'eau volcanique de Vichy. Hydrate, repulpe et renforce la barrière de la peau. Formule minimaliste de 11 ingrédients. 50ml.",
+    category: "visage",
+    price: 26000,
+    image: "https://static.thcdn.com/productimg/original/11499284-1435152226994972.jpg",
+    targets: ["hydratation", "peau déshydratée", "peau sèche", "peau sensible", "éclat", "barrière cutanée"],
+    usagePoints: [
+      "Hydrate et repulpe",
+      "Renforce la barrière cutanée",
+      "Le matin avant la crème"
+    ],
+    whatsapp: "+237674377959",
+  },
+  {
+    id: "garnier-vitc-booster",
+    name: "Even & Matte Vitamin C Booster Serum 30ml",
+    brand: "Garnier",
+    description: "Sérum à la vitamine C, niacinamide et acide salicylique. Aide à atténuer les taches, ravive l'éclat et matifie. Petit prix, idéal pour débuter. 30ml.",
+    category: "visage",
+    price: 7500,
+    image: "https://ke.jumia.is/unsafe/fit-in/680x680/filters:fill(white)/product/49/109074/1.jpg?4586",
+    targets: ["taches", "teint terne", "éclat", "peau grasse", "taches post-acné", "brillance"],
+    usagePoints: [
+      "Vitamine C + niacinamide + acide salicylique",
+      "Ravive l'éclat et matifie",
+      "Protection solaire le jour"
+    ],
+    whatsapp: "+237674377959",
+  },
+  {
+    id: "palmers-cocoa-lotion",
+    name: "Cocoa Butter Formula Lotion 400ml",
+    brand: "Palmer's",
+    description: "Lait corps au beurre de cacao et à la vitamine E. Hydrate 48h, adoucit les peaux sèches et rugueuses et aide à lisser l'apparence des marques. 400ml.",
+    category: "corps",
+    price: 6500,
+    image: "https://media.superdrug.com//medias/sys_master/prd-images/he3/h05/12502235217950/prd-front-100757_600x600/prd-front-100757-600x600.jpg",
+    targets: ["corps", "peau sèche", "hydratation corps", "peau rugueuse", "marques", "vergetures"],
+    usagePoints: [
+      "Beurre de cacao et vitamine E",
+      "Hydratation 48h",
+      "Adoucit les peaux sèches"
+    ],
+    whatsapp: "+237674377959",
+  },
+  {
+    id: "eucerin-urearepair-lotion",
+    name: "UreaRepair Plus Lotion 10% Urée 400ml",
+    brand: "Eucerin",
+    description: "Lait corps à 10% d'urée pour peaux très sèches et rugueuses. Hydrate 48h, restaure la barrière cutanée et lisse la peau. 400ml.",
+    category: "corps",
+    price: 18500,
+    image: "https://static.thcdn.com/productimg/original/14759755-1505077068754506.jpg",
+    targets: ["corps", "peau très sèche", "peau rugueuse", "sécheresse", "desquamation", "hydratation corps"],
+    usagePoints: [
+      "10% d'urée pour peaux très sèches",
+      "Hydratation 48h",
+      "Lisse les zones rugueuses"
+    ],
+    whatsapp: "+237674377959",
+  },
+  {
+    id: "eucerin-urearepair-pieds",
+    name: "UreaRepair Plus Crème Pieds 10% Urée 100ml",
+    brand: "Eucerin",
+    description: "Crème pieds à 10% d'urée pour pieds très secs, rugueux et talons craquelés. Hydrate et répare. 100ml.",
+    category: "corps",
+    price: 11500,
+    image: "https://static.thcdn.com/productimg/original/11115981-2135111285371404.jpg",
+    targets: ["pieds secs", "talons craquelés", "corps", "peau rugueuse", "sécheresse"],
+    usagePoints: [
+      "Talons craquelés et pieds très secs",
+      "10% d'urée",
+      "Matin et soir sur pieds propres"
+    ],
+    whatsapp: "+237674377959",
+  },
+  {
+    id: "cantu-leave-in",
+    name: "Shea Butter Leave-In Conditioning Repair Cream 453g",
+    brand: "Cantu",
+    description: "Crème sans rinçage au beurre de karité pur et huiles naturelles pour cheveux secs, abîmés, crépus ou bouclés. Aide à limiter la casse et les fourches, apporte souplesse et brillance. Sans silicone. 453g.",
+    category: "cheveux",
+    price: 8000,
+    image: "https://static.thcdn.com/productimg/original/12042573-1995049338699247.jpg",
+    targets: ["cheveux secs", "cheveux crépus", "cheveux bouclés", "casse", "fourches", "cheveux abîmés", "hydratation cheveux"],
+    usagePoints: [
+      "Beurre de karité pur",
+      "Limite la casse et les fourches",
+      "Sans silicone, sans alcool desséchant"
+    ],
+    whatsapp: "+237674377959",
+  },
+  {
+    id: "cantu-shampoo",
+    name: "Shea Butter Sulfate-Free Cleansing Cream Shampoo 400ml",
+    brand: "Cantu",
+    description: "Shampooing crème sans sulfates au beurre de karité. Nettoie en douceur les cheveux secs, crépus ou bouclés sans les dessécher. 400ml.",
+    category: "cheveux",
+    price: 8000,
+    image: "https://static.thcdn.com/productimg/original/12042579-1855019065909787.jpg",
+    targets: ["cheveux secs", "cheveux crépus", "cheveux bouclés", "cuir chevelu", "lavage doux"],
+    usagePoints: [
+      "Sans sulfates",
+      "Nettoie sans dessécher",
+      "Pour cheveux crépus et bouclés"
+    ],
+    whatsapp: "+237674377959",
+  },
+  {
+    id: "sheamoisture-curl-smoothie",
+    name: "Coconut & Hibiscus Curl Enhancing Smoothie 326ml",
+    brand: "SheaMoisture",
+    description: "Crème coiffante au beurre de karité, huile de coco et protéines de soie. Définit les boucles, hydrate et réduit les frisottis des cheveux épais, bouclés ou crépus. Sans silicone ni sulfates. 326ml.",
+    category: "cheveux",
+    price: 13000,
+    image: "https://static.thcdn.com/productimg/original/11309661-1974942313600445.jpg",
+    targets: ["cheveux bouclés", "cheveux crépus", "frisottis", "cheveux secs", "définition boucles", "hydratation cheveux"],
+    usagePoints: [
+      "Définit les boucles et réduit les frisottis",
+      "Karité, coco et protéines de soie",
+      "Sans silicone ni sulfates"
+    ],
+    whatsapp: "+237674377959",
+  },
+  {
+    id: "sheamoisture-curl-shampoo",
+    name: "Coconut & Hibiscus Curl & Shine Shampoo 379ml",
+    brand: "SheaMoisture",
+    description: "Shampooing au beurre de karité et à l'huile de coco pour cheveux bouclés et crépus. Nettoie en douceur, hydrate et apporte de la brillance. 379ml.",
+    category: "cheveux",
+    price: 12500,
+    image: "https://static.thcdn.com/productimg/original/11309659-3014946154246711.jpg",
+    targets: ["cheveux bouclés", "cheveux crépus", "cheveux secs", "brillance", "lavage doux"],
+    usagePoints: [
+      "Nettoie en douceur",
+      "Hydrate et fait briller",
+      "À associer au Curl Enhancing Smoothie"
+    ],
+    whatsapp: "+237674377959",
+  },
+
   // ── KITS — une routine complète par besoin (recommandés après l'analyse) ──
   // Prix d'un kit = somme des prix de ses produits (recalculé au chargement, cf. fin du fichier).
   {
