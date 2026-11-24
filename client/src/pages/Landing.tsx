@@ -38,10 +38,11 @@ const TRUST: [string, string][] = [
   ["Données protégées", "Selon la loi camerounaise n° 2024/017"],
 ];
 
-const STEPS: [string, string][] = [
-  ["Photographiez votre peau", "Une photo avec votre téléphone suffit. Répondez à quelques questions : depuis quand, ce que vous avez déjà essayé."],
-  ["L'IA prépare votre dossier", "Elle décrit ce qu'elle observe, zone par zone, et vous donne une première analyse gratuite en quelques secondes."],
-  ["Un dermatologue valide et prescrit", "Il relit votre dossier, confirme ou corrige, et vous envoie un compte rendu signé et une ordonnance si besoin."],
+// [titre, texte ordinateur, texte téléphone (plus court, maquette Mobile)]
+const STEPS: [string, string, string][] = [
+  ["Photographiez votre peau", "Une photo avec votre téléphone suffit. Répondez à quelques questions : depuis quand, ce que vous avez déjà essayé.", "Une photo avec votre téléphone et quelques questions."],
+  ["L'IA prépare votre dossier", "Elle décrit ce qu'elle observe, zone par zone, et vous donne une première analyse gratuite en quelques secondes.", "Une première analyse gratuite, zone par zone, en quelques secondes."],
+  ["Un dermatologue valide et prescrit", "Il relit votre dossier, confirme ou corrige, et vous envoie un compte rendu signé et une ordonnance si besoin.", "Compte rendu signé et ordonnance si besoin."],
 ];
 
 const FEATURES: { icon: LucideIcon; title: string; text: string; href: string }[] = [
@@ -97,11 +98,32 @@ export default function Landing() {
         .gs-landing .gs-menu-btn { display: none; }
         .gs-landing .gs-float { display: flex; }
         .gs-landing .gs-hero-img { height: 560px; }
+        .gs-landing .only-m { display: none; }
         @media (max-width: 900px) {
           .gs-landing .gs-nav { display: none; }
           .gs-landing .gs-menu-btn { display: flex; }
           .gs-landing .gs-float { display: none; }
           .gs-landing .gs-hero-img { height: 320px; }
+        }
+        /* Téléphone : maquette « Mobile » (390 px) */
+        @media (max-width: 640px) {
+          .gs-landing .only-d { display: none !important; }
+          .gs-landing .only-m { display: revert; }
+          .gs-landing .gs-hero-media { display: none; }
+          .gs-landing .gs-hero-btns > a { flex: 1 1 100% !important; max-width: none !important; height: 54px; padding: 0 16px !important; }
+          .gs-landing .gs-trust { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 18px !important; padding-top: 24px !important; padding-bottom: 24px !important; }
+          .gs-landing .gs-trust b { font-size: 14px !important; }
+          .gs-landing .gs-trust span { font-size: 13px !important; }
+          .gs-landing .gs-step { flex-direction: row !important; gap: 14px !important; padding: 20px !important; border-radius: 16px !important; }
+          .gs-landing .gs-step h3 { font-size: 17px !important; }
+          .gs-landing .gs-step p { font-size: 14px !important; line-height: 1.5 !important; }
+          .gs-landing .gs-feature { border-radius: 16px !important; padding: 18px !important; flex-wrap: nowrap !important; }
+          .gs-landing .gs-feature b { font-size: 16px !important; }
+          .gs-landing .gs-feature span span { font-size: 13.5px !important; }
+          .gs-landing .gs-section-p { font-size: 15px !important; }
+          .gs-landing .gs-pro-btn { width: 100%; height: 48px; font-size: 15px !important; }
+          .gs-landing .gs-pro p { display: none; }
+          .gs-landing footer { font-size: 13px; }
         }
         .gs-landing .gs-card-link { transition: border-color .15s, box-shadow .15s; }
         .gs-landing .gs-card-link:hover { border-color: ${C.green}; box-shadow: 0 6px 18px rgba(15,59,50,.08); }
@@ -132,27 +154,33 @@ export default function Landing() {
       <section style={{ ...wrap, paddingTop: "clamp(28px, 6vw, 72px)", paddingBottom: "clamp(32px, 5vw, 56px)", display: "flex", flexWrap: "wrap", gap: "clamp(24px, 4.5vw, 56px)", alignItems: "center" }}>
         <div style={{ flex: "1 1 420px", minWidth: 0, display: "flex", flexDirection: "column", gap: "clamp(18px, 2vw, 24px)" }}>
           <span style={{ alignSelf: "flex-start", display: "inline-flex", alignItems: "center", gap: 8, background: C.pale, color: C.green, fontSize: 14, fontWeight: 600, padding: "8px 14px", borderRadius: 999, lineHeight: 1.35 }}>
-            <ShieldCheck size={16} strokeWidth={2} aria-hidden style={{ flex: "none" }} />
-            Un mini dermatologue pour tous, pensé pour les peaux africaines
+            <ShieldCheck size={16} strokeWidth={2} aria-hidden style={{ flex: "none" }} className="only-d" />
+            <span className="only-d">Un mini dermatologue pour tous, pensé pour les peaux africaines</span>
+            <span className="only-m">Un mini dermatologue pour tous</span>
           </span>
           <h1 style={{ margin: 0, fontSize: "clamp(34px, 4.6vw, 56px)", lineHeight: 1.06, fontWeight: 700, letterSpacing: "-0.025em", color: C.green }}>
             Un avis dermatologique fiable, sans faire la queue.
           </h1>
           <p style={{ margin: 0, fontSize: "clamp(16px, 1.6vw, 19px)", lineHeight: 1.55, color: C.sub2, maxWidth: 560 }}>
-            Photographiez votre peau. Notre IA prépare votre dossier, un dermatologue le vérifie et vous prescrit le bon traitement. Tout se passe dans l'application.
+            Photographiez votre peau. Notre IA prépare votre dossier, un dermatologue le vérifie et vous prescrit le bon traitement.<span className="only-d"> Tout se passe dans l'application.</span>
           </p>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+          {/* Téléphone : l'image vient avant les boutons, comme sur la maquette mobile */}
+          <img src="/img/accueil-dermatologue.webp" alt="Une dermatologue examine la peau d'une patiente" className="only-m"
+            fetchPriority="high" decoding="async" width={1600} height={1986}
+            style={{ width: "100%", height: 300, objectFit: "cover", objectPosition: "center 25%", borderRadius: 20 }} />
+          <div className="gs-hero-btns" style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
             <Link href="/analyze" style={{ ...btnPrimary, flex: "1 1 260px", maxWidth: 360 }}>Analyser ma peau gratuitement <ArrowRight size={18} aria-hidden /></Link>
             <Link href="/dermatologues" style={{ ...btnSecondary, flex: "1 1 260px", maxWidth: 360 }}>Consulter un dermatologue · 5 000 FCFA</Link>
           </div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "10px 20px", fontSize: 14, color: C.sub2 }}>
+          <div className="only-d" style={{ display: "flex", flexWrap: "wrap", gap: "10px 20px", fontSize: 14, color: C.sub2 }}>
             <CheckLine>Analyse gratuite</CheckLine>
             <CheckLine>Réponse d'un dermatologue sous 24 h</CheckLine>
             <CheckLine>Paiement Mobile Money</CheckLine>
           </div>
+          <span className="only-m" style={{ fontSize: 13, color: C.sub, textAlign: "center" }}>Données protégées selon la loi camerounaise n° 2024/017</span>
         </div>
 
-        <div style={{ flex: "1 1 400px", minWidth: 0, position: "relative" }}>
+        <div className="gs-hero-media" style={{ flex: "1 1 400px", minWidth: 0, position: "relative" }}>
           <img src="/img/accueil-dermatologue.webp" alt="Une dermatologue examine la peau d'une patiente" className="gs-hero-img"
             fetchPriority="high" decoding="async" width={1600} height={1986}
             style={{ display: "block", width: "100%", objectFit: "cover", objectPosition: "center 30%", borderRadius: 24 }} />
@@ -172,7 +200,7 @@ export default function Landing() {
 
       {/* Bandeau confiance */}
       <section style={{ background: "#fff", borderTop: `1px solid ${C.line}`, borderBottom: `1px solid ${C.line}` }}>
-        <div style={{ ...wrap, paddingTop: 28, paddingBottom: 28, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(220px, 100%), 1fr))", gap: 24 }}>
+        <div className="gs-trust" style={{ ...wrap, paddingTop: 28, paddingBottom: 28, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(220px, 100%), 1fr))", gap: 24 }}>
           {TRUST.map(([t, s]) => (
             <div key={t} style={{ display: "flex", flexDirection: "column", gap: 4 }}><b style={{ fontSize: 16, color: C.green }}>{t}</b><span style={{ fontSize: 14, color: C.sub }}>{s}</span></div>
           ))}
@@ -183,16 +211,18 @@ export default function Landing() {
       <section id="comment" style={{ ...wrap, paddingTop: "clamp(48px, 8vw, 96px)", paddingBottom: "clamp(40px, 6vw, 72px)", display: "flex", flexDirection: "column", gap: "clamp(24px, 3vw, 40px)", scrollMarginTop: 16 }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 12, maxWidth: 640 }}>
           <span style={eyebrow}>Comment ça marche</span>
-          <h2 style={h2}>L'IA fait le travail préparatoire. Le dermatologue décide.</h2>
+          <h2 style={h2}><span className="only-d">L'IA fait le travail préparatoire. Le dermatologue décide.</span><span className="only-m">L'IA prépare. Le dermatologue décide.</span></h2>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(280px, 100%), 1fr))", gap: 20 }}>
-          {STEPS.map(([t, p], i) => {
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(280px, 100%), 1fr))", gap: "clamp(12px, 1.6vw, 20px)" }}>
+          {STEPS.map(([t, p, pm], i) => {
             const dark = i === 2;
             return (
-              <div key={t} style={{ background: dark ? C.green : "#fff", border: dark ? "none" : `1px solid ${C.line}`, borderRadius: 20, padding: "clamp(20px, 2.4vw, 28px)", display: "flex", flexDirection: "column", gap: 14 }}>
+              <div key={t} className="gs-step" style={{ background: dark ? C.green : "#fff", border: dark ? "none" : `1px solid ${C.line}`, borderRadius: 20, padding: "clamp(20px, 2.4vw, 28px)", display: "flex", flexDirection: "column", gap: 14 }}>
                 <span style={{ fontSize: 15, fontWeight: 700, color: dark ? C.accentDark : C.accent }}>{i + 1}</span>
-                <h3 style={{ margin: 0, fontSize: "clamp(18px, 1.8vw, 22px)", color: dark ? "#fff" : C.green }}>{t}</h3>
-                <p style={{ margin: 0, fontSize: 16, lineHeight: 1.55, color: dark ? C.onDark : C.sub }}>{p}</p>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <h3 style={{ margin: 0, fontSize: "clamp(18px, 1.8vw, 22px)", color: dark ? "#fff" : C.green }}>{t}</h3>
+                  <p style={{ margin: 0, fontSize: 16, lineHeight: 1.55, color: dark ? C.onDark : C.sub }}><span className="only-d">{p}</span><span className="only-m">{pm}</span></p>
+                </div>
               </div>
             );
           })}
@@ -207,13 +237,13 @@ export default function Landing() {
               <span style={eyebrow}>Tout dans une seule application</span>
               <h2 style={h2}>Un mini dermatologue dans votre poche.</h2>
             </div>
-            <p style={{ flex: "1 1 340px", minWidth: 0, margin: 0, fontSize: 17, lineHeight: 1.6, color: C.sub2 }}>
-              Comprendre sa peau, choisir les bons produits, éviter les dangereux et suivre ses progrès : GlowScan vous accompagne au quotidien, et un dermatologue prend le relais quand il le faut.
+            <p className="gs-section-p" style={{ flex: "1 1 340px", minWidth: 0, margin: 0, fontSize: 17, lineHeight: 1.6, color: C.sub2 }}>
+              Comprendre sa peau, choisir les bons produits, éviter les dangereux et suivre ses progrès<span className="only-d"> : GlowScan vous accompagne au quotidien, et un dermatologue prend le relais quand il le faut</span>.
             </p>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(300px, 100%), 1fr))", gap: "clamp(12px, 1.6vw, 20px)" }}>
             {FEATURES.map(({ icon: Icon, title, text, href }) => (
-              <Link key={title} href={href} className="gs-card-link" style={{ textDecoration: "none", background: "#fff", border: `1px solid ${C.line}`, borderRadius: 20, padding: "clamp(18px, 2.4vw, 28px)", display: "flex", gap: 14, flexWrap: "wrap" }}>
+              <Link key={title} href={href} className="gs-card-link gs-feature" style={{ textDecoration: "none", background: "#fff", border: `1px solid ${C.line}`, borderRadius: 20, padding: "clamp(18px, 2.4vw, 28px)", display: "flex", gap: 14, flexWrap: "wrap" }}>
                 <span style={{ width: 44, height: 44, borderRadius: 12, background: C.pale, display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}><Icon size={22} color={C.green} strokeWidth={2} aria-hidden /></span>
                 <span style={{ flex: "1 1 200px", display: "flex", flexDirection: "column", gap: 6 }}>
                   <b style={{ fontSize: "clamp(16px, 1.6vw, 20px)", color: C.green }}>{title}</b>
@@ -231,9 +261,9 @@ export default function Landing() {
           style={{ flex: "1 1 380px", minWidth: 0, width: "100%", height: "clamp(280px, 34vw, 440px)", objectFit: "cover", borderRadius: 24 }} />
         <div style={{ flex: "1 1 440px", minWidth: 0, display: "flex", flexDirection: "column", gap: 18 }}>
           <span style={eyebrow}>Pourquoi GlowScan</span>
-          <h2 style={h2}>Les outils dermatologiques du monde voient très peu de peaux comme la vôtre.</h2>
-          <p style={{ margin: 0, fontSize: 17, lineHeight: 1.6, color: C.sub2 }}>La plupart des IA de dermatologie ont été entraînées presque sans peaux noires. Une tache, un eczéma ou une acné ne se présentent pas de la même façon sur une peau foncée. GlowScan apprend à partir de cas vérifiés par des dermatologues africains.</p>
-          <p style={{ margin: 0, fontSize: 17, lineHeight: 1.6, color: C.sub2 }}>Et nous ne vendons aucun produit éclaircissant : pas d'hydroquinone, pas de corticoïdes, pas de mercure.</p>
+          <h2 style={h2}>Les outils dermatologiques<span className="only-d"> du monde</span> voient très peu de peaux comme la vôtre.</h2>
+          <p className="gs-section-p" style={{ margin: 0, fontSize: 17, lineHeight: 1.6, color: C.sub2 }}>La plupart des IA de dermatologie ont été entraînées presque sans peaux noires.<span className="only-d"> Une tache, un eczéma ou une acné ne se présentent pas de la même façon sur une peau foncée.</span> GlowScan apprend à partir de cas vérifiés par des dermatologues africains.</p>
+          <p className="gs-section-p" style={{ margin: 0, fontSize: 17, lineHeight: 1.6, color: C.sub2 }}><span className="only-d">Et nous ne vendons aucun produit éclaircissant</span><span className="only-m">Aucun produit éclaircissant</span> : pas d'hydroquinone, pas de corticoïdes, pas de mercure.</p>
         </div>
       </section>
 
@@ -242,9 +272,27 @@ export default function Landing() {
         <div style={{ ...wrap, paddingTop: "clamp(48px, 8vw, 96px)", paddingBottom: "clamp(48px, 8vw, 96px)", display: "flex", flexDirection: "column", gap: "clamp(24px, 3vw, 40px)" }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 12, maxWidth: 640 }}>
             <span style={eyebrow}>Ce que vous obtenez</span>
-            <h2 style={h2}>Commencez gratuitement, allez plus loin si besoin.</h2>
+            <h2 style={h2} className="only-d">Commencez gratuitement, allez plus loin si besoin.</h2>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(280px, 100%), 1fr))", gap: 20 }}>
+          {/* Téléphone : offres en lignes compactes (maquette Mobile) */}
+          <div className="only-m" style={{ marginTop: -10 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <Link href="/analyze" style={{ textDecoration: "none", border: `1px solid ${C.line}`, borderRadius: 16, padding: 20, background: C.bg, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+                <span style={{ display: "flex", flexDirection: "column", gap: 4 }}><b style={{ fontSize: 17, color: C.green }}>Analyse IA</b><span style={{ fontSize: 13, color: C.sub }}>En quelques secondes</span></span>
+                <b style={{ fontSize: 18, color: C.green }}>Gratuit</b>
+              </Link>
+              <div style={{ border: `2px solid ${C.green}`, borderRadius: 16, padding: 20, background: "#fff", display: "flex", flexDirection: "column", gap: 10 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}><b style={{ fontSize: 17, color: C.green }}>Consultation dermatologue</b><b style={{ fontSize: 18, color: C.green, whiteSpace: "nowrap" }}>5 000 FCFA</b></div>
+                <span style={{ fontSize: 13, lineHeight: 1.5, color: C.sub }}>Compte rendu signé et ordonnance, sur WhatsApp. Réponse sous 24 h, ou remboursé.</span>
+                <Link href="/dermatologues" style={{ ...btnPrimary, fontSize: 15, minHeight: 48 }}>Consulter un dermatologue</Link>
+              </div>
+              <Link href="/shop" style={{ textDecoration: "none", border: `1px solid ${C.line}`, borderRadius: 16, padding: 20, background: C.bg, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+                <span style={{ display: "flex", flexDirection: "column", gap: 4 }}><b style={{ fontSize: 17, color: C.green }}>Kits de soins</b><span style={{ fontSize: 13, color: C.sub }}>Adaptés à votre analyse, livrés</span></span>
+                <span style={{ fontSize: 14, fontWeight: 600, color: C.green, whiteSpace: "nowrap" }}>Voir →</span>
+              </Link>
+            </div>
+          </div>
+          <div className="only-d" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(280px, 100%), 1fr))", gap: 20 }}>
             <div style={{ border: `1px solid ${C.line}`, borderRadius: 20, padding: "clamp(20px, 2.4vw, 28px)", display: "flex", flexDirection: "column", gap: 12, background: C.bg }}>
               <h3 style={{ margin: 0, fontSize: 21, color: C.green }}>Analyse IA</h3>
               <b style={{ fontSize: "clamp(24px, 2.6vw, 32px)", color: C.green }}>Gratuit</b>
@@ -269,13 +317,13 @@ export default function Landing() {
 
       {/* Espace dermatologue */}
       <section id="pro" style={{ ...wrap, paddingTop: "clamp(32px, 8vw, 96px)", paddingBottom: "clamp(32px, 8vw, 96px)" }}>
-        <div style={{ background: C.green, borderRadius: "clamp(20px, 2.4vw, 28px)", padding: "clamp(26px, 4.6vw, 56px)", display: "flex", flexWrap: "wrap", gap: "20px 32px", alignItems: "center", justifyContent: "space-between" }}>
+        <div className="gs-pro" style={{ background: C.green, borderRadius: "clamp(20px, 2.4vw, 28px)", padding: "clamp(26px, 4.6vw, 56px)", display: "flex", flexWrap: "wrap", gap: "20px 32px", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ flex: "1 1 440px", minWidth: 0, display: "flex", flexDirection: "column", gap: 14 }}>
             <span style={{ ...eyebrow, color: C.accentDark }}>Vous êtes dermatologue ?</span>
-            <h2 style={{ ...h2, fontSize: "clamp(21px, 3vw, 36px)", lineHeight: 1.2, color: "#fff" }}>GlowScan Derm : vos dossiers prêts, vos ordonnances en quelques secondes.</h2>
+            <h2 style={{ ...h2, fontSize: "clamp(21px, 3vw, 36px)", lineHeight: 1.2, color: "#fff" }}><span className="only-d">GlowScan Derm : vos</span><span className="only-m">Vos</span> dossiers prêts, vos ordonnances en quelques secondes.</h2>
             <p style={{ margin: 0, fontSize: 17, lineHeight: 1.6, color: C.onDark }}>Recevez des patients déjà documentés, suivez-les dans le temps et consultez à distance.</p>
           </div>
-          <Link href="/derm" style={{ ...btnPrimary, background: "#fff", color: C.green, flex: "0 1 auto" }}>Découvrir GlowScan Derm</Link>
+          <Link href="/derm" className="gs-pro-btn" style={{ ...btnPrimary, background: "#fff", color: C.green, flex: "0 1 auto" }}>Découvrir GlowScan Derm</Link>
         </div>
       </section>
 
