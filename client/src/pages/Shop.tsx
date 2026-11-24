@@ -29,6 +29,21 @@ const CATS = [
 ] as const;
 const CAT_LABEL: Record<string, string> = { visage: "Visage", corps: "Corps", cheveux: "Cheveux" };
 const imgOf = (p: Product) => productImages[p.id] || p.image || null;
+
+// Photo produit (packshot sur fond blanc) ou mosaïque des produits inclus pour un kit.
+function ProductVisual({ p, alt, lazy }: { p: Product; alt: string; lazy?: boolean }) {
+  if (p.images && p.images.length > 1) {
+    return (
+      <div className="grid h-full w-full grid-cols-3 items-center gap-1 bg-white p-2">
+        {p.images.slice(0, 3).map((src, i) => (
+          <img key={i} src={src} alt={i === 0 ? alt : ""} loading={lazy ? "lazy" : undefined} className="h-full w-full object-contain" />
+        ))}
+      </div>
+    );
+  }
+  const img = imgOf(p);
+  return img ? <img src={img} alt={alt} loading={lazy ? "lazy" : undefined} className="h-full w-full bg-white object-contain p-2" /> : null;
+}
 const firstSentence = (s: string) => (s || "").split(/(?<=[.!?])\s/)[0].slice(0, 110);
 
 function CartButton({ count, onClick }: { count: number; onClick: () => void }) {
@@ -91,7 +106,6 @@ export default function Shop() {
   const detail = detailId ? catalog.find((p) => p.id === detailId) : null;
   if (detailId && detail) {
     const on = lines.some((l) => l.id === detail.id);
-    const img = imgOf(detail);
     const brand = getProductBrand(detail);
     return (
       <div className="b2c-theme min-h-screen bg-organic-bg font-body text-organic-text">
@@ -105,7 +119,7 @@ export default function Shop() {
           </div>
 
           <div className="relative h-[300px] w-full bg-cover bg-center" style={{ background: G.sage }}>
-            {img && <img src={img} alt={detail.name} className="h-full w-full object-cover" />}
+            <ProductVisual p={detail} alt={detail.name} />
             <span className="absolute left-5 top-4 rounded-pill bg-white px-3 py-1 text-[11px] font-bold uppercase tracking-[.08em]" style={{ color: G.dark }}>{CAT_LABEL[detail.category] || "Soin"}</span>
           </div>
 
@@ -209,11 +223,10 @@ export default function Shop() {
           <div className="grid grid-cols-2 gap-3">
             {products.map((p) => {
               const on = lines.some((l) => l.id === p.id);
-              const img = imgOf(p);
               return (
                 <div key={p.id} className="flex flex-col gap-1.5">
                   <button type="button" onClick={() => openDetail(p.id)} aria-label={`Voir ${p.name}`} className="relative aspect-[4/3.4] w-full overflow-hidden rounded-[14px] border-0 p-0" style={{ background: G.sage }}>
-                    {img && <img src={img} alt="" loading="lazy" className="h-full w-full object-cover" />}
+                    <ProductVisual p={p} alt="" lazy />
                     {isReco(p) && <span className="absolute left-2 top-2 rounded-pill bg-white px-2 py-0.5 text-[10.5px] font-bold" style={{ color: G.dark }}>Conseillé</span>}
                   </button>
                   <button type="button" onClick={() => openDetail(p.id)} className="border-0 bg-transparent p-0 text-left text-[14.5px] font-semibold leading-snug" style={{ color: G.text }}>{p.name}</button>
