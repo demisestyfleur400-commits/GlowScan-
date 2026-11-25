@@ -335,6 +335,8 @@ export default function Landing() {
             <span style={{ lineHeight: 1.55 }}>L'analyse IA ne remplace pas un diagnostic médical. En cas de douleur forte, de fièvre ou de lésion qui saigne, consultez un médecin sans attendre.</span>
           </div>
           <nav aria-label="Liens du pied de page" style={{ display: "flex", flexWrap: "wrap", gap: "4px 20px", alignItems: "flex-start" }}>
+            {/* Page « À propos » statique (référencement) : vrai lien, pas de navigation interne */}
+            <a href="/glowscan-africa" style={{ color: C.sub, minHeight: 44, display: "inline-flex", alignItems: "center" }}>GlowScan Africa</a>
             <Link href={CGU_HREF} style={{ color: C.sub, minHeight: 44, display: "inline-flex", alignItems: "center" }}>Conditions d'utilisation</Link>
             <Link href="/confidentialite" style={{ color: C.sub, minHeight: 44, display: "inline-flex", alignItems: "center" }}>Confidentialité</Link>
             <a href={CONTACT_HREF} style={{ color: C.sub, minHeight: 44, display: "inline-flex", alignItems: "center" }}>Contact</a>
