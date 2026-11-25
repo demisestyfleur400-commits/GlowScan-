@@ -3,6 +3,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useSEO } from "@/hooks/useSEO";
 import { trackPageVisit } from "@/lib/analytics";
 import { fetchWithRetry } from "@/lib/imageUtils";
+import { rememberReturnPath } from "@/lib/postLogin";
 import { triggerPWAInstallPrompt } from "@/hooks/use-pwa-install";
 import { useSubscription } from "@/hooks/use-subscription";
 import { GsTopBar } from "@/components/GsTopBar";
@@ -348,6 +349,7 @@ export default function Analyze() {
             saveQuestionnaireDraft(consultationData, selectedArea, uploadedImage || "", answers);
           }
           localStorage.setItem("glowscan_after_auth", "restore_questionnaire");
+          rememberReturnPath("/analyze");
           toast({
             title: "Session expirée",
             description: "Connectez-vous pour continuer : vos réponses sont sauvegardées.",
@@ -802,7 +804,7 @@ export default function Analyze() {
               </p>
               <button
                 type="button"
-                onClick={() => (window.location.href = "/auth")}
+                onClick={() => { rememberReturnPath("/ma-peau"); window.location.href = "/auth"; }}
                 className="rounded-pill border-0 bg-organic-accent p-3.5 text-[15px] font-bold text-organic-neutral-100 hover:bg-organic-accent-600"
               >
                 Créer mon compte gratuit

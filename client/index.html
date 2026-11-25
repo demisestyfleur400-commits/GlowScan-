@@ -18,6 +18,8 @@
         document.title = "GlowScan Derm";
         var at = document.querySelector('meta[name="apple-mobile-web-app-title"]'); if (at) at.setAttribute("content", "GlowScan Derm");
         window.addEventListener("beforeinstallprompt", function (e) {
+          // Seulement dans l'espace médical : ailleurs, c'est l'appli patient qui s'installe.
+          if (location.pathname.indexOf("/derm") !== 0) return;
           e.preventDefault(); window.__gsDermInstall = e; window.dispatchEvent(new Event("gs:derm-installable"));
         });
       })();

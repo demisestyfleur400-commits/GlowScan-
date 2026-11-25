@@ -12,6 +12,7 @@ import {
 } from "@shared/delivery";
 import { productImages } from "@/lib/productImages";
 import { cart, useCart } from "@/lib/cart";
+import { rememberReturnPath } from "@/lib/postLogin";
 import { ensureDermFonts } from "@/components/derm/tokens";
 
 // ════════════════════════════════════════════════════════════════════════
@@ -70,7 +71,7 @@ export default function Commande() {
 
   useEffect(() => { ensureDermFonts(); }, []);
   useEffect(() => { window.scrollTo(0, 0); }, [step]);
-  useEffect(() => { if (!authLoading && !user) setLocation("/auth"); }, [authLoading, user, setLocation]);
+  useEffect(() => { if (!authLoading && !user) { rememberReturnPath(); setLocation("/auth"); } }, [authLoading, user, setLocation]);
   useEffect(() => {
     if (user) setF((x) => ({ ...x, name: x.name || [user.firstName, user.lastName].filter(Boolean).join(" ") }));
   }, [user]);

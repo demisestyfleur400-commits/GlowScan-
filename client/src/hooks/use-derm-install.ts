@@ -33,9 +33,16 @@ export function useDermInstall() {
     ensureDermManifest();
     const onReady = () => { if (!isStandalone()) setState("ready"); };
     const onInstalled = () => { (window as any).__gsDermInstall = null; setState("installed"); };
+    // Arrivée dans l'espace médical sans rechargement : le navigateur relance l'invitation
+    // avec le manifeste Derm ; on la capte ici aussi.
+    const onPrompt = (e: Event) => {
+      if (!window.location.pathname.startsWith("/derm") || (window as any).__gsDermInstall === e) return;
+      e.preventDefault(); (window as any).__gsDermInstall = e; onReady();
+    };
     window.addEventListener("gs:derm-installable", onReady);
     window.addEventListener("appinstalled", onInstalled);
-    return () => { window.removeEventListener("gs:derm-installable", onReady); window.removeEventListener("appinstalled", onInstalled); };
+    window.addEventListener("beforeinstallprompt", onPrompt);
+    return () => { window.removeEventListener("gs:derm-installable", onReady); window.removeEventListener("appinstalled", onInstalled); window.removeEventListener("beforeinstallprompt", onPrompt); };
   }, []);
 
   const install = async (): Promise<boolean> => {

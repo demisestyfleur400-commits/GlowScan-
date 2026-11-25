@@ -9,6 +9,7 @@ import { pickKit } from "@shared/kits";
 import { formatF } from "@shared/delivery";
 import { productImages } from "@/lib/productImages";
 import { cart, useCart } from "@/lib/cart";
+import { rememberReturnPath } from "@/lib/postLogin";
 import { ensureDermFonts } from "@/components/derm/tokens";
 import { cn } from "@/lib/utils";
 
@@ -96,7 +97,8 @@ export default function Shop() {
 
   const count = lines.reduce((a, l) => a + l.qty, 0);
   const subtotal = lines.reduce((a, l) => a + (catalog.find((p) => p.id === l.id)?.price ?? 0) * l.qty, 0);
-  const goCart = () => setLocation(user ? "/commande" : "/auth");
+  // Sans compte : après l'inscription, on revient directement à la commande (le panier est gardé).
+  const goCart = () => { if (!user) rememberReturnPath("/commande"); setLocation(user ? "/commande" : "/auth"); };
   const openDetail = (id: string | null) => {
     setDetailId(id);
     window.history.replaceState(null, "", id ? `/shop?p=${encodeURIComponent(id)}` : "/shop");

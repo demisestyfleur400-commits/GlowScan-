@@ -4,7 +4,8 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { useEffect, lazy, Suspense } from "react";
+import { useEffect, useRef, lazy, Suspense } from "react";
+import { rememberReturnPath } from "@/lib/postLogin";
 import * as Sentry from "@sentry/react";
 
 // 🔴 SENTRY INITIALIZATION — Error monitoring & alerting
@@ -248,6 +249,42 @@ function ScrollToTop() {
   return null;
 }
 
+// Connexion / inscription : on revient ensuite sur la page d'où l'on venait (panier,
+// résultat, page protégée…) au lieu de l'accueil. Un chemin déjà mémorisé
+// explicitement (ex. « /commande » depuis le panier) reste prioritaire.
+function RememberBeforeAuth() {
+  const [loc] = useLocation();
+  const prev = useRef<string | null>(null);
+  useEffect(() => {
+    if (loc === "/auth" && prev.current && !prev.current.startsWith("/auth")) {
+      try { if (!sessionStorage.getItem("postLoginRedirect")) rememberReturnPath(prev.current); } catch {}
+    }
+    prev.current = window.location.pathname + window.location.search;
+  }, [loc]);
+  return null;
+}
+
+// Identité installable selon l'espace : GlowScan Derm sur /derm, GlowScan partout
+// ailleurs. Avant, une visite de /derm laissait le manifeste Derm en place : l'appli
+// patient proposait ensuite d'installer « GlowScan Derm ».
+const B2C_TITLE = "GlowScan Africa — Dermatologue en ligne et analyse de peau IA";
+function AppIdentity() {
+  const [loc] = useLocation();
+  useEffect(() => {
+    const derm = loc.startsWith("/derm");
+    const m = document.querySelector('link[rel="manifest"]');
+    const want = derm ? "/manifest-derm.json" : "/manifest.json";
+    if (m && m.getAttribute("href") !== want) m.setAttribute("href", want);
+    const at = document.querySelector('meta[name="apple-mobile-web-app-title"]');
+    if (at) at.setAttribute("content", derm ? "GlowScan Derm" : "GlowScan");
+    const ic = document.querySelector('link[rel="icon"]');
+    if (ic && derm && ic.getAttribute("href") !== "/icon-derm-192.png") { ic.setAttribute("type", "image/png"); ic.setAttribute("href", "/icon-derm-192.png"); }
+    if (ic && !derm && ic.getAttribute("href") === "/icon-derm-192.png") { ic.setAttribute("type", "image/jpeg"); ic.setAttribute("href", "/logo-glowscan-square.jpeg"); }
+    if (!derm && document.title === "GlowScan Derm") document.title = B2C_TITLE;
+  }, [loc]);
+  return null;
+}
+
 function App() {
   useEffect(() => {
     if ("serviceWorker" in navigator) {
@@ -261,6 +298,8 @@ function App() {
         <TooltipProvider>
           <BodyBackground />
           <ScrollToTop />
+          <RememberBeforeAuth />
+          <AppIdentity />
           <Router />
           <TabBar />
           <PWAInstallBanner />

@@ -45,6 +45,8 @@ export function usePWAInstall() {
 
       // Android/Chrome → attendre l'événement natif beforeinstallprompt
       const handler = (e: Event) => {
+        // Invitation reçue dans l'espace médical = installation de GlowScan Derm : pas pour cette bannière.
+        if (window.location.pathname.startsWith("/derm")) return;
         e.preventDefault();
         setDeferredPrompt(e);
         setShowBanner(true);
