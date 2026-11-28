@@ -389,6 +389,16 @@ export default function ProAnalyze() {
   const [datasetSent, setDatasetSent] = useState(false);
   const [savingDossier, setSavingDossier] = useState(false);
 
+  // Consultation SANS l'IA : le médecin n'est jamais bloqué si l'IA est lente ou en panne.
+  // manualMode → diagnostic écrit par le médecin dans le compte rendu ; photos rangées
+  // dans les documents du dossier. aiSlow : l'IA dépasse 30 s ; aiFailed : elle a échoué.
+  const [manualMode, setManualMode] = useState(false);
+  const [aiSlow, setAiSlow] = useState(false);
+  const [aiFailed, setAiFailed] = useState(false);
+  const [manualPhotos, setManualPhotos] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const abandonAiRef = useRef(false);
+  const slowTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // PDF Viewer
   const [showPdfViewer, setShowPdfViewer] = useState(false);
   const [pdfHtml, setPdfHtml] = useState("");
@@ -617,6 +627,10 @@ export default function ProAnalyze() {
       return;
     }
     setStep(4);
+    abandonAiRef.current = false;
+    setAiFailed(false); setAiSlow(false);
+    if (slowTimerRef.current) clearTimeout(slowTimerRef.current);
+    slowTimerRef.current = setTimeout(() => setAiSlow(true), 30000);
     try {
       const r = await analyze.mutateAsync({
         image: photoBase64,
@@ -673,6 +687,9 @@ export default function ProAnalyze() {
           },
         },
       });
+      if (slowTimerRef.current) clearTimeout(slowTimerRef.current);
+      setAiSlow(false);
+      if (abandonAiRef.current) return; // le médecin a continué sans l'IA : réponse tardive ignorée
       setResult(r as any);
       // Enregistre l'examen physique du médecin comme annotation dataset (fire-and-forget)
       const sid = (r as any).savedScanId;
@@ -683,6 +700,9 @@ export default function ProAnalyze() {
         }).catch(() => {});
       }
     } catch (err: any) {
+      if (slowTimerRef.current) clearTimeout(slowTimerRef.current);
+      setAiSlow(false);
+      if (abandonAiRef.current) return;
       // Abonnement expiré (402) → message EXPLICITE, pas « réessayez » (sinon le
       // dermato croit que l'app est cassée). On le renvoie vers la réactivation.
       if (err?.status === 402 || err?.code === "PRO_SUBSCRIPTION_REQUIRED") {
@@ -696,13 +716,41 @@ export default function ProAnalyze() {
         return;
       }
       console.warn("[pro] analyse IA indisponible", err?.message);
-      toast({
-        title: "Erreur de connexion — réessayez",
-        description: "Le service IA est momentanément indisponible. Relance l'analyse.",
-        variant: "destructive",
-      });
-      setStep(3); // retour au questionnaire (la photo est conservée)
+      // Retour au questionnaire avec un choix clair : réessayer ou continuer sans l'IA.
+      setAiFailed(true);
+      setStep(3); // la photo et l'examen sont conservés
     }
+  };
+
+  // ─── Continuer sans l'IA : diagnostic du médecin, photos rangées dans le dossier ───
+  const continueWithoutAI = async () => {
+    abandonAiRef.current = true;
+    if (slowTimerRef.current) clearTimeout(slowTimerRef.current);
+    setAiSlow(false); setAiFailed(false);
+    setManualMode(true);
+    setResult(null);
+    setDossierSaved(true);
+    setStep(5);
+    if (!patientId) return;
+    const day = new Date().toLocaleDateString("fr-FR");
+    const files: [string, string][] = [
+      ...([[photoBase64, "face"], [photoRight, "profil droit"], [photoLeft, "profil gauche"]] as [string | null, string][])
+        .filter(([d]) => !!d).map(([d, l]) => [`Photo clinique · ${l} · ${day}`, d!] as [string, string]),
+      ...dermoPhotos.map((d, i) => [`Photo au dermatoscope ${i + 1} · ${day}`, d] as [string, string]),
+    ];
+    if (!files.length) return;
+    setManualPhotos("saving");
+    let ok = 0;
+    for (const [name, data] of files) {
+      try {
+        const r = await fetch(`/api/derm/records/${patientId}/documents`, {
+          method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, data }),
+        });
+        if (r.ok) ok++;
+      } catch { /* réseau : compté comme non enregistré */ }
+    }
+    setManualPhotos(ok === files.length ? "saved" : "error");
   };
 
   // ─── Step 4 → 5 : sauver dossier (TÂCHE 5 — robuste) ──────────────
@@ -1369,6 +1417,7 @@ export default function ProAnalyze() {
     setResult(null);
     setQuestionnaire([]); setAnswers({});
     setDossierSaved(false); setDatasetSent(false); setSavingDossier(false);
+    abandonAiRef.current = false; setManualMode(false); setAiSlow(false); setAiFailed(false); setManualPhotos("idle");
     setProblemDuration(""); setPreviousProducts(""); setAllergies(""); setConsultMotif("");
     setClinicalRecord({});
     setExamen({ ...EMPTY_EXAMEN });
@@ -1763,7 +1812,17 @@ export default function ProAnalyze() {
         {step === 4 && (
           <div className="mt-4">
             {analyze.isPending || !result ? (
-              <ScanLoader photo={photoBase64} />
+              <>
+                <ScanLoader photo={photoBase64} />
+                <div className="mt-3 text-center" data-testid="ai-wait-actions">
+                  {aiSlow && <p className="text-sm font-extrabold mb-1" style={{ color: INK }}>L'IA met plus de temps que d'habitude.</p>}
+                  <button type="button" onClick={continueWithoutAI} data-testid="button-continue-without-ai-wait"
+                    className={aiSlow ? "px-5 py-2.5 rounded-full text-sm font-extrabold text-white" : "text-sm font-extrabold"}
+                    style={aiSlow ? { background: NAVY, border: 0, cursor: "pointer" } : { background: "none", border: 0, color: "var(--color-accent-700)", cursor: "pointer" }}>
+                    Continuer sans l'IA →
+                  </button>
+                </div>
+              </>
             ) : (
               <>
                 {/* Produit nocif identifié dans l'anamnèse (produits déclarés) */}
@@ -1946,6 +2005,23 @@ export default function ProAnalyze() {
                 : "Préparation des questions selon le motif..."}
             />
 
+            {aiFailed && (
+              <div role="alert" data-testid="ai-failed-banner" className="mb-4 rounded-xl p-4" style={{ background: "rgba(217,164,65,0.12)", border: "1px solid rgba(217,164,65,0.45)" }}>
+                <p className="text-sm font-extrabold" style={{ color: INK }}>L'IA ne répond pas pour le moment.</p>
+                <p className="text-xs mt-1 mb-3" style={{ color: DS.body }}>Votre examen et vos photos sont conservés. Vous pouvez réessayer, ou continuer la consultation sans l'IA : vous écrirez votre diagnostic dans le compte rendu.</p>
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" onClick={continueWithoutAI} data-testid="button-continue-without-ai-banner"
+                    className="px-4 py-2.5 rounded-full text-sm font-extrabold text-white" style={{ background: NAVY, border: 0, cursor: "pointer" }}>
+                    Continuer sans l'IA →
+                  </button>
+                  <button type="button" onClick={launchAnalysis}
+                    className="px-4 py-2.5 rounded-full text-sm font-extrabold" style={{ background: "var(--color-divider)", border: "1px solid #E2E8F0", color: DS.body, cursor: "pointer" }}>
+                    Réessayer l'analyse IA
+                  </button>
+                </div>
+              </div>
+            )}
+
             {genQuestionnaire.isPending ? (
               <div className="py-10 text-center">
                 <Loader2 className="w-6 h-6 animate-spin mx-auto mb-3" style={{ color: NAVY }} />
@@ -1964,6 +2040,10 @@ export default function ProAnalyze() {
                     Lancer l'analyse IA <Activity className="w-4 h-4" />
                   </button>
                 </div>
+                <button type="button" onClick={continueWithoutAI} data-testid="button-skip-analysis-empty"
+                  className="mt-3 w-full text-center text-sm font-extrabold" style={{ background: "none", border: 0, color: "var(--color-accent-700)", cursor: "pointer" }}>
+                  Continuer sans l'IA → <span className="font-normal" style={{ color: DS.muted }}>vous écrivez votre diagnostic dans le compte rendu</span>
+                </button>
               </div>
             ) : (
               <>
@@ -2032,12 +2112,11 @@ export default function ProAnalyze() {
                     Lancer l'analyse IA <Activity className="w-4 h-4" />
                   </button>
                 </div>
-                {!preanalysis && (
-                  <button type="button" onClick={() => { setDossierSaved(true); setStep(5); }} data-testid="button-skip-analysis"
-                    className="mt-3 w-full text-center text-sm font-extrabold" style={{ background: "none", border: 0, color: "var(--color-accent-700)", cursor: "pointer" }}>
-                    Continuer sans analyse → <span className="font-normal" style={{ color: DS.muted }}>(pré-analyse Glow désactivée dans vos Paramètres)</span>
-                  </button>
-                )}
+                {/* Toujours visible : l'IA est une aide, jamais un passage obligé. */}
+                <button type="button" onClick={continueWithoutAI} data-testid="button-skip-analysis"
+                  className="mt-3 w-full text-center text-sm font-extrabold" style={{ background: "none", border: 0, color: "var(--color-accent-700)", cursor: "pointer" }}>
+                  Continuer sans l'IA → <span className="font-normal" style={{ color: DS.muted }}>{preanalysis ? "vous écrivez votre diagnostic dans le compte rendu" : "(pré-analyse Glow désactivée dans vos Paramètres)"}</span>
+                </button>
               </>
             )}
           </ProCard>
@@ -2055,18 +2134,38 @@ export default function ProAnalyze() {
                   >
                     <CheckCircle2 className="w-8 h-8" style={{ color: "var(--color-accent-2-700)" }} />
                   </div>
-                  <h2 className="text-xl font-extrabold mb-2" style={{ color: INK }} data-testid="text-confirmation-title">
-                    Dossier de {patientLabel} mis à jour 
-                  </h2>
-                  <p className="text-sm mb-1" style={{ color: DS.body }}>
-                    Photo, diagnostic, anamnèse et produits enregistrés.
-                  </p>
-                  <p className="text-xs mb-5" style={{ color: DS.muted }}>
-                    Retrouvez ce dossier dans <strong style={{ color: DS.body }}>Patients → {patientLabel}</strong>
-                  </p>
+                  {manualMode ? (
+                    <>
+                      <h2 className="text-xl font-extrabold mb-2" style={{ color: INK }} data-testid="text-confirmation-title">
+                        Consultation sans l'IA · {patientLabel}
+                      </h2>
+                      <p className="text-sm mb-1" style={{ color: DS.body }}>
+                        Écrivez votre diagnostic et votre conduite à tenir dans le compte rendu ci-dessous, puis signez-le.
+                      </p>
+                      <p className="text-xs mb-5" data-testid="manual-photos-status" style={{ color: manualPhotos === "error" ? "var(--color-accent-700)" : DS.muted }}>
+                        {manualPhotos === "saving" ? "Enregistrement des photos dans le dossier…"
+                          : manualPhotos === "saved" ? "Photos enregistrées dans le dossier du patient (Documents)."
+                          : manualPhotos === "error" ? "Certaines photos n'ont pas pu être enregistrées : ajoutez-les depuis le dossier du patient (Documents)."
+                          : "Aucune photo à enregistrer."}
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <h2 className="text-xl font-extrabold mb-2" style={{ color: INK }} data-testid="text-confirmation-title">
+                        Dossier de {patientLabel} mis à jour
+                      </h2>
+                      <p className="text-sm mb-1" style={{ color: DS.body }}>
+                        Photo, diagnostic, anamnèse et produits enregistrés.
+                      </p>
+                      <p className="text-xs mb-5" style={{ color: DS.muted }}>
+                        Retrouvez ce dossier dans <strong style={{ color: DS.body }}>Patients → {patientLabel}</strong>
+                      </p>
+                    </>
+                  )}
 
 
-                  {/* Récap dossier */}
+                  {/* Récap dossier (résultat IA) — absent en consultation sans l'IA */}
+                  {!manualMode && <>
                   <div
                     className="rounded-2xl p-4 mb-5 text-left"
                     style={{ background: "var(--color-bg)", border: `1px solid ${DS.border}` }}
@@ -2150,6 +2249,7 @@ export default function ProAnalyze() {
                     age={age}
                     patientContext={[consultMotif ? `Motif : ${consultMotif}` : "", problemDuration ? `Durée : ${problemDuration}` : "", previousProducts ? `Produits : ${previousProducts}` : "", allergies ? `Allergies : ${allergies}` : ""].filter(Boolean).join(" · ") || undefined}
                   />
+                  </>}
 
                   {/* ─── Classification patient (TÂCHE 4) ─── */}
                   <div className="rounded-2xl p-4 mb-4" style={{ background: "var(--color-bg)", border: "1px solid rgba(42,107,79,0.15)" }}>
